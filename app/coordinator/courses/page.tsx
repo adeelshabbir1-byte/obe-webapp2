@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CreateCourseForm from "../../../components/CreateCourseForm";
+import AssignSubjectExpertSelect from "../../../components/AssignSubjectExpertSelect";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -18,6 +19,11 @@ export default async function CoordinatorCoursesPage() {
     where: { coordinatorId: user.id },
     orderBy: { createdAt: "desc" },
     include: { subjectExpert: true, masterCourse: true },
+  });
+
+  const subjectExperts = await prisma.user.findMany({
+    where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    orderBy: { name: "asc" },
   });
 
   return (
@@ -38,11 +44,22 @@ export default async function CoordinatorCoursesPage() {
               <tr key={c.id}>
                 <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td>
                 <td>{c.masterCourse ? <span style={{ color: "var(--sage)" }}>HEC {c.masterCourse.category}</span> : "Manual entry"}</td>
-                <td>{c.subjectExpert?.name || "—"}</td>
+                <td>
+                  <AssignSubjectExpertSelect
+                    courseId={c.id}
+                    currentId={c.subjectExpertId}
+                    options={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {subjectExperts.length === 0 && (
+          <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>
+            No Subject Experts onboarded yet — add one under Faculty Onboarding first.
+          </div>
+        )}
       </div>
 
       <CreateCourseForm />

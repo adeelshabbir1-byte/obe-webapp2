@@ -5,6 +5,11 @@ import { writeAuditLog } from "./audit";
 const MAX_FAILED_LOGINS = 8;
 const LOCKOUT_MINUTES = 15;
 
+// Password hashing via Node's built-in crypto.scrypt — deliberately NOT using
+// a native-compiled module (like argon2) here, since those can fail to load
+// on serverless platforms when the build environment's binary doesn't match
+// the runtime environment exactly. scrypt is part of Node core, so this
+// works identically everywhere with zero native dependencies.
 const SCRYPT_KEYLEN = 64;
 
 export async function hashPassword(plain: string): Promise<string> {

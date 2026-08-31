@@ -93,8 +93,54 @@ model Course {
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
   createdAt           DateTime @default(now())
 
+  // Gold-standard template fields, set by the Subject Expert
+  templateStatus      String   @default("draft") // draft | submitted | approved | changes-requested
+  assignmentPct       Int      @default(15)
+  quizPct             Int      @default(20)
+  projectPct          Int      @default(0)
+  labPct              Int      @default(0)
+  midtermPct          Int      @default(25)
+  finalPct            Int      @default(40)
+
+  clos                CLO[]
+  lectureRows         LectureRow[]
+
   @@unique([coordinatorId, code])
   @@index([coordinatorId])
+}
+
+// CLOs set by the Subject Expert for a course
+model CLO {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  code        String   // "CLO-1"
+  statement   String   @db.Text
+  bloomLevel  String   // C1..C6
+  createdAt   DateTime @default(now())
+
+  lectureRows LectureRow[]
+
+  @@unique([courseId, code])
+  @@index([courseId])
+}
+
+// The 30-lecture schedule set by the Subject Expert
+model LectureRow {
+  id            String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id])
+  week          Int
+  lectureNumber Int
+  topic         String
+  subtopic      String?
+  cloId         String?
+  clo           CLO?     @relation(fields: [cloId], references: [id])
+  bloomLevel    String?  // C1..C6
+  weightPct     Int      @default(0)
+
+  @@unique([courseId, lectureNumber])
+  @@index([courseId])
 }
 
 // ============================================================================
