@@ -240,7 +240,7 @@ model MasterCourse {
   title               String
   creditHours         Int
   category            String   // General Education | Major | IDS | Certification | Capstone Project | Field Experience
-  semesterNumber      Int
+  semesterNumber      Int?
 
   adoptedInto         Course[]
 
