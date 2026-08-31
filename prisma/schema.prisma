@@ -49,6 +49,7 @@ model User {
   courses            Course[] @relation("CourseCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
   plos               PLO[]    @relation("PloCoordinator")
+  batches            Batch[]  @relation("BatchCoordinator")
   auditLogs          AuditLog[]
 
   @@index([managedById])
@@ -81,6 +82,23 @@ model PasswordResetToken {
   @@index([userId])
 }
 
+// A cohort/intake — e.g. "BS Computer Science, Fall 2025". Different batches
+// can follow different schemes of studies, so the same HEC curriculum can be
+// (re-)imported independently for each one.
+model Batch {
+  id             String   @id @default(cuid())
+  coordinatorId  String
+  coordinator    User     @relation("BatchCoordinator", fields: [coordinatorId], references: [id])
+  degreeProgram  String   // e.g. "BS Computer Science"
+  batchName      String   // e.g. "Fall 2025"
+  createdAt      DateTime @default(now())
+
+  courses        Course[]
+
+  @@unique([coordinatorId, degreeProgram, batchName])
+  @@index([coordinatorId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -90,6 +108,8 @@ model Course {
   semesterNumber      Int?     // 1..8, which semester this is offered in
   coordinatorId       String
   coordinator         User     @relation("CourseCoordinator", fields: [coordinatorId], references: [id])
+  batchId             String?  // which cohort/intake this course offering belongs to
+  batch               Batch?   @relation(fields: [batchId], references: [id])
   subjectExpertId     String?
   subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
@@ -110,8 +130,9 @@ model Course {
   lectureRows         LectureRow[]
   ploMappings         CoursePloMapping[]
 
-  @@unique([coordinatorId, code])
+  @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
+  @@index([batchId])
 }
 
 // Institutional/Program PLOs — defined by the Program Coordinator (optionally

@@ -17,8 +17,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   }
 
   if (body.code !== course.code) {
-    const clash = await prisma.course.findFirst({ where: { coordinatorId: user.id, code: body.code, NOT: { id: course.id } } });
-    if (clash) return NextResponse.json({ error: "another course already uses this code" }, { status: 409 });
+    const clash = await prisma.course.findFirst({ where: { coordinatorId: user.id, batchId: course.batchId, code: body.code, NOT: { id: course.id } } });
+    if (clash) return NextResponse.json({ error: "another course in this batch already uses this code" }, { status: 409 });
   }
 
   const updated = await prisma.course.update({

@@ -28,8 +28,12 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  if (!body.code || !body.title || !body.creditHours) {
-    return NextResponse.json({ error: "code, title, creditHours are required" }, { status: 400 });
+  if (!body.code || !body.title || !body.creditHours || !body.batchId) {
+    return NextResponse.json({ error: "code, title, creditHours, batchId are required" }, { status: 400 });
+  }
+  const batch = await prisma.batch.findUnique({ where: { id: body.batchId } });
+  if (!batch || batch.coordinatorId !== user.id) {
+    return NextResponse.json({ error: "invalid batch" }, { status: 400 });
   }
 
   const course = await prisma.course.create({
@@ -38,6 +42,7 @@ export async function POST(req: NextRequest) {
       title: body.title,
       creditHours: parseInt(body.creditHours, 10),
       coordinatorId: user.id,
+      batchId: body.batchId,
       masterCourseId: body.masterCourseId || null,
     },
   });

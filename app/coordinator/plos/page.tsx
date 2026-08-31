@@ -6,6 +6,7 @@ import PlosManager from "../../../components/PlosManager";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
 ];

@@ -6,18 +6,22 @@ import CoursesManager from "../../../components/CoursesManager";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
 ];
 
-export default async function CoordinatorCoursesPage() {
+export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
+  const selectedBatchId = searchParams.batchId || "";
+
   const courses = await prisma.course.findMany({
-    where: { coordinatorId: user.id },
+    where: { coordinatorId: user.id, ...(selectedBatchId ? { batchId: selectedBatchId } : {}) },
     orderBy: [{ semesterNumber: "asc" }, { createdAt: "desc" }],
+    include: { batch: true },
   });
 
   const subjectExperts = await prisma.user.findMany({
@@ -25,18 +29,32 @@ export default async function CoordinatorCoursesPage() {
     orderBy: { name: "asc" },
   });
 
+  const batches = await prisma.batch.findMany({
+    where: { coordinatorId: user.id },
+    orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
+  });
+
+  const curricula = await prisma.masterCurriculum.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: [{ authority: "asc" }, { title: "asc" }, { version: "desc" }],
+  });
+
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Import the full HEC curriculum in one click, or add courses manually. Everything stays editable afterward.
+        Import from any published curriculum into a specific batch, or add courses manually. Everything stays editable afterward.
       </p>
       <CoursesManager
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
           semesterNumber: c.semesterNumber, fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId,
+          batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
+        batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
+        curricula={curricula.map((c) => ({ id: c.id, authority: c.authority, title: c.title, version: c.version }))}
+        selectedBatchId={selectedBatchId}
       />
     </Shell>
   );
