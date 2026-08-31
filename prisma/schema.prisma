@@ -48,6 +48,7 @@ model User {
   resetTokens        PasswordResetToken[]
   courses            Course[] @relation("CourseCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
+  plos               PLO[]    @relation("PloCoordinator")
   auditLogs          AuditLog[]
 
   @@index([managedById])
@@ -85,6 +86,8 @@ model Course {
   code                String
   title               String
   creditHours         Int
+  courseType          String   @default("Core") // Core | Elective | Lab | IDS | General Education | Capstone Project | Field Experience
+  semesterNumber      Int?     // 1..8, which semester this is offered in
   coordinatorId       String
   coordinator         User     @relation("CourseCoordinator", fields: [coordinatorId], references: [id])
   subjectExpertId     String?
@@ -101,12 +104,54 @@ model Course {
   labPct              Int      @default(0)
   midtermPct          Int      @default(25)
   finalPct            Int      @default(40)
+  omcComment          String?  @db.Text // latest OMC review comment on this template
 
   clos                CLO[]
   lectureRows         LectureRow[]
+  ploMappings         CoursePloMapping[]
 
   @@unique([coordinatorId, code])
   @@index([coordinatorId])
+}
+
+// Institutional/Program PLOs — defined by the Program Coordinator (optionally
+// starting from a HEC PLO as a template), editable and formally approved by
+// the Chairman. CLOs map to THESE, not directly to the read-only HEC list,
+// so the institution's actual approved PLOs are what's authoritative.
+model PLO {
+  id                    String   @id @default(cuid())
+  coordinatorId         String
+  coordinator           User     @relation("PloCoordinator", fields: [coordinatorId], references: [id])
+  number                Int
+  title                 String
+  description           String   @db.Text
+  sourceMasterPloNumber Int?     // which HEC PLO this was copied from, if any — traceability only
+  status                String   @default("draft") // draft | approved | changes-requested
+  chairmanComment       String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  clos                  CLO[]
+  ploMappings           CoursePloMapping[]
+
+  @@unique([coordinatorId, number])
+  @@index([coordinatorId])
+}
+
+// OMC assigns which PLOs each course contributes to — a many-to-many matrix,
+// not something a Subject Expert or Coordinator sets themselves.
+model CoursePloMapping {
+  id           String   @id @default(cuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  ploId        String
+  plo          PLO      @relation(fields: [ploId], references: [id])
+  assignedById String   // the OMC member who made this assignment
+  createdAt    DateTime @default(now())
+
+  @@unique([courseId, ploId])
+  @@index([courseId])
+  @@index([ploId])
 }
 
 // CLOs set by the Subject Expert for a course
@@ -117,6 +162,8 @@ model CLO {
   code        String   // "CLO-1"
   statement   String   @db.Text
   bloomLevel  String   // C1..C6
+  mappedPloId String?  // references the institution's own PLO (see PLO model)
+  mappedPlo   PLO?     @relation(fields: [mappedPloId], references: [id])
   createdAt   DateTime @default(now())
 
   lectureRows LectureRow[]

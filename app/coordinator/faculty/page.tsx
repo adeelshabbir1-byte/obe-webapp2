@@ -7,6 +7,7 @@ import CreateUserForm from "../../../components/CreateUserForm";
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
   { href: "/coordinator/courses", label: "Courses" },
+  { href: "/coordinator/plos", label: "Program Learning Outcomes" },
 ];
 
 export default async function CoordinatorFacultyPage() {

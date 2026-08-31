@@ -6,7 +6,8 @@ const ROLE_HOME: Record<string, string> = {
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
-  // INSTRUCTOR, OMC pages follow the same pattern as the pages already built.
+  OMC: "/omc/queue",
+  // INSTRUCTOR pages follow the same pattern as the pages already built.
 };
 
 export default async function Dashboard() {

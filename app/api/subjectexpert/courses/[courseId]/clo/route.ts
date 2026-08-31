@@ -18,7 +18,10 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (existing) return NextResponse.json({ error: "a CLO with this code already exists on this course" }, { status: 409 });
 
   const clo = await prisma.cLO.create({
-    data: { courseId: course.id, code: body.code, statement: body.statement, bloomLevel: body.bloomLevel },
+    data: {
+      courseId: course.id, code: body.code, statement: body.statement, bloomLevel: body.bloomLevel,
+      mappedPloId: body.mappedPloId || null,
+    },
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "CLO_ADDED", entityType: "CLO", entityId: clo.id });
