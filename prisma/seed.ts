@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import argon2 from "argon2";
+import { hashPassword } from "../lib/auth";
 import { HEC_BSCS_2025, HEC_BSCS_2025_PLOS, HEC_BSCS_2025_COURSES } from "./hec-bscs-2025";
 
 const prisma = new PrismaClient();
@@ -11,7 +11,7 @@ async function seedSuperUser() {
     return;
   }
 
-  const passwordHash = await argon2.hash("ChangeMe123!", { type: argon2.argon2id });
+  const passwordHash = await hashPassword("ChangeMe123!");
 
   await prisma.user.create({
     data: {
