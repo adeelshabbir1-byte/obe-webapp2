@@ -22,13 +22,19 @@ export default async function OmcPloReportPage() {
   const reportSections = [];
   for (const coord of coordinators) {
     const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
-    const counts: Record<string, number> = {};
+    const rows = [];
     for (const p of plos) {
-      counts[p.id] = await prisma.coursePloMapping.count({ where: { ploId: p.id } });
+      const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
+      const byType: Record<string, number> = {};
+      for (const m of mappings) byType[m.course.courseType] = (byType[m.course.courseType] || 0) + 1;
+      rows.push({ number: p.number, title: p.title, count: mappings.length, byType });
     }
     const totalCourses = await prisma.course.count({ where: { coordinatorId: coord.id } });
-    const max = Math.max(1, ...Object.values(counts));
-    reportSections.push({ coordinatorName: coord.name, totalCourses, rows: plos.map((p) => ({ number: p.number, title: p.title, count: counts[p.id] || 0, pct: Math.round(((counts[p.id] || 0) / max) * 100) })) });
+    const max = Math.max(1, ...rows.map((r) => r.count));
+    reportSections.push({
+      coordinatorName: coord.name, totalCourses,
+      rows: rows.map((r) => ({ ...r, pct: Math.round((r.count / max) * 100) })),
+    });
   }
 
   return (
@@ -44,15 +50,26 @@ export default async function OmcPloReportPage() {
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 14 }}>{sec.totalCourses} course(s) total</p>
           {sec.rows.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLOs defined.</p>}
           {sec.rows.map((r) => (
-            <div key={r.number} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
-              <div style={{ width: 200, fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>PLO-{r.number}: {r.title}</div>
-              <div style={{ flex: 1, height: 14, background: "#EFEADC", position: "relative" }}>
-                <div style={{ height: "100%", width: `${r.pct}%`, background: "var(--brass)" }} />
+            <div key={r.number} style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 200, fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>PLO-{r.number}: {r.title}</div>
+                <div style={{ flex: 1, height: 14, background: "#EFEADC", position: "relative" }}>
+                  <div style={{ height: "100%", width: `${r.pct}%`, background: "var(--brass)" }} />
+                </div>
+                <div style={{ width: 130, textAlign: "right", fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
+                  {r.count} course{r.count === 1 ? "" : "s"}
+                  {r.count === 0 && <span style={{ marginLeft: 6, background: "#F5EAE5", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                </div>
               </div>
-              <div style={{ width: 130, textAlign: "right", fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
-                {r.count} course{r.count === 1 ? "" : "s"}
-                {r.count === 0 && <span style={{ marginLeft: 6, background: "#F5EAE5", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
-              </div>
+              {r.count > 0 && (
+                <div style={{ marginLeft: 210, marginTop: 4, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {Object.entries(r.byType).map(([type, n]) => (
+                    <span key={type} style={{ fontSize: 10.5, background: "#EFECE3", color: "var(--slate)", padding: "2px 8px", borderRadius: 2 }}>
+                      {type}: {n}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
