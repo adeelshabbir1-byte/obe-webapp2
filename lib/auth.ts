@@ -1,17 +1,30 @@
-import argon2 from "argon2";
+import crypto from "crypto";
 import { prisma } from "./db";
 import { writeAuditLog } from "./audit";
 
 const MAX_FAILED_LOGINS = 8;
 const LOCKOUT_MINUTES = 15;
 
+const SCRYPT_KEYLEN = 64;
+
 export async function hashPassword(plain: string): Promise<string> {
-  return argon2.hash(plain, { type: argon2.argon2id });
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derivedKey = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(plain, salt, SCRYPT_KEYLEN, (err, key) => (err ? reject(err) : resolve(key)));
+  });
+  return `scrypt:${salt}:${derivedKey.toString("hex")}`;
 }
 
-export async function verifyPassword(hash: string, plain: string): Promise<boolean> {
+export async function verifyPassword(storedHash: string, plain: string): Promise<boolean> {
   try {
-    return await argon2.verify(hash, plain);
+    const [scheme, salt, hashHex] = storedHash.split(":");
+    if (scheme !== "scrypt" || !salt || !hashHex) return false;
+    const derivedKey = await new Promise<Buffer>((resolve, reject) => {
+      crypto.scrypt(plain, salt, SCRYPT_KEYLEN, (err, key) => (err ? reject(err) : resolve(key)));
+    });
+    const storedBuffer = Buffer.from(hashHex, "hex");
+    if (storedBuffer.length !== derivedKey.length) return false;
+    return crypto.timingSafeEqual(storedBuffer, derivedKey);
   } catch {
     return false;
   }
