@@ -1,0 +1,161 @@
+// ============================================================================
+// OBE / Curriculum / Accreditation Platform — Core Data Model (MVP)
+// Lineage backbone: Super User -> Chairman -> Program Coordinator -> Faculty
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_USER
+  CHAIRMAN
+  PROGRAM_COORDINATOR
+  SUBJECT_EXPERT
+  INSTRUCTOR
+  OMC
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  username           String   @unique
+  passwordHash       String   // Argon2id hash — never plaintext
+  name               String
+  role               UserRole
+  department         String?
+
+  // Self-relation: who created / manages this account (Super User -> Chairman ->
+  // Program Coordinator -> Faculty). Keeps the org chain queryable without a
+  // separate institution model, which can be layered in later.
+  managedById        String?
+  managedBy          User?    @relation("UserManagement", fields: [managedById], references: [id])
+  managedUsers       User[]   @relation("UserManagement")
+
+  mustChangePassword Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  failedLoginCount   Int      @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  sessions           Session[]
+  resetTokens        PasswordResetToken[]
+  courses            Course[] @relation("CourseCoordinator")
+  seCourses          Course[] @relation("CourseSubjectExpert")
+  auditLogs          AuditLog[]
+
+  @@index([managedById])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+
+  @@index([userId])
+}
+
+model Course {
+  id                  String   @id @default(cuid())
+  code                String
+  title               String
+  creditHours         Int
+  coordinatorId       String
+  coordinator         User     @relation("CourseCoordinator", fields: [coordinatorId], references: [id])
+  subjectExpertId     String?
+  subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
+  masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
+  masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
+  createdAt           DateTime @default(now())
+
+  @@unique([coordinatorId, code])
+  @@index([coordinatorId])
+}
+
+// ============================================================================
+// LAYER 1 — OFFICIAL MASTER CURRICULUM
+// Seeded from real HEC notifications (see prisma/hec-bscs-2025.ts). Immutable
+// once published — institutions adopt a copy via Course.masterCourseId, they
+// never edit these rows directly.
+// ============================================================================
+
+model MasterCurriculum {
+  id                 String   @id @default(cuid())
+  authority          String   // "HEC", "NCEAC", etc.
+  title              String   // "BS Computer Science"
+  version            String   // "2025"
+  publicationDate    DateTime?
+  sourceReference    String?  // e.g. "HEC/NCRC/CS&IT/2025/8163"
+  status             String   @default("PUBLISHED") // DRAFT | PUBLISHED | SUPERSEDED
+  createdAt          DateTime @default(now())
+
+  courses            MasterCourse[]
+  plos               MasterPLO[]
+}
+
+model MasterCourse {
+  id                  String   @id @default(cuid())
+  masterCurriculumId  String
+  masterCurriculum    MasterCurriculum @relation(fields: [masterCurriculumId], references: [id])
+  code                String   // suggested numbering — not an official HEC code, see seed file comment
+  title               String
+  creditHours         Int
+  category            String   // General Education | Major | IDS | Certification | Capstone Project | Field Experience
+  semesterNumber      Int
+
+  adoptedInto         Course[]
+
+  @@index([masterCurriculumId])
+  @@unique([masterCurriculumId, code])
+}
+
+model MasterPLO {
+  id                  String   @id @default(cuid())
+  masterCurriculumId  String
+  masterCurriculum    MasterCurriculum @relation(fields: [masterCurriculumId], references: [id])
+  number              Int
+  title               String
+  description         String   @db.Text
+
+  @@index([masterCurriculumId])
+  @@unique([masterCurriculumId, number])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actor        User?    @relation(fields: [actorUserId], references: [id])
+  action       String
+  entityType   String?
+  entityId     String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+}
