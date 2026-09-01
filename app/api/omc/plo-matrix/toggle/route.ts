@@ -15,10 +15,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "courseId, ploId, mapped are required" }, { status: 400 });
   }
 
-  // Verify this course/PLO belong to a coordinator this OMC member can see.
+  // Verify this course/PLO belong to a coordinator this OMC member can see,
+  // AND that the PLO actually belongs to the SAME batch as the course
+  // (PLOs are batch-scoped — a course must only map to its own batch's PLOs).
   const course = await prisma.course.findUnique({ where: { id: courseId }, include: { coordinator: true } });
   const plo = await prisma.pLO.findUnique({ where: { id: ploId } });
-  if (!course || !plo || course.coordinator.managedById !== user.managedById || plo.coordinatorId !== course.coordinatorId) {
+  if (!course || !plo || course.coordinator.managedById !== user.managedById || plo.batchId !== course.batchId) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 

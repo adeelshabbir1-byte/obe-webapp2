@@ -216,6 +216,11 @@ CREATE TABLE IF NOT EXISTS "CurrentTerm" (
 ALTER TABLE "Course"
   ADD COLUMN IF NOT EXISTS "instructorId" TEXT REFERENCES "User"("id"),
   ADD COLUMN IF NOT EXISTS "isOffered" BOOLEAN NOT NULL DEFAULT false;
+-- Run in Supabase SQL Editor. The User.role column is a genuine PostgreSQL
+-- enum type (not plain text, as an earlier migration's comment incorrectly
+-- assumed) — this actually adds COURSE_ASSIGNER as a valid value.
+
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'COURSE_ASSIGNER';
 -- Run in Supabase SQL Editor. Adds faculty load tracking, the
 -- CourseSectionAssignment matrix table, and the COURSE_ASSIGNER role
 -- (role is stored as text, so no enum change needed at the DB level).
@@ -271,6 +276,104 @@ CREATE INDEX IF NOT EXISTS "GroupSectionAssignment_instructorId_idx" ON "GroupSe
 ALTER TABLE "Course"
   ADD COLUMN IF NOT EXISTS "offeredTermName" TEXT,
   ADD COLUMN IF NOT EXISTS "offeredTermYear" INTEGER;
+-- Run in Supabase SQL Editor. Adds degreeProgram to PLO, backfills existing
+-- rows where possible, and replaces the old unique constraint/index with the
+-- correct one. Finds the old one dynamically (by column match) rather than
+-- guessing its exact name, since that's bitten us before.
+
+ALTER TABLE "PLO" ADD COLUMN IF NOT EXISTS "degreeProgram" TEXT NOT NULL DEFAULT '';
+
+-- Backfill: where a coordinator has exactly one distinct degree program
+-- across their batches, assume existing PLOs belong to it.
+UPDATE "PLO" p
+SET "degreeProgram" = sub.only_degree
+FROM (
+  SELECT "coordinatorId", MIN("degreeProgram") AS only_degree
+  FROM "Batch"
+  GROUP BY "coordinatorId"
+  HAVING COUNT(DISTINCT "degreeProgram") = 1
+) sub
+WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = '';
+
+-- Drop whatever the old (coordinatorId, number) unique constraint/index is
+-- called, as either a formal constraint or a plain index.
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    WHERE rel.relname = 'PLO' AND con.contype = 'u'
+      AND (
+        SELECT array_agg(a.attname ORDER BY a.attnum)::text[]
+        FROM pg_attribute a
+        WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+      ) = ARRAY['coordinatorId','number']::text[]
+  LOOP
+    EXECUTE format('ALTER TABLE "PLO" DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+END $$;
+
+DROP INDEX IF EXISTS "PLO_coordinatorId_number_key";
+
+CREATE UNIQUE INDEX IF NOT EXISTS "PLO_coordinatorId_degreeProgram_number_key" ON "PLO"("coordinatorId", "degreeProgram", "number");
+
+-- Add COURSE_ASSIGNER to the UserRole enum if it's somehow still missing
+-- (the IF NOT EXISTS clause makes this safe to run again even if already applied).
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'COURSE_ASSIGNER';
+-- Run in Supabase SQL Editor. Re-scopes PLO from (coordinator + degreeProgram)
+-- to (batch) directly — since even two cohorts of the same degree can have
+-- different PLOs.
+--
+-- IMPORTANT: the backfill below is a best-effort guess (it picks the most
+-- recently created batch matching each PLO's old degreeProgram, when a
+-- coordinator has more than one batch for that degree). After running this,
+-- go to Coordinator → Program Learning Outcomes for each batch and confirm
+-- the PLOs landed on the right one — move/recreate any that didn't.
+
+ALTER TABLE "PLO" ADD COLUMN IF NOT EXISTS "batchId" TEXT;
+
+UPDATE "PLO" p
+SET "batchId" = sub.batch_id
+FROM (
+  SELECT DISTINCT ON (b."coordinatorId", b."degreeProgram")
+    b."coordinatorId", b."degreeProgram", b.id AS batch_id
+  FROM "Batch" b
+  ORDER BY b."coordinatorId", b."degreeProgram", b."createdAt" DESC
+) sub
+WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = sub."degreeProgram" AND p."batchId" IS NULL;
+
+-- Drop the old (coordinatorId, degreeProgram, number) unique constraint/index,
+-- whatever it's actually called.
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    WHERE rel.relname = 'PLO' AND con.contype = 'u'
+      AND (
+        SELECT array_agg(a.attname ORDER BY a.attnum)::text[]
+        FROM pg_attribute a
+        WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+      ) = ARRAY['coordinatorId','degreeProgram','number']::text[]
+  LOOP
+    EXECUTE format('ALTER TABLE "PLO" DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+END $$;
+DROP INDEX IF EXISTS "PLO_coordinatorId_degreeProgram_number_key";
+
+-- Drop the now-unused degreeProgram column and enforce the new scoping.
+ALTER TABLE "PLO" DROP COLUMN IF EXISTS "degreeProgram";
+CREATE UNIQUE INDEX IF NOT EXISTS "PLO_batchId_number_key" ON "PLO"("batchId", "number");
+
+-- Any PLO that still has no batchId (e.g. its coordinator had zero matching
+-- batches somehow) is orphaned — this just reports how many, doesn't delete them.
+SELECT count(*) AS plos_still_missing_a_batch FROM "PLO" WHERE "batchId" IS NULL;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (the old Course_coordinatorId_code_key index fix and orphaned-course cleanup were one-off repairs, not needed for a fresh database)

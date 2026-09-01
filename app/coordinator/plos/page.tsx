@@ -13,12 +13,17 @@ const NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
 ];
 
-export default async function CoordinatorPlosPage() {
+export default async function CoordinatorPlosPage({ searchParams }: { searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const plos = await prisma.pLO.findMany({ where: { coordinatorId: user.id }, orderBy: { number: "asc" } });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const selectedBatchId = searchParams.batchId || batches[0]?.id || "";
+
+  const plos = selectedBatchId
+    ? await prisma.pLO.findMany({ where: { coordinatorId: user.id, batchId: selectedBatchId }, orderBy: { number: "asc" } })
+    : [];
   const hecPlos = await prisma.masterPLO.findMany({
     where: { masterCurriculum: { authority: "HEC" } },
     orderBy: { number: "asc" },
@@ -28,15 +33,34 @@ export default async function CoordinatorPlosPage() {
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Learning Outcomes</h1>
-        <a href="/api/coordinator/plos/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Define your program's PLOs — copy a starting point from the HEC curriculum or write your own. The Chairman reviews and approves them before Subject Experts map CLOs to them.
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
+        PLOs are defined separately per batch/cohort — even two intakes of the same degree can have different
+        outcomes if the curriculum was revised between them. Copy a starting point from the HEC curriculum or
+        write your own; the Chairman reviews and approves them before Subject Experts map CLOs to them.
       </p>
-      <PlosManager
-        initialPlos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description, status: p.status, chairmanComment: p.chairmanComment, sourceMasterPloNumber: p.sourceMasterPloNumber }))}
-        hecPlos={hecPlos.map((h) => ({ number: h.number, title: h.title, description: h.description }))}
-      />
+
+      {batches.length === 0 ? (
+        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Create a batch first before defining PLOs.</p></div>
+      ) : (
+        <>
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Batch</label>
+            <form method="GET" style={{ display: "inline" }}>
+              <select name="batchId" defaultValue={selectedBatchId} onChange={(e) => e.currentTarget.form?.submit()} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
+              </select>
+            </form>
+          </div>
+          <PlosManager
+            key={selectedBatchId}
+            batchId={selectedBatchId}
+            initialPlos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description, status: p.status, chairmanComment: p.chairmanComment, sourceMasterPloNumber: p.sourceMasterPloNumber }))}
+            hecPlos={hecPlos.map((h) => ({ number: h.number, title: h.title, description: h.description }))}
+          />
+        </>
+      )}
     </Shell>
   );
 }

@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; coordinatorName: string };
+type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; coordinatorName: string; degreeProgram: string };
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
@@ -38,19 +38,19 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
     <div className="card">
       {error && <div className="err">{error}</div>}
       <table>
-        <thead><tr><th>#</th><th>Title</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
         <tbody>
-          {initialPlos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
+          {initialPlos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
           {initialPlos.map((p) => (
             <Fragment key={p.id}>
               <tr>
-                <td>PLO-{p.number}</td><td>{p.title}</td><td>{p.coordinatorName}</td>
+                <td>PLO-{p.number}</td><td>{p.title}</td><td style={{ fontSize: 11.5 }}>{p.degreeProgram}</td><td>{p.coordinatorName}</td>
                 <td>{statusBadge(p.status)}</td>
                 <td><button onClick={() => setOpenId(openId === p.id ? null : p.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>{openId === p.id ? "Close" : "Review"}</button></td>
               </tr>
               {openId === p.id && (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <form onSubmit={(e) => decide(e, p.id, "approved")} style={{ padding: "10px 0" }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12, marginBottom: 10 }}>
                         <div className="field"><label>Title</label><input name="title" defaultValue={p.title} required /></div>

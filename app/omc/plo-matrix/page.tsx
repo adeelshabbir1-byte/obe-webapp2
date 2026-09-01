@@ -22,17 +22,23 @@ export default async function OmcPloMatrixPage() {
     where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" },
     orderBy: { name: "asc" },
   });
+  const coordinatorIds = coordinators.map((c) => c.id);
+
+  // Grouped by BATCH directly — a course already belongs to exactly one
+  // batch, and PLOs are now scoped per batch too, so this is a clean 1:1 match.
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
 
   const programs = [];
-  for (const coord of coordinators) {
+  for (const batch of batches) {
     const courses = await prisma.course.findMany({
-      where: { coordinatorId: coord.id },
+      where: { batchId: batch.id },
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       include: { ploMappings: true },
     });
-    const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
+    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
+    if (courses.length === 0 && plos.length === 0) continue;
     programs.push({
-      coordinatorId: coord.id, coordinatorName: coord.name,
+      coordinatorId: batch.id, coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`,
       plos: plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status })),
       courses: courses.map((c) => ({
         id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
@@ -45,7 +51,8 @@ export default async function OmcPloMatrixPage() {
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO–Course Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Assign which PLOs each course contributes to. Check a box to map it — no need to add rows one at a time.
+        Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
+        of the same degree can have different PLOs.
       </p>
       <PloMatrix programs={programs} />
     </Shell>

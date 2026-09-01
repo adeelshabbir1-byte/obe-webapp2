@@ -107,6 +107,7 @@ model Batch {
   createdAt      DateTime @default(now())
 
   courses        Course[]
+  plos           PLO[]    @relation("BatchPlos")
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
@@ -295,6 +296,8 @@ model PLO {
   id                    String   @id @default(cuid())
   coordinatorId         String
   coordinator           User     @relation("PloCoordinator", fields: [coordinatorId], references: [id])
+  batchId               String   // PLOs are scoped per BATCH — even two cohorts of the same degree can differ
+  batch                 Batch    @relation("BatchPlos", fields: [batchId], references: [id])
   number                Int
   title                 String
   description           String   @db.Text
@@ -307,8 +310,9 @@ model PLO {
   clos                  CLO[]
   ploMappings           CoursePloMapping[]
 
-  @@unique([coordinatorId, number])
+  @@unique([batchId, number])
   @@index([coordinatorId])
+  @@index([batchId])
 }
 
 // OMC assigns which PLOs each course contributes to — a many-to-many matrix,

@@ -10,34 +10,30 @@ export async function GET() {
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+
   const groups = await prisma.courseEquivalenceGroup.findMany({
     where: { chairmanId: user.managedById || "" },
-    include: { members: { include: { course: { include: { batch: true } } } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
   });
 
-  // Courses eligible to add: offered, not already in a group.
-  const allOffered = await prisma.course.findMany({
+  const allCourses = await prisma.course.findMany({
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
-    include: { batch: true, equivalenceMember: true },
+    include: { equivalenceMember: true },
     orderBy: [{ code: "asc" }],
   });
-  const availableCourses = allOffered.filter((c) => !c.equivalenceMember);
+
+  const batchColumns = batches.map((b) => ({
+    batchId: b.id,
+    batchLabel: `${b.degreeProgram} — ${b.batchName}`,
+    courses: allCourses
+      .filter((c) => c.batchId === b.id)
+      .map((c) => ({ id: c.id, code: c.code, title: c.title, studentCount: b.studentCount, groupId: c.equivalenceMember?.groupId || null })),
+  }));
 
   return NextResponse.json({
-    groups: groups.map((g) => ({
-      id: g.id, name: g.name,
-      members: g.members.map((m) => ({
-        courseId: m.course.id, code: m.course.code, title: m.course.title,
-        batchLabel: m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—",
-        studentCount: m.course.batch?.studentCount || 0,
-      })),
-    })),
-    availableCourses: availableCourses.map((c) => ({
-      id: c.id, code: c.code, title: c.title,
-      batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
-      studentCount: c.batch?.studentCount || 0,
-    })),
+    batches: batchColumns,
+    groups: groups.map((g) => ({ id: g.id, name: g.name })),
   });
 }
 

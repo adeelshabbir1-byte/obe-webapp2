@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedUser } from "../../../../../lib/session";
+import { prisma } from "../../../../../lib/db";
+import { writeAuditLog } from "../../../../../lib/audit";
+
+export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
+
+  const body = await req.json();
+  const { courseIdA, courseIdB } = body;
+  if (!courseIdA || !courseIdB || courseIdA === courseIdB) {
+    return NextResponse.json({ error: "two different courseIds are required" }, { status: 400 });
+  }
+
+  const [courseA, courseB, memberA, memberB] = await Promise.all([
+    prisma.course.findUnique({ where: { id: courseIdA } }),
+    prisma.course.findUnique({ where: { id: courseIdB } }),
+    prisma.courseEquivalenceMember.findUnique({ where: { courseId: courseIdA } }),
+    prisma.courseEquivalenceMember.findUnique({ where: { courseId: courseIdB } }),
+  ]);
+  if (!courseA || !courseB) return NextResponse.json({ error: "course not found" }, { status: 404 });
+
+  // Already in the same group — nothing to do.
+  if (memberA && memberB && memberA.groupId === memberB.groupId) {
+    return NextResponse.json({ groupId: memberA.groupId });
+  }
+
+  let groupId: string;
+
+  if (memberA && !memberB) {
+    groupId = memberA.groupId;
+    await prisma.courseEquivalenceMember.create({ data: { groupId, courseId: courseIdB } });
+  } else if (memberB && !memberA) {
+    groupId = memberB.groupId;
+    await prisma.courseEquivalenceMember.create({ data: { groupId, courseId: courseIdA } });
+  } else if (memberA && memberB) {
+    // Both already grouped, but in different groups — merge B's group into A's.
+    groupId = memberA.groupId;
+    await prisma.courseEquivalenceMember.updateMany({ where: { groupId: memberB.groupId }, data: { groupId } });
+    const oldGroup = await prisma.courseEquivalenceGroup.findUnique({ where: { id: memberB.groupId } });
+    if (oldGroup) await prisma.courseEquivalenceGroup.delete({ where: { id: memberB.groupId } }).catch(() => {});
+  } else {
+    const group = await prisma.courseEquivalenceGroup.create({
+      data: { chairmanId: user.managedById, name: `${courseA.code} / ${courseB.code}` },
+    });
+    groupId = group.id;
+    await prisma.courseEquivalenceMember.createMany({ data: [{ groupId, courseId: courseIdA }, { groupId, courseId: courseIdB }] });
+  }
+
+  await writeAuditLog({ actorUserId: user.id, action: "EQUIVALENCE_PAIRED", entityType: "CourseEquivalenceGroup", entityId: groupId, metadata: { courseIdA, courseIdB } });
+
+  // Give the other course a head start: if one already has PLOs mapped and
+  // the other has none yet, copy the mapping over by PLO NUMBER (translated
+  // into that course's own degree program's PLOs, since PLO records differ
+  // across programs) — fully editable afterward, not a live sync.
+  await copyPloMappingByNumber(courseIdA, courseIdB);
+  await copyPloMappingByNumber(courseIdB, courseIdA);
+
+  return NextResponse.json({ groupId });
+}
+
+async function copyPloMappingByNumber(fromCourseId: string, toCourseId: string) {
+  const [fromMappings, toMappings, toCourse] = await Promise.all([
+    prisma.coursePloMapping.findMany({ where: { courseId: fromCourseId }, include: { plo: true } }),
+    prisma.coursePloMapping.count({ where: { courseId: toCourseId } }),
+    prisma.course.findUnique({ where: { id: toCourseId } }),
+  ]);
+  if (fromMappings.length === 0 || toMappings > 0 || !toCourse) return; // only fill in an empty target
+
+  const toPlos = await prisma.pLO.findMany({ where: { batchId: toCourse.batchId || "", number: { in: fromMappings.map((m) => m.plo.number) } } });
+  const toPloByNumber = new Map(toPlos.map((p) => [p.number, p]));
+
+  for (const m of fromMappings) {
+    const match = toPloByNumber.get(m.plo.number);
+    if (match) {
+      await prisma.coursePloMapping.upsert({
+        where: { courseId_ploId: { courseId: toCourseId, ploId: match.id } },
+        create: { courseId: toCourseId, ploId: match.id, assignedById: m.assignedById },
+        update: {},
+      });
+    }
+  }
+}

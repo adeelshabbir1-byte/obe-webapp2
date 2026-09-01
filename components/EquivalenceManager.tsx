@@ -2,127 +2,121 @@
 
 import { useState, useEffect } from "react";
 
-type Member = { courseId: string; code: string; title: string; batchLabel: string; studentCount: number };
-type Group = { id: string; name: string; members: Member[] };
-type Available = { id: string; code: string; title: string; batchLabel: string; studentCount: number };
+type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null };
+type BatchColumn = { batchId: string; batchLabel: string; courses: Course[] };
+type Group = { id: string; name: string };
 
 export default function EquivalenceManager() {
+  const [batches, setBatches] = useState<BatchColumn[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [available, setAvailable] = useState<Available[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [addingToGroup, setAddingToGroup] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ batchId: string; courseId: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     try {
       const res = await fetch("/api/omc/equivalence");
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
-      setGroups(data.groups); setAvailable(data.availableCourses); setLoaded(true);
+      setBatches(data.batches); setGroups(data.groups); setLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
   }
 
   useEffect(() => { load(); }, []);
 
-  async function createGroup(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true); setError("");
-    const fd = new FormData(e.currentTarget);
+  async function handleClick(batchId: string, courseId: string) {
+    if (!selected) { setSelected({ batchId, courseId }); return; }
+    if (selected.courseId === courseId) { setSelected(null); return; } // clicked same course again — deselect
+    if (selected.batchId === batchId) {
+      // Same column — just move selection, don't pair with itself-column
+      setSelected({ batchId, courseId });
+      return;
+    }
+    // Different column — pair them
+    setBusy(true); setError("");
     try {
-      const res = await fetch("/api/omc/equivalence", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: fd.get("name") }),
+      const res = await fetch("/api/omc/equivalence/pair", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseIdA: selected.courseId, courseIdB: courseId }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); await load();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); setSelected(null); return; }
+      setSelected(null); setBusy(false); await load();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); setSelected(null); }
   }
 
-  async function deleteGroup(groupId: string) {
-    setLoading(true);
-    await fetch(`/api/omc/equivalence/${groupId}`, { method: "DELETE" });
-    setLoading(false); await load();
-  }
-
-  async function addMember(groupId: string, courseId: string) {
-    if (!courseId) return;
-    setLoading(true); setError("");
+  async function handleDoubleClick(courseId: string, groupId: string | null) {
+    if (!groupId) return; // not grouped, nothing to remove
+    setBusy(true); setError("");
     try {
-      const res = await fetch(`/api/omc/equivalence/${groupId}/members`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setAddingToGroup(null); setLoading(false); await load();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
-  }
-
-  async function removeMember(groupId: string, courseId: string) {
-    setLoading(true);
-    await fetch(`/api/omc/equivalence/${groupId}/members/${courseId}`, { method: "DELETE" });
-    setLoading(false); await load();
+      await fetch(`/api/omc/equivalence/${groupId}/members/${courseId}`, { method: "DELETE" });
+      setBusy(false); await load();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
   if (!loaded) return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Loading…</p></div>;
+  if (batches.length === 0) return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No batches with offered courses yet.</p></div>;
+
+  // Row layout: grouped rows first (aligned by group order), then each
+  // column's remaining ungrouped courses stacked independently below.
+  const maxUngrouped = Math.max(0, ...batches.map((b) => b.courses.filter((c) => !c.groupId).length));
+  const totalRows = groups.length + maxUngrouped;
+
+  function cellFor(batch: BatchColumn, rowIndex: number): Course | null {
+    if (rowIndex < groups.length) {
+      const g = groups[rowIndex];
+      return batch.courses.find((c) => c.groupId === g.id) || null;
+    }
+    const ungrouped = batch.courses.filter((c) => !c.groupId);
+    return ungrouped[rowIndex - groups.length] || null;
+  }
 
   return (
     <>
       {error && <div className="err">{error}</div>}
-
-      {groups.map((g) => {
-        const total = g.members.reduce((sum, m) => sum + m.studentCount, 0);
-        const sections = Math.max(1, Math.ceil(total / 50));
-        return (
-          <div className="card" key={g.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h3 style={{ fontSize: 14 }}>{g.name}</h3>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, color: "var(--slate)" }}>
-                  {total} combined students → <b style={{ color: sections > 1 ? "var(--rust)" : "var(--ink)" }}>{sections} section{sections === 1 ? "" : "s"} needed</b>
-                </span>
-                <button onClick={() => deleteGroup(g.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete Group</button>
-              </div>
-            </div>
-            <table>
-              <thead><tr><th>Course</th><th>Batch</th><th>Students</th><th></th></tr></thead>
-              <tbody>
-                {g.members.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No courses added yet.</td></tr>}
-                {g.members.map((m) => (
-                  <tr key={m.courseId}>
-                    <td><b>{m.code}</b> {m.title}</td><td style={{ fontSize: 11.5 }}>{m.batchLabel}</td><td>{m.studentCount}</td>
-                    <td><button onClick={() => removeMember(g.id, m.courseId)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {addingToGroup === g.id ? (
-              <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-                <select onChange={(e) => addMember(g.id, e.target.value)} disabled={loading} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-                  <option value="">— Select a course to add —</option>
-                  {available.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title} ({c.batchLabel})</option>)}
-                </select>
-                <button onClick={() => setAddingToGroup(null)} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 12, textDecoration: "underline", cursor: "pointer" }}>Cancel</button>
-              </div>
-            ) : (
-              <button onClick={() => setAddingToGroup(g.id)} className="btn btn-brass" style={{ marginTop: 10, padding: "6px 12px", fontSize: 12 }}>+ Add Course</button>
-            )}
-          </div>
-        );
-      })}
-
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Create Equivalence Group</h3>
-        <form onSubmit={createGroup} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Group Name</label>
-            <input name="name" placeholder="Introduction to Programming (shared)" required style={{ padding: "7px 9px", border: "1px solid var(--line)", width: "100%" }} />
-          </div>
-          <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "7px 14px" }}>Create</button>
-        </form>
-        <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-          Only courses currently offered (and not already in another group) can be added as members.
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 4 }}>
+          Click a course, then click another in a <b>different</b> column to mark them equivalent — they'll snap
+          into the same row. Double-click a course that's already paired to remove it from its group (it drops
+          back to the bottom of its own column).
         </p>
+        {selected && <p style={{ fontSize: 12, color: "var(--brass-dark)" }}>Selected — click a course in another column to pair.</p>}
+      </div>
+
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table style={{ tableLayout: "fixed" }}>
+          <thead>
+            <tr>
+              {batches.map((b) => <th key={b.batchId} style={{ minWidth: 200 }}>{b.batchLabel}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: totalRows }).map((_, rowIndex) => (
+              <tr key={rowIndex} style={{ borderTop: rowIndex === groups.length ? "2px solid var(--line)" : undefined }}>
+                {batches.map((b) => {
+                  const course = cellFor(b, rowIndex);
+                  if (!course) return <td key={b.batchId}></td>;
+                  const isSelected = selected?.courseId === course.id;
+                  return (
+                    <td key={b.batchId}
+                      onClick={() => !busy && handleClick(b.batchId, course.id)}
+                      onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
+                      style={{
+                        cursor: "pointer", padding: "6px 8px",
+                        background: isSelected ? "#F4EFE1" : course.groupId ? "#E4EEE8" : undefined,
+                        border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{course.code}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{course.title} ({course.studentCount})</div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );

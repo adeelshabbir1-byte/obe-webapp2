@@ -14,7 +14,7 @@ function statusBadge(status: string) {
   return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
-export default function PlosManager({ initialPlos, hecPlos }: { initialPlos: Plo[]; hecPlos: HecPlo[] }) {
+export default function PlosManager({ initialPlos, hecPlos, batchId }: { initialPlos: Plo[]; hecPlos: HecPlo[]; batchId: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function PlosManager({ initialPlos, hecPlos }: { initialPlos: Plo
     try {
       const res = await fetch("/api/coordinator/plos", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ number: nextNumber, title: hp.title, description: hp.description, sourceMasterPloNumber: hp.number }),
+        body: JSON.stringify({ number: nextNumber, title: hp.title, description: hp.description, sourceMasterPloNumber: hp.number, batchId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -42,7 +42,7 @@ export default function PlosManager({ initialPlos, hecPlos }: { initialPlos: Plo
     try {
       const res = await fetch("/api/coordinator/plos", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ number: fd.get("number"), title: fd.get("title"), description: fd.get("description") }),
+        body: JSON.stringify({ number: fd.get("number"), title: fd.get("title"), description: fd.get("description"), batchId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }

@@ -1,9 +1,11 @@
 import { prisma } from "./db";
 
-async function getCoordinatorsFor(chairmanId: string | null) {
-  return prisma.user.findMany({
-    where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId || "" },
-    orderBy: { name: "asc" },
+async function getBatchesFor(chairmanId: string | null) {
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId || "" } });
+  const coordinatorIds = coordinators.map((c) => c.id);
+  return prisma.batch.findMany({
+    where: { coordinatorId: { in: coordinatorIds } },
+    orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 }
 
@@ -11,10 +13,10 @@ async function getCoordinatorsFor(chairmanId: string | null) {
 // Report 1 — Program-Level PLO Coverage & Distribution Summary
 // ============================================================================
 export async function getCoverageReport(chairmanId: string | null) {
-  const coordinators = await getCoordinatorsFor(chairmanId);
+  const batches = await getBatchesFor(chairmanId);
   const programs = [];
-  for (const coord of coordinators) {
-    const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
+  for (const batch of batches) {
+    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
     const rows = [];
     for (const p of plos) {
       const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
@@ -22,11 +24,12 @@ export async function getCoverageReport(chairmanId: string | null) {
       for (const m of mappings) byType[m.course.courseType] = (byType[m.course.courseType] || 0) + 1;
       rows.push({ number: p.number, title: p.title, status: p.status, count: mappings.length, byType });
     }
-    const totalCourses = await prisma.course.count({ where: { coordinatorId: coord.id } });
+    const totalCourses = await prisma.course.count({ where: { batchId: batch.id } });
+    if (totalCourses === 0 && rows.length === 0) continue;
     const notHit = rows.filter((r) => r.count === 0).length;
     const avg = rows.length ? Number((rows.reduce((s, r) => s + r.count, 0) / rows.length).toFixed(1)) : 0;
     const approved = rows.filter((r) => r.status === "approved").length;
-    programs.push({ coordinatorName: coord.name, totalCourses, notHit, avg, approved, totalPlos: rows.length, rows });
+    programs.push({ coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, totalCourses, notHit, avg, approved, totalPlos: rows.length, rows });
   }
   return programs;
 }
@@ -35,11 +38,12 @@ export async function getCoverageReport(chairmanId: string | null) {
 // Report 2 — PLO Depth & Contribution Heatmap (by course type)
 // ============================================================================
 export async function getHeatmapReport(chairmanId: string | null) {
-  const coordinators = await getCoordinatorsFor(chairmanId);
+  const batches = await getBatchesFor(chairmanId);
   const programs = [];
-  for (const coord of coordinators) {
-    const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
-    const courses = await prisma.course.findMany({ where: { coordinatorId: coord.id } });
+  for (const batch of batches) {
+    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
+    const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
+    if (courses.length === 0 && plos.length === 0) continue;
     const courseTypes = Array.from(new Set(courses.map((c) => c.courseType))).sort();
 
     const matrix: Record<number, Record<string, number>> = {};
@@ -50,7 +54,7 @@ export async function getHeatmapReport(chairmanId: string | null) {
       for (const m of mappings) row[m.course.courseType] = (row[m.course.courseType] || 0) + 1;
       matrix[p.number] = row;
     }
-    programs.push({ coordinatorName: coord.name, courseTypes, plos: plos.map((p) => ({ number: p.number, title: p.title })), matrix });
+    programs.push({ coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, courseTypes, plos: plos.map((p) => ({ number: p.number, title: p.title })), matrix });
   }
   return programs;
 }
@@ -59,10 +63,11 @@ export async function getHeatmapReport(chairmanId: string | null) {
 // Report 3 — Semester-Wise PLO Progression & Balance
 // ============================================================================
 export async function getProgressionReport(chairmanId: string | null) {
-  const coordinators = await getCoordinatorsFor(chairmanId);
+  const batches = await getBatchesFor(chairmanId);
   const programs = [];
-  for (const coord of coordinators) {
-    const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
+  for (const batch of batches) {
+    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
+    if (plos.length === 0) continue;
     const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
     const matrix: Record<number, Record<number, number>> = {};
@@ -77,7 +82,7 @@ export async function getProgressionReport(chairmanId: string | null) {
       }
       matrix[p.number] = row;
     }
-    programs.push({ coordinatorName: coord.name, semesters, plos: plos.map((p) => ({ number: p.number, title: p.title })), matrix });
+    programs.push({ coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, semesters, plos: plos.map((p) => ({ number: p.number, title: p.title })), matrix });
   }
   return programs;
 }
@@ -91,10 +96,11 @@ const BLOOM_LABELS: Record<string, string> = {
 };
 
 export async function getBloomReport(chairmanId: string | null) {
-  const coordinators = await getCoordinatorsFor(chairmanId);
+  const batches = await getBatchesFor(chairmanId);
   const programs = [];
-  for (const coord of coordinators) {
-    const courses = await prisma.course.findMany({ where: { coordinatorId: coord.id } });
+  for (const batch of batches) {
+    const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
+    if (courses.length === 0) continue;
     const bySemester: Record<number, Record<string, number>> = {};
     const overall: Record<string, number> = {};
     for (const b of BLOOM_ORDER) overall[b] = 0;
@@ -116,7 +122,7 @@ export async function getBloomReport(chairmanId: string | null) {
     const higherOrderPct = totalClos ? Math.round((higherOrderCount / totalClos) * 100) : 0;
 
     programs.push({
-      coordinatorName: coord.name, totalClos, higherOrderPct,
+      coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, totalClos, higherOrderPct,
       overall, bySemester,
     });
   }
@@ -124,16 +130,20 @@ export async function getBloomReport(chairmanId: string | null) {
 }
 export { BLOOM_ORDER, BLOOM_LABELS };
 
+// ============================================================================
+// Report 4 — Course-Level Accreditation Audit & Orphan Detection
+// ============================================================================
 export async function getAuditReport(chairmanId: string | null) {
-  const coordinators = await getCoordinatorsFor(chairmanId);
+  const batches = await getBatchesFor(chairmanId);
   const programs = [];
-  for (const coord of coordinators) {
-    const totalPlos = await prisma.pLO.count({ where: { coordinatorId: coord.id } });
+  for (const batch of batches) {
+    const totalPlos = await prisma.pLO.count({ where: { batchId: batch.id } });
     const courses = await prisma.course.findMany({
-      where: { coordinatorId: coord.id },
+      where: { batchId: batch.id },
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       include: { ploMappings: true },
     });
+    if (courses.length === 0) continue;
     const rows = courses.map((c) => {
       const ploCount = c.ploMappings.length;
       let flag: "orphan" | "broad" | "ok" = "ok";
@@ -142,7 +152,7 @@ export async function getAuditReport(chairmanId: string | null) {
       return { code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber, ploCount, totalPlos, flag };
     });
     programs.push({
-      coordinatorName: coord.name, totalPlos,
+      coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, totalPlos,
       orphanCount: rows.filter((r) => r.flag === "orphan").length,
       broadCount: rows.filter((r) => r.flag === "broad").length,
       rows,

@@ -34,28 +34,47 @@ export async function getBenchmarkCandidates(coordinatorId: string) {
  * the explicit "copy this whole batch into a new batch" flow.
  */
 export async function copyCourseContent(sourceCourseId: string, newCourseId: string) {
-  const source = await prisma.course.findUnique({ where: { id: sourceCourseId } });
-  if (!source) return null;
+  const [source, newCourse] = await Promise.all([
+    prisma.course.findUnique({ where: { id: sourceCourseId } }),
+    prisma.course.findUnique({ where: { id: newCourseId } }),
+  ]);
+  if (!source || !newCourse) return null;
 
   const [ploMappings, clos, lectureRows] = await Promise.all([
-    prisma.coursePloMapping.findMany({ where: { courseId: source.id } }),
-    prisma.cLO.findMany({ where: { courseId: source.id } }),
+    prisma.coursePloMapping.findMany({ where: { courseId: source.id }, include: { plo: true } }),
+    prisma.cLO.findMany({ where: { courseId: source.id }, include: { mappedPlo: true } }),
     prisma.lectureRow.findMany({ where: { courseId: source.id } }),
   ]);
 
-  if (ploMappings.length > 0) {
+  // PLOs are scoped per BATCH, so a PLO id from the source course's batch is
+  // meaningless in the new course's batch — translate by PLO NUMBER into
+  // whichever PLO (if any) already exists with that number in the new batch.
+  const neededNumbers = new Set<number>([
+    ...ploMappings.map((m) => m.plo.number),
+    ...clos.filter((c) => c.mappedPlo).map((c) => c.mappedPlo!.number),
+  ]);
+  const targetPlos = newCourse.batchId
+    ? await prisma.pLO.findMany({ where: { batchId: newCourse.batchId, number: { in: Array.from(neededNumbers) } } })
+    : [];
+  const targetPloByNumber = new Map(targetPlos.map((p) => [p.number, p]));
+
+  const translatedMappings = ploMappings
+    .map((m) => targetPloByNumber.get(m.plo.number))
+    .filter((p): p is NonNullable<typeof p> => !!p);
+  if (translatedMappings.length > 0) {
     await prisma.coursePloMapping.createMany({
-      data: ploMappings.map((m) => ({ courseId: newCourseId, ploId: m.ploId, assignedById: m.assignedById })),
+      data: translatedMappings.map((p) => ({ courseId: newCourseId, ploId: p.id, assignedById: source.coordinatorId })),
       skipDuplicates: true,
     });
   }
 
   const cloIdMap: Record<string, string> = {};
   for (const c of clos) {
+    const translatedPlo = c.mappedPlo ? targetPloByNumber.get(c.mappedPlo.number) : null;
     const created = await prisma.cLO.create({
       data: {
         courseId: newCourseId, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel,
-        mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct,
+        mappedPloId: translatedPlo?.id || null, ploContributionPct: translatedPlo ? c.ploContributionPct : null,
       },
     });
     cloIdMap[c.id] = created.id;
