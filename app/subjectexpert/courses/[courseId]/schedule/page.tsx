@@ -17,7 +17,8 @@ export default async function SchedulePage({ params }: { params: { courseId: str
     where: { id: params.courseId },
     include: {
       clos: { orderBy: { code: "asc" } },
-      lectureRows: { orderBy: { lectureNumber: "asc" }, include: { clo: true } },
+      lectureRows: { orderBy: { lectureNumber: "asc" }, include: { clo: true, instrumentLinks: true } },
+      assessmentInstruments: { orderBy: [{ type: "asc" }, { label: "asc" }] },
     },
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
@@ -69,8 +70,10 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         initialRows={course.lectureRows.map((r) => ({
           id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
           cloId: r.cloId, cloCode: r.clo?.code || null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+          linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId),
         }))}
         clos={course.clos.map((c) => ({ id: c.id, code: c.code }))}
+        instruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct }))}
       />
 
       {course.templateStatus === "changes-requested" && course.omcComment && (

@@ -16,13 +16,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (!body.topic) return NextResponse.json({ error: "topic is required" }, { status: 400 });
 
   // Week and Lecture # are intentionally NOT editable here — they're fixed
-  // by the 32-row template (2 lectures per week).
+  // by the 32-row template (2 lectures per week). Weight is also not set
+  // here — it's auto-computed from linked assessment instruments.
   const updated = await prisma.lectureRow.update({
     where: { id: params.lectureId },
     data: {
       topic: body.topic, subtopic: body.subtopic || null,
       cloId: body.cloId || null, bloomLevel: body.bloomLevel || null,
-      weightPct: body.weightPct ? parseInt(body.weightPct, 10) : 0,
     },
   });
 

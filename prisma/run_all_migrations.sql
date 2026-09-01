@@ -110,5 +110,93 @@ BEGIN
   END IF;
 END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS "Course_coordinatorId_batchId_code_key" ON "Course"("coordinatorId", "batchId", "code");
+-- Run in Supabase SQL Editor. MasterCourse.semesterNumber needs to allow NULL
+-- (some courses, like open electives, don't have a fixed semester).
+
+ALTER TABLE "MasterCourse" ALTER COLUMN "semesterNumber" DROP NOT NULL;
+-- Run in Supabase SQL Editor. Adds the CLO-to-PLO contribution percentage.
+
+ALTER TABLE "CLO" ADD COLUMN IF NOT EXISTS "ploContributionPct" INTEGER;
+-- Run in Supabase SQL Editor. Adds the OMC Weight Policy system and the
+-- exception-approval workflow for out-of-range Subject Expert weights.
+
+CREATE TABLE IF NOT EXISTS "WeightPolicy" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL REFERENCES "User"("id"),
+  "courseType" TEXT NOT NULL,
+  "assignmentMin" INTEGER NOT NULL DEFAULT 0,
+  "assignmentMax" INTEGER NOT NULL DEFAULT 100,
+  "quizMin" INTEGER NOT NULL DEFAULT 0,
+  "quizMax" INTEGER NOT NULL DEFAULT 100,
+  "projectMin" INTEGER NOT NULL DEFAULT 0,
+  "projectMax" INTEGER NOT NULL DEFAULT 100,
+  "labMin" INTEGER NOT NULL DEFAULT 0,
+  "labMax" INTEGER NOT NULL DEFAULT 100,
+  "midtermMin" INTEGER NOT NULL DEFAULT 0,
+  "midtermMax" INTEGER NOT NULL DEFAULT 100,
+  "finalMin" INTEGER NOT NULL DEFAULT 0,
+  "finalMax" INTEGER NOT NULL DEFAULT 100,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "WeightPolicy_chairmanId_courseType_key" ON "WeightPolicy"("chairmanId", "courseType");
+CREATE INDEX IF NOT EXISTS "WeightPolicy_chairmanId_idx" ON "WeightPolicy"("chairmanId");
+
+CREATE TABLE IF NOT EXISTS "WeightExceptionRequest" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+  "requestedById" TEXT NOT NULL,
+  "assignmentPct" INTEGER NOT NULL,
+  "quizPct" INTEGER NOT NULL,
+  "projectPct" INTEGER NOT NULL,
+  "labPct" INTEGER NOT NULL,
+  "midtermPct" INTEGER NOT NULL,
+  "finalPct" INTEGER NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'pending',
+  "omcComment" TEXT,
+  "reviewedById" TEXT,
+  "reviewedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "WeightExceptionRequest_courseId_key" ON "WeightExceptionRequest"("courseId");
+CREATE INDEX IF NOT EXISTS "WeightExceptionRequest_courseId_idx" ON "WeightExceptionRequest"("courseId");
+-- Run in Supabase SQL Editor. Adds the self-referencing benchmark lineage
+-- field so a new batch's course can trace back to which prior offering it
+-- was pre-filled from.
+
+ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "benchmarkSourceId" TEXT REFERENCES "Course"("id");
+CREATE INDEX IF NOT EXISTS "Course_benchmarkSourceId_idx" ON "Course"("benchmarkSourceId");
+-- Run in Supabase SQL Editor. Adds minimum-assessment-count fields to the
+-- weight policy (e.g. "at least 3 quizzes, 2 assignments").
+
+ALTER TABLE "WeightPolicy"
+  ADD COLUMN IF NOT EXISTS "assignmentMinCount" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS "quizMinCount" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS "projectMinCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "labMinCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "midtermMinCount" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS "finalMinCount" INTEGER NOT NULL DEFAULT 1;
+-- Run in Supabase SQL Editor. Adds AssessmentInstrument (quizzes, assignments,
+-- midterm/final questions each with their own marks%) and the many-to-many
+-- link table between lecture rows and instruments (the checkbox matrix).
+
+CREATE TABLE IF NOT EXISTS "AssessmentInstrument" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+  "type" TEXT NOT NULL,
+  "label" TEXT NOT NULL,
+  "marksPct" INTEGER NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "AssessmentInstrument_courseId_idx" ON "AssessmentInstrument"("courseId");
+
+CREATE TABLE IF NOT EXISTS "LectureRowInstrument" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "lectureRowId" TEXT NOT NULL REFERENCES "LectureRow"("id"),
+  "instrumentId" TEXT NOT NULL REFERENCES "AssessmentInstrument"("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "LectureRowInstrument_lectureRowId_instrumentId_key" ON "LectureRowInstrument"("lectureRowId", "instrumentId");
+CREATE INDEX IF NOT EXISTS "LectureRowInstrument_lectureRowId_idx" ON "LectureRowInstrument"("lectureRowId");
+CREATE INDEX IF NOT EXISTS "LectureRowInstrument_instrumentId_idx" ON "LectureRowInstrument"("instrumentId");
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)

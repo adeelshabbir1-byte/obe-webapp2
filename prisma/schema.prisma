@@ -190,6 +190,7 @@ model Course {
   lectureRows         LectureRow[]
   ploMappings         CoursePloMapping[]
   weightExceptions    WeightExceptionRequest[]
+  assessmentInstruments AssessmentInstrument[]
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
@@ -269,10 +270,42 @@ model LectureRow {
   cloId         String?
   clo           CLO?     @relation(fields: [cloId], references: [id])
   bloomLevel    String?  // C1..C6
-  weightPct     Int      @default(0)
+  weightPct     Int      @default(0) // auto-computed: sum of linked instruments' marksPct
+
+  instrumentLinks LectureRowInstrument[]
 
   @@unique([courseId, lectureNumber])
   @@index([courseId])
+}
+
+// A specific gradeable item (Quiz 1, Assignment 2, Midterm Q3, Final Q5...)
+// worth a defined % of the course's total marks. Lecture rows link to
+// whichever instruments test that topic, and their contribution % is the
+// sum of those instruments' marksPct — not a manually typed guess.
+model AssessmentInstrument {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  type      String   // Assignment | Quiz | Midterm | Final | Project | Lab
+  label     String   // "Quiz 1", "Midterm Q3"
+  marksPct  Int      // this instrument's % of total course marks
+  createdAt DateTime @default(now())
+
+  lectureLinks LectureRowInstrument[]
+
+  @@index([courseId])
+}
+
+model LectureRowInstrument {
+  id           String   @id @default(cuid())
+  lectureRowId String
+  lectureRow   LectureRow @relation(fields: [lectureRowId], references: [id])
+  instrumentId String
+  instrument   AssessmentInstrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([lectureRowId, instrumentId])
+  @@index([lectureRowId])
+  @@index([instrumentId])
 }
 
 // ============================================================================
