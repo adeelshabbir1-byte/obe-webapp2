@@ -1,23 +1,26 @@
 import { prisma } from "./db";
 
+type CandidateCourse = Awaited<ReturnType<typeof fetchCandidates>>[number];
+
 /**
- * Finds the most recent prior course (any earlier batch, same coordinator)
- * that matches by masterCourseId (for HEC-imported courses) or by code
- * (for manual courses), and that actually has Subject Expert work on it
- * (at least one CLO) worth inheriting.
+ * Fetches every existing course for this coordinator that has at least one
+ * CLO (i.e. is worth using as a benchmark), ONCE — so a bulk import of many
+ * courses doesn't run a separate database query per course to check for a
+ * benchmark (that N+1 pattern was slow enough to time out a 44-course import).
  */
-async function findBenchmarkSource(coordinatorId: string, newCourseId: string, masterCourseId: string | null, code: string) {
-  const where = masterCourseId
-    ? { coordinatorId, masterCourseId, NOT: { id: newCourseId } }
-    : { coordinatorId, code, NOT: { id: newCourseId } };
-
-  const candidates = await prisma.course.findMany({
-    where,
+async function fetchCandidates(coordinatorId: string) {
+  const courses = await prisma.course.findMany({
+    where: { coordinatorId },
     orderBy: { createdAt: "desc" },
-    include: { clos: true },
+    include: { clos: { select: { id: true } } },
   });
+  return courses.filter((c) => c.clos.length > 0);
+}
 
-  return candidates.find((c) => c.clos.length > 0) || null;
+function findBenchmarkSource(candidates: CandidateCourse[], newCourseId: string, masterCourseId: string | null, code: string) {
+  return candidates.find((c) =>
+    c.id !== newCourseId && (masterCourseId ? c.masterCourseId === masterCourseId : c.code === code)
+  ) || null;
 }
 
 /**
@@ -26,9 +29,16 @@ async function findBenchmarkSource(coordinatorId: string, newCourseId: string, m
  * batch's course into a freshly created one. The new course keeps its own
  * templateStatus ('draft') — it still needs its own OMC review — but the
  * Subject Expert starts from a filled-in template instead of a blank one.
+ *
+ * `candidates` should be fetched ONCE via getBenchmarkCandidates() before a
+ * loop of many course creations, not re-fetched per course.
  */
-export async function copyBenchmarkIfAvailable(newCourseId: string, coordinatorId: string, masterCourseId: string | null, code: string) {
-  const source = await findBenchmarkSource(coordinatorId, newCourseId, masterCourseId, code);
+export async function copyBenchmarkIfAvailable(
+  newCourseId: string, coordinatorId: string, masterCourseId: string | null, code: string,
+  candidates?: CandidateCourse[]
+) {
+  const pool = candidates ?? (await fetchCandidates(coordinatorId));
+  const source = findBenchmarkSource(pool, newCourseId, masterCourseId, code);
   if (!source) return null;
 
   const [ploMappings, clos, lectureRows] = await Promise.all([
@@ -37,8 +47,11 @@ export async function copyBenchmarkIfAvailable(newCourseId: string, coordinatorI
     prisma.lectureRow.findMany({ where: { courseId: source.id } }),
   ]);
 
-  for (const m of ploMappings) {
-    await prisma.coursePloMapping.create({ data: { courseId: newCourseId, ploId: m.ploId, assignedById: m.assignedById } }).catch(() => {});
+  if (ploMappings.length > 0) {
+    await prisma.coursePloMapping.createMany({
+      data: ploMappings.map((m) => ({ courseId: newCourseId, ploId: m.ploId, assignedById: m.assignedById })),
+      skipDuplicates: true,
+    });
   }
 
   const cloIdMap: Record<string, string> = {};
@@ -52,12 +65,12 @@ export async function copyBenchmarkIfAvailable(newCourseId: string, coordinatorI
     cloIdMap[c.id] = created.id;
   }
 
-  for (const r of lectureRows) {
-    await prisma.lectureRow.create({
-      data: {
+  if (lectureRows.length > 0) {
+    await prisma.lectureRow.createMany({
+      data: lectureRows.map((r) => ({
         courseId: newCourseId, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
         cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
-      },
+      })),
     });
   }
 
@@ -71,4 +84,8 @@ export async function copyBenchmarkIfAvailable(newCourseId: string, coordinatorI
   });
 
   return { sourceCourseId: source.id, cloCount: clos.length, lectureRowCount: lectureRows.length };
+}
+
+export async function getBenchmarkCandidates(coordinatorId: string) {
+  return fetchCandidates(coordinatorId);
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { copyBenchmarkIfAvailable } from "../../../../../lib/benchmarkCopy";
+import { copyBenchmarkIfAvailable, getBenchmarkCandidates } from "../../../../../lib/benchmarkCopy";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -28,40 +28,51 @@ export async function POST(req: NextRequest) {
   });
   if (!curriculum) return NextResponse.json({ error: "curriculum not found" }, { status: 404 });
 
-  // Scoped to this batch specifically — the same curriculum CAN be imported
-  // again into a different batch, since each batch tracks its own courses.
-  const alreadyImported = await prisma.course.findMany({
-    where: { coordinatorId: user.id, batchId: batch.id, masterCourseId: { not: null } },
-    select: { masterCourseId: true },
-  });
-  const importedIds = new Set(alreadyImported.map((c) => c.masterCourseId));
+  // Fetch everything we need ONCE up front, instead of once per course in
+  // the loop below — the per-course version of this was slow enough on a
+  // 40+ course curriculum to time out the request.
+  const [existingInBatch, benchmarkCandidates] = await Promise.all([
+    prisma.course.findMany({ where: { coordinatorId: user.id, batchId: batch.id }, select: { code: true, masterCourseId: true } }),
+    getBenchmarkCandidates(user.id),
+  ]);
+  const existingCodes = new Set(existingInBatch.map((c) => c.code));
+  const importedIds = new Set(existingInBatch.map((c) => c.masterCourseId).filter(Boolean));
 
   const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id));
 
   let created = 0;
   let benchmarksCopied = 0;
+  const errors: string[] = [];
+
   for (const mc of toImport) {
-    let code = mc.code;
-    const codeClash = await prisma.course.findFirst({ where: { coordinatorId: user.id, batchId: batch.id, code } });
-    if (codeClash) code = `${mc.code}-${curriculum.version}`;
+    try {
+      let code = mc.code;
+      if (existingCodes.has(code)) code = `${mc.code}-${curriculum.version}`;
+      existingCodes.add(code);
 
-    const newCourse = await prisma.course.create({
-      data: {
-        code, title: mc.title, creditHours: mc.creditHours,
-        courseType: mc.category, semesterNumber: mc.semesterNumber,
-        coordinatorId: user.id, batchId: batch.id, masterCourseId: mc.id,
-      },
-    });
-    created++;
+      const newCourse = await prisma.course.create({
+        data: {
+          code, title: mc.title, creditHours: mc.creditHours,
+          courseType: mc.category, semesterNumber: mc.semesterNumber,
+          coordinatorId: user.id, batchId: batch.id, masterCourseId: mc.id,
+        },
+      });
+      created++;
 
-    const benchmark = await copyBenchmarkIfAvailable(newCourse.id, user.id, mc.id, code);
-    if (benchmark) benchmarksCopied++;
+      const benchmark = await copyBenchmarkIfAvailable(newCourse.id, user.id, mc.id, code, benchmarkCandidates);
+      if (benchmark) benchmarksCopied++;
+    } catch (err: any) {
+      errors.push(`${mc.code}: ${err?.message || "failed"}`);
+    }
   }
 
   await writeAuditLog({
     actorUserId: user.id, action: "HEC_CURRICULUM_BULK_IMPORTED", entityType: "Batch", entityId: batch.id,
-    metadata: { count: created, curriculumId: curriculum.id, benchmarksCopied },
+    metadata: { count: created, curriculumId: curriculum.id, benchmarksCopied, errorCount: errors.length },
   });
 
-  return NextResponse.json({ created, skipped: toImport.length - created, alreadyPresent: importedIds.size, benchmarksCopied });
+  return NextResponse.json({
+    created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, benchmarksCopied,
+    errors: errors.length > 0 ? errors : undefined,
+  });
 }

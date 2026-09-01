@@ -38,9 +38,17 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ batchId: importBatchId, curriculumId: importCurriculumId }),
       });
-      const data = await res.json();
+      let data: any = {};
+      try { data = await res.json(); }
+      catch {
+        setError(res.ok
+          ? "The import may have partly succeeded but the server didn't send a proper response — refresh the page to check what was actually imported."
+          : `Server error (status ${res.status}) with no details — check Vercel's Runtime Logs, or try importing again.`);
+        setLoading(false); router.refresh(); return;
+      }
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setImportResult(`Imported ${data.created} new course(s) into this batch.${data.alreadyPresent ? ` (${data.alreadyPresent} were already imported into it.)` : ""}${data.benchmarksCopied ? ` ${data.benchmarksCopied} started pre-filled from a previous batch's template.` : ""}`);
+      const errorNote = data.errors ? ` ${data.errors.length} course(s) failed: ${data.errors.slice(0, 3).join("; ")}${data.errors.length > 3 ? "…" : ""}` : "";
+      setImportResult(`Imported ${data.created} new course(s) into this batch.${data.alreadyPresent ? ` (${data.alreadyPresent} were already imported into it.)` : ""}${data.benchmarksCopied ? ` ${data.benchmarksCopied} started pre-filled from a previous batch's template.` : ""}${errorNote}`);
       setLoading(false); router.push(`/coordinator/courses?batchId=${importBatchId}`); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
