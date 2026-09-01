@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../lib/session";
-import { prisma } from "../../../../../../lib/db";
-import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
-import { writeAuditLog } from "../../../../../../lib/audit";
+import { getAuthenticatedUser } from "../../../../../../../lib/session";
+import { prisma } from "../../../../../../../lib/db";
+import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
+import { writeAuditLog } from "../../../../../../../lib/audit";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
