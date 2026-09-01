@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import PlosManager from "../../../components/PlosManager";
+import AutoSubmitSelect from "../../../components/AutoSubmitSelect";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -47,11 +48,7 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
         <>
           <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Batch</label>
-            <form method="GET" style={{ display: "inline" }}>
-              <select name="batchId" defaultValue={selectedBatchId} onChange={(e) => e.currentTarget.form?.submit()} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-                {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
-              </select>
-            </form>
+            <AutoSubmitSelect name="batchId" defaultValue={selectedBatchId} options={batches.map((b) => ({ value: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))} />
           </div>
           <PlosManager
             key={selectedBatchId}
