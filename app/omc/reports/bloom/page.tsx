@@ -7,6 +7,8 @@ import ReportsSubNav from "../../../../components/ReportsSubNav";
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
+  { href: "/omc/weight-policy", label: "Weight Policy" },
+  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/reports", label: "Reports" },
 ];
 

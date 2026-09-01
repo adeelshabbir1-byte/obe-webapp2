@@ -49,6 +49,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
           semesterNumber: c.semesterNumber, fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId,
+          fromBenchmark: !!c.benchmarkSourceId,
           batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}

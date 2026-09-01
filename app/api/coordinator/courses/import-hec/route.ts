@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { copyBenchmarkIfAvailable } from "../../../../../lib/benchmarkCopy";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -38,12 +39,13 @@ export async function POST(req: NextRequest) {
   const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id));
 
   let created = 0;
+  let benchmarksCopied = 0;
   for (const mc of toImport) {
     let code = mc.code;
     const codeClash = await prisma.course.findFirst({ where: { coordinatorId: user.id, batchId: batch.id, code } });
     if (codeClash) code = `${mc.code}-${curriculum.version}`;
 
-    await prisma.course.create({
+    const newCourse = await prisma.course.create({
       data: {
         code, title: mc.title, creditHours: mc.creditHours,
         courseType: mc.category, semesterNumber: mc.semesterNumber,
@@ -51,12 +53,15 @@ export async function POST(req: NextRequest) {
       },
     });
     created++;
+
+    const benchmark = await copyBenchmarkIfAvailable(newCourse.id, user.id, mc.id, code);
+    if (benchmark) benchmarksCopied++;
   }
 
   await writeAuditLog({
     actorUserId: user.id, action: "HEC_CURRICULUM_BULK_IMPORTED", entityType: "Batch", entityId: batch.id,
-    metadata: { count: created, curriculumId: curriculum.id },
+    metadata: { count: created, curriculumId: curriculum.id, benchmarksCopied },
   });
 
-  return NextResponse.json({ created, skipped: toImport.length - created, alreadyPresent: importedIds.size });
+  return NextResponse.json({ created, skipped: toImport.length - created, alreadyPresent: importedIds.size, benchmarksCopied });
 }

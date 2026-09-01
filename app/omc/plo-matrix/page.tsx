@@ -7,7 +7,9 @@ import PloMatrix from "../../../components/PloMatrix";
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/plo-report", label: "PLO Coverage Report" },
+  { href: "/omc/weight-policy", label: "Weight Policy" },
+  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
+  { href: "/omc/reports", label: "Reports" },
 ];
 
 export default async function OmcPloMatrixPage() {

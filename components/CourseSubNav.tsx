@@ -2,9 +2,9 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
   courseId: string; active: "clos" | "schedule" | "weights"; code: string; title: string; status: string;
 }) {
   const tabs = [
-    { key: "clos", label: "CLOs", href: `/subjectexpert/courses/${courseId}/clos` },
-    { key: "schedule", label: "30-Lecture Schedule", href: `/subjectexpert/courses/${courseId}/schedule` },
-    { key: "weights", label: "Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
+    { key: "clos", label: "1. CLOs & PLO Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
+    { key: "weights", label: "2. Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
+    { key: "schedule", label: "3. Lecture Schedule & Submit", href: `/subjectexpert/courses/${courseId}/schedule` },
   ];
   return (
     <div style={{ marginBottom: 20 }}>

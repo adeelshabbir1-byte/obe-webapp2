@@ -14,7 +14,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
-    include: { clos: { orderBy: { code: "asc" } } },
+    include: { clos: { orderBy: { code: "asc" } }, benchmarkSource: { include: { batch: true } } },
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
 
@@ -30,9 +30,17 @@ export default async function ClosPage({ params }: { params: { courseId: string 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
       <CourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} status={course.templateStatus} />
+      {course.benchmarkSource && (
+        <div className="card" style={{ borderColor: "var(--brass)" }}>
+          <p style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>
+            This template was pre-filled from the {course.benchmarkSource.batch ? `${course.benchmarkSource.batch.degreeProgram} — ${course.benchmarkSource.batch.batchName}` : "previous"} offering of this course.
+            Review it and make any changes needed for this batch, rather than starting from scratch.
+          </p>
+        </div>
+      )}
       <ClosManager
         courseId={course.id}
-        initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId }))}
+        initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct }))}
         plos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status }))}
       />
     </Shell>

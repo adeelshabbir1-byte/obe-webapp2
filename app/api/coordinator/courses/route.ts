@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { copyBenchmarkIfAvailable } from "../../../../lib/benchmarkCopy";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  const benchmark = await copyBenchmarkIfAvailable(course.id, user.id, body.masterCourseId || null, body.code);
+
   await writeAuditLog({
     actorUserId: user.id,
     action: body.masterCourseId ? "COURSE_ADOPTED_FROM_MASTER" : "COURSE_CREATED",
@@ -55,5 +58,5 @@ export async function POST(req: NextRequest) {
     metadata: body.masterCourseId ? { masterCourseId: body.masterCourseId } : undefined,
   });
 
-  return NextResponse.json({ course }, { status: 201 });
+  return NextResponse.json({ course, benchmarkCopied: !!benchmark }, { status: 201 });
 }

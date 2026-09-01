@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       statement: body.statement,
       bloomLevel: body.bloomLevel,
       mappedPloId: body.mappedPloId || null,
+      ploContributionPct: body.mappedPloId ? (body.ploContributionPct ? parseInt(body.ploContributionPct, 10) : 100) : null,
     },
   });
 

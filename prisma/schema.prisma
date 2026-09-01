@@ -50,6 +50,7 @@ model User {
   seCourses          Course[] @relation("CourseSubjectExpert")
   plos               PLO[]    @relation("PloCoordinator")
   batches            Batch[]  @relation("BatchCoordinator")
+  weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
   @@index([managedById])
@@ -99,6 +100,56 @@ model Batch {
   @@index([coordinatorId])
 }
 
+// OMC-defined min/max assessment weight ranges per course type. A Subject
+// Expert's weights must fall within these; if not, a WeightExceptionRequest
+// is created instead of saving directly.
+model WeightPolicy {
+  id            String   @id @default(cuid())
+  chairmanId    String
+  chairman      User     @relation("WeightPolicyChairman", fields: [chairmanId], references: [id])
+  courseType    String   // Core | Elective | Lab | IDS | General Education | Capstone Project | Field Experience
+  assignmentMin Int      @default(0)
+  assignmentMax Int      @default(100)
+  quizMin       Int      @default(0)
+  quizMax       Int      @default(100)
+  projectMin    Int      @default(0)
+  projectMax    Int      @default(100)
+  labMin        Int      @default(0)
+  labMax        Int      @default(100)
+  midtermMin    Int      @default(0)
+  midtermMax    Int      @default(100)
+  finalMin      Int      @default(0)
+  finalMax      Int      @default(100)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([chairmanId, courseType])
+  @@index([chairmanId])
+}
+
+// A Subject Expert's proposed weights that fall outside the policy range,
+// pending OMC approval. Only the latest request per course is kept.
+model WeightExceptionRequest {
+  id            String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id])
+  requestedById String
+  assignmentPct Int
+  quizPct       Int
+  projectPct    Int
+  labPct        Int
+  midtermPct    Int
+  finalPct      Int
+  status        String   @default("pending") // pending | approved | rejected
+  omcComment    String?  @db.Text
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  @@unique([courseId])
+  @@index([courseId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -114,6 +165,9 @@ model Course {
   subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
+  benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any
+  benchmarkSource     Course?  @relation("BenchmarkLineage", fields: [benchmarkSourceId], references: [id])
+  benchmarkCopies     Course[] @relation("BenchmarkLineage")
   createdAt           DateTime @default(now())
 
   // Gold-standard template fields, set by the Subject Expert
@@ -129,6 +183,7 @@ model Course {
   clos                CLO[]
   lectureRows         LectureRow[]
   ploMappings         CoursePloMapping[]
+  weightExceptions    WeightExceptionRequest[]
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
@@ -185,6 +240,9 @@ model CLO {
   bloomLevel  String   // C1..C6
   mappedPloId String?  // references the institution's own PLO (see PLO model)
   mappedPlo   PLO?     @relation(fields: [mappedPloId], references: [id])
+  ploContributionPct Int? // this CLO's % contribution toward mappedPlo's attainment —
+                          // when several CLOs in the same course map to the same PLO,
+                          // their contributions must sum to 100 (enforced at submit time)
   createdAt   DateTime @default(now())
 
   lectureRows LectureRow[]

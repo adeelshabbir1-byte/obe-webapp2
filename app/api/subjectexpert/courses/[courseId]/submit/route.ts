@@ -26,6 +26,18 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
     }, { status: 400 });
   }
 
+  // Where multiple CLOs map to the same PLO, their contribution % must sum to 100.
+  const byPlo: Record<string, number> = {};
+  for (const c of clos) {
+    if (c.mappedPloId) byPlo[c.mappedPloId] = (byPlo[c.mappedPloId] || 0) + (c.ploContributionPct || 0);
+  }
+  const badTotals = Object.entries(byPlo).filter(([, total]) => total !== 100);
+  if (badTotals.length > 0) {
+    return NextResponse.json({
+      error: `CLO contribution percentages must sum to 100% per PLO — ${badTotals.length} PLO(s) don't add up correctly yet`,
+    }, { status: 400 });
+  }
+
   const updated = await prisma.course.update({ where: { id: course.id }, data: { templateStatus: "submitted" } });
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_SUBMITTED", entityType: "Course", entityId: course.id });
 

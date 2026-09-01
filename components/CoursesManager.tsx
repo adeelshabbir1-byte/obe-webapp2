@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
-  fromHec: boolean; subjectExpertId: string | null; batchName: string | null;
+  fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -40,7 +40,7 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setImportResult(`Imported ${data.created} new course(s) into this batch.${data.alreadyPresent ? ` (${data.alreadyPresent} were already imported into it.)` : ""}`);
+      setImportResult(`Imported ${data.created} new course(s) into this batch.${data.alreadyPresent ? ` (${data.alreadyPresent} were already imported into it.)` : ""}${data.benchmarksCopied ? ` ${data.benchmarksCopied} started pre-filled from a previous batch's template.` : ""}`);
       setLoading(false); router.push(`/coordinator/courses?batchId=${importBatchId}`); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -163,6 +163,11 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
                 <td>{c.semesterNumber ?? "—"}</td>
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
+                  {c.fromBenchmark && (
+                    <span style={{ fontSize: 10, background: "#F4EFE1", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 2, marginRight: 6 }}>
+                      Pre-filled from prior batch
+                    </span>
+                  )}
                   <select defaultValue={c.subjectExpertId || ""} onChange={(e) => assignSe(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— Unassigned —</option>
                     {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}

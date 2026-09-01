@@ -6,7 +6,9 @@ import Shell from "../../../components/Shell";
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/plo-report", label: "PLO Coverage Report" },
+  { href: "/omc/weight-policy", label: "Weight Policy" },
+  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
+  { href: "/omc/reports", label: "Reports" },
 ];
 
 function statusBadge(status: string) {

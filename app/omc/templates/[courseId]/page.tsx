@@ -7,7 +7,9 @@ import OmcDecisionForm from "../../../../components/OmcDecisionForm";
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/plo-report", label: "PLO Coverage Report" },
+  { href: "/omc/weight-policy", label: "Weight Policy" },
+  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
+  { href: "/omc/reports", label: "Reports" },
 ];
 
 export default async function OmcTemplateDetailPage({ params }: { params: { courseId: string } }) {
@@ -38,10 +40,10 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>CLOs</h3>
         <table>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th></tr></thead>
           <tbody>
             {course.clos.map((c) => (
-              <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `PLO-${c.mappedPlo.number}: ${c.mappedPlo.title}` : "—"}</td></tr>
+              <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `PLO-${c.mappedPlo.number}: ${c.mappedPlo.title}` : "—"}</td><td>{c.mappedPlo ? `${c.ploContributionPct ?? 100}%` : "—"}</td></tr>
             ))}
           </tbody>
         </table>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null };
+type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null };
 
 const BLOOM_OPTIONS = [
   { v: "C1", label: "C1 — Remember" }, { v: "C2", label: "C2 — Understand" }, { v: "C3", label: "C3 — Apply" },
@@ -16,6 +16,21 @@ function ploLabel(plos: Plo[], id: string | null) {
   const p = plos.find((x) => x.id === id);
   if (!p) return "—";
   return `PLO-${p.number}: ${p.title}${p.status !== "approved" ? " (pending approval)" : ""}`;
+}
+
+// Groups CLOs by their mapped PLO and flags any PLO whose CLO contributions
+// don't sum to exactly 100% — surfaced live, not just at submit time.
+function contributionWarnings(clos: Clo[], plos: Plo[]) {
+  const byPlo: Record<string, number> = {};
+  for (const c of clos) {
+    if (c.mappedPloId) byPlo[c.mappedPloId] = (byPlo[c.mappedPloId] || 0) + (c.ploContributionPct || 0);
+  }
+  return Object.entries(byPlo)
+    .filter(([, total]) => total !== 100)
+    .map(([ploId, total]) => {
+      const p = plos.find((x) => x.id === ploId);
+      return { label: p ? `PLO-${p.number}: ${p.title}` : "Unknown PLO", total };
+    });
 }
 
 export default function ClosManager({ courseId, initialClos, plos }: { courseId: string; initialClos: Clo[]; plos: Plo[] }) {
@@ -34,7 +49,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: fd.get("code"), statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
-          mappedPloId: fd.get("mappedPloId") || null,
+          mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
         }),
       });
       const data = await res.json();
@@ -52,7 +67,8 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"), mappedPloId: fd.get("mappedPloId") || null,
+          statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
+          mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
         }),
       });
       const data = await res.json();
@@ -74,6 +90,8 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
     </>
   );
 
+  const warnings = contributionWarnings(initialClos, plos);
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -85,26 +103,35 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
           </p>
         </div>
       )}
+      {warnings.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--rust)" }}>
+          <p style={{ fontSize: 12.5, color: "var(--rust)", fontWeight: 600, marginBottom: 6 }}>Contribution percentages don't add up to 100%:</p>
+          {warnings.map((w) => (
+            <p key={w.label} style={{ fontSize: 12, color: "var(--slate)" }}>{w.label} — currently totals {w.total}%</p>
+          ))}
+        </div>
+      )}
       <div className="card">
         <table>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th></th></tr></thead>
           <tbody>
             {initialClos.length === 0 && (
-              <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
+              <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
             {initialClos.map((c) => (
               editingId === c.id ? (
                 <tr key={c.id}>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                       <span style={{ fontWeight: 600 }}>{c.code}</span>
-                      <input name="statement" defaultValue={c.statement} style={{ flex: "1 1 260px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
+                      <input name="statement" defaultValue={c.statement} style={{ flex: "1 1 220px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
                       <select name="bloomLevel" defaultValue={c.bloomLevel} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
                         {BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.v}</option>)}
                       </select>
-                      <select name="mappedPloId" defaultValue={c.mappedPloId ?? ""} style={{ padding: "6px 8px", border: "1px solid var(--line)", maxWidth: 220 }}>
+                      <select name="mappedPloId" defaultValue={c.mappedPloId ?? ""} style={{ padding: "6px 8px", border: "1px solid var(--line)", maxWidth: 200 }}>
                         {ploSelectOptions}
                       </select>
+                      <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={c.ploContributionPct ?? 100} placeholder="%" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
                       <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
                       <button type="button" onClick={() => setEditingId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
                     </form>
@@ -113,6 +140,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
               ) : (
                 <tr key={c.id}>
                   <td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
+                  <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
                   <td style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
                     <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
@@ -135,10 +163,19 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
             </div>
           </div>
           <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
-          <div className="field">
-            <label>Mapped PLO (defined by your Program Coordinator)</label>
-            <select name="mappedPloId">{ploSelectOptions}</select>
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 14 }}>
+            <div className="field">
+              <label>Mapped PLO (defined by your Program Coordinator)</label>
+              <select name="mappedPloId">{ploSelectOptions}</select>
+            </div>
+            <div className="field">
+              <label>Contribution %</label>
+              <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={100} placeholder="100" />
+            </div>
           </div>
+          <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>
+            If more than one CLO in this course maps to the same PLO, their contribution percentages must add up to 100%.
+          </p>
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
         </form>
       </div>
