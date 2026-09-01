@@ -23,22 +23,18 @@ function findBenchmarkSource(candidates: CandidateCourse[], newCourseId: string,
   ) || null;
 }
 
+export async function getBenchmarkCandidates(coordinatorId: string) {
+  return fetchCandidates(coordinatorId);
+}
+
 /**
- * Copies CLOs (with PLO mapping + contribution %), the PLO–Course matrix
- * assignment, the lecture schedule, and assessment weights from a prior
- * batch's course into a freshly created one. The new course keeps its own
- * templateStatus ('draft') — it still needs its own OMC review — but the
- * Subject Expert starts from a filled-in template instead of a blank one.
- *
- * `candidates` should be fetched ONCE via getBenchmarkCandidates() before a
- * loop of many course creations, not re-fetched per course.
+ * Copies a specific known source course's SE work (CLOs, PLO mapping,
+ * contribution %, lecture schedule, weights) into a specific known new
+ * course — the shared engine behind both automatic benchmark matching and
+ * the explicit "copy this whole batch into a new batch" flow.
  */
-export async function copyBenchmarkIfAvailable(
-  newCourseId: string, coordinatorId: string, masterCourseId: string | null, code: string,
-  candidates?: CandidateCourse[]
-) {
-  const pool = candidates ?? (await fetchCandidates(coordinatorId));
-  const source = findBenchmarkSource(pool, newCourseId, masterCourseId, code);
+export async function copyCourseContent(sourceCourseId: string, newCourseId: string) {
+  const source = await prisma.course.findUnique({ where: { id: sourceCourseId } });
   if (!source) return null;
 
   const [ploMappings, clos, lectureRows] = await Promise.all([
@@ -83,9 +79,26 @@ export async function copyBenchmarkIfAvailable(
     },
   });
 
-  return { sourceCourseId: source.id, cloCount: clos.length, lectureRowCount: lectureRows.length };
+  return { cloCount: clos.length, lectureRowCount: lectureRows.length };
 }
 
-export async function getBenchmarkCandidates(coordinatorId: string) {
-  return fetchCandidates(coordinatorId);
+/**
+ * Finds the most recent prior course (any earlier batch, same coordinator)
+ * that matches by masterCourseId (for HEC-imported courses) or by code
+ * (for manual courses), with actual Subject Expert work worth inheriting,
+ * and copies its content into the freshly created course.
+ *
+ * `candidates` should be fetched ONCE via getBenchmarkCandidates() before a
+ * loop of many course creations, not re-fetched per course.
+ */
+export async function copyBenchmarkIfAvailable(
+  newCourseId: string, coordinatorId: string, masterCourseId: string | null, code: string,
+  candidates?: CandidateCourse[]
+) {
+  const pool = candidates ?? (await fetchCandidates(coordinatorId));
+  const source = findBenchmarkSource(pool, newCourseId, masterCourseId, code);
+  if (!source) return null;
+
+  const result = await copyCourseContent(source.id, newCourseId);
+  return result ? { sourceCourseId: source.id, ...result } : null;
 }

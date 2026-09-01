@@ -10,6 +10,7 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/load-report", label: "Teacher Load Report" },
 ];
 
 export default async function CoordinatorFacultyPage() {
@@ -24,7 +25,10 @@ export default async function CoordinatorFacultyPage() {
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Onboarding</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Onboarding</h1>
+        <a href="/api/coordinator/faculty/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+      </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create Subject Expert and Course Instructor accounts, and set each instructor's normal teaching load.
       </p>

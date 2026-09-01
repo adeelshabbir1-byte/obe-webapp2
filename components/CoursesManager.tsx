@@ -24,10 +24,29 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
   const [importBatchId, setImportBatchId] = useState(selectedBatchId || batches[0]?.id || "");
   const [importCurriculumId, setImportCurriculumId] = useState(curricula[0]?.id || "");
   const [addBatchId, setAddBatchId] = useState(selectedBatchId || batches[0]?.id || "");
+  const [copySourceBatchId, setCopySourceBatchId] = useState("");
+  const [copyResult, setCopyResult] = useState("");
 
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
     router.push(url);
+  }
+
+  async function copyFromBatch() {
+    if (!copySourceBatchId || !selectedBatchId) { setError("View a specific batch first (that's the target), and pick a source batch to copy from."); return; }
+    setLoading(true); setError(""); setCopyResult("");
+    try {
+      const res = await fetch("/api/coordinator/courses/copy-from-batch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: selectedBatchId }),
+      });
+      let data: any = {};
+      try { data = await res.json(); } catch { setError("No response from server — check Runtime Logs, or try again."); setLoading(false); return; }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const errorNote = data.errors ? ` ${data.errors.length} failed: ${data.errors.slice(0, 3).join("; ")}` : "";
+      setCopyResult(`Copied ${data.created} course(s) from the source batch.${errorNote}`);
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function importHec() {
@@ -118,6 +137,30 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
           <option value="">All batches</option>
           {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
         </select>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Copy From Another Batch</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
+          Duplicates every course in the source batch into the batch you're currently viewing below (including
+          each course's CLOs, weights, and lecture schedule) — useful when a program has no official curriculum
+          to import from HEC.
+        </p>
+        {copyResult && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{copyResult}</div>}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Copy From</label>
+            <select value={copySourceBatchId} onChange={(e) => setCopySourceBatchId(e.target.value)}>
+              <option value="">— Select source batch —</option>
+              {batches.filter((b) => b.id !== selectedBatchId).map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
+            </select>
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--slate)" }}>
+            Into: <b style={{ color: "var(--ink)" }}>{batches.find((b) => b.id === selectedBatchId)?.batchName || "select a batch above to view first"}</b>
+          </div>
+          <button onClick={copyFromBatch} disabled={loading || !selectedBatchId} className="btn btn-brass">{loading ? "Copying…" : "Copy Courses"}</button>
+        </div>
+        {!selectedBatchId && <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>Use "Viewing batch" above to pick the target batch first.</div>}
       </div>
 
       <div className="card">

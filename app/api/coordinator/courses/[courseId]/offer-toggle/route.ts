@@ -13,7 +13,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const body = await req.json();
   const isOffered = !!body.isOffered;
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { isOffered } });
+  const data: any = { isOffered };
+  if (isOffered) {
+    const current = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
+    if (current) { data.offeredTermName = current.termName; data.offeredTermYear = current.year; }
+  }
+
+  const updated = await prisma.course.update({ where: { id: course.id }, data });
 
   await writeAuditLog({ actorUserId: user.id, action: isOffered ? "COURSE_OFFERED_MANUALLY" : "COURSE_UNOFFERED", entityType: "Course", entityId: course.id });
 

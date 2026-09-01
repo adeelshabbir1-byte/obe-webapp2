@@ -255,6 +255,8 @@ model Course {
   instructorId        String?
   instructor          User?    @relation("CourseInstructor", fields: [instructorId], references: [id])
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
+  offeredTermName     String?  // "Fall" | "Spring" — which term this was offered in, stamped when isOffered becomes true
+  offeredTermYear     Int?
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
   benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any

@@ -26,7 +26,7 @@ export async function POST() {
     const semesterNumber = computeCurrentSemesterNumber(batch, current);
     const result = await prisma.course.updateMany({
       where: { batchId: batch.id, semesterNumber, isOffered: false },
-      data: { isOffered: true },
+      data: { isOffered: true, offeredTermName: current.termName, offeredTermYear: current.year },
     });
     offered += result.count;
     perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: result.count });

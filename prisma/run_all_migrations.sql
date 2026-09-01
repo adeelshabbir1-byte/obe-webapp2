@@ -265,5 +265,12 @@ CREATE TABLE IF NOT EXISTS "GroupSectionAssignment" (
 CREATE UNIQUE INDEX IF NOT EXISTS "GroupSectionAssignment_groupId_instructorId_key" ON "GroupSectionAssignment"("groupId", "instructorId");
 CREATE INDEX IF NOT EXISTS "GroupSectionAssignment_groupId_idx" ON "GroupSectionAssignment"("groupId");
 CREATE INDEX IF NOT EXISTS "GroupSectionAssignment_instructorId_idx" ON "GroupSectionAssignment"("instructorId");
+-- Run in Supabase SQL Editor. Adds term tracking to Course, needed for the
+-- Teacher Load Report to know which semester a section assignment belongs to.
+
+ALTER TABLE "Course"
+  ADD COLUMN IF NOT EXISTS "offeredTermName" TEXT,
+  ADD COLUMN IF NOT EXISTS "offeredTermYear" INTEGER;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
+-- (the old Course_coordinatorId_code_key index fix and orphaned-course cleanup were one-off repairs, not needed for a fresh database)

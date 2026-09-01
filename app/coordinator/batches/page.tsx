@@ -10,6 +10,7 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/load-report", label: "Teacher Load Report" },
 ];
 
 export default async function BatchesPage() {
@@ -25,7 +26,10 @@ export default async function BatchesPage() {
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Degree Programs & Batches</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Degree Programs & Batches</h1>
+        <a href="/api/coordinator/batches/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+      </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Different batches/cohorts can follow different schemes of studies. Create a batch here, then import
         or add courses into it — the same HEC curriculum can be imported fresh for each new batch.
