@@ -16,8 +16,12 @@ export async function GET() {
   // Return one row per known course type, defaulting to 0-100 (unrestricted) if never set.
   const policies = COURSE_TYPES.map((t) => byType.get(t) || {
     id: null, courseType: t,
-    assignmentMin: 0, assignmentMax: 100, quizMin: 0, quizMax: 100, projectMin: 0, projectMax: 100,
-    labMin: 0, labMax: 100, midtermMin: 0, midtermMax: 100, finalMin: 0, finalMax: 100,
+    assignmentMin: 0, assignmentMax: 100, assignmentMinCount: 1,
+    quizMin: 0, quizMax: 100, quizMinCount: 1,
+    projectMin: 0, projectMax: 100, projectMinCount: 0,
+    labMin: 0, labMax: 100, labMinCount: 0,
+    midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
+    finalMin: 0, finalMax: 100, finalMinCount: 1,
   });
 
   return NextResponse.json({ policies });
@@ -33,11 +37,14 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "valid courseType is required" }, { status: 400 });
   }
 
-  const fields = ["assignmentMin", "assignmentMax", "quizMin", "quizMax", "projectMin", "projectMax", "labMin", "labMax", "midtermMin", "midtermMax", "finalMin", "finalMax"];
+  const fields = ["assignmentMin", "assignmentMax", "assignmentMinCount", "quizMin", "quizMax", "quizMinCount",
+    "projectMin", "projectMax", "projectMinCount", "labMin", "labMax", "labMinCount",
+    "midtermMin", "midtermMax", "midtermMinCount", "finalMin", "finalMax", "finalMinCount"];
   const data: Record<string, number> = {};
   for (const f of fields) {
     const v = parseInt(body[f], 10);
-    if (isNaN(v) || v < 0 || v > 100) return NextResponse.json({ error: `${f} must be a number between 0 and 100` }, { status: 400 });
+    const isCount = f.endsWith("MinCount");
+    if (isNaN(v) || v < 0 || (!isCount && v > 100)) return NextResponse.json({ error: `${f} must be a valid number${isCount ? "" : " between 0 and 100"}` }, { status: 400 });
     data[f] = v;
   }
   // sanity: min <= max for each pair

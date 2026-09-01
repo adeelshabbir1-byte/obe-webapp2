@@ -28,8 +28,8 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
         <div className="card">
           <h3 style={{ fontSize: 14, marginBottom: 8 }}>OMC Weight Policy for {course.courseType} courses</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "var(--slate)" }}>
-            <span>Assignment: <b style={{ color: "var(--ink)" }}>{policy.assignmentMin}–{policy.assignmentMax}%</b></span>
-            <span>Quiz: <b style={{ color: "var(--ink)" }}>{policy.quizMin}–{policy.quizMax}%</b></span>
+            <span>Assignment: <b style={{ color: "var(--ink)" }}>{policy.assignmentMin}–{policy.assignmentMax}%</b> ({policy.assignmentMinCount}+ conducted)</span>
+            <span>Quiz: <b style={{ color: "var(--ink)" }}>{policy.quizMin}–{policy.quizMax}%</b> ({policy.quizMinCount}+ conducted)</span>
             <span>Project: <b style={{ color: "var(--ink)" }}>{policy.projectMin}–{policy.projectMax}%</b></span>
             <span>Lab: <b style={{ color: "var(--ink)" }}>{policy.labMin}–{policy.labMax}%</b></span>
             <span>Midterm: <b style={{ color: "var(--ink)" }}>{policy.midtermMin}–{policy.midtermMax}%</b></span>

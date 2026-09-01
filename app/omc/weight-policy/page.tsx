@@ -22,8 +22,13 @@ export default async function WeightPolicyPage() {
   const existing = await prisma.weightPolicy.findMany({ where: { chairmanId: user.managedById || "" } });
   const byType = new Map(existing.map((p) => [p.courseType, p]));
   const policies = COURSE_TYPES.map((t) => byType.get(t) || {
-    courseType: t, assignmentMin: 0, assignmentMax: 100, quizMin: 0, quizMax: 100, projectMin: 0, projectMax: 100,
-    labMin: 0, labMax: 100, midtermMin: 0, midtermMax: 100, finalMin: 0, finalMax: 100,
+    courseType: t,
+    assignmentMin: 0, assignmentMax: 100, assignmentMinCount: 1,
+    quizMin: 0, quizMax: 100, quizMinCount: 1,
+    projectMin: 0, projectMax: 100, projectMinCount: 0,
+    labMin: 0, labMax: 100, labMinCount: 0,
+    midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
+    finalMin: 0, finalMax: 100, finalMinCount: 1,
   });
 
   return (

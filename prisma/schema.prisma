@@ -110,16 +110,22 @@ model WeightPolicy {
   courseType    String   // Core | Elective | Lab | IDS | General Education | Capstone Project | Field Experience
   assignmentMin Int      @default(0)
   assignmentMax Int      @default(100)
+  assignmentMinCount Int @default(1) // minimum number of assignments to be conducted
   quizMin       Int      @default(0)
   quizMax       Int      @default(100)
+  quizMinCount  Int      @default(1) // minimum number of quizzes to be conducted
   projectMin    Int      @default(0)
   projectMax    Int      @default(100)
+  projectMinCount Int    @default(0)
   labMin        Int      @default(0)
   labMax        Int      @default(100)
+  labMinCount   Int      @default(0)
   midtermMin    Int      @default(0)
   midtermMax    Int      @default(100)
+  midtermMinCount Int    @default(1)
   finalMin      Int      @default(0)
   finalMax      Int      @default(100)
+  finalMinCount Int      @default(1)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
