@@ -8,6 +8,7 @@ const NAV = [
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },
+  { href: "/chairman/assigners", label: "Course Assigners" },
 ];
 
 export default async function ChairmanOmcPage() {

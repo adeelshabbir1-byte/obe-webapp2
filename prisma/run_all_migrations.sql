@@ -198,5 +198,72 @@ CREATE TABLE IF NOT EXISTS "LectureRowInstrument" (
 CREATE UNIQUE INDEX IF NOT EXISTS "LectureRowInstrument_lectureRowId_instrumentId_key" ON "LectureRowInstrument"("lectureRowId", "instrumentId");
 CREATE INDEX IF NOT EXISTS "LectureRowInstrument_lectureRowId_idx" ON "LectureRowInstrument"("lectureRowId");
 CREATE INDEX IF NOT EXISTS "LectureRowInstrument_instrumentId_idx" ON "LectureRowInstrument"("instrumentId");
+-- Run in Supabase SQL Editor. Adds batch start-term tracking, the current-term
+-- setting, and course offering/instructor assignment fields.
+
+ALTER TABLE "Batch"
+  ADD COLUMN IF NOT EXISTS "startTerm" TEXT NOT NULL DEFAULT 'Fall',
+  ADD COLUMN IF NOT EXISTS "startYear" INTEGER NOT NULL DEFAULT 2025;
+
+CREATE TABLE IF NOT EXISTS "CurrentTerm" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "coordinatorId" TEXT NOT NULL UNIQUE REFERENCES "User"("id"),
+  "termName" TEXT NOT NULL,
+  "year" INTEGER NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE "Course"
+  ADD COLUMN IF NOT EXISTS "instructorId" TEXT REFERENCES "User"("id"),
+  ADD COLUMN IF NOT EXISTS "isOffered" BOOLEAN NOT NULL DEFAULT false;
+-- Run in Supabase SQL Editor. Adds faculty load tracking, the
+-- CourseSectionAssignment matrix table, and the COURSE_ASSIGNER role
+-- (role is stored as text, so no enum change needed at the DB level).
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "normalLoad" INTEGER NOT NULL DEFAULT 3,
+  ADD COLUMN IF NOT EXISTS "externalLoadCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "externalLoadNote" TEXT;
+
+CREATE TABLE IF NOT EXISTS "CourseSectionAssignment" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+  "instructorId" TEXT NOT NULL REFERENCES "User"("id"),
+  "sectionCount" INTEGER NOT NULL DEFAULT 1,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CourseSectionAssignment_courseId_instructorId_key" ON "CourseSectionAssignment"("courseId", "instructorId");
+CREATE INDEX IF NOT EXISTS "CourseSectionAssignment_courseId_idx" ON "CourseSectionAssignment"("courseId");
+CREATE INDEX IF NOT EXISTS "CourseSectionAssignment_instructorId_idx" ON "CourseSectionAssignment"("instructorId");
+-- Run in Supabase SQL Editor. Adds batch student counts and the course
+-- equivalence group system (combining courses across batches/programs).
+
+ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "studentCount" INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS "CourseEquivalenceGroup" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL REFERENCES "User"("id"),
+  "name" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "CourseEquivalenceGroup_chairmanId_idx" ON "CourseEquivalenceGroup"("chairmanId");
+
+CREATE TABLE IF NOT EXISTS "CourseEquivalenceMember" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "groupId" TEXT NOT NULL REFERENCES "CourseEquivalenceGroup"("id"),
+  "courseId" TEXT NOT NULL UNIQUE REFERENCES "Course"("id")
+);
+CREATE INDEX IF NOT EXISTS "CourseEquivalenceMember_groupId_idx" ON "CourseEquivalenceMember"("groupId");
+
+CREATE TABLE IF NOT EXISTS "GroupSectionAssignment" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "groupId" TEXT NOT NULL REFERENCES "CourseEquivalenceGroup"("id"),
+  "instructorId" TEXT NOT NULL REFERENCES "User"("id"),
+  "sectionCount" INTEGER NOT NULL DEFAULT 1,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "GroupSectionAssignment_groupId_instructorId_key" ON "GroupSectionAssignment"("groupId", "instructorId");
+CREATE INDEX IF NOT EXISTS "GroupSectionAssignment_groupId_idx" ON "GroupSectionAssignment"("groupId");
+CREATE INDEX IF NOT EXISTS "GroupSectionAssignment_instructorId_idx" ON "GroupSectionAssignment"("instructorId");
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)

@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
-import CreateUserForm from "../../../components/CreateUserForm";
+import FacultyManager from "../../../components/FacultyManager";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
+  { href: "/coordinator/semester", label: "Current Semester" },
 ];
 
 export default async function CoordinatorFacultyPage() {
@@ -25,31 +26,13 @@ export default async function CoordinatorFacultyPage() {
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Onboarding</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Create Subject Expert and Course Instructor accounts. They set a new password on first login.
+        Create Subject Expert and Course Instructor accounts, and set each instructor's normal teaching load.
       </p>
-
-      <div className="card">
-        <table>
-          <thead><tr><th>Username</th><th>Name</th><th>Role</th></tr></thead>
-          <tbody>
-            {faculty.length === 0 && (
-              <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>
-            )}
-            {faculty.map((f) => (
-              <tr key={f.id}><td>{f.username}</td><td>{f.name}</td><td>{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <CreateUserForm
-        endpoint="/api/coordinator/faculty"
-        buttonLabel="Onboard Faculty"
-        showRoleSelect
-        roleOptions={[
-          { value: "SUBJECT_EXPERT", label: "Subject Expert" },
-          { value: "INSTRUCTOR", label: "Course Instructor" },
-        ]}
+      <FacultyManager
+        initialFaculty={faculty.map((f) => ({
+          id: f.id, username: f.username, name: f.name, role: f.role, mustChangePassword: f.mustChangePassword,
+          normalLoad: f.normalLoad, externalLoadCount: f.externalLoadCount, externalLoadNote: f.externalLoadNote,
+        }))}
       />
     </Shell>
   );

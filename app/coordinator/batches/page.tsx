@@ -9,6 +9,7 @@ const NAV = [
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
+  { href: "/coordinator/semester", label: "Current Semester" },
 ];
 
 export default async function BatchesPage() {
@@ -30,7 +31,7 @@ export default async function BatchesPage() {
         or add courses into it — the same HEC curriculum can be imported fresh for each new batch.
       </p>
       <BatchesManager
-        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, courseCount: b._count.courses }))}
+        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses }))}
       />
     </Shell>
   );

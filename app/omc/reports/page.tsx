@@ -7,6 +7,7 @@ const NAV = [
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
+  { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/reports", label: "Reports" },
 ];
 

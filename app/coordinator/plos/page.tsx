@@ -9,6 +9,7 @@ const NAV = [
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
+  { href: "/coordinator/semester", label: "Current Semester" },
 ];
 
 export default async function CoordinatorPlosPage() {

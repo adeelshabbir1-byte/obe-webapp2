@@ -19,6 +19,7 @@ enum UserRole {
   SUBJECT_EXPERT
   INSTRUCTOR
   OMC
+  COURSE_ASSIGNER
 }
 
 model User {
@@ -38,6 +39,9 @@ model User {
   managedUsers       User[]   @relation("UserManagement")
 
   mustChangePassword Boolean  @default(false)
+  normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
+  externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
+  externalLoadNote   String?               // e.g. "2 courses at MS level"
   isActive           Boolean  @default(true)
   failedLoginCount   Int      @default(0)
   lockedUntil        DateTime?
@@ -48,8 +52,13 @@ model User {
   resetTokens        PasswordResetToken[]
   courses            Course[] @relation("CourseCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
+  teachingCourses    Course[] @relation("CourseInstructor")
+  sectionAssignments CourseSectionAssignment[] @relation("SectionInstructor")
+  groupSectionAssignments GroupSectionAssignment[] @relation("GroupSectionInstructor")
+  equivalenceGroups  CourseEquivalenceGroup[] @relation("EquivalenceChairman")
   plos               PLO[]    @relation("PloCoordinator")
   batches            Batch[]  @relation("BatchCoordinator")
+  currentTerm        CurrentTerm? @relation("CurrentTermCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
@@ -92,12 +101,26 @@ model Batch {
   coordinator    User     @relation("BatchCoordinator", fields: [coordinatorId], references: [id])
   degreeProgram  String   // e.g. "BS Computer Science"
   batchName      String   // e.g. "Fall 2025"
+  startTerm      String   @default("Fall")   // "Fall" | "Spring" — which term this batch's Semester 1 falls in
+  startYear      Int      @default(2025)
+  studentCount   Int      @default(0) // current active student count — editable each semester as students join/leave
   createdAt      DateTime @default(now())
 
   courses        Course[]
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
+}
+
+// The single "what term is it right now" setting per coordinator/program —
+// updating this drives which batch is in which semester automatically.
+model CurrentTerm {
+  id            String   @id @default(cuid())
+  coordinatorId String   @unique
+  coordinator   User     @relation("CurrentTermCoordinator", fields: [coordinatorId], references: [id])
+  termName      String   // "Fall" | "Spring"
+  year          Int
+  updatedAt     DateTime @updatedAt
 }
 
 // OMC-defined min/max assessment weight ranges per course type. A Subject
@@ -156,6 +179,66 @@ model WeightExceptionRequest {
   @@index([courseId])
 }
 
+// Which faculty member teaches how many sections of a given (offered)
+// course — the source of truth for the Course Assigner's load matrix.
+// A single course can have multiple rows (split across faculty by section).
+model CourseSectionAssignment {
+  id           String   @id @default(cuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  instructorId String
+  instructor   User     @relation("SectionInstructor", fields: [instructorId], references: [id])
+  sectionCount Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@unique([courseId, instructorId])
+  @@index([courseId])
+  @@index([instructorId])
+}
+
+// OMC-defined equivalence: courses that are the same underlying content
+// across different batches/programs (even with different codes/names) and
+// can be taught together as one combined class, split into sections once
+// combined enrollment crosses the 50-student cap.
+model CourseEquivalenceGroup {
+  id         String   @id @default(cuid())
+  chairmanId String
+  chairman   User     @relation("EquivalenceChairman", fields: [chairmanId], references: [id])
+  name       String   // e.g. "Introduction to Programming (shared)"
+  createdAt  DateTime @default(now())
+
+  members    CourseEquivalenceMember[]
+  sectionAssignments GroupSectionAssignment[]
+
+  @@index([chairmanId])
+}
+
+model CourseEquivalenceMember {
+  id       String @id @default(cuid())
+  groupId  String
+  group    CourseEquivalenceGroup @relation(fields: [groupId], references: [id])
+  courseId String @unique // a course can only belong to one equivalence group
+  course   Course @relation(fields: [courseId], references: [id])
+
+  @@index([groupId])
+}
+
+// Faculty section allocation for a combined equivalence group — parallel to
+// CourseSectionAssignment but for the group as a whole rather than one course.
+model GroupSectionAssignment {
+  id           String   @id @default(cuid())
+  groupId      String
+  group        CourseEquivalenceGroup @relation(fields: [groupId], references: [id])
+  instructorId String
+  instructor   User     @relation("GroupSectionInstructor", fields: [instructorId], references: [id])
+  sectionCount Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@unique([groupId, instructorId])
+  @@index([groupId])
+  @@index([instructorId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -169,6 +252,9 @@ model Course {
   batch               Batch?   @relation(fields: [batchId], references: [id])
   subjectExpertId     String?
   subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
+  instructorId        String?
+  instructor          User?    @relation("CourseInstructor", fields: [instructorId], references: [id])
+  isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
   benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any
@@ -191,6 +277,8 @@ model Course {
   ploMappings         CoursePloMapping[]
   weightExceptions    WeightExceptionRequest[]
   assessmentInstruments AssessmentInstrument[]
+  sectionAssignments  CourseSectionAssignment[]
+  equivalenceMember   CourseEquivalenceMember?
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
