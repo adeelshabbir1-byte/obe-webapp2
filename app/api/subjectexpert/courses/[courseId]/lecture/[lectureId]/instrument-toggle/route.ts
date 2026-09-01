@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
+import { recomputeAffectedRows } from "../../../../../../../../lib/lectureWeights";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -30,10 +31,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: row.id, instrumentId } });
   }
 
-  // Recompute the row's total weight from all currently linked instruments.
-  const links = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId: row.id }, include: { instrument: true } });
-  const weightPct = links.reduce((sum, l) => sum + l.instrument.marksPct, 0);
-  await prisma.lectureRow.update({ where: { id: row.id }, data: { weightPct } });
+  // Recompute every row sharing this instrument — the split changes for
+  // all of them whenever the count of linked rows changes.
+  await recomputeAffectedRows([instrumentId]);
 
-  return NextResponse.json({ weightPct });
+  const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
+  return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
 }

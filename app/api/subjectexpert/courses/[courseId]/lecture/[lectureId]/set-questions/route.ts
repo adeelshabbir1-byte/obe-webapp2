@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
+import { recomputeAffectedRows } from "../../../../../../../../lib/lectureWeights";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -35,6 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const existingLinksOfType = await prisma.lectureRowInstrument.findMany({
     where: { lectureRowId: row.id, instrument: { type } },
   });
+  const removedInstrumentIds = existingLinksOfType.map((l) => l.instrumentId);
   await prisma.lectureRowInstrument.deleteMany({ where: { id: { in: existingLinksOfType.map((l) => l.id) } } });
 
   for (const n of numbers) {
@@ -42,9 +44,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     await prisma.lectureRowInstrument.create({ data: { lectureRowId: row.id, instrumentId: instrument.id } });
   }
 
-  const allLinks = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId: row.id }, include: { instrument: true } });
-  const weightPct = allLinks.reduce((sum, l) => sum + l.instrument.marksPct, 0);
-  await prisma.lectureRow.update({ where: { id: row.id }, data: { weightPct } });
+  // Recompute every row sharing any instrument that was added or removed —
+  // the split changes for all of them whenever the linked-row count changes.
+  const addedInstrumentIds = numbers.map((n: string) => byLabel.get(n)!.id);
+  await recomputeAffectedRows([...new Set([...removedInstrumentIds, ...addedInstrumentIds])]);
 
-  return NextResponse.json({ weightPct });
+  const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
+  return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
 }

@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { recomputeRowWeight } from "../../../../../../../lib/lectureWeights";
 
 export async function DELETE(req: Request, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
@@ -12,14 +13,16 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: params.instrumentId } });
   if (!instrument || instrument.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  // Recompute weightPct for any lecture rows that were linked to this instrument.
+  // Links must be removed BEFORE the instrument itself (foreign key), and we
+  // need the affected row IDs first so we can recompute their weight after.
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: params.instrumentId } });
+  const affectedRowIds = links.map((l) => l.lectureRowId);
+
+  await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: params.instrumentId } });
   await prisma.assessmentInstrument.delete({ where: { id: params.instrumentId } });
 
-  for (const link of links) {
-    const remaining = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId: link.lectureRowId }, include: { instrument: true } });
-    const total = remaining.reduce((sum, l) => sum + l.instrument.marksPct, 0);
-    await prisma.lectureRow.update({ where: { id: link.lectureRowId }, data: { weightPct: total } });
+  for (const rowId of affectedRowIds) {
+    await recomputeRowWeight(rowId);
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_DELETED", entityType: "AssessmentInstrument", entityId: params.instrumentId });

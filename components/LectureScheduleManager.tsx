@@ -173,6 +173,8 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
         </table>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
           For Midterm/Final, type the question number(s) this lecture is tested in (comma-separated for more than one), then click away to save.
+          If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them (e.g. a 10%
+          question linked to 2 lectures gives each one 5%).
         </p>
       </div>
     </>
