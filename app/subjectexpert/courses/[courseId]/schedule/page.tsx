@@ -67,11 +67,18 @@ export default async function SchedulePage({ params }: { params: { courseId: str
 
       <LectureScheduleManager
         courseId={course.id}
-        initialRows={course.lectureRows.map((r) => ({
-          id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
-          cloId: r.cloId, cloCode: r.clo?.code || null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
-          linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId),
-        }))}
+        initialRows={course.lectureRows.map((r) => {
+          const linkedInstruments = r.instrumentLinks
+            .map((l) => course.assessmentInstruments.find((i) => i.id === l.instrumentId))
+            .filter((i): i is (typeof course.assessmentInstruments)[number] => !!i);
+          return {
+            id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
+            cloId: r.cloId, cloCode: r.clo?.code || null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+            linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId),
+            midtermQuestions: linkedInstruments.filter((i) => i.type === "Midterm").map((i) => i.label).join(", "),
+            finalQuestions: linkedInstruments.filter((i) => i.type === "Final").map((i) => i.label).join(", "),
+          };
+        })}
         clos={course.clos.map((c) => ({ id: c.id, code: c.code }))}
         instruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct }))}
       />

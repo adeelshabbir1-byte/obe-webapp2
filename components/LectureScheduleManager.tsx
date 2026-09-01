@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Clo = { id: string; code: string };
 type Instrument = { id: string; type: string; label: string; marksPct: number };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; cloCode: string | null; bloomLevel: string | null; weightPct: number; linkedInstrumentIds: string[] };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; cloCode: string | null; bloomLevel: string | null; weightPct: number; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string };
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
 
@@ -17,6 +17,10 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busyCell, setBusyCell] = useState<string | null>(null);
+
+  const checkboxInstruments = instruments.filter((i) => i.type === "Quiz" || i.type === "Assignment");
+  const hasMidterm = instruments.some((i) => i.type === "Midterm");
+  const hasFinal = instruments.some((i) => i.type === "Final");
 
   async function generate() {
     setLoading(true); setError("");
@@ -52,6 +56,19 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
     setBusyCell(null); router.refresh();
   }
 
+  async function saveQuestions(rowId: string, type: "Midterm" | "Final", value: string) {
+    const key = rowId + type;
+    setBusyCell(key); setError("");
+    try {
+      const res = await fetch(`/api/subjectexpert/courses/${courseId}/lecture/${rowId}/set-questions`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, numbers: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
+      setBusyCell(null); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
+  }
+
   if (initialRows.length === 0) {
     return (
       <div className="card">
@@ -73,8 +90,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
       {instruments.length === 0 && (
         <div className="card" style={{ borderColor: "var(--brass)" }}>
           <p style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>
-            No quizzes, assignments, or exam questions defined yet — go to the "Quizzes/Assignments/Exams" tab first,
-            then come back here to check off which lectures they test.
+            No quizzes, assignments, or exam questions defined yet — go to the "Quizzes/Assignments/Exams" tab first.
           </p>
         </div>
       )}
@@ -87,18 +103,20 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
           <thead>
             <tr>
               <th>Wk</th><th>Lec</th><th>Topic</th><th>Sub Topic</th><th>CLO</th><th>Bloom</th>
-              {instruments.map((i) => (
+              {checkboxInstruments.map((i) => (
                 <th key={i.id} style={{ textAlign: "center", writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80, whiteSpace: "nowrap", fontSize: 10.5 }}>
                   {i.type} {i.label}
                 </th>
               ))}
+              {hasMidterm && <th style={{ fontSize: 10.5 }}>Midterm Q#</th>}
+              {hasFinal && <th style={{ fontSize: 10.5 }}>Final Q#</th>}
               <th>Weight</th><th></th>
             </tr>
           </thead>
           <tbody>
             {initialRows.map((r) => editingId === r.id ? (
               <tr key={r.id}>
-                <td colSpan={7 + instruments.length}>
+                <td colSpan={7 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0)}>
                   <form onSubmit={(e) => saveRow(e, r.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                     <span style={{ fontWeight: 600, fontSize: 12 }}>Wk {r.week} · Lec {r.lectureNumber}</span>
                     <input name="topic" defaultValue={r.topic} placeholder="Topic" style={{ flex: "1 1 160px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -120,7 +138,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
                 <td>{r.week}</td><td>{r.lectureNumber}</td>
                 <td style={{ color: r.topic ? "var(--ink)" : "var(--slate)" }}>{r.topic || "—"}</td>
                 <td>{r.subtopic || "—"}</td><td>{r.cloCode || "—"}</td><td>{r.bloomLevel || "—"}</td>
-                {instruments.map((i) => {
+                {checkboxInstruments.map((i) => {
                   const checked = r.linkedInstrumentIds.includes(i.id);
                   const key = r.id + i.id;
                   return (
@@ -129,12 +147,33 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
                     </td>
                   );
                 })}
+                {hasMidterm && (
+                  <td>
+                    <input
+                      defaultValue={r.midtermQuestions} placeholder="e.g. 1,3" disabled={busyCell === r.id + "Midterm"}
+                      onBlur={(e) => { if (e.target.value !== r.midtermQuestions) saveQuestions(r.id, "Midterm", e.target.value); }}
+                      style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }}
+                    />
+                  </td>
+                )}
+                {hasFinal && (
+                  <td>
+                    <input
+                      defaultValue={r.finalQuestions} placeholder="e.g. 2" disabled={busyCell === r.id + "Final"}
+                      onBlur={(e) => { if (e.target.value !== r.finalQuestions) saveQuestions(r.id, "Final", e.target.value); }}
+                      style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }}
+                    />
+                  </td>
+                )}
                 <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
                 <td><button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>
               </tr>
             ))}
           </tbody>
         </table>
+        <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
+          For Midterm/Final, type the question number(s) this lecture is tested in (comma-separated for more than one), then click away to save.
+        </p>
       </div>
     </>
   );
