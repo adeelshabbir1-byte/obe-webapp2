@@ -14,13 +14,45 @@ function statusBadge(status: string) {
   return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
-export default function PlosManager({ initialPlos, hecPlos, batchId }: { initialPlos: Plo[]; hecPlos: HecPlo[]; batchId: string }) {
+export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatches }: {
+  initialPlos: Plo[]; hecPlos: HecPlo[]; batchId: string; otherBatches: { id: string; label: string }[];
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copySourceBatchId, setCopySourceBatchId] = useState("");
+  const [bulkResult, setBulkResult] = useState("");
 
   const nextNumber = initialPlos.length ? Math.max(...initialPlos.map((p) => p.number)) + 1 : 1;
+
+  async function addAllHec() {
+    setLoading(true); setError(""); setBulkResult("");
+    try {
+      const res = await fetch("/api/coordinator/plos/bulk-add-hec", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setBulkResult(`Added ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  async function copyAllFromBatch() {
+    if (!copySourceBatchId) { setError("Select a batch to copy from first."); return; }
+    setLoading(true); setError(""); setBulkResult("");
+    try {
+      const res = await fetch("/api/coordinator/plos/copy-from-batch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: batchId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setBulkResult(`Copied ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
 
   async function copyFromHec(hp: HecPlo) {
     setLoading(true); setError("");
@@ -76,6 +108,29 @@ export default function PlosManager({ initialPlos, hecPlos, batchId }: { initial
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {bulkResult && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Add All PLOs at Once</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>All added as editable copies — nothing stays locked to the source.</p>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <button onClick={addAllHec} disabled={loading} className="btn btn-brass" style={{ padding: "8px 14px" }}>Add All 10 HEC PLOs</button>
+          </div>
+          {otherBatches.length > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Copy From Another Batch</label>
+                <select value={copySourceBatchId} onChange={(e) => setCopySourceBatchId(e.target.value)} style={{ padding: "7px 9px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                  <option value="">— Select batch —</option>
+                  {otherBatches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+                </select>
+              </div>
+              <button onClick={copyAllFromBatch} disabled={loading || !copySourceBatchId} className="btn btn-brass" style={{ padding: "8px 14px" }}>Copy All PLOs</button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Program's PLOs</h3>

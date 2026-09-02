@@ -53,6 +53,7 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
           <PlosManager
             key={selectedBatchId}
             batchId={selectedBatchId}
+            otherBatches={batches.filter((b) => b.id !== selectedBatchId).map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))}
             initialPlos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description, status: p.status, chairmanComment: p.chairmanComment, sourceMasterPloNumber: p.sourceMasterPloNumber }))}
             hecPlos={hecPlos.map((h) => ({ number: h.number, title: h.title, description: h.description }))}
           />
