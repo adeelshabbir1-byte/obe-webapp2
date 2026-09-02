@@ -34,14 +34,15 @@ export default async function InstructorCoursesPage() {
     <Shell roleLabel="Faculty / Lecturer" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Semester Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Courses currently offered and assigned to you.
+        Courses currently offered and assigned to you. Click "Open" to record your actual delivery — starts as
+        an editable copy of the Subject Expert's plan.
       </p>
       <div className="card">
         <table>
-          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th>Sections</th><th>Subject Expert</th></tr></thead>
+          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th>Sections</th><th>Subject Expert</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && (
-              <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses assigned to you for the current semester yet.</td></tr>
+              <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No courses assigned to you for the current semester yet.</td></tr>
             )}
             {courses.map((c) => (
               <tr key={c.id}>
@@ -49,16 +50,11 @@ export default async function InstructorCoursesPage() {
                 <td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
                 <td>{c.sectionCount ?? "—"}</td>
                 <td>{c.subjectExpert?.name || "—"}</td>
+                <td><a href={`/instructor/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</a></td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="card" style={{ borderColor: "var(--brass)" }}>
-        <p style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>
-          Course delivery screens (logging actual lecture dates, entering marks, attendance) aren't built yet —
-          this page currently just confirms what you're assigned to teach this semester.
-        </p>
       </div>
     </Shell>
   );

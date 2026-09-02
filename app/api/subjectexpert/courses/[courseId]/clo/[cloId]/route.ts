@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
-  if (!clo || clo.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   if (!body.statement || !body.bloomLevel) {
@@ -38,7 +38,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
-  if (!clo || clo.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   await prisma.cLO.delete({ where: { id: params.cloId } });
   await writeAuditLog({ actorUserId: user.id, action: "CLO_DELETED", entityType: "CLO", entityId: params.cloId });

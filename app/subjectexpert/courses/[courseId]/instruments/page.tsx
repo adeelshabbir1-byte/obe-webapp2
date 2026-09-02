@@ -14,7 +14,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
-    include: { assessmentInstruments: { orderBy: [{ type: "asc" }, { label: "asc" }] } },
+    include: { assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }] } },
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
 

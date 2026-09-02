@@ -263,6 +263,9 @@ model Course {
   benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any
   benchmarkSource     Course?  @relation("BenchmarkLineage", fields: [benchmarkSourceId], references: [id])
   benchmarkCopies     Course[] @relation("BenchmarkLineage")
+  prerequisiteCourseId String? // the course that should be taken before this one
+  prerequisiteCourse  Course?  @relation("PrerequisiteLineage", fields: [prerequisiteCourseId], references: [id])
+  postrequisiteCourses Course[] @relation("PrerequisiteLineage")
   createdAt           DateTime @default(now())
 
   // Gold-standard template fields, set by the Subject Expert
@@ -275,6 +278,15 @@ model Course {
   finalPct            Int      @default(40)
   omcComment          String?  @db.Text // latest OMC review comment on this template
 
+  // Instructor's OWN copy of the weights (separate from SE's plan above),
+  // populated when the Instructor first opens their delivery page.
+  instructorAssignmentPct Int?
+  instructorQuizPct       Int?
+  instructorProjectPct    Int?
+  instructorLabPct        Int?
+  instructorMidtermPct    Int?
+  instructorFinalPct      Int?
+
   clos                CLO[]
   lectureRows         LectureRow[]
   ploMappings         CoursePloMapping[]
@@ -282,10 +294,41 @@ model Course {
   assessmentInstruments AssessmentInstrument[]
   sectionAssignments  CourseSectionAssignment[]
   equivalenceMember   CourseEquivalenceMember?
+  feedForwardNotes    FeedForwardNote[]
+  guidanceComments    InstructorGuidanceComment[]
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
   @@index([batchId])
+}
+
+// Left by an instructor at any point (typically end of semester) for whoever
+// teaches this course next — either the next batch's instance of the same
+// course, or a course that lists this one as its prerequisite.
+model FeedForwardNote {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  authorId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([courseId])
+}
+
+// A running thread between OMC and the Instructor about this specific
+// course's delivery — visible throughout the semester, not gated behind a
+// submit action.
+model InstructorGuidanceComment {
+  id         String   @id @default(cuid())
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+  authorId   String
+  authorRole String   // "OMC" | "INSTRUCTOR"
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([courseId])
 }
 
 // Institutional/Program PLOs — defined by the Program Coordinator (optionally
@@ -336,6 +379,7 @@ model CLO {
   id          String   @id @default(cuid())
   courseId    String
   course      Course   @relation(fields: [courseId], references: [id])
+  source      String   @default("SE") // "SE" | "INSTRUCTOR" — SE's plan vs the Instructor's own delivery copy
   code        String   // "CLO-1"
   statement   String   @db.Text
   bloomLevel  String   // C1..C6
@@ -348,7 +392,7 @@ model CLO {
 
   lectureRows LectureRow[]
 
-  @@unique([courseId, code])
+  @@unique([courseId, source, code])
   @@index([courseId])
 }
 
@@ -357,6 +401,7 @@ model LectureRow {
   id            String   @id @default(cuid())
   courseId      String
   course        Course   @relation(fields: [courseId], references: [id])
+  source        String   @default("SE") // "SE" | "INSTRUCTOR"
   week          Int
   lectureNumber Int
   topic         String
@@ -365,10 +410,11 @@ model LectureRow {
   clo           CLO?     @relation(fields: [cloId], references: [id])
   bloomLevel    String?  // C1..C6
   weightPct     Int      @default(0) // auto-computed: sum of linked instruments' marksPct
+  actualDate    DateTime? // Instructor-only: the real calendar date this lecture happened
 
   instrumentLinks LectureRowInstrument[]
 
-  @@unique([courseId, lectureNumber])
+  @@unique([courseId, source, lectureNumber])
   @@index([courseId])
 }
 
@@ -380,6 +426,7 @@ model AssessmentInstrument {
   id        String   @id @default(cuid())
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id])
+  source    String   @default("SE") // "SE" | "INSTRUCTOR"
   type      String   // Assignment | Quiz | Midterm | Final | Project | Lab
   label     String   // "Quiz 1", "Midterm Q3"
   marksPct  Int      // this instrument's % of total course marks

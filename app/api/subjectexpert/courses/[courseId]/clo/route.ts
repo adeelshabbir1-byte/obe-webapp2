@@ -14,12 +14,12 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     return NextResponse.json({ error: "code, statement, bloomLevel are required" }, { status: 400 });
   }
 
-  const existing = await prisma.cLO.findFirst({ where: { courseId: course.id, code: body.code } });
+  const existing = await prisma.cLO.findFirst({ where: { courseId: course.id, source: "SE", code: body.code } });
   if (existing) return NextResponse.json({ error: "a CLO with this code already exists on this course" }, { status: 409 });
 
   const clo = await prisma.cLO.create({
     data: {
-      courseId: course.id, code: body.code, statement: body.statement, bloomLevel: body.bloomLevel,
+      courseId: course.id, source: "SE", code: body.code, statement: body.statement, bloomLevel: body.bloomLevel,
       mappedPloId: body.mappedPloId || null,
       ploContributionPct: body.mappedPloId ? (body.ploContributionPct ? parseInt(body.ploContributionPct, 10) : 100) : null,
     },

@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const row = await prisma.lectureRow.findUnique({ where: { id: params.lectureId } });
-  if (!row || row.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!row || row.courseId !== course.id || row.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   if (!body.topic) return NextResponse.json({ error: "topic is required" }, { status: 400 });
@@ -37,7 +37,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const row = await prisma.lectureRow.findUnique({ where: { id: params.lectureId } });
-  if (!row || row.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!row || row.courseId !== course.id || row.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   await prisma.lectureRow.delete({ where: { id: params.lectureId } });
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_DELETED", entityType: "LectureRow", entityId: params.lectureId });

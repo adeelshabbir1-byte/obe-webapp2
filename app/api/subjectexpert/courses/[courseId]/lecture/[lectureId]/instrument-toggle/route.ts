@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const row = await prisma.lectureRow.findUnique({ where: { id: params.lectureId } });
-  if (!row || row.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!row || row.courseId !== course.id || row.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   const { instrumentId, linked } = body;
@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: instrumentId } });
-  if (!instrument || instrument.courseId !== course.id) return NextResponse.json({ error: "invalid instrument" }, { status: 400 });
+  if (!instrument || instrument.courseId !== course.id || instrument.source !== "SE") return NextResponse.json({ error: "invalid instrument" }, { status: 400 });
 
   if (linked) {
     await prisma.lectureRowInstrument.upsert({

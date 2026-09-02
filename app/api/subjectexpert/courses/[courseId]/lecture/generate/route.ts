@@ -9,7 +9,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const existingCount = await prisma.lectureRow.count({ where: { courseId: course.id } });
+  const existingCount = await prisma.lectureRow.count({ where: { courseId: course.id, source: "SE" } });
   if (existingCount > 0) {
     return NextResponse.json({ error: "lecture rows already exist for this course" }, { status: 409 });
   }
@@ -18,6 +18,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   // (Topic, Sub Topic, CLO, Bloom, Weight) is filled in afterward.
   const rows = Array.from({ length: 32 }, (_, i) => ({
     courseId: course.id,
+    source: "SE",
     lectureNumber: i + 1,
     week: Math.ceil((i + 1) / 2),
     topic: "",

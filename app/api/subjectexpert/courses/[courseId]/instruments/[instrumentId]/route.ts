@@ -11,7 +11,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: params.instrumentId } });
-  if (!instrument || instrument.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!instrument || instrument.courseId !== course.id || instrument.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Links must be removed BEFORE the instrument itself (foreign key), and we
   // need the affected row IDs first so we can recompute their weight after.

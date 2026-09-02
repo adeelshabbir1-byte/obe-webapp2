@@ -18,6 +18,21 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState("");
+
+  const pendingCount = initialPlos.filter((p) => p.status !== "approved").length;
+
+  async function approveAll() {
+    if (!confirm(`Approve all ${pendingCount} pending PLO(s)? This can't be undone in bulk.`)) return;
+    setLoading(true); setError(""); setBulkResult("");
+    try {
+      const res = await fetch("/api/chairman/plos/approve-all", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setBulkResult(`Approved ${data.approved} PLO(s).`);
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
 
   async function decide(e: React.FormEvent<HTMLFormElement>, ploId: string, status: string) {
     e.preventDefault();
@@ -37,6 +52,14 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
   return (
     <div className="card">
       {error && <div className="err">{error}</div>}
+      {bulkResult && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
+      {pendingCount > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button onClick={approveAll} disabled={loading} className="btn" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>
+            Approve All ({pendingCount} pending)
+          </button>
+        </div>
+      )}
       <table>
         <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
         <tbody>

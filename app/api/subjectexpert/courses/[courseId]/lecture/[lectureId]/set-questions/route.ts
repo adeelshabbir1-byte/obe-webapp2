@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const row = await prisma.lectureRow.findUnique({ where: { id: params.lectureId } });
-  if (!row || row.courseId !== course.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!row || row.courseId !== course.id || row.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   const type: string = body.type; // "Midterm" | "Final"
@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // Parse "1, 3" -> ["1","3"], ignoring blanks.
   const numbers = raw.split(",").map((n: string) => n.trim()).filter((n: string) => n.length > 0);
 
-  const allOfType = await prisma.assessmentInstrument.findMany({ where: { courseId: course.id, type } });
+  const allOfType = await prisma.assessmentInstrument.findMany({ where: { courseId: course.id, source: "SE", type } });
   const byLabel = new Map(allOfType.map((i) => [i.label, i]));
 
   const invalid = numbers.filter((n: string) => !byLabel.has(n));
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   // Replace this row's links of this type with exactly the new set.
   const existingLinksOfType = await prisma.lectureRowInstrument.findMany({
-    where: { lectureRowId: row.id, instrument: { type } },
+    where: { lectureRowId: row.id, instrument: { type, source: "SE" } },
   });
   const removedInstrumentIds = existingLinksOfType.map((l) => l.instrumentId);
   await prisma.lectureRowInstrument.deleteMany({ where: { id: { in: existingLinksOfType.map((l) => l.id) } } });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
+  prerequisiteCourseId: string | null; batchId: string | null;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -115,6 +116,15 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
     setLoading(false); router.refresh();
   }
 
+  async function setPrerequisite(courseId: string, prerequisiteCourseId: string) {
+    setLoading(true);
+    await fetch(`/api/coordinator/courses/${courseId}/prerequisite`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prerequisiteCourseId: prerequisiteCourseId || null }),
+    });
+    setLoading(false); router.refresh();
+  }
+
   if (batches.length === 0) {
     return (
       <div className="card" style={{ borderColor: "var(--rust)" }}>
@@ -188,12 +198,12 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Source</th><th>Subject Expert</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={9} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
             {courses.map((c) => editingId === c.id ? (
               <tr key={c.id}>
-                <td colSpan={9}>
+                <td colSpan={10}>
                   <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                     <input name="code" defaultValue={c.code} placeholder="Code" style={{ width: 90, padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <input name="title" defaultValue={c.title} placeholder="Title" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -222,6 +232,12 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
                   <select defaultValue={c.subjectExpertId || ""} onChange={(e) => assignSe(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— Unassigned —</option>
                     {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                    <option value="">— None —</option>
+                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
                   </select>
                 </td>
                 <td><button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>

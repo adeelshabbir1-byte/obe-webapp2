@@ -16,9 +16,9 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
     include: {
-      clos: { orderBy: { code: "asc" } },
-      lectureRows: { orderBy: { lectureNumber: "asc" }, include: { clo: true, instrumentLinks: true } },
-      assessmentInstruments: { orderBy: [{ type: "asc" }, { label: "asc" }] },
+      clos: { where: { source: "SE" }, orderBy: { code: "asc" } },
+      lectureRows: { where: { source: "SE" }, orderBy: { lectureNumber: "asc" }, include: { clo: true, instrumentLinks: true } },
+      assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }] },
     },
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
