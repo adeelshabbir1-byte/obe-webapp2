@@ -20,15 +20,7 @@ const NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
-function statusBadge(status: string) {
-  const map: Record<string, [string, string]> = {
-    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
-  };
-  const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
-}
-
-export default async function OmcQueuePage() {
+export default async function DeliveryCompletionPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== "OMC") redirect("/dashboard");
@@ -37,29 +29,35 @@ export default async function OmcQueuePage() {
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, templateStatus: { not: "draft" } },
-    include: { subjectExpert: true },
-    orderBy: { createdAt: "desc" },
+    where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: { not: null } },
+    include: { batch: true, instructor: true, lectureRows: { where: { source: "INSTRUCTOR" } } },
+    orderBy: [{ code: "asc" }],
+  });
+
+  const rows = courses.map((c) => {
+    const total = c.lectureRows.length;
+    const dated = c.lectureRows.filter((r) => r.actualDate).length;
+    const pct = total > 0 ? Math.round((dated / total) * 100) : 0;
+    return { course: c, dated, total, pct };
   });
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Review Queue</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Instructor Delivery Completion</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Subject Expert course templates submitted for review.
+        How much of the semester each instructor has actually logged, so falling behind is visible mid-semester.
       </p>
-      <div className="card">
+      <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Code</th><th>Title</th><th>Subject Expert</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>Course</th><th>Instructor</th><th>Lectures Dated</th><th>% Complete</th></tr></thead>
           <tbody>
-            {courses.length === 0 && (
-              <tr><td colSpan={5} style={{ color: "var(--slate)" }}>Nothing submitted for review yet.</td></tr>
-            )}
-            {courses.map((c) => (
-              <tr key={c.id}>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.subjectExpert?.name || "—"}</td>
-                <td>{statusBadge(c.templateStatus)}</td>
-                <td><a href={`/omc/templates/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</a></td>
+            {rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No instructor-assigned courses yet.</td></tr>}
+            {rows.map((r) => (
+              <tr key={r.course.id} style={{ background: r.pct < 30 ? "#FFE4DC" : undefined }}>
+                <td style={{ fontSize: 11.5 }}>{r.course.batch ? `${r.course.batch.degreeProgram} — ${r.course.batch.batchName}` : "—"}</td>
+                <td><b>{r.course.code}</b> {r.course.title}</td><td>{r.course.instructor?.name || "—"}</td>
+                <td>{r.dated} / {r.total}</td>
+                <td style={{ fontWeight: 600, color: r.pct < 30 ? "var(--rust)" : r.pct >= 80 ? "var(--sage)" : "var(--brass-dark)" }}>{r.pct}%</td>
               </tr>
             ))}
           </tbody>

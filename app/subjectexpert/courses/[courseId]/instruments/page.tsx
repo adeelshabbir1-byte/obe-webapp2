@@ -19,10 +19,15 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
       assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }] },
       lectureRows: { where: { source: "SE" }, orderBy: { lectureNumber: "asc" }, include: { instrumentLinks: true } },
       clos: { where: { source: "SE" } },
+      coordinator: true,
     },
   });
   if (!course) notFound();
   if (course.subjectExpertId !== user.id) notFound();
+
+  const policy = await prisma.weightPolicy.findUnique({
+    where: { chairmanId_courseType: { chairmanId: course.coordinator.managedById || "", courseType: course.courseType } },
+  });
 
   const cloHitCounts: Record<string, number> = {};
   for (const c of course.clos) cloHitCounts[c.id] = 0;
@@ -49,6 +54,10 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
           midtermPct: course.midtermPct, finalPct: course.finalPct,
           projectPct: course.projectPct, labPct: course.labPct,
         }}
+        policyMax={policy ? {
+          assignmentMax: policy.assignmentMax, quizMax: policy.quizMax, midtermMax: policy.midtermMax,
+          finalMax: policy.finalMax, projectMax: policy.projectMax, labMax: policy.labMax,
+        } : undefined}
         rows={course.lectureRows.map((r) => {
           const linkedInstruments = r.instrumentLinks
             .map((l) => course.assessmentInstruments.find((i) => i.id === l.instrumentId))

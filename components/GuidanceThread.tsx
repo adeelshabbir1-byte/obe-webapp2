@@ -33,7 +33,7 @@ export default function GuidanceThread({ courseId, initialComments, apiBase }: {
         {initialComments.map((c) => (
           <div key={c.id} style={{
             alignSelf: c.authorRole === "OMC" ? "flex-start" : "flex-end",
-            background: c.authorRole === "OMC" ? "#F4EFE1" : "#E4EEE8", padding: "8px 12px", maxWidth: "80%",
+            background: c.authorRole === "OMC" ? "#E8E6FB" : "#CCFBF1", padding: "8px 12px", maxWidth: "80%",
           }}>
             <div style={{ fontSize: 10, textTransform: "uppercase", color: "var(--slate)", marginBottom: 3 }}>{c.authorRole === "OMC" ? "OMC" : "Instructor"}</div>
             <div style={{ fontSize: 12.5 }}>{c.body}</div>

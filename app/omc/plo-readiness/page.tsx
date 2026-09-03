@@ -20,15 +20,7 @@ const NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
-function statusBadge(status: string) {
-  const map: Record<string, [string, string]> = {
-    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
-  };
-  const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
-}
-
-export default async function OmcQueuePage() {
+export default async function PloReadinessPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== "OMC") redirect("/dashboard");
@@ -36,30 +28,39 @@ export default async function OmcQueuePage() {
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, templateStatus: { not: "draft" } },
-    include: { subjectExpert: true },
-    orderBy: { createdAt: "desc" },
+  const plos = await prisma.pLO.findMany({
+    where: { coordinatorId: { in: coordinatorIds }, status: "approved" },
+    include: { batch: true, ploMappings: true },
+    orderBy: [{ batchId: "asc" }, { number: "asc" }],
   });
+
+  const rows = plos.map((p) => ({
+    plo: p, courseCount: p.ploMappings.length,
+    flag: p.ploMappings.length === 0 ? "unassigned" : p.ploMappings.length < 2 ? "thin" : "ok",
+  }));
+
+  const flagLabel: Record<string, { text: string; cls: string }> = {
+    unassigned: { text: "Not Assigned to Any Course", cls: "badge-no" },
+    thin: { text: "Only 1 Course — Thin Coverage", cls: "badge-warn" },
+    ok: { text: "OK", cls: "badge-ok" },
+  };
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Review Queue</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO Assignment Readiness</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Subject Expert course templates submitted for review.
+        Approved PLOs that aren't yet assigned to any course, or have too few contributing courses to be meaningfully measurable.
       </p>
-      <div className="card">
+      <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Code</th><th>Title</th><th>Subject Expert</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>PLO</th><th>Courses Assigned</th><th>Status</th></tr></thead>
           <tbody>
-            {courses.length === 0 && (
-              <tr><td colSpan={5} style={{ color: "var(--slate)" }}>Nothing submitted for review yet.</td></tr>
-            )}
-            {courses.map((c) => (
-              <tr key={c.id}>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.subjectExpert?.name || "—"}</td>
-                <td>{statusBadge(c.templateStatus)}</td>
-                <td><a href={`/omc/templates/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</a></td>
+            {rows.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No approved PLOs yet.</td></tr>}
+            {rows.map((r) => (
+              <tr key={r.plo.id}>
+                <td style={{ fontSize: 11.5 }}>{r.plo.batch ? `${r.plo.batch.degreeProgram} — ${r.plo.batch.batchName}` : "—"}</td>
+                <td><b>PLO-{r.plo.number}</b>: {r.plo.title}</td><td>{r.courseCount}</td>
+                <td><span className={`badge ${flagLabel[r.flag].cls}`}>{flagLabel[r.flag].text}</span></td>
               </tr>
             ))}
           </tbody>

@@ -20,15 +20,7 @@ const NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
-function statusBadge(status: string) {
-  const map: Record<string, [string, string]> = {
-    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
-  };
-  const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
-}
-
-export default async function OmcQueuePage() {
+export default async function SubmissionTimelinessPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== "OMC") redirect("/dashboard");
@@ -37,29 +29,34 @@ export default async function OmcQueuePage() {
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, templateStatus: { not: "draft" } },
-    include: { subjectExpert: true },
-    orderBy: { createdAt: "desc" },
+    where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
+    include: { batch: true, subjectExpert: true },
+    orderBy: [{ code: "asc" }],
   });
+
+  const statusLabel: Record<string, { text: string; cls: string }> = {
+    draft: { text: "Not Submitted", cls: "badge-no" },
+    submitted: { text: "Submitted, Pending Review", cls: "badge-warn" },
+    approved: { text: "Approved", cls: "badge-ok" },
+    "changes-requested": { text: "Changes Requested", cls: "badge-warn" },
+  };
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Review Queue</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Submission Timeliness</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Subject Expert course templates submitted for review.
+        Which Subject Experts have submitted their template, and which haven't yet.
       </p>
-      <div className="card">
+      <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Code</th><th>Title</th><th>Subject Expert</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>Course</th><th>Subject Expert</th><th>Status</th></tr></thead>
           <tbody>
-            {courses.length === 0 && (
-              <tr><td colSpan={5} style={{ color: "var(--slate)" }}>Nothing submitted for review yet.</td></tr>
-            )}
+            {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
             {courses.map((c) => (
               <tr key={c.id}>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.subjectExpert?.name || "—"}</td>
-                <td>{statusBadge(c.templateStatus)}</td>
-                <td><a href={`/omc/templates/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</a></td>
+                <td style={{ fontSize: 11.5 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td>
+                <td><b>{c.code}</b> {c.title}</td><td>{c.subjectExpert?.name || <span style={{ color: "var(--slate)" }}>Unassigned</span>}</td>
+                <td><span className={`badge ${statusLabel[c.templateStatus]?.cls || "badge-neutral"}`}>{statusLabel[c.templateStatus]?.text || c.templateStatus}</span></td>
               </tr>
             ))}
           </tbody>

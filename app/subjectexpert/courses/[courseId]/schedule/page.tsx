@@ -40,7 +40,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
               return (
                 <span key={c.id} style={{
                   fontSize: 11.5, padding: "4px 10px", borderRadius: 2,
-                  background: ok ? "#E4EEE8" : "#F5EAE5", color: ok ? "var(--sage)" : "var(--rust)",
+                  background: ok ? "#CCFBF1" : "#FFE4DC", color: ok ? "var(--sage)" : "var(--rust)",
                 }}>
                   {c.code}: {n} topic{n === 1 ? "" : "s"}{!ok ? ` (needs ${3 - n} more)` : ""}
                 </span>

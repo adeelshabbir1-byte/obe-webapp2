@@ -65,7 +65,7 @@ export default function AssignmentMatrix() {
             return (
               <div key={i.id} style={{
                 border: `1px solid ${over ? "var(--rust)" : "var(--line)"}`, padding: "8px 12px",
-                background: over ? "#F5EAE5" : "var(--card)", minWidth: 150,
+                background: over ? "#FFE4DC" : "var(--card)", minWidth: 150,
               }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600 }}>{i.name}</div>
                 <div style={{ fontSize: 11.5, color: over ? "var(--rust)" : "var(--slate)" }}>
@@ -103,7 +103,7 @@ export default function AssignmentMatrix() {
                 <tr key={r.kind + r.id}>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <b>{r.label}</b>
-                    {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F4EFE1", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                    {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
                   </td>
                   <td style={{ fontSize: 11.5 }}>{r.courseType}</td>
                   <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>{r.batchLabel}</td>
@@ -116,7 +116,7 @@ export default function AssignmentMatrix() {
                     const key = r.id + i.id;
                     const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                     return (
-                      <td key={i.id} style={{ textAlign: "center", background: over && value > 0 ? "#F5EAE5" : undefined }}>
+                      <td key={i.id} style={{ textAlign: "center", background: over && value > 0 ? "#FFE4DC" : undefined }}>
                         <input
                           type="number" min={0} defaultValue={value} disabled={busyCell === key}
                           onBlur={(e) => { const n = parseInt(e.target.value, 10) || 0; if (n !== value) setCount(r, i.id, n); }}

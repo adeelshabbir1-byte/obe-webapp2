@@ -54,11 +54,11 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       <table className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F4EFE1)" }}>Course Type</th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
-              <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: "var(--surface-1, #F4EFE1)" }}>{c.label}</th>
+              <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: "var(--surface-1, #E8E6FB)" }}>{c.label}</th>
             ))}
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F4EFE1)" }}></th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (

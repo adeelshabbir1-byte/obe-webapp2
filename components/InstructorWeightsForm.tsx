@@ -40,7 +40,7 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Actual Weights</h3>
         {error && <div className="err">{error}</div>}
-        {ok && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+        {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
         <form onSubmit={onSubmit}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div className="field"><label>Assignment %</label><input name="assignmentPct" type="number" defaultValue={current.assignmentPct} /></div>

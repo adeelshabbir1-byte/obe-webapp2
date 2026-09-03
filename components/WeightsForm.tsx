@@ -39,9 +39,9 @@ export default function WeightsForm({ courseId, current }: {
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 12 }}>Assessment Weights</h3>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {pending && (
-        <div style={{ background: "#F4EFE1", color: "var(--brass-dark)", border: "1px solid #E3D4B0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#E8E6FB", color: "var(--brass-dark)", border: "1px solid #C7C2F0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
           Outside policy range — sent to the OMC for approval instead of saving directly:
           <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>{pending.map((v) => <li key={v}>{v}</li>)}</ul>
         </div>

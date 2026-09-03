@@ -13,6 +13,12 @@ const NAV = [
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
+  { href: "/omc/total-summary", label: "Total Summary" },
+  { href: "/omc/weight-compliance", label: "Weight Compliance" },
+  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
+  { href: "/omc/delivery-completion", label: "Delivery Completion" },
+  { href: "/omc/plo-readiness", label: "PLO Readiness" },
+  { href: "/omc/section-utilization", label: "Section Utilization" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
@@ -72,7 +78,7 @@ export default async function CoverageReportPage() {
                     </div>
                     <div style={{ fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
                       {r.count} course{r.count === 1 ? "" : "s"}
-                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#F5EAE5", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
                     </div>
                   </div>
                   <div style={{ display: "flex", height: 18, width: "100%", background: "#EFEADC", overflow: "hidden" }}>

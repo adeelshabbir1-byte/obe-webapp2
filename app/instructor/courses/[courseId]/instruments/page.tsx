@@ -15,8 +15,12 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
   if (!user) redirect("/login");
   if (user.role !== "INSTRUCTOR") redirect("/dashboard");
 
-  const course = await prisma.course.findUnique({ where: { id: params.courseId } });
+  const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { coordinator: true } });
   if (!course || course.instructorId !== user.id) notFound();
+
+  const policy = await prisma.weightPolicy.findUnique({
+    where: { chairmanId_courseType: { chairmanId: course.coordinator.managedById || "", courseType: course.courseType } },
+  });
 
   await ensureInstructorCopy(course.id);
   const updated = await prisma.course.findUnique({
@@ -50,6 +54,10 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
           midtermPct: updated.instructorMidtermPct ?? updated.midtermPct, finalPct: updated.instructorFinalPct ?? updated.finalPct,
           projectPct: updated.instructorProjectPct ?? updated.projectPct, labPct: updated.instructorLabPct ?? updated.labPct,
         }}
+        policyMax={policy ? {
+          assignmentMax: policy.assignmentMax, quizMax: policy.quizMax, midtermMax: policy.midtermMax,
+          finalMax: policy.finalMax, projectMax: policy.projectMax, labMax: policy.labMax,
+        } : undefined}
         rows={updated.lectureRows.map((r) => {
           const linkedInstruments = r.instrumentLinks
             .map((l) => updated.assessmentInstruments.find((i) => i.id === l.instrumentId))

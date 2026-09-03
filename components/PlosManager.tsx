@@ -8,7 +8,7 @@ type HecPlo = { number: number; title: string; description: string };
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
-    draft: ["#EFECE3", "#5B6B7C"], approved: ["#E4EEE8", "#4B7A63"], "changes-requested": ["#F5EAE5", "#B1512E"],
+    draft: ["#EFECE3", "#5B6B7C"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
   };
   const [bg, fg] = map[status] || map.draft;
   return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
@@ -108,7 +108,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {bulkResult && <div style={{ background: "#E4EEE8", color: "var(--sage)", border: "1px solid #BEDACB", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
+      {bulkResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Add All PLOs at Once</h3>

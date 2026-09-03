@@ -12,13 +12,19 @@ const NAV = [
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
+  { href: "/omc/total-summary", label: "Total Summary" },
+  { href: "/omc/weight-compliance", label: "Weight Compliance" },
+  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
+  { href: "/omc/delivery-completion", label: "Delivery Completion" },
+  { href: "/omc/plo-readiness", label: "PLO Readiness" },
+  { href: "/omc/section-utilization", label: "Section Utilization" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
 function flagBadge(flag: string) {
-  if (flag === "orphan") return <span style={{ background: "#F5EAE5", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Orphan — No PLO</span>;
-  if (flag === "broad") return <span style={{ background: "#F4EFE1", color: "var(--brass-dark)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Overly Broad</span>;
-  return <span style={{ background: "#E4EEE8", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>OK</span>;
+  if (flag === "orphan") return <span style={{ background: "#FFE4DC", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Orphan — No PLO</span>;
+  if (flag === "broad") return <span style={{ background: "#E8E6FB", color: "var(--brass-dark)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Overly Broad</span>;
+  return <span style={{ background: "#CCFBF1", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>OK</span>;
 }
 
 export default async function AuditReportPage() {

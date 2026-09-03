@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; marksPct: number };
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
+type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
 const TARGET_KEY: Record<string, keyof Targets> = {
   Quiz: "quizPct", Assignment: "assignmentPct", Midterm: "midtermPct", Final: "finalPct", Project: "projectPct", Lab: "labPct",
 };
+const POLICY_MAX_KEY: Record<string, keyof PolicyMax> = {
+  Quiz: "quizMax", Assignment: "assignmentMax", Midterm: "midtermMax", Final: "finalMax", Project: "projectMax", Lab: "labMax",
+};
 
-export default function AssessmentsManager({ courseId, initialInstruments, targets, rows, apiBase }: {
-  courseId: string; initialInstruments: Instrument[]; targets: Targets; rows: Row[]; apiBase: string;
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, rows, apiBase }: {
+  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; rows: Row[]; apiBase: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -30,6 +34,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  async function editInstrument(id: string, marksPct: number) {
+    setBusyCell(id); setError("");
+    try {
+      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marksPct }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
+      setBusyCell(null); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
 
   async function removeInstrument(id: string) {
@@ -73,24 +89,43 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         const items = initialInstruments.filter((i) => i.type === type);
         const sum = items.reduce((s, i) => s + i.marksPct, 0);
         const target = targets[TARGET_KEY[type]];
-        const mismatch = items.length > 0 && sum !== target;
+        const max = policyMax?.[POLICY_MAX_KEY[type]];
+        const overTarget = items.length > 0 && sum !== target;
+        const overPolicy = items.length > 0 && max !== undefined && sum > max;
         const isNumbered = type === "Midterm" || type === "Final";
         const nextLabel = isNumbered ? String(items.length + 1) : `${type} ${items.length + 1}`;
         return (
           <div className="card" key={type}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ fontSize: 14 }}>{type}</h3>
-              <span style={{ fontSize: 11.5, color: mismatch ? "var(--rust)" : "var(--slate)" }}>
-                {sum}% defined {target ? `(target: ${target}%)` : ""}{mismatch && <span style={{ marginLeft: 6, fontWeight: 600 }}>— doesn't match</span>}
+              <span style={{ fontSize: 11.5, color: overPolicy ? "var(--rust)" : overTarget ? "var(--brass-dark)" : "var(--slate)" }}>
+                {sum}% defined {target ? `(your target: ${target}%${max !== undefined ? `, OMC max: ${max}%` : ""})` : ""}
               </span>
             </div>
+            {overPolicy && (
+              <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 8, fontWeight: 600 }}>
+                ⚠ Exceeds the OMC's policy maximum of {max}% for this course type.
+              </p>
+            )}
+            {!overPolicy && overTarget && (
+              <p style={{ fontSize: 11.5, color: "var(--brass-dark)", marginBottom: 8 }}>
+                ⚠ Doesn't match your own {target}% target for this category yet.
+              </p>
+            )}
             <table>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
               <tbody>
                 {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
                 {items.map((i) => (
                   <tr key={i.id}>
-                    <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
+                    <td>{isNumbered ? `Q${i.label}` : i.label}</td>
+                    <td>
+                      <input
+                        type="number" min={0} max={100} defaultValue={i.marksPct} disabled={busyCell === i.id}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrument(i.id, n); }}
+                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                      />%
+                    </td>
                     <td><button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
                   </tr>
                 ))}
