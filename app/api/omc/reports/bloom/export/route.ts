@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { canViewReports } from "../../../../../../lib/reportScope";
 import { getBloomReport, BLOOM_ORDER } from "../../../../../../lib/reports";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const programs = await getBloomReport(user.managedById);
+  const programs = await getBloomReport(user);
   const overallRows: Record<string, any>[] = [];
   const semesterRows: Record<string, any>[] = [];
 
