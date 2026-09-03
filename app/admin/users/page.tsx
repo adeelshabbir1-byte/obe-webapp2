@@ -7,12 +7,14 @@ import CreateUserForm from "../../../components/CreateUserForm";
 export default async function AdminUsersPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUPER_USER") redirect("/dashboard");
 
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Chairmen" }, { href: "/admin/curricula", label: "Master Curricula" }]}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Chairmen" }, { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/curriculum-migration", label: "Version Migration" }]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Chairmen</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create the Chairman account(s) who each run a department's accreditation pipeline.

@@ -19,7 +19,12 @@ CREATE TABLE IF NOT EXISTS "CLO" (
   "bloomLevel" TEXT NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "CLO_courseId_code_key" ON "CLO"("courseId", "code");
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'CLO' AND column_name = 'source') THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS "CLO_courseId_code_key" ON "CLO"("courseId", "code")';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS "CLO_courseId_idx" ON "CLO"("courseId");
 
 CREATE TABLE IF NOT EXISTS "LectureRow" (
@@ -33,7 +38,12 @@ CREATE TABLE IF NOT EXISTS "LectureRow" (
   "bloomLevel" TEXT,
   "weightPct" INTEGER NOT NULL DEFAULT 0
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "LectureRow_courseId_lectureNumber_key" ON "LectureRow"("courseId", "lectureNumber");
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'LectureRow' AND column_name = 'source') THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS "LectureRow_courseId_lectureNumber_key" ON "LectureRow"("courseId", "lectureNumber")';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS "LectureRow_courseId_idx" ON "LectureRow"("courseId");
 -- Run in Supabase SQL Editor. Replaces the direct-to-HEC PLO mapping with
 -- proper institutional PLOs: defined by the Program Coordinator, approved by
@@ -1130,6 +1140,65 @@ BEGIN
   END IF;
 END $$;
 
+-- Run in Supabase SQL Editor. Adds exam dates on Course, plus Holiday and
+-- ClassDayMode tables for the Coordinator's calendar and the Instructor's
+-- auto-fill lecture dates feature.
+
+ALTER TABLE "Course"
+  ADD COLUMN IF NOT EXISTS "midtermDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "finalDate" TIMESTAMP(3);
+
+CREATE TABLE IF NOT EXISTS "Holiday" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "coordinatorId" TEXT NOT NULL REFERENCES "User"("id"),
+  "date" TIMESTAMP(3) NOT NULL,
+  "label" TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "Holiday_coordinatorId_date_key" ON "Holiday"("coordinatorId", "date");
+CREATE INDEX IF NOT EXISTS "Holiday_coordinatorId_idx" ON "Holiday"("coordinatorId");
+
+CREATE TABLE IF NOT EXISTS "ClassDayMode" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "coordinatorId" TEXT NOT NULL REFERENCES "User"("id"),
+  "date" TIMESTAMP(3) NOT NULL,
+  "mode" TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "ClassDayMode_coordinatorId_date_key" ON "ClassDayMode"("coordinatorId", "date");
+CREATE INDEX IF NOT EXISTS "ClassDayMode_coordinatorId_idx" ON "ClassDayMode"("coordinatorId");
+-- Run in Supabase SQL Editor. Adds the extra fields needed for the Course
+-- Description Form report (textbook, references, catalog description, etc.)
+
+ALTER TABLE "Course"
+  ADD COLUMN IF NOT EXISTS "textbook" TEXT,
+  ADD COLUMN IF NOT EXISTS "referenceMaterial" TEXT,
+  ADD COLUMN IF NOT EXISTS "catalogDescription" TEXT,
+  ADD COLUMN IF NOT EXISTS "programmingAssignmentsNote" TEXT,
+  ADD COLUMN IF NOT EXISTS "labInstructorName" TEXT;
+-- Run in Supabase SQL Editor. Adds MFA fields, session MFA-verified flag,
+-- and the CqiRecord table.
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "mfaEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "mfaSecret" TEXT,
+  ADD COLUMN IF NOT EXISTS "mfaBackupCodes" TEXT;
+
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "mfaVerified" BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS "CqiRecord" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL REFERENCES "User"("id"),
+  "authorId" TEXT NOT NULL,
+  "batchId" TEXT REFERENCES "Batch"("id"),
+  "courseId" TEXT REFERENCES "Course"("id"),
+  "finding" TEXT NOT NULL,
+  "actionTaken" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'open',
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "CqiRecord_chairmanId_idx" ON "CqiRecord"("chairmanId");
+CREATE INDEX IF NOT EXISTS "CqiRecord_batchId_idx" ON "CqiRecord"("batchId");
+CREATE INDEX IF NOT EXISTS "CqiRecord_courseId_idx" ON "CqiRecord"("courseId");
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

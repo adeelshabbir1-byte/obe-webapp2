@@ -9,11 +9,16 @@ const NAV = [
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },
   { href: "/chairman/assigners", label: "Course Assigners" },
+  { href: "/chairman/cqi", label: "CQI Records" },
+  { href: "/chairman/audit-log", label: "Audit Log" },
+  { href: "/omc/reports", label: "Reports" },
 ];
 
 export default async function ChairmanOmcPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
 
   const omcMembers = await prisma.user.findMany({ where: { role: "OMC", managedById: user.id }, orderBy: { createdAt: "desc" } });

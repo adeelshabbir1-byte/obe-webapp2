@@ -14,5 +14,7 @@ const ROLE_HOME: Record<string, string> = {
 export default async function Dashboard() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   redirect(ROLE_HOME[user.role] || "/login");
 }

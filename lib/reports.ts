@@ -1,19 +1,35 @@
 import { prisma } from "./db";
+import { coordinatorIdsFor } from "./reportScope";
 
-async function getBatchesFor(chairmanId: string | null) {
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId || "" } });
-  const coordinatorIds = coordinators.map((c) => c.id);
-  return prisma.batch.findMany({
+type ReportUser = { id: string; role: string; managedById: string | null };
+
+async function getBatchesFor(user: ReportUser) {
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({
     where: { coordinatorId: { in: coordinatorIds } },
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
+
+  // SE/Instructor see the full picture for any batch they're actually
+  // involved in (a batch-wide PLO report makes sense that way), but not
+  // batches they have no course in at all.
+  if (user.role === "SUBJECT_EXPERT" || user.role === "INSTRUCTOR") {
+    const myCourses = await prisma.course.findMany({
+      where: user.role === "SUBJECT_EXPERT" ? { subjectExpertId: user.id } : { instructorId: user.id },
+      select: { batchId: true },
+    });
+    const myBatchIds = new Set(myCourses.map((c) => c.batchId).filter((id): id is string => !!id));
+    return allBatches.filter((b) => myBatchIds.has(b.id));
+  }
+
+  return allBatches;
 }
 
 // ============================================================================
 // Report 1 — Program-Level PLO Coverage & Distribution Summary
 // ============================================================================
-export async function getCoverageReport(chairmanId: string | null) {
-  const batches = await getBatchesFor(chairmanId);
+export async function getCoverageReport(user: ReportUser) {
+  const batches = await getBatchesFor(user);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -37,8 +53,8 @@ export async function getCoverageReport(chairmanId: string | null) {
 // ============================================================================
 // Report 2 — PLO Depth & Contribution Heatmap (by course type)
 // ============================================================================
-export async function getHeatmapReport(chairmanId: string | null) {
-  const batches = await getBatchesFor(chairmanId);
+export async function getHeatmapReport(user: ReportUser) {
+  const batches = await getBatchesFor(user);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -62,8 +78,8 @@ export async function getHeatmapReport(chairmanId: string | null) {
 // ============================================================================
 // Report 3 — Semester-Wise PLO Progression & Balance
 // ============================================================================
-export async function getProgressionReport(chairmanId: string | null) {
-  const batches = await getBatchesFor(chairmanId);
+export async function getProgressionReport(user: ReportUser) {
+  const batches = await getBatchesFor(user);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -95,8 +111,8 @@ const BLOOM_LABELS: Record<string, string> = {
   C1: "Remember", C2: "Understand", C3: "Apply", C4: "Analyze", C5: "Evaluate", C6: "Create",
 };
 
-export async function getBloomReport(chairmanId: string | null) {
-  const batches = await getBatchesFor(chairmanId);
+export async function getBloomReport(user: ReportUser) {
+  const batches = await getBatchesFor(user);
   const programs = [];
   for (const batch of batches) {
     const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
@@ -133,8 +149,8 @@ export { BLOOM_ORDER, BLOOM_LABELS };
 // ============================================================================
 // Report 4 — Course-Level Accreditation Audit & Orphan Detection
 // ============================================================================
-export async function getAuditReport(chairmanId: string | null) {
-  const batches = await getBatchesFor(chairmanId);
+export async function getAuditReport(user: ReportUser) {
+  const batches = await getBatchesFor(user);
   const programs = [];
   for (const batch of batches) {
     const totalPlos = await prisma.pLO.count({ where: { batchId: batch.id } });

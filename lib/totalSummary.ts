@@ -59,15 +59,29 @@ export async function computeTotalSummary(courseId: string) {
   }
 
   const round1 = (n: number) => Math.round(n * 10) / 10;
-  const topics = Array.from(byTopic.values()).map((t) => ({
-    ...t, cloTotal: round1(t.cloTotal),
-    byClo: Object.fromEntries(Object.entries(t.byClo).map(([k, v]) => [k, round1(v)])),
-    byType: Object.fromEntries(Object.entries(t.byType).map(([k, v]) => [k, round1(v)])),
-    byPlo: Object.fromEntries(Object.entries(t.byPlo).map(([k, v]) => [k, round1(v)])),
-  }));
+  const topics = Array.from(byTopic.values()).map((t) => {
+    const rounded = {
+      ...t, cloTotal: round1(t.cloTotal),
+      byClo: Object.fromEntries(Object.entries(t.byClo).map(([k, v]) => [k, round1(v)])),
+      byType: Object.fromEntries(Object.entries(t.byType).map(([k, v]) => [k, round1(v)])),
+      byPlo: Object.fromEntries(Object.entries(t.byPlo).map(([k, v]) => [k, round1(v)])),
+    };
+    const typeTotal = round1(Object.values(rounded.byType).reduce((s, v) => s + v, 0));
+    const ploTotal = round1(Object.values(rounded.byPlo).reduce((s, v) => s + v, 0));
+    // These three totals should all agree (same underlying marks, three views) — flag if they don't.
+    const mismatch = Math.abs(rounded.cloTotal - typeTotal) > 0.6;
+    return { ...rounded, typeTotal, ploTotal, mismatch };
+  });
+
+  const colTotals = {
+    byClo: Object.fromEntries(cloCodes.map((c) => [c, round1(topics.reduce((s, t) => s + (t.byClo[c] || 0), 0))])),
+    byType: { Assignment: 0, Quiz: 0, Project: 0, Lab: 0, Midterm: 0, Final: 0 } as Record<string, number>,
+    byPlo: Object.fromEntries(plos.map((p) => [`PLO-${p.number}`, round1(topics.reduce((s, t) => s + (t.byPlo[`PLO-${p.number}`] || 0), 0))])),
+  };
+  for (const type of Object.keys(colTotals.byType)) colTotals.byType[type] = round1(topics.reduce((s, t) => s + (t.byType[type] || 0), 0));
 
   return {
-    cloCodes, ploLabels: plos.map((p) => `PLO-${p.number}`), topics,
+    cloCodes, ploLabels: plos.map((p) => `PLO-${p.number}`), topics, colTotals,
     totalLectures: lectureRows.length,
     grandTotal: round1(topics.reduce((s, t) => s + t.cloTotal, 0)),
   };

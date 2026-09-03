@@ -9,16 +9,20 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
+  { href: "/omc/reports", label: "OMC Reports" },
 ];
 
 export default async function LoadReportPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
   return (

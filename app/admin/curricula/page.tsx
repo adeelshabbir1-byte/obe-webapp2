@@ -7,11 +7,14 @@ import CurriculaManager from "../../../components/CurriculaManager";
 const NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
   { href: "/admin/curricula", label: "Master Curricula" },
+  { href: "/admin/curriculum-migration", label: "Version Migration" },
 ];
 
 export default async function AdminCurriculaPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUPER_USER") redirect("/dashboard");
 
   const curricula = await prisma.masterCurriculum.findMany({

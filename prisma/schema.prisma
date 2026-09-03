@@ -39,6 +39,9 @@ model User {
   managedUsers       User[]   @relation("UserManagement")
 
   mustChangePassword Boolean  @default(false)
+  mfaEnabled         Boolean  @default(false)
+  mfaSecret          String?
+  mfaBackupCodes     String?  // JSON array of hashed one-time backup codes
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
@@ -59,6 +62,9 @@ model User {
   plos               PLO[]    @relation("PloCoordinator")
   batches            Batch[]  @relation("BatchCoordinator")
   currentTerm        CurrentTerm? @relation("CurrentTermCoordinator")
+  holidays           Holiday[]    @relation("HolidayCoordinator")
+  classDayModes      ClassDayMode[] @relation("ClassDayModeCoordinator")
+  cqiRecords         CqiRecord[]  @relation("CqiChairman")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
@@ -75,6 +81,7 @@ model Session {
   revokedAt  DateTime?
   ipAddress  String?
   userAgent  String?
+  mfaVerified Boolean @default(true) // false only while an MFA-enabled user's login is pending code entry
 
   @@index([userId])
 }
@@ -108,6 +115,7 @@ model Batch {
 
   courses        Course[]
   plos           PLO[]    @relation("BatchPlos")
+  cqiRecords     CqiRecord[]
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
@@ -240,6 +248,53 @@ model GroupSectionAssignment {
   @@index([instructorId])
 }
 
+// Dates a Coordinator has declared a holiday — no lecture auto-fills onto these.
+model Holiday {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  coordinator   User     @relation("HolidayCoordinator", fields: [coordinatorId], references: [id])
+  date          DateTime
+  label         String
+
+  @@unique([coordinatorId, date])
+  @@index([coordinatorId])
+}
+
+// Marks a specific date as Online or On-Campus delivery — shown in delivery reports.
+model ClassDayMode {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  coordinator   User     @relation("ClassDayModeCoordinator", fields: [coordinatorId], references: [id])
+  date          DateTime
+  mode          String   // "Online" | "OnCampus"
+
+  @@unique([coordinatorId, date])
+  @@index([coordinatorId])
+}
+
+// Continuous Quality Improvement — a record of a finding (from a report, an
+// audit, or manual observation) and the action taken in response, tracked
+// through to closure. Scoped to whichever batch/course it concerns.
+model CqiRecord {
+  id            String   @id @default(cuid())
+  chairmanId    String
+  chairman      User     @relation("CqiChairman", fields: [chairmanId], references: [id])
+  authorId      String   // who raised this
+  batchId       String?
+  batch         Batch?   @relation(fields: [batchId], references: [id])
+  courseId      String?
+  course        Course?  @relation(fields: [courseId], references: [id])
+  finding       String   @db.Text
+  actionTaken   String?  @db.Text
+  status        String   @default("open") // open | in-progress | closed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([chairmanId])
+  @@index([batchId])
+  @@index([courseId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -258,6 +313,8 @@ model Course {
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
   offeredTermName     String?  // "Fall" | "Spring" — which term this was offered in, stamped when isOffered becomes true
   offeredTermYear     Int?
+  midtermDate         DateTime? // set by Coordinator — no lecture auto-fills onto this date
+  finalDate           DateTime? // set by Coordinator — no lecture auto-fills onto this date
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
   benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any
@@ -278,6 +335,13 @@ model Course {
   finalPct            Int      @default(40)
   omcComment          String?  @db.Text // latest OMC review comment on this template
 
+  // Extra fields for the Course Description Form / accreditation paperwork
+  textbook            String?  @db.Text
+  referenceMaterial   String?  @db.Text
+  catalogDescription  String?  @db.Text
+  programmingAssignmentsNote String? @db.Text
+  labInstructorName   String?
+
   // Instructor's OWN copy of the weights (separate from SE's plan above),
   // populated when the Instructor first opens their delivery page.
   instructorAssignmentPct Int?
@@ -296,6 +360,7 @@ model Course {
   equivalenceMember   CourseEquivalenceMember?
   feedForwardNotes    FeedForwardNote[]
   guidanceComments    InstructorGuidanceComment[]
+  cqiRecords          CqiRecord[]
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])

@@ -7,11 +7,14 @@ import CurriculumDetailManager from "../../../../components/CurriculumDetailMana
 const NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
   { href: "/admin/curricula", label: "Master Curricula" },
+  { href: "/admin/curriculum-migration", label: "Version Migration" },
 ];
 
 export default async function CurriculumDetailPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUPER_USER") redirect("/dashboard");
 
   const curriculum = await prisma.masterCurriculum.findUnique({

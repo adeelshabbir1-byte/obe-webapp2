@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
   await createSession(
     result.user.id,
     req.headers.get("x-forwarded-for") || undefined,
-    req.headers.get("user-agent") || undefined
+    req.headers.get("user-agent") || undefined,
+    !result.user.mfaEnabled // if MFA is on, this session starts unverified until the code is entered
   );
 
   return NextResponse.json({
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       role: result.user.role,
       name: result.user.name,
       mustChangePassword: result.user.mustChangePassword,
+      mfaEnabled: result.user.mfaEnabled,
     },
   });
 }

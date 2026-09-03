@@ -10,13 +10,6 @@ const NAV = [
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
-  { href: "/omc/total-summary", label: "Total Summary" },
-  { href: "/omc/weight-compliance", label: "Weight Compliance" },
-  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
-  { href: "/omc/delivery-completion", label: "Delivery Completion" },
-  { href: "/omc/plo-readiness", label: "PLO Readiness" },
-  { href: "/omc/section-utilization", label: "Section Utilization" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
@@ -31,6 +24,8 @@ function statusBadge(status: string) {
 export default async function OmcQueuePage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });

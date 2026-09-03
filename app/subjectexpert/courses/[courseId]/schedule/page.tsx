@@ -10,6 +10,8 @@ const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
 export default async function SchedulePage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
 
   const course = await prisma.course.findUnique({

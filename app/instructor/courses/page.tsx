@@ -3,11 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }];
+const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorCoursesPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "INSTRUCTOR") redirect("/dashboard");
 
   const [directCourses, sectionAssignments] = await Promise.all([

@@ -1,39 +1,25 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
-
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
-  { href: "/omc/total-summary", label: "Total Summary" },
-  { href: "/omc/weight-compliance", label: "Weight Compliance" },
-  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
-  { href: "/omc/delivery-completion", label: "Delivery Completion" },
-  { href: "/omc/plo-readiness", label: "PLO Readiness" },
-  { href: "/omc/section-utilization", label: "Section Utilization" },
-  { href: "/omc/reports", label: "Reports" },
-];
 
 export default async function WeightCompliancePage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
-  if (user.role !== "OMC") redirect("/dashboard");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
+  if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
-  const coordinatorIds = coordinators.map((c) => c.id);
+  const coordinatorIds = await coordinatorIdsFor(user);
 
   const courses = await prisma.course.findMany({
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
     include: { batch: true, weightExceptions: true },
     orderBy: [{ code: "asc" }],
   });
-  const policies = await prisma.weightPolicy.findMany({ where: { chairmanId: user.managedById || "" } });
+  const policies = await prisma.weightPolicy.findMany({ where: { chairmanId: await chairmanIdFor(user) } });
   const policyByType = new Map(policies.map((p) => [p.courseType, p]));
 
   const rows = courses.map((c) => {
@@ -59,7 +45,7 @@ export default async function WeightCompliancePage() {
   };
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Weight Policy Compliance</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every offered course's weight compliance status, not just pending exceptions.

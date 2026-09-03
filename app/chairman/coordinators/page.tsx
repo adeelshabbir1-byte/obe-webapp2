@@ -7,6 +7,8 @@ import CreateUserForm from "../../../components/CreateUserForm";
 export default async function ChairmanCoordinatorsPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
 
   const coordinators = await prisma.user.findMany({
@@ -15,7 +17,7 @@ export default async function ChairmanCoordinatorsPage() {
   });
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }]}>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/cqi", label: "CQI Records" }, { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/omc/reports", label: "Reports" }]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Coordinators</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Coordinators onboard faculty and define courses on your behalf.

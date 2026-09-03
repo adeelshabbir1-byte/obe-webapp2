@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -51,14 +52,26 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({ actorUserId: user.id, action: "EQUIVALENCE_PAIRED", entityType: "CourseEquivalenceGroup", entityId: groupId, metadata: { courseIdA, courseIdB } });
 
-  // Give the other course a head start: if one already has PLOs mapped and
-  // the other has none yet, copy the mapping over by PLO NUMBER (translated
-  // into that course's own degree program's PLOs, since PLO records differ
-  // across programs) — fully editable afterward, not a live sync.
+  // Give the other course a head start: if one already has a full template
+  // (CLOs, weights, instruments, lecture content) and the other has none,
+  // copy it over wholesale — same PLO-number-translation as the benchmark
+  // system, fully editable afterward, not a live sync. Only fills in an
+  // empty target, and falls back to a lighter PLO-only copy otherwise.
+  await copyFullContentIfEmpty(courseIdA, courseIdB);
+  await copyFullContentIfEmpty(courseIdB, courseIdA);
   await copyPloMappingByNumber(courseIdA, courseIdB);
   await copyPloMappingByNumber(courseIdB, courseIdA);
 
   return NextResponse.json({ groupId });
+}
+
+async function copyFullContentIfEmpty(fromCourseId: string, toCourseId: string) {
+  const [fromCloCount, toCloCount] = await Promise.all([
+    prisma.cLO.count({ where: { courseId: fromCourseId, source: "SE" } }),
+    prisma.cLO.count({ where: { courseId: toCourseId, source: "SE" } }),
+  ]);
+  if (fromCloCount === 0 || toCloCount > 0) return; // nothing to give, or target already has its own content
+  await copyCourseContent(fromCourseId, toCourseId);
 }
 
 async function copyPloMappingByNumber(fromCourseId: string, toCourseId: string) {

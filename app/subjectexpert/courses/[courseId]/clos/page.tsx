@@ -4,12 +4,15 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import ClosManager from "../../../../../components/ClosManager";
+import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
 
 const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
 
 export default async function ClosPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
 
   const course = await prisma.course.findUnique({
@@ -42,6 +45,14 @@ export default async function ClosPage({ params }: { params: { courseId: string 
         courseId={course.id}
         initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct }))}
         plos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status }))}
+      />
+      <CourseDescriptionFieldsForm
+        courseId={course.id}
+        initial={{
+          textbook: course.textbook || "", referenceMaterial: course.referenceMaterial || "",
+          catalogDescription: course.catalogDescription || "", programmingAssignmentsNote: course.programmingAssignmentsNote || "",
+          labInstructorName: course.labInstructorName || "",
+        }}
       />
     </Shell>
   );

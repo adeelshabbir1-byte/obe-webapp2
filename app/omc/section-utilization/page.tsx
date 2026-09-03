@@ -1,35 +1,21 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
-
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
-  { href: "/omc/total-summary", label: "Total Summary" },
-  { href: "/omc/weight-compliance", label: "Weight Compliance" },
-  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
-  { href: "/omc/delivery-completion", label: "Delivery Completion" },
-  { href: "/omc/plo-readiness", label: "PLO Readiness" },
-  { href: "/omc/section-utilization", label: "Section Utilization" },
-  { href: "/omc/reports", label: "Reports" },
-];
 
 export default async function SectionUtilizationPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
-  if (user.role !== "OMC") redirect("/dashboard");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
+  if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
-  const coordinatorIds = coordinators.map((c) => c.id);
+  const coordinatorIds = await coordinatorIdsFor(user);
 
   const groups = await prisma.courseEquivalenceGroup.findMany({
-    where: { chairmanId: user.managedById || "" },
+    where: { chairmanId: await chairmanIdFor(user) },
     include: { members: { include: { course: { include: { batch: true } } } } },
   });
 
@@ -47,7 +33,7 @@ export default async function SectionUtilizationPage() {
   const totalSaved = groupRows.reduce((s, r) => s + Math.max(0, r.saved), 0);
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Combined-Section Utilization</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         How many sections combining equivalent courses is saving, versus teaching them all separately.

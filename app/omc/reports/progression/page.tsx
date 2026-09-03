@@ -1,25 +1,9 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
+import { canViewReports, roleLabel } from "../../../../lib/reportScope";
 import { getProgressionReport } from "../../../../lib/reports";
 import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
-
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/adherence-report", label: "Cross-Instructor Comparison" },
-  { href: "/omc/total-summary", label: "Total Summary" },
-  { href: "/omc/weight-compliance", label: "Weight Compliance" },
-  { href: "/omc/submission-timeliness", label: "Submission Timeliness" },
-  { href: "/omc/delivery-completion", label: "Delivery Completion" },
-  { href: "/omc/plo-readiness", label: "PLO Readiness" },
-  { href: "/omc/section-utilization", label: "Section Utilization" },
-  { href: "/omc/reports", label: "Reports" },
-];
 
 function heatColor(value: number, max: number) {
   if (value === 0) return "#F7F4EC";
@@ -33,12 +17,14 @@ function heatColor(value: number, max: number) {
 export default async function ProgressionReportPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
-  if (user.role !== "OMC") redirect("/dashboard");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
+  if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const programs = await getProgressionReport(user.managedById);
+  const programs = await getProgressionReport(user);
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22 }}>Semester-Wise PLO Progression & Balance</h1>
         <a href="/api/omc/reports/progression/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

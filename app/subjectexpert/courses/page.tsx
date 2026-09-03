@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
+const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
@@ -15,6 +15,8 @@ function statusLabel(status: string) {
 export default async function SubjectExpertCoursesPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
 
   const courses = await prisma.course.findMany({

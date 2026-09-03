@@ -11,6 +11,8 @@ const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }];
 export default async function InstructorClosPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "INSTRUCTOR") redirect("/dashboard");
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });

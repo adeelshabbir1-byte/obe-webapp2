@@ -8,6 +8,8 @@ const NAV = [{ href: "/assigner/matrix", label: "Section Assignment Matrix" }];
 export default async function AssignerMatrixPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
+  if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "COURSE_ASSIGNER") redirect("/dashboard");
 
   return (

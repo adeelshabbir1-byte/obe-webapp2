@@ -34,6 +34,7 @@ export default function Shell({
         ))}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
+          <a href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</a>
           <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
             Sign out
           </button>
