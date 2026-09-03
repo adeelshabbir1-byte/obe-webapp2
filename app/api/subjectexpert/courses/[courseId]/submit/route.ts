@@ -9,8 +9,8 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const clos = await prisma.cLO.findMany({ where: { courseId: course.id } });
-  const lectureRows = await prisma.lectureRow.findMany({ where: { courseId: course.id } });
+  const clos = await prisma.cLO.findMany({ where: { courseId: course.id, source: "SE" } });
+  const lectureRows = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" } });
   if (clos.length === 0 || lectureRows.length === 0) {
     return NextResponse.json({ error: "add at least one CLO and one lecture row before submitting" }, { status: 400 });
   }

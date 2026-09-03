@@ -1,24 +1,30 @@
--- Run in Supabase SQL Editor. Adds degreeProgram to PLO, backfills existing
--- rows where possible, and replaces the old unique constraint/index with the
--- correct one. Finds the old one dynamically (by column match) rather than
--- guessing its exact name, since that's bitten us before.
+-- Run in Supabase SQL Editor. This was an INTERMEDIATE step (PLO scoped by
+-- coordinator+degreeProgram) later superseded by migration_plo_batch_scope.sql
+-- (PLO scoped by batch directly). Wrapped so it's a safe no-op if the
+-- database has already moved past this stage (degreeProgram column gone).
 
-ALTER TABLE "PLO" ADD COLUMN IF NOT EXISTS "degreeProgram" TEXT NOT NULL DEFAULT '';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PLO' AND column_name = 'degreeProgram') THEN
 
--- Backfill: where a coordinator has exactly one distinct degree program
--- across their batches, assume existing PLOs belong to it.
-UPDATE "PLO" p
-SET "degreeProgram" = sub.only_degree
-FROM (
-  SELECT "coordinatorId", MIN("degreeProgram") AS only_degree
-  FROM "Batch"
-  GROUP BY "coordinatorId"
-  HAVING COUNT(DISTINCT "degreeProgram") = 1
-) sub
-WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = '';
+    -- Backfill: where a coordinator has exactly one distinct degree program
+    -- across their batches, assume existing PLOs belong to it.
+    UPDATE "PLO" p
+    SET "degreeProgram" = sub.only_degree
+    FROM (
+      SELECT "coordinatorId", MIN("degreeProgram") AS only_degree
+      FROM "Batch"
+      GROUP BY "coordinatorId"
+      HAVING COUNT(DISTINCT "degreeProgram") = 1
+    ) sub
+    WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = '';
+
+  END IF;
+END $$;
 
 -- Drop whatever the old (coordinatorId, number) unique constraint/index is
--- called, as either a formal constraint or a plain index.
+-- called, as either a formal constraint or a plain index — safe even if
+-- already gone.
 DO $$
 DECLARE
   r RECORD;
@@ -37,10 +43,18 @@ BEGIN
     EXECUTE format('ALTER TABLE "PLO" DROP CONSTRAINT %I', r.conname);
   END LOOP;
 END $$;
-
 DROP INDEX IF EXISTS "PLO_coordinatorId_number_key";
 
-CREATE UNIQUE INDEX IF NOT EXISTS "PLO_coordinatorId_degreeProgram_number_key" ON "PLO"("coordinatorId", "degreeProgram", "number");
+-- Only (re)create the intermediate degreeProgram-based unique index if that
+-- column still exists — once batch_scope has dropped it, this must NOT run,
+-- since duplicate (coordinatorId, degreeProgram, number) rows now legitimately
+-- exist across different batches of the same degree.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PLO' AND column_name = 'degreeProgram') THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS "PLO_coordinatorId_degreeProgram_number_key" ON "PLO"("coordinatorId", "degreeProgram", "number")';
+  END IF;
+END $$;
 
 -- Add COURSE_ASSIGNER to the UserRole enum if it's somehow still missing
 -- (the IF NOT EXISTS clause makes this safe to run again even if already applied).

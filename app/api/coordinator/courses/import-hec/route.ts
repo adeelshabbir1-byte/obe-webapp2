@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { copyBenchmarkIfAvailable, getBenchmarkCandidates } from "../../../../../lib/benchmarkCopy";
+import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
 
       const benchmark = await copyBenchmarkIfAvailable(newCourse.id, user.id, mc.id, code, benchmarkCandidates);
       if (benchmark) benchmarksCopied++;
+      else await seedFromMasterCourseIfAvailable(newCourse.id, mc.id);
     } catch (err: any) {
       errors.push(`${mc.code}: ${err?.message || "failed"}`);
     }

@@ -10,15 +10,22 @@
 
 ALTER TABLE "PLO" ADD COLUMN IF NOT EXISTS "batchId" TEXT;
 
-UPDATE "PLO" p
-SET "batchId" = sub.batch_id
-FROM (
-  SELECT DISTINCT ON (b."coordinatorId", b."degreeProgram")
-    b."coordinatorId", b."degreeProgram", b.id AS batch_id
-  FROM "Batch" b
-  ORDER BY b."coordinatorId", b."degreeProgram", b."createdAt" DESC
-) sub
-WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = sub."degreeProgram" AND p."batchId" IS NULL;
+-- Only attempt the backfill if degreeProgram still exists (skip cleanly if
+-- this migration already completed in an earlier run).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PLO' AND column_name = 'degreeProgram') THEN
+    UPDATE "PLO" p
+    SET "batchId" = sub.batch_id
+    FROM (
+      SELECT DISTINCT ON (b."coordinatorId", b."degreeProgram")
+        b."coordinatorId", b."degreeProgram", b.id AS batch_id
+      FROM "Batch" b
+      ORDER BY b."coordinatorId", b."degreeProgram", b."createdAt" DESC
+    ) sub
+    WHERE p."coordinatorId" = sub."coordinatorId" AND p."degreeProgram" = sub."degreeProgram" AND p."batchId" IS NULL;
+  END IF;
+END $$;
 
 -- Drop the old (coordinatorId, degreeProgram, number) unique constraint/index,
 -- whatever it's actually called.

@@ -106,7 +106,7 @@ export async function getBloomReport(chairmanId: string | null) {
     for (const b of BLOOM_ORDER) overall[b] = 0;
 
     for (const c of courses) {
-      const clos = await prisma.cLO.findMany({ where: { courseId: c.id } });
+      const clos = await prisma.cLO.findMany({ where: { courseId: c.id, source: "SE" } });
       const sem = c.semesterNumber || 0;
       if (!bySemester[sem]) { bySemester[sem] = {}; for (const b of BLOOM_ORDER) bySemester[sem][b] = 0; }
       for (const clo of clos) {

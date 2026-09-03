@@ -24,7 +24,7 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
     where: { id: params.courseId },
     include: {
       coordinator: true, subjectExpert: true,
-      clos: { orderBy: { code: "asc" }, include: { mappedPlo: true } },
+      clos: { where: { source: "SE" }, orderBy: { code: "asc" }, include: { mappedPlo: true } },
       lectureRows: { orderBy: { lectureNumber: "asc" }, include: { clo: true } },
     },
   });

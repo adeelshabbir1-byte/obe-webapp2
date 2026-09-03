@@ -28,6 +28,43 @@ export async function getBenchmarkCandidates(coordinatorId: string) {
 }
 
 /**
+ * Fallback for when no benchmark match exists: seeds the new course's SE-side
+ * CLOs and 32-lecture topic draft directly from HEC's MasterCourseClo /
+ * MasterCourseTopic content (if any exists for this master course). Only
+ * called when copyBenchmarkIfAvailable found nothing — a benchmark from a
+ * real prior batch's actual work always takes priority over this seed.
+ */
+export async function seedFromMasterCourseIfAvailable(newCourseId: string, masterCourseId: string | null) {
+  if (!masterCourseId) return null;
+
+  const [seedClos, seedTopics] = await Promise.all([
+    prisma.masterCourseClo.findMany({ where: { masterCourseId }, orderBy: { orderIndex: "asc" } }),
+    prisma.masterCourseTopic.findMany({ where: { masterCourseId }, orderBy: { lectureNumber: "asc" } }),
+  ]);
+  if (seedClos.length === 0 && seedTopics.length === 0) return null;
+
+  for (const [i, c] of seedClos.entries()) {
+    await prisma.cLO.create({
+      data: { courseId: newCourseId, source: "SE", code: `CLO-${i + 1}`, statement: c.statement, bloomLevel: c.bloomLevel },
+    });
+  }
+
+  if (seedTopics.length > 0) {
+    // Fill in a full 32-row template — Week/Lecture# fixed as usual — using
+    // the seeded topic for whichever lecture numbers we have content for.
+    const topicByLecture = new Map(seedTopics.map((t) => [t.lectureNumber, t.topic]));
+    await prisma.lectureRow.createMany({
+      data: Array.from({ length: 32 }, (_, i) => ({
+        courseId: newCourseId, source: "SE", lectureNumber: i + 1, week: Math.ceil((i + 1) / 2),
+        topic: topicByLecture.get(i + 1) || "", subtopic: null, cloId: null, bloomLevel: null, weightPct: 0,
+      })),
+    });
+  }
+
+  return { cloCount: seedClos.length, topicCount: seedTopics.length };
+}
+
+/**
  * Copies a specific known source course's SE work (CLOs, PLO mapping,
  * contribution %, lecture schedule, weights) into a specific known new
  * course — the shared engine behind both automatic benchmark matching and

@@ -481,9 +481,38 @@ model MasterCourse {
   semesterNumber      Int?
 
   adoptedInto         Course[]
+  seedClos            MasterCourseClo[]
+  seedTopics          MasterCourseTopic[]
 
   @@index([masterCurriculumId])
   @@unique([masterCurriculumId, code])
+}
+
+// HEC's stated learning outcomes for a major course — seeded as a starting
+// CLO draft when the course is first adopted into a batch.
+model MasterCourseClo {
+  id             String @id @default(cuid())
+  masterCourseId String
+  masterCourse   MasterCourse @relation(fields: [masterCourseId], references: [id])
+  statement      String @db.Text
+  bloomLevel     String // C1..C6, inferred from the outcome's verb
+  orderIndex     Int    @default(0)
+
+  @@index([masterCourseId])
+}
+
+// A real (or standard-curriculum-synthesized) 32-lecture topic breakdown for
+// a major course — seeded as a starting draft on the Lecture Content tab.
+model MasterCourseTopic {
+  id             String @id @default(cuid())
+  masterCourseId String
+  masterCourse   MasterCourse @relation(fields: [masterCourseId], references: [id])
+  lectureNumber  Int    // 1..32
+  topic          String
+  subtopic       String?
+
+  @@unique([masterCourseId, lectureNumber])
+  @@index([masterCourseId])
 }
 
 model MasterPLO {
