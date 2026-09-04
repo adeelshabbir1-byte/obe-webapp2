@@ -1,10 +1,14 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { navForRole } from "../../../../components/reportNav";
 import { getCoverageReport } from "../../../../lib/reports";
 import { courseTypeColor } from "../../../../lib/courseTypeColors";
+import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
+import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
+import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 
 function StatCard({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -15,28 +19,35 @@ function StatCard({ label, value, tone }: { label: string; value: string | numbe
   );
 }
 
-export default async function CoverageReportPage() {
+export default async function CoverageReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const programs = await getCoverageReport(user);
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const filter = { degree: searchParams.degree, batchId: searchParams.batchId };
+
+  const programs = await getCoverageReport(user, filter);
   const legendTypes = Array.from(new Set(programs.flatMap((p) => p.rows.flatMap((r) => Object.keys(r.byType))))).sort();
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22 }}>Program-Level PLO Coverage & Distribution Summary</h1>
-        <a href="/api/omc/reports/coverage/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <ReportPrintHeader title="Program-Level PLO Coverage & Distribution Summary" />
+        <a href="/api/omc/reports/coverage/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         How comprehensively the program addresses each PLO — highlighting coverage gaps where a PLO is under-mapped.
       </p>
       <ReportsSubNav active="coverage" />
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
 
-      {programs.length === 0 && <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No programs yet.</p></div>}
+      {programs.length === 0 && <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No programs match this filter.</p></div>}
 
       {programs.map((sec) => (
         <div key={sec.coordinatorName} style={{ marginBottom: 24 }}>

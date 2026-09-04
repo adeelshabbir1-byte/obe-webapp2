@@ -2,13 +2,17 @@ import { prisma } from "./db";
 import { coordinatorIdsFor } from "./reportScope";
 
 type ReportUser = { id: string; role: string; managedById: string | null };
+export type ReportFilter = { degree?: string; batchId?: string };
 
-async function getBatchesFor(user: ReportUser) {
+async function getBatchesFor(user: ReportUser, filter?: ReportFilter) {
   const coordinatorIds = await coordinatorIdsFor(user);
-  const allBatches = await prisma.batch.findMany({
+  let allBatches = await prisma.batch.findMany({
     where: { coordinatorId: { in: coordinatorIds } },
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
+
+  if (filter?.batchId) allBatches = allBatches.filter((b) => b.id === filter.batchId);
+  else if (filter?.degree) allBatches = allBatches.filter((b) => b.degreeProgram === filter.degree);
 
   // SE/Instructor see the full picture for any batch they're actually
   // involved in (a batch-wide PLO report makes sense that way), but not
@@ -28,8 +32,8 @@ async function getBatchesFor(user: ReportUser) {
 // ============================================================================
 // Report 1 — Program-Level PLO Coverage & Distribution Summary
 // ============================================================================
-export async function getCoverageReport(user: ReportUser) {
-  const batches = await getBatchesFor(user);
+export async function getCoverageReport(user: ReportUser, filter?: ReportFilter) {
+  const batches = await getBatchesFor(user, filter);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -53,8 +57,8 @@ export async function getCoverageReport(user: ReportUser) {
 // ============================================================================
 // Report 2 — PLO Depth & Contribution Heatmap (by course type)
 // ============================================================================
-export async function getHeatmapReport(user: ReportUser) {
-  const batches = await getBatchesFor(user);
+export async function getHeatmapReport(user: ReportUser, filter?: ReportFilter) {
+  const batches = await getBatchesFor(user, filter);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -78,8 +82,8 @@ export async function getHeatmapReport(user: ReportUser) {
 // ============================================================================
 // Report 3 — Semester-Wise PLO Progression & Balance
 // ============================================================================
-export async function getProgressionReport(user: ReportUser) {
-  const batches = await getBatchesFor(user);
+export async function getProgressionReport(user: ReportUser, filter?: ReportFilter) {
+  const batches = await getBatchesFor(user, filter);
   const programs = [];
   for (const batch of batches) {
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
@@ -111,8 +115,8 @@ const BLOOM_LABELS: Record<string, string> = {
   C1: "Remember", C2: "Understand", C3: "Apply", C4: "Analyze", C5: "Evaluate", C6: "Create",
 };
 
-export async function getBloomReport(user: ReportUser) {
-  const batches = await getBatchesFor(user);
+export async function getBloomReport(user: ReportUser, filter?: ReportFilter) {
+  const batches = await getBatchesFor(user, filter);
   const programs = [];
   for (const batch of batches) {
     const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
@@ -149,8 +153,8 @@ export { BLOOM_ORDER, BLOOM_LABELS };
 // ============================================================================
 // Report 4 — Course-Level Accreditation Audit & Orphan Detection
 // ============================================================================
-export async function getAuditReport(user: ReportUser) {
-  const batches = await getBatchesFor(user);
+export async function getAuditReport(user: ReportUser, filter?: ReportFilter) {
+  const batches = await getBatchesFor(user, filter);
   const programs = [];
   for (const batch of batches) {
     const totalPlos = await prisma.pLO.count({ where: { batchId: batch.id } });

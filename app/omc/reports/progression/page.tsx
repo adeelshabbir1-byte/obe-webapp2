@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { navForRole } from "../../../../components/reportNav";
+import { prisma } from "../../../../lib/db";
+import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
+import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import { getProgressionReport } from "../../../../lib/reports";
 import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
@@ -14,25 +18,32 @@ function heatColor(value: number, max: number) {
   return `rgb(${r},${g},${b})`;
 }
 
-export default async function ProgressionReportPage() {
+export default async function ProgressionReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const programs = await getProgressionReport(user);
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const filter = { degree: searchParams.degree, batchId: searchParams.batchId };
+
+  const programs = await getProgressionReport(user, filter);
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22 }}>Semester-Wise PLO Progression & Balance</h1>
-        <a href="/api/omc/reports/progression/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <ReportPrintHeader title="Semester-Wise PLO Progression & Balance" />
+        <a href="/api/omc/reports/progression/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         How outcomes scale across the 8 semesters — foundational PLOs should show up heavily in semesters 1–4, advanced ones in 5–8.
       </p>
       <ReportsSubNav active="progression" />
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
 
       {programs.length === 0 && <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No programs yet.</p></div>}
 

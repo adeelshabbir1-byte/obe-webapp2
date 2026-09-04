@@ -33,6 +33,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
       <div className="card no-print">
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
         <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
+        {selectedCourseId && <a href={`/api/reports/course-monitoring-word?courseId=${selectedCourseId}`} className="btn btn-brass" style={{ textDecoration: "none", marginLeft: 10 }}>Download Word</a>}
       </div>
       {course && variance && (
         <>

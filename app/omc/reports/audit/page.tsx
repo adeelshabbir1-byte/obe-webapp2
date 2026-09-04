@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { navForRole } from "../../../../components/reportNav";
+import { prisma } from "../../../../lib/db";
+import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
+import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import { getAuditReport } from "../../../../lib/reports";
 import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
@@ -11,25 +15,32 @@ function flagBadge(flag: string) {
   return <span style={{ background: "#CCFBF1", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>OK</span>;
 }
 
-export default async function AuditReportPage() {
+export default async function AuditReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
 
-  const programs = await getAuditReport(user);
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const filter = { degree: searchParams.degree, batchId: searchParams.batchId };
+
+  const programs = await getAuditReport(user, filter);
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22 }}>Course-Level Accreditation Audit & Orphan Detection</h1>
-        <a href="/api/omc/reports/audit/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <ReportPrintHeader title="Course-Level Accreditation Audit & Orphan Detection" />
+        <a href="/api/omc/reports/audit/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Flags orphan courses (mapped to zero PLOs) and overly broad courses (mapped to every single PLO indiscriminately) — both signal misconfiguration to accreditation panels.
       </p>
       <ReportsSubNav active="audit" />
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
 
       {programs.length === 0 && <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No programs yet.</p></div>}
 
