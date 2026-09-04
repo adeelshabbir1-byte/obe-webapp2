@@ -26,6 +26,14 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
   const variance = selectedCourseId ? await computeTopicVariance(selectedCourseId) : null;
   const totalPlos = course ? await prisma.pLO.count({ where: { batchId: course.batchId || "" } }) : 0;
   const mappedPlos = course ? await prisma.coursePloMapping.count({ where: { courseId: course.id } }) : 0;
+  const liveWeights = course ? {
+    assignmentPct: course.instructorAssignmentPct ?? course.assignmentPct,
+    quizPct: course.instructorQuizPct ?? course.quizPct,
+    projectPct: course.instructorProjectPct ?? course.projectPct,
+    labPct: course.instructorLabPct ?? course.labPct,
+    midtermPct: course.instructorMidtermPct ?? course.midtermPct,
+    finalPct: course.instructorFinalPct ?? course.finalPct,
+  } : null;
 
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
@@ -53,7 +61,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Assessment Weightage</h3>
             <table>
               <thead><tr><th>Assignment</th><th>Quiz</th><th>Project</th><th>Lab</th><th>Midterm</th><th>Final</th></tr></thead>
-              <tbody><tr><td>{course.assignmentPct}%</td><td>{course.quizPct}%</td><td>{course.projectPct}%</td><td>{course.labPct}%</td><td>{course.midtermPct}%</td><td>{course.finalPct}%</td></tr></tbody>
+              <tbody><tr><td>{liveWeights!.assignmentPct}%</td><td>{liveWeights!.quizPct}%</td><td>{liveWeights!.projectPct}%</td><td>{liveWeights!.labPct}%</td><td>{liveWeights!.midtermPct}%</td><td>{liveWeights!.finalPct}%</td></tr></tbody>
             </table>
           </div>
 

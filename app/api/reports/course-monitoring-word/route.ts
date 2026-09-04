@@ -35,6 +35,14 @@ export async function GET(req: NextRequest) {
   const variance = await computeTopicVariance(courseId);
   const totalPlos = await prisma.pLO.count({ where: { batchId: course.batchId || "" } });
   const mappedPlos = await prisma.coursePloMapping.count({ where: { courseId: course.id } });
+  const w = {
+    assignmentPct: course.instructorAssignmentPct ?? course.assignmentPct,
+    quizPct: course.instructorQuizPct ?? course.quizPct,
+    projectPct: course.instructorProjectPct ?? course.projectPct,
+    labPct: course.instructorLabPct ?? course.labPct,
+    midtermPct: course.instructorMidtermPct ?? course.midtermPct,
+    finalPct: course.instructorFinalPct ?? course.finalPct,
+  };
 
   const doc = new Document({
     sections: [{
@@ -52,7 +60,7 @@ export async function GET(req: NextRequest) {
             labelValueRow("Subject Expert", course.subjectExpert?.name || "—"),
             labelValueRow("Instructor", course.instructor?.name || "—"),
             labelValueRow("PLOs Assigned to this Course", `${mappedPlos} of ${totalPlos} program PLOs`),
-            labelValueRow("Assessment Weightage", `Assignment ${course.assignmentPct}%, Quiz ${course.quizPct}%, Project ${course.projectPct}%, Lab ${course.labPct}%, Midterm ${course.midtermPct}%, Final ${course.finalPct}%`),
+            labelValueRow("Assessment Weightage", `Assignment ${w.assignmentPct}%, Quiz ${w.quizPct}%, Project ${w.projectPct}%, Lab ${w.labPct}%, Midterm ${w.midtermPct}%, Final ${w.finalPct}%`),
             labelValueRow("Plan Adherence", `${variance.adherencePct}% of planned weight delivered${variance.missed.length > 0 ? ` — ${variance.missed.length} topic(s) not covered: ${variance.missed.map((m) => m.topic).join(", ")}` : " — all planned topics covered"}`),
           ],
         }),

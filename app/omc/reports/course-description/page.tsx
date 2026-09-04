@@ -40,6 +40,18 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
   const byWeek = new Map<number, string[]>();
   if (course) for (const r of course.lectureRows) byWeek.set(r.week, [...(byWeek.get(r.week) || []), r.topic]);
 
+  // Prefer the Instructor's current weights (their actual delivered numbers)
+  // over the SE's original plan, once the Instructor has set their own.
+  const liveWeights = course ? {
+    assignmentPct: course.instructorAssignmentPct ?? course.assignmentPct,
+    quizPct: course.instructorQuizPct ?? course.quizPct,
+    projectPct: course.instructorProjectPct ?? course.projectPct,
+    labPct: course.instructorLabPct ?? course.labPct,
+    midtermPct: course.instructorMidtermPct ?? course.midtermPct,
+    finalPct: course.instructorFinalPct ?? course.finalPct,
+    isInstructorSet: course.instructorAssignmentPct !== null,
+  } : null;
+
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Course Description Form" />
@@ -57,17 +69,22 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
               <Row label="Course Title" value={course.title} />
               <Row label="Credit Hours" value={course.creditHours} />
               <Row label="Assessment Instruments with Weights" value={
-                <table style={{ marginTop: 0 }}>
-                  <tbody>
-                    <tr><td>Assignment</td><td>{course.assignmentPct}</td></tr>
-                    <tr><td>Quiz</td><td>{course.quizPct}</td></tr>
-                    <tr><td>Project</td><td>{course.projectPct}</td></tr>
-                    <tr><td>Lab</td><td>{course.labPct}</td></tr>
-                    <tr><td>Midterm</td><td>{course.midtermPct}</td></tr>
-                    <tr><td>Final</td><td>{course.finalPct}</td></tr>
-                    <tr style={{ fontWeight: 700 }}><td>Total</td><td>{course.assignmentPct + course.quizPct + course.projectPct + course.labPct + course.midtermPct + course.finalPct}</td></tr>
-                  </tbody>
-                </table>
+                <>
+                  <table style={{ marginTop: 0 }}>
+                    <tbody>
+                      <tr><td>Assignment</td><td>{liveWeights!.assignmentPct}</td></tr>
+                      <tr><td>Quiz</td><td>{liveWeights!.quizPct}</td></tr>
+                      <tr><td>Project</td><td>{liveWeights!.projectPct}</td></tr>
+                      <tr><td>Lab</td><td>{liveWeights!.labPct}</td></tr>
+                      <tr><td>Midterm</td><td>{liveWeights!.midtermPct}</td></tr>
+                      <tr><td>Final</td><td>{liveWeights!.finalPct}</td></tr>
+                      <tr style={{ fontWeight: 700 }}><td>Total</td><td>{liveWeights!.assignmentPct + liveWeights!.quizPct + liveWeights!.projectPct + liveWeights!.labPct + liveWeights!.midtermPct + liveWeights!.finalPct}</td></tr>
+                    </tbody>
+                  </table>
+                  <p style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 4 }}>
+                    {liveWeights!.isInstructorSet ? "Instructor's current delivered weights." : "Subject Expert's planned weights (Instructor hasn't set their own yet)."}
+                  </p>
+                </>
               } />
               <Row label="Course Instructor" value={course.subjectExpert?.name || "—"} />
               <Row label="Lab Instructor" value={course.labInstructorName || "N/A"} />

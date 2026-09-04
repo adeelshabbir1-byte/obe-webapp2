@@ -21,13 +21,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
   }
 
   if (body.status === "approved") {
-    await prisma.course.update({
-      where: { id: request.courseId },
-      data: {
-        assignmentPct: request.assignmentPct, quizPct: request.quizPct, projectPct: request.projectPct,
-        labPct: request.labPct, midtermPct: request.midtermPct, finalPct: request.finalPct,
-      },
-    });
+    if (request.source === "INSTRUCTOR") {
+      await prisma.course.update({
+        where: { id: request.courseId },
+        data: {
+          instructorAssignmentPct: request.assignmentPct, instructorQuizPct: request.quizPct, instructorProjectPct: request.projectPct,
+          instructorLabPct: request.labPct, instructorMidtermPct: request.midtermPct, instructorFinalPct: request.finalPct,
+        },
+      });
+    } else {
+      await prisma.course.update({
+        where: { id: request.courseId },
+        data: {
+          assignmentPct: request.assignmentPct, quizPct: request.quizPct, projectPct: request.projectPct,
+          labPct: request.labPct, midtermPct: request.midtermPct, finalPct: request.finalPct,
+        },
+      });
+    }
   }
 
   const updated = await prisma.weightExceptionRequest.update({

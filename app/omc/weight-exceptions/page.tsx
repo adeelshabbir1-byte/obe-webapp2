@@ -26,7 +26,7 @@ export default async function WeightExceptionsPage() {
 
   const requests = await prisma.weightExceptionRequest.findMany({
     where: { status: "pending", course: { coordinatorId: { in: coordinatorIds } } },
-    include: { course: { include: { subjectExpert: true } } },
+    include: { course: { include: { subjectExpert: true, instructor: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -34,12 +34,12 @@ export default async function WeightExceptionsPage() {
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Weight Exceptions</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Course weightages a Subject Expert proposed that fall outside your Weight Policy ranges.
+        Course weightages a Subject Expert or Instructor proposed that fall outside your Weight Policy ranges.
       </p>
       <WeightExceptionsManager
         initialRequests={requests.map((r) => ({
           id: r.id, courseCode: r.course.code, courseTitle: r.course.title,
-          subjectExpertName: r.course.subjectExpert?.name || "—",
+          source: r.source, proposedBy: r.source === "INSTRUCTOR" ? (r.course.instructor?.name || "—") : (r.course.subjectExpert?.name || "—"),
           assignmentPct: r.assignmentPct, quizPct: r.quizPct, projectPct: r.projectPct,
           labPct: r.labPct, midtermPct: r.midtermPct, finalPct: r.finalPct,
         }))}

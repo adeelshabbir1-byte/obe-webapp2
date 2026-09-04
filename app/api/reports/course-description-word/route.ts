@@ -44,6 +44,15 @@ export async function GET(req: NextRequest) {
   const byWeek = new Map<number, string[]>();
   for (const r of course.lectureRows) byWeek.set(r.week, [...(byWeek.get(r.week) || []), r.topic]);
 
+  const w = {
+    assignmentPct: course.instructorAssignmentPct ?? course.assignmentPct,
+    quizPct: course.instructorQuizPct ?? course.quizPct,
+    projectPct: course.instructorProjectPct ?? course.projectPct,
+    labPct: course.instructorLabPct ?? course.labPct,
+    midtermPct: course.instructorMidtermPct ?? course.midtermPct,
+    finalPct: course.instructorFinalPct ?? course.finalPct,
+  };
+
   const weeklyRows = [
     new TableRow({ children: ["Week", "Topics", "Lectures"].map((h) =>
       new TableCell({ shading: { type: ShadingType.CLEAR, fill: "F4EFE1" }, children: [new Paragraph({ children: [new TextRun({ text: h, bold: true, size: 18 })] })] })
@@ -72,7 +81,7 @@ export async function GET(req: NextRequest) {
             labelValueRow("Course Code", course.code),
             labelValueRow("Course Title", course.title),
             labelValueRow("Credit Hours", String(course.creditHours)),
-            labelValueRow("Assessment Weights", `Assignment ${course.assignmentPct}%, Quiz ${course.quizPct}%, Project ${course.projectPct}%, Lab ${course.labPct}%, Midterm ${course.midtermPct}%, Final ${course.finalPct}%`),
+            labelValueRow("Assessment Weights", `Assignment ${w.assignmentPct}%, Quiz ${w.quizPct}%, Project ${w.projectPct}%, Lab ${w.labPct}%, Midterm ${w.midtermPct}%, Final ${w.finalPct}%`),
             labelValueRow("Course Instructor", course.subjectExpert?.name || "—"),
             labelValueRow("Lab Instructor", course.labInstructorName || "N/A"),
             labelValueRow("Catalog Description", course.catalogDescription || "Not filled in yet."),

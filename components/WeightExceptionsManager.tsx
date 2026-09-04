@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Req = {
-  id: string; courseCode: string; courseTitle: string; subjectExpertName: string;
+  id: string; courseCode: string; courseTitle: string; source: string; proposedBy: string;
   assignmentPct: number; quizPct: number; projectPct: number; labPct: number; midtermPct: number; finalPct: number;
 };
 
@@ -33,13 +33,13 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
       {error && <div className="err">{error}</div>}
       <div className="card">
         <table>
-          <thead><tr><th>Course</th><th>Subject Expert</th><th>Proposed Weights</th><th></th></tr></thead>
+          <thead><tr><th>Course</th><th>Proposed By</th><th>Proposed Weights</th><th></th></tr></thead>
           <tbody>
             {initialRequests.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No pending weight exception requests.</td></tr>}
             {initialRequests.map((r) => (
               <tr key={r.id}>
                 <td><b>{r.courseCode}</b><br /><span style={{ color: "var(--slate)", fontSize: 11.5 }}>{r.courseTitle}</span></td>
-                <td>{r.subjectExpertName}</td>
+                <td>{r.proposedBy} <span className="badge badge-neutral" style={{ marginLeft: 4 }}>{r.source === "INSTRUCTOR" ? "Instructor" : "Subject Expert"}</span></td>
                 <td style={{ fontSize: 11.5 }}>
                   A {r.assignmentPct}% · Q {r.quizPct}% · P {r.projectPct}% · L {r.labPct}% · Mid {r.midtermPct}% · Final {r.finalPct}%
                 </td>

@@ -28,9 +28,9 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     // Out of policy range — don't apply directly. Create/update a pending
     // exception request for the OMC to approve instead.
     await prisma.weightExceptionRequest.upsert({
-      where: { courseId: course.id },
+      where: { courseId_source: { courseId: course.id, source: "SE" } },
       create: {
-        courseId: course.id, requestedById: user.id,
+        courseId: course.id, source: "SE", requestedById: user.id,
         assignmentPct: vals.assignmentPct, quizPct: vals.quizPct, projectPct: vals.projectPct,
         labPct: vals.labPct, midtermPct: vals.midtermPct, finalPct: vals.finalPct,
         status: "pending",

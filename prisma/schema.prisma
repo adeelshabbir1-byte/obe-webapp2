@@ -172,6 +172,7 @@ model WeightExceptionRequest {
   id            String   @id @default(cuid())
   courseId      String
   course        Course   @relation(fields: [courseId], references: [id])
+  source        String   @default("SE") // "SE" | "INSTRUCTOR" — which one's proposed weights this is
   requestedById String
   assignmentPct Int
   quizPct       Int
@@ -185,7 +186,7 @@ model WeightExceptionRequest {
   reviewedAt    DateTime?
   createdAt     DateTime @default(now())
 
-  @@unique([courseId])
+  @@unique([courseId, source])
   @@index([courseId])
 }
 
