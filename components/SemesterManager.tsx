@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Instructor = { id: string; name: string };
@@ -97,7 +98,7 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Currently Offered Courses</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>You can finalize this list — remove anything that shouldn't be offered this semester.</p>
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th>Instructor</th><th></th></tr></thead>
           <tbody>
             {offeredCourses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses offered yet.</td></tr>}
@@ -114,7 +115,7 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         {instructors.length === 0 && (
           <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>No Course Instructors onboarded yet — add one under Faculty Onboarding first.</div>
         )}
@@ -123,7 +124,7 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Not Currently Offered</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Add any course manually that the automatic offering missed.</p>
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th></th></tr></thead>
           <tbody>
             {notOfferedCourses.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>Nothing else to offer.</td></tr>}
@@ -134,7 +135,7 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
@@ -68,7 +69,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
           <h3 style={{ fontSize: 14 }}>Lecture Content</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} topics filled in — click any cell to edit</span>
         </div>
-        <table style={{ tableLayout: "fixed" }}>
+        <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
             <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
           </thead>
@@ -114,7 +115,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           Same-colored topics repeat across rows — a quick visual check that related lectures are grouped together.
           Set which quizzes/assignments/exam questions test each topic on the Assessments tab (Weight column fills in from there).

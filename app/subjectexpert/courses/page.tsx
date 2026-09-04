@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -31,7 +32,7 @@ export default async function SubjectExpertCoursesPage() {
         Build the gold-standard template for each course: CLOs, the 30-lecture schedule, and assessment weights.
       </p>
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Title</th><th>Template Status</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && (
@@ -44,7 +45,7 @@ export default async function SubjectExpertCoursesPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -48,7 +49,7 @@ export default async function LogFilePage({ searchParams }: { searchParams: { co
         </div>
       )}
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Wk</th><th>Lec</th><th>Date</th><th>Mode</th><th>Topic</th><th>Sub Topic</th><th>CLO</th><th>Reschedule Note</th></tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>No delivery data logged yet.</td></tr>}
@@ -64,7 +65,7 @@ export default async function LogFilePage({ searchParams }: { searchParams: { co
               );
             })}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

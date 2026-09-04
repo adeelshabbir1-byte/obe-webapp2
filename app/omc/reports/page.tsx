@@ -51,6 +51,8 @@ const SECTIONS = [
     desc: "Student marks and computed results.",
     cards: [
       { href: "/omc/reports/result-mate", title: "Result Mate", desc: "Per-student marks, CLO/PLO attainment, and relative grading for the class." },
+      { href: "/omc/reports/pass-rates", title: "CLO / PLO Pass Rates", desc: "Pass/fail counts per CLO and PLO, plus a histogram of the class's overall score distribution." },
+      { href: "/omc/reports/course-offering-map", title: "Course Offering Map", desc: "Which courses are offered, who's teaching them, and how many students are enrolled — visually, by semester." },
     ],
   },
   {

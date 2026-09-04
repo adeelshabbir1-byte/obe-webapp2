@@ -50,12 +50,17 @@ export default async function CalendarPage() {
       <CalendarManager
         initialHolidays={holidays.map((h) => ({ id: h.id, date: h.date.toISOString(), label: h.label }))}
         initialDayModes={dayModes.map((m) => ({ id: m.id, date: m.date.toISOString(), mode: m.mode }))}
-        courses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, midtermDate: c.midtermDate?.toISOString() || null, finalDate: c.finalDate?.toISOString() || null }))}
+        courses={courses.map((c) => ({
+          id: c.id, code: c.code, title: c.title,
+          midtermStartDate: c.midtermStartDate?.toISOString() || null, midtermEndDate: c.midtermEndDate?.toISOString() || null,
+          finalStartDate: c.finalStartDate?.toISOString() || null, finalEndDate: c.finalEndDate?.toISOString() || null,
+        }))}
         degreePrograms={degreePrograms}
         initialSemesterDates={semesterDates.map((d) => ({
           degreeProgram: d.degreeProgram, termName: d.termName, termYear: d.termYear,
           semesterStartDate: d.semesterStartDate?.toISOString() || null,
-          midtermDate: d.midtermDate?.toISOString() || null, finalDate: d.finalDate?.toISOString() || null,
+          midtermStartDate: d.midtermStartDate?.toISOString() || null, midtermEndDate: d.midtermEndDate?.toISOString() || null,
+          finalStartDate: d.finalStartDate?.toISOString() || null, finalEndDate: d.finalEndDate?.toISOString() || null,
         }))}
         defaultTermName={currentTerm?.termName || "Fall"}
         defaultTermYear={currentTerm?.year || new Date().getFullYear()}

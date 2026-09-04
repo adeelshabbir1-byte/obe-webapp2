@@ -26,22 +26,33 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const blockedDates = new Set<string>(holidays.map((h) => h.date.toISOString().slice(0, 10)));
 
   // Degree-wide semester dates are the default; a course's own dates (if set) override them.
-  let midterm = course.midtermDate;
-  let final = course.finalDate;
-  if ((!midterm || !final) && course.batchId) {
+  let midtermStart = course.midtermStartDate, midtermEnd = course.midtermEndDate;
+  let finalStart = course.finalStartDate, finalEnd = course.finalEndDate;
+  if ((!midtermStart || !finalStart) && course.batchId) {
     const batch = await prisma.batch.findUnique({ where: { id: course.batchId } });
     if (batch && course.offeredTermName && course.offeredTermYear) {
       const semDates = await prisma.semesterDates.findUnique({
         where: { coordinatorId_degreeProgram_termName_termYear: { coordinatorId: course.coordinatorId, degreeProgram: batch.degreeProgram, termName: course.offeredTermName, termYear: course.offeredTermYear } },
       });
       if (semDates) {
-        if (!midterm) midterm = semDates.midtermDate;
-        if (!final) final = semDates.finalDate;
+        if (!midtermStart) { midtermStart = semDates.midtermStartDate; midtermEnd = semDates.midtermEndDate; }
+        if (!finalStart) { finalStart = semDates.finalStartDate; finalEnd = semDates.finalEndDate; }
       }
     }
   }
-  if (midterm) blockedDates.add(midterm.toISOString().slice(0, 10));
-  if (final) blockedDates.add(final.toISOString().slice(0, 10));
+  function blockRange(start: Date | null, end: Date | null) {
+    if (!start) return;
+    const rangeEnd = end || start;
+    let d = new Date(start);
+    let guard = 0;
+    while (d <= rangeEnd && guard < 14) {
+      blockedDates.add(d.toISOString().slice(0, 10));
+      d = addDays(d, 1);
+      guard++;
+    }
+  }
+  blockRange(midtermStart, midtermEnd);
+  blockRange(finalStart, finalEnd);
 
   const d1 = new Date(lec1.actualDate);
   const d2 = new Date(lec2.actualDate);

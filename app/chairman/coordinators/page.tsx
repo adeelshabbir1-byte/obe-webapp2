@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -17,14 +18,14 @@ export default async function ChairmanCoordinatorsPage() {
   });
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/cqi", label: "CQI Records" }, { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/chairman/institute-settings", label: "Institute Settings" }, { href: "/omc/reports", label: "Reports" }]}>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/cqi", label: "CQI Records" }, { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/omc/reports", label: "Reports" }]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Coordinators</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Coordinators onboard faculty and define courses on your behalf.
       </p>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Email</th></tr></thead>
           <tbody>
             {coordinators.length === 0 && (
@@ -34,7 +35,7 @@ export default async function ChairmanCoordinatorsPage() {
               <tr key={c.id}><td>{c.username}</td><td>{c.name}</td><td>{c.email}</td></tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <CreateUserForm endpoint="/api/chairman/coordinators" buttonLabel="Create Coordinator" />

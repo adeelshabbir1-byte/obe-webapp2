@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null };
@@ -48,7 +49,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     <>
       {error && <div className="err">{error}</div>}
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Load (Normal / External)</th><th></th></tr></thead>
           <tbody>
             {initialFaculty.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>}
@@ -84,7 +85,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

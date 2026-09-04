@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -66,7 +67,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <table style={{ tableLayout: "fixed" }}>
+        <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
               <th style={{ width: 70 }}>PLO #</th>
@@ -90,7 +91,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

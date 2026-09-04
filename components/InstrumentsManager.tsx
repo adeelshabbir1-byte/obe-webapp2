@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; marksPct: number };
@@ -54,7 +55,7 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
                 {mismatch && <span style={{ marginLeft: 6, fontWeight: 600 }}>— doesn't match</span>}
               </span>
             </div>
-            <table>
+            <SortableTable>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
               <tbody>
                 {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
@@ -65,7 +66,7 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
             <AddInstrumentRow type={type} nextLabel={nextLabel} loading={loading} onAdd={addInstrument} />
           </div>
         );

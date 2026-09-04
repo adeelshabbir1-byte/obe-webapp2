@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -56,7 +57,7 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
             {prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No PLOs defined yet.</p>
             ) : (
-              <table style={{ marginTop: 10 }}>
+              <SortableTable style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>
@@ -78,7 +79,7 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </SortableTable>
             )}
           </div>
         );

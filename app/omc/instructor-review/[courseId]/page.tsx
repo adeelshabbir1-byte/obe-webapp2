@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { computeTopicVariance } from "../../../../lib/varianceReport";
@@ -53,7 +54,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
         </div>
 
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Planned vs. Actual, by Topic</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Topic</th><th>Planned Lectures</th><th>Planned Marks%</th><th>Actual Lectures</th><th>Actual Marks%</th><th>Status</th></tr></thead>
           <tbody>
             {variance.topics.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No planned topics yet.</td></tr>}
@@ -65,7 +66,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <GuidanceThread

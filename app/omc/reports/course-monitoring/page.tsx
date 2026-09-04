@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -55,7 +56,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
       {course && variance && (
         <>
           <div className="card">
-            <table>
+            <SortableTable>
               <tbody>
                 <tr><td style={{ fontWeight: 600, width: "26%" }}>Course</td><td>{course.code} — {course.title}</td></tr>
                 <tr><td style={{ fontWeight: 600 }}>Batch</td><td>{course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"}</td></tr>
@@ -63,15 +64,15 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
                 <tr><td style={{ fontWeight: 600 }}>Instructor</td><td>{course.instructor?.name || "—"}</td></tr>
                 <tr><td style={{ fontWeight: 600 }}>PLOs Assigned to this Course</td><td>{mappedPlos} of {totalPlos} program PLOs</td></tr>
               </tbody>
-            </table>
+            </SortableTable>
           </div>
 
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Assessment Weightage</h3>
-            <table>
+            <SortableTable>
               <thead><tr><th>Assignment</th><th>Quiz</th><th>Project</th><th>Lab</th><th>Midterm</th><th>Final</th></tr></thead>
               <tbody><tr><td>{liveWeights!.assignmentPct}%</td><td>{liveWeights!.quizPct}%</td><td>{liveWeights!.projectPct}%</td><td>{liveWeights!.labPct}%</td><td>{liveWeights!.midtermPct}%</td><td>{liveWeights!.finalPct}%</td></tr></tbody>
-            </table>
+            </SortableTable>
           </div>
 
           <div className="card">
@@ -83,12 +84,12 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
           </div>
 
           <div className="card no-print" style={{ marginTop: 20 }}>
-            <table>
+            <SortableTable>
               <tbody>
                 <tr><td style={{ width: "50%" }}>Instructor Signature: ___________________________</td><td>Date: ___________________</td></tr>
                 <tr><td style={{ paddingTop: 20 }}>Program Coordinator Signature: ___________________________</td><td style={{ paddingTop: 20 }}>Date: ___________________</td></tr>
               </tbody>
-            </table>
+            </SortableTable>
           </div>
         </>
       )}

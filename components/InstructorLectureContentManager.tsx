@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
@@ -61,7 +62,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
           Set lectures 1 and 2's dates below first, then click Auto-fill — the rest follow the same weekly pattern,
           skipping holidays and this course's exam dates. Any date you've already changed stays as you set it.
         </p>
-        <table style={{ tableLayout: "fixed" }}>
+        <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
             <tr><th style={{ width: 34 }}>Wk</th><th style={{ width: 34 }}>Lec</th><th style={{ width: "16%" }}>Planned Topic</th><th style={{ width: "20%" }}>Actual Topic</th><th style={{ width: "16%" }}>Sub Topic</th><th style={{ width: 110 }}>Actual Date</th><th style={{ width: 80 }}>CLO</th><th style={{ width: 80 }}>Bloom</th><th style={{ width: 60 }}>Weight</th></tr>
           </thead>
@@ -104,7 +105,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number };
@@ -46,7 +47,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
     <>
       {error && <div className="err">{error}</div>}
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th></th></tr></thead>
           <tbody>
             {initialBatches.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
@@ -73,7 +74,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           Student count can change each semester as students leave or migrate in — update it whenever it changes.
         </p>

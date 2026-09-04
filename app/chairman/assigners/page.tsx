@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -11,7 +12,6 @@ const NAV = [
   { href: "/chairman/assigners", label: "Course Assigners" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" },
-  { href: "/chairman/institute-settings", label: "Institute Settings" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
@@ -32,13 +32,13 @@ export default async function ChairmanAssignersPage() {
       </p>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Email</th></tr></thead>
           <tbody>
             {assigners.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No Course Assigners yet.</td></tr>}
             {assigners.map((a) => <tr key={a.id}><td>{a.username}</td><td>{a.name}</td><td>{a.email}</td></tr>)}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <CreateUserForm endpoint="/api/chairman/assigners" buttonLabel="Create Course Assigner" />

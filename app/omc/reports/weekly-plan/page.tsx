@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -47,7 +48,7 @@ export default async function WeeklyPlanPage({ searchParams }: { searchParams: {
         </div>
       )}
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Week</th><th>Topics</th><th>CLO</th><th>No. of Lectures</th></tr></thead>
           <tbody>
             {byWeek.size === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No lecture content filled in yet.</td></tr>}
@@ -60,7 +61,7 @@ export default async function WeeklyPlanPage({ searchParams }: { searchParams: {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

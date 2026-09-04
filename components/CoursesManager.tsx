@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Course = {
@@ -197,7 +198,7 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
@@ -244,7 +245,7 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         {subjectExperts.length === 0 && (
           <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</div>
         )}

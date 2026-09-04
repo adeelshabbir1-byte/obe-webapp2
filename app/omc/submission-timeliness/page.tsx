@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -42,7 +43,7 @@ export default async function SubmissionTimelinessPage({ searchParams }: { searc
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Course</th><th>Subject Expert</th><th>Status</th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
@@ -54,7 +55,7 @@ export default async function SubmissionTimelinessPage({ searchParams }: { searc
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

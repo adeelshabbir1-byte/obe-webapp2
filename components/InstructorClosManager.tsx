@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
@@ -72,16 +73,16 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
       {error && <div className="err">{error}</div>}
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--brass-dark)" }}>Subject Expert's Planned CLOs (reference)</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th></tr></thead>
           <tbody>
             {seClos.map((c) => <tr key={c.id}><td>{c.code}</td><td style={{ fontSize: 12 }}>{c.statement}</td><td>{c.bloomLevel}</td></tr>)}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th></th></tr></thead>
           <tbody>
             {initialClos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
@@ -114,7 +115,7 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
               )
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

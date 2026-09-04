@@ -8,6 +8,7 @@ const NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
   { href: "/admin/curricula", label: "Master Curricula" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
+  { href: "/admin/platform-settings", label: "Platform Settings" },
 ];
 
 export default async function AdminCurriculaPage() {

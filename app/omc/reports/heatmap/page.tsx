@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -57,7 +58,7 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
             {prog.courseTypes.length === 0 || prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>Not enough data yet.</p>
             ) : (
-              <table style={{ marginTop: 10 }}>
+              <SortableTable style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>
@@ -79,7 +80,7 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </SortableTable>
             )}
           </div>
         );

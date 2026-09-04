@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
@@ -112,7 +113,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         </div>
       )}
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th></th></tr></thead>
           <tbody>
             {initialClos.length === 0 && (
@@ -149,7 +150,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
               )
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

@@ -2,9 +2,11 @@ import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
+import { suggestClOReweighting } from "../../../../../lib/resultMate";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
+import ReweightingSuggestions from "../../../../../components/ReweightingSuggestions";
 import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
 
@@ -44,6 +46,8 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
     prisma.feedForwardNote.findMany({ where: { courseId: course.id }, orderBy: { createdAt: "desc" } }),
   ]);
 
+  const reweightingSuggestions = await suggestClOReweighting(course.id);
+
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
       <InstructorCourseSubNav courseId={updated.id} active="instruments" code={updated.code} title={updated.title} />
@@ -74,6 +78,8 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
         })}
         apiBase="/api/instructor"
       />
+
+      <ReweightingSuggestions courseId={updated.id} suggestions={reweightingSuggestions} />
 
       <FeedForwardNotes
         courseId={course.id}

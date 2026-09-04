@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; coordinatorName: string; degreeProgram: string };
@@ -60,7 +61,7 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
           </button>
         </div>
       )}
-      <table>
+      <SortableTable>
         <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {initialPlos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
@@ -93,7 +94,7 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
             </Fragment>
           ))}
         </tbody>
-      </table>
+      </SortableTable>
     </div>
   );
 }

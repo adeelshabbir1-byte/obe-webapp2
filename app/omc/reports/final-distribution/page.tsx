@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -46,7 +47,7 @@ export default async function FinalDistributionPage({ searchParams }: { searchPa
         <>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topics → CLO Marks (Final only)</h3>
-            <table>
+            <SortableTable>
               <thead><tr><th>Topic</th><th>Lec</th>{dist.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
               <tbody>
                 {dist.topics.map((t) => (
@@ -58,18 +59,18 @@ export default async function FinalDistributionPage({ searchParams }: { searchPa
                   <td>{dist.totalMarks}</td>
                 </tr>
               </tbody>
-            </table>
+            </SortableTable>
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Question → CLO Breakdown</h3>
-            <table>
+            <SortableTable>
               <thead><tr><th>Question</th><th>Marks</th>{dist.cloCodes.map((c) => <th key={c}>{c}</th>)}</tr></thead>
               <tbody>
                 {dist.questionRows.map((q) => (
                   <tr key={q.label}><td>Q{q.label}</td><td>{q.marksPct}</td>{dist.cloCodes.map((c) => <td key={c}>{q.byClo[c] || 0}</td>)}</tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
           </div>
         </>
       ) : (

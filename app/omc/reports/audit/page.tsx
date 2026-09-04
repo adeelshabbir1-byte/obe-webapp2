@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -58,7 +59,7 @@ export default async function AuditReportPage({ searchParams }: { searchParams: 
             </div>
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
-            <table>
+            <SortableTable>
               <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Sem</th><th>PLOs Mapped</th><th>Flag</th></tr></thead>
               <tbody>
                 {prog.rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
@@ -69,7 +70,7 @@ export default async function AuditReportPage({ searchParams }: { searchParams: 
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
           </div>
         </div>
       ))}

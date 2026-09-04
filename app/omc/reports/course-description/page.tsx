@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -71,7 +72,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
       </div>
       {course && (
         <div className="card">
-          <table>
+          <SortableTable>
             <tbody>
               <Row label="Degree Program" value={course.batch?.degreeProgram || "—"} />
               <Row label="Course Code" value={course.code} />
@@ -79,7 +80,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
               <Row label="Credit Hours" value={course.creditHours} />
               <Row label="Assessment Instruments with Weights" value={
                 <>
-                  <table style={{ marginTop: 0 }}>
+                  <SortableTable style={{ marginTop: 0 }}>
                     <tbody>
                       <tr><td>Assignment</td><td>{liveWeights!.assignmentPct}</td></tr>
                       <tr><td>Quiz</td><td>{liveWeights!.quizPct}</td></tr>
@@ -89,7 +90,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
                       <tr><td>Final</td><td>{liveWeights!.finalPct}</td></tr>
                       <tr style={{ fontWeight: 700 }}><td>Total</td><td>{liveWeights!.assignmentPct + liveWeights!.quizPct + liveWeights!.projectPct + liveWeights!.labPct + liveWeights!.midtermPct + liveWeights!.finalPct}</td></tr>
                     </tbody>
-                  </table>
+                  </SortableTable>
                   <p style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 4 }}>
                     {liveWeights!.isInstructorSet ? "Instructor's current delivered weights." : "Subject Expert's planned weights (Instructor hasn't set their own yet)."}
                   </p>
@@ -104,18 +105,18 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
                 <ol style={{ margin: 0, paddingLeft: 18 }}>{course.clos.map((c) => <li key={c.id} style={{ marginBottom: 4 }}>{c.statement}</li>)}</ol>
               } />
               <Row label="Topics Covered, by Week" value={
-                <table style={{ marginTop: 0 }}>
+                <SortableTable style={{ marginTop: 0 }}>
                   <thead><tr><th>Week</th><th>Topics</th><th>No. of Lectures</th></tr></thead>
                   <tbody>
                     {Array.from(byWeek.entries()).map(([week, topics]) => (
                       <tr key={week}><td>{week}</td><td>{topics.join("; ")}</td><td>{topics.length}</td></tr>
                     ))}
                   </tbody>
-                </table>
+                </SortableTable>
               } />
               <Row label="Programming Assignments" value={course.programmingAssignmentsNote || <span style={{ color: "var(--slate)" }}>Not filled in yet.</span>} />
             </tbody>
-          </table>
+          </SortableTable>
         </div>
       )}
     </Shell>

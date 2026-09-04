@@ -2064,6 +2064,51 @@ BEGIN
   END IF;
 END $$;
 
+-- Run in Supabase SQL Editor. Adds the PlatformSettings singleton table for
+-- Super-User-only branding (institute name/logo, NCEAC logo, Lets Innovate
+-- logo) shown across every page and report.
+
+CREATE TABLE IF NOT EXISTS "PlatformSettings" (
+  "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'singleton',
+  "instituteName" TEXT,
+  "instituteLogo" TEXT,
+  "ownerLogo" TEXT,
+  "nceacLogo" TEXT
+);
+-- Run in Supabase SQL Editor. Adds the per-Chairman institute logo field
+-- (each paying tenant institution has its own name/logo, set only by the
+-- Super User). Note: PlatformSettings.instituteName/instituteLogo columns
+-- from an earlier migration are now unused (superseded by this per-Chairman
+-- approach) — harmless to leave, no code references them.
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "instituteLogo" TEXT;
+-- Run in Supabase SQL Editor. Converts midterm/final from single dates to
+-- date ranges (they span a full exam week), on both SemesterDates (the
+-- degree-wide default) and Course (the per-course override).
+
+ALTER TABLE "SemesterDates"
+  ADD COLUMN IF NOT EXISTS "midtermStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "midtermEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "finalStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "finalEndDate" TIMESTAMP(3);
+
+-- Best-effort carry-over of any previously-set single dates into the new
+-- start-date columns (end date left blank — old data had no range info).
+UPDATE "SemesterDates" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
+UPDATE "SemesterDates" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+ALTER TABLE "SemesterDates" DROP COLUMN IF EXISTS "midtermDate";
+ALTER TABLE "SemesterDates" DROP COLUMN IF EXISTS "finalDate";
+
+ALTER TABLE "Course"
+  ADD COLUMN IF NOT EXISTS "midtermStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "midtermEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "finalStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "finalEndDate" TIMESTAMP(3);
+
+UPDATE "Course" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
+UPDATE "Course" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+ALTER TABLE "Course" DROP COLUMN IF EXISTS "midtermDate";
+ALTER TABLE "Course" DROP COLUMN IF EXISTS "finalDate";
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

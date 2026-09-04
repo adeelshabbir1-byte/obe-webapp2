@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -62,7 +63,7 @@ export default async function SectionUtilizationPage({ searchParams }: { searchP
         </div>
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Group</th><th>Member Courses</th><th>Combined Students</th><th>Sections If Combined</th><th>Sections If Separate</th><th>Sections Saved</th></tr></thead>
           <tbody>
             {groupRows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No equivalence groups yet.</td></tr>}
@@ -75,7 +76,7 @@ export default async function SectionUtilizationPage({ searchParams }: { searchP
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

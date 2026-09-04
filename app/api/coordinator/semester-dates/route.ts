@@ -24,13 +24,17 @@ export async function PUT(req: NextRequest) {
     create: {
       coordinatorId: user.id, degreeProgram: body.degreeProgram, termName: body.termName, termYear: parseInt(body.termYear, 10),
       semesterStartDate: body.semesterStartDate ? new Date(body.semesterStartDate) : null,
-      midtermDate: body.midtermDate ? new Date(body.midtermDate) : null,
-      finalDate: body.finalDate ? new Date(body.finalDate) : null,
+      midtermStartDate: body.midtermStartDate ? new Date(body.midtermStartDate) : null,
+      midtermEndDate: body.midtermEndDate ? new Date(body.midtermEndDate) : null,
+      finalStartDate: body.finalStartDate ? new Date(body.finalStartDate) : null,
+      finalEndDate: body.finalEndDate ? new Date(body.finalEndDate) : null,
     },
     update: {
       semesterStartDate: body.semesterStartDate ? new Date(body.semesterStartDate) : null,
-      midtermDate: body.midtermDate ? new Date(body.midtermDate) : null,
-      finalDate: body.finalDate ? new Date(body.finalDate) : null,
+      midtermStartDate: body.midtermStartDate ? new Date(body.midtermStartDate) : null,
+      midtermEndDate: body.midtermEndDate ? new Date(body.midtermEndDate) : null,
+      finalStartDate: body.finalStartDate ? new Date(body.finalStartDate) : null,
+      finalEndDate: body.finalEndDate ? new Date(body.finalEndDate) : null,
     },
   });
 

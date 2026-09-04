@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null };
@@ -99,7 +100,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Courses ({courses.length})</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Title</th><th>Credits</th><th>Category</th><th>Sem</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
@@ -129,7 +130,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">
@@ -148,7 +149,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>PLOs ({plos.length})</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th>Description</th><th></th></tr></thead>
           <tbody>
             {plos.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No PLOs yet.</td></tr>}
@@ -174,7 +175,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

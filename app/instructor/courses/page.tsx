@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -40,7 +41,7 @@ export default async function InstructorCoursesPage() {
         an editable copy of the Subject Expert's plan.
       </p>
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th>Sections</th><th>Subject Expert</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && (
@@ -56,7 +57,7 @@ export default async function InstructorCoursesPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

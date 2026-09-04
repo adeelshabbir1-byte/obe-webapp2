@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Policy = {
@@ -52,7 +53,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
   return (
     <div className="card" style={{ overflowX: "auto" }}>
       {error && <div className="err">{error}</div>}
-      <table className="xlgrid" style={{ borderCollapse: "collapse" }}>
+      <SortableTable className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}>Course Type</th>
@@ -99,7 +100,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
             </tr>
           ))}
         </tbody>
-      </table>
+      </SortableTable>
       <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
         "# Min" is the minimum number of that assessment type to be conducted (e.g. 3 quizzes, 2 assignments).
       </p>

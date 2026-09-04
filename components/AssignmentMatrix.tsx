@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SortableTable from "./SortableTable";
 
 type Row = { kind: "course" | "group"; id: string; label: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null };
@@ -81,7 +82,7 @@ export default function AssignmentMatrix() {
 
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Section Assignment Matrix</h3>
-        <table>
+        <SortableTable>
           <thead>
             <tr>
               <th>Course</th><th>Type</th><th>Batch</th><th>Students</th><th>Sections Needed</th>
@@ -129,7 +130,7 @@ export default function AssignmentMatrix() {
               );
             })}
           </tbody>
-        </table>
+        </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           "Combined" rows are equivalence groups (courses from different batches/programs taught together).
           Sections Needed is calculated automatically at 1 section per 50 students. Going over a faculty member's

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; sourceMasterPloNumber: number | null };
@@ -134,7 +135,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Program's PLOs</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th>Description</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {initialPlos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined yet.</td></tr>}
@@ -161,13 +162,13 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Copy from HEC BS Computer Science 2025</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>Adds it as your next PLO number, pre-filled from the official text — fully editable afterward.</p>
-        <table>
+        <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th></th></tr></thead>
           <tbody>
             {hecPlos.map((hp) => (
@@ -177,7 +178,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -70,7 +71,7 @@ export default async function AdherenceReportPage({ searchParams }: { searchPara
           )}
 
           <div className="card">
-            <table>
+            <SortableTable>
               <thead><tr><th>Instructor</th><th>Batch</th><th>Term</th><th>Adherence %</th><th>Topics Missed</th></tr></thead>
               <tbody>
                 {family.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No instructor deliveries found for this course.</td></tr>}
@@ -82,7 +83,7 @@ export default async function AdherenceReportPage({ searchParams }: { searchPara
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
           </div>
         </>
       )}

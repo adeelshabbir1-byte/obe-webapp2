@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -37,7 +38,7 @@ export default async function OmcQueuePage() {
         Subject Expert course templates submitted for review.
       </p>
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Title</th><th>Subject Expert</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && (
@@ -51,7 +52,7 @@ export default async function OmcQueuePage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

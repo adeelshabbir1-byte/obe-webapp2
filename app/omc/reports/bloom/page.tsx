@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -80,7 +81,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
             {semesters.length > 0 && (
               <div className="card" style={{ overflowX: "auto" }}>
                 <h4 style={{ fontSize: 12.5, marginBottom: 10, color: "var(--slate)" }}>By Semester</h4>
-                <table>
+                <SortableTable>
                   <thead><tr><th>Semester</th>{BLOOM_ORDER.map((b) => <th key={b} style={{ textAlign: "center" }}>{b}</th>)}</tr></thead>
                   <tbody>
                     {semesters.map((s) => (
@@ -90,7 +91,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </SortableTable>
               </div>
             )}
           </div>

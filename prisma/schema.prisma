@@ -42,7 +42,8 @@ model User {
   mfaEnabled         Boolean  @default(false)
   mfaSecret          String?
   mfaBackupCodes     String?  // JSON array of hashed one-time backup codes
-  instituteName      String?  // set by a Chairman; shown in the sidebar/footer across their institution
+  instituteName      String? // set by Super User only, per-Chairman (this is a multi-tenant SaaS — each paying institution has its own)
+  instituteLogo      String? @db.Text // base64 data URI, set by Super User only, per-Chairman
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
@@ -367,11 +368,23 @@ model SemesterDates {
   termName           String
   termYear           Int
   semesterStartDate  DateTime?
-  midtermDate        DateTime?
-  finalDate          DateTime?
+  midtermStartDate   DateTime?
+  midtermEndDate     DateTime?
+  finalStartDate     DateTime?
+  finalEndDate       DateTime?
 
   @@unique([coordinatorId, degreeProgram, termName, termYear])
   @@index([coordinatorId])
+}
+
+// Singleton — truly platform-wide branding (Lets Innovate + NCEAC), the same
+// across every tenant/institution on this SaaS deployment. Set exclusively
+// by the Super User. Per-institution branding lives on User (see Chairman's
+// instituteName/instituteLogo) since each paying tenant has its own.
+model PlatformSettings {
+  id            String  @id @default("singleton")
+  ownerLogo     String? @db.Text // base64 data URI — "Lets Innovate Pvt Ltd", used for copyright
+  nceacLogo     String? @db.Text // base64 data URI — the NCEAC accreditation seal
 }
 
 model Course {
@@ -392,8 +405,10 @@ model Course {
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
   offeredTermName     String?  // "Fall" | "Spring" — which term this was offered in, stamped when isOffered becomes true
   offeredTermYear     Int?
-  midtermDate         DateTime? // set by Coordinator — no lecture auto-fills onto this date
-  finalDate           DateTime? // set by Coordinator — no lecture auto-fills onto this date
+  midtermStartDate    DateTime? // set by Coordinator (override) — no lecture auto-fills within this range
+  midtermEndDate      DateTime?
+  finalStartDate      DateTime?
+  finalEndDate        DateTime?
   masterCourseId      String?  // traceability: which HEC/Master course this was adopted from, if any
   masterCourse        MasterCourse? @relation(fields: [masterCourseId], references: [id])
   benchmarkSourceId   String?  // which prior batch's course this template was copied from, if any

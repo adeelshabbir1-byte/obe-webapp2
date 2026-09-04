@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SortableTable from "./SortableTable";
 
 type Term = { termName: string; year: number };
 type Row = {
@@ -78,7 +79,7 @@ export default function LoadReportManager() {
             <h3 style={{ fontSize: 14 }}>Teacher Load Report</h3>
             <button onClick={exportExcel} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
           </div>
-          <table>
+          <SortableTable>
             <thead><tr><th>Faculty</th><th>Assigned Sections</th><th>External</th><th>Total</th><th>Normal Load</th><th>Status</th></tr></thead>
             <tbody>
               {rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
@@ -91,7 +92,7 @@ export default function LoadReportManager() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </SortableTable>
         </div>
       )}
     </>

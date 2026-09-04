@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -58,7 +59,7 @@ export default async function WeightCompliancePage({ searchParams }: { searchPar
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Course</th><th>Type</th><th>Weights</th><th>Status</th></tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
@@ -71,7 +72,7 @@ export default async function WeightCompliancePage({ searchParams }: { searchPar
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

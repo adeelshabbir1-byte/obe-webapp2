@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SortableTable from "./SortableTable";
 
 type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null };
 type BatchColumn = { batchId: string; batchLabel: string; courses: Course[] };
@@ -85,7 +86,7 @@ export default function EquivalenceManager() {
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <table style={{ tableLayout: "fixed" }}>
+        <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
               <th style={{ minWidth: 130 }}>Group</th>
@@ -125,7 +126,7 @@ export default function EquivalenceManager() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

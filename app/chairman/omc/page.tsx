@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -11,7 +12,6 @@ const NAV = [
   { href: "/chairman/assigners", label: "Course Assigners" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" },
-  { href: "/chairman/institute-settings", label: "Institute Settings" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
@@ -32,7 +32,7 @@ export default async function ChairmanOmcPage() {
       </p>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Email</th></tr></thead>
           <tbody>
             {omcMembers.length === 0 && (
@@ -42,7 +42,7 @@ export default async function ChairmanOmcPage() {
               <tr key={m.id}><td>{m.username}</td><td>{m.name}</td><td>{m.email}</td></tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <CreateUserForm endpoint="/api/chairman/omc" buttonLabel="Create OMC Member" />

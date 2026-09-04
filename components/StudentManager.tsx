@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Student = { id: string; name: string; rollNumber: string };
@@ -66,7 +67,7 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
       </div>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Name</th><th>Roll Number</th><th></th></tr></thead>
           <tbody>
             {students.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
@@ -77,7 +78,7 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

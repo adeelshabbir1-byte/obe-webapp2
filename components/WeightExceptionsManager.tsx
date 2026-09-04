@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Req = {
@@ -32,7 +33,7 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
     <>
       {error && <div className="err">{error}</div>}
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Course</th><th>Proposed By</th><th>Proposed Weights</th><th></th></tr></thead>
           <tbody>
             {initialRequests.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No pending weight exception requests.</td></tr>}
@@ -60,7 +61,7 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

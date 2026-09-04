@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -40,13 +41,12 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
       { href: "/chairman/assigners", label: "Course Assigners" },
       { href: "/chairman/cqi", label: "CQI Records" },
       { href: "/chairman/audit-log", label: "Audit Log" },
-      { href: "/chairman/institute-settings", label: "Institute Settings" },
       { href: "/omc/reports", label: "Reports" },
     ]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Audit Log</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Every significant action taken by anyone in your institution.</p>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Entity</th></tr></thead>
           <tbody>
             {logs.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No activity yet.</td></tr>}
@@ -59,7 +59,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>Page {pageNum} of {totalPages} ({total} total)</span>
           <div style={{ display: "flex", gap: 8 }}>

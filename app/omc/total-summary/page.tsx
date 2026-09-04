@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
@@ -58,7 +59,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
         <>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → CLO Contribution</h3>
-            <table>
+            <SortableTable>
               <thead><tr><th>Topic</th><th>Lec</th>{summary.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
@@ -74,12 +75,12 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
                   <td>{summary.grandTotal}%</td>
                 </tr>
               </tbody>
-            </table>
+            </SortableTable>
           </div>
 
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → Assessment Type</h3>
-            <table>
+            <SortableTable>
               <thead><tr><th>Topic</th><th>Lec</th><th>Assignment</th><th>Quiz</th><th>Project</th><th>Lab</th><th>Mid</th><th>Final</th><th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
@@ -98,13 +99,13 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
                   <td>{summary.grandTotal}%</td>
                 </tr>
               </tbody>
-            </table>
+            </SortableTable>
           </div>
 
           {summary.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → PLO Contribution</h3>
-              <table>
+              <SortableTable>
                 <thead><tr><th>Topic</th><th>Lec</th>{summary.ploLabels.map((p) => <th key={p}>{p}</th>)}<th>Total</th></tr></thead>
                 <tbody>
                   {summary.topics.map((t) => (
@@ -120,7 +121,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
                     <td>{summary.grandTotal}%</td>
                   </tr>
                 </tbody>
-              </table>
+              </SortableTable>
             </div>
           )}
         </>

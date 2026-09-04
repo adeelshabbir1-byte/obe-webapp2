@@ -14,8 +14,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const updated = await prisma.course.update({
     where: { id: course.id },
     data: {
-      midtermDate: body.midtermDate ? new Date(body.midtermDate) : null,
-      finalDate: body.finalDate ? new Date(body.finalDate) : null,
+      midtermStartDate: body.midtermStartDate ? new Date(body.midtermStartDate) : null,
+      midtermEndDate: body.midtermEndDate ? new Date(body.midtermEndDate) : null,
+      finalStartDate: body.finalStartDate ? new Date(body.finalStartDate) : null,
+      finalEndDate: body.finalEndDate ? new Date(body.finalEndDate) : null,
     },
   });
 

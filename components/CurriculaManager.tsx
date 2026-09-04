@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Curriculum = { id: string; authority: string; title: string; version: string; courseCount: number; ploCount: number };
@@ -45,7 +46,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
     <>
       {error && <div className="err">{error}</div>}
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>PLOs</th><th></th></tr></thead>
           <tbody>
             {initialCurricula.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
@@ -75,7 +76,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
               </Fragment>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

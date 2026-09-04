@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; marksPct: number };
@@ -112,7 +113,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 ⚠ Doesn't match your own {target}% target for this category yet.
               </p>
             )}
-            <table>
+            <SortableTable>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
               <tbody>
                 {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
@@ -130,7 +131,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
             <AddRow type={type} nextLabel={nextLabel} loading={loading} onAdd={addInstrument} />
           </div>
         );
@@ -143,7 +144,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         ) : initialInstruments.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Define at least one instrument above first.</p>
         ) : (
-          <table>
+          <SortableTable>
             <thead>
               <tr>
                 <th>Topic</th>
@@ -176,7 +177,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 </tr>
               ))}
             </tbody>
-          </table>
+          </SortableTable>
         )}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them.

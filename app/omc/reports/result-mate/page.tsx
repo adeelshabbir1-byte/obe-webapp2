@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
@@ -37,7 +38,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Result Mate" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Relative grading, based on the class mean and standard deviation — A ≥ mean+SD, B ≥ mean, C ≥ mean−SD, D ≥ mean−2SD, else F.
+        Relative grading, based on the class mean and standard deviation.
       </p>
       <div className="card no-print">
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
@@ -72,8 +73,57 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
             </div>
           </div>
 
+          <div className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Suggested Grade Cutoffs</h3>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Computed from this class's mean/SD — editable via the actual grade boundaries you record for the course, this is a suggestion.</p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {[
+                { grade: "A", cutoff: result.stats.mean + result.stats.sd, label: "and above" },
+                { grade: "B", cutoff: result.stats.mean, label: `– ${Math.round((result.stats.mean + result.stats.sd) * 10) / 10}%` },
+                { grade: "C", cutoff: result.stats.mean - result.stats.sd, label: `– ${result.stats.mean}%` },
+                { grade: "D", cutoff: result.stats.mean - 2 * result.stats.sd, label: `– ${Math.round((result.stats.mean - result.stats.sd) * 10) / 10}%` },
+                { grade: "F", cutoff: null, label: `below ${Math.round((result.stats.mean - 2 * result.stats.sd) * 10) / 10}%` },
+              ].map((g) => (
+                <div key={g.grade} style={{ background: "var(--paper)", border: "1px solid var(--line)", padding: "8px 14px", minWidth: 90, textAlign: "center" }}>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{g.grade}</div>
+                  <div style={{ fontSize: 11, color: "var(--slate)" }}>{g.cutoff !== null ? `${Math.round(g.cutoff * 10) / 10}% ${g.label}` : g.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {result.instruments.length > 0 && (
+            <div className="card" style={{ overflowX: "auto" }}>
+              <h3 style={{ fontSize: 14, marginBottom: 10 }}>Per-Assessment-Item Scores</h3>
+              <SortableTable>
+                <thead>
+                  <tr>
+                    <th>Roll #</th><th>Name</th>
+                    {result.instruments.map((i) => <th key={i.id}>{i.type} {i.label}<br /><span style={{ fontWeight: 400 }}>/{i.maxScore}</span></th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.rows.map((r) => (
+                    <tr key={r.studentId}>
+                      <td>{r.rollNumber}</td><td>{r.name}</td>
+                      {result.instruments.map((i) => <td key={i.id}>{r.rawScores[i.id] ?? "—"}</td>)}
+                    </tr>
+                  ))}
+                  <tr style={{ fontWeight: 700, borderTop: "2px solid var(--line)" }}>
+                    <td colSpan={2}>Average</td>
+                    {result.instruments.map((i) => <td key={i.id}>{i.average ?? "—"}</td>)}
+                  </tr>
+                  <tr style={{ fontWeight: 700 }}>
+                    <td colSpan={2}>Std. Deviation</td>
+                    {result.instruments.map((i) => <td key={i.id}>{i.sd ?? "—"}</td>)}
+                  </tr>
+                </tbody>
+              </SortableTable>
+            </div>
+          )}
+
           <div className="card" style={{ overflowX: "auto" }}>
-            <table>
+            <SortableTable>
               <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total %</th><th>Grade</th></tr></thead>
               <tbody>
                 {result.rows.length === 0 && <tr><td colSpan={result.cloCodes.length + 4} style={{ color: "var(--slate)" }}>No students enrolled, or no marks entered yet.</td></tr>}
@@ -87,13 +137,13 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SortableTable>
           </div>
 
           {result.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO Attainment, by Student</h3>
-              <table>
+              <SortableTable>
                 <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => <th key={p}>{p}</th>)}</tr></thead>
                 <tbody>
                   {result.rows.map((r) => (
@@ -103,7 +153,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </SortableTable>
             </div>
           )}
         </>

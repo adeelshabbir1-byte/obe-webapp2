@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Course = { id: string; code: string; title: string; batchLabel: string; isOffered: boolean; offeredTermName: string | null; offeredTermYear: number | null; enrolledStudents: { id: string; name: string; rollNumber: string; batchLabel: string }[] };
@@ -50,7 +51,7 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
       </div>
 
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Course</th><th>Home Batch</th><th>Repeat Offered</th><th>Enrolled (Repeat)</th><th></th></tr></thead>
           <tbody>
             {filtered.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No courses found.</td></tr>}
@@ -97,7 +98,7 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
               </Fragment>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

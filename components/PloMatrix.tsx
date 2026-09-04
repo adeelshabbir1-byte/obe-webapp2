@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
@@ -63,7 +64,7 @@ export default function PloMatrix({ programs }: { programs: Program[] }) {
             ) : prog.courses.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No courses in this program yet.</p>
             ) : (
-              <table style={{ marginTop: 10 }}>
+              <SortableTable style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>Course</th><th>Type</th><th>Sem</th>
@@ -100,7 +101,7 @@ export default function PloMatrix({ programs }: { programs: Program[] }) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </SortableTable>
             )}
             {prog.plos.some((p) => p.status !== "approved") && (
               <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>* PLO not yet approved by Chairman</div>

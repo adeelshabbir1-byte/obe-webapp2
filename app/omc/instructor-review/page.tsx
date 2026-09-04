@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -29,7 +30,7 @@ export default async function InstructorReviewListPage() {
         See how each instructor's actual delivery compares to the Subject Expert's plan, and guide them directly.
       </p>
       <div className="card">
-        <table>
+        <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Instructor</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No instructor-assigned courses yet.</td></tr>}
@@ -41,7 +42,7 @@ export default async function InstructorReviewListPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -49,7 +50,7 @@ export default async function BatchComparisonPage() {
         Side-by-side comparison of every batch — useful for spotting drift between cohorts of the same degree.
       </p>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table>
+        <SortableTable>
           <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses</th><th>PLOs Defined</th><th>PLOs Approved</th><th>Courses with a PLO Assigned</th></tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
@@ -61,7 +62,7 @@ export default async function BatchComparisonPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </Shell>
   );

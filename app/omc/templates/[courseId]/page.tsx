@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
@@ -45,26 +46,26 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>CLOs</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th></tr></thead>
           <tbody>
             {course.clos.map((c) => (
               <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `PLO-${c.mappedPlo.number}: ${c.mappedPlo.title}` : "—"}</td><td>{c.mappedPlo ? `${c.ploContributionPct ?? 100}%` : "—"}</td></tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>30-Lecture Schedule ({course.lectureRows.length}/30)</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Wk</th><th>Lec</th><th>Topic</th><th>Sub Topic</th><th>CLO</th><th>Bloom</th><th>Weight</th></tr></thead>
           <tbody>
             {course.lectureRows.map((r) => (
               <tr key={r.id}><td>{r.week}</td><td>{r.lectureNumber}</td><td>{r.topic}</td><td>{r.subtopic || "—"}</td><td>{r.clo?.code || "—"}</td><td>{r.bloomLevel || "—"}</td><td>{r.weightPct}%</td></tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
 
       <div className="card">

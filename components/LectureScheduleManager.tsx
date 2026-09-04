@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Clo = { id: string; code: string };
@@ -99,7 +100,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
           <h3 style={{ fontSize: 14 }}>Lecture Schedule</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} rows filled in</span>
         </div>
-        <table>
+        <SortableTable>
           <thead>
             <tr>
               <th>Wk</th><th>Lec</th><th>Topic</th><th>Sub Topic</th><th>CLO</th><th>Bloom</th>
@@ -170,7 +171,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
           For Midterm/Final, type the question number(s) this lecture is tested in (comma-separated for more than one), then click away to save.
           If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them (e.g. a 10%

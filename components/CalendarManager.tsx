@@ -1,12 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Holiday = { id: string; date: string; label: string };
 type DayMode = { id: string; date: string; mode: string };
-type Course = { id: string; code: string; title: string; midtermDate: string | null; finalDate: string | null };
-type SemesterDate = { degreeProgram: string; termName: string; termYear: number; semesterStartDate: string | null; midtermDate: string | null; finalDate: string | null };
+type Course = { id: string; code: string; title: string; midtermStartDate: string | null; midtermEndDate: string | null; finalStartDate: string | null; finalEndDate: string | null };
+type SemesterDate = {
+  degreeProgram: string; termName: string; termYear: number; semesterStartDate: string | null;
+  midtermStartDate: string | null; midtermEndDate: string | null; finalStartDate: string | null; finalEndDate: string | null;
+};
+
+// Given a semester start date, suggest Week 9 Monday–Sunday for midterm and
+// Week 17 Monday–Sunday for final — a starting point the Coordinator can
+// freely override.
+function suggestExamWeeks(semesterStartDate: string) {
+  if (!semesterStartDate) return null;
+  const start = new Date(semesterStartDate + "T00:00:00");
+  const day = start.getDay(); // 0=Sun..6=Sat
+  const daysToMonday = day === 0 ? -6 : 1 - day;
+  const week1Monday = new Date(start); week1Monday.setDate(week1Monday.getDate() + daysToMonday);
+
+  function weekRange(weekNumber: number) {
+    const monday = new Date(week1Monday); monday.setDate(monday.getDate() + (weekNumber - 1) * 7);
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
+  }
+
+  return { midterm: weekRange(9), final: weekRange(17) };
+}
 
 export default function CalendarManager({ initialHolidays, initialDayModes, courses, degreePrograms, initialSemesterDates, defaultTermName, defaultTermYear }: {
   initialHolidays: Holiday[]; initialDayModes: DayMode[]; courses: Course[];
@@ -20,6 +43,21 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
 
   const currentDegreeDates = initialSemesterDates.find((d) => d.degreeProgram === selectedDegree && d.termName === defaultTermName && d.termYear === defaultTermYear);
 
+  const [semesterStart, setSemesterStart] = useState(currentDegreeDates?.semesterStartDate ? currentDegreeDates.semesterStartDate.slice(0, 10) : "");
+  const [midtermStart, setMidtermStart] = useState(currentDegreeDates?.midtermStartDate ? currentDegreeDates.midtermStartDate.slice(0, 10) : "");
+  const [midtermEnd, setMidtermEnd] = useState(currentDegreeDates?.midtermEndDate ? currentDegreeDates.midtermEndDate.slice(0, 10) : "");
+  const [finalStart, setFinalStart] = useState(currentDegreeDates?.finalStartDate ? currentDegreeDates.finalStartDate.slice(0, 10) : "");
+  const [finalEnd, setFinalEnd] = useState(currentDegreeDates?.finalEndDate ? currentDegreeDates.finalEndDate.slice(0, 10) : "");
+
+  function onSemesterStartChange(value: string) {
+    setSemesterStart(value);
+    const suggestion = suggestExamWeeks(value);
+    if (suggestion) {
+      setMidtermStart(suggestion.midterm.start); setMidtermEnd(suggestion.midterm.end);
+      setFinalStart(suggestion.final.start); setFinalEnd(suggestion.final.end);
+    }
+  }
+
   async function saveSemesterDates(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true); setError("");
@@ -29,7 +67,9 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           degreeProgram: selectedDegree, termName: fd.get("termName"), termYear: fd.get("termYear"),
-          semesterStartDate: fd.get("semesterStartDate") || null, midtermDate: fd.get("midtermDate") || null, finalDate: fd.get("finalDate") || null,
+          semesterStartDate: semesterStart || null,
+          midtermStartDate: midtermStart || null, midtermEndDate: midtermEnd || null,
+          finalStartDate: finalStart || null, finalEndDate: finalEnd || null,
         }),
       });
       const data = await res.json();
@@ -87,7 +127,10 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
     try {
       const res = await fetch(`/api/coordinator/courses/${selectedCourseId}/exam-dates`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ midtermDate: fd.get("midtermDate") || null, finalDate: fd.get("finalDate") || null }),
+        body: JSON.stringify({
+          midtermStartDate: fd.get("midtermStartDate") || null, midtermEndDate: fd.get("midtermEndDate") || null,
+          finalStartDate: fd.get("finalStartDate") || null, finalEndDate: fd.get("finalEndDate") || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -103,7 +146,10 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
 
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <h3 style={{ fontSize: 14, marginBottom: 10, color: "var(--brass-dark)" }}>Semester Dates, by Degree Program</h3>
-        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>Applies to every course currently offered under this degree program.</p>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
+          Applies to every course currently offered under this degree program. Setting the semester start date
+          auto-suggests Midterm week (Week 9) and Final week (Week 17) below — both are fully editable.
+        </p>
         {degreePrograms.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Create a batch first.</p>
         ) : (
@@ -116,9 +162,11 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             <form onSubmit={saveSemesterDates} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
               <div className="field" style={{ marginBottom: 0 }}><label>Term</label><input name="termName" defaultValue={defaultTermName} style={{ width: 90 }} /></div>
               <div className="field" style={{ marginBottom: 0 }}><label>Year</label><input name="termYear" type="number" defaultValue={defaultTermYear} style={{ width: 80 }} /></div>
-              <div className="field" style={{ marginBottom: 0 }}><label>Semester Start</label><input name="semesterStartDate" type="date" defaultValue={currentDegreeDates?.semesterStartDate ? currentDegreeDates.semesterStartDate.slice(0, 10) : ""} /></div>
-              <div className="field" style={{ marginBottom: 0 }}><label>Midterm Date</label><input name="midtermDate" type="date" defaultValue={currentDegreeDates?.midtermDate ? currentDegreeDates.midtermDate.slice(0, 10) : ""} /></div>
-              <div className="field" style={{ marginBottom: 0 }}><label>Final Date</label><input name="finalDate" type="date" defaultValue={currentDegreeDates?.finalDate ? currentDegreeDates.finalDate.slice(0, 10) : ""} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Semester Start</label><input type="date" value={semesterStart} onChange={(e) => onSemesterStartChange(e.target.value)} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Midterm Start</label><input type="date" value={midtermStart} onChange={(e) => setMidtermStart(e.target.value)} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Midterm End</label><input type="date" value={midtermEnd} onChange={(e) => setMidtermEnd(e.target.value)} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Final Start</label><input type="date" value={finalStart} onChange={(e) => setFinalStart(e.target.value)} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Final End</label><input type="date" value={finalEnd} onChange={(e) => setFinalEnd(e.target.value)} /></div>
               <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save"}</button>
             </form>
           </>
@@ -127,16 +175,18 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Override for a Specific Course</h3>
-        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>Only needed if one course genuinely has a different exam date than the rest of its degree program.</p>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>Only needed if one course genuinely has different exam weeks than the rest of its degree program.</p>
         <div style={{ marginBottom: 10 }}>
           <select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
             {courses.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title}</option>)}
           </select>
         </div>
         {selectedCourse && (
-          <form onSubmit={saveExamDates} style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-            <div className="field" style={{ marginBottom: 0 }}><label>Midterm Date</label><input name="midtermDate" type="date" defaultValue={selectedCourse.midtermDate ? selectedCourse.midtermDate.slice(0, 10) : ""} /></div>
-            <div className="field" style={{ marginBottom: 0 }}><label>Final Date</label><input name="finalDate" type="date" defaultValue={selectedCourse.finalDate ? selectedCourse.finalDate.slice(0, 10) : ""} /></div>
+          <form onSubmit={saveExamDates} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div className="field" style={{ marginBottom: 0 }}><label>Midterm Start</label><input name="midtermStartDate" type="date" defaultValue={selectedCourse.midtermStartDate ? selectedCourse.midtermStartDate.slice(0, 10) : ""} /></div>
+            <div className="field" style={{ marginBottom: 0 }}><label>Midterm End</label><input name="midtermEndDate" type="date" defaultValue={selectedCourse.midtermEndDate ? selectedCourse.midtermEndDate.slice(0, 10) : ""} /></div>
+            <div className="field" style={{ marginBottom: 0 }}><label>Final Start</label><input name="finalStartDate" type="date" defaultValue={selectedCourse.finalStartDate ? selectedCourse.finalStartDate.slice(0, 10) : ""} /></div>
+            <div className="field" style={{ marginBottom: 0 }}><label>Final End</label><input name="finalEndDate" type="date" defaultValue={selectedCourse.finalEndDate ? selectedCourse.finalEndDate.slice(0, 10) : ""} /></div>
             <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save Override"}</button>
           </form>
         )}
@@ -144,7 +194,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Holidays</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Date</th><th>Label</th><th></th></tr></thead>
           <tbody>
             {initialHolidays.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
@@ -154,7 +204,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <form onSubmit={addHoliday} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 10 }}>
           <div className="field" style={{ marginBottom: 0 }}><label>Date</label><input name="date" type="date" required /></div>
           <div className="field" style={{ marginBottom: 0 }}><label>Label</label><input name="label" placeholder="e.g. Eid Holiday" required /></div>
@@ -164,7 +214,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Online / On-Campus Days</h3>
-        <table>
+        <SortableTable>
           <thead><tr><th>Date</th><th>Mode</th><th></th></tr></thead>
           <tbody>
             {initialDayModes.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None set — days default to On-Campus.</td></tr>}
@@ -174,7 +224,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
         <form onSubmit={addDayMode} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 10 }}>
           <div className="field" style={{ marginBottom: 0 }}><label>Date</label><input name="date" type="date" required /></div>
           <div className="field" style={{ marginBottom: 0 }}>

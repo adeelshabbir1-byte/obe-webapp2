@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; maxScore: number };
@@ -84,7 +85,7 @@ export default function MarksEntryManager({ courseId, instruments, students, has
         {instruments.length === 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No assessment instruments defined yet — go to the Assessments tab first.</p>}
         {students.length === 0 && instruments.length > 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No students enrolled yet.</p>}
         {students.length > 0 && instruments.length > 0 && (
-          <table style={{ tableLayout: "fixed" }}>
+          <SortableTable style={{ tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th style={{ width: 140 }}>Name</th><th style={{ width: 90 }}>Roll #</th>
@@ -113,7 +114,7 @@ export default function MarksEntryManager({ courseId, instruments, students, has
                 </tr>
               ))}
             </tbody>
-          </table>
+          </SortableTable>
         )}
       </div>
     </>

@@ -9,6 +9,12 @@ export async function GET() {
 
   const chairmanId = user.role === "SUPER_USER" ? null : await chairmanIdFor(user);
   const chairman = chairmanId ? await prisma.user.findUnique({ where: { id: chairmanId } }) : null;
+  const platform = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
 
-  return NextResponse.json({ instituteName: chairman?.instituteName || null });
+  return NextResponse.json({
+    instituteName: chairman?.instituteName || null,
+    instituteLogo: chairman?.instituteLogo || null,
+    ownerLogo: platform?.ownerLogo || null,
+    nceacLogo: platform?.nceacLogo || null,
+  });
 }

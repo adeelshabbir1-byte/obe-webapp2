@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Clo = { id: string; code: string };
@@ -68,7 +69,7 @@ export default function InstructorLectureScheduleManager({ courseId, initialRows
           <h3 style={{ fontSize: 14 }}>Actual Lecture Delivery</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} lectures dated</span>
         </div>
-        <table>
+        <SortableTable>
           <thead>
             <tr>
               <th>Wk</th><th>Lec</th><th>Planned Topic</th><th>Actual Topic</th><th>Actual Date</th><th>CLO</th><th>Bloom</th>
@@ -128,7 +129,7 @@ export default function InstructorLectureScheduleManager({ courseId, initialRows
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       </div>
     </>
   );

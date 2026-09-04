@@ -4,7 +4,8 @@ import { prisma } from "../../../lib/db";
 import { coordinatorIdsFor } from "../../../lib/reportScope";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
-import CourseRepositioningManager from "../../../components/CourseRepositioningManager";
+import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
+import { courseTypeColor } from "../../../lib/courseTypeColors";
 
 export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -25,12 +26,15 @@ export default async function CourseRepositioningPage({ searchParams }: { search
       })
     : [];
 
+  const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
+
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Repositioning</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Move an HEC-approved course to a different semester before it's offered. Blocked if it would land
-        before its own prerequisite, or ahead of a course that depends on it.
+        Move an HEC-approved course to a different semester before it's offered — click a course, then a
+        semester row. Blocked if it would land before its own prerequisite, or ahead of a course that depends
+        on it, or once the course is already offered. Semester load (credit / contact hours) updates live.
       </p>
 
       <div className="card">
@@ -45,17 +49,26 @@ export default async function CourseRepositioningPage({ searchParams }: { search
         </form>
       </div>
 
-      {courses.length === 0 ? (
-        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No courses in this batch yet.</p></div>
-      ) : (
-        <CourseRepositioningManager
-          courses={courses.map((c) => ({
-            id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
-            semesterNumber: c.semesterNumber, isOffered: c.isOffered,
-            prerequisiteCode: c.prerequisiteCourse?.code || null, prerequisiteSemester: c.prerequisiteCourse?.semesterNumber || null,
-          }))}
-        />
+      {usedTypes.length > 0 && (
+        <div className="card">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+            {usedTypes.map((t) => (
+              <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
+
+      <InteractiveCourseMap
+        mode="reposition"
+        courses={courses.map((c) => ({
+          id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
+          semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
+        }))}
+      />
     </Shell>
   );
 }

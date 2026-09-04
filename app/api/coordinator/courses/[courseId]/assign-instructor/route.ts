@@ -13,6 +13,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const body = await req.json();
   const instructorId = body.instructorId || null;
 
+  if (instructorId && !course.isOffered) {
+    return NextResponse.json({ error: "this course must be offered before an instructor can be assigned to it" }, { status: 400 });
+  }
+
   if (instructorId) {
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
     if (!instructor || instructor.role !== "INSTRUCTOR" || instructor.managedById !== user.id) {
