@@ -6,14 +6,37 @@ import { useRouter } from "next/navigation";
 type Holiday = { id: string; date: string; label: string };
 type DayMode = { id: string; date: string; mode: string };
 type Course = { id: string; code: string; title: string; midtermDate: string | null; finalDate: string | null };
+type SemesterDate = { degreeProgram: string; termName: string; termYear: number; semesterStartDate: string | null; midtermDate: string | null; finalDate: string | null };
 
-export default function CalendarManager({ initialHolidays, initialDayModes, courses }: {
+export default function CalendarManager({ initialHolidays, initialDayModes, courses, degreePrograms, initialSemesterDates, defaultTermName, defaultTermYear }: {
   initialHolidays: Holiday[]; initialDayModes: DayMode[]; courses: Course[];
+  degreePrograms: string[]; initialSemesterDates: SemesterDate[]; defaultTermName: string; defaultTermYear: number;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id || "");
+  const [selectedDegree, setSelectedDegree] = useState(degreePrograms[0] || "");
+
+  const currentDegreeDates = initialSemesterDates.find((d) => d.degreeProgram === selectedDegree && d.termName === defaultTermName && d.termYear === defaultTermYear);
+
+  async function saveSemesterDates(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true); setError("");
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch("/api/coordinator/semester-dates", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          degreeProgram: selectedDegree, termName: fd.get("termName"), termYear: fd.get("termYear"),
+          semesterStartDate: fd.get("semesterStartDate") || null, midtermDate: fd.get("midtermDate") || null, finalDate: fd.get("finalDate") || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
 
   async function addHoliday(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,9 +101,33 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
     <>
       {error && <div className="err">{error}</div>}
 
+      <div className="card" style={{ borderColor: "var(--brass)" }}>
+        <h3 style={{ fontSize: 14, marginBottom: 10, color: "var(--brass-dark)" }}>Semester Dates, by Degree Program</h3>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>Applies to every course currently offered under this degree program.</p>
+        {degreePrograms.length === 0 ? (
+          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Create a batch first.</p>
+        ) : (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <select value={selectedDegree} onChange={(e) => setSelectedDegree(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                {degreePrograms.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <form onSubmit={saveSemesterDates} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div className="field" style={{ marginBottom: 0 }}><label>Term</label><input name="termName" defaultValue={defaultTermName} style={{ width: 90 }} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Year</label><input name="termYear" type="number" defaultValue={defaultTermYear} style={{ width: 80 }} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Semester Start</label><input name="semesterStartDate" type="date" defaultValue={currentDegreeDates?.semesterStartDate ? currentDegreeDates.semesterStartDate.slice(0, 10) : ""} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Midterm Date</label><input name="midtermDate" type="date" defaultValue={currentDegreeDates?.midtermDate ? currentDegreeDates.midtermDate.slice(0, 10) : ""} /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Final Date</label><input name="finalDate" type="date" defaultValue={currentDegreeDates?.finalDate ? currentDegreeDates.finalDate.slice(0, 10) : ""} /></div>
+              <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save"}</button>
+            </form>
+          </>
+        )}
+      </div>
+
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Midterm & Final Exam Dates</h3>
-        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>No lecture auto-fills onto a course's exam dates.</p>
+        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Override for a Specific Course</h3>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>Only needed if one course genuinely has a different exam date than the rest of its degree program.</p>
         <div style={{ marginBottom: 10 }}>
           <select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
             {courses.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title}</option>)}
@@ -90,7 +137,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
           <form onSubmit={saveExamDates} style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
             <div className="field" style={{ marginBottom: 0 }}><label>Midterm Date</label><input name="midtermDate" type="date" defaultValue={selectedCourse.midtermDate ? selectedCourse.midtermDate.slice(0, 10) : ""} /></div>
             <div className="field" style={{ marginBottom: 0 }}><label>Final Date</label><input name="finalDate" type="date" defaultValue={selectedCourse.finalDate ? selectedCourse.finalDate.slice(0, 10) : ""} /></div>
-            <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save"}</button>
+            <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save Override"}</button>
           </form>
         )}
       </div>

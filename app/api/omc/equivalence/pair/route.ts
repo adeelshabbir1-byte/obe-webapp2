@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (oldGroup) await prisma.courseEquivalenceGroup.delete({ where: { id: memberB.groupId } }).catch(() => {});
   } else {
     const group = await prisma.courseEquivalenceGroup.create({
-      data: { chairmanId: user.managedById, name: `${courseA.code} / ${courseB.code}` },
+      data: { chairmanId: user.managedById, createdById: user.id, name: `${courseA.code} / ${courseB.code}` },
     });
     groupId = group.id;
     await prisma.courseEquivalenceMember.createMany({ data: [{ groupId, courseId: courseIdA }, { groupId, courseId: courseIdB }] });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Shell({
@@ -14,6 +15,11 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const [instituteName, setInstituteName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/institute-info").then((r) => r.json()).then((d) => setInstituteName(d.instituteName)).catch(() => {});
+  }, []);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -26,6 +32,7 @@ export default function Shell({
       <div className="sidebar">
         <div className="seal" style={{ width: 36, height: 36, fontSize: 12, margin: "0 0 8px" }}>NC</div>
         <h2 style={{ fontSize: 14, color: "#fff" }}>OBE Curriculum Governance</h2>
+        {instituteName && <div style={{ fontSize: 11, color: "#B7AE97", marginTop: 2 }}>{instituteName}</div>}
         <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#B7AE97", margin: "5px 0 20px" }}>
           {roleLabel}
         </div>
@@ -40,7 +47,12 @@ export default function Shell({
           </button>
         </div>
       </div>
-      <div className="main">{children}</div>
+      <div className="main">
+        {children}
+        <div style={{ marginTop: 40, paddingTop: 14, borderTop: "1px solid var(--line)", fontSize: 10.5, color: "var(--slate)", textAlign: "center" }}>
+          {instituteName ? `${instituteName} — ` : ""}© {new Date().getFullYear()} Lets Innovate. All rights reserved.
+        </div>
+      </div>
     </div>
   );
 }

@@ -26,23 +26,37 @@ export default async function CalendarPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const [holidays, dayModes, courses] = await Promise.all([
+  const [holidays, dayModes, courses, semesterDates, batches, currentTerm] = await Promise.all([
     prisma.holiday.findMany({ where: { coordinatorId: user.id }, orderBy: { date: "asc" } }),
     prisma.classDayMode.findMany({ where: { coordinatorId: user.id }, orderBy: { date: "asc" } }),
     prisma.course.findMany({ where: { coordinatorId: user.id, isOffered: true }, orderBy: { code: "asc" } }),
+    prisma.semesterDates.findMany({ where: { coordinatorId: user.id }, orderBy: [{ termYear: "desc" }, { degreeProgram: "asc" }] }),
+    prisma.batch.findMany({ where: { coordinatorId: user.id } }),
+    prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } }),
   ]);
+
+  const degreePrograms = Array.from(new Set(batches.map((b) => b.degreeProgram)));
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Calendar & Exam Dates</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Set exam dates, holidays, and online/on-campus days — all of this feeds into how Instructors' lecture
-        dates auto-fill, and into delivery reports.
+        Set semester start/midterm/final dates once per Degree Program — applies to every course currently
+        offered under it. Individual courses can still override with their own dates if genuinely different.
+        All of this feeds into how Instructors' lecture dates auto-fill, and into delivery reports.
       </p>
       <CalendarManager
         initialHolidays={holidays.map((h) => ({ id: h.id, date: h.date.toISOString(), label: h.label }))}
         initialDayModes={dayModes.map((m) => ({ id: m.id, date: m.date.toISOString(), mode: m.mode }))}
         courses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, midtermDate: c.midtermDate?.toISOString() || null, finalDate: c.finalDate?.toISOString() || null }))}
+        degreePrograms={degreePrograms}
+        initialSemesterDates={semesterDates.map((d) => ({
+          degreeProgram: d.degreeProgram, termName: d.termName, termYear: d.termYear,
+          semesterStartDate: d.semesterStartDate?.toISOString() || null,
+          midtermDate: d.midtermDate?.toISOString() || null, finalDate: d.finalDate?.toISOString() || null,
+        }))}
+        defaultTermName={currentTerm?.termName || "Fall"}
+        defaultTermYear={currentTerm?.year || new Date().getFullYear()}
       />
     </Shell>
   );

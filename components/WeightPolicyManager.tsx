@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Policy = {
   courseType: string;
+  updatedByName?: string | null;
   assignmentMin: number; assignmentMax: number; assignmentMinCount: number;
   quizMin: number; quizMax: number; quizMinCount: number;
   projectMin: number; projectMax: number; projectMinCount: number;
@@ -73,7 +74,10 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
         <tbody>
           {initialPolicies.map((p) => (
             <tr key={p.courseType}>
-              <td style={{ border: "1px solid var(--line)", padding: "6px 8px", fontWeight: 500, whiteSpace: "nowrap" }}>{p.courseType}</td>
+              <td style={{ border: "1px solid var(--line)", padding: "6px 8px", fontWeight: 500, whiteSpace: "nowrap" }}>
+                {p.courseType}
+                {p.updatedByName && <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--slate)" }}>by {p.updatedByName}</div>}
+              </td>
               {COMPONENTS.map((c) => (
                 <Fragment key={c.key}>
                   <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center" }}>

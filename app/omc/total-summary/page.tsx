@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import { computeTotalSummary } from "../../../lib/totalSummary";
@@ -21,7 +21,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
 
   let courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds } },
+    where: { ...courseScopeFor(user) },
     include: { batch: true },
     orderBy: [{ code: "asc" }],
   });

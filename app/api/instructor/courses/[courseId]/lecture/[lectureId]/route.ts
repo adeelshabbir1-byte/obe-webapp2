@@ -21,6 +21,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       topic: body.topic, subtopic: body.subtopic || null,
       cloId: body.cloId || null, bloomLevel: body.bloomLevel || null,
       actualDate: body.actualDate ? new Date(body.actualDate) : null,
+      // A manual date change is a deliberate choice, not an auto-fill artifact — clear any stale note.
+      rescheduledNote: body.actualDate && body.actualDate !== row.actualDate?.toISOString().slice(0, 10) ? null : row.rescheduledNote,
     },
   });
 

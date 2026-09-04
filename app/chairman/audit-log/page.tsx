@@ -40,6 +40,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
       { href: "/chairman/assigners", label: "Course Assigners" },
       { href: "/chairman/cqi", label: "CQI Records" },
       { href: "/chairman/audit-log", label: "Audit Log" },
+      { href: "/chairman/institute-settings", label: "Institute Settings" },
       { href: "/omc/reports", label: "Reports" },
     ]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Audit Log</h1>

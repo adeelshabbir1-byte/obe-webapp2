@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeTopicVariance } from "../../../../lib/varianceReport";
 import Shell from "../../../../components/Shell";
+import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 
-export default async function CourseMonitoringPage({ searchParams }: { searchParams: { courseId?: string } }) {
+export default async function CourseMonitoringPage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -16,12 +17,17 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
   if (!canViewReports(user.role)) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, instructorId: { not: null } },
+  let courses = await prisma.course.findMany({
+    where: { AND: [courseScopeFor(user), { instructorId: { not: null } }] },
     include: { batch: true, instructor: true, subjectExpert: true },
     orderBy: { code: "asc" },
   });
-  const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
+  else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
+
+    const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const variance = selectedCourseId ? await computeTopicVariance(selectedCourseId) : null;
   const totalPlos = course ? await prisma.pLO.count({ where: { batchId: course.batchId || "" } }) : 0;
@@ -39,9 +45,12 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Course Monitoring Process Form" />
       <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
+        <div style={{ marginTop: 10 }}>
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
         <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
         {selectedCourseId && <a href={`/api/reports/course-monitoring-word?courseId=${selectedCourseId}`} className="btn btn-brass" style={{ textDecoration: "none", marginLeft: 10 }}>Download Word</a>}
+        </div>
       </div>
       {course && variance && (
         <>

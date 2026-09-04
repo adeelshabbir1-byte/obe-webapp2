@@ -37,6 +37,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
           cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
           actualDate: r.actualDate ? r.actualDate.toISOString() : null,
           seTopic: seTopicByLecture.get(r.lectureNumber) || "",
+          rescheduledNote: r.rescheduledNote,
         }))}
         clos={clos.map((c) => ({ id: c.id, code: c.code }))}
       />

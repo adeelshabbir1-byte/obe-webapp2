@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   const updated = await prisma.course.update({
     where: { id: course.id },
-    data: { templateStatus: body.status, omcComment: body.comment || null },
+    data: { templateStatus: body.status, omcComment: body.comment || null, templateReviewedById: user.id },
   });
 
   await writeAuditLog({

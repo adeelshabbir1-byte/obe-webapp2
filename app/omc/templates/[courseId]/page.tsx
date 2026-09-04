@@ -31,6 +31,8 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
   });
   if (!course || course.coordinator.managedById !== user.managedById) notFound();
 
+  const reviewer = course.templateReviewedById ? await prisma.user.findUnique({ where: { id: course.templateReviewedById } }) : null;
+
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
@@ -72,6 +74,9 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
         </div>
       </div>
 
+      {reviewer && (
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>Last reviewed by {reviewer.name} ({course.templateStatus}).</p>
+      )}
       <OmcDecisionForm courseId={course.id} currentComment={course.omcComment} />
     </Shell>
   );

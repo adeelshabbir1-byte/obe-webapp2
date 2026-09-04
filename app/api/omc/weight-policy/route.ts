@@ -11,11 +11,14 @@ export async function GET() {
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   const existing = await prisma.weightPolicy.findMany({ where: { chairmanId: user.managedById } });
-  const byType = new Map(existing.map((p) => [p.courseType, p]));
+  const updaterIds = existing.map((p) => p.updatedById).filter((id): id is string => !!id);
+  const updaters = updaterIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: updaterIds } } }) : [];
+  const updaterNameById = new Map(updaters.map((u) => [u.id, u.name]));
+  const byType = new Map(existing.map((p) => [p.courseType, { ...p, updatedByName: p.updatedById ? updaterNameById.get(p.updatedById) || null : null }]));
 
   // Return one row per known course type, defaulting to 0-100 (unrestricted) if never set.
   const policies = COURSE_TYPES.map((t) => byType.get(t) || {
-    id: null, courseType: t,
+    id: null, courseType: t, updatedByName: null,
     assignmentMin: 0, assignmentMax: 100, assignmentMinCount: 1,
     quizMin: 0, quizMax: 100, quizMinCount: 1,
     projectMin: 0, projectMax: 100, projectMinCount: 0,
@@ -56,8 +59,8 @@ export async function PUT(req: NextRequest) {
 
   const policy = await prisma.weightPolicy.upsert({
     where: { chairmanId_courseType: { chairmanId: user.managedById, courseType: body.courseType } },
-    create: { chairmanId: user.managedById, courseType: body.courseType, ...data },
-    update: data,
+    create: { chairmanId: user.managedById, courseType: body.courseType, updatedById: user.id, ...data },
+    update: { ...data, updatedById: user.id },
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHT_POLICY_SET", entityType: "WeightPolicy", entityId: policy.id, metadata: { courseType: body.courseType } });

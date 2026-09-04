@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 
-export default async function WeightCompliancePage() {
+export default async function WeightCompliancePage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -13,12 +14,15 @@ export default async function WeightCompliancePage() {
   if (!canViewReports(user.role)) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
 
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
+  let courses = await prisma.course.findMany({
+    where: { AND: [courseScopeFor(user), { isOffered: true }] },
     include: { batch: true, weightExceptions: true },
     orderBy: [{ code: "asc" }],
   });
+  if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
+  else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
   const policies = await prisma.weightPolicy.findMany({ where: { chairmanId: await chairmanIdFor(user) } });
   const policyByType = new Map(policies.map((p) => [p.courseType, p]));
 
@@ -50,6 +54,9 @@ export default async function WeightCompliancePage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every offered course's weight compliance status, not just pending exceptions.
       </p>
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead><tr><th>Batch</th><th>Course</th><th>Type</th><th>Weights</th><th>Status</th></tr></thead>

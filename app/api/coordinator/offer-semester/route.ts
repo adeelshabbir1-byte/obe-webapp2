@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
+import { autoEnrollBatchStudents } from "../../../../lib/autoEnroll";
 
 export async function POST() {
   const user = await getAuthenticatedUser();
@@ -24,12 +25,16 @@ export async function POST() {
 
   for (const batch of batches) {
     const semesterNumber = computeCurrentSemesterNumber(batch, current);
-    const result = await prisma.course.updateMany({
-      where: { batchId: batch.id, semesterNumber, isOffered: false },
-      data: { isOffered: true, offeredTermName: current.termName, offeredTermYear: current.year },
-    });
-    offered += result.count;
-    perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: result.count });
+    const coursesToOffer = await prisma.course.findMany({ where: { batchId: batch.id, semesterNumber, isOffered: false } });
+    if (coursesToOffer.length > 0) {
+      await prisma.course.updateMany({
+        where: { id: { in: coursesToOffer.map((c) => c.id) } },
+        data: { isOffered: true, offeredTermName: current.termName, offeredTermYear: current.year },
+      });
+      for (const c of coursesToOffer) await autoEnrollBatchStudents(c.id, batch.id);
+    }
+    offered += coursesToOffer.length;
+    perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: coursesToOffer.length });
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "SEMESTER_OFFERED", metadata: { termName: current.termName, year: current.year, offered } });

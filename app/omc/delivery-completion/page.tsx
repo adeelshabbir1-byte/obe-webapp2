@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 
-export default async function DeliveryCompletionPage() {
+export default async function DeliveryCompletionPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -14,11 +15,15 @@ export default async function DeliveryCompletionPage() {
 
   const coordinatorIds = await coordinatorIdsFor(user);
 
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: { not: null } },
+  let courses = await prisma.course.findMany({
+    where: { AND: [courseScopeFor(user), { isOffered: true, instructorId: { not: null } }] },
     include: { batch: true, instructor: true, lectureRows: { where: { source: "INSTRUCTOR" } } },
     orderBy: [{ code: "asc" }],
   });
+
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
+  else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
   const rows = courses.map((c) => {
     const total = c.lectureRows.length;
@@ -33,6 +38,9 @@ export default async function DeliveryCompletionPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         How much of the semester each instructor has actually logged, so falling behind is visible mid-semester.
       </p>
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead><tr><th>Batch</th><th>Course</th><th>Instructor</th><th>Lectures Dated</th><th>% Complete</th></tr></thead>

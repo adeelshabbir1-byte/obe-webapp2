@@ -5,6 +5,7 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
+import LoadHecContentButton from "../../../../../components/LoadHecContentButton";
 
 const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
 
@@ -41,6 +42,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
           </p>
         </div>
       )}
+      {course.masterCourseId && course.clos.length === 0 && <LoadHecContentButton courseId={course.id} />}
       <ClosManager
         courseId={course.id}
         initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct }))}

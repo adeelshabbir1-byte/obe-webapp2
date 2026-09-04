@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/auth";
 import { HEC_BSCS_2025, HEC_BSCS_2025_PLOS, HEC_BSCS_2025_COURSES } from "./hec-bscs-2025";
 import { HEC_COURSE_SEED_CONTENT } from "./hec-course-seed-content";
+import { HEC_GE_IDS_SEED_CONTENT } from "./hec-ge-ids-seed-content";
+
+const ALL_HEC_SEED_CONTENT = { ...HEC_COURSE_SEED_CONTENT, ...HEC_GE_IDS_SEED_CONTENT };
 
 const prisma = new PrismaClient();
 
@@ -79,12 +82,12 @@ async function seedMasterCourseContent() {
   // Runs independently of whether the curriculum itself is newly seeded —
   // backfills CLOs/topics onto MasterCourse rows that already exist but
   // don't have this content yet (matched by code).
-  const courses = await prisma.masterCourse.findMany({ where: { code: { in: Object.keys(HEC_COURSE_SEED_CONTENT) } } });
+  const courses = await prisma.masterCourse.findMany({ where: { code: { in: Object.keys(ALL_HEC_SEED_CONTENT) } } });
   let seeded = 0;
   for (const course of courses) {
     const existing = await prisma.masterCourseClo.count({ where: { masterCourseId: course.id } });
     if (existing > 0) continue;
-    const seed = HEC_COURSE_SEED_CONTENT[course.code];
+    const seed = ALL_HEC_SEED_CONTENT[course.code];
     if (!seed) continue;
     await prisma.masterCourseClo.createMany({
       data: seed.clos.map((c, i) => ({ masterCourseId: course.id, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: i })),

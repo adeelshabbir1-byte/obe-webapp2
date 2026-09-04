@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null };
 type BatchColumn = { batchId: string; batchLabel: string; courses: Course[] };
-type Group = { id: string; name: string };
+type Group = { id: string; name: string; createdByName?: string | null };
 
 export default function EquivalenceManager() {
   const [batches, setBatches] = useState<BatchColumn[]>([]);
@@ -88,12 +88,21 @@ export default function EquivalenceManager() {
         <table style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
+              <th style={{ minWidth: 130 }}>Group</th>
               {batches.map((b) => <th key={b.batchId} style={{ minWidth: 200 }}>{b.batchLabel}</th>)}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: totalRows }).map((_, rowIndex) => (
               <tr key={rowIndex} style={{ borderTop: rowIndex === groups.length ? "2px solid var(--line)" : undefined }}>
+                <td style={{ fontSize: 11, color: "var(--slate)" }}>
+                  {rowIndex < groups.length && (
+                    <>
+                      {groups[rowIndex].name}
+                      {groups[rowIndex].createdByName && <div style={{ fontSize: 9.5 }}>by {groups[rowIndex].createdByName}</div>}
+                    </>
+                  )}
+                </td>
                 {batches.map((b) => {
                   const course = cellFor(b, rowIndex);
                   if (!course) return <td key={b.batchId}></td>;

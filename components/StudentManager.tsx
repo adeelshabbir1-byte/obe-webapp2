@@ -10,6 +10,7 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
   const router = useRouter();
   const [batchId, setBatchId] = useState(initialBatchId);
   const [csvText, setCsvText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,20 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
   function switchBatch(id: string) {
     setBatchId(id);
     router.push(`/coordinator/students?batchId=${id}`);
+  }
+
+  async function importFile() {
+    if (!file) return;
+    setLoading(true); setError(""); setResult("");
+    try {
+      const fd = new FormData();
+      fd.append("batchId", batchId); fd.append("file", file);
+      const res = await fetch("/api/coordinator/students/import-file", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setResult(`Imported ${data.imported} student(s) from ${file.name}.${data.skipped ? ` Skipped ${data.skipped} row(s).` : ""}`);
+      setFile(null); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function importCsv() {
@@ -66,11 +81,20 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
       </div>
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Bulk Import Students</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
         {result && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
-        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>Paste one student per line, as "Name, Roll Number" (comma or tab separated) — or paste directly from an Excel column.</p>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
+          Column A = Name, Column B = Roll Number. A header row is fine — it's detected and skipped automatically.
+        </p>
+        <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 12.5, marginBottom: 10, display: "block" }} />
+        <button onClick={importFile} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Or Paste Student Data Directly</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>One student per line, as "Name, Roll Number" (comma or tab separated) — works directly from a copied Excel column.</p>
         <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8} placeholder={"Ali Khan, 2026-CS-001\nSara Ahmed, 2026-CS-002"} style={{ width: "100%", padding: 8, border: "1px solid var(--line)", fontFamily: "monospace", fontSize: 12.5 }} />
-        <button onClick={importCsv} disabled={loading} className="btn btn-brass" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Students"}</button>
+        <button onClick={importCsv} disabled={loading || !csvText.trim()} className="btn btn-brass" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Pasted Text"}</button>
       </div>
     </>
   );

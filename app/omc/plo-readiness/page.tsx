@@ -4,6 +4,7 @@ import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 
 type Status = "none" | "draft" | "approved-unassigned" | "healthy";
 const STATUS_STYLE: Record<Status, { label: string; bg: string; color: string }> = {
@@ -13,7 +14,7 @@ const STATUS_STYLE: Record<Status, { label: string; bg: string; color: string }>
   healthy: { label: "Approved & Assigned", bg: "#CCFBF1", color: "#0D9488" },
 };
 
-export default async function PloReadinessPage() {
+export default async function PloReadinessPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -22,7 +23,10 @@ export default async function PloReadinessPage() {
 
   const coordinatorIds = await coordinatorIdsFor(user);
 
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" } ] });
+  let batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" } ] });
+  const allBatches = batches;
+  if (searchParams.batchId) batches = batches.filter((b) => b.id === searchParams.batchId);
+  else if (searchParams.degree) batches = batches.filter((b) => b.degreeProgram === searchParams.degree);
   const plos = await prisma.pLO.findMany({
     where: { coordinatorId: { in: coordinatorIds } },
     include: { ploMappings: true },
@@ -45,6 +49,10 @@ export default async function PloReadinessPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every PLO number, across every batch, color-coded by status.
       </p>
+
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
 
       <div className="card">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>

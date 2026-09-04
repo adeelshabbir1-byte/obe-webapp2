@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeResultMate } from "../../../../lib/resultMate";
 import Shell from "../../../../components/Shell";
+import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 
-export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string } }) {
+export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -16,12 +17,17 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   if (!canViewReports(user.role)) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, instructorId: { not: null } },
+  let courses = await prisma.course.findMany({
+    where: { AND: [courseScopeFor(user), { instructorId: { not: null } }] },
     include: { batch: true, instructor: true },
     orderBy: { code: "asc" },
   });
-  const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
+  else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
+
+    const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const result = selectedCourseId ? await computeResultMate(selectedCourseId) : null;
 
@@ -34,8 +40,11 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
         Relative grading, based on the class mean and standard deviation — A ≥ mean+SD, B ≥ mean, C ≥ mean−SD, D ≥ mean−2SD, else F.
       </p>
       <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
+        <div style={{ marginTop: 10 }}>
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
         <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
+        </div>
       </div>
 
       {course && (

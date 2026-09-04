@@ -4,8 +4,9 @@ import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 
-export default async function SectionUtilizationPage() {
+export default async function SectionUtilizationPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -13,11 +14,14 @@ export default async function SectionUtilizationPage() {
   if (!canViewReports(user.role)) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
 
-  const groups = await prisma.courseEquivalenceGroup.findMany({
+  let groups = await prisma.courseEquivalenceGroup.findMany({
     where: { chairmanId: await chairmanIdFor(user) },
     include: { members: { include: { course: { include: { batch: true } } } } },
   });
+  if (searchParams.batchId) groups = groups.filter((g) => g.members.some((m) => m.course.batchId === searchParams.batchId));
+  else if (searchParams.degree) groups = groups.filter((g) => g.members.some((m) => m.course.batch?.degreeProgram === searchParams.degree));
 
   const standaloneOffered = await prisma.course.count({
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true, equivalenceMember: null },
@@ -38,6 +42,9 @@ export default async function SectionUtilizationPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         How many sections combining equivalent courses is saving, versus teaching them all separately.
       </p>
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
       <div className="card">
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "12px 16px", minWidth: 150 }}>

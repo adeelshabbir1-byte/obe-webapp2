@@ -31,9 +31,13 @@ export async function GET() {
       .map((c) => ({ id: c.id, code: c.code, title: c.title, studentCount: b.studentCount, groupId: c.equivalenceMember?.groupId || null })),
   }));
 
+  const creatorIds = groups.map((g) => g.createdById).filter((id): id is string => !!id);
+  const creators = creatorIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: creatorIds } } }) : [];
+  const creatorNameById = new Map(creators.map((u) => [u.id, u.name]));
+
   return NextResponse.json({
     batches: batchColumns,
-    groups: groups.map((g) => ({ id: g.id, name: g.name })),
+    groups: groups.map((g) => ({ id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null })),
   });
 }
 
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.name) return NextResponse.json({ error: "name is required" }, { status: 400 });
 
-  const group = await prisma.courseEquivalenceGroup.create({ data: { chairmanId: user.managedById, name: body.name } });
+  const group = await prisma.courseEquivalenceGroup.create({ data: { chairmanId: user.managedById, createdById: user.id, name: body.name } });
 
   await writeAuditLog({ actorUserId: user.id, action: "EQUIVALENCE_GROUP_CREATED", entityType: "CourseEquivalenceGroup", entityId: group.id });
 

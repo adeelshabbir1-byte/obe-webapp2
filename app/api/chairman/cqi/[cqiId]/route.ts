@@ -18,6 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { cqiId: str
     data: {
       actionTaken: body.actionTaken !== undefined ? body.actionTaken : record.actionTaken,
       status: body.status || record.status,
+      lastUpdatedById: user.id,
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "CQI_RECORD_UPDATED", entityType: "CqiRecord", entityId: params.cqiId });

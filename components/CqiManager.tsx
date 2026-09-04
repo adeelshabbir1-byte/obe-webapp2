@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Cqi = { id: string; finding: string; actionTaken: string | null; status: string; createdAt: string; batchLabel: string | null; courseLabel: string | null };
+type Cqi = { id: string; finding: string; actionTaken: string | null; status: string; createdAt: string; batchLabel: string | null; courseLabel: string | null; authorName: string | null; lastUpdatedByName: string | null };
 type Batch = { id: string; label: string };
 type Course = { id: string; label: string };
 
@@ -51,7 +51,7 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
           <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--slate)" }}>{r.batchLabel || ""} {r.courseLabel ? `· ${r.courseLabel}` : ""} · {r.createdAt.slice(0, 10)}</div>
+                <div style={{ fontSize: 11, color: "var(--slate)" }}>{r.batchLabel || ""} {r.courseLabel ? `· ${r.courseLabel}` : ""} · {r.createdAt.slice(0, 10)}{r.authorName ? ` · raised by ${r.authorName}` : ""}{r.lastUpdatedByName ? ` · last updated by ${r.lastUpdatedByName}` : ""}</div>
                 <div style={{ fontSize: 13, marginTop: 3 }}>{r.finding}</div>
               </div>
               <span className={`badge ${statusBadge[r.status] || "badge-neutral"}`}>{r.status}</span>

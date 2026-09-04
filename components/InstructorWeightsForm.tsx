@@ -9,11 +9,12 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
   const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
+  const [pending, setPending] = useState<{ violations: string[]; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true); setError(""); setOk(false);
+    setLoading(true); setError(""); setOk(false); setPending(null);
     const fd = new FormData(e.currentTarget);
     try {
       const res = await fetch(`/api/instructor/courses/${courseId}/weights`, {
@@ -24,6 +25,12 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
         }),
       });
       const data = await res.json();
+      if (res.status === 202 && data.pendingApproval) {
+        // Held for OMC approval — NOT saved. Do not show a success state.
+        setPending({ violations: data.violations || [], message: data.message });
+        setLoading(false); router.refresh();
+        return;
+      }
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setOk(true); setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -41,6 +48,16 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Actual Weights</h3>
         {error && <div className="err">{error}</div>}
         {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+        {pending && (
+          <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "10px 12px", fontSize: 12.5, marginBottom: 12 }}>
+            <b>Not saved — held for OMC approval.</b> {pending.message}
+            {pending.violations.length > 0 && (
+              <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                {pending.violations.map((v) => <li key={v}>{v}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
         <form onSubmit={onSubmit}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div className="field"><label>Assignment %</label><input name="assignmentPct" type="number" defaultValue={current.assignmentPct} /></div>

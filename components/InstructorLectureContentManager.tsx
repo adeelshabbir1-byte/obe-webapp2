@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
 type Clo = { id: string; code: string };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string; rescheduledNote: string | null };
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
 
@@ -81,10 +81,11 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                     onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
                     style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                 </td>
-                <td style={{ padding: 0 }}>
+                <td style={{ padding: 0, background: r.rescheduledNote ? "#FFE4DC" : undefined }} title={r.rescheduledNote || undefined}>
                   <input type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
                     onBlur={(e) => { if (e.target.value !== (r.actualDate ? r.actualDate.slice(0, 10) : "")) saveField(r, { actualDate: e.target.value }); }}
                     style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />
+                  {r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>Rescheduled</div>}
                 </td>
                 <td style={{ padding: 0 }}>
                   <select defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}

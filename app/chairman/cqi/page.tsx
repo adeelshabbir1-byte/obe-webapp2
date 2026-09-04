@@ -22,6 +22,10 @@ export default async function CqiPage() {
     prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: { code: "asc" } }),
   ]);
 
+  const peopleIds = Array.from(new Set(records.flatMap((r) => [r.authorId, r.lastUpdatedById]).filter((id): id is string => !!id)));
+  const people = peopleIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: peopleIds } } }) : [];
+  const nameById = new Map(people.map((p) => [p.id, p.name]));
+
   const nav = user.role === "CHAIRMAN"
     ? [
         { href: "/chairman/coordinators", label: "Program Coordinators" },
@@ -30,6 +34,7 @@ export default async function CqiPage() {
         { href: "/chairman/assigners", label: "Course Assigners" },
         { href: "/chairman/cqi", label: "CQI Records" },
         { href: "/chairman/audit-log", label: "Audit Log" },
+        { href: "/chairman/institute-settings", label: "Institute Settings" },
         { href: "/omc/reports", label: "Reports" },
       ]
     : [
@@ -52,6 +57,8 @@ export default async function CqiPage() {
       <CqiManager
         initialRecords={records.map((r) => ({
           id: r.id, finding: r.finding, actionTaken: r.actionTaken, status: r.status, createdAt: r.createdAt.toISOString(),
+          authorName: nameById.get(r.authorId) || null,
+          lastUpdatedByName: r.lastUpdatedById ? nameById.get(r.lastUpdatedById) || null : null,
           batchLabel: r.batch ? `${r.batch.degreeProgram} — ${r.batch.batchName}` : null,
           courseLabel: r.course ? `${r.course.code} — ${r.course.title}` : null,
         }))}

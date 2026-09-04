@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { autoEnrollBatchStudents } from "../../../../../../lib/autoEnroll";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -20,6 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   const updated = await prisma.course.update({ where: { id: course.id }, data });
+  if (isOffered) await autoEnrollBatchStudents(course.id, course.batchId);
 
   await writeAuditLog({ actorUserId: user.id, action: isOffered ? "COURSE_OFFERED_MANUALLY" : "COURSE_UNOFFERED", entityType: "Course", entityId: course.id });
 

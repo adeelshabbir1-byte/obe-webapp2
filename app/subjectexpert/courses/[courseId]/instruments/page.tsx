@@ -27,6 +27,8 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   if (!course) notFound();
   if (course.subjectExpertId !== user.id) notFound();
 
+  const reviewer = course.templateReviewedById ? await prisma.user.findUnique({ where: { id: course.templateReviewedById } }) : null;
+
   const policy = await prisma.weightPolicy.findUnique({
     where: { chairmanId_courseType: { chairmanId: course.coordinator.managedById || "", courseType: course.courseType } },
   });
@@ -77,13 +79,13 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
 
       {course.templateStatus === "changes-requested" && course.omcComment && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
-          <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--rust)" }}>Changes Requested by OMC</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--rust)" }}>Changes Requested by OMC{reviewer ? ` (${reviewer.name})` : ""}</h3>
           <p style={{ fontSize: 12.5 }}>{course.omcComment}</p>
         </div>
       )}
       {course.templateStatus === "approved" && (
         <div className="card" style={{ borderColor: "var(--sage)" }}>
-          <h3 style={{ fontSize: 14, color: "var(--sage)" }}>Approved by OMC</h3>
+          <h3 style={{ fontSize: 14, color: "var(--sage)" }}>Approved by OMC{reviewer ? ` (${reviewer.name})` : ""}</h3>
           {course.omcComment && <p style={{ fontSize: 12.5, marginTop: 6 }}>{course.omcComment}</p>}
         </div>
       )}
