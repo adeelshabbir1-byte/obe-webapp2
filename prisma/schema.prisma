@@ -116,6 +116,7 @@ model Batch {
   courses        Course[]
   plos           PLO[]    @relation("BatchPlos")
   cqiRecords     CqiRecord[]
+  students       Student[]
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
@@ -295,6 +296,59 @@ model CqiRecord {
   @@index([courseId])
 }
 
+// A real student, imported by the Coordinator per batch (bulk CSV) — the
+// foundation for marks entry and result computation.
+model Student {
+  id         String   @id @default(cuid())
+  batchId    String
+  batch      Batch    @relation(fields: [batchId], references: [id])
+  name       String
+  rollNumber String
+  createdAt  DateTime @default(now())
+
+  enrollments StudentEnrollment[]
+  marks       StudentMark[]
+
+  @@unique([batchId, rollNumber])
+  @@index([batchId])
+}
+
+// A student taking a specific course — decoupled from their home batch so a
+// repeat/summer enrollment into a different offering still works.
+model StudentEnrollment {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+  isRepeat   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([studentId, courseId])
+  @@index([courseId])
+  @@index([studentId])
+}
+
+// A student's raw score on one specific assessment instrument (Quiz 1, Midterm
+// Q3, etc.) — entered by the Instructor, matching the reference Excel's
+// per-item mark sheet.
+model StudentMark {
+  id           String   @id @default(cuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  instrumentId String
+  instrument   AssessmentInstrument @relation(fields: [instrumentId], references: [id])
+  score        Float
+  enteredById  String
+  updatedAt    DateTime @updatedAt
+
+  @@unique([studentId, instrumentId])
+  @@index([courseId])
+  @@index([studentId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -361,6 +415,8 @@ model Course {
   feedForwardNotes    FeedForwardNote[]
   guidanceComments    InstructorGuidanceComment[]
   cqiRecords          CqiRecord[]
+  studentEnrollments  StudentEnrollment[]
+  studentMarks        StudentMark[]
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
@@ -495,9 +551,11 @@ model AssessmentInstrument {
   type      String   // Assignment | Quiz | Midterm | Final | Project | Lab
   label     String   // "Quiz 1", "Midterm Q3"
   marksPct  Int      // this instrument's % of total course marks
+  maxScore  Int      @default(10) // the raw marks this instrument is scored out of (e.g. Quiz out of 10)
   createdAt DateTime @default(now())
 
   lectureLinks LectureRowInstrument[]
+  studentMarks StudentMark[]
 
   @@index([courseId])
 }

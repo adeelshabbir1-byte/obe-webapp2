@@ -23,6 +23,7 @@ const CARDS = [
   { href: "/omc/reports/course-monitoring", title: "Course Monitoring Form", desc: "Weightage, PLO assignment, and plan adherence — with a signature block for printing." },
   { href: "/omc/reports/midterm-distribution", title: "Midterm Paper Distribution", desc: "Which topics and CLOs the midterm's questions actually test, and how much each is worth." },
   { href: "/omc/reports/final-distribution", title: "Final Paper Distribution", desc: "Same breakdown, for the final exam." },
+  { href: "/omc/reports/result-mate", title: "Result Mate", desc: "Per-student marks, CLO/PLO attainment, and relative grading for the class." },
 ];
 
 export default async function ReportsHubPage() {

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });
 
   const instrument = await prisma.assessmentInstrument.create({
-    data: { courseId: course.id, source: "INSTRUCTOR", type: body.type, label: body.label, marksPct },
+    data: { courseId: course.id, source: "INSTRUCTOR", type: body.type, label: body.label, marksPct, maxScore: body.maxScore ? parseInt(body.maxScore, 10) : 10 },
   });
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_INSTRUMENT_ADDED", entityType: "AssessmentInstrument", entityId: instrument.id });
   return NextResponse.json({ instrument }, { status: 201 });

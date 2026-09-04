@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   }
 
   const instrument = await prisma.assessmentInstrument.create({
-    data: { courseId: course.id, type: body.type, label: body.label, marksPct },
+    data: { courseId: course.id, type: body.type, label: body.label, marksPct, maxScore: body.maxScore ? parseInt(body.maxScore, 10) : 10 },
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_ADDED", entityType: "AssessmentInstrument", entityId: instrument.id });

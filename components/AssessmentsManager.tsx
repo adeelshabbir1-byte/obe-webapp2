@@ -24,11 +24,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const [loading, setLoading] = useState(false);
   const [busyCell, setBusyCell] = useState<string | null>(null);
 
-  async function addInstrument(type: string, nextLabel: string, marksPct: string) {
+  async function addInstrument(type: string, nextLabel: string, marksPct: string, maxScore: string) {
     setLoading(true); setError("");
     try {
       const res = await fetch(`${apiBase}/courses/${courseId}/instruments`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, label: nextLabel, marksPct }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, label: nextLabel, marksPct, maxScore }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -186,13 +186,14 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   );
 }
 
-function AddRow({ type, nextLabel, loading, onAdd }: { type: string; nextLabel: string; loading: boolean; onAdd: (type: string, label: string, marksPct: string) => void }) {
+function AddRow({ type, nextLabel, loading, onAdd }: { type: string; nextLabel: string; loading: boolean; onAdd: (type: string, label: string, marksPct: string, maxScore: string) => void }) {
   const [marksPct, setMarksPct] = useState("");
+  const [maxScore, setMaxScore] = useState("10");
   const isNumbered = type === "Midterm" || type === "Final";
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!marksPct) return;
-    onAdd(type, nextLabel, marksPct);
+    onAdd(type, nextLabel, marksPct, maxScore || "10");
     setMarksPct("");
   }
   return (
@@ -201,6 +202,10 @@ function AddRow({ type, nextLabel, loading, onAdd }: { type: string; nextLabel: 
       <div>
         <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Marks %</label>
         <input value={marksPct} onChange={(e) => setMarksPct(e.target.value)} type="number" min={0} max={100} required style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Out of (raw)</label>
+        <input value={maxScore} onChange={(e) => setMaxScore(e.target.value)} type="number" min={1} style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
       </div>
       <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Add</button>
     </form>
