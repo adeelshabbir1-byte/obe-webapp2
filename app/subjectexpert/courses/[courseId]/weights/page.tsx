@@ -17,7 +17,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { coordinator: true } });
   if (!course || course.subjectExpertId !== user.id) notFound();
 
-  const pendingException = await prisma.weightExceptionRequest.findUnique({ where: { courseId: course.id } });
+  const pendingException = await prisma.weightExceptionRequest.findUnique({ where: { courseId_source: { courseId: course.id, source: "SE" } } });
   const policy = await prisma.weightPolicy.findUnique({
     where: { chairmanId_courseType: { chairmanId: course.coordinator.managedById || "", courseType: course.courseType } },
   });
