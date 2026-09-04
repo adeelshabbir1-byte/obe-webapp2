@@ -10,6 +10,8 @@ const NAV = [
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
+  { href: "/coordinator/students", label: "Students" },
+  { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },

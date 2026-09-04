@@ -2,17 +2,10 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import WeightPolicyManager from "../../../components/WeightPolicyManager";
 
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/reports", label: "Reports" },
-];
+
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
@@ -36,7 +29,7 @@ export default async function WeightPolicyPage() {
   });
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Weight Policy</h1>
         <a href="/api/omc/weight-policy/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

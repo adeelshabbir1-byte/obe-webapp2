@@ -1,17 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
+import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import EquivalenceManager from "../../../components/EquivalenceManager";
 
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/reports", label: "Reports" },
-];
+
 
 export default async function OmcEquivalencePage() {
   const user = await getAuthenticatedUser();
@@ -21,7 +14,7 @@ export default async function OmcEquivalencePage() {
   if (user.role !== "OMC") redirect("/dashboard");
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Equivalence</h1>
         <a href="/api/omc/equivalence/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

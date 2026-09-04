@@ -2,17 +2,10 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import PloMatrix from "../../../components/PloMatrix";
 
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/reports", label: "Reports" },
-];
+
 
 export default async function OmcPloMatrixPage() {
   const user = await getAuthenticatedUser();
@@ -51,7 +44,7 @@ export default async function OmcPloMatrixPage() {
   }
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO–Course Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
