@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     }
   }
 
-  await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_STUDENTS_ADDED", entityType: "Course", entityId: course.id, metadata: { added, notFound } });
+  await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_STUDENTS_ADDED", entityType: "Course", entityId: course.id, metadata: { added, notFound: notFound.join(", ") } });
 
   return NextResponse.json({ added, notFound: notFound.length > 0 ? notFound : undefined });
 }
