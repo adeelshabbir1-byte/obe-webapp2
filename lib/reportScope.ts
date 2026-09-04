@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import type { Prisma } from "@prisma/client";
 
 const REPORT_ROLES = ["OMC", "CHAIRMAN", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR"];
 
@@ -7,7 +8,7 @@ export function canViewReports(role: string) {
 }
 
 /** A Prisma `where` filter for Course, scoped to what this role should see. */
-export function courseScopeFor(user: { id: string; role: string; managedById: string | null }) {
+export function courseScopeFor(user: { id: string; role: string; managedById: string | null }): Prisma.CourseWhereInput {
   switch (user.role) {
     case "OMC":
       return { coordinator: { managedById: user.managedById || "" } };
