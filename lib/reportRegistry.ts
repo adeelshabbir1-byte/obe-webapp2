@@ -3,7 +3,8 @@
 // groups all read from this list instead of duplicating it.
 
 export type ReportDef = { id: string; href: string; title: string; desc: string; hasEditActions?: boolean };
-export type ReportSection = { title: string; desc: string; cards: ReportDef[] };
+type ReportCardDef = Omit<ReportDef, "id">;
+export type ReportSection = { title: string; desc: string; cards: ReportCardDef[] };
 
 function idFor(href: string) {
   return href.replace(/^\//, "").replace(/\//g, ".");

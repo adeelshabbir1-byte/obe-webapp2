@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canViewReports, roleLabel } from "../../../lib/reportScope";
 import { canViewReport } from "../../../lib/reportAcl";
-import { REPORT_SECTIONS } from "../../../lib/reportRegistry";
+import { REPORT_SECTIONS, reportIdForHref } from "../../../lib/reportRegistry";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 
@@ -17,7 +17,7 @@ export default async function ReportsHubPage() {
   const filteredSections = await Promise.all(
     REPORT_SECTIONS.map(async (section) => {
       const cards = await Promise.all(
-        section.cards.map(async (c) => ((await canViewReport(user, c.id)) ? c : null))
+        section.cards.map(async (c) => ((await canViewReport(user, reportIdForHref(c.href))) ? c : null))
       );
       return { ...section, cards: cards.filter((c): c is NonNullable<typeof c> => c !== null) };
     })
