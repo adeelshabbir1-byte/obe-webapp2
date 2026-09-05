@@ -6,7 +6,7 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import InstructorWeightsForm from "../../../../../components/InstructorWeightsForm";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }];
+const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorWeightsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();

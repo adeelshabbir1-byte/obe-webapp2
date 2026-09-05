@@ -6,7 +6,7 @@ import CourseSubNav from "../../../../../components/CourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
+const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstrumentsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();

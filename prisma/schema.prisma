@@ -70,6 +70,8 @@ model User {
   cqiRecords         CqiRecord[]  @relation("CqiChairman")
   semesterDates      SemesterDates[] @relation("SemesterDatesCoordinator")
   gradingScale       GradingScale[]  @relation("GradingScaleCoordinator")
+  reportAccessRules  ReportAccessRule[] @relation("ReportAccessChairman")
+  programProfiles    ProgramProfile[] @relation("ProgramProfileCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
@@ -439,6 +441,56 @@ model AssignmentSnapshot {
 
   @@index([coordinatorId])
   @@index([termName, termYear])
+}
+
+// Chairman-controlled access rules for reports — either role-wide or for a
+// specific person, covering view and edit separately (edit only matters for
+// reports with embedded actions, like Result Mate's grade cutoffs). No rule
+// for a report/subject means the default (today's behavior: open to every
+// role that's normally eligible) applies.
+model ReportAccessRule {
+  id            String  @id @default(cuid())
+  chairmanId    String
+  chairman      User    @relation("ReportAccessChairman", fields: [chairmanId], references: [id])
+  reportId      String  // matches ReportDef.id in lib/reportRegistry.ts
+  subjectType   String  // "ROLE" | "USER"
+  subjectValue  String  // a role name (e.g. "INSTRUCTOR") or a User.id
+  canView       Boolean @default(true)
+  canEdit       Boolean @default(true)
+
+  @@unique([chairmanId, reportId, subjectType, subjectValue])
+  @@index([chairmanId])
+}
+
+// A saved set of reports for one-go printing. Platform-scope bundles (set
+// by Super User) are shared across every institution; Coordinator-scope
+// bundles are personal to that Coordinator (e.g. "NCEAC Visit Package").
+model ReportBundle {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  scope       String  // "PLATFORM" | "COORDINATOR"
+  ownerId     String? // the Coordinator's User.id — null for PLATFORM bundles
+  reportIds   String  @db.Text // JSON array of report ids from lib/reportRegistry.ts
+
+  @@index([ownerId])
+}
+
+// Program-level narrative content for the full program document (Annex-A
+// style) — department intro/vision/mission and PEOs, which nothing else in
+// the system tracks. Optional: the document generates fine without it, just
+// skipping those sections.
+model ProgramProfile {
+  id                 String @id @default(cuid())
+  coordinatorId      String
+  coordinator        User   @relation("ProgramProfileCoordinator", fields: [coordinatorId], references: [id])
+  degreeProgram      String
+  departmentIntro    String? @db.Text
+  departmentVision   String? @db.Text
+  departmentMission  String? @db.Text
+  peos               String? @db.Text // JSON array of strings
+
+  @@unique([coordinatorId, degreeProgram])
 }
 
 model Course {

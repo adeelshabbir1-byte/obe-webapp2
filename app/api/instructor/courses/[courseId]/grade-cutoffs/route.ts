@@ -3,11 +3,13 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { canEditReport } from "../../../../../../lib/reportAcl";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await canEditReport(user, "omc.reports.result-mate"))) return NextResponse.json({ error: "your Chairman has restricted edit access to this report" }, { status: 403 });
 
   const body = await req.json();
   const cutoffs: { letter: string; minPercent: number }[] = body.cutoffs || [];

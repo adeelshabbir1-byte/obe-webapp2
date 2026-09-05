@@ -15,6 +15,8 @@ const NAV = [
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
   { href: "/coordinator/assignment-history", label: "Assignment History" },
+  { href: "/coordinator/report-bundles", label: "Report Bundles" },
+  { href: "/coordinator/program-profile", label: "Program Document" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },

@@ -11,6 +11,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
+  const [uploadResult, setUploadResult] = useState("");
 
   async function doClone(e: React.FormEvent<HTMLFormElement>, sourceId: string) {
     e.preventDefault();
@@ -39,6 +40,19 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  async function uploadPdf(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true); setError(""); setUploadResult("");
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch("/api/admin/curricula/upload-pdf", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setUploadResult(data.message); setLoading(false);
+      setTimeout(() => router.push(`/admin/curricula/${data.curriculumId}`), 1800);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -88,6 +102,25 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
             <div className="field"><label>Version</label><input name="version" placeholder="2025" required /></div>
           </div>
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Creating…" : "Create Curriculum"}</button>
+        </form>
+      </div>
+
+      <div className="card" style={{ borderColor: "var(--brass)" }}>
+        <h3 style={{ fontSize: 14, marginBottom: 6, color: "var(--brass-dark)" }}>Upload a Curriculum PDF</h3>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
+          Extraction is best-effort — course codes, titles, and credit hours are auto-detected where the
+          PDF's formatting allows, but this always needs your review afterward in the curriculum editor
+          before publishing. Different institutions format these documents differently, so results vary.
+        </p>
+        {uploadResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{uploadResult} Redirecting to the editor…</div>}
+        <form onSubmit={uploadPdf}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 14 }}>
+            <div className="field"><label>Authority</label><input name="authority" placeholder="e.g. University of the Punjab" required /></div>
+            <div className="field"><label>Program Title</label><input name="title" placeholder="BS Computer Science" required /></div>
+            <div className="field"><label>Version</label><input name="version" placeholder="2026" required /></div>
+          </div>
+          <div className="field"><label>PDF File</label><input name="file" type="file" accept="application/pdf" required /></div>
+          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Uploading & Parsing…" : "Upload & Parse"}</button>
         </form>
       </div>
     </>

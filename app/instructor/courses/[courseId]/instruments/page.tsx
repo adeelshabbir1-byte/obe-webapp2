@@ -10,7 +10,7 @@ import ReweightingSuggestions from "../../../../../components/ReweightingSuggest
 import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }];
+const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorInstrumentsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();

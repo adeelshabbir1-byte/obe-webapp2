@@ -7,7 +7,7 @@ import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
 import LoadHecContentButton from "../../../../../components/LoadHecContentButton";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }];
+const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function ClosPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();

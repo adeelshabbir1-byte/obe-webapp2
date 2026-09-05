@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { canViewReport, canEditReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeResultMate } from "../../../../lib/resultMate";
@@ -18,6 +19,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
+  if (!(await canViewReport(user, "omc.reports.result-mate"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
   let courses = await prisma.course.findMany({
@@ -35,10 +37,11 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   const result = selectedCourseId ? await computeResultMate(selectedCourseId) : null;
 
   const gradingScale = course ? await prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId }, orderBy: { orderIndex: "asc" } }) : [];
-  const canEditCutoffs = course && (
+  const hasCutoffRole = course && (
     (user.role === "INSTRUCTOR" && course.instructorId === user.id) ||
     user.role === "CHAIRMAN"
   );
+  const canEditCutoffs = hasCutoffRole && (await canEditReport(user, "omc.reports.result-mate"));
   const cutoffApiEndpoint = course
     ? (user.role === "CHAIRMAN" ? `/api/chairman/courses/${course.id}/grade-cutoffs` : `/api/instructor/courses/${course.id}/grade-cutoffs`)
     : "";

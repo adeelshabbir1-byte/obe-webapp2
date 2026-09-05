@@ -18,7 +18,7 @@ export default async function ChairmanCoordinatorsPage() {
   });
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/cqi", label: "CQI Records" }, { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/omc/reports", label: "Reports" }]}>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={[{ href: "/chairman/coordinators", label: "Program Coordinators" }, { href: "/chairman/plos", label: "Program Learning Outcomes" }, { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/cqi", label: "CQI Records" }, { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/chairman/report-access", label: "Report Access Control" }, { href: "/omc/reports", label: "Reports" }]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Coordinators</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Coordinators onboard faculty and define courses on your behalf.
