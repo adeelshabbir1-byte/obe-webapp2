@@ -14,6 +14,7 @@ const NAV = [
   { href: "/coordinator/students", label: "Students" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
+  { href: "/coordinator/assignment-history", label: "Assignment History" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
@@ -46,7 +47,7 @@ export default async function CoordinatorFacultyPage() {
       <FacultyManager
         initialFaculty={faculty.map((f) => ({
           id: f.id, username: f.username, name: f.name, role: f.role, mustChangePassword: f.mustChangePassword,
-          normalLoad: f.normalLoad, externalLoadCount: f.externalLoadCount, externalLoadNote: f.externalLoadNote,
+          normalLoad: f.normalLoad, externalLoadCount: f.externalLoadCount, externalLoadNote: f.externalLoadNote, specialization: f.specialization,
         }))}
       />
     </Shell>

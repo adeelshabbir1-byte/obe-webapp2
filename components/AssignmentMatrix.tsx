@@ -3,8 +3,15 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
-type Row = { kind: "course" | "group"; id: string; label: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
-type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null };
+type Row = { kind: "course" | "group"; id: string; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
+type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
+
+function specializationMatches(row: Row, instructor: Instructor): boolean {
+  if (row.courseType !== "Elective" || !instructor.specialization) return false;
+  const spec = instructor.specialization.toLowerCase().trim();
+  const title = row.title.toLowerCase();
+  return spec.length > 2 && (title.includes(spec) || spec.includes(title));
+}
 
 export default function AssignmentMatrix() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -86,22 +93,25 @@ export default function AssignmentMatrix() {
           <thead>
             <tr>
               <th>Course</th><th>Type</th><th>Batch</th><th>Students</th><th>Sections Needed</th>
-              {instructors.map((i) => {
+              {instructors.map((i, idx) => {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
+                const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
                 return (
-                  <th key={i.id} style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap" }}>
+                  <th key={i.id} style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined }}>
                     {i.name}
+                    {i.specialization && <div style={{ fontSize: 9, fontWeight: 400, color: "var(--slate)" }}>{i.specialization}</div>}
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {rows.map((r, rowIdx) => {
               const assignedTotal = Object.values(r.assignments).reduce((a, b) => a + b, 0);
               const shortOrOver = assignedTotal !== r.sectionsNeeded;
+              const newBlock = rowIdx === 0 || rows[rowIdx - 1].courseType !== r.courseType;
               return (
-                <tr key={r.kind + r.id}>
+                <tr key={r.kind + r.id} style={{ borderTop: newBlock && rowIdx > 0 ? "2px solid var(--brass)" : undefined }}>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <b>{r.label}</b>
                     {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
@@ -112,16 +122,22 @@ export default function AssignmentMatrix() {
                   <td style={{ fontSize: 12, fontWeight: 600, color: shortOrOver ? "var(--brass-dark)" : "var(--sage)" }}>
                     {assignedTotal} / {r.sectionsNeeded}
                   </td>
-                  {instructors.map((i) => {
+                  {instructors.map((i, idx) => {
                     const value = r.assignments[i.id] || 0;
                     const key = r.id + i.id;
                     const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
+                    const matches = specializationMatches(r, i);
+                    const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
                     return (
-                      <td key={i.id} style={{ textAlign: "center", background: over && value > 0 ? "#FFE4DC" : undefined }}>
+                      <td key={i.id} title={matches ? `${i.name}'s specialization matches this elective` : undefined} style={{
+                        textAlign: "center",
+                        background: over && value > 0 ? "#FFE4DC" : matches ? "#CCFBF1" : undefined,
+                        borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined,
+                      }}>
                         <input
                           type="number" min={0} defaultValue={value} disabled={busyCell === key}
                           onBlur={(e) => { const n = parseInt(e.target.value, 10) || 0; if (n !== value) setCount(r, i.id, n); }}
-                          style={{ width: 44, padding: "3px 4px", border: "1px solid var(--line)", textAlign: "center", fontSize: 12 }}
+                          style={{ width: 44, padding: "3px 4px", border: matches ? "1px solid var(--sage)" : "1px solid var(--line)", textAlign: "center", fontSize: 12 }}
                         />
                       </td>
                     );
@@ -133,8 +149,11 @@ export default function AssignmentMatrix() {
         </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           "Combined" rows are equivalence groups (courses from different batches/programs taught together).
-          Sections Needed is calculated automatically at 1 section per 50 students. Going over a faculty member's
-          normal load is allowed but highlighted in red as a warning.
+          Sections Needed is calculated automatically at 1 section per 50 students. Going over a faculty
+          member's normal load is allowed but highlighted in red as a warning. Courses are grouped by type;
+          instructors are ordered by the type of course they've historically taught most (a thicker line marks
+          each new group), and a cell is highlighted green when an instructor's specialization matches an
+          elective's title.
         </p>
       </div>
     </>

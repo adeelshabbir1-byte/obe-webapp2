@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null };
+type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null };
 
 export default function FacultyManager({ initialFaculty }: { initialFaculty: Faculty[] }) {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"),
-          role: fd.get("role"), normalLoad: fd.get("normalLoad"),
+          role: fd.get("role"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
         }),
       });
       const data = await res.json();
@@ -37,7 +37,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     try {
       const res = await fetch("/api/coordinator/faculty/load", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote") }),
+        body: JSON.stringify({ userId, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote"), specialization: fd.get("specialization") }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -50,14 +50,18 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
       {error && <div className="err">{error}</div>}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Load (Normal / External)</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Specialization</th><th>Load (Normal / External)</th><th></th></tr></thead>
           <tbody>
-            {initialFaculty.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>}
+            {initialFaculty.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>}
             {initialFaculty.map((f) => editingId === f.id ? (
               <tr key={f.id}>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <form onSubmit={(e) => saveLoad(e, f.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                     <span style={{ fontWeight: 600, fontSize: 12 }}>{f.name}</span>
+                    <div>
+                      <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Specialization</label>
+                      <input name="specialization" defaultValue={f.specialization || ""} placeholder="e.g. Software Engineering" style={{ width: 160, padding: "5px 6px", border: "1px solid var(--line)" }} />
+                    </div>
                     <div>
                       <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Normal Load</label>
                       <input name="normalLoad" type="number" min={0} defaultValue={f.normalLoad} style={{ width: 60, padding: "5px 6px", border: "1px solid var(--line)" }} />
@@ -80,8 +84,9 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                 <td>{f.username}</td><td>{f.name}</td>
                 <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"}</span></td>
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
+                <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
-                <td><button onClick={() => setEditingId(f.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit Load</button></td>
+                <td><button onClick={() => setEditingId(f.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>
               </tr>
             ))}
           </tbody>
@@ -106,6 +111,10 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
             <div className="field">
               <label>Normal Load (courses/labs per semester)</label>
               <input name="normalLoad" type="number" min={0} defaultValue={3} />
+            </div>
+            <div className="field">
+              <label>Specialization (optional)</label>
+              <input name="specialization" placeholder="e.g. Software Engineering, AI, Networks" />
             </div>
           </div>
           <div className="small-note" style={{ marginBottom: 10 }}>This user will be required to set a new password on first login.</div>

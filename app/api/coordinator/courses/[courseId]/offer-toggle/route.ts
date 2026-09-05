@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { autoEnrollBatchStudents } from "../../../../../../lib/autoEnroll";
+import { carryOverFromMatchingSemester } from "../../../../../../lib/benchmarkCopy";
+import { snapshotCourseAssignmentsIfTermChanging } from "../../../../../../lib/assignmentSnapshot";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -17,11 +19,17 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const data: any = { isOffered };
   if (isOffered) {
     const current = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
-    if (current) { data.offeredTermName = current.termName; data.offeredTermYear = current.year; }
+    if (current) {
+      await snapshotCourseAssignmentsIfTermChanging(course.id, current.termName, current.year);
+      data.offeredTermName = current.termName; data.offeredTermYear = current.year;
+    }
   }
 
   const updated = await prisma.course.update({ where: { id: course.id }, data });
-  if (isOffered) await autoEnrollBatchStudents(course.id, course.batchId);
+  if (isOffered) {
+    await autoEnrollBatchStudents(course.id, course.batchId);
+    await carryOverFromMatchingSemester(course.id);
+  }
 
   await writeAuditLog({ actorUserId: user.id, action: isOffered ? "COURSE_OFFERED_MANUALLY" : "COURSE_UNOFFERED", entityType: "Course", entityId: course.id });
 

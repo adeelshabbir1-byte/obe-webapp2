@@ -2148,6 +2148,27 @@ CREATE TABLE IF NOT EXISTS "CourseGradeCutoff" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "CourseGradeCutoff_courseId_letter_key" ON "CourseGradeCutoff"("courseId", "letter");
 CREATE INDEX IF NOT EXISTS "CourseGradeCutoff_courseId_idx" ON "CourseGradeCutoff"("courseId");
+-- Run in Supabase SQL Editor. Adds faculty specialization tagging and the
+-- assignment history snapshot table (needed since Course only tracks its
+-- CURRENT offering term — this preserves prior terms' data before it gets
+-- overwritten).
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "specialization" TEXT;
+
+CREATE TABLE IF NOT EXISTS "AssignmentSnapshot" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "coordinatorId" TEXT NOT NULL,
+  "courseLabel" TEXT NOT NULL,
+  "courseType" TEXT NOT NULL,
+  "batchLabel" TEXT NOT NULL,
+  "termName" TEXT NOT NULL,
+  "termYear" INTEGER NOT NULL,
+  "instructorName" TEXT NOT NULL,
+  "sectionCount" INTEGER NOT NULL,
+  "snapshotAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "AssignmentSnapshot_coordinatorId_idx" ON "AssignmentSnapshot"("coordinatorId");
+CREATE INDEX IF NOT EXISTS "AssignmentSnapshot_termName_termYear_idx" ON "AssignmentSnapshot"("termName", "termYear");
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

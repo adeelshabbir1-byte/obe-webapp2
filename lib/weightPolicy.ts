@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { normalizeCourseType } from "./courseTypeColors";
 
 export type WeightValues = {
   assignmentPct: number; quizPct: number; projectPct: number;
@@ -7,7 +8,7 @@ export type WeightValues = {
 
 export async function getPolicyForCourse(chairmanId: string | null, courseType: string) {
   if (!chairmanId) return null;
-  return prisma.weightPolicy.findUnique({ where: { chairmanId_courseType: { chairmanId, courseType } } });
+  return prisma.weightPolicy.findUnique({ where: { chairmanId_courseType: { chairmanId, courseType: normalizeCourseType(courseType) } } });
 }
 
 /** Returns the list of fields that fall outside the policy's range, empty if compliant or no policy set. */

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null };
 type MPlo = { id: string; number: number; title: string; description: string };
 
-const CATEGORIES = ["General Education", "Major", "IDS", "Certification", "Capstone Project", "Field Experience"];
+const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
 
 export default function CurriculumDetailManager({ curriculumId, courses, plos }: { curriculumId: string; courses: MCourse[]; plos: MPlo[] }) {
   const router = useRouter();

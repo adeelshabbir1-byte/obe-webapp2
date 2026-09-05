@@ -10,6 +10,7 @@ import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import GradeCutoffsForm from "../../../../components/GradeCutoffsForm";
+import GradeBoundaryEditor from "../../../../components/GradeBoundaryEditor";
 
 export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -107,18 +108,36 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           </div>
 
           {canEditCutoffs && course && (
-            <GradeCutoffsForm
-              courseId={course.id}
-              apiEndpoint={cutoffApiEndpoint}
-              gradingScale={gradingScale.map((s) => ({ letter: s.letter, gpaValue: s.gpaValue }))}
-              savedCutoffs={result.savedCutoffs}
-              suggestion={{
-                A: Math.round((result.stats.mean + result.stats.sd) * 10) / 10,
-                B: Math.round(result.stats.mean * 10) / 10,
-                C: Math.round((result.stats.mean - result.stats.sd) * 10) / 10,
-                D: Math.round((result.stats.mean - 2 * result.stats.sd) * 10) / 10,
-              }}
-            />
+            <>
+              <GradeBoundaryEditor
+                apiEndpoint={cutoffApiEndpoint}
+                students={result.rows.map((r) => ({ name: r.name, rollNumber: r.rollNumber, totalPct: r.totalPct }))}
+                gradingScale={gradingScale.map((s) => ({ letter: s.letter, gpaValue: s.gpaValue }))}
+                initialCutoffs={Object.fromEntries(
+                  gradingScale.map((s) => {
+                    const saved = result.savedCutoffs.find((c) => c.letter === s.letter);
+                    if (saved) return [s.letter, saved.minPercent];
+                    if (s.letter === "A") return [s.letter, Math.round((result.stats.mean + result.stats.sd) * 10) / 10];
+                    if (s.letter === "B") return [s.letter, Math.round(result.stats.mean * 10) / 10];
+                    if (s.letter === "C") return [s.letter, Math.round((result.stats.mean - result.stats.sd) * 10) / 10];
+                    if (s.letter === "D") return [s.letter, Math.round((result.stats.mean - 2 * result.stats.sd) * 10) / 10];
+                    return [s.letter, 0];
+                  })
+                )}
+              />
+              <GradeCutoffsForm
+                courseId={course.id}
+                apiEndpoint={cutoffApiEndpoint}
+                gradingScale={gradingScale.map((s) => ({ letter: s.letter, gpaValue: s.gpaValue }))}
+                savedCutoffs={result.savedCutoffs}
+                suggestion={{
+                  A: Math.round((result.stats.mean + result.stats.sd) * 10) / 10,
+                  B: Math.round(result.stats.mean * 10) / 10,
+                  C: Math.round((result.stats.mean - result.stats.sd) * 10) / 10,
+                  D: Math.round((result.stats.mean - 2 * result.stats.sd) * 10) / 10,
+                }}
+              />
+          </>
           )}
 
           {result.instruments.length > 0 && (

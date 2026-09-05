@@ -33,14 +33,14 @@ export const HEC_BSCS_2025_PLOS = [
   { number: 10, title: "Life-long Learning", description: "Recognize the need, and have the ability, to engage in independent learning for continual development as a computing professional." },
 ];
 
-// category: "General Education" | "Major" | "IDS" | "Certification" | "Capstone Project" | "Field Experience"
+// category: "General Education" | "Core" | "Elective" | "IDS" | "Certification" | "Capstone Project" | "Field Experience"
 export const HEC_BSCS_2025_COURSES = [
   // Semester I — 18 credits
   { code: "GE-101", title: "Quantitative Reasoning-I", creditHours: 3, category: "General Education", semesterNumber: 1 },
   { code: "GE-102", title: "Functional English", creditHours: 3, category: "General Education", semesterNumber: 1 },
   { code: "GE-103", title: "Applications of Information and Communication Technologies", creditHours: 3, category: "General Education", semesterNumber: 1 },
   { code: "GE-104", title: "Social Science", creditHours: 2, category: "General Education", semesterNumber: 1 },
-  { code: "CS-101", title: "Programming Fundamentals", creditHours: 4, category: "Major", semesterNumber: 1 },
+  { code: "CS-101", title: "Programming Fundamentals", creditHours: 4, category: "Core", semesterNumber: 1 },
   { code: "IDS-101", title: "Calculus & Analytical Geometry (IDS I, Mandatory)", creditHours: 3, category: "IDS", semesterNumber: 1 },
 
   // Semester II — 19 credits
@@ -48,47 +48,47 @@ export const HEC_BSCS_2025_COURSES = [
   { code: "GE-106", title: "Arts and Humanities", creditHours: 2, category: "General Education", semesterNumber: 2 },
   { code: "GE-107", title: "Pakistan Studies", creditHours: 2, category: "General Education", semesterNumber: 2 },
   { code: "GE-108", title: "Fehm-e-Quran – I (for Muslim Students)", creditHours: 1, category: "General Education", semesterNumber: 2 },
-  { code: "CS-102", title: "Object Oriented Programming", creditHours: 4, category: "Major", semesterNumber: 2 },
-  { code: "CS-103", title: "Digital Logic Design", creditHours: 4, category: "Major", semesterNumber: 2 },
+  { code: "CS-102", title: "Object Oriented Programming", creditHours: 4, category: "Core", semesterNumber: 2 },
+  { code: "CS-103", title: "Digital Logic Design", creditHours: 4, category: "Core", semesterNumber: 2 },
   { code: "IDS-102", title: "Linear Algebra (IDS II, Mandatory)", creditHours: 3, category: "IDS", semesterNumber: 2 },
 
   // Semester III — 19 credits
   { code: "GE-109", title: "Expository Writing", creditHours: 3, category: "General Education", semesterNumber: 3 },
   { code: "GE-110", title: "Natural Science", creditHours: 3, category: "General Education", semesterNumber: 3 },
   { code: "GE-111", title: "Fehm-e-Quran – II (for Muslim Students)", creditHours: 1, category: "General Education", semesterNumber: 3 },
-  { code: "CS-104", title: "Data Structures", creditHours: 4, category: "Major", semesterNumber: 3 },
-  { code: "CS-105", title: "Database Systems", creditHours: 4, category: "Major", semesterNumber: 3 },
-  { code: "CS-106", title: "Operating Systems", creditHours: 4, category: "Major", semesterNumber: 3 },
+  { code: "CS-104", title: "Data Structures", creditHours: 4, category: "Core", semesterNumber: 3 },
+  { code: "CS-105", title: "Database Systems", creditHours: 4, category: "Core", semesterNumber: 3 },
+  { code: "CS-106", title: "Operating Systems", creditHours: 4, category: "Core", semesterNumber: 3 },
 
   // Semester IV — 17 credits
   { code: "GE-112", title: "Civics and Community Engagement", creditHours: 2, category: "General Education", semesterNumber: 4 },
   { code: "GE-113", title: "Ideology and Constitution of Pakistan", creditHours: 2, category: "General Education", semesterNumber: 4 },
   { code: "GE-114", title: "Entrepreneurship", creditHours: 2, category: "General Education", semesterNumber: 4 },
   { code: "GE-115", title: "Islamic Studies (Religious Education / Ethics for non-Muslim students)", creditHours: 2, category: "General Education", semesterNumber: 4 },
-  { code: "CS-107", title: "Software Engineering", creditHours: 3, category: "Major", semesterNumber: 4 },
-  { code: "CS-108", title: "Computer Organization & Architecture", creditHours: 3, category: "Major", semesterNumber: 4 },
-  { code: "CS-109", title: "Design & Analysis of Algorithms", creditHours: 3, category: "Major", semesterNumber: 4 },
+  { code: "CS-107", title: "Software Engineering", creditHours: 3, category: "Core", semesterNumber: 4 },
+  { code: "CS-108", title: "Computer Organization & Architecture", creditHours: 3, category: "Core", semesterNumber: 4 },
+  { code: "CS-109", title: "Design & Analysis of Algorithms", creditHours: 3, category: "Core", semesterNumber: 4 },
 
   // Semester V — 18 credits
-  { code: "CS-110", title: "Computer Networks", creditHours: 3, category: "Major", semesterNumber: 5 },
-  { code: "CS-111", title: "Information Security", creditHours: 3, category: "Major", semesterNumber: 5 },
-  { code: "CS-112", title: "Artificial Intelligence", creditHours: 3, category: "Major", semesterNumber: 5 },
-  { code: "CS-113", title: "Theory of Automata", creditHours: 3, category: "Major", semesterNumber: 5 },
+  { code: "CS-110", title: "Computer Networks", creditHours: 3, category: "Core", semesterNumber: 5 },
+  { code: "CS-111", title: "Information Security", creditHours: 3, category: "Core", semesterNumber: 5 },
+  { code: "CS-112", title: "Artificial Intelligence", creditHours: 3, category: "Core", semesterNumber: 5 },
+  { code: "CS-113", title: "Theory of Automata", creditHours: 3, category: "Core", semesterNumber: 5 },
   { code: "IDS-103", title: "IDS - III (institution-selected)", creditHours: 3, category: "IDS", semesterNumber: 5 },
   { code: "IDS-104", title: "IDS - IV (institution-selected)", creditHours: 3, category: "IDS", semesterNumber: 5 },
 
   // Semester VI — 15 credits
-  { code: "CS-114", title: "Cloud Computing", creditHours: 3, category: "Major", semesterNumber: 6 },
-  { code: "CS-ELEC-1", title: "Elective I (specialization)", creditHours: 3, category: "Major", semesterNumber: 6 },
-  { code: "CS-ELEC-2", title: "Elective II (specialization)", creditHours: 3, category: "Major", semesterNumber: 6 },
-  { code: "CS-ELEC-3", title: "Elective III (specialization)", creditHours: 3, category: "Major", semesterNumber: 6 },
-  { code: "CS-ELEC-4", title: "Elective IV (specialization)", creditHours: 3, category: "Major", semesterNumber: 6 },
+  { code: "CS-114", title: "Cloud Computing", creditHours: 3, category: "Core", semesterNumber: 6 },
+  { code: "CS-ELEC-1", title: "Elective I (specialization)", creditHours: 3, category: "Elective", semesterNumber: 6 },
+  { code: "CS-ELEC-2", title: "Elective II (specialization)", creditHours: 3, category: "Elective", semesterNumber: 6 },
+  { code: "CS-ELEC-3", title: "Elective III (specialization)", creditHours: 3, category: "Elective", semesterNumber: 6 },
+  { code: "CS-ELEC-4", title: "Elective IV (specialization)", creditHours: 3, category: "Elective", semesterNumber: 6 },
 
   // Semester VII — 15 credits
-  { code: "CS-ELEC-5", title: "Elective V (specialization)", creditHours: 3, category: "Major", semesterNumber: 7 },
-  { code: "CS-ELEC-6", title: "Elective VI (specialization)", creditHours: 3, category: "Major", semesterNumber: 7 },
-  { code: "CS-ELEC-7", title: "Elective VII (specialization)", creditHours: 3, category: "Major", semesterNumber: 7 },
-  { code: "CS-ELEC-8", title: "Elective VIII (specialization)", creditHours: 3, category: "Major", semesterNumber: 7 },
+  { code: "CS-ELEC-5", title: "Elective V (specialization)", creditHours: 3, category: "Elective", semesterNumber: 7 },
+  { code: "CS-ELEC-6", title: "Elective VI (specialization)", creditHours: 3, category: "Elective", semesterNumber: 7 },
+  { code: "CS-ELEC-7", title: "Elective VII (specialization)", creditHours: 3, category: "Elective", semesterNumber: 7 },
+  { code: "CS-ELEC-8", title: "Elective VIII (specialization)", creditHours: 3, category: "Elective", semesterNumber: 7 },
   { code: "CS-CERT", title: "Professional Certification", creditHours: 3, category: "Certification", semesterNumber: 7 },
 
   // Semester VIII — 9 credits

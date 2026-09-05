@@ -45,6 +45,7 @@ model User {
   instituteName      String? // set by Super User only, per-Chairman (this is a multi-tenant SaaS — each paying institution has its own)
   instituteLogo      String? @db.Text // base64 data URI, set by Super User only, per-Chairman
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
+  specialization     String?  // e.g. "Software Engineering", "AI", "Networks" — set by Coordinator, used to suggest a good fit for elective/specialization courses
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
   isActive           Boolean  @default(true)
@@ -417,6 +418,27 @@ model CourseGradeCutoff {
 
   @@unique([courseId, letter])
   @@index([courseId])
+}
+
+// A permanent snapshot of a course's section assignments for one specific
+// past semester — taken automatically right before a course gets re-offered
+// for a new term (which would otherwise overwrite offeredTermName/Year and
+// lose the historical record). This is what "download a previous semester's
+// assignments" reads from.
+model AssignmentSnapshot {
+  id             String   @id @default(cuid())
+  coordinatorId  String
+  courseLabel    String
+  courseType     String
+  batchLabel     String
+  termName       String
+  termYear       Int
+  instructorName String
+  sectionCount   Int
+  snapshotAt     DateTime @default(now())
+
+  @@index([coordinatorId])
+  @@index([termName, termYear])
 }
 
 model Course {

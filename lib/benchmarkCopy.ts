@@ -158,3 +158,47 @@ export async function copyBenchmarkIfAvailable(
   const result = await copyCourseContent(source.id, newCourseId);
   return result ? { sourceCourseId: source.id, ...result } : null;
 }
+
+/**
+ * Called at OFFERING time (not course-creation time) — finds the best prior
+ * occurrence of this same course to carry settings forward from, preferring
+ * a match on the SAME term type (this Fall from last Fall, this Spring from
+ * last Spring) over the most recent occurrence of any term type. Auto-assigns
+ * the matched instructor, and fills in content if the course has none yet.
+ */
+export async function carryOverFromMatchingSemester(courseId: string) {
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (!course || !course.offeredTermName) return null;
+
+  const allPriorOfferings = await prisma.course.findMany({
+    where: {
+      coordinatorId: course.coordinatorId,
+      id: { not: courseId },
+      isOffered: true,
+      OR: course.masterCourseId ? [{ masterCourseId: course.masterCourseId }] : [{ code: course.code }],
+    },
+    orderBy: [{ offeredTermYear: "desc" }],
+  });
+  if (allPriorOfferings.length === 0) return null;
+
+  // Prefer same term-type (Fall<-Fall, Spring<-Spring); otherwise the most recent of any type.
+  const sameTermMatch = allPriorOfferings.find((c) => c.offeredTermName === course.offeredTermName);
+  const match = sameTermMatch || allPriorOfferings[0];
+
+  const updates: any = {};
+  if (!course.instructorId && match.instructorId) updates.instructorId = match.instructorId;
+
+  if (Object.keys(updates).length > 0) await prisma.course.update({ where: { id: course.id }, data: updates });
+
+  const existingClos = await prisma.cLO.count({ where: { courseId: course.id, source: "SE" } });
+  let contentCopied = false;
+  if (existingClos === 0) {
+    const result = await copyCourseContent(match.id, course.id);
+    contentCopied = !!result;
+  }
+
+  return {
+    matchedCourseId: match.id, matchedTerm: `${match.offeredTermName} ${match.offeredTermYear}`,
+    sameTermType: !!sameTermMatch, instructorCarriedOver: !!updates.instructorId, contentCopied,
+  };
+}

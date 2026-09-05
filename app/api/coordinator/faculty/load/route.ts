@@ -19,6 +19,7 @@ export async function PUT(req: NextRequest) {
       normalLoad: body.normalLoad !== undefined ? parseInt(body.normalLoad, 10) : faculty.normalLoad,
       externalLoadCount: body.externalLoadCount !== undefined ? parseInt(body.externalLoadCount, 10) : faculty.externalLoadCount,
       externalLoadNote: body.externalLoadNote !== undefined ? body.externalLoadNote || null : faculty.externalLoadNote,
+      specialization: body.specialization !== undefined ? body.specialization || null : faculty.specialization,
     },
   });
 

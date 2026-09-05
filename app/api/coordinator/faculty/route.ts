@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       managedById: user.id,
       mustChangePassword: true,
       normalLoad: body.normalLoad ? parseInt(body.normalLoad, 10) : 3,
+      specialization: body.specialization || null,
     },
   });
 
