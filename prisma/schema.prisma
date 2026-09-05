@@ -68,6 +68,7 @@ model User {
   classDayModes      ClassDayMode[] @relation("ClassDayModeCoordinator")
   cqiRecords         CqiRecord[]  @relation("CqiChairman")
   semesterDates      SemesterDates[] @relation("SemesterDatesCoordinator")
+  gradingScale       GradingScale[]  @relation("GradingScaleCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
@@ -387,6 +388,37 @@ model PlatformSettings {
   nceacLogo     String? @db.Text // base64 data URI — the NCEAC accreditation seal
 }
 
+// Program-wide grading scale — which letter grades exist and their GPA
+// value, set exclusively by the Program Coordinator. Applies to every
+// course they manage.
+model GradingScale {
+  id            String @id @default(cuid())
+  coordinatorId String
+  coordinator   User   @relation("GradingScaleCoordinator", fields: [coordinatorId], references: [id])
+  letter        String // "A", "A-", "B+", etc.
+  gpaValue      Float
+  orderIndex    Int    @default(0) // highest grade first
+
+  @@unique([coordinatorId, letter])
+  @@index([coordinatorId])
+}
+
+// Per-course % cutoff for each letter grade — set by the Instructor
+// (starting from the computed mean/SD suggestion), with the Chairman able
+// to override for any course under their institution.
+model CourseGradeCutoff {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  letter      String
+  minPercent  Float
+  setById     String   // who last set/changed this (Instructor or Chairman)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([courseId, letter])
+  @@index([courseId])
+}
+
 model Course {
   id                  String   @id @default(cuid())
   code                String
@@ -457,6 +489,7 @@ model Course {
   guidanceComments    InstructorGuidanceComment[]
   cqiRecords          CqiRecord[]
   studentEnrollments  StudentEnrollment[]
+  gradeCutoffs        CourseGradeCutoff[]
   studentMarks        StudentMark[]
 
   @@unique([coordinatorId, batchId, code])

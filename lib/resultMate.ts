@@ -65,12 +65,22 @@ export async function computeResultMate(courseId: string) {
   const variance = totals.length > 1 ? totals.reduce((s, t) => s + (t - mean) ** 2, 0) / (totals.length - 1) : 0;
   const sd = Math.sqrt(variance);
 
-  function gradeFor(pct: number): string {
+  function suggestedGradeFor(pct: number): string {
     if (pct >= mean + sd) return "A";
     if (pct >= mean) return "B";
     if (pct >= mean - sd) return "C";
     if (pct >= mean - 2 * sd) return "D";
     return "F";
+  }
+
+  // If the Instructor (or Chairman override) has saved actual cutoffs for
+  // this course, those take priority over the live-computed suggestion.
+  const savedCutoffs = await prisma.courseGradeCutoff.findMany({ where: { courseId }, orderBy: { minPercent: "desc" } });
+  const cutoffsAreSet = savedCutoffs.length > 0;
+  function gradeFor(pct: number): string {
+    if (!cutoffsAreSet) return suggestedGradeFor(pct);
+    const match = savedCutoffs.find((c) => pct >= c.minPercent);
+    return match?.letter || savedCutoffs[savedCutoffs.length - 1]?.letter || suggestedGradeFor(pct);
   }
 
   const graded = rows.map((r) => ({ ...r, grade: gradeFor(r.totalPct) })).sort((a, b) => b.totalPct - a.totalPct);
@@ -90,6 +100,7 @@ export async function computeResultMate(courseId: string) {
   return {
     cloCodes, ploLabels, rows: graded, instruments: instrumentStats,
     stats: { mean: Math.round(mean * 10) / 10, sd: Math.round(sd * 10) / 10, count: totals.length },
+    cutoffsAreSet, savedCutoffs: savedCutoffs.map((c) => ({ letter: c.letter, minPercent: c.minPercent })),
   };
 }
 

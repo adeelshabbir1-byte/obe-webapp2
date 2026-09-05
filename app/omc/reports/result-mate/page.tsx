@@ -9,6 +9,7 @@ import Shell from "../../../../components/Shell";
 import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
+import GradeCutoffsForm from "../../../../components/GradeCutoffsForm";
 
 export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -31,6 +32,15 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const result = selectedCourseId ? await computeResultMate(selectedCourseId) : null;
+
+  const gradingScale = course ? await prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId }, orderBy: { orderIndex: "asc" } }) : [];
+  const canEditCutoffs = course && (
+    (user.role === "INSTRUCTOR" && course.instructorId === user.id) ||
+    user.role === "CHAIRMAN"
+  );
+  const cutoffApiEndpoint = course
+    ? (user.role === "CHAIRMAN" ? `/api/chairman/courses/${course.id}/grade-cutoffs` : `/api/instructor/courses/${course.id}/grade-cutoffs`)
+    : "";
 
   const gradeBadge: Record<string, string> = { A: "badge-ok", B: "badge-ok", C: "badge-warn", D: "badge-warn", F: "badge-no" };
 
@@ -74,8 +84,12 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Suggested Grade Cutoffs</h3>
-            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Computed from this class's mean/SD — editable via the actual grade boundaries you record for the course, this is a suggestion.</p>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>{result.cutoffsAreSet ? "Applied Grade Cutoffs" : "Suggested Grade Cutoffs"}</h3>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+              {result.cutoffsAreSet
+                ? "These are the actual cutoffs saved for this course — grades above are assigned using these, not the live computation."
+                : "Computed from this class's mean/SD — no cutoffs have been saved for this course yet, so grades above use this live suggestion."}
+            </p>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {[
                 { grade: "A", cutoff: result.stats.mean + result.stats.sd, label: "and above" },
@@ -91,6 +105,21 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
               ))}
             </div>
           </div>
+
+          {canEditCutoffs && course && (
+            <GradeCutoffsForm
+              courseId={course.id}
+              apiEndpoint={cutoffApiEndpoint}
+              gradingScale={gradingScale.map((s) => ({ letter: s.letter, gpaValue: s.gpaValue }))}
+              savedCutoffs={result.savedCutoffs}
+              suggestion={{
+                A: Math.round((result.stats.mean + result.stats.sd) * 10) / 10,
+                B: Math.round(result.stats.mean * 10) / 10,
+                C: Math.round((result.stats.mean - result.stats.sd) * 10) / 10,
+                D: Math.round((result.stats.mean - 2 * result.stats.sd) * 10) / 10,
+              }}
+            />
+          )}
 
           {result.instruments.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
