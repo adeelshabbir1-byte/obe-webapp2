@@ -2093,9 +2093,17 @@ ALTER TABLE "SemesterDates"
   ADD COLUMN IF NOT EXISTS "finalEndDate" TIMESTAMP(3);
 
 -- Best-effort carry-over of any previously-set single dates into the new
--- start-date columns (end date left blank — old data had no range info).
-UPDATE "SemesterDates" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
-UPDATE "SemesterDates" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+-- start-date columns — only if the old columns still exist (safe to re-run
+-- even after they've already been migrated and dropped once).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'SemesterDates' AND column_name = 'midtermDate') THEN
+    UPDATE "SemesterDates" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'SemesterDates' AND column_name = 'finalDate') THEN
+    UPDATE "SemesterDates" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+  END IF;
+END $$;
 ALTER TABLE "SemesterDates" DROP COLUMN IF EXISTS "midtermDate";
 ALTER TABLE "SemesterDates" DROP COLUMN IF EXISTS "finalDate";
 
@@ -2105,8 +2113,15 @@ ALTER TABLE "Course"
   ADD COLUMN IF NOT EXISTS "finalStartDate" TIMESTAMP(3),
   ADD COLUMN IF NOT EXISTS "finalEndDate" TIMESTAMP(3);
 
-UPDATE "Course" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
-UPDATE "Course" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Course' AND column_name = 'midtermDate') THEN
+    UPDATE "Course" SET "midtermStartDate" = "midtermDate" WHERE "midtermDate" IS NOT NULL AND "midtermStartDate" IS NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Course' AND column_name = 'finalDate') THEN
+    UPDATE "Course" SET "finalStartDate" = "finalDate" WHERE "finalDate" IS NOT NULL AND "finalStartDate" IS NULL;
+  END IF;
+END $$;
 ALTER TABLE "Course" DROP COLUMN IF EXISTS "midtermDate";
 ALTER TABLE "Course" DROP COLUMN IF EXISTS "finalDate";
 -- Run in Supabase SQL Editor. Adds the 3-tier grading module: Program

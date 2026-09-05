@@ -35,6 +35,10 @@ export default async function MarksEntryPage({ params }: { params: { courseId: s
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
       <InstructorCourseSubNav courseId={course.id} active="marks" code={course.code} title={course.title} />
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Marks Entry</h2>
+      <div className="card" style={{ borderColor: "var(--brass)" }}>
+        <p style={{ fontSize: 12.5, marginBottom: 8 }}>Once marks are entered, view computed grades, CLO/PLO attainment, and set grade cutoffs for this course.</p>
+        <a href={`/omc/reports/result-mate?courseId=${course.id}`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>View Results for This Course</a>
+      </div>
       <MarksEntryManager
         courseId={course.id}
         instruments={instruments.map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))}
