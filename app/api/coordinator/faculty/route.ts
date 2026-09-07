@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       mustChangePassword: true,
       normalLoad: body.normalLoad ? parseInt(body.normalLoad, 10) : 3,
       specialization: body.specialization || null,
+      secondaryRole: body.role === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null,
     },
   });
 

@@ -66,7 +66,7 @@ export async function GET() {
   rows = rows.sort((a, b) => typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label));
 
   const instructors = await prisma.user.findMany({
-    where: { role: "INSTRUCTOR", managedById: { in: coordinatorIds } },
+    where: { managedById: { in: coordinatorIds }, OR: [{ role: "INSTRUCTOR" }, { role: "SUBJECT_EXPERT", secondaryRole: "INSTRUCTOR" }] },
   });
 
   // Historical teaching pattern per instructor, across every semester ever

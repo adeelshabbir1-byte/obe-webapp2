@@ -16,5 +16,11 @@ export default async function Dashboard() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
+
+  // A dual-capable Subject Expert who hasn't picked a role for this session yet.
+  if (user.rawRole === "SUBJECT_EXPERT" && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
+    redirect("/choose-role");
+  }
+
   redirect(ROLE_HOME[user.role] || "/login");
 }

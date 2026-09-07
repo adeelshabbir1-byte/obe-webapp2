@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeTopicVariance } from "../../../../lib/varianceReport";
@@ -16,6 +17,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
+  if (!(await canViewReport(user, "omc.reports.course-monitoring"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
   let courses = await prisma.course.findMany({

@@ -8,6 +8,8 @@ const NAV = [
   { href: "/admin/users", label: "Chairman Accounts" },
   { href: "/admin/curricula", label: "Master Curricula" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
+  { href: "/admin/platform-settings", label: "Platform Settings" },
+  { href: "/admin/report-bundles", label: "Report Bundles" },
 ];
 
 export default async function CurriculumMigrationPage({ searchParams }: { searchParams: { fromId?: string; toId?: string } }) {

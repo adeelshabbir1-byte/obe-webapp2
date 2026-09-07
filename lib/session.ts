@@ -48,5 +48,20 @@ export async function getAuthenticatedUser() {
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
   const { passwordHash, ...safeUser } = session.user;
-  return { ...safeUser, mfaVerified: session.mfaVerified };
+  // A dual-capable Subject Expert's chosen role for this session overrides
+  // their stored role everywhere else in the app checks `user.role` —
+  // rawRole/secondaryRole stay available for the few places (onboarding,
+  // the choice screen itself, dropdowns) that need the true picture.
+  const effectiveRole = session.activeRole || safeUser.role;
+  return { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified };
+}
+
+/** Called from the role-choice screen once a dual-capable person picks
+ * which role to act as for this session. */
+export async function setActiveRole(role: string) {
+  const raw = cookies().get(SESSION_COOKIE)?.value;
+  if (!raw) return false;
+  const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
+  const result = await prisma.session.updateMany({ where: { tokenHash }, data: { activeRole: role } });
+  return result.count > 0;
 }

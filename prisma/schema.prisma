@@ -46,6 +46,7 @@ model User {
   instituteLogo      String? @db.Text // base64 data URI, set by Super User only, per-Chairman
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
   specialization     String?  // e.g. "Software Engineering", "AI", "Networks" — set by Coordinator, used to suggest a good fit for elective/specialization courses
+  secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
   isActive           Boolean  @default(true)
@@ -89,6 +90,7 @@ model Session {
   ipAddress  String?
   userAgent  String?
   mfaVerified Boolean @default(true) // false only while an MFA-enabled user's login is pending code entry
+  activeRole  String? // which role a dual-capable person (Subject Expert who can also Instruct) chose for this session
 
   @@index([userId])
 }

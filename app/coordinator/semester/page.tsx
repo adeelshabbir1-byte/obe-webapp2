@@ -46,7 +46,10 @@ export default async function CoordinatorSemesterPage() {
     include: { batch: true },
   });
 
-  const instructors = await prisma.user.findMany({ where: { role: "INSTRUCTOR", managedById: user.id }, orderBy: { name: "asc" } });
+  const instructors = await prisma.user.findMany({
+    where: { managedById: user.id, OR: [{ role: "INSTRUCTOR" }, { role: "SUBJECT_EXPERT", secondaryRole: "INSTRUCTOR" }] },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>

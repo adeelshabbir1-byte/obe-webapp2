@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     user: {
       username: result.user.username,
       role: result.user.role,
+      secondaryRole: result.user.secondaryRole,
       name: result.user.name,
       mustChangePassword: result.user.mustChangePassword,
       mfaEnabled: result.user.mfaEnabled,

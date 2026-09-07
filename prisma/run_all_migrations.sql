@@ -2205,6 +2205,11 @@ CREATE TABLE IF NOT EXISTS "ProgramProfile" (
   "peos" TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "ProgramProfile_coordinatorId_degreeProgram_key" ON "ProgramProfile"("coordinatorId", "degreeProgram");
+-- Run in Supabase SQL Editor. Adds dual-role capability: a Subject Expert
+-- can also be assigned/act as an Instructor on the same account.
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "secondaryRole" TEXT;
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "activeRole" TEXT;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

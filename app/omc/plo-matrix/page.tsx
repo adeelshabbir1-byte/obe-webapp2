@@ -31,6 +31,9 @@ export default async function OmcPloMatrixPage() {
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       include: { ploMappings: true },
     });
+    const assignerIds = Array.from(new Set(courses.flatMap((c) => c.ploMappings.map((m) => m.assignedById)).filter((id): id is string => !!id)));
+    const assigners = assignerIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: assignerIds } } }) : [];
+    const assignerNameById = new Map(assigners.map((a) => [a.id, a.name]));
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
     if (courses.length === 0 && plos.length === 0) continue;
     programs.push({
@@ -39,6 +42,7 @@ export default async function OmcPloMatrixPage() {
       courses: courses.map((c) => ({
         id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
         mappedPloIds: c.ploMappings.map((m) => m.ploId),
+        assignedByPloId: Object.fromEntries(c.ploMappings.map((m) => [m.ploId, m.assignedById ? assignerNameById.get(m.assignedById) || null : null])),
       })),
     });
   }

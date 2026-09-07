@@ -126,6 +126,23 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
     setLoading(false); router.refresh();
   }
 
+  async function splitIntoLab(courseId: string, currentCredit: number) {
+    const input = prompt(`How many of the ${currentCredit} credit hours are the Lab component? (The rest stay as the theory course.)`, "1");
+    if (input === null) return;
+    const labCreditHours = parseInt(input, 10);
+    if (isNaN(labCreditHours)) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/courses/${courseId}/split-lab`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labCreditHours }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   if (batches.length === 0) {
     return (
       <div className="card" style={{ borderColor: "var(--rust)" }}>
@@ -241,7 +258,12 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
                     {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
                   </select>
                 </td>
-                <td><button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>
+                <td>
+                  <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
+                  {c.courseType !== "Lab" && (
+                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Split into Lab</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

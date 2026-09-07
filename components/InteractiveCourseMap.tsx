@@ -91,7 +91,13 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
   function rowLoad(semesterNumber: number, excludeId?: string, includeCourse?: Course) {
     const rowCourses = (byRow[semesterNumber] || []).filter((c) => c.id !== excludeId);
     const all = includeCourse ? [...rowCourses, includeCourse] : rowCourses;
-    return { credit: all.reduce((s, c) => s + c.creditHours, 0), contact: all.reduce((s, c) => s + contactHoursFor(c), 0), count: all.length };
+    const labCourses = all.filter((c) => c.courseType === "Lab");
+    return {
+      credit: all.reduce((s, c) => s + c.creditHours, 0),
+      labCredit: labCourses.reduce((s, c) => s + c.creditHours, 0),
+      contact: all.reduce((s, c) => s + contactHoursFor(c), 0),
+      count: all.length,
+    };
   }
 
   return (
@@ -100,7 +106,7 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
           {mode === "prereq"
-            ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. Click a linked course again to remove that link.")
+            ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
             : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there.")}
         </p>
       </div>
@@ -123,8 +129,11 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
                   >
                     Sem {sem}
                   </text>
-                  <text x={10} y={TOP_MARGIN + (sem - 1) * (BOX_H + V_GAP) + BOX_H / 2 + 12} fontSize={9.5} fill="var(--slate)">
-                    {load.credit}cr / {load.contact}ct
+                  <text x={10} y={TOP_MARGIN + (sem - 1) * (BOX_H + V_GAP) + BOX_H / 2 + 12} fontSize={9} fill="var(--slate)">
+                    Total: {load.credit}cr / {load.contact}ct
+                  </text>
+                  <text x={10} y={TOP_MARGIN + (sem - 1) * (BOX_H + V_GAP) + BOX_H / 2 + 24} fontSize={9} fill="var(--slate)">
+                    Lab: {load.labCredit}cr
                   </text>
                 </g>
               );
@@ -144,11 +153,17 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
               if (!pos) return null;
               const isSelected = selectedId === c.id;
               return (
-                <g key={c.id} onClick={() => onCourseClick(c)} style={{ cursor: loading ? "wait" : "pointer" }}>
+                <g key={c.id} style={{ cursor: loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType)} opacity={c.isOffered ? 0.5 : 0.9}
-                    stroke={isSelected ? "#1E1B4B" : "none"} strokeWidth={isSelected ? 3 : 0} />
-                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">{c.code}</text>
-                  <text x={pos.x + BOX_W / 2} y={pos.y + 40} textAnchor="middle" fontSize={10} fill="#fff">
+                    stroke={isSelected ? "#1E1B4B" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
+                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
+                  {mode === "prereq" && c.prerequisiteCourseId && (
+                    <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>
+                      <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#B1512E" />
+                      <text x={pos.x + BOX_W - 10} y={pos.y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">×</text>
+                    </g>
+                  )}
+                  <text x={pos.x + BOX_W / 2} y={pos.y + 40} textAnchor="middle" fontSize={10} fill="#fff" onClick={() => onCourseClick(c)}>
                     {c.title.length > 22 ? c.title.slice(0, 20) + "…" : c.title}
                   </text>
                 </g>

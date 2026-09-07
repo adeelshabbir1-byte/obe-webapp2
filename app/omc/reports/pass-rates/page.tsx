@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeCloPloPassRates } from "../../../../lib/resultMate";
@@ -15,6 +16,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
+  if (!(await canViewReport(user, "omc.reports.pass-rates"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const courses = await prisma.course.findMany({

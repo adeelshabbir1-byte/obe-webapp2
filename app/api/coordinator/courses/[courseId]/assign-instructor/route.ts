@@ -19,7 +19,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   if (instructorId) {
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
-    if (!instructor || instructor.role !== "INSTRUCTOR" || instructor.managedById !== user.id) {
+    const isValidInstructor = instructor && instructor.managedById === user.id && (instructor.role === "INSTRUCTOR" || (instructor.role === "SUBJECT_EXPERT" && instructor.secondaryRole === "INSTRUCTOR"));
+    if (!isValidInstructor) {
       return NextResponse.json({ error: "invalid instructor" }, { status: 400 });
     }
   }

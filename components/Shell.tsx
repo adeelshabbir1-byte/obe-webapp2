@@ -20,13 +20,23 @@ export default function Shell({
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null);
   const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
   const [nceacLogo, setNceacLogo] = useState<string | null>(null);
+  const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/institute-info").then((r) => r.json()).then((d) => {
       setInstituteName(d.instituteName); setInstituteLogo(d.instituteLogo);
       setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
     }).catch(() => {});
+    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); }).catch(() => {});
   }, []);
+
+  async function switchRole() {
+    if (!roleSwitch) return;
+    const nextRole = roleSwitch.activeRole === "INSTRUCTOR" ? "SUBJECT_EXPERT" : "INSTRUCTOR";
+    await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
+    router.push("/dashboard");
+    router.refresh();
+  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -61,6 +71,11 @@ export default function Shell({
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
           <a href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</a>
+          {roleSwitch && (
+            <button onClick={switchRole} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: "pointer", padding: 0, textAlign: "left" }}>
+              Switch to {roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}
+            </button>
+          )}
           <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
             Sign out
           </button>

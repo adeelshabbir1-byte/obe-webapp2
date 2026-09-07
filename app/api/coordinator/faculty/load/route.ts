@@ -20,6 +20,7 @@ export async function PUT(req: NextRequest) {
       externalLoadCount: body.externalLoadCount !== undefined ? parseInt(body.externalLoadCount, 10) : faculty.externalLoadCount,
       externalLoadNote: body.externalLoadNote !== undefined ? body.externalLoadNote || null : faculty.externalLoadNote,
       specialization: body.specialization !== undefined ? body.specialization || null : faculty.specialization,
+      secondaryRole: body.secondaryRole !== undefined ? (faculty.role === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null) : faculty.secondaryRole,
     },
   });
 

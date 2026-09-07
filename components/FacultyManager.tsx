@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null };
+type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; secondaryRole: string | null };
 
 export default function FacultyManager({ initialFaculty }: { initialFaculty: Faculty[] }) {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         body: JSON.stringify({
           name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"),
           role: fd.get("role"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
+          secondaryRole: fd.get("alsoInstructor") === "on" ? "INSTRUCTOR" : null,
         }),
       });
       const data = await res.json();
@@ -37,7 +38,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     try {
       const res = await fetch("/api/coordinator/faculty/load", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote"), specialization: fd.get("specialization") }),
+        body: JSON.stringify({ userId, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote"), specialization: fd.get("specialization"), secondaryRole: fd.get("alsoInstructorEdit") === "on" ? "INSTRUCTOR" : null }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -62,6 +63,11 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                       <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Specialization</label>
                       <input name="specialization" defaultValue={f.specialization || ""} placeholder="e.g. Software Engineering" style={{ width: 160, padding: "5px 6px", border: "1px solid var(--line)" }} />
                     </div>
+                    {f.role === "SUBJECT_EXPERT" && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5 }}>
+                        <input type="checkbox" name="alsoInstructorEdit" defaultChecked={f.secondaryRole === "INSTRUCTOR"} /> Can also be Instructor
+                      </label>
+                    )}
                     <div>
                       <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Normal Load</label>
                       <input name="normalLoad" type="number" min={0} defaultValue={f.normalLoad} style={{ width: 60, padding: "5px 6px", border: "1px solid var(--line)" }} />
@@ -82,7 +88,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
             ) : (
               <tr key={f.id}>
                 <td>{f.username}</td><td>{f.name}</td>
-                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"}</span></td>
+                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}</td>
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
@@ -107,6 +113,9 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                 <option value="SUBJECT_EXPERT">Subject Expert</option>
                 <option value="INSTRUCTOR">Course Instructor</option>
               </select>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 400, marginTop: 6 }}>
+                <input type="checkbox" name="alsoInstructor" /> If Subject Expert: can also be assigned as Instructor
+              </label>
             </div>
             <div className="field">
               <label>Normal Load (courses/labs per semester)</label>

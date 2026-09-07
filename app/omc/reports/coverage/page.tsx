@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { getCoverageReport } from "../../../../lib/reports";
 import { courseTypeColor } from "../../../../lib/courseTypeColors";
@@ -25,6 +26,7 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (!canViewReports(user.role)) redirect("/dashboard");
+  if (!(await canViewReport(user, "omc.reports.coverage"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });

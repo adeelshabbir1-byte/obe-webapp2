@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[] };
+type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[]; assignedByPloId?: Record<string, string | null> };
 type Program = { coordinatorId: string; coordinatorName: string; plos: Plo[]; courses: Course[] };
 
 type SortKey = "code" | "type" | "semester";
@@ -89,8 +89,9 @@ export default function PloMatrix({ programs }: { programs: Program[] }) {
                       {prog.plos.map((p) => {
                         const checked = c.mappedPloIds.includes(p.id);
                         const key = c.id + p.id;
+                        const assignedBy = c.assignedByPloId?.[p.id];
                         return (
-                          <td key={p.id} style={{ textAlign: "center" }}>
+                          <td key={p.id} style={{ textAlign: "center" }} title={checked && assignedBy ? `Assigned by ${assignedBy}` : undefined}>
                             <input
                               type="checkbox" checked={checked} disabled={busyKey === key}
                               onChange={(e) => toggle(c.id, p.id, e.target.checked)}
