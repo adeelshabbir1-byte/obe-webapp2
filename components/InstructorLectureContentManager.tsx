@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
 type Clo = { id: string; code: string };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string; rescheduledNote: string | null };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string; rescheduledNote: string | null; holidayConflict?: string | null };
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
 
@@ -26,7 +26,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
     } catch (err: any) { setError("Unexpected error: " + err.message); setAutoFilling(false); }
   }
 
-  async function saveField(row: Row, patch: Partial<{ topic: string; subtopic: string; cloId: string; bloomLevel: string; actualDate: string }>) {
+  async function saveField(row: Row, patch: Partial<{ topic: string; subtopic: string; cloId: string; bloomLevel: string; actualDate: string }>, revertEl?: HTMLInputElement, revertValue?: string) {
     setBusyRow(row.id); setError("");
     try {
       const res = await fetch(`/api/instructor/courses/${courseId}/lecture/${row.id}`, {
@@ -38,7 +38,11 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        if (revertEl) { revertEl.value = revertValue || ""; revertEl.style.borderColor = "var(--rust)"; setTimeout(() => { revertEl.style.borderColor = ""; }, 1500); }
+        setBusyRow(null); return;
+      }
       setBusyRow(null); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
@@ -82,11 +86,12 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                     onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
                     style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                 </td>
-                <td style={{ padding: 0, background: r.rescheduledNote ? "#FFE4DC" : undefined }} title={r.rescheduledNote || undefined}>
+                <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FFE4DC" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
                   <input type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
-                    onBlur={(e) => { if (e.target.value !== (r.actualDate ? r.actualDate.slice(0, 10) : "")) saveField(r, { actualDate: e.target.value }); }}
+                    onBlur={(e) => { const prev = r.actualDate ? r.actualDate.slice(0, 10) : ""; if (e.target.value !== prev) saveField(r, { actualDate: e.target.value }, e.target, prev); }}
                     style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />
                   {r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>Rescheduled</div>}
+                  {r.holidayConflict && !r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>⚠ Holiday: {r.holidayConflict}</div>}
                 </td>
                 <td style={{ padding: 0 }}>
                   <select defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}

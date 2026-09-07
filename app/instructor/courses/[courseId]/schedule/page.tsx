@@ -20,12 +20,14 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
 
   await ensureInstructorCopy(course.id);
 
-  const [instructorRows, seRows, clos] = await Promise.all([
+  const [instructorRows, seRows, clos, holidays] = await Promise.all([
     prisma.lectureRow.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" } }),
     prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" } }),
     prisma.cLO.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { code: "asc" } }),
+    prisma.holiday.findMany({ where: { coordinatorId: course.coordinatorId } }),
   ]);
   const seTopicByLecture = new Map(seRows.map((r) => [r.lectureNumber, r.topic]));
+  const holidayLabelByDate = new Map(holidays.map((h) => [h.date.toISOString().slice(0, 10), h.label]));
 
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
@@ -38,6 +40,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
           actualDate: r.actualDate ? r.actualDate.toISOString() : null,
           seTopic: seTopicByLecture.get(r.lectureNumber) || "",
           rescheduledNote: r.rescheduledNote,
+          holidayConflict: r.actualDate ? holidayLabelByDate.get(r.actualDate.toISOString().slice(0, 10)) || null : null,
         }))}
         clos={clos.map((c) => ({ id: c.id, code: c.code }))}
       />
