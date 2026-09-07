@@ -17,7 +17,7 @@ export default function MarksEntryManager({ courseId, instruments, students, has
   const [rollNumbersToAdd, setRollNumbersToAdd] = useState("");
   const [addResult, setAddResult] = useState("");
 
-  async function saveScore(studentId: string, instrumentId: string, value: string) {
+  async function saveScore(studentId: string, instrumentId: string, value: string, inputEl: HTMLInputElement, previousValue: number | null) {
     const key = studentId + instrumentId;
     setBusyCell(key); setError("");
     try {
@@ -25,7 +25,14 @@ export default function MarksEntryManager({ courseId, instruments, students, has
         method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, instrumentId, score: value }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        inputEl.value = previousValue !== null ? String(previousValue) : ""; // the box was showing an unsaved number — revert it
+        inputEl.style.borderColor = "var(--rust)";
+        setTimeout(() => { inputEl.style.borderColor = ""; }, 1500);
+        setBusyCell(null);
+        return;
+      }
       setBusyCell(null); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
@@ -104,7 +111,7 @@ export default function MarksEntryManager({ courseId, instruments, students, has
                       <td key={i.id} style={{ textAlign: "center" }}>
                         <input
                           type="number" min={0} max={i.maxScore} defaultValue={s.marks[i.id] ?? ""} disabled={busyCell === key}
-                          onBlur={(e) => { const v = e.target.value; if (v !== "" && Number(v) !== s.marks[i.id]) saveScore(s.id, i.id, v); }}
+                          onBlur={(e) => { const v = e.target.value; if (v !== "" && Number(v) !== s.marks[i.id]) saveScore(s.id, i.id, v, e.target, s.marks[i.id] ?? null); }}
                           style={{ width: 50, padding: "4px 5px", border: "1px solid var(--line)", textAlign: "center", fontSize: 12 }}
                         />
                       </td>
