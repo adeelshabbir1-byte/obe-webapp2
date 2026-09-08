@@ -21,12 +21,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     if (clash) return NextResponse.json({ error: "another course in this batch already uses this code" }, { status: 409 });
   }
 
+  const hasLab = body.hasLab !== undefined ? !!body.hasLab : course.hasLab;
+  const zeroingLab = course.hasLab && !hasLab; // was true, now being turned off
+
   const updated = await prisma.course.update({
     where: { id: course.id },
     data: {
       code: body.code, title: body.title, creditHours: parseInt(body.creditHours, 10),
       courseType: body.courseType || course.courseType,
       semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
+      hasLab,
+      ...(zeroingLab ? { labPct: 0, instructorLabPct: 0 } : {}),
     },
   });
 

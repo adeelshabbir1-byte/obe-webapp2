@@ -2210,6 +2210,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "ProgramProfile_coordinatorId_degreeProgram_ke
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "secondaryRole" TEXT;
 ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "activeRole" TEXT;
+-- Run in Supabase SQL Editor. Adds hasLab to Course — when false, Lab %
+-- is locked to 0 in weight-setting (Weight Policy compliance checks skip
+-- the lab category for these courses too).
+
+ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "hasLab" BOOLEAN NOT NULL DEFAULT true;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

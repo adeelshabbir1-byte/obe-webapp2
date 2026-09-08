@@ -501,6 +501,7 @@ model Course {
   title               String
   creditHours         Int
   courseType          String   @default("Core") // Core | Elective | Lab | IDS | General Education | Capstone Project | Field Experience
+  hasLab              Boolean  @default(true) // whether this course has a lab component — when false, Lab % is locked to 0 in weight-setting
   semesterNumber      Int?     // 1..8, which semester this is offered in
   coordinatorId       String
   coordinator         User     @relation("CourseCoordinator", fields: [coordinatorId], references: [id])

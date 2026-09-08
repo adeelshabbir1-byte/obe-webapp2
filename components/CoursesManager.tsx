@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
-  prerequisiteCourseId: string | null; batchId: string | null;
+  prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -100,6 +100,7 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
         body: JSON.stringify({
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           courseType: fd.get("courseType"), semesterNumber: fd.get("semesterNumber") || null,
+          hasLab: fd.get("hasLab") === "on",
         }),
       });
       const data = await res.json();
@@ -230,6 +231,9 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
                       {COURSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <input name="semesterNumber" type="number" min={1} max={8} defaultValue={c.semesterNumber ?? ""} placeholder="Sem" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+                      <input type="checkbox" name="hasLab" defaultChecked={c.hasLab} /> Has Lab Component
+                    </label>
                     <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
                     <button type="button" onClick={() => setEditingId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
                   </form>

@@ -12,7 +12,7 @@ export async function getPolicyForCourse(chairmanId: string | null, courseType: 
 }
 
 /** Returns the list of fields that fall outside the policy's range, empty if compliant or no policy set. */
-export function checkPolicyCompliance(weights: WeightValues, policy: Awaited<ReturnType<typeof getPolicyForCourse>>): string[] {
+export function checkPolicyCompliance(weights: WeightValues, policy: Awaited<ReturnType<typeof getPolicyForCourse>>, hasLab: boolean = true): string[] {
   if (!policy) return [];
   const violations: string[] = [];
   const pairs: [keyof WeightValues, string][] = [
@@ -20,6 +20,7 @@ export function checkPolicyCompliance(weights: WeightValues, policy: Awaited<Ret
     ["labPct", "lab"], ["midtermPct", "midterm"], ["finalPct", "final"],
   ];
   for (const [field, key] of pairs) {
+    if (key === "lab" && !hasLab) continue; // no lab component on this course — 0% is correct, not a violation
     const val = weights[field];
     const min = (policy as any)[`${key}Min`];
     const max = (policy as any)[`${key}Max`];

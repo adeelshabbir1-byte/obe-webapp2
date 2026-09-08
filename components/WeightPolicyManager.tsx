@@ -15,10 +15,17 @@ type Policy = {
   finalMin: number; finalMax: number; finalMinCount: number;
 };
 
-const COMPONENTS: { key: string; label: string }[] = [
-  { key: "assignment", label: "Assignment" }, { key: "quiz", label: "Quiz" }, { key: "project", label: "Project" },
-  { key: "lab", label: "Lab" }, { key: "midterm", label: "Midterm" }, { key: "final", label: "Final" },
+const COMPONENTS: { key: string; label: string; color: string }[] = [
+  { key: "assignment", label: "Assignment", color: "#2563EB" },
+  { key: "quiz", label: "Quiz", color: "#16A34A" },
+  { key: "project", label: "Project", color: "#7C3AED" },
+  { key: "lab", label: "Lab", color: "#EA580C" },
+  { key: "midterm", label: "Midterm", color: "#DB2777" },
+  { key: "final", label: "Final", color: "#CA8A04" },
 ];
+const MIN_BG = "#DBEAFE";   // light blue — every Min % cell
+const MAX_BG = "#DCFCE7";   // light green — every Max % cell
+const COUNT_BG = "#FEF3C7"; // light amber — every # Min (minimum count) cell
 
 export default function WeightPolicyManager({ initialPolicies }: { initialPolicies: Policy[] }) {
   const router = useRouter();
@@ -58,16 +65,16 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
           <tr>
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
-              <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: "var(--surface-1, #E8E6FB)" }}>{c.label}</th>
+              <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (
               <Fragment key={c.key}>
-                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 500 }}>Min %</th>
-                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 500 }}>Max %</th>
-                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 500 }}># Min</th>
+                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 600, background: MIN_BG }}>Min %</th>
+                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 600, background: MAX_BG }}>Max %</th>
+                <th style={{ border: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, fontWeight: 600, background: COUNT_BG }}># Min</th>
               </Fragment>
             ))}
           </tr>
@@ -81,13 +88,13 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
               </td>
               {COMPONENTS.map((c) => (
                 <Fragment key={c.key}>
-                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center" }}>
+                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center", background: `${MIN_BG}80` }}>
                     {cellInput(`${p.courseType}-${c.key}-min`, (p as any)[`${c.key}Min`], 42)}
                   </td>
-                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center" }}>
+                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center", background: `${MAX_BG}80` }}>
                     {cellInput(`${p.courseType}-${c.key}-max`, (p as any)[`${c.key}Max`], 42)}
                   </td>
-                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center" }}>
+                  <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center", background: `${COUNT_BG}80` }}>
                     {cellInput(`${p.courseType}-${c.key}-count`, (p as any)[`${c.key}MinCount`], 36)}
                   </td>
                 </Fragment>

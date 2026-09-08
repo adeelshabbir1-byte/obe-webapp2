@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const courseWithCoordinator = await prisma.course.findUnique({ where: { id: course.id }, include: { coordinator: true } });
   const policy = await getPolicyForCourse(courseWithCoordinator?.coordinator.managedById || null, course.courseType);
-  const violations = checkPolicyCompliance(vals as any, policy);
+  const violations = checkPolicyCompliance(vals as any, policy, course.hasLab);
 
   if (violations.length > 0) {
     // Out of policy range — don't apply directly, same as the SE's flow.

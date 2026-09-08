@@ -19,7 +19,7 @@ const ROWS: { key: keyof Weights; label: string; minKey: string; maxKey: string 
   { key: "finalPct", label: "Final", minKey: "finalMin", maxKey: "finalMax" },
 ];
 
-export default function InstructorWeightsForm({ courseId, current, sePlanned, policy }: { courseId: string; current: Weights; sePlanned: Weights; policy: Policy }) {
+export default function InstructorWeightsForm({ courseId, current, sePlanned, policy, hasLab }: { courseId: string; current: Weights; sePlanned: Weights; policy: Policy; hasLab: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
@@ -125,14 +125,15 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
             {ROWS.map((r) => {
               const min = policy ? (policy as any)[r.minKey] : null;
               const max = policy ? (policy as any)[r.maxKey] : null;
+              const isLabLocked = r.key === "labPct" && !hasLab;
               return (
-                <tr key={r.key}>
-                  <td style={{ fontWeight: 600 }}>{r.label}</td>
-                  <td style={{ color: "var(--slate)" }}>{min !== null ? `${min}%` : "—"}</td>
-                  <td style={{ color: "var(--slate)" }}>{max !== null ? `${max}%` : "—"}</td>
-                  <td style={{ color: "var(--slate)" }}>{sePlanned[r.key]}%</td>
+                <tr key={r.key} style={isLabLocked ? { opacity: 0.55 } : undefined}>
+                  <td style={{ fontWeight: 600 }}>{r.label}{isLabLocked && <span style={{ fontWeight: 400, fontSize: 10.5, color: "var(--slate)" }}> (no lab component)</span>}</td>
+                  <td style={{ color: "var(--slate)" }}>{isLabLocked ? "—" : (min !== null ? `${min}%` : "—")}</td>
+                  <td style={{ color: "var(--slate)" }}>{isLabLocked ? "—" : (max !== null ? `${max}%` : "—")}</td>
+                  <td style={{ color: "var(--slate)" }}>{isLabLocked ? "—" : `${sePlanned[r.key]}%`}</td>
                   <td>
-                    <input name={r.key} type="number" min={0} max={100} defaultValue={current[r.key]} style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)" }} />
+                    <input name={r.key} type="number" min={0} max={100} defaultValue={isLabLocked ? 0 : current[r.key]} disabled={isLabLocked} readOnly={isLabLocked} style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)", background: isLabLocked ? "var(--paper)" : undefined }} />
                   </td>
                 </tr>
               );

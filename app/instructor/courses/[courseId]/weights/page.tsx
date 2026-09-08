@@ -36,6 +36,7 @@ export default async function InstructorWeightsPage({ params }: { params: { cour
           midtermPct: updated.instructorMidtermPct ?? updated.midtermPct, finalPct: updated.instructorFinalPct ?? updated.finalPct,
         }}
         sePlanned={{ assignmentPct: updated.assignmentPct, quizPct: updated.quizPct, projectPct: updated.projectPct, labPct: updated.labPct, midtermPct: updated.midtermPct, finalPct: updated.finalPct }}
+        hasLab={updated.hasLab}
         policy={policy ? {
           assignmentMin: policy.assignmentMin, assignmentMax: policy.assignmentMax,
           quizMin: policy.quizMin, quizMax: policy.quizMax,
