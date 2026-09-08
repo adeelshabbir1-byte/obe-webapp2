@@ -25,18 +25,25 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
   const [ok, setOk] = useState(false);
   const [pending, setPending] = useState<{ violations: string[]; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState<{ values: Weights; violations: string[] } | null>(null);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true); setError(""); setOk(false); setPending(null);
-    const fd = new FormData(e.currentTarget);
+  function checkViolations(values: Weights): string[] {
+    if (!policy) return [];
+    const violations: string[] = [];
+    for (const r of ROWS) {
+      const min = (policy as any)[r.minKey], max = (policy as any)[r.maxKey];
+      const v = values[r.key];
+      if (v < min || v > max) violations.push(`${r.label}: ${v}% is outside the allowed ${min}–${max}%`);
+    }
+    return violations;
+  }
+
+  async function submitValues(values: Weights) {
+    setLoading(true); setError(""); setOk(false); setPending(null); setConfirming(null);
     try {
       const res = await fetch(`/api/instructor/courses/${courseId}/weights`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentPct: fd.get("assignmentPct"), quizPct: fd.get("quizPct"), projectPct: fd.get("projectPct"),
-          labPct: fd.get("labPct"), midtermPct: fd.get("midtermPct"), finalPct: fd.get("finalPct"),
-        }),
+        body: JSON.stringify(values),
       });
       const data = await res.json();
       if (res.status === 202 && data.pendingApproval) {
@@ -49,6 +56,22 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(""); setOk(false); setPending(null);
+    const fd = new FormData(e.currentTarget);
+    const values: Weights = {
+      assignmentPct: Number(fd.get("assignmentPct")), quizPct: Number(fd.get("quizPct")), projectPct: Number(fd.get("projectPct")),
+      labPct: Number(fd.get("labPct")), midtermPct: Number(fd.get("midtermPct")), finalPct: Number(fd.get("finalPct")),
+    };
+    const violations = checkViolations(values);
+    if (violations.length > 0) {
+      setConfirming({ values, violations }); // ask before sending, rather than auto-submitting for approval
+      return;
+    }
+    submitValues(values);
+  }
+
   const total = ROWS.reduce((s, r) => s + (current[r.key] ?? 0), 0);
 
   return (
@@ -56,7 +79,7 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
       <h3 style={{ fontSize: 14, marginBottom: 6 }}>Assessment Weights</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
         Your weights start out equal to the Subject Expert's plan — adjust any that need to differ for your actual delivery.
-        Going outside the OMC's allowed range holds the change for approval instead of saving it directly.
+        Going outside the OMC's allowed range asks for confirmation before it's sent for approval.
       </p>
       {error && <div className="err">{error}</div>}
       {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
@@ -70,7 +93,24 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
           )}
         </div>
       )}
-      <form onSubmit={onSubmit}>
+
+      {confirming && (
+        <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "12px 14px", fontSize: 12.5, marginBottom: 12 }}>
+          <b>These are outside the OMC's allowed range:</b>
+          <ul style={{ margin: "6px 0 10px", paddingLeft: 18 }}>{confirming.violations.map((v) => <li key={v}>{v}</li>)}</ul>
+          <p style={{ marginBottom: 10 }}>Do you want to send this for OMC approval, or go back and adjust the values to stay within range?</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" onClick={() => submitValues(confirming.values)} disabled={loading} className="btn btn-brass">
+              {loading ? "Sending…" : "Send for OMC Approval"}
+            </button>
+            <button type="button" onClick={() => setConfirming(null)} style={{ background: "none", border: "1px solid var(--line)", padding: "6px 12px", cursor: "pointer" }}>
+              Go Back and Adjust
+            </button>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} style={{ display: confirming ? "none" : undefined }}>
         <table>
           <thead>
             <tr>
