@@ -26,20 +26,6 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
       <CourseSubNav courseId={course.id} active="weights" code={course.code} title={course.title} status={course.templateStatus} />
 
-      {policy && (
-        <div className="card">
-          <h3 style={{ fontSize: 14, marginBottom: 8 }}>OMC Weight Policy for {course.courseType} courses</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "var(--slate)" }}>
-            <span>Assignment: <b style={{ color: "var(--ink)" }}>{policy.assignmentMin}–{policy.assignmentMax}%</b> ({policy.assignmentMinCount}+ conducted)</span>
-            <span>Quiz: <b style={{ color: "var(--ink)" }}>{policy.quizMin}–{policy.quizMax}%</b> ({policy.quizMinCount}+ conducted)</span>
-            <span>Project: <b style={{ color: "var(--ink)" }}>{policy.projectMin}–{policy.projectMax}%</b></span>
-            <span>Lab: <b style={{ color: "var(--ink)" }}>{policy.labMin}–{policy.labMax}%</b></span>
-            <span>Midterm: <b style={{ color: "var(--ink)" }}>{policy.midtermMin}–{policy.midtermMax}%</b></span>
-            <span>Final: <b style={{ color: "var(--ink)" }}>{policy.finalMin}–{policy.finalMax}%</b></span>
-          </div>
-        </div>
-      )}
-
       {pendingException && pendingException.status === "pending" && (
         <div className="card" style={{ borderColor: "var(--brass)" }}>
           <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--brass-dark)" }}>Pending OMC Approval</h3>
@@ -69,6 +55,14 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
           assignmentPct: course.assignmentPct, quizPct: course.quizPct, projectPct: course.projectPct,
           labPct: course.labPct, midtermPct: course.midtermPct, finalPct: course.finalPct,
         }}
+        policy={policy ? {
+          assignmentMin: policy.assignmentMin, assignmentMax: policy.assignmentMax,
+          quizMin: policy.quizMin, quizMax: policy.quizMax,
+          projectMin: policy.projectMin, projectMax: policy.projectMax,
+          labMin: policy.labMin, labMax: policy.labMax,
+          midtermMin: policy.midtermMin, midtermMax: policy.midtermMax,
+          finalMin: policy.finalMin, finalMax: policy.finalMax,
+        } : null}
       />
     </Shell>
   );

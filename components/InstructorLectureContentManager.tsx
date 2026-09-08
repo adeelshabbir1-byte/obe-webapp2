@@ -139,31 +139,31 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                       </td>
                       <td style={{ color: "var(--ink)", fontSize: 11.5, background: "#F4EFE1", fontWeight: 500 }}>{r.seTopic || "—"}</td>
                       <td style={{ background: colorForTopic(r.topic), padding: 0, ...(topicChanged ? CHANGED_STYLE : {}) }} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
-                        <input defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Actual topic..."
+                        <input key={`topic-${r.id}-${r.topic}`} defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Actual topic..."
                           onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, { topic: e.target.value }); }}
                           style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                       </td>
                       <td style={{ padding: 0, ...(subtopicChanged ? CHANGED_STYLE : {}) }} title={subtopicChanged ? `Subject Expert planned: "${se!.subtopic || "—"}"` : undefined}>
-                        <input defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder="Sub topic..."
+                        <input key={`subtopic-${r.id}-${r.subtopic}`} defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder="Sub topic..."
                           onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
                           style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                       </td>
                       <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FFE4DC" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
-                        <input type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
+                        <input key={`date-${r.id}-${r.actualDate}`} type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
                           onBlur={(e) => { const prev = r.actualDate ? r.actualDate.slice(0, 10) : ""; if (e.target.value !== prev) saveField(r, { actualDate: e.target.value }, e.target, prev); }}
                           style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />
                         {r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>Rescheduled</div>}
                         {r.holidayConflict && !r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>⚠ Holiday: {r.holidayConflict}</div>}
                       </td>
                       <td style={{ padding: 0, ...(cloChanged ? CHANGED_STYLE : {}) }} title={cloChanged ? `Subject Expert planned: ${se!.cloCode || "—"}` : undefined}>
-                        <select defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}
+                        <select key={`clo-${r.id}-${r.cloId}`} defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}
                           style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}>
                           <option value="">—</option>
                           {clos.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
                         </select>
                       </td>
                       <td style={{ padding: 0, ...(bloomChanged ? CHANGED_STYLE : {}) }} title={bloomChanged ? `Subject Expert planned: ${se!.bloomLevel || "—"}` : undefined}>
-                        <select defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { bloomLevel: e.target.value })}
+                        <select key={`bloom-${r.id}-${r.bloomLevel}`} defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { bloomLevel: e.target.value })}
                           style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}>
                           {BLOOM_OPTIONS.map((b) => <option key={b} value={b}>{b || "—"}</option>)}
                         </select>

@@ -4,8 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Weights = { assignmentPct: number; quizPct: number; projectPct: number; labPct: number; midtermPct: number; finalPct: number };
+type Policy = {
+  assignmentMin: number; assignmentMax: number; quizMin: number; quizMax: number;
+  projectMin: number; projectMax: number; labMin: number; labMax: number;
+  midtermMin: number; midtermMax: number; finalMin: number; finalMax: number;
+} | null;
 
-export default function InstructorWeightsForm({ courseId, current, sePlanned }: { courseId: string; current: Weights; sePlanned: Weights }) {
+const ROWS: { key: keyof Weights; label: string; minKey: string; maxKey: string }[] = [
+  { key: "assignmentPct", label: "Assignment", minKey: "assignmentMin", maxKey: "assignmentMax" },
+  { key: "quizPct", label: "Quiz", minKey: "quizMin", maxKey: "quizMax" },
+  { key: "projectPct", label: "Project", minKey: "projectMin", maxKey: "projectMax" },
+  { key: "labPct", label: "Lab", minKey: "labMin", maxKey: "labMax" },
+  { key: "midtermPct", label: "Midterm", minKey: "midtermMin", maxKey: "midtermMax" },
+  { key: "finalPct", label: "Final", minKey: "finalMin", maxKey: "finalMax" },
+];
+
+export default function InstructorWeightsForm({ courseId, current, sePlanned, policy }: { courseId: string; current: Weights; sePlanned: Weights; policy: Policy }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
@@ -26,7 +40,6 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
       });
       const data = await res.json();
       if (res.status === 202 && data.pendingApproval) {
-        // Held for OMC approval — NOT saved. Do not show a success state.
         setPending({ violations: data.violations || [], message: data.message });
         setLoading(false); router.refresh();
         return;
@@ -36,41 +49,64 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned }: 
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  const total = ROWS.reduce((s, r) => s + (current[r.key] ?? 0), 0);
+
   return (
-    <>
-      <div className="card" style={{ borderColor: "var(--brass)" }}>
-        <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--brass-dark)" }}>Subject Expert's Plan (reference)</h3>
-        <div style={{ fontSize: 12.5, color: "var(--slate)" }}>
-          Assignment {sePlanned.assignmentPct}% · Quiz {sePlanned.quizPct}% · Project {sePlanned.projectPct}% · Lab {sePlanned.labPct}% · Midterm {sePlanned.midtermPct}% · Final {sePlanned.finalPct}%
+    <div className="card">
+      <h3 style={{ fontSize: 14, marginBottom: 6 }}>Assessment Weights</h3>
+      <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
+        Your weights start out equal to the Subject Expert's plan — adjust any that need to differ for your actual delivery.
+        Going outside the OMC's allowed range holds the change for approval instead of saving it directly.
+      </p>
+      {error && <div className="err">{error}</div>}
+      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {pending && (
+        <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "10px 12px", fontSize: 12.5, marginBottom: 12 }}>
+          <b>Not saved — held for OMC approval.</b> {pending.message}
+          {pending.violations.length > 0 && (
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              {pending.violations.map((v) => <li key={v}>{v}</li>)}
+            </ul>
+          )}
         </div>
-      </div>
-      <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Actual Weights</h3>
-        {error && <div className="err">{error}</div>}
-        {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
-        {pending && (
-          <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "10px 12px", fontSize: 12.5, marginBottom: 12 }}>
-            <b>Not saved — held for OMC approval.</b> {pending.message}
-            {pending.violations.length > 0 && (
-              <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
-                {pending.violations.map((v) => <li key={v}>{v}</li>)}
-              </ul>
-            )}
-          </div>
-        )}
-        <form onSubmit={onSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div className="field"><label>Assignment %</label><input name="assignmentPct" type="number" defaultValue={current.assignmentPct} /></div>
-            <div className="field"><label>Quiz %</label><input name="quizPct" type="number" defaultValue={current.quizPct} /></div>
-            <div className="field"><label>Project %</label><input name="projectPct" type="number" defaultValue={current.projectPct} /></div>
-            <div className="field"><label>Lab %</label><input name="labPct" type="number" defaultValue={current.labPct} /></div>
-            <div className="field"><label>Midterm %</label><input name="midtermPct" type="number" defaultValue={current.midtermPct} /></div>
-            <div className="field"><label>Final %</label><input name="finalPct" type="number" defaultValue={current.finalPct} /></div>
-          </div>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Saving…" : "Save Weights"}</button>
-          <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 6 }}>Must total exactly 100%.</div>
-        </form>
-      </div>
-    </>
+      )}
+      <form onSubmit={onSubmit}>
+        <table>
+          <thead>
+            <tr>
+              <th>Assessment Tool</th>
+              <th>OMC Min %</th>
+              <th>OMC Max %</th>
+              <th>Subject Expert's %</th>
+              <th>Your %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((r) => {
+              const min = policy ? (policy as any)[r.minKey] : null;
+              const max = policy ? (policy as any)[r.maxKey] : null;
+              return (
+                <tr key={r.key}>
+                  <td style={{ fontWeight: 600 }}>{r.label}</td>
+                  <td style={{ color: "var(--slate)" }}>{min !== null ? `${min}%` : "—"}</td>
+                  <td style={{ color: "var(--slate)" }}>{max !== null ? `${max}%` : "—"}</td>
+                  <td style={{ color: "var(--slate)" }}>{sePlanned[r.key]}%</td>
+                  <td>
+                    <input name={r.key} type="number" min={0} max={100} defaultValue={current[r.key]} style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)" }} />
+                  </td>
+                </tr>
+              );
+            })}
+            <tr style={{ fontWeight: 700, borderTop: "2px solid var(--line)" }}>
+              <td colSpan={3}></td>
+              <td>{sePlanned.assignmentPct + sePlanned.quizPct + sePlanned.projectPct + sePlanned.labPct + sePlanned.midtermPct + sePlanned.finalPct}%</td>
+              <td style={{ color: total === 100 ? "var(--sage)" : "var(--rust)" }}>{total}%</td>
+            </tr>
+          </tbody>
+        </table>
+        <button className="btn btn-brass" type="submit" disabled={loading} style={{ marginTop: 14 }}>{loading ? "Saving…" : "Save Weights"}</button>
+        <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 6 }}>Must total exactly 100%.</div>
+      </form>
+    </div>
   );
 }
