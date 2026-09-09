@@ -30,3 +30,40 @@ export async function snapshotCourseAssignmentsIfTermChanging(courseId: string, 
     })),
   });
 }
+
+/** Call BEFORE overwriting a course's offeredTermName/Year — snapshots the
+ * outgoing term's CLO/PLO attainment (for later comparison), THEN clears
+ * StudentMark and StudentEnrollment for this course so the new term starts
+ * clean and never mixes with the old students' marks. Safe to call even if
+ * no marks exist yet (nothing to snapshot or clear). */
+export async function snapshotAttainmentAndResetIfTermChanging(courseId: string, newTermName: string, newTermYear: number) {
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (!course || !course.offeredTermName || !course.offeredTermYear) return;
+  if (course.offeredTermName === newTermName && course.offeredTermYear === newTermYear) return;
+
+  const enrollmentCount = await prisma.studentEnrollment.count({ where: { courseId } });
+  if (enrollmentCount === 0) return; // nothing to snapshot or reset
+
+  const { computeCloPloPassRates } = await import("./resultMate");
+  const stats = await computeCloPloPassRates(courseId);
+
+  if (stats.studentCount > 0) {
+    await prisma.attainmentSnapshot.create({
+      data: {
+        coordinatorId: course.coordinatorId,
+        courseLabel: `${course.code} — ${course.title}`,
+        termName: course.offeredTermName, termYear: course.offeredTermYear,
+        studentCount: stats.studentCount,
+        cloStatsJson: JSON.stringify(stats.cloStats),
+        ploStatsJson: JSON.stringify(stats.ploStats),
+        histogramJson: JSON.stringify(stats.histogram),
+      },
+    });
+  }
+
+  // Clear marks and enrollment so the new term's students start fresh —
+  // otherwise auto-enrollment would add new students on top of the old
+  // ones, mixing two semesters' marks together in one Result Mate view.
+  await prisma.studentMark.deleteMany({ where: { courseId } });
+  await prisma.studentEnrollment.deleteMany({ where: { courseId } });
+}

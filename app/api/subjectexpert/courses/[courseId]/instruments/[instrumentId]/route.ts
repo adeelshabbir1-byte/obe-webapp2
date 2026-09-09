@@ -14,16 +14,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (!instrument || instrument.courseId !== course.id || instrument.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
-  const marksPct = parseInt(body.marksPct, 10);
-  if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });
+  const data: any = {};
+  if (body.marksPct !== undefined) {
+    const marksPct = parseInt(body.marksPct, 10);
+    if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });
+    data.marksPct = marksPct;
+  }
+  if (body.maxScore !== undefined) {
+    const maxScore = parseInt(body.maxScore, 10);
+    if (isNaN(maxScore) || maxScore < 1) return NextResponse.json({ error: "maxScore must be at least 1" }, { status: 400 });
+    data.maxScore = maxScore;
+  }
+  if (body.label !== undefined && body.label.trim()) data.label = body.label.trim();
 
-  const updated = await prisma.assessmentInstrument.update({ where: { id: params.instrumentId }, data: { marksPct } });
+  const updated = await prisma.assessmentInstrument.update({ where: { id: params.instrumentId }, data });
 
   // The instrument's marks changed, so every lecture row it's linked to needs its weightPct recomputed.
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: params.instrumentId } });
   for (const link of links) await recomputeRowWeight(link.lectureRowId);
 
-  await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_UPDATED", entityType: "AssessmentInstrument", entityId: params.instrumentId, metadata: { marksPct } });
+  await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_UPDATED", entityType: "AssessmentInstrument", entityId: params.instrumentId, metadata: data });
 
   return NextResponse.json({ instrument: updated });
 }

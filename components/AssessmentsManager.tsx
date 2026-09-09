@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Instrument = { id: string; type: string; label: string; marksPct: number };
+type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number };
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number };
@@ -37,11 +37,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function editInstrument(id: string, marksPct: number) {
+  async function editInstrument(id: string, patch: { marksPct?: number; maxScore?: number; label?: string }) {
     setBusyCell(id); setError("");
     try {
       const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marksPct }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
@@ -114,18 +114,33 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
               </p>
             )}
             <SortableTable>
-              <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
+              <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th>Out of (raw)</th><th></th></tr></thead>
               <tbody>
-                {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
+                {items.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
                 {items.map((i) => (
                   <tr key={i.id}>
-                    <td>{isNumbered ? `Q${i.label}` : i.label}</td>
+                    <td>
+                      {isNumbered ? `Q${i.label}` : (
+                        <input
+                          type="text" defaultValue={i.label} disabled={busyCell === i.id}
+                          onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== i.label) editInstrument(i.id, { label: e.target.value.trim() }); }}
+                          style={{ width: 90, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                        />
+                      )}
+                    </td>
                     <td>
                       <input
                         type="number" min={0} max={100} defaultValue={i.marksPct} disabled={busyCell === i.id}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrument(i.id, n); }}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrument(i.id, { marksPct: n }); }}
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
                       />%
+                    </td>
+                    <td>
+                      / <input
+                        type="number" min={1} defaultValue={i.maxScore} disabled={busyCell === i.id}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= 1 && n !== i.maxScore) editInstrument(i.id, { maxScore: n }); }}
+                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                      />
                     </td>
                     <td><button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
                   </tr>

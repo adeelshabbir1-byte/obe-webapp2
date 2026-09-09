@@ -3,9 +3,11 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
 import { getPolicyForCourse } from "../../../../../lib/weightPolicy";
+import { getLinkedSections } from "../../../../../lib/linkedSections";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import InstructorWeightsForm from "../../../../../components/InstructorWeightsForm";
+import LinkedSectionsBanner from "../../../../../components/LinkedSectionsBanner";
 
 const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
@@ -24,10 +26,16 @@ export default async function InstructorWeightsPage({ params }: { params: { cour
   if (!updated) notFound();
 
   const policy = await getPolicyForCourse(course.coordinator.managedById, course.courseType);
+  const linkedSections = await getLinkedSections(user.id, course.id);
 
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
       <InstructorCourseSubNav courseId={updated.id} active="weights" code={updated.code} title={updated.title} />
+      <LinkedSectionsBanner
+        courseId={updated.id}
+        linkedSections={linkedSections.map((s) => ({ id: s.id, batchLabel: s.batch ? `${s.batch.degreeProgram} — ${s.batch.batchName}` : "—" }))}
+        showSyncClos={true}
+      />
       <InstructorWeightsForm
         courseId={updated.id}
         current={{

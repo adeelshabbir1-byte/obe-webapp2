@@ -26,24 +26,30 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
   const [pending, setPending] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState<{ values: Weights; violations: string[] } | null>(null);
+  const [values, setValues] = useState<Weights>(current);
 
-  function checkViolations(values: Weights): string[] {
+  function setField(key: keyof Weights, raw: string) {
+    setValues((prev) => ({ ...prev, [key]: raw === "" ? 0 : Number(raw) }));
+  }
+
+  function checkViolations(vals: Weights): string[] {
     if (!policy) return [];
     const violations: string[] = [];
     for (const r of ROWS) {
+      if (r.key === "labPct" && !hasLab) continue;
       const min = (policy as any)[r.minKey], max = (policy as any)[r.maxKey];
-      const v = values[r.key];
+      const v = vals[r.key];
       if (v < min || v > max) violations.push(`${r.label}: ${v}% is outside the allowed ${min}–${max}%`);
     }
     return violations;
   }
 
-  async function submitValues(values: Weights) {
+  async function submitValues(vals: Weights) {
     setLoading(true); setError(""); setOk(false); setPending(null); setConfirming(null);
     try {
       const res = await fetch(`/api/subjectexpert/courses/${courseId}/weights`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(vals),
       });
       const data = await res.json();
       if (res.status === 202 && data.pendingApproval) {
@@ -57,11 +63,6 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(""); setOk(false); setPending(null);
-    const fd = new FormData(e.currentTarget);
-    const values: Weights = {
-      assignmentPct: Number(fd.get("assignmentPct")), quizPct: Number(fd.get("quizPct")), projectPct: Number(fd.get("projectPct")),
-      labPct: Number(fd.get("labPct")), midtermPct: Number(fd.get("midtermPct")), finalPct: Number(fd.get("finalPct")),
-    };
     const violations = checkViolations(values);
     if (violations.length > 0) {
       setConfirming({ values, violations });
@@ -70,11 +71,12 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
     submitValues(values);
   }
 
-  const total = ROWS.reduce((s, r) => s + (current[r.key] ?? 0), 0);
+  const total = ROWS.reduce((s, r) => s + (values[r.key] ?? 0), 0);
 
   return (
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 12 }}>Assessment Weights</h3>
+      <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>The total below updates as you type.</p>
       {error && <div className="err">{error}</div>}
       {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {pending && (
@@ -121,7 +123,12 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
                   <td style={{ color: "var(--slate)" }}>{isLabLocked ? "—" : (min !== null ? `${min}%` : "—")}</td>
                   <td style={{ color: "var(--slate)" }}>{isLabLocked ? "—" : (max !== null ? `${max}%` : "—")}</td>
                   <td>
-                    <input name={r.key} type="number" min={0} max={100} defaultValue={isLabLocked ? 0 : current[r.key]} disabled={isLabLocked} readOnly={isLabLocked} style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)", background: isLabLocked ? "var(--paper)" : undefined }} />
+                    <input
+                      name={r.key} type="number" min={0} max={100} value={isLabLocked ? 0 : values[r.key]}
+                      disabled={isLabLocked} readOnly={isLabLocked}
+                      onChange={(e) => setField(r.key, e.target.value)}
+                      style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)", background: isLabLocked ? "var(--paper)" : undefined }}
+                    />
                   </td>
                 </tr>
               );
@@ -132,8 +139,10 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
             </tr>
           </tbody>
         </table>
-        <button className="btn btn-brass" type="submit" disabled={loading} style={{ marginTop: 14 }}>{loading ? "Saving…" : "Save Weights"}</button>
-        <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 6 }}>Must total exactly 100%.</div>
+        <button className="btn btn-brass" type="submit" disabled={loading || total !== 100} style={{ marginTop: 14 }}>{loading ? "Saving…" : "Save Weights"}</button>
+        <div style={{ fontSize: 11, color: total === 100 ? "var(--slate)" : "var(--rust)", marginTop: 6 }}>
+          {total === 100 ? "Must total exactly 100%." : `Currently totals ${total}% — must be exactly 100% to save.`}
+        </div>
       </form>
     </div>
   );

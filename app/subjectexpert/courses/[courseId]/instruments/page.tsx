@@ -52,7 +52,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
 
       <AssessmentsManager
         courseId={course.id}
-        initialInstruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct }))}
+        initialInstruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore }))}
         targets={{
           assignmentPct: course.assignmentPct, quizPct: course.quizPct,
           midtermPct: course.midtermPct, finalPct: course.finalPct,

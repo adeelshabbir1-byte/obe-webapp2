@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { autoEnrollBatchStudents } from "../../../../../../lib/autoEnroll";
 import { carryOverFromMatchingSemester } from "../../../../../../lib/benchmarkCopy";
-import { snapshotCourseAssignmentsIfTermChanging } from "../../../../../../lib/assignmentSnapshot";
+import { snapshotCourseAssignmentsIfTermChanging, snapshotAttainmentAndResetIfTermChanging } from "../../../../../../lib/assignmentSnapshot";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -21,6 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     const current = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
     if (current) {
       await snapshotCourseAssignmentsIfTermChanging(course.id, current.termName, current.year);
+      await snapshotAttainmentAndResetIfTermChanging(course.id, current.termName, current.year);
       data.offeredTermName = current.termName; data.offeredTermYear = current.year;
     }
   }

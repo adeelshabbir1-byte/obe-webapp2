@@ -12,6 +12,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
+  { href: "/omc/section-comparison", label: "Section Comparison" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/omc/reports", label: "Reports" },
 ];

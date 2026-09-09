@@ -10,7 +10,7 @@ import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import SimpleBarChart from "../../../../components/SimpleBarChart";
 
-export default async function PassRatesPage({ searchParams }: { searchParams: { courseId?: string } }) {
+export default async function PassRatesPage({ searchParams }: { searchParams: { courseId?: string; compareId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -27,6 +27,18 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
   const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const result = selectedCourseId ? await computeCloPloPassRates(selectedCourseId) : null;
+
+  const pastOfferings = course
+    ? await prisma.attainmentSnapshot.findMany({ where: { coordinatorId: course.coordinatorId, courseLabel: `${course.code} — ${course.title}` }, orderBy: [{ termYear: "desc" }] })
+    : [];
+  const selectedCompareId = searchParams.compareId || "";
+  const compareSnapshot = pastOfferings.find((s) => s.id === selectedCompareId);
+  const compareStats = compareSnapshot ? {
+    studentCount: compareSnapshot.studentCount,
+    cloStats: JSON.parse(compareSnapshot.cloStatsJson) as { code: string; maxWeight: number; passCount: number; failCount: number }[],
+    ploStats: JSON.parse(compareSnapshot.ploStatsJson) as { label: string; maxWeight: number; passCount: number; failCount: number }[],
+    histogram: JSON.parse(compareSnapshot.histogramJson) as { label: string; count: number }[],
+  } : null;
 
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
@@ -45,19 +57,63 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
         </div>
       )}
 
+      {course && pastOfferings.length > 0 && (
+        <div className="card no-print">
+          <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Compare Against a Past Offering</label>
+          <form method="GET" style={{ display: "inline" }}>
+            <input type="hidden" name="courseId" value={selectedCourseId} />
+            <select name="compareId" defaultValue={selectedCompareId} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+              <option value="">— None —</option>
+              {pastOfferings.map((s) => <option key={s.id} value={s.id}>{s.termName} {s.termYear} ({s.studentCount} students)</option>)}
+            </select>
+            <button type="submit" className="btn btn-brass" style={{ marginLeft: 8 }}>Compare</button>
+          </form>
+        </div>
+      )}
+
       {result && result.studentCount === 0 && (
         <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No students enrolled, or no marks entered yet.</p></div>
       )}
 
       {result && result.studentCount > 0 && (
         <>
+          <div className="card" style={{ display: compareStats ? "grid" : undefined, gridTemplateColumns: compareStats ? "1fr 1fr" : undefined, gap: 20 }}>
+            <div>
+              <h3 style={{ fontSize: 14, marginBottom: 12 }}>Overall Score Distribution {compareStats && "(Current)"}</h3>
+              <SimpleBarChart bars={result.histogram.map((b) => ({ label: b.label, value: b.count }))} />
+            </div>
+            {compareStats && (
+              <div>
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>{compareSnapshot!.termName} {compareSnapshot!.termYear} ({compareStats.studentCount} students)</h3>
+                <SimpleBarChart bars={compareStats.histogram.map((b) => ({ label: b.label, value: b.count, color: "#7C3AED" }))} />
+              </div>
+            )}
+          </div>
+
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Overall Score Distribution</h3>
-            <SimpleBarChart bars={result.histogram.map((b) => ({ label: b.label, value: b.count }))} />
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each CLO {compareStats && "— Current vs Past"}</h3>
+            <SimpleBarChart bars={result.cloStats.map((c) => ({ label: c.code, value: c.passCount }))} unit={` / ${result.studentCount}`} />
+            {compareStats && (
+              <>
+                <p style={{ fontSize: 11, color: "var(--slate)", margin: "14px 0 6px" }}>{compareSnapshot!.termName} {compareSnapshot!.termYear}:</p>
+                <SimpleBarChart bars={compareStats.cloStats.map((c) => ({ label: c.code, value: c.passCount, color: "#7C3AED" }))} unit={` / ${compareStats.studentCount}`} />
+              </>
+            )}
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each PLO {compareStats && "— Current vs Past"}</h3>
+            <SimpleBarChart bars={result.ploStats.map((p) => ({ label: p.label, value: p.passCount }))} unit={` / ${result.studentCount}`} />
+            {compareStats && (
+              <>
+                <p style={{ fontSize: 11, color: "var(--slate)", margin: "14px 0 6px" }}>{compareSnapshot!.termName} {compareSnapshot!.termYear}:</p>
+                <SimpleBarChart bars={compareStats.ploStats.map((p) => ({ label: p.label, value: p.passCount, color: "#7C3AED" }))} unit={` / ${compareStats.studentCount}`} />
+              </>
+            )}
           </div>
 
           <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by CLO</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by CLO — Detail</h3>
             <table>
               <thead><tr><th>CLO</th><th>Max Weight</th><th>Passed</th><th>Failed</th><th>Pass Rate</th></tr></thead>
               <tbody>
@@ -75,7 +131,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
           </div>
 
           <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by PLO</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by PLO — Detail</h3>
             <table>
               <thead><tr><th>PLO</th><th>Max Weight</th><th>Passed</th><th>Failed</th><th>Pass Rate</th></tr></thead>
               <tbody>

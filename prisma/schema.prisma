@@ -429,6 +429,26 @@ model CourseGradeCutoff {
 // for a new term (which would otherwise overwrite offeredTermName/Year and
 // lose the historical record). This is what "download a previous semester's
 // assignments" reads from.
+// A permanent snapshot of a course's CLO/PLO attainment for one specific
+// past offering — taken automatically right before a course gets re-offered
+// (which also clears StudentMark/StudentEnrollment for a fresh start, so
+// old and new students' marks never mix). This is what "compare this
+// offering to a past one" reads from.
+model AttainmentSnapshot {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  courseLabel   String
+  termName      String
+  termYear      Int
+  studentCount  Int
+  cloStatsJson  String   @db.Text // JSON: { code, maxWeight, passCount, failCount }[]
+  ploStatsJson  String   @db.Text // JSON: { label, maxWeight, passCount, failCount }[]
+  histogramJson String   @db.Text // JSON: { label, count }[]
+  snapshotAt    DateTime @default(now())
+
+  @@index([coordinatorId])
+}
+
 model AssignmentSnapshot {
   id             String   @id @default(cuid())
   coordinatorId  String

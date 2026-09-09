@@ -9,6 +9,7 @@ type Suggestion = { cloCode: string; totalWeight: number; items: Item[] };
 export default function ReweightingSuggestions({ courseId, suggestions }: { courseId: string; suggestions: Suggestion[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [applyingAll, setApplyingAll] = useState(false);
   const [error, setError] = useState("");
 
   async function apply(instrumentId: string, weight: number) {
@@ -23,16 +24,43 @@ export default function ReweightingSuggestions({ courseId, suggestions }: { cour
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(null); }
   }
 
+  async function applyAll() {
+    const toApply = suggestions.flatMap((s) => s.items.filter((it) => Math.abs(it.suggestedWeight - it.currentWeight) >= 1));
+    if (toApply.length === 0) return;
+    if (!confirm(`Apply all ${toApply.length} suggested weight change(s) across every CLO?`)) return;
+    setApplyingAll(true); setError("");
+    try {
+      for (const it of toApply) {
+        const res = await fetch(`/api/instructor/courses/${courseId}/instruments/${it.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marksPct: it.suggestedWeight }),
+        });
+        if (!res.ok) { const data = await res.json(); setError(data.error || "Something went wrong partway through — some changes may not have applied."); setApplyingAll(false); router.refresh(); return; }
+      }
+      setApplyingAll(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setApplyingAll(false); }
+  }
+
   if (suggestions.length === 0) return null;
+
+  const totalChanges = suggestions.reduce((s, sug) => s + sug.items.filter((it) => Math.abs(it.suggestedWeight - it.currentWeight) >= 1).length, 0);
 
   return (
     <div className="card" style={{ borderColor: "var(--brass)" }}>
-      <h3 style={{ fontSize: 14, marginBottom: 6, color: "var(--brass-dark)" }}>Suggested Re-Weighting</h3>
-      <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
-        Based on how the class actually scored on each item — shifting weight toward whichever items students did
-        best on raises that CLO's average and pass rate. Each CLO's total weight stays the same. Purely a
-        suggestion — apply any, all, or none.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h3 style={{ fontSize: 14, marginBottom: 6, color: "var(--brass-dark)" }}>Suggested Re-Weighting</h3>
+          <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12, maxWidth: 640 }}>
+            Based on how the class actually scored on each item — shifting weight toward whichever items students did
+            best on raises that CLO's average and pass rate. Each CLO's total weight stays the same. Purely a
+            suggestion — apply any, all, or none.
+          </p>
+        </div>
+        {totalChanges > 1 && (
+          <button onClick={applyAll} disabled={applyingAll || loading !== null} className="btn btn-brass" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+            {applyingAll ? "Applying…" : `Apply All (${totalChanges})`}
+          </button>
+        )}
+      </div>
       {error && <div className="err">{error}</div>}
       {suggestions.map((s) => (
         <div key={s.cloCode} style={{ marginBottom: 16 }}>
