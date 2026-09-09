@@ -2234,6 +2234,15 @@ CREATE TABLE IF NOT EXISTS "AttainmentSnapshot" (
   "snapshotAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "AttainmentSnapshot_coordinatorId_idx" ON "AttainmentSnapshot"("coordinatorId");
+-- Run in Supabase SQL Editor. MasterCurriculum/MasterCourse/MasterPLO were
+-- created outside the tracked migration files early in this project (a
+-- direct schema push), so later column additions to MasterCurriculum were
+-- never actually migrated. This adds anything that might be missing,
+-- safely, on tables that already exist.
+
+ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "sourceReference" TEXT;
+ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'PUBLISHED';
+ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "publicationDate" TIMESTAMP(3);
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)
