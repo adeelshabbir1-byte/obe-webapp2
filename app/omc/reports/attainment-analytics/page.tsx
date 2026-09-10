@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeCoAttainment } from "../../../../lib/attainmentLevels";
+import { getPassingCriteria } from "../../../../lib/passingCriteria";
 import Shell from "../../../../components/Shell";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
@@ -33,7 +34,8 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
   const selectedCourseId = searchParams.courseId || offeredCourses[0]?.id || "";
   const selectedCourse = offeredCourses.find((c) => c.id === selectedCourseId);
 
-  const coData = selectedCourseId ? await computeCoAttainment(selectedCourseId) : null;
+  const passCriteria = await getPassingCriteria(await chairmanIdFor(user));
+  const coData = selectedCourseId ? await computeCoAttainment(selectedCourseId, passCriteria) : null;
 
   // Session-wise: average attainment level per term, across every historical
   // snapshot for this program (a default 60% target is used here since
@@ -57,7 +59,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
   // Subject-wise: every currently-offered course's overall attainment level.
   const subjectRows: { label: string; value: number }[] = [];
   for (const c of offeredCourses) {
-    const data = await computeCoAttainment(c.id);
+    const data = await computeCoAttainment(c.id, passCriteria);
     if (data.rows.length === 0) continue;
     const avgLevel = Math.round((data.rows.reduce((s, r) => s + r.level, 0) / data.rows.length) * 100) / 100;
     subjectRows.push({ label: c.code, value: avgLevel });

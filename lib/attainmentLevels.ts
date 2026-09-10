@@ -13,7 +13,8 @@ function levelFor(actualPct: number, targetPct: number): number {
 
 /** CO (CLO) attainment: target % (faculty-set) vs actual % of students who
  * attained it, each mapped to a 0-3 NBA/Washington-Accord style level. */
-export async function computeCoAttainment(courseId: string): Promise<{ rows: CoAttainmentRow[]; poRows: PoAttainmentRow[] }> {
+export async function computeCoAttainment(courseId: string, criteria?: { cloPct: number; ploPct: number }): Promise<{ rows: CoAttainmentRow[]; poRows: PoAttainmentRow[] }> {
+  const passCriteria = criteria || { cloPct: 50, ploPct: 50 };
   const result = await computeResultMate(courseId);
   const clos = await prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } });
 
@@ -32,7 +33,7 @@ export async function computeCoAttainment(courseId: string): Promise<{ rows: CoA
 
   const rows: CoAttainmentRow[] = clos.map((clo) => {
     const max = cloMaxWeight[clo.code] || 0;
-    const threshold = max * 0.5;
+    const threshold = max * (passCriteria.cloPct / 100);
     const passCount = result.rows.filter((r) => (r.byClo[clo.code] || 0) >= threshold).length;
     const actualPct = result.rows.length > 0 ? Math.round((passCount / result.rows.length) * 1000) / 10 : 0;
     return { code: clo.code, targetPct: clo.targetPct, actualPct, level: levelFor(actualPct, clo.targetPct) };

@@ -2343,6 +2343,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS "SurveyAnswer_surveyResponseId_questionId_key"
 -- Attainment Analytics dashboard (target vs actual, NBA-style levels).
 
 ALTER TABLE "CLO" ADD COLUMN IF NOT EXISTS "targetPct" INTEGER NOT NULL DEFAULT 60;
+-- Run in Supabase SQL Editor. Adds PassingCriteria — OMC-configurable
+-- CLO/PLO attainment threshold per institution, defaulting to 50% for
+-- both if never set. Used everywhere pass/fail is computed: Result Mate,
+-- CLO/PLO Pass Rates, Program Attainment Analytics, and transcripts.
+
+CREATE TABLE IF NOT EXISTS "PassingCriteria" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL UNIQUE,
+  "cloPassingPct" INTEGER NOT NULL DEFAULT 50,
+  "ploPassingPct" INTEGER NOT NULL DEFAULT 50
+);
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

@@ -97,8 +97,27 @@ export async function computeResultMate(courseId: string) {
     };
   });
 
+  // Max possible weighted marks per CLO/PLO — needed to know each cell's
+  // pass/fail threshold (50% of max), not just the raw achieved number.
+  const cloMaxWeight: Record<string, number> = Object.fromEntries(cloCodes.map((c) => [c, 0]));
+  for (const inst of instruments) {
+    const cloId = instrumentToClo.get(inst.id);
+    const clo = clos.find((c) => c.id === cloId);
+    if (clo) cloMaxWeight[clo.code] = (cloMaxWeight[clo.code] || 0) + inst.marksPct;
+  }
+  const ploMaxWeight: Record<string, number> = Object.fromEntries(ploLabels.map((p) => [p, 0]));
+  for (const clo of clos) {
+    if (clo.mappedPlo && clo.ploContributionPct) {
+      const label = `PLO-${clo.mappedPlo.number}`;
+      ploMaxWeight[label] = (ploMaxWeight[label] || 0) + (cloMaxWeight[clo.code] || 0) * clo.ploContributionPct / 100;
+    }
+  }
+  const round1For = (n: number) => Math.round(n * 10) / 10;
+
   return {
     cloCodes, ploLabels, rows: graded, instruments: instrumentStats,
+    cloMaxWeight: Object.fromEntries(Object.entries(cloMaxWeight).map(([k, v]) => [k, round1For(v)])),
+    ploMaxWeight: Object.fromEntries(Object.entries(ploMaxWeight).map(([k, v]) => [k, round1For(v)])),
     stats: { mean: Math.round(mean * 10) / 10, sd: Math.round(sd * 10) / 10, count: totals.length },
     cutoffsAreSet, savedCutoffs: savedCutoffs.map((c) => ({ letter: c.letter, minPercent: c.minPercent })),
   };
@@ -106,7 +125,8 @@ export async function computeResultMate(courseId: string) {
 
 /** Pass/fail counts per CLO and PLO (pass = >=50% of that CLO/PLO's max
  * weighted marks), plus a histogram of the class's overall score distribution. */
-export async function computeCloPloPassRates(courseId: string) {
+export async function computeCloPloPassRates(courseId: string, criteria?: { cloPct: number; ploPct: number }) {
+  const c = criteria || { cloPct: 50, ploPct: 50 };
   const result = await computeResultMate(courseId);
 
   const [instruments, clos] = await Promise.all([
@@ -143,14 +163,14 @@ export async function computeCloPloPassRates(courseId: string) {
 
   const cloStats = result.cloCodes.map((code) => {
     const max = cloMaxWeight[code] || 0;
-    const threshold = max * 0.5;
+    const threshold = max * (c.cloPct / 100);
     const passCount = result.rows.filter((r) => (r.byClo[code] || 0) >= threshold).length;
     return { code, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount };
   });
 
   const ploStats = result.ploLabels.map((label) => {
     const max = ploMaxWeight[label] || 0;
-    const threshold = max * 0.5;
+    const threshold = max * (c.ploPct / 100);
     const passCount = result.rows.filter((r) => (r.byPlo[label] || 0) >= threshold).length;
     return { label, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount };
   });

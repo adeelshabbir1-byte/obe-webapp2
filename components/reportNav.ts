@@ -13,6 +13,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/omc/section-comparison", label: "Section Comparison" },
+  { href: "/omc/passing-criteria", label: "Passing Criteria" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/omc/reports", label: "Reports" },
 ];

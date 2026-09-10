@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { coordinatorIdsFor } from "../../../lib/reportScope";
 import { prisma } from "../../../lib/db";
 import { computeCloPloPassRates } from "../../../lib/resultMate";
+import { getPassingCriteria } from "../../../lib/passingCriteria";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import SimpleBarChart from "../../../components/SimpleBarChart";
@@ -27,8 +28,9 @@ export default async function SectionComparisonPage({ searchParams }: { searchPa
 
   const courseA = searchParams.courseA ? courses.find((c) => c.id === searchParams.courseA) : null;
   const courseB = searchParams.courseB ? courses.find((c) => c.id === searchParams.courseB) : null;
-  const statsA = courseA ? await computeCloPloPassRates(courseA.id) : null;
-  const statsB = courseB ? await computeCloPloPassRates(courseB.id) : null;
+  const criteria = await getPassingCriteria(user.managedById);
+  const statsA = courseA ? await computeCloPloPassRates(courseA.id, criteria) : null;
+  const statsB = courseB ? await computeCloPloPassRates(courseB.id, criteria) : null;
 
   function label(c: typeof courses[number]) {
     return `${c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"} · ${c.instructor?.name || "Unassigned"}`;

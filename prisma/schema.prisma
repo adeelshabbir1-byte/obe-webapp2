@@ -146,6 +146,16 @@ model CurrentTerm {
   updatedAt     DateTime @updatedAt
 }
 
+// OMC-defined institution-wide pass/fail threshold for CLO and PLO
+// attainment — how much of a CLO/PLO's max weighted marks a student needs
+// to count as having "passed" it. Defaults to 50% for both if never set.
+model PassingCriteria {
+  id            String @id @default(cuid())
+  chairmanId    String @unique
+  cloPassingPct Int    @default(50)
+  ploPassingPct Int    @default(50)
+}
+
 // OMC-defined min/max assessment weight ranges per course type. A Subject
 // Expert's weights must fall within these; if not, a WeightExceptionRequest
 // is created instead of saving directly.

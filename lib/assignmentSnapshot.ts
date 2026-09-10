@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { getPassingCriteria } from "./passingCriteria";
 
 /** Call BEFORE overwriting a course's offeredTermName/Year — if it already
  * had a different term set, permanently snapshots its current section
@@ -44,8 +45,11 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
   const enrollmentCount = await prisma.studentEnrollment.count({ where: { courseId } });
   if (enrollmentCount === 0) return; // nothing to snapshot or reset
 
+  const coordinator = await prisma.user.findUnique({ where: { id: course.coordinatorId } });
+  const criteria = await getPassingCriteria(coordinator?.managedById);
+
   const { computeCloPloPassRates } = await import("./resultMate");
-  const stats = await computeCloPloPassRates(courseId);
+  const stats = await computeCloPloPassRates(courseId, criteria);
 
   if (stats.studentCount > 0) {
     await prisma.attainmentSnapshot.create({
@@ -68,7 +72,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
     coordinatorId: course.coordinatorId, code: course.code, title: course.title,
     creditHours: course.creditHours, courseType: course.courseType,
     offeredTermName: course.offeredTermName, offeredTermYear: course.offeredTermYear,
-  });
+  }, criteria);
 
   // Clear marks and enrollment so the new term's students start fresh —
   // otherwise auto-enrollment would add new students on top of the old
@@ -81,7 +85,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
  * attainment for this course offering — called right before the reset
  * above wipes their marks, so a student's transcript survives across every
  * semester rather than just the current one. */
-async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number }) {
+async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number }, criteria: { cloPct: number; ploPct: number }) {
   const { computeResultMate } = await import("./resultMate");
   const result = await computeResultMate(courseId);
   if (result.rows.length === 0) return;
@@ -118,8 +122,8 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
       courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
       termName: course.offeredTermName, termYear: course.offeredTermYear,
       totalPct: r.totalPct, grade: r.grade, gpaPoints: gpaByLetter.get(r.grade) ?? null,
-      cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: r.byClo[code] || 0, passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * 0.5 }))),
-      ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: r.byPlo[label] || 0, passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * 0.5 }))),
+      cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: r.byClo[code] || 0, passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * (criteria.cloPct / 100) }))),
+      ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: r.byPlo[label] || 0, passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * (criteria.ploPct / 100) }))),
     })),
   });
 }

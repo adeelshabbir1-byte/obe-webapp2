@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor, chairmanIdFor } from "../../../../lib/reportScope";
 import { canViewReport, canEditReport } from "../../../../lib/reportAcl";
+import { getPassingCriteria } from "../../../../lib/passingCriteria";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeResultMate } from "../../../../lib/resultMate";
@@ -35,6 +36,22 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const result = selectedCourseId ? await computeResultMate(selectedCourseId) : null;
+  const passCriteria = await getPassingCriteria(await chairmanIdFor(user));
+
+  // Group instruments by type for the two-level table header (e.g. one
+  // merged "Assignment" heading over A1/A2/A3, instead of repeating the
+  // type name on every single column) — keeps more results visible at once.
+  const TYPE_COLOR: Record<string, string> = {
+    Assignment: "#2563EB", Quiz: "#16A34A", Project: "#7C3AED", Lab: "#EA580C", Midterm: "#DB2777", Final: "#CA8A04",
+  };
+  const groupedInstrumentTypes: { type: string; instruments: any[] }[] = [];
+  if (result) {
+    for (const inst of result.instruments) {
+      const last = groupedInstrumentTypes[groupedInstrumentTypes.length - 1];
+      if (last && last.type === inst.type) last.instruments.push(inst);
+      else groupedInstrumentTypes.push({ type: inst.type, instruments: [inst] });
+    }
+  }
 
   const gradingScale = course ? await prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId }, orderBy: { orderIndex: "asc" } }) : [];
   const hasCutoffRole = course && (
@@ -146,11 +163,16 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           {result.instruments.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 10 }}>Per-Assessment-Item Scores</h3>
-              <SortableTable>
+              <SortableTable style={{ tableLayout: "fixed" }}>
                 <thead>
                   <tr>
-                    <th>Roll #</th><th>Name</th>
-                    {result.instruments.map((i) => <th key={i.id}>{i.type} {i.label}<br /><span style={{ fontWeight: 400 }}>/{i.maxScore}</span></th>)}
+                    <th rowSpan={2} style={{ width: 70 }}>Roll #</th><th rowSpan={2} style={{ width: 130 }}>Name</th>
+                    {groupedInstrumentTypes.map((g) => (
+                      <th key={g.type} colSpan={g.instruments.length} style={{ textAlign: "center", background: TYPE_COLOR[g.type] || "#94A3B8", color: "#fff" }}>{g.type}</th>
+                    ))}
+                  </tr>
+                  <tr>
+                    {result.instruments.map((i) => <th key={i.id} style={{ width: 56 }}>{i.label}<br /><span style={{ fontWeight: 400 }}>/{i.maxScore}</span></th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -174,6 +196,8 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           )}
 
           <div className="card" style={{ overflowX: "auto" }}>
+            <h3 style={{ fontSize: 14, marginBottom: 4 }}>CLO Attainment, by Student</h3>
+            <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.cloPct}% pass threshold for that CLO.</p>
             <SortableTable>
               <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total %</th><th>Grade</th></tr></thead>
               <tbody>
@@ -182,7 +206,12 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                   <tr key={r.studentId}>
                     <td>{r.rollNumber}</td>
                     <td>{r.name}{r.isRepeat && <span className="badge badge-warn" style={{ marginLeft: 6 }}>Repeat</span>}</td>
-                    {result.cloCodes.map((c) => <td key={c}>{r.byClo[c] || 0}</td>)}
+                    {result.cloCodes.map((c) => {
+                      const max = result.cloMaxWeight[c] || 0;
+                      const threshold = max * (passCriteria.cloPct / 100);
+                      const failed = max > 0 && (r.byClo[c] || 0) < threshold;
+                      return <td key={c} style={failed ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.cloPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byClo[c] || 0}</td>;
+                    })}
                     <td style={{ fontWeight: 600 }}>{r.totalPct}%</td>
                     <td><span className={`badge ${gradeBadge[r.grade]}`}>{r.grade}</span></td>
                   </tr>
@@ -193,14 +222,20 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
 
           {result.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO Attainment, by Student</h3>
+              <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLO Attainment, by Student</h3>
+              <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
               <SortableTable>
                 <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => <th key={p}>{p}</th>)}</tr></thead>
                 <tbody>
                   {result.rows.map((r) => (
                     <tr key={r.studentId}>
                       <td>{r.rollNumber}</td><td>{r.name}</td>
-                      {result.ploLabels.map((p) => <td key={p}>{r.byPlo[p] || 0}</td>)}
+                      {result.ploLabels.map((p) => {
+                        const max = result.ploMaxWeight[p] || 0;
+                        const threshold = max * (passCriteria.ploPct / 100);
+                        const failed = max > 0 && (r.byPlo[p] || 0) < threshold;
+                        return <td key={p} style={failed ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.ploPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byPlo[p] || 0}</td>;
+                      })}
                     </tr>
                   ))}
                 </tbody>

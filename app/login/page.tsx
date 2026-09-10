@@ -55,6 +55,7 @@ export default function LoginPage() {
             <input name="password" type="password" required />
           </div>
           <button className="btn btn-full" type="submit" disabled={loading}>
+            {loading && <span className="spinner" style={{ borderColor: "rgba(30,27,75,.3)", borderTopColor: "#fff" }} />}
             {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>

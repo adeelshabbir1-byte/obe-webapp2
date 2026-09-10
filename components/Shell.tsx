@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
 
 export default function Shell({
@@ -16,6 +16,7 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [instituteName, setInstituteName] = useState<string | null>(null);
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null);
   const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
@@ -63,9 +64,14 @@ export default function Shell({
             <div style={{ fontSize: 9.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#8A8266", margin: "0 0 4px", paddingLeft: 2 }}>
               {section.title}
             </div>
-            {section.links.map((n) => (
-              <a key={n.href} href={n.href} className="nav-link">{n.label}</a>
-            ))}
+            {section.links.map((n) => {
+              const isActive = pathname === n.href;
+              return (
+                <a key={n.href} href={n.href} className="nav-link" style={isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : undefined}>
+                  {n.label}
+                </a>
+              );
+            })}
           </div>
         ))}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; maxScore: number }; // id here is the SLOT key (type::label)
 type Student = { id: string; name: string; rollNumber: string; isRepeat: boolean; marks: Record<string, number> };
-type Section = { courseId: string; sectionLabel: string; students: Student[] };
+type Section = { courseId: string; sectionLabel: string; sectionFullLabel: string; students: Student[] };
 
 export default function CombinedMarksEntryManager({ instruments, sections, instrumentIdBySlot }: {
   instruments: Instrument[]; sections: Section[]; instrumentIdBySlot: Record<string, Record<string, string>>;
@@ -50,7 +50,7 @@ export default function CombinedMarksEntryManager({ instruments, sections, instr
         <table style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
-              <th style={{ width: 90 }}>Roll #</th><th style={{ width: 140 }}>Name</th><th style={{ width: 120 }}>Section</th>
+              <th style={{ width: 90 }}>Roll #</th><th style={{ width: 140 }}>Name</th><th style={{ width: 70 }}>Section</th>
               {instruments.map((i) => <th key={i.id} style={{ textAlign: "center", fontSize: 10.5 }}>{i.type} {i.label}<br /><span style={{ fontWeight: 400, color: "var(--slate)" }}>/{i.maxScore}</span></th>)}
             </tr>
           </thead>
@@ -59,7 +59,7 @@ export default function CombinedMarksEntryManager({ instruments, sections, instr
               <tr key={s.id}>
                 <td>{s.rollNumber}</td>
                 <td>{s.name}{s.isRepeat && <span className="badge badge-warn" style={{ marginLeft: 6 }}>Repeat</span>}</td>
-                <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{sec.sectionLabel}</td>
+                <td style={{ fontSize: 11.5, color: "var(--slate)", fontWeight: 600 }} title={sec.sectionFullLabel}>{sec.sectionLabel}</td>
                 {instruments.map((i) => {
                   const key = s.id + i.id;
                   const hasMatch = !!instrumentIdBySlot[sec.courseId]?.[i.id];

@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor, chairmanIdFor } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeCloPloPassRates } from "../../../../lib/resultMate";
+import { getPassingCriteria } from "../../../../lib/passingCriteria";
 import Shell from "../../../../components/Shell";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
@@ -26,7 +27,8 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
   });
   const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
   const course = courses.find((c) => c.id === selectedCourseId);
-  const result = selectedCourseId ? await computeCloPloPassRates(selectedCourseId) : null;
+  const criteria = await getPassingCriteria(await chairmanIdFor(user));
+  const result = selectedCourseId ? await computeCloPloPassRates(selectedCourseId, criteria) : null;
 
   const pastOfferings = course
     ? await prisma.attainmentSnapshot.findMany({ where: { coordinatorId: course.coordinatorId, courseLabel: `${course.code} — ${course.title}` }, orderBy: [{ termYear: "desc" }] })
