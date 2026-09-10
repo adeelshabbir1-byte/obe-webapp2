@@ -2338,6 +2338,11 @@ CREATE TABLE IF NOT EXISTS "SurveyAnswer" (
   "ratingValue" INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "SurveyAnswer_surveyResponseId_questionId_key" ON "SurveyAnswer"("surveyResponseId", "questionId");
+-- Run in Supabase SQL Editor. Adds targetPct to CLO — the faculty-set %
+-- of students expected to attain each CO, used by the new Program
+-- Attainment Analytics dashboard (target vs actual, NBA-style levels).
+
+ALTER TABLE "CLO" ADD COLUMN IF NOT EXISTS "targetPct" INTEGER NOT NULL DEFAULT 60;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

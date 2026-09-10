@@ -803,6 +803,7 @@ model CLO {
   ploContributionPct Int? // this CLO's % contribution toward mappedPlo's attainment —
                           // when several CLOs in the same course map to the same PLO,
                           // their contributions must sum to 100 (enforced at submit time)
+  targetPct   Int      @default(60) // NBA/Washington-Accord style: % of students expected to attain this CO — compared against actual attainment on the Program Attainment Analytics dashboard
   createdAt   DateTime @default(now())
 
   lectureRows LectureRow[]

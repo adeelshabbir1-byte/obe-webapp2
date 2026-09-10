@@ -22,6 +22,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
       { href: "/omc/reports/bloom", title: "CLO Bloom's Taxonomy Distribution", desc: "Whether higher-order thinking is adequately represented as students progress." },
       { href: "/omc/plo-readiness", title: "PLO Readiness Matrix", desc: "Every PLO's status across every batch, in one color-coded grid." },
       { href: "/omc/reports/indirect-attainment", title: "Indirect PLO Attainment (Stakeholder Feedback)", desc: "Average rating per PLO from submitted student, alumni, and employer surveys — a second evidence source alongside direct attainment." },
+      { href: "/omc/reports/attainment-analytics", title: "Program Attainment Analytics", desc: "NBA/Washington-Accord style: target vs actual CO attainment, PO levels (0-3), session-wise trend, and subject-wise comparison." },
     ],
   },
   {
