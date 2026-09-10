@@ -47,6 +47,7 @@ model User {
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
   specialization     String?  // e.g. "Software Engineering", "AI", "Networks" — set by Coordinator, used to suggest a good fit for elective/specialization courses
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
+  maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
   isActive           Boolean  @default(true)
@@ -73,6 +74,9 @@ model User {
   gradingScale       GradingScale[]  @relation("GradingScaleCoordinator")
   reportAccessRules  ReportAccessRule[] @relation("ReportAccessChairman")
   programProfiles    ProgramProfile[] @relation("ProgramProfileCoordinator")
+  alumni             Alumni[] @relation("AlumniCoordinator")
+  employers          Employer[] @relation("EmployerCoordinator")
+  surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
 
@@ -309,6 +313,96 @@ model CqiRecord {
   @@index([courseId])
 }
 
+// ===== Indirect PLO Attainment: stakeholder feedback surveys =====
+// Alumni and Employers aren't system users — no login, just contact
+// records the Coordinator maintains, similar in spirit to Student.
+model Alumni {
+  id             String   @id @default(cuid())
+  coordinatorId  String
+  coordinator    User     @relation("AlumniCoordinator", fields: [coordinatorId], references: [id])
+  name           String
+  email          String?
+  degreeProgram  String
+  graduationYear Int
+  createdAt      DateTime @default(now())
+
+  responses SurveyResponse[]
+  @@index([coordinatorId])
+}
+
+model Employer {
+  id              String   @id @default(cuid())
+  coordinatorId   String
+  coordinator     User     @relation("EmployerCoordinator", fields: [coordinatorId], references: [id])
+  organizationName String
+  contactName     String?
+  contactEmail    String?
+  createdAt       DateTime @default(now())
+
+  responses SurveyResponse[]
+  @@index([coordinatorId])
+}
+
+model SurveyTemplate {
+  id              String   @id @default(cuid())
+  coordinatorId   String
+  coordinator     User     @relation("SurveyTemplateCoordinator", fields: [coordinatorId], references: [id])
+  title           String
+  stakeholderType String   // "STUDENT" | "ALUMNI" | "EMPLOYER"
+  createdAt       DateTime @default(now())
+
+  questions SurveyQuestion[]
+  responses SurveyResponse[]
+  @@index([coordinatorId])
+}
+
+model SurveyQuestion {
+  id               String         @id @default(cuid())
+  surveyTemplateId String
+  surveyTemplate   SurveyTemplate @relation(fields: [surveyTemplateId], references: [id])
+  text             String         @db.Text
+  mappedPloId      String?
+  mappedPlo        PLO?           @relation(fields: [mappedPloId], references: [id])
+  orderIndex       Int            @default(0)
+
+  answers SurveyAnswer[]
+  @@index([surveyTemplateId])
+}
+
+// One respondent's link into one survey — token-based, no login required.
+// respondentId points at whichever stakeholder table matches respondentType.
+model SurveyResponse {
+  id               String         @id @default(cuid())
+  surveyTemplateId String
+  surveyTemplate   SurveyTemplate @relation(fields: [surveyTemplateId], references: [id])
+  token            String         @unique
+  respondentType   String         // "STUDENT" | "ALUMNI" | "EMPLOYER"
+  respondentLabel  String         // display name, captured at creation time
+  studentId        String?
+  student          Student?       @relation(fields: [studentId], references: [id])
+  alumniId         String?
+  alumni           Alumni?        @relation(fields: [alumniId], references: [id])
+  employerId       String?
+  employer         Employer?      @relation(fields: [employerId], references: [id])
+  submittedAt      DateTime?
+  createdAt        DateTime       @default(now())
+
+  answers SurveyAnswer[]
+  @@index([surveyTemplateId])
+  @@index([token])
+}
+
+model SurveyAnswer {
+  id               String         @id @default(cuid())
+  surveyResponseId String
+  surveyResponse   SurveyResponse @relation(fields: [surveyResponseId], references: [id])
+  questionId       String
+  question         SurveyQuestion @relation(fields: [questionId], references: [id])
+  ratingValue      Int            // 1-5
+
+  @@unique([surveyResponseId, questionId])
+}
+
 // A real student, imported by the Coordinator per batch (bulk CSV) — the
 // foundation for marks entry and result computation.
 model Student {
@@ -321,6 +415,8 @@ model Student {
 
   enrollments StudentEnrollment[]
   marks       StudentMark[]
+  transcriptRecords StudentTranscriptRecord[]
+  surveyResponses SurveyResponse[]
 
   @@unique([batchId, rollNumber])
   @@index([batchId])
@@ -434,6 +530,32 @@ model CourseGradeCutoff {
 // (which also clears StudentMark/StudentEnrollment for a fresh start, so
 // old and new students' marks never mix). This is what "compare this
 // offering to a past one" reads from.
+// One student's permanent academic record for one course offering — taken
+// automatically right before that course's StudentMark/StudentEnrollment
+// get cleared on re-offering, so an individual's transcript survives across
+// every semester, not just the current one.
+model StudentTranscriptRecord {
+  id            String   @id @default(cuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  coordinatorId String
+  courseCode    String
+  courseTitle   String
+  creditHours   Int
+  courseType    String
+  termName      String
+  termYear      Int
+  totalPct      Float
+  grade         String
+  gpaPoints     Float?
+  cloAttainmentJson String @db.Text // JSON: { code, pct, passed }[]
+  ploAttainmentJson String @db.Text // JSON: { label, pct, passed }[]
+  snapshotAt    DateTime @default(now())
+
+  @@index([studentId])
+  @@index([coordinatorId])
+}
+
 model AttainmentSnapshot {
   id            String   @id @default(cuid())
   coordinatorId String
@@ -644,6 +766,7 @@ model PLO {
 
   clos                  CLO[]
   ploMappings           CoursePloMapping[]
+  surveyQuestions       SurveyQuestion[]
 
   @@unique([batchId, number])
   @@index([coordinatorId])

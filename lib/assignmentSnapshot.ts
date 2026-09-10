@@ -61,9 +61,65 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
     });
   }
 
+  // Preserve each individual student's grade and CLO/PLO attainment before
+  // their marks get wiped below — this is what makes a per-student
+  // transcript possible across multiple semesters.
+  await snapshotStudentTranscripts(courseId, {
+    coordinatorId: course.coordinatorId, code: course.code, title: course.title,
+    creditHours: course.creditHours, courseType: course.courseType,
+    offeredTermName: course.offeredTermName, offeredTermYear: course.offeredTermYear,
+  });
+
   // Clear marks and enrollment so the new term's students start fresh —
   // otherwise auto-enrollment would add new students on top of the old
   // ones, mixing two semesters' marks together in one Result Mate view.
   await prisma.studentMark.deleteMany({ where: { courseId } });
   await prisma.studentEnrollment.deleteMany({ where: { courseId } });
+}
+
+/** Snapshots each individual enrolled student's grade and CLO/PLO
+ * attainment for this course offering — called right before the reset
+ * above wipes their marks, so a student's transcript survives across every
+ * semester rather than just the current one. */
+async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number }) {
+  const { computeResultMate } = await import("./resultMate");
+  const result = await computeResultMate(courseId);
+  if (result.rows.length === 0) return;
+
+  const [instruments, clos, links, gradingScale] = await Promise.all([
+    prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } }),
+    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
+    prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId, source: "INSTRUCTOR" } }, include: { lectureRow: true } }),
+    prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId } }),
+  ]);
+  const instrumentToClo = new Map<string, string>();
+  for (const link of links) if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
+
+  const cloMaxWeight: Record<string, number> = {};
+  for (const clo of clos) cloMaxWeight[clo.code] = 0;
+  for (const inst of instruments) {
+    const cloId = instrumentToClo.get(inst.id);
+    const clo = clos.find((c) => c.id === cloId);
+    if (clo) cloMaxWeight[clo.code] = (cloMaxWeight[clo.code] || 0) + inst.marksPct;
+  }
+  const ploMaxWeight: Record<string, number> = {};
+  for (const label of result.ploLabels) ploMaxWeight[label] = 0;
+  for (const clo of clos) {
+    if (clo.mappedPlo && clo.ploContributionPct) {
+      const label = `PLO-${clo.mappedPlo.number}`;
+      ploMaxWeight[label] = (ploMaxWeight[label] || 0) + (cloMaxWeight[clo.code] || 0) * clo.ploContributionPct / 100;
+    }
+  }
+  const gpaByLetter = new Map(gradingScale.map((g) => [g.letter, g.gpaValue]));
+
+  await prisma.studentTranscriptRecord.createMany({
+    data: result.rows.map((r) => ({
+      studentId: r.studentId, coordinatorId: course.coordinatorId,
+      courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
+      termName: course.offeredTermName, termYear: course.offeredTermYear,
+      totalPct: r.totalPct, grade: r.grade, gpaPoints: gpaByLetter.get(r.grade) ?? null,
+      cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: r.byClo[code] || 0, passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * 0.5 }))),
+      ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: r.byPlo[label] || 0, passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * 0.5 }))),
+    })),
+  });
 }

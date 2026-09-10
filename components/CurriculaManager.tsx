@@ -43,6 +43,20 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  async function deleteCurriculum(id: string, title: string, courseCount: number) {
+    const confirmMsg = courseCount > 0
+      ? `Delete "${title}" and its ${courseCount} course(s)? This cannot be undone. Any real courses already adopted from it stay untouched, just losing their traceability link.`
+      : `Delete "${title}"? This cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/admin/curricula/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   async function uploadPdf(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true); setError(""); setUploadResult("");
@@ -72,6 +86,9 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                     <a href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</a>
                     <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
                       {cloningId === c.id ? "Cancel" : "Clone as New Version"}
+                    </button>
+                    <button onClick={() => deleteCurriculum(c.id, c.title, c.courseCount)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                      Delete
                     </button>
                   </td>
                 </tr>

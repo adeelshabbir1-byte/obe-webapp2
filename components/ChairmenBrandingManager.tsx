@@ -13,18 +13,22 @@ function fileToDataUri(file: File): Promise<string> {
   });
 }
 
-type Chairman = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null };
+type Chairman = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
 
 export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairman[] }) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
   const [instituteName, setInstituteName] = useState("");
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null);
+  const [maxDegreePrograms, setMaxDegreePrograms] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   function startEdit(c: Chairman) {
-    setExpandedId(c.id); setInstituteName(c.instituteName || ""); setInstituteLogo(c.instituteLogo); setError("");
+    setExpandedId(c.id); setName(c.name); setInstituteName(c.instituteName || ""); setInstituteLogo(c.instituteLogo);
+    setMaxDegreePrograms(c.maxDegreePrograms === null || c.maxDegreePrograms === undefined ? "" : String(c.maxDegreePrograms));
+    setError("");
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -39,7 +43,8 @@ export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairm
     setLoading(true); setError("");
     try {
       const res = await fetch(`/api/admin/users/${chairmanId}/branding`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instituteName, instituteLogo }),
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, instituteName, instituteLogo, maxDegreePrograms: maxDegreePrograms === "" ? null : parseInt(maxDegreePrograms, 10) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -67,6 +72,10 @@ export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairm
                   <div style={{ padding: "10px 0" }}>
                     {error && <div className="err">{error}</div>}
                     <div className="field">
+                      <label>Name</label>
+                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Chairman's name" />
+                    </div>
+                    <div className="field">
                       <label>Institute Name (for {c.name}'s institution)</label>
                       <input value={instituteName} onChange={(e) => setInstituteName(e.target.value)} placeholder="e.g. SS CASEIT" />
                     </div>
@@ -74,6 +83,11 @@ export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairm
                       <label>Institute Logo</label>
                       {instituteLogo && <img src={instituteLogo} alt="Institute logo" style={{ maxHeight: 60, maxWidth: 160, display: "block", marginBottom: 8, border: "1px solid var(--line)", padding: 6, background: "#fff" }} />}
                       <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleFile} style={{ fontSize: 12.5 }} />
+                    </div>
+                    <div className="field">
+                      <label>Licensed Degree Programs (leave blank for unlimited)</label>
+                      <input type="number" min={0} value={maxDegreePrograms} onChange={(e) => setMaxDegreePrograms(e.target.value)} placeholder="e.g. 2" style={{ width: 100 }} />
+                      <p style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 4 }}>The number of distinct Degree Programs this institution's Coordinators can create in total.</p>
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
                       <button onClick={() => save(c.id)} disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save"}</button>

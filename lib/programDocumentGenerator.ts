@@ -29,6 +29,7 @@ export async function generateProgramDocument(batchId: string, coordinatorId: st
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       include: {
         prerequisiteCourse: true,
+        subjectExpert: true,
         clos: { where: { source: "SE" }, orderBy: { code: "asc" }, include: { mappedPlo: true } },
         lectureRows: { where: { source: "SE" }, orderBy: { lectureNumber: "asc" } },
       },
@@ -152,7 +153,11 @@ export async function generateProgramDocument(batchId: string, coordinatorId: st
         lv("Credit Hours", String(c.creditHours)),
         lv("Category", c.courseType),
         lv("Prerequisite", c.prerequisiteCourse ? `${c.prerequisiteCourse.code} — ${c.prerequisiteCourse.title}` : "None"),
+        lv("Assessment Weights", `Assignment ${c.assignmentPct}%, Quiz ${c.quizPct}%, Project ${c.projectPct}%, Lab ${c.labPct}%, Midterm ${c.midtermPct}%, Final ${c.finalPct}%`),
+        lv("Subject Expert", c.subjectExpert?.name || "—"),
+        lv("Lab Instructor", c.labInstructorName || "N/A"),
         lv("Catalog Description", c.catalogDescription || "—"),
+        lv("Programming Assignments", c.programmingAssignmentsNote || "—"),
       ],
     }));
 

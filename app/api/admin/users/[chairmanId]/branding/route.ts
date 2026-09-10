@@ -11,10 +11,12 @@ export async function PUT(req: NextRequest, { params }: { params: { chairmanId: 
 
   const body = await req.json();
   const data: any = {};
+  if (body.name !== undefined && body.name.trim()) data.name = body.name.trim();
   if (body.instituteName !== undefined) data.instituteName = body.instituteName || null;
   if (body.instituteLogo !== undefined) data.instituteLogo = body.instituteLogo || null;
+  if (body.maxDegreePrograms !== undefined) data.maxDegreePrograms = body.maxDegreePrograms === null ? null : parseInt(body.maxDegreePrograms, 10);
 
   const updated = await prisma.user.update({ where: { id: params.chairmanId }, data });
 
-  return NextResponse.json({ instituteName: updated.instituteName, instituteLogo: updated.instituteLogo });
+  return NextResponse.json({ name: updated.name, instituteName: updated.instituteName, instituteLogo: updated.instituteLogo, maxDegreePrograms: updated.maxDegreePrograms });
 }

@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
         <ChairmenBrandingManager
           chairmen={chairmen.map((c) => ({
             id: c.id, username: c.username, name: c.name, email: c.email, department: c.department,
-            instituteName: c.instituteName, instituteLogo: c.instituteLogo,
+            instituteName: c.instituteName, instituteLogo: c.instituteLogo, maxDegreePrograms: c.maxDegreePrograms,
           }))}
         />
       </div>

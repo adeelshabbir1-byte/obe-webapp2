@@ -10,6 +10,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
+import SimpleBarChart from "../../../../components/SimpleBarChart";
 
 function StatCard({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -42,7 +43,7 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
         <a href="/api/omc/reports/coverage/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        How comprehensively the program addresses each PLO — highlighting coverage gaps where a PLO is under-mapped.
+        How comprehensively the program addresses each PLO — a short bar means few courses map to it, worth reviewing.
       </p>
       <ReportsSubNav active="coverage" />
       <div className="card no-print">
@@ -61,43 +62,58 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
             <StatCard label="Avg Courses / PLO" value={sec.avg} />
             <StatCard label="PLOs Not Hit" value={sec.notHit} tone={sec.notHit > 0 ? "var(--rust)" : "var(--sage)"} />
           </div>
+
           <div className="card">
-            {sec.rows.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLOs defined.</p>}
-            {sec.rows.map((r) => {
-              const typeEntries = Object.entries(r.byType);
-              const max = Math.max(1, ...sec.rows.map((x) => x.count));
-              return (
-                <div key={r.number} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #EFEADC" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600 }}>
-                      PLO-{r.number}: {r.title}
-                      {r.status !== "approved" && (
-                        <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 2 }}>{r.status.replace("-", " ")}</span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
-                      {r.count} course{r.count === 1 ? "" : "s"}
-                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", height: 18, width: "100%", background: "#EFEADC", overflow: "hidden" }}>
-                    {typeEntries.map(([type, n]) => (
-                      <div key={type} title={`${type}: ${n}`} style={{ width: `${(n / Math.max(1, r.count)) * 100}%`, background: courseTypeColor(type) }} />
-                    ))}
-                  </div>
-                  {typeEntries.length > 0 && (
-                    <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 10 }}>
-                      {typeEntries.map(([type, n]) => (
-                        <span key={type} style={{ fontSize: 10.5, color: "var(--slate)", display: "flex", alignItems: "center", gap: 5 }}>
-                          <span style={{ width: 8, height: 8, background: courseTypeColor(type), display: "inline-block", borderRadius: 1 }} />
-                          {type}: {n}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <h4 style={{ fontSize: 12.5, marginBottom: 12, color: "var(--slate)" }}>Courses Mapped, per PLO</h4>
+            {sec.rows.length === 0 ? (
+              <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLOs defined.</p>
+            ) : (
+              <SimpleBarChart
+                bars={sec.rows.map((r) => ({ label: `PLO-${r.number}`, value: r.count, color: r.count === 0 ? "#B1512E" : undefined }))}
+              />
+            )}
+          </div>
+
+          <div className="card" style={{ overflowX: "auto" }}>
+            <h4 style={{ fontSize: 12.5, marginBottom: 12, color: "var(--slate)" }}>Detail — Breakdown by Course Type</h4>
+            <table>
+              <thead><tr><th>PLO</th><th>Title</th><th>Status</th><th>Courses</th><th>By Course Type</th></tr></thead>
+              <tbody>
+                {sec.rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined.</td></tr>}
+                {sec.rows.map((r) => {
+                  const typeEntries = Object.entries(r.byType);
+                  return (
+                    <tr key={r.number}>
+                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>PLO-{r.number}</td>
+                      <td>{r.title}</td>
+                      <td>
+                        {r.status !== "approved" ? (
+                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 2 }}>{r.status.replace("-", " ")}</span>
+                        ) : (
+                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--sage)", background: "#CCFBF1", padding: "1px 6px", borderRadius: 2 }}>Approved</span>
+                        )}
+                      </td>
+                      <td>
+                        {r.count}
+                        {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                      </td>
+                      <td>
+                        {typeEntries.length === 0 ? "—" : (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {typeEntries.map(([type, n]) => (
+                              <span key={type} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ width: 8, height: 8, background: courseTypeColor(type), display: "inline-block", borderRadius: 1 }} />
+                                {type}: {n}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       ))}
