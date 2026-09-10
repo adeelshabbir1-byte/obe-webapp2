@@ -5,7 +5,7 @@ import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null };
+type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null; targetPct: number };
 
 const BLOOM_OPTIONS = [
   { v: "C1", label: "C1 — Remember" }, { v: "C2", label: "C2 — Understand" }, { v: "C3", label: "C3 — Apply" },
@@ -51,6 +51,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         body: JSON.stringify({
           code: fd.get("code"), statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
           mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
+          targetPct: fd.get("targetPct") || 60,
         }),
       });
       const data = await res.json();
@@ -70,6 +71,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         body: JSON.stringify({
           statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
           mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
+          targetPct: fd.get("targetPct") || 60,
         }),
       });
       const data = await res.json();
@@ -114,15 +116,15 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th><th></th></tr></thead>
           <tbody>
             {initialClos.length === 0 && (
-              <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
+              <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
             {initialClos.map((c) => (
               editingId === c.id ? (
                 <tr key={c.id}>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                       <span style={{ fontWeight: 600 }}>{c.code}</span>
                       <input name="statement" defaultValue={c.statement} style={{ flex: "1 1 220px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -133,6 +135,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                         {ploSelectOptions}
                       </select>
                       <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={c.ploContributionPct ?? 100} placeholder="%" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
+                      <input name="targetPct" type="number" min={1} max={100} defaultValue={c.targetPct} title="Target % — expected % of students attaining this CO" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
                       <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
                       <button type="button" onClick={() => setEditingId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
                     </form>
@@ -142,6 +145,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                 <tr key={c.id}>
                   <td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
                   <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
+                  <td>{c.targetPct}%</td>
                   <td style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
                     <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
@@ -164,7 +168,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
             </div>
           </div>
           <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 14 }}>
             <div className="field">
               <label>Mapped PLO (defined by your Program Coordinator)</label>
               <select name="mappedPloId">{ploSelectOptions}</select>
@@ -172,6 +176,10 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
             <div className="field">
               <label>Contribution %</label>
               <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={100} placeholder="100" />
+            </div>
+            <div className="field">
+              <label title="Expected % of students who should attain this CO">Target % (attainment)</label>
+              <input name="targetPct" type="number" min={1} max={100} defaultValue={60} placeholder="60" />
             </div>
           </div>
           <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>

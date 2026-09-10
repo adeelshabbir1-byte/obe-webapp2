@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
-type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null };
+type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null; offeredTermName: string | null; offeredTermYear: number | null };
 type BatchColumn = { batchId: string; batchLabel: string; courses: Course[] };
 type Group = { id: string; name: string; createdByName?: string | null };
 
@@ -120,6 +120,7 @@ export default function EquivalenceManager() {
                     >
                       <div style={{ fontSize: 12, fontWeight: 600 }}>{course.code}</div>
                       <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{course.title} ({course.studentCount})</div>
+                      <div style={{ fontSize: 9.5, color: "var(--brass-dark)", fontWeight: 600 }}>{course.offeredTermName ? `${course.offeredTermName} ${course.offeredTermYear}` : "Term not set"}</div>
                     </td>
                   );
                 })}

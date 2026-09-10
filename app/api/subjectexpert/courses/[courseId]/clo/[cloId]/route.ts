@@ -24,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       bloomLevel: body.bloomLevel,
       mappedPloId: body.mappedPloId || null,
       ploContributionPct: body.mappedPloId ? (body.ploContributionPct ? parseInt(body.ploContributionPct, 10) : 100) : null,
+      targetPct: body.targetPct ? parseInt(body.targetPct, 10) : 60,
     },
   });
 

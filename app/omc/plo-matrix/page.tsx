@@ -4,10 +4,10 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import PloMatrix from "../../../components/PloMatrix";
+import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
+import CopyPloMappingsForm from "../../../components/CopyPloMappingsForm";
 
-
-
-export default async function OmcPloMatrixPage() {
+export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -22,7 +22,12 @@ export default async function OmcPloMatrixPage() {
 
   // Grouped by BATCH directly — a course already belongs to exactly one
   // batch, and PLOs are now scoped per batch too, so this is a clean 1:1 match.
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const batches = allBatches.filter((b) => {
+    if (searchParams.batchId) return b.id === searchParams.batchId;
+    if (searchParams.degree) return b.degreeProgram === searchParams.degree;
+    return true;
+  });
 
   const programs = [];
   for (const batch of batches) {
@@ -54,6 +59,19 @@ export default async function OmcPloMatrixPage() {
         Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
         of the same degree can have different PLOs.
       </p>
+      <div className="card no-print">
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
+      </div>
+      {allBatches.length > 1 && (
+        <div className="card">
+          <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Copy Mappings from Another Batch</h3>
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+            If two batches share the same or an equivalent curriculum, copy one's PLO mappings into the other —
+            matched by course code and PLO number. Only fills in gaps; never overwrites what's already set.
+          </p>
+          <CopyPloMappingsForm batches={allBatches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))} />
+        </div>
+      )}
       <PloMatrix programs={programs} />
     </Shell>
   );

@@ -28,7 +28,7 @@ export async function GET() {
     batchLabel: `${b.degreeProgram} — ${b.batchName}`,
     courses: allCourses
       .filter((c) => c.batchId === b.id)
-      .map((c) => ({ id: c.id, code: c.code, title: c.title, studentCount: b.studentCount, groupId: c.equivalenceMember?.groupId || null })),
+      .map((c) => ({ id: c.id, code: c.code, title: c.title, studentCount: b.studentCount, groupId: c.equivalenceMember?.groupId || null, offeredTermName: c.offeredTermName, offeredTermYear: c.offeredTermYear })),
   }));
 
   const creatorIds = groups.map((g) => g.createdById).filter((id): id is string => !!id);
