@@ -30,14 +30,14 @@ const NAV = [
   { href: "/omc/reports", label: "OMC Reports" },
 ];
 
-export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; q?: string } }) {
+export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; batchId?: string; q?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id } });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" } ]});
   const batchIds = batches.map((b) => b.id);
 
   const q = searchParams.q || "";
@@ -52,6 +52,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   let cloAgg = new Map<string, { attempted: number; passed: number }>();
   let ploAgg = new Map<string, { attempted: number; passed: number }>();
   let totalCredits = 0, totalGradePoints = 0;
+  let remediation: { ploLabel: string; courses: { code: string; title: string }[] }[] = [];
 
   if (student && belongsToCoordinator) {
     const historical = await prisma.studentTranscriptRecord.findMany({ where: { studentId: student.id }, orderBy: [{ termYear: "asc" }] });
@@ -89,20 +90,72 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
         cloAgg.set(code, entry);
       }
     }
+
+    // PLO remediation: for every PLO with at least one recorded failure,
+    // find courses in this student's own batch curriculum that map to it
+    // and aren't already in their transcript — a concrete path to still
+    // attain it.
+    const failedPloLabels = Array.from(ploAgg.entries()).filter(([, v]) => v.passed < v.attempted).map(([label]) => label);
+    if (failedPloLabels.length > 0) {
+      const takenCodes = new Set(courseRows.map((r) => r.code));
+      const batchCourses = await prisma.course.findMany({
+        where: { batchId: student.batchId },
+        include: { ploMappings: { include: { plo: true } } },
+      });
+      remediation = failedPloLabels.map((label) => {
+        const ploNumber = parseInt(label.replace("PLO-", ""), 10);
+        const eligible = batchCourses.filter((c) => !takenCodes.has(c.code) && c.ploMappings.some((m) => m.plo.number === ploNumber));
+        return { ploLabel: label, courses: eligible.map((c) => ({ code: c.code, title: c.title })) };
+      }).filter((r) => r.courses.length > 0 || true); // keep even zero-course entries — that's important info too
+    }
   }
 
   const cgpa = totalCredits > 0 ? Math.round((totalGradePoints / totalCredits) * 100) / 100 : null;
+
+  // Batch-level aggregate view (no specific student selected, but a batch is).
+  const selectedBatchId = searchParams.batchId || "";
+  let batchSummary: { studentCount: number; avgCgpa: number | null; cloAgg: Map<string, { attempted: number; passed: number }>; ploAgg: Map<string, { attempted: number; passed: number }> } | null = null;
+  if (!student && selectedBatchId && batchIds.includes(selectedBatchId)) {
+    const studentsInBatch = await prisma.student.findMany({ where: { batchId: selectedBatchId } });
+    const records = await prisma.studentTranscriptRecord.findMany({ where: { studentId: { in: studentsInBatch.map((s) => s.id) } } });
+    const byStudentGpa = new Map<string, { credits: number; points: number }>();
+    const bCloAgg = new Map<string, { attempted: number; passed: number }>();
+    const bPloAgg = new Map<string, { attempted: number; passed: number }>();
+    for (const r of records) {
+      if (r.gpaPoints !== null) {
+        const e = byStudentGpa.get(r.studentId) || { credits: 0, points: 0 };
+        e.credits += r.creditHours; e.points += r.gpaPoints * r.creditHours;
+        byStudentGpa.set(r.studentId, e);
+      }
+      for (const c of JSON.parse(r.cloAttainmentJson) as { code: string; passed: boolean }[]) {
+        const e = bCloAgg.get(c.code) || { attempted: 0, passed: 0 };
+        e.attempted++; if (c.passed) e.passed++;
+        bCloAgg.set(c.code, e);
+      }
+      for (const p of JSON.parse(r.ploAttainmentJson) as { label: string; passed: boolean }[]) {
+        const e = bPloAgg.get(p.label) || { attempted: 0, passed: 0 };
+        e.attempted++; if (p.passed) e.passed++;
+        bPloAgg.set(p.label, e);
+      }
+    }
+    const gpas = Array.from(byStudentGpa.values()).filter((v) => v.credits > 0).map((v) => v.points / v.credits);
+    batchSummary = {
+      studentCount: studentsInBatch.length,
+      avgCgpa: gpas.length > 0 ? Math.round((gpas.reduce((s, g) => s + g, 0) / gpas.length) * 100) / 100 : null,
+      cloAgg: bCloAgg, ploAgg: bPloAgg,
+    };
+  }
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Student Transcript" />
       <div className="card no-print">
-        <form method="GET" style={{ display: "flex", gap: 10 }}>
+        <form method="GET" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
           <input name="q" defaultValue={q} placeholder="Search by name or roll number..." style={{ flex: 1, padding: "7px 10px", border: "1px solid var(--line)" }} />
           <button type="submit" className="btn btn-brass">Search</button>
         </form>
         {matches.length > 0 && (
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginBottom: 14 }}>
             {matches.map((m) => (
               <a key={m.id} href={`/coordinator/student-transcript?studentId=${m.id}`} style={{ display: "block", padding: "6px 4px", fontSize: 13, color: "var(--brass-dark)", textDecoration: "none", borderBottom: "1px solid var(--line)" }}>
                 {m.name} — {m.rollNumber} ({m.batch.degreeProgram} — {m.batch.batchName})
@@ -110,10 +163,51 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
             ))}
           </div>
         )}
+        <form method="GET" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <label style={{ fontSize: 11.5, color: "var(--slate)" }}>Or view a whole batch:</label>
+          <select name="batchId" defaultValue={selectedBatchId} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+            <option value="">— Select a batch —</option>
+            {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
+          </select>
+          <button type="submit" className="btn btn-brass" style={{ padding: "5px 12px", fontSize: 12 }}>View Batch</button>
+        </form>
       </div>
 
       {searchParams.studentId && !belongsToCoordinator && (
         <div className="card"><p style={{ color: "var(--rust)", fontSize: 12.5 }}>Student not found in your program.</p></div>
+      )}
+
+      {batchSummary && (
+        <>
+          <div className="card">
+            <p style={{ fontSize: 13 }}><b>{batches.find((b) => b.id === selectedBatchId)?.degreeProgram} — {batches.find((b) => b.id === selectedBatchId)?.batchName}</b></p>
+            <p style={{ fontSize: 13, marginTop: 6 }}><b>{batchSummary.studentCount} students</b>{batchSummary.avgCgpa !== null && <> — Average CGPA: <b>{batchSummary.avgCgpa.toFixed(2)}</b></>}</p>
+          </div>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>CLO-Wise Attainment — Whole Batch</h3>
+            <table>
+              <thead><tr><th>CLO</th><th>Attempted</th><th>Passed</th><th>Pass Rate</th></tr></thead>
+              <tbody>
+                {batchSummary.cloAgg.size === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No historical data yet for this batch.</td></tr>}
+                {Array.from(batchSummary.cloAgg.entries()).map(([code, v]) => (
+                  <tr key={code}><td>{code}</td><td>{v.attempted}</td><td style={{ color: "var(--sage)", fontWeight: 600 }}>{v.passed}</td><td>{Math.round((v.passed / v.attempted) * 100)}%</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO-Wise Attainment — Whole Batch</h3>
+            <table>
+              <thead><tr><th>PLO</th><th>Attempted</th><th>Passed</th><th>Pass Rate</th></tr></thead>
+              <tbody>
+                {batchSummary.ploAgg.size === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No historical data yet for this batch.</td></tr>}
+                {Array.from(batchSummary.ploAgg.entries()).map(([label, v]) => (
+                  <tr key={label}><td>{label}</td><td>{v.attempted}</td><td style={{ color: "var(--sage)", fontWeight: 600 }}>{v.passed}</td><td>{Math.round((v.passed / v.attempted) * 100)}%</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {student && belongsToCoordinator && (
@@ -165,6 +259,28 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
               </tbody>
             </table>
           </div>
+
+          {remediation.length > 0 && (
+            <div className="card" style={{ borderColor: "var(--rust)" }}>
+              <h3 style={{ fontSize: 14, marginBottom: 4, color: "var(--rust)" }}>PLO Remediation Path</h3>
+              <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
+                For each PLO with at least one recorded failure, here are the courses in this student's curriculum
+                that still contribute to it and haven't been taken yet.
+              </p>
+              {remediation.map((r) => (
+                <div key={r.ploLabel} style={{ marginBottom: 12 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{r.ploLabel}</p>
+                  {r.courses.length === 0 ? (
+                    <p style={{ fontSize: 12, color: "var(--rust)" }}>No remaining courses in this curriculum contribute to this PLO — this needs a curriculum review.</p>
+                  ) : (
+                    <ul style={{ margin: 0, paddingLeft: 20 }}>
+                      {r.courses.map((c) => <li key={c.code} style={{ fontSize: 12.5 }}>{c.code} — {c.title}</li>)}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </Shell>

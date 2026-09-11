@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin/curriculum-migration", label: "Version Migration" },
   { href: "/admin/platform-settings", label: "Platform Settings" },
   { href: "/admin/report-bundles", label: "Report Bundles" },
+  { href: "/admin/landing-page", label: "Landing Page" },
 ];
 
 export default async function PlatformSettingsPage() {

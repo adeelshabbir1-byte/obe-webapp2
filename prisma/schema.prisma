@@ -491,6 +491,23 @@ model SemesterDates {
 
 // Singleton — truly platform-wide branding (Lets Innovate + NCEAC), the same
 // across every tenant/institution on this SaaS deployment. Set exclusively
+// The public marketing/landing page's editable text content — a single
+// row, edited by the Super User. Feature list and testimonials are stored
+// as JSON arrays for flexibility without needing separate tables.
+model LandingPageContent {
+  id              String  @id @default(cuid())
+  headline        String  @default("Outcome-Based Education Governance, Built for Accreditation")
+  subheadline     String  @db.Text @default("Design, deliver, and prove learning outcomes across your entire institution — from curriculum to classroom to accreditation report.")
+  aboutText       String  @db.Text @default("")
+  missionText     String  @db.Text @default("")
+  contactEmail    String?
+  contactPhone    String?
+  pricingNote     String  @db.Text @default("")
+  featuresJson    String  @db.Text @default("[]")
+  testimonialsJson String @db.Text @default("[]")
+  updatedAt       DateTime @updatedAt
+}
+
 // by the Super User. Per-institution branding lives on User (see Chairman's
 // instituteName/instituteLogo) since each paying tenant has its own.
 model PlatformSettings {
