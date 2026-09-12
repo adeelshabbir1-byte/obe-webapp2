@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Cqi = { id: string; finding: string; actionTaken: string | null; status: string; createdAt: string; batchLabel: string | null; courseLabel: string | null; authorName: string | null; lastUpdatedByName: string | null };
+type Cqi = {
+  id: string; finding: string; actionTaken: string | null; status: string; createdAt: string;
+  batchLabel: string | null; courseLabel: string | null; authorName: string | null; lastUpdatedByName: string | null;
+  sourceType: string | null; sourceReference: string | null; metricBefore: number | null; metricAfter: number | null;
+};
 type Batch = { id: string; label: string };
 type Course = { id: string; label: string };
 
@@ -12,6 +16,7 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   async function addRecord(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,7 +45,22 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  const statusBadge: Record<string, string> = { open: "badge-no", "in-progress": "badge-warn", closed: "badge-ok" };
+  async function verifyRecord(id: string, metricAfter: string, status: string) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/chairman/cqi/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metricAfter, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setVerifyingId(null); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  const statusBadge: Record<string, string> = {
+    open: "badge-no", "in-progress": "badge-warn", closed: "badge-ok",
+    "verified-effective": "badge-ok", "verified-ineffective": "badge-no",
+  };
 
   return (
     <>
@@ -51,8 +71,22 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
           <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--slate)" }}>{r.batchLabel || ""} {r.courseLabel ? `· ${r.courseLabel}` : ""} · {r.createdAt.slice(0, 10)}{r.authorName ? ` · raised by ${r.authorName}` : ""}{r.lastUpdatedByName ? ` · last updated by ${r.lastUpdatedByName}` : ""}</div>
+                <div style={{ fontSize: 11, color: "var(--slate)" }}>
+                  {r.sourceReference && <span className="badge badge-neutral" style={{ marginRight: 6 }}>{r.sourceType}: {r.sourceReference}</span>}
+                  {r.batchLabel || ""} {r.courseLabel ? `· ${r.courseLabel}` : ""} · {r.createdAt.slice(0, 10)}{r.authorName ? ` · raised by ${r.authorName}` : ""}{r.lastUpdatedByName ? ` · last updated by ${r.lastUpdatedByName}` : ""}
+                </div>
                 <div style={{ fontSize: 13, marginTop: 3 }}>{r.finding}</div>
+                {(r.metricBefore !== null || r.metricAfter !== null) && (
+                  <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--slate)" }}>
+                    {r.metricBefore !== null && <span>Before: <b style={{ color: "var(--ink)" }}>{r.metricBefore}%</b></span>}
+                    {r.metricAfter !== null && (
+                      <span style={{ marginLeft: 10 }}>
+                        After: <b style={{ color: r.metricAfter >= (r.metricBefore ?? 0) ? "var(--sage)" : "var(--rust)" }}>{r.metricAfter}%</b>
+                        {r.metricBefore !== null && (r.metricAfter >= r.metricBefore ? " ↑ improved" : " ↓ did not improve")}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <span className={`badge ${statusBadge[r.status] || "badge-neutral"}`}>{r.status}</span>
             </div>
@@ -64,11 +98,27 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
                 </select>
                 <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
               </form>
+            ) : verifyingId === r.id ? (
+              <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); verifyRecord(r.id, fd.get("metricAfter") as string, fd.get("verifyStatus") as string); }} style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <div>
+                  <label style={{ fontSize: 10, color: "var(--slate)", display: "block" }}>New metric value (%)</label>
+                  <input name="metricAfter" type="number" step="0.1" required style={{ width: 90, padding: 6, border: "1px solid var(--line)", fontSize: 12.5 }} />
+                </div>
+                <select name="verifyStatus" style={{ padding: 6, border: "1px solid var(--line)", fontSize: 12.5 }}>
+                  <option value="verified-effective">Effective — it worked</option>
+                  <option value="verified-ineffective">Ineffective — needs more action</option>
+                </select>
+                <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save Verification</button>
+                <button type="button" onClick={() => setVerifyingId(null)} style={{ background: "none", border: "1px solid var(--line)", padding: "5px 10px", fontSize: 11.5, cursor: "pointer" }}>Cancel</button>
+              </form>
             ) : (
-              <>
-                {r.actionTaken && <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 6 }}><b>Action:</b> {r.actionTaken}</div>}
-                <button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 6 }}>Update</button>
-              </>
+              <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 6 }}>
+                {r.actionTaken && <div style={{ fontSize: 12, color: "var(--slate)" }}><b>Action:</b> {r.actionTaken}</div>}
+                <button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Update</button>
+                {r.metricBefore !== null && r.metricAfter === null && (
+                  <button onClick={() => setVerifyingId(r.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Verify Now — Did It Work?</button>
+                )}
+              </div>
             )}
           </div>
         ))}

@@ -13,12 +13,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { cqiId: str
   if (!record || record.chairmanId !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
+  const isVerifying = body.metricAfter !== undefined && body.metricAfter !== null;
   const updated = await prisma.cqiRecord.update({
     where: { id: params.cqiId },
     data: {
       actionTaken: body.actionTaken !== undefined ? body.actionTaken : record.actionTaken,
       status: body.status || record.status,
       lastUpdatedById: user.id,
+      ...(isVerifying ? {
+        metricAfter: parseFloat(body.metricAfter),
+        verifiedById: user.id,
+        verifiedAt: new Date(),
+      } : {}),
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "CQI_RECORD_UPDATED", entityType: "CqiRecord", entityId: params.cqiId });

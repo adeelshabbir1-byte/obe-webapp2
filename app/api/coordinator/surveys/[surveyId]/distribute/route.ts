@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { chairmanIdFor } from "../../../../../../lib/reportScope";
+
+async function canManageSurveys(user: { role: string; isAlumniCustodian: boolean }) {
+  return user.role === "PROGRAM_COORDINATOR" || user.isAlumniCustodian;
+}
 
 export async function POST(req: NextRequest, { params }: { params: { surveyId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await canManageSurveys(user))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const chairmanId = await chairmanIdFor(user);
 
-  const survey = await prisma.surveyTemplate.findUnique({ where: { id: params.surveyId } });
-  if (!survey || survey.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const survey = await prisma.surveyTemplate.findUnique({ where: { id: params.surveyId }, include: { coordinator: true } });
+  if (!survey || survey.coordinator.managedById !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   const respondentIds: string[] = body.respondentIds || [];
@@ -19,10 +25,10 @@ export async function POST(req: NextRequest, { params }: { params: { surveyId: s
     const students = await prisma.student.findMany({ where: { id: { in: respondentIds } } });
     respondents = students.map((s) => ({ id: s.id, name: s.name }));
   } else if (survey.stakeholderType === "ALUMNI") {
-    const alumni = await prisma.alumni.findMany({ where: { id: { in: respondentIds }, coordinatorId: user.id } });
+    const alumni = await prisma.alumni.findMany({ where: { id: { in: respondentIds }, chairmanId, status: "APPROVED" } });
     respondents = alumni.map((a) => ({ id: a.id, name: a.name }));
   } else {
-    const employers = await prisma.employer.findMany({ where: { id: { in: respondentIds }, coordinatorId: user.id } });
+    const employers = await prisma.employer.findMany({ where: { id: { in: respondentIds }, chairmanId, status: "APPROVED" } });
     respondents = employers.map((e) => ({ id: e.id, name: e.organizationName }));
   }
 

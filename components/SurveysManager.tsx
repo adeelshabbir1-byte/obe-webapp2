@@ -46,7 +46,7 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [stakeholderType, setStakeholderType] = useState("STUDENT");
-  const [questions, setQuestions] = useState<{ text: string; mappedPloId: string }[]>([{ text: "", mappedPloId: "" }]);
+  const [questions, setQuestions] = useState<{ text: string; mappedPloId: string; mappedPeoLabel: string }[]>([{ text: "", mappedPloId: "", mappedPeoLabel: "" }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,13 +54,13 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
     const t = QUICK_START_TEMPLATES[key];
     setTitle(t.title);
     setStakeholderType(t.stakeholderType);
-    setQuestions(t.questions.map((text) => ({ text, mappedPloId: "" })));
+    setQuestions(t.questions.map((text) => ({ text, mappedPloId: "", mappedPeoLabel: "" })));
   }
 
-  function updateQuestion(i: number, field: "text" | "mappedPloId", value: string) {
+  function updateQuestion(i: number, field: "text" | "mappedPloId" | "mappedPeoLabel", value: string) {
     setQuestions((prev) => prev.map((q, idx) => (idx === i ? { ...q, [field]: value } : q)));
   }
-  function addQuestion() { setQuestions((prev) => [...prev, { text: "", mappedPloId: "" }]); }
+  function addQuestion() { setQuestions((prev) => [...prev, { text: "", mappedPloId: "", mappedPeoLabel: "" }]); }
   function removeQuestion(i: number) { setQuestions((prev) => prev.filter((_, idx) => idx !== i)); }
 
   async function createSurvey(e: React.FormEvent<HTMLFormElement>) {
@@ -71,11 +71,11 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
     try {
       const res = await fetch("/api/coordinator/surveys", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, stakeholderType, questions: validQuestions.map((q) => ({ text: q.text, mappedPloId: q.mappedPloId || null })) }),
+        body: JSON.stringify({ title, stakeholderType, questions: validQuestions.map((q) => ({ text: q.text, mappedPloId: q.mappedPloId || null, mappedPeoLabel: q.mappedPeoLabel || null })) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setTitle(""); setQuestions([{ text: "", mappedPloId: "" }]); setLoading(false); router.refresh();
+      setTitle(""); setQuestions([{ text: "", mappedPloId: "", mappedPeoLabel: "" }]); setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -130,6 +130,7 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
                 <option value="">No PLO mapping</option>
                 {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}</option>)}
               </select>
+              <input value={q.mappedPeoLabel} onChange={(e) => updateQuestion(i, "mappedPeoLabel", e.target.value)} placeholder="PEO (e.g. PEO-1, optional)" style={{ width: 130, padding: "8px 6px", border: "1px solid var(--line)" }} />
               <button type="button" onClick={() => removeQuestion(i)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, cursor: "pointer" }}>Remove</button>
             </div>
           ))}

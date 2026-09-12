@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     data: {
       coordinatorId, title: body.title, stakeholderType: body.stakeholderType,
       questions: {
-        create: body.questions.map((q: any, i: number) => ({ text: q.text, mappedPloId: q.mappedPloId || null, orderIndex: i })),
+        create: body.questions.map((q: any, i: number) => ({ text: q.text, mappedPloId: q.mappedPloId || null, mappedPeoLabel: q.mappedPeoLabel || null, orderIndex: i })),
       },
     },
     include: { questions: true },

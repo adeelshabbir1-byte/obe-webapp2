@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor, courseScopeFor, chairmanIdFor } from "../../../../lib/reportScope";
 import { canViewReport, canEditReport } from "../../../../lib/reportAcl";
 import { getPassingCriteria } from "../../../../lib/passingCriteria";
+import LogCqiActionButton from "../../../../components/LogCqiActionButton";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
 import { computeResultMate } from "../../../../lib/resultMate";
@@ -199,7 +200,25 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
             <h3 style={{ fontSize: 14, marginBottom: 4 }}>CLO Attainment, by Student</h3>
             <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.cloPct}% pass threshold for that CLO.</p>
             <SortableTable>
-              <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total %</th><th>Grade</th></tr></thead>
+              <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => {
+                const max = result.cloMaxWeight[c] || 0;
+                const threshold = max * (passCriteria.cloPct / 100);
+                const failCount = result.rows.filter((r) => (r.byClo[c] || 0) < threshold).length;
+                return (
+                  <th key={c}>
+                    {c}
+                    {(user.role === "CHAIRMAN" || user.role === "OMC") && failCount > 0 && (
+                      <div className="no-print" style={{ marginTop: 4 }}>
+                        <LogCqiActionButton
+                          courseId={course?.id} sourceType="CLO" sourceReference={c}
+                          defaultFinding={`${c} in ${course?.code}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.cloPct}% pass threshold.`}
+                          metricBefore={Math.round(((result.rows.length - failCount) / result.rows.length) * 1000) / 10}
+                        />
+                      </div>
+                    )}
+                  </th>
+                );
+              })}<th>Total %</th><th>Grade</th></tr></thead>
               <tbody>
                 {result.rows.length === 0 && <tr><td colSpan={result.cloCodes.length + 4} style={{ color: "var(--slate)" }}>No students enrolled, or no marks entered yet.</td></tr>}
                 {result.rows.map((r) => (
@@ -225,7 +244,25 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
               <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLO Attainment, by Student</h3>
               <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
               <SortableTable>
-                <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => <th key={p}>{p}</th>)}</tr></thead>
+                <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => {
+                  const max = result.ploMaxWeight[p] || 0;
+                  const threshold = max * (passCriteria.ploPct / 100);
+                  const failCount = result.rows.filter((r) => (r.byPlo[p] || 0) < threshold).length;
+                  return (
+                    <th key={p}>
+                      {p}
+                      {(user.role === "CHAIRMAN" || user.role === "OMC") && failCount > 0 && (
+                        <div className="no-print" style={{ marginTop: 4 }}>
+                          <LogCqiActionButton
+                            courseId={course?.id} sourceType="PLO" sourceReference={p}
+                            defaultFinding={`${p} in ${course?.code}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.ploPct}% pass threshold.`}
+                            metricBefore={Math.round(((result.rows.length - failCount) / result.rows.length) * 1000) / 10}
+                          />
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}</tr></thead>
                 <tbody>
                   {result.rows.map((r) => (
                     <tr key={r.studentId}>

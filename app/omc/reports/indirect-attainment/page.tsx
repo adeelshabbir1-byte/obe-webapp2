@@ -24,19 +24,36 @@ export default async function IndirectAttainmentPage() {
   });
 
   const byPlo = new Map<string, { total: number; count: number; byStakeholder: Record<string, { total: number; count: number }> }>();
+  const byPeo = new Map<string, { total: number; count: number; byStakeholder: Record<string, { total: number; count: number }> }>();
   for (const a of answers) {
-    if (!a.question.mappedPlo) continue;
-    const label = `PLO-${a.question.mappedPlo.number}`;
-    const entry = byPlo.get(label) || { total: 0, count: 0, byStakeholder: {} };
-    entry.total += a.ratingValue; entry.count++;
-    const stype = a.surveyResponse.respondentType;
-    const se = entry.byStakeholder[stype] || { total: 0, count: 0 };
-    se.total += a.ratingValue; se.count++;
-    entry.byStakeholder[stype] = se;
-    byPlo.set(label, entry);
+    if (a.question.mappedPlo) {
+      const label = `PLO-${a.question.mappedPlo.number}`;
+      const entry = byPlo.get(label) || { total: 0, count: 0, byStakeholder: {} };
+      entry.total += a.ratingValue; entry.count++;
+      const stype = a.surveyResponse.respondentType;
+      const se = entry.byStakeholder[stype] || { total: 0, count: 0 };
+      se.total += a.ratingValue; se.count++;
+      entry.byStakeholder[stype] = se;
+      byPlo.set(label, entry);
+    }
+    if (a.question.mappedPeoLabel) {
+      const label = a.question.mappedPeoLabel;
+      const entry = byPeo.get(label) || { total: 0, count: 0, byStakeholder: {} };
+      entry.total += a.ratingValue; entry.count++;
+      const stype = a.surveyResponse.respondentType;
+      const se = entry.byStakeholder[stype] || { total: 0, count: 0 };
+      se.total += a.ratingValue; se.count++;
+      entry.byStakeholder[stype] = se;
+      byPeo.set(label, entry);
+    }
   }
 
   const rows = Array.from(byPlo.entries()).map(([label, v]) => ({
+    label, avg: Math.round((v.total / v.count) * 100) / 100, count: v.count,
+    byStakeholder: Object.entries(v.byStakeholder).map(([type, s]) => ({ type, avg: Math.round((s.total / s.count) * 100) / 100, count: s.count })),
+  })).sort((a, b) => a.label.localeCompare(b.label));
+
+  const peoRows = Array.from(byPeo.entries()).map(([label, v]) => ({
     label, avg: Math.round((v.total / v.count) * 100) / 100, count: v.count,
     byStakeholder: Object.entries(v.byStakeholder).map(([type, s]) => ({ type, avg: Math.round((s.total / s.count) * 100) / 100, count: s.count })),
   })).sort((a, b) => a.label.localeCompare(b.label));

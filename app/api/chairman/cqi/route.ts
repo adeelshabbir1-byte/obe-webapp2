@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
     data: {
       chairmanId, authorId: user.id, batchId: body.batchId || null, courseId: body.courseId || null,
       finding: body.finding, actionTaken: body.actionTaken || null,
+      sourceType: body.sourceType || null, sourceReference: body.sourceReference || null,
+      metricBefore: body.metricBefore !== undefined && body.metricBefore !== null ? parseFloat(body.metricBefore) : null,
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "CQI_RECORD_CREATED", entityType: "CqiRecord", entityId: record.id });

@@ -315,7 +315,13 @@ model CqiRecord {
   course        Course?  @relation(fields: [courseId], references: [id])
   finding       String   @db.Text
   actionTaken   String?  @db.Text
-  status        String   @default("open") // open | in-progress | closed
+  status        String   @default("open") // open | in-progress | closed | verified-effective | verified-ineffective
+  sourceType    String?  // "CLO" | "PLO" | "PEO" | "GENERAL" — what kind of finding this is
+  sourceReference String? // e.g. "CLO-3", "PLO-5", "PEO-1: ..." — which specific outcome this is about
+  metricBefore  Float?   // the observed value (e.g. pass rate %) at the time this was raised
+  metricAfter   Float?   // the same metric re-checked later, once the action has had a chance to take effect
+  verifiedById  String?
+  verifiedAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -413,6 +419,7 @@ model SurveyQuestion {
   text             String         @db.Text
   mappedPloId      String?
   mappedPlo        PLO?           @relation(fields: [mappedPloId], references: [id])
+  mappedPeoLabel   String?        // PEOs aren't a separate table (see ProgramProfile.peos) — free-text label like "PEO-1", used for indirect PEO assessment via alumni/employer surveys
   orderIndex       Int            @default(0)
 
   answers SurveyAnswer[]

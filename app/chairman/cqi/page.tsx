@@ -62,6 +62,7 @@ export default async function CqiPage() {
           lastUpdatedByName: r.lastUpdatedById ? nameById.get(r.lastUpdatedById) || null : null,
           batchLabel: r.batch ? `${r.batch.degreeProgram} — ${r.batch.batchName}` : null,
           courseLabel: r.course ? `${r.course.code} — ${r.course.title}` : null,
+          sourceType: r.sourceType, sourceReference: r.sourceReference, metricBefore: r.metricBefore, metricAfter: r.metricAfter,
         }))}
         batches={batches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))}
         courses={courses.map((c) => ({ id: c.id, label: `${c.code} — ${c.title}` }))}

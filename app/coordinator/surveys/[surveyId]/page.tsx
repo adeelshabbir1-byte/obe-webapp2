@@ -47,7 +47,8 @@ export default async function SurveyDetailPage({ params }: { params: { surveyId:
 
   let respondents: { id: string; label: string; alreadyLinked: boolean }[] = [];
   if (survey.stakeholderType === "STUDENT") {
-    const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id } });
+    const coordinators = await prisma.user.findMany({ where: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" } });
+    const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinators.map((c) => c.id) } } });
     const students = await prisma.student.findMany({ where: { batchId: { in: batches.map((b) => b.id) } } });
     respondents = students.map((s) => ({ id: s.id, label: `${s.name} (${s.rollNumber})`, alreadyLinked: linkedIds.has(s.id) }));
   } else if (survey.stakeholderType === "ALUMNI") {
