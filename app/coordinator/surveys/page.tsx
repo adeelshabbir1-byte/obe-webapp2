@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { roleLabel, chairmanIdFor } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import SurveysManager from "../../../components/SurveysManager";
 
@@ -34,18 +36,21 @@ export default async function SurveysPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
+  if (user.role !== "PROGRAM_COORDINATOR" && !user.isAlumniCustodian) redirect("/dashboard");
 
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id } });
+  const chairmanId = await chairmanIdFor(user);
+  const coordinators = chairmanId ? await prisma.user.findMany({ where: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" } }) : [];
+  const coordinatorIds = coordinators.map((c) => c.id);
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } } });
   const plos = await prisma.pLO.findMany({ where: { batchId: { in: batches.map((b) => b.id) } }, orderBy: { number: "asc" } });
   const surveys = await prisma.surveyTemplate.findMany({
-    where: { coordinatorId: user.id },
+    where: { coordinatorId: { in: coordinatorIds } },
     include: { questions: true, _count: { select: { responses: true } } },
     orderBy: { createdAt: "desc" },
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={user.role === "PROGRAM_COORDINATOR" ? NAV : navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Feedback Surveys</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Measure indirect PLO attainment through stakeholder feedback — a second evidence source alongside direct

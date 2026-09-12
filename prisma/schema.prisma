@@ -48,6 +48,7 @@ model User {
   specialization     String?  // e.g. "Software Engineering", "AI", "Networks" — set by Coordinator, used to suggest a good fit for elective/specialization courses
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited
+  isAlumniCustodian  Boolean  @default(false) // set by Chairman on ONE faculty member — that person reviews/approves all alumni & employer data submitted by any faculty
   externalLoadCount  Int      @default(0)  // load from courses taught elsewhere (e.g. MS-level) not tracked in this system
   externalLoadNote   String?               // e.g. "2 courses at MS level"
   isActive           Boolean  @default(true)
@@ -74,8 +75,8 @@ model User {
   gradingScale       GradingScale[]  @relation("GradingScaleCoordinator")
   reportAccessRules  ReportAccessRule[] @relation("ReportAccessChairman")
   programProfiles    ProgramProfile[] @relation("ProgramProfileCoordinator")
-  alumni             Alumni[] @relation("AlumniCoordinator")
-  employers          Employer[] @relation("EmployerCoordinator")
+  alumni             Alumni[] @relation("AlumniChairman")
+  employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
   auditLogs          AuditLog[]
@@ -328,29 +329,68 @@ model CqiRecord {
 // records the Coordinator maintains, similar in spirit to Student.
 model Alumni {
   id             String   @id @default(cuid())
-  coordinatorId  String
-  coordinator    User     @relation("AlumniCoordinator", fields: [coordinatorId], references: [id])
+  chairmanId     String   // institution-wide scope — any faculty under any of this chairman's coordinators shares one pool
+  chairman       User     @relation("AlumniChairman", fields: [chairmanId], references: [id])
   name           String
   email          String?
+  rollNumber     String   // links back to their record as a student — important for tracking, and prevents duplicate entry
   degreeProgram  String
   graduationYear Int
+  totalWorkExperienceYears Int? // optional — years of work experience since graduating
+  addedById      String?  // which faculty member added this record — any faculty can add, but not duplicate an existing one
+  status         String   @default("PENDING") // PENDING | APPROVED | REJECTED — reviewed by the chairman-designated custodian (User.isAlumniCustodian)
+  reviewedById   String?
+  reviewNote     String?  @db.Text
   createdAt      DateTime @default(now())
 
-  responses SurveyResponse[]
-  @@index([coordinatorId])
+  responses   SurveyResponse[]
+  employment  AlumniEmployment[]
+  @@unique([chairmanId, rollNumber])
+  @@index([chairmanId])
 }
 
 model Employer {
   id              String   @id @default(cuid())
-  coordinatorId   String
-  coordinator     User     @relation("EmployerCoordinator", fields: [coordinatorId], references: [id])
+  chairmanId      String
+  chairman        User     @relation("EmployerChairman", fields: [chairmanId], references: [id])
   organizationName String
   contactName     String?
   contactEmail    String?
+  companySize     String?  // e.g. "1-10", "11-50", "51-200", "201-500", "500+"
+  industryType    String?  // e.g. "Software Development", "Banking", "Telecom"
+  addedById       String?  // which faculty member added this record — any faculty can add, but not duplicate an existing one
+  status          String   @default("PENDING")
+  reviewedById    String?
+  reviewNote      String?  @db.Text
   createdAt       DateTime @default(now())
 
-  responses SurveyResponse[]
-  @@index([coordinatorId])
+  responses  SurveyResponse[]
+  employment AlumniEmployment[]
+  @@unique([chairmanId, organizationName])
+  @@index([chairmanId])
+}
+
+// One alumnus's employment at one employer, for one stretch of time — an
+// alumnus can have many of these (career history), and an employer can have
+// many alumni employed there (current or past).
+model AlumniEmployment {
+  id           String    @id @default(cuid())
+  alumniId     String
+  alumni       Alumni    @relation(fields: [alumniId], references: [id])
+  employerId   String
+  employer     Employer  @relation(fields: [employerId], references: [id])
+  jobTitle     String?
+  startDate    DateTime?
+  endDate      DateTime? // null = current position
+  salaryRange  String?   // optional, e.g. "PKR 80,000 - 100,000"
+  addedById    String?
+  status       String    @default("PENDING")
+  reviewedById String?
+  reviewNote   String?   @db.Text
+  createdAt    DateTime  @default(now())
+
+  @@index([alumniId])
+  @@index([employerId])
 }
 
 model SurveyTemplate {

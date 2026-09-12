@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { chairmanIdFor, roleLabel } from "../../../../lib/reportScope";
+import { navForRole } from "../../../../components/reportNav";
 import Shell from "../../../../components/Shell";
 import SurveyDetailManager from "../../../../components/SurveyDetailManager";
 
@@ -35,10 +37,11 @@ export default async function SurveyDetailPage({ params }: { params: { surveyId:
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
+  if (user.role !== "PROGRAM_COORDINATOR" && !user.isAlumniCustodian) redirect("/dashboard");
 
-  const survey = await prisma.surveyTemplate.findUnique({ where: { id: params.surveyId }, include: { questions: true, responses: true } });
-  if (!survey || survey.coordinatorId !== user.id) notFound();
+  const survey = await prisma.surveyTemplate.findUnique({ where: { id: params.surveyId }, include: { questions: true, responses: true, coordinator: true } });
+  const chairmanId = await chairmanIdFor(user);
+  if (!survey || survey.coordinator.managedById !== chairmanId) notFound();
 
   const linkedIds = new Set(survey.responses.map((r) => r.studentId || r.alumniId || r.employerId));
 
@@ -48,10 +51,10 @@ export default async function SurveyDetailPage({ params }: { params: { surveyId:
     const students = await prisma.student.findMany({ where: { batchId: { in: batches.map((b) => b.id) } } });
     respondents = students.map((s) => ({ id: s.id, label: `${s.name} (${s.rollNumber})`, alreadyLinked: linkedIds.has(s.id) }));
   } else if (survey.stakeholderType === "ALUMNI") {
-    const alumni = await prisma.alumni.findMany({ where: { coordinatorId: user.id } });
+    const alumni = await prisma.alumni.findMany({ where: { chairmanId, status: "APPROVED" } });
     respondents = alumni.map((a) => ({ id: a.id, label: `${a.name} (${a.degreeProgram} '${a.graduationYear})`, alreadyLinked: linkedIds.has(a.id) }));
   } else {
-    const employers = await prisma.employer.findMany({ where: { coordinatorId: user.id } });
+    const employers = await prisma.employer.findMany({ where: { chairmanId, status: "APPROVED" } });
     respondents = employers.map((e) => ({ id: e.id, label: e.organizationName, alreadyLinked: linkedIds.has(e.id) }));
   }
 
@@ -59,7 +62,7 @@ export default async function SurveyDetailPage({ params }: { params: { surveyId:
   const origin = `https://${host}`;
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={user.role === "PROGRAM_COORDINATOR" ? NAV : navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>{survey.title}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>{survey.stakeholderType} survey — {survey.questions.length} question(s).</p>
       <SurveyDetailManager

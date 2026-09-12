@@ -22,13 +22,14 @@ export default function Shell({
   const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
   const [nceacLogo, setNceacLogo] = useState<string | null>(null);
   const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string } | null>(null);
+  const [isAlumniCustodian, setIsAlumniCustodian] = useState(false);
 
   useEffect(() => {
     fetch("/api/institute-info").then((r) => r.json()).then((d) => {
       setInstituteName(d.instituteName); setInstituteLogo(d.instituteLogo);
       setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
     }).catch(() => {});
-    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); }).catch(() => {});
+    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); if (d.isAlumniCustodian) setIsAlumniCustodian(true); }).catch(() => {});
   }, []);
 
   async function switchRole() {
@@ -81,6 +82,16 @@ export default function Shell({
             <button onClick={switchRole} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: "pointer", padding: 0, textAlign: "left" }}>
               Switch to {roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}
             </button>
+          )}
+          {isAlumniCustodian && (
+            <>
+              <a href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+                Review Alumni & Employer Data
+              </a>
+              <a href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+                Manage Feedback Surveys
+              </a>
+            </>
           )}
           <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
             Sign out

@@ -6,6 +6,42 @@ import { useRouter } from "next/navigation";
 type Plo = { id: string; number: number; title: string };
 type Survey = { id: string; title: string; stakeholderType: string; questions: { id: string; text: string }[]; _count: { responses: number } };
 
+const QUICK_START_TEMPLATES: Record<string, { title: string; stakeholderType: string; questions: string[] }> = {
+  alumni: {
+    title: "Alumni Exit Survey",
+    stakeholderType: "ALUMNI",
+    questions: [
+      "My degree program adequately prepared me for the demands of my current job.",
+      "I am able to apply core knowledge from my field to solve real-world problems.",
+      "I can communicate effectively, both in writing and verbally, in professional settings.",
+      "I understand and apply professional and ethical responsibilities in my work.",
+      "I regularly engage in continued learning to keep my skills current.",
+    ],
+  },
+  employer: {
+    title: "Employer Feedback Survey",
+    stakeholderType: "EMPLOYER",
+    questions: [
+      "Graduates from this program demonstrate strong technical/domain knowledge.",
+      "Graduates from this program work effectively as part of a team.",
+      "Graduates from this program communicate clearly in both written and verbal form.",
+      "Graduates from this program exhibit professionalism and sound ethical judgment.",
+      "Graduates from this program adapt well to new tools, technologies, and problems.",
+    ],
+  },
+  student: {
+    title: "Current Student Satisfaction Survey",
+    stakeholderType: "STUDENT",
+    questions: [
+      "I am satisfied with the overall quality of teaching in my program.",
+      "The curriculum adequately covers the skills relevant to my career goals.",
+      "I have adequate access to labs, resources, and faculty support when I need it.",
+      "I feel prepared to tackle real-world problems in my field.",
+      "Overall, I am satisfied with my educational experience in this program.",
+    ],
+  },
+};
+
 export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; plos: Plo[] }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -13,6 +49,13 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
   const [questions, setQuestions] = useState<{ text: string; mappedPloId: string }[]>([{ text: "", mappedPloId: "" }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function useTemplate(key: keyof typeof QUICK_START_TEMPLATES) {
+    const t = QUICK_START_TEMPLATES[key];
+    setTitle(t.title);
+    setStakeholderType(t.stakeholderType);
+    setQuestions(t.questions.map((text) => ({ text, mappedPloId: "" })));
+  }
 
   function updateQuestion(i: number, field: "text" | "mappedPloId", value: string) {
     setQuestions((prev) => prev.map((q, idx) => (idx === i ? { ...q, [field]: value } : q)));
@@ -58,6 +101,14 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Create a New Survey</h3>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 6 }}>Quick Start — pre-fill with a standard template, then adjust as needed</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => useTemplate("alumni")} style={{ background: "none", border: "1px solid var(--brass)", color: "var(--brass-dark)", padding: "5px 12px", fontSize: 11.5, cursor: "pointer" }}>Alumni Exit Survey</button>
+            <button type="button" onClick={() => useTemplate("employer")} style={{ background: "none", border: "1px solid var(--brass)", color: "var(--brass-dark)", padding: "5px 12px", fontSize: 11.5, cursor: "pointer" }}>Employer Feedback Survey</button>
+            <button type="button" onClick={() => useTemplate("student")} style={{ background: "none", border: "1px solid var(--brass)", color: "var(--brass-dark)", padding: "5px 12px", fontSize: 11.5, cursor: "pointer" }}>Student Satisfaction Survey</button>
+          </div>
+        </div>
         <form onSubmit={createSurvey}>
           <div style={{ display: "flex", gap: 14 }}>
             <div className="field" style={{ flex: 2 }}><label>Title</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Alumni Exit Survey 2026" /></div>

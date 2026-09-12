@@ -13,6 +13,7 @@ const NAV = [
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" },
   { href: "/chairman/report-access", label: "Report Access Control" },
+  { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
   { href: "/omc/reports", label: "Reports" },
 ];
 

@@ -1,53 +1,48 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { roleLabel, chairmanIdFor } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import StakeholdersManager from "../../../components/StakeholdersManager";
 
-const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
-  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
-  { href: "/coordinator/courses", label: "Courses" },
-  { href: "/coordinator/plos", label: "Program Learning Outcomes" },
-  { href: "/coordinator/semester", label: "Current Semester" },
-  { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
-  { href: "/coordinator/students", label: "Students" },
-  { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/grading-scale", label: "Grading Scale" },
-  { href: "/coordinator/assignment-history", label: "Assignment History" },
-  { href: "/coordinator/report-bundles", label: "Report Bundles" },
-  { href: "/coordinator/program-profile", label: "Program Document" },
-  { href: "/coordinator/required-books", label: "Required Textbooks" },
-  { href: "/coordinator/student-transcript", label: "Student Transcript" },
-  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
-  { href: "/coordinator/surveys", label: "Feedback Surveys" },
-  { href: "/coordinator/load-report", label: "Teacher Load Report" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
-  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
-  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
-  { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
-  { href: "/omc/reports", label: "OMC Reports" },
-];
+const ALLOWED_ROLES = ["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR"];
 
 export default async function StakeholdersPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
+  if (!ALLOWED_ROLES.includes(user.role)) redirect("/dashboard");
 
-  const [alumni, employers] = await Promise.all([
-    prisma.alumni.findMany({ where: { coordinatorId: user.id }, orderBy: { graduationYear: "desc" } }),
-    prisma.employer.findMany({ where: { coordinatorId: user.id }, orderBy: { organizationName: "asc" } }),
+  const chairmanId = await chairmanIdFor(user);
+  if (!chairmanId) {
+    return (
+      <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+        <div className="card"><p style={{ color: "var(--rust)", fontSize: 12.5 }}>No institution is on record for your account — contact your Program Coordinator.</p></div>
+      </Shell>
+    );
+  }
+
+  const [alumni, employers, employment] = await Promise.all([
+    prisma.alumni.findMany({ where: { chairmanId }, orderBy: { graduationYear: "desc" } }),
+    prisma.employer.findMany({ where: { chairmanId }, orderBy: { organizationName: "asc" } }),
+    prisma.alumniEmployment.findMany({ where: { alumni: { chairmanId } }, orderBy: { startDate: "desc" } }),
   ]);
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Alumni & Employers</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Contact records for stakeholder feedback surveys — used to measure indirect PLO attainment.
+        Shared across your whole institution — any faculty member can submit a record, but it needs approval
+        from your institution's designated data custodian before it's used (e.g. for surveys). An alumni's roll
+        number and an employer's name must be unique, so the same person or company is never added twice.
       </p>
-      <StakeholdersManager alumni={alumni} employers={employers} />
+      <StakeholdersManager
+        alumni={alumni.map((a) => ({ id: a.id, name: a.name, email: a.email, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, totalWorkExperienceYears: a.totalWorkExperienceYears, status: a.status }))}
+        employers={employers.map((e) => ({ id: e.id, organizationName: e.organizationName, contactName: e.contactName, contactEmail: e.contactEmail, companySize: e.companySize, industryType: e.industryType, status: e.status }))}
+        employment={employment.map((e) => ({ id: e.id, alumniId: e.alumniId, employerId: e.employerId, jobTitle: e.jobTitle, startDate: e.startDate ? e.startDate.toISOString().slice(0, 10) : null, endDate: e.endDate ? e.endDate.toISOString().slice(0, 10) : null, salaryRange: e.salaryRange, status: e.status }))}
+      />
     </Shell>
   );
 }

@@ -20,11 +20,13 @@ export const OMC_ACTION_NAV = [
 
 export const INSTRUCTOR_NAV = [
   { href: "/instructor/courses", label: "My Semester Courses" },
+  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },
+  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/omc/reports", label: "Reports" },
 ];
 

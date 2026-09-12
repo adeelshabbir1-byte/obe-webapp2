@@ -6,5 +6,5 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
   const dualCapable = user.rawRole === "SUBJECT_EXPERT" && user.secondaryRole === "INSTRUCTOR";
-  return NextResponse.json({ dualCapable, activeRole: user.role });
+  return NextResponse.json({ dualCapable, activeRole: user.role, isAlumniCustodian: !!user.isAlumniCustodian });
 }
