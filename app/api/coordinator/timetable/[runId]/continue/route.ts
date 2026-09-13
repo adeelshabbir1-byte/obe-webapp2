@@ -6,7 +6,7 @@ import { runGeneticAlgorithm, Gene } from "../../../../../../lib/timetableGA";
 import { buildSlots } from "../../../../../../lib/timetableSlotBuilder";
 
 export const maxDuration = 60;
-const CHUNK_MS = 8000;
+const CHUNK_MS = 4000; // kept conservative — some hosting plans hard-cap function duration well under the 60s "maxDuration" this route requests, so leave real headroom for the surrounding DB queries
 
 export async function POST(req: Request, { params }: { params: { runId: string } }) {
   const user = await getAuthenticatedUser();

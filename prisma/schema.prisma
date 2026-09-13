@@ -76,6 +76,7 @@ model User {
   reportAccessRules  ReportAccessRule[] @relation("ReportAccessChairman")
   programProfiles    ProgramProfile[] @relation("ProgramProfileCoordinator")
   alumni             Alumni[] @relation("AlumniChairman")
+  degreePrograms     DegreeProgram[] @relation("DegreeProgramCoordinator")
   ownedRooms         Room[] @relation("RoomChairman")
   scheduleSections   ScheduleSection[] @relation("ScheduleSectionInstructor")
   facultyUnavailability FacultyUnavailability[] @relation("FacultyUnavailabilityFaculty")
@@ -115,6 +116,24 @@ model PasswordResetToken {
   revokedAt DateTime?
 
   @@index([userId])
+}
+
+// A degree program the Coordinator's institution offers (e.g. "BS Computer
+// Science") — set up once, then reused every semester to quickly create
+// that term's intake batches via checkboxes rather than retyping names.
+model DegreeProgram {
+  id             String  @id @default(cuid())
+  coordinatorId  String
+  coordinator    User    @relation("DegreeProgramCoordinator", fields: [coordinatorId], references: [id])
+  name           String  // e.g. "BS Computer Science" — matches Batch.degreeProgram for compatibility with existing reports/licensing
+  shortCode      String  // e.g. "BSCS" — used to auto-generate batch names
+  defaultIntakeSize Int  @default(30)
+  usuallyOfferedInFall   Boolean @default(true)
+  usuallyOfferedInSpring Boolean @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([coordinatorId, shortCode])
+  @@index([coordinatorId])
 }
 
 // A cohort/intake — e.g. "BS Computer Science, Fall 2025". Different batches

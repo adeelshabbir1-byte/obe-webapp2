@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import BatchesManager from "../../../components/BatchesManager";
+import DegreeProgramsAndIntakeManager from "../../../components/DegreeProgramsAndIntakeManager";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -42,6 +43,7 @@ export default async function BatchesPage() {
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
     include: { _count: { select: { courses: true } } },
   });
+  const degreePrograms = await prisma.degreeProgram.findMany({ where: { coordinatorId: user.id }, orderBy: { name: "asc" } });
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
@@ -53,6 +55,7 @@ export default async function BatchesPage() {
         Different batches/cohorts can follow different schemes of studies. Create a batch here, then import
         or add courses into it — the same HEC curriculum can be imported fresh for each new batch.
       </p>
+      <DegreeProgramsAndIntakeManager programs={degreePrograms} />
       <BatchesManager
         initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses }))}
       />

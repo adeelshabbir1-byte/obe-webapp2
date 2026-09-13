@@ -130,10 +130,32 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
 
   async function pollLoop(id: string) {
     pollingRef.current = true;
+    let consecutiveFailures = 0;
     while (pollingRef.current) {
-      const res = await fetch(`/api/coordinator/timetable/${id}/continue`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); break; }
+      let data: any;
+      try {
+        const res = await fetch(`/api/coordinator/timetable/${id}/continue`, { method: "POST" });
+        const text = await res.text();
+        data = text ? JSON.parse(text) : null;
+        if (!res.ok || !data) {
+          consecutiveFailures++;
+          if (consecutiveFailures >= 3) {
+            setError("The server stopped responding mid-generation (likely a hosting time limit on each step) — try again with a shorter 'max run time', or check what's been saved so far below.");
+            setGenerating(false); await loadRun(id); break;
+          }
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
+        }
+      } catch (err: any) {
+        consecutiveFailures++;
+        if (consecutiveFailures >= 3) {
+          setError("Lost connection to the server while generating — try again with a shorter 'max run time'.");
+          setGenerating(false); await loadRun(id); break;
+        }
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      consecutiveFailures = 0;
       setRunInfo({ hardViolations: data.hardViolations, generations: data.generations, notes: "" });
       setProgressPct(data.percentTimeUsed ?? 0);
       if (data.status === "COMPLETED" || data.status === "STOPPED") {
