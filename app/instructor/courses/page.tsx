@@ -30,12 +30,14 @@ export default async function InstructorCoursesPage() {
   // yet. Only show courses whose offered term matches their own
   // Coordinator's actual current term.
   const coordinatorIdsInvolved = Array.from(new Set([
-    ...directCourses.map((c) => c.batch.coordinatorId), ...sectionAssignments.map((a) => a.course.batch.coordinatorId),
+    ...directCourses.map((c) => c.batch?.coordinatorId).filter((id): id is string => !!id),
+    ...sectionAssignments.map((a) => a.course.batch?.coordinatorId).filter((id): id is string => !!id),
   ]));
   const currentTerms = await prisma.currentTerm.findMany({ where: { coordinatorId: { in: coordinatorIdsInvolved } } });
   const currentTermByCoordinator = new Map(currentTerms.map((t) => [t.coordinatorId, t]));
 
-  function isActuallyCurrent(course: { offeredTermName: string | null; offeredTermYear: number | null; batch: { coordinatorId: string } }): boolean {
+  function isActuallyCurrent(course: { offeredTermName: string | null; offeredTermYear: number | null; batch: { coordinatorId: string } | null }): boolean {
+    if (!course.batch) return true; // no batch on record — nothing to compare against, fall back to showing it
     const ct = currentTermByCoordinator.get(course.batch.coordinatorId);
     if (!ct) return true; // no current-term set yet for that coordinator — fall back to isOffered alone rather than hiding everything
     return course.offeredTermName === ct.termName && course.offeredTermYear === ct.year;

@@ -46,7 +46,7 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
 
     const byDegree = new Map<string, typeof coursesForSemester>();
     for (const c of coursesForSemester) {
-      const key = `${c.batch.degreeProgram} — ${c.batch.batchName}`;
+      const key = c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "Unknown Program";
       byDegree.set(key, [...(byDegree.get(key) || []), c]);
     }
     const usedTypes = Array.from(new Set(coursesForSemester.map((c) => c.courseType)));

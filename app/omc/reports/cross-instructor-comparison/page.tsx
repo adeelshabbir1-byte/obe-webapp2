@@ -69,7 +69,7 @@ export default async function CrossInstructorComparisonPage({ searchParams }: { 
       byTopic.set(key, entry);
     }
     return {
-      label: `${o.batch.degreeProgram} — ${o.offeredTermName || "?"} ${o.offeredTermYear || ""} (${o.instructor?.name || "Unassigned"})`,
+      label: `${o.batch?.degreeProgram || "Unknown Program"} — ${o.offeredTermName || "?"} ${o.offeredTermYear || ""} (${o.instructor?.name || "Unassigned"})`,
       byTopic,
     };
   });
