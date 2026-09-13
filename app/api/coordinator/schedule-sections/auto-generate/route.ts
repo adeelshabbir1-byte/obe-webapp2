@@ -31,10 +31,14 @@ export async function POST() {
       labelIndex++;
       // Default room type: LAB if the course itself has a lab component,
       // otherwise LECTURE — PC can override per section afterward.
+      // Defaults: theory = 1.5hr x 2 sessions/week, lab = 3hr x 1 session/week.
+      const roomTypeNeeded = c.hasLab ? "LAB" : "LECTURE";
       await prisma.scheduleSection.create({
         data: {
           courseId: c.id, instructorId, sectionLabel: `Section ${String.fromCharCode(64 + labelIndex)}`,
-          roomTypeNeeded: c.hasLab ? "LAB" : "LECTURE",
+          roomTypeNeeded,
+          sessionsPerWeek: roomTypeNeeded === "LAB" ? 1 : 2,
+          sessionDurationMinutes: roomTypeNeeded === "LAB" ? 180 : 90,
         },
       });
       created++;

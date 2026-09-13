@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import AvailabilityGrid from "./AvailabilityGrid";
 
 type Room = { id: string; name: string; type: string; capacity: number };
 type Batch = { id: string; label: string; workingDays: string[]; dailyStartHour: number; dailyEndHour: number };
@@ -94,35 +95,19 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     await loadSections(); setLoading(false);
   }
 
-  // Faculty availability (PC-set)
-  const [unavailability, setUnavailability] = useState<any[]>([]);
+  // Faculty availability (PC-set) — per-faculty grid
   const [unavailFacultyId, setUnavailFacultyId] = useState(faculty[0]?.id || "");
-  async function loadUnavailability() {
-    const res = await fetch("/api/coordinator/faculty-unavailability");
-    const data = await res.json();
-    setUnavailability(data.records || []);
-  }
-  useEffect(() => { loadUnavailability(); }, []);
+  const [facultyUnavailable, setFacultyUnavailable] = useState<{ dayOfWeek: string; startHour: number; endHour: number }[]>([]);
+  const [loadingGrid, setLoadingGrid] = useState(false);
 
-  async function addUnavailability(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true); setError("");
-    const fd = new FormData(e.currentTarget);
-    try {
-      const res = await fetch("/api/coordinator/faculty-unavailability", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ facultyId: unavailFacultyId, dayOfWeek: fd.get("dayOfWeek"), startHour: fd.get("startHour"), endHour: fd.get("endHour"), note: fd.get("note") }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      await loadUnavailability(); (e.target as HTMLFormElement).reset(); setLoading(false);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  async function loadFacultyUnavailability(facultyId: string) {
+    setLoadingGrid(true);
+    const res = await fetch(`/api/coordinator/faculty-unavailability?facultyId=${facultyId}`);
+    const data = await res.json();
+    setFacultyUnavailable(data.records || []);
+    setLoadingGrid(false);
   }
-  async function removeUnavailability(id: string) {
-    setLoading(true);
-    await fetch(`/api/coordinator/faculty-unavailability/${id}`, { method: "DELETE" });
-    await loadUnavailability(); setLoading(false);
-  }
+  useEffect(() => { if (unavailFacultyId) loadFacultyUnavailability(unavailFacultyId); }, []);
 
   // Generate & view
   const [generating, setGenerating] = useState(false);
@@ -131,6 +116,10 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   const [entries, setEntries] = useState<Entry[]>([]);
   const [viewMode, setViewMode] = useState<"batch" | "instructor" | "room" | "course">("batch");
   const [viewFilter, setViewFilter] = useState("");
+  const [progressPct, setProgressPct] = useState(0);
+  const [maxMinutes, setMaxMinutes] = useState(30);
+  const [runStatus, setRunStatus] = useState<"IDLE" | "RUNNING" | "COMPLETED" | "STOPPED">("IDLE");
+  const pollingRef = { current: false } as { current: boolean };
 
   async function loadRun(id: string) {
     const res = await fetch(`/api/coordinator/timetable/${id}`);
@@ -139,19 +128,50 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   }
   useEffect(() => { if (runId) loadRun(runId); }, []);
 
+  async function pollLoop(id: string) {
+    pollingRef.current = true;
+    while (pollingRef.current) {
+      const res = await fetch(`/api/coordinator/timetable/${id}/continue`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); break; }
+      setRunInfo({ hardViolations: data.hardViolations, generations: data.generations, notes: "" });
+      setProgressPct(data.percentTimeUsed ?? 0);
+      if (data.status === "COMPLETED" || data.status === "STOPPED") {
+        setRunStatus(data.status); setGenerating(false); await loadRun(id); router.refresh(); break;
+      }
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+
   async function generate() {
-    setGenerating(true); setError("");
+    setGenerating(true); setError(""); setProgressPct(0); setRunStatus("RUNNING");
     try {
-      const res = await fetch("/api/coordinator/timetable/generate", { method: "POST" });
+      const res = await fetch("/api/coordinator/timetable/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxMinutes }),
+      });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setGenerating(false); return; }
-      setRunId(data.runId); await loadRun(data.runId); setGenerating(false); setTab("Generate & View"); router.refresh();
+      setRunId(data.runId); setTab("Generate & View");
+      pollLoop(data.runId);
     } catch (err: any) { setError("Unexpected error: " + err.message); setGenerating(false); }
+  }
+
+  async function stopNow() {
+    if (!runId) return;
+    pollingRef.current = false;
+    setGenerating(false);
+    const res = await fetch(`/api/coordinator/timetable/${runId}/stop`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) { setRunStatus(data.status); await loadRun(runId); router.refresh(); }
   }
 
   const groupKeyFor = (e: Entry) => (viewMode === "batch" ? e.batchLabel : viewMode === "instructor" ? e.instructorName : viewMode === "room" ? e.roomName : `${e.courseCode} — ${e.courseTitle}`);
   const groups = Array.from(new Set(entries.map(groupKeyFor))).sort();
   const filteredEntries = viewFilter ? entries.filter((e) => groupKeyFor(e) === viewFilter) : entries;
+
+  const GRID_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const usedDays = GRID_DAYS.filter((d) => filteredEntries.some((e) => e.day === d));
+  const timeStarts = Array.from(new Set(filteredEntries.map((e) => e.startHour))).sort((a, b) => a - b);
 
   return (
     <>
@@ -251,39 +271,19 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       )}
 
       {tab === "Faculty Availability" && (
-        <div className="card">
-          <h3 style={{ fontSize: 14, marginBottom: 10 }}>Faculty Unavailability (set by you, as Coordinator)</h3>
-          <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}>Faculty can also mark their own unavailability from their own account — both feed the same generator.</p>
-          <table>
-            <thead><tr><th>Faculty</th><th>Day</th><th>Time</th><th>Note</th><th></th></tr></thead>
-            <tbody>
-              {unavailability.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>None set.</td></tr>}
-              {unavailability.map((u: any) => (
-                <tr key={u.id}>
-                  <td>{faculty.find((f) => f.id === u.facultyId)?.name || "—"}</td><td>{u.dayOfWeek}</td>
-                  <td>{formatHour(u.startHour)}–{formatHour(u.endHour)}</td><td>{u.note || "—"}</td>
-                  <td><button onClick={() => removeUnavailability(u.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <form onSubmit={addUnavailability} style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div>
-              <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Faculty</label>
-              <select value={unavailFacultyId} onChange={(e) => setUnavailFacultyId(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
-                {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-            </div>
-            <div className="field" style={{ margin: 0 }}>
-              <label>Day</label>
-              <select name="dayOfWeek">{DAYS.map((d) => <option key={d} value={d}>{d}</option>)}</select>
-            </div>
-            <div className="field" style={{ margin: 0 }}><label>Start Hour</label><input name="startHour" type="number" min={0} max={23} defaultValue={8} style={{ width: 70 }} /></div>
-            <div className="field" style={{ margin: 0 }}><label>End Hour</label><input name="endHour" type="number" min={0} max={23} defaultValue={9} style={{ width: 70 }} /></div>
-            <div className="field" style={{ margin: 0 }}><label>Note (optional)</label><input name="note" placeholder="e.g. Faculty meeting" /></div>
-            <button className="btn btn-brass" type="submit" disabled={loading}>Add</button>
-          </form>
-        </div>
+        <>
+          <div className="card">
+            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Faculty Member</label>
+            <select value={unavailFacultyId} onChange={(e) => { setUnavailFacultyId(e.target.value); loadFacultyUnavailability(e.target.value); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+              {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+          {loadingGrid ? (
+            <div className="card"><p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p></div>
+          ) : (
+            <AvailabilityGrid facultyId={unavailFacultyId} existingUnavailable={facultyUnavailable} />
+          )}
+        </>
       )}
 
       {tab === "Generate & View" && (
@@ -291,19 +291,44 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Generate Timetable</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
-              Runs a genetic algorithm across all your rooms, sections, and faculty availability. May take up to a minute for larger institutions.
+              Runs a genetic algorithm in the background, searching for a clash-free schedule. It keeps improving
+              until it finds a perfect result or the time limit is reached — you can also accept the current best
+              early.
             </p>
-            <button onClick={generate} disabled={generating} className="btn btn-brass">{generating ? "Generating… this may take a minute" : "Generate Timetable"}</button>
-            {runInfo && (
-              <p style={{ fontSize: 12.5, marginTop: 12, color: runInfo.hardViolations > 0 ? "var(--rust)" : "var(--sage)" }}>
-                {runInfo.notes} ({runInfo.generations} generation(s) run)
+            {!generating && (
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Max run time (minutes)</label>
+                  <input type="number" min={1} max={30} value={maxMinutes} onChange={(e) => setMaxMinutes(parseInt(e.target.value, 10) || 30)} style={{ width: 80, padding: "6px 8px", border: "1px solid var(--line)" }} />
+                </div>
+                <button onClick={generate} className="btn btn-brass">Generate Timetable</button>
+              </div>
+            )}
+            {generating && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ background: "var(--line)", borderRadius: 6, height: 10, overflow: "hidden", marginBottom: 8 }}>
+                  <div style={{ background: "var(--brass)", height: "100%", width: `${progressPct}%`, transition: "width .3s" }} />
+                </div>
+                <p style={{ fontSize: 12, color: "var(--slate)" }}>
+                  Searching… {progressPct}% of time budget used
+                  {runInfo && ` — best so far: ${runInfo.hardViolations} clash(es), ${runInfo.generations} generation(s)`}
+                </p>
+                <button onClick={stopNow} style={{ marginTop: 8, background: "none", border: "1px solid var(--rust)", color: "var(--rust)", padding: "5px 14px", fontSize: 12, cursor: "pointer" }}>Stop Now & Use Current Best</button>
+              </div>
+            )}
+            {!generating && runInfo && (
+              <p style={{ fontSize: 12.5, color: (runInfo.hardViolations || 0) > 0 ? "var(--rust)" : "var(--sage)" }}>
+                {(runInfo.hardViolations || 0) > 0 ? `${runInfo.hardViolations} clash(es) remain` : "Clash-free!"} after {runInfo.generations} generation(s).
               </p>
             )}
           </div>
 
           {entries.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 10 }}>Sub-Timetable View</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                <h3 style={{ fontSize: 14 }}>Timetable</h3>
+                {runId && <a href={`/api/coordinator/timetable/${runId}/export`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>}
+              </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <select value={viewMode} onChange={(e) => { setViewMode(e.target.value as any); setViewFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
                   <option value="batch">By Batch / Degree Program</option>
@@ -316,14 +341,25 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                   {groups.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
+
               <table>
-                <thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Section</th><th>Instructor</th><th>Batch</th><th>Room</th></tr></thead>
+                <thead><tr><th>Time</th>{usedDays.map((d) => <th key={d}>{d}</th>)}</tr></thead>
                 <tbody>
-                  {filteredEntries.map((e) => (
-                    <tr key={e.id}>
-                      <td>{e.day}</td><td>{formatHour(e.startHour)}–{formatHour(e.endHour)}</td>
-                      <td>{e.courseCode} — {e.courseTitle}</td><td>{e.sectionLabel}</td><td>{e.instructorName}</td>
-                      <td style={{ fontSize: 11 }}>{e.batchLabel}</td><td>{e.roomName} ({e.roomType})</td>
+                  {timeStarts.map((t) => (
+                    <tr key={t}>
+                      <td style={{ whiteSpace: "nowrap", fontSize: 11 }}>{formatHour(t)}</td>
+                      {usedDays.map((d) => {
+                        const cellEntries = filteredEntries.filter((e) => e.day === d && e.startHour === t);
+                        return (
+                          <td key={d} style={{ fontSize: 11, verticalAlign: "top" }}>
+                            {cellEntries.map((e) => (
+                              <div key={e.id} style={{ marginBottom: 4, padding: 4, background: "#F0EDFB", borderRadius: 3 }}>
+                                <b>{e.courseCode}</b> ({e.sectionLabel})<br />{e.instructorName}<br />{e.roomName} · {e.batchLabel}
+                              </div>
+                            ))}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
-import MyAvailabilityManager from "../../../components/MyAvailabilityManager";
+import AvailabilityGrid from "../../../components/AvailabilityGrid";
 
 export default async function MyAvailabilityPage() {
   const user = await getAuthenticatedUser();
@@ -19,9 +19,10 @@ export default async function MyAvailabilityPage() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Availability</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Mark times you're unavailable to teach — this feeds directly into the Coordinator's timetable generator.
+        Every slot is available by default — uncheck the ones you're not free for. This feeds directly into the
+        Coordinator's timetable generator.
       </p>
-      <MyAvailabilityManager initialRecords={records.map((r) => ({ id: r.id, dayOfWeek: r.dayOfWeek, startHour: r.startHour, endHour: r.endHour, note: r.note }))} />
+      <AvailabilityGrid existingUnavailable={records.map((r) => ({ dayOfWeek: r.dayOfWeek, startHour: r.startHour, endHour: r.endHour }))} />
     </Shell>
   );
 }

@@ -108,7 +108,7 @@ function mutate(chromosome: Gene[], slots: Slot[], rooms: Room[], rate: number):
   return chromosome.map((g, i) => (Math.random() < rate ? randomGene(slots[i], rooms) : g));
 }
 
-export function runGeneticAlgorithm(slots: Slot[], rooms: Room[], unavailability: Unavailability[], opts: { populationSize?: number; maxGenerations?: number; timeBudgetMs?: number } = {}) {
+export function runGeneticAlgorithm(slots: Slot[], rooms: Room[], unavailability: Unavailability[], opts: { populationSize?: number; maxGenerations?: number; timeBudgetMs?: number; seed?: Gene[] } = {}) {
   const populationSize = opts.populationSize ?? 40;
   const maxGenerations = opts.maxGenerations ?? 150;
   const timeBudgetMs = opts.timeBudgetMs ?? 8000;
@@ -116,7 +116,13 @@ export function runGeneticAlgorithm(slots: Slot[], rooms: Room[], unavailability
 
   if (slots.length === 0) return { chromosome: [] as Gene[], score: 0, hardViolations: 0, generations: 0 };
 
-  let population: Gene[][] = Array.from({ length: populationSize }, () => slots.map((s) => randomGene(s, rooms)));
+  // Seed a valid-length chromosome from a previous chunk's best, if given
+  // (and the slot count still matches — it won't if sections changed).
+  const validSeed = opts.seed && opts.seed.length === slots.length ? opts.seed : null;
+
+  let population: Gene[][] = Array.from({ length: populationSize }, (_, i) =>
+    i === 0 && validSeed ? validSeed : slots.map((s) => randomGene(s, rooms))
+  );
   let best = population[0], bestFit = fitness(best, slots, rooms, unavailability);
   let gen = 0;
 

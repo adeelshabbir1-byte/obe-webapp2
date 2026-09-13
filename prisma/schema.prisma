@@ -211,8 +211,8 @@ model ScheduleSection {
   instructorId   String
   instructor     User     @relation("ScheduleSectionInstructor", fields: [instructorId], references: [id])
   sectionLabel   String   @default("Section A")
-  sessionsPerWeek Int     @default(3)
-  sessionDurationMinutes Int @default(60)
+  sessionsPerWeek Int     @default(2) // theory default: 2 sessions/week (lab default: 1) — see ScheduleSection auto-generation
+  sessionDurationMinutes Int @default(90) // theory default: 1.5hr (lab default: 3hr)
   roomTypeNeeded String   @default("LECTURE") // "LECTURE" | "LAB"
   createdAt      DateTime @default(now())
 
@@ -256,12 +256,15 @@ model TimetableRun {
   chairmanId   String
   chairman     User     @relation("TimetableRunChairman", fields: [chairmanId], references: [id])
   generatedById String
-  status       String   @default("COMPLETED") // "COMPLETED" | "FAILED"
+  status       String   @default("RUNNING") // "RUNNING" | "COMPLETED" | "STOPPED" | "FAILED"
   fitnessScore Float?
   hardViolations Int?
   generations  Int?
   notes        String?  @db.Text
+  bestChromosomeJson String? @db.Text // serialized best-so-far chromosome — lets the next chunk resume rather than restart from scratch
+  targetEndTime DateTime? // when this run should stop even if not perfect (e.g. now + 30 min)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   entries TimetableEntry[]
   @@index([chairmanId])
