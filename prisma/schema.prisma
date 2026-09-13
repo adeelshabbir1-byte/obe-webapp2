@@ -150,6 +150,35 @@ model CurrentTerm {
 // OMC-defined institution-wide pass/fail threshold for CLO and PLO
 // attainment — how much of a CLO/PLO's max weighted marks a student needs
 // to count as having "passed" it. Defaults to 50% for both if never set.
+// Per-lecture attendance, marked by the Instructor for each enrolled
+// student. One record per (lecture, student) — status can be updated by
+// re-marking, not accumulated.
+model AttendanceRecord {
+  id           String   @id @default(cuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  lectureRowId String
+  lectureRow   LectureRow @relation(fields: [lectureRowId], references: [id])
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  status       String   // "PRESENT" | "ABSENT" | "LEAVE"
+  markedById   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([lectureRowId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+}
+
+// Institution-wide minimum attendance % — below this, a student is
+// flagged in the attendance report. Defaults to 75% if never set.
+model AttendanceThreshold {
+  id            String @id @default(cuid())
+  chairmanId    String @unique
+  minPercentage Int    @default(75)
+}
+
 model PassingCriteria {
   id            String @id @default(cuid())
   chairmanId    String @unique
@@ -351,6 +380,7 @@ model Alumni {
 
   responses   SurveyResponse[]
   employment  AlumniEmployment[]
+  additionalDegrees AlumniAdditionalDegree[]
   @@unique([chairmanId, rollNumber])
   @@index([chairmanId])
 }
@@ -397,6 +427,25 @@ model AlumniEmployment {
 
   @@index([alumniId])
   @@index([employerId])
+}
+
+// A degree earned AFTER graduating from this institution (MS, PhD,
+// professional certifications) — separate from the one original degree
+// tracked directly on Alumni.
+model AlumniAdditionalDegree {
+  id             String   @id @default(cuid())
+  alumniId       String
+  alumni         Alumni   @relation(fields: [alumniId], references: [id])
+  degreeName     String   // e.g. "MS Computer Science"
+  institution    String   // e.g. "Stanford University"
+  completionYear Int?
+  addedById      String?
+  status         String   @default("PENDING")
+  reviewedById   String?
+  reviewNote     String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([alumniId])
 }
 
 model SurveyTemplate {
@@ -474,6 +523,7 @@ model Student {
   marks       StudentMark[]
   transcriptRecords StudentTranscriptRecord[]
   surveyResponses SurveyResponse[]
+  attendanceRecords AttendanceRecord[]
 
   @@unique([batchId, rollNumber])
   @@index([batchId])
@@ -773,6 +823,8 @@ model Course {
 
   clos                CLO[]
   lectureRows         LectureRow[]
+  paperDistributionItems PaperDistributionItem[]
+  attendanceRecords   AttendanceRecord[]
   ploMappings         CoursePloMapping[]
   weightExceptions    WeightExceptionRequest[]
   assessmentInstruments AssessmentInstrument[]
@@ -878,11 +930,36 @@ model CLO {
                           // when several CLOs in the same course map to the same PLO,
                           // their contributions must sum to 100 (enforced at submit time)
   targetPct   Int      @default(60) // NBA/Washington-Accord style: % of students expected to attain this CO — compared against actual attainment on the Program Attainment Analytics dashboard
+  orderIndex  Int      @default(0) // display order — code is auto-derived from this ("CLO-1", "CLO-2"...) so it's never manually typed and never has gaps
   createdAt   DateTime @default(now())
 
   lectureRows LectureRow[]
+  paperDistributionItems PaperDistributionItem[]
 
   @@unique([courseId, source, code])
+  @@index([courseId])
+}
+
+// Final/mid-term paper distribution — one row per question, built by SE
+// (planning) or Instructor (actual exam), picking a topic from the course's
+// own lecture plan so the CLO and cognitive level come from real course
+// data rather than being retyped.
+model PaperDistributionItem {
+  id             String      @id @default(cuid())
+  courseId       String
+  course         Course      @relation(fields: [courseId], references: [id])
+  source         String      @default("SE") // "SE" | "INSTRUCTOR"
+  questionNo     Int         // auto-numbered in display order, never manually typed
+  lectureRowId   String?     // optional link to the topic/lecture this question is drawn from
+  lectureRow     LectureRow? @relation(fields: [lectureRowId], references: [id])
+  topicText      String      // pre-filled from the linked lecture row's topic, but editable
+  cloId          String?
+  clo            CLO?        @relation(fields: [cloId], references: [id])
+  cognitiveLevel String?     // C1..C6 — pre-filled from the topic's Bloom level, but editable since one topic can spawn questions at different levels
+  marks          Float
+  orderIndex     Int         @default(0)
+  createdAt      DateTime    @default(now())
+
   @@index([courseId])
 }
 
@@ -904,6 +981,8 @@ model LectureRow {
   rescheduledNote String? // set by auto-fill when a holiday/exam date pushed this lecture off its natural weekly slot
 
   instrumentLinks LectureRowInstrument[]
+  paperDistributionItems PaperDistributionItem[]
+  attendanceRecords AttendanceRecord[]
 
   @@unique([courseId, source, lectureNumber])
   @@index([courseId])

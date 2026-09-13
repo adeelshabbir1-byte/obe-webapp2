@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 type Alum = { id: string; name: string; email: string | null; rollNumber: string; degreeProgram: string; graduationYear: number; totalWorkExperienceYears: number | null; status: string };
 type Employer = { id: string; organizationName: string; contactName: string | null; contactEmail: string | null; companySize: string | null; industryType: string | null; status: string };
 type Employment = { id: string; alumniId: string; employerId: string; jobTitle: string | null; startDate: string | null; endDate: string | null; salaryRange: string | null; status: string };
+type Degree = { id: string; alumniId: string; degreeName: string; institution: string; completionYear: number | null; status: string };
 
 const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "500+"];
 
-export default function StakeholdersManager({ alumni, employers, employment }: { alumni: Alum[]; employers: Employer[]; employment: Employment[] }) {
+export default function StakeholdersManager({ alumni, employers, employment, degrees }: { alumni: Alum[]; employers: Employer[]; employment: Employment[]; degrees: Degree[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [empAlumniId, setEmpAlumniId] = useState(alumni[0]?.id || "");
   const [empEmployerId, setEmpEmployerId] = useState(employers[0]?.id || "");
+  const [degreeAlumniId, setDegreeAlumniId] = useState(alumni[0]?.id || "");
 
   async function addAlumni(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -85,6 +87,28 @@ export default function StakeholdersManager({ alumni, employers, employment }: {
   async function removeEmployment(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/alumni-employment/${id}`, { method: "DELETE" });
+    setLoading(false); router.refresh();
+  }
+
+  async function addDegree(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!degreeAlumniId) { setError("Pick an alumni."); return; }
+    setLoading(true); setError("");
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch("/api/coordinator/alumni-degrees", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alumniId: degreeAlumniId, degreeName: fd.get("degreeName"), institution: fd.get("institution"), completionYear: fd.get("completionYear") || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  async function removeDegree(id: string) {
+    setLoading(true);
+    await fetch(`/api/coordinator/alumni-degrees/${id}`, { method: "DELETE" });
     setLoading(false); router.refresh();
   }
 
@@ -201,6 +225,42 @@ export default function StakeholdersManager({ alumni, employers, employment }: {
             <div className="field" style={{ margin: 0 }}><label>End Date (blank = current)</label><input name="endDate" type="date" /></div>
             <div className="field" style={{ margin: 0 }}><label>Salary Range (optional)</label><input name="salaryRange" placeholder="e.g. PKR 80,000 - 100,000" /></div>
             <button className="btn btn-brass" type="submit" disabled={loading}>Add Employment Record</button>
+          </form>
+        )}
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Additional Degrees (Post-Graduation)</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+          Further education an alumnus completed after graduating from here — MS, PhD, certifications.
+        </p>
+        <table>
+          <thead><tr><th>Alumni</th><th>Degree</th><th>Institution</th><th>Completion Year</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {degrees.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
+            {degrees.map((d) => (
+              <tr key={d.id}>
+                <td>{alumName(d.alumniId)}</td><td>{d.degreeName}</td><td>{d.institution}</td><td>{d.completionYear || "—"}</td>
+                <td><StatusBadge status={d.status} /></td>
+                <td><button onClick={() => removeDegree(d.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {alumni.length === 0 ? (
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 12 }}>Add at least one alumni above before recording additional degrees.</p>
+        ) : (
+          <form onSubmit={addDegree} style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Alumni</label>
+              <select value={degreeAlumniId} onChange={(e) => setDegreeAlumniId(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+                {alumni.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.rollNumber})</option>)}
+              </select>
+            </div>
+            <div className="field" style={{ margin: 0 }}><label>Degree Name</label><input name="degreeName" placeholder="e.g. MS Computer Science" required /></div>
+            <div className="field" style={{ margin: 0 }}><label>Institution</label><input name="institution" placeholder="e.g. Stanford University" required /></div>
+            <div className="field" style={{ margin: 0 }}><label>Completion Year (optional)</label><input name="completionYear" type="number" style={{ width: 100 }} /></div>
+            <button className="btn btn-brass" type="submit" disabled={loading}>Add Degree</button>
           </form>
         )}
       </div>

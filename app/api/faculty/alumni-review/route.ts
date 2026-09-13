@@ -14,9 +14,10 @@ export async function GET() {
     prisma.employer.findMany({ where: { chairmanId, status: "PENDING" }, orderBy: { createdAt: "asc" } }),
     prisma.alumniEmployment.findMany({ where: { status: "PENDING", alumni: { chairmanId } }, include: { alumni: true, employer: true }, orderBy: { createdAt: "asc" } }),
   ]);
+  const degrees = await prisma.alumniAdditionalDegree.findMany({ where: { status: "PENDING", alumni: { chairmanId } }, include: { alumni: true }, orderBy: { createdAt: "asc" } });
 
   const submitterIds = Array.from(new Set([
-    ...alumni.map((a) => a.addedById), ...employers.map((e) => e.addedById), ...employment.map((e) => e.addedById),
+    ...alumni.map((a) => a.addedById), ...employers.map((e) => e.addedById), ...employment.map((e) => e.addedById), ...degrees.map((d) => d.addedById),
   ].filter((id): id is string => !!id)));
   const submitters = submitterIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: submitterIds } } }) : [];
   const nameById = new Map(submitters.map((s) => [s.id, s.name]));
@@ -28,6 +29,10 @@ export async function GET() {
       id: e.id, jobTitle: e.jobTitle, startDate: e.startDate, endDate: e.endDate, salaryRange: e.salaryRange,
       alumniName: e.alumni.name, employerName: e.employer.organizationName,
       submitterName: e.addedById ? nameById.get(e.addedById) || "—" : "—",
+    })),
+    degrees: degrees.map((d) => ({
+      id: d.id, degreeName: d.degreeName, institution: d.institution, completionYear: d.completionYear,
+      alumniName: d.alumni.name, submitterName: d.addedById ? nameById.get(d.addedById) || "—" : "—",
     })),
   });
 }

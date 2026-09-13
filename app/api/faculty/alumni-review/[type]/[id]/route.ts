@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 
-const MODEL_FOR_TYPE = { alumni: "alumni", employer: "employer", employment: "alumniEmployment" } as const;
+const MODEL_FOR_TYPE = { alumni: "alumni", employer: "employer", employment: "alumniEmployment", degree: "alumniAdditionalDegree" } as const;
 
 export async function PUT(req: NextRequest, { params }: { params: { type: string; id: string } }) {
   const user = await getAuthenticatedUser();
@@ -26,10 +26,14 @@ export async function PUT(req: NextRequest, { params }: { params: { type: string
     const record = await prisma.employer.findUnique({ where: { id: params.id } });
     if (!record || record.chairmanId !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
     await prisma.employer.update({ where: { id: params.id }, data: { status: decision, reviewedById: user.id, reviewNote: body.reviewNote || null } });
-  } else {
+  } else if (type === "employment") {
     const record = await prisma.alumniEmployment.findUnique({ where: { id: params.id }, include: { alumni: true } });
     if (!record || record.alumni.chairmanId !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
     await prisma.alumniEmployment.update({ where: { id: params.id }, data: { status: decision, reviewedById: user.id, reviewNote: body.reviewNote || null } });
+  } else {
+    const record = await prisma.alumniAdditionalDegree.findUnique({ where: { id: params.id }, include: { alumni: true } });
+    if (!record || record.alumni.chairmanId !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
+    await prisma.alumniAdditionalDegree.update({ where: { id: params.id }, data: { status: decision, reviewedById: user.id, reviewNote: body.reviewNote || null } });
   }
 
   return NextResponse.json({ ok: true });

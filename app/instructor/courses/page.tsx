@@ -25,9 +25,28 @@ export default async function InstructorCoursesPage() {
     }),
   ]);
 
+  // isOffered alone isn't enough — a course keeps that flag from whenever
+  // it was last offered, even for a batch whose intake term hasn't arrived
+  // yet. Only show courses whose offered term matches their own
+  // Coordinator's actual current term.
+  const coordinatorIdsInvolved = Array.from(new Set([
+    ...directCourses.map((c) => c.batch.coordinatorId), ...sectionAssignments.map((a) => a.course.batch.coordinatorId),
+  ]));
+  const currentTerms = await prisma.currentTerm.findMany({ where: { coordinatorId: { in: coordinatorIdsInvolved } } });
+  const currentTermByCoordinator = new Map(currentTerms.map((t) => [t.coordinatorId, t]));
+
+  function isActuallyCurrent(course: { offeredTermName: string | null; offeredTermYear: number | null; batch: { coordinatorId: string } }): boolean {
+    const ct = currentTermByCoordinator.get(course.batch.coordinatorId);
+    if (!ct) return true; // no current-term set yet for that coordinator — fall back to isOffered alone rather than hiding everything
+    return course.offeredTermName === ct.termName && course.offeredTermYear === ct.year;
+  }
+
+  const filteredDirectCourses = directCourses.filter(isActuallyCurrent);
+  const filteredSectionAssignments = sectionAssignments.filter((a) => isActuallyCurrent(a.course));
+
   const byId = new Map<string, (typeof directCourses)[number] & { sectionCount?: number }>();
-  for (const c of directCourses) byId.set(c.id, c);
-  for (const a of sectionAssignments) {
+  for (const c of filteredDirectCourses) byId.set(c.id, c);
+  for (const a of filteredSectionAssignments) {
     const existing = byId.get(a.course.id);
     byId.set(a.course.id, { ...(existing || a.course), sectionCount: a.sectionCount });
   }

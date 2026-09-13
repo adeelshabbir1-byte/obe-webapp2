@@ -3,6 +3,10 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { getLinkedSections } from "../../../../../lib/linkedSections";
 import { shortSectionCode } from "../../../../../lib/shortSectionCode";
+import { computeResultMate } from "../../../../../lib/resultMate";
+import { getPassingCriteria } from "../../../../../lib/passingCriteria";
+import { chairmanIdFor } from "../../../../../lib/reportScope";
+import SimpleBarChart from "../../../../../components/SimpleBarChart";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
@@ -22,6 +26,21 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
 
   const linkedSections = await getLinkedSections(user.id, course.id);
   const wantsCombined = searchParams.combined === "1" && linkedSections.length > 0;
+
+  // Histograms — grade distribution and CLO attainment, visible right here
+  // while entering/reviewing marks, not just later in Result Mate.
+  const passCriteria = await getPassingCriteria(await chairmanIdFor(user));
+  const result = await computeResultMate(course.id);
+  const gradeBuckets = new Map<string, number>();
+  for (const r of result.rows) gradeBuckets.set(r.grade, (gradeBuckets.get(r.grade) || 0) + 1);
+  const gradeOrder = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"];
+  const gradeHistogram = gradeOrder.filter((g) => gradeBuckets.has(g)).map((g) => ({ label: g, value: gradeBuckets.get(g)! }));
+  const cloHistogram = result.cloCodes.map((code) => {
+    const max = result.cloMaxWeight[code] || 0;
+    const threshold = max * (passCriteria.cloPct / 100);
+    const passCount = result.rows.filter((r) => (r.byClo[code] || 0) >= threshold).length;
+    return { label: code, value: passCount };
+  });
 
   const [instruments, enrollments, batchStudentCount] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
@@ -109,6 +128,29 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
         <p style={{ fontSize: 12.5, marginBottom: 8 }}>Once marks are entered, view computed grades, CLO/PLO attainment, and set grade cutoffs for this course.</p>
         <a href={`/omc/reports/result-mate?courseId=${course.id}`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>View Results for This Course</a>
       </div>
+
+      {result.rows.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 4 }}>Grades Histogram</h3>
+            <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}>How many students landed in each letter grade, based on marks entered so far.</p>
+            {gradeHistogram.length === 0 ? (
+              <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No grades computed yet.</p>
+            ) : (
+              <SimpleBarChart bars={gradeHistogram} />
+            )}
+          </div>
+          <div className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 4 }}>CLO Attainment Histogram</h3>
+            <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}>How many students passed each CLO (out of {result.rows.length}), at the {passCriteria.cloPct}% threshold.</p>
+            {cloHistogram.length === 0 ? (
+              <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No CLOs with marks yet.</p>
+            ) : (
+              <SimpleBarChart bars={cloHistogram} maxValue={result.rows.length} />
+            )}
+          </div>
+        </div>
+      )}
 
       {linkedSections.length > 0 && (
         <div className="card no-print" style={{ borderColor: "var(--brass)" }}>

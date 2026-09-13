@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { renumberClos } from "../../../../../../../lib/cloOrdering";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -42,6 +43,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   await prisma.cLO.delete({ where: { id: params.cloId } });
+  await renumberClos(course.id, "SE");
   await writeAuditLog({ actorUserId: user.id, action: "CLO_DELETED", entityType: "CLO", entityId: params.cloId });
 
   return NextResponse.json({ ok: true });

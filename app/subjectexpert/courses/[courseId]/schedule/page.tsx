@@ -31,6 +31,9 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
       <CourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} status={course.templateStatus} />
+      <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
+        <a href={`/api/subjectexpert/courses/${course.id}/weekly-plan-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Tentative Weekly Plan (Word)</a>
+      </div>
 
       {course.clos.length > 0 && (
         <div className="card">

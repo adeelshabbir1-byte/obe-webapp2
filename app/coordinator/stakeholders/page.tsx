@@ -24,10 +24,11 @@ export default async function StakeholdersPage() {
     );
   }
 
-  const [alumni, employers, employment] = await Promise.all([
+  const [alumni, employers, employment, degrees] = await Promise.all([
     prisma.alumni.findMany({ where: { chairmanId }, orderBy: { graduationYear: "desc" } }),
     prisma.employer.findMany({ where: { chairmanId }, orderBy: { organizationName: "asc" } }),
     prisma.alumniEmployment.findMany({ where: { alumni: { chairmanId } }, orderBy: { startDate: "desc" } }),
+    prisma.alumniAdditionalDegree.findMany({ where: { alumni: { chairmanId } }, orderBy: { completionYear: "desc" } }),
   ]);
 
   return (
@@ -42,6 +43,7 @@ export default async function StakeholdersPage() {
         alumni={alumni.map((a) => ({ id: a.id, name: a.name, email: a.email, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, totalWorkExperienceYears: a.totalWorkExperienceYears, status: a.status }))}
         employers={employers.map((e) => ({ id: e.id, organizationName: e.organizationName, contactName: e.contactName, contactEmail: e.contactEmail, companySize: e.companySize, industryType: e.industryType, status: e.status }))}
         employment={employment.map((e) => ({ id: e.id, alumniId: e.alumniId, employerId: e.employerId, jobTitle: e.jobTitle, startDate: e.startDate ? e.startDate.toISOString().slice(0, 10) : null, endDate: e.endDate ? e.endDate.toISOString().slice(0, 10) : null, salaryRange: e.salaryRange, status: e.status }))}
+        degrees={degrees.map((d) => ({ id: d.id, alumniId: d.alumniId, degreeName: d.degreeName, institution: d.institution, completionYear: d.completionYear, status: d.status }))}
       />
     </Shell>
   );

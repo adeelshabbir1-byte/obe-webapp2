@@ -1,5 +1,5 @@
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
-  courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "marks"; code: string; title: string;
+  courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "marks" | "paper-distribution" | "attendance"; code: string; title: string;
 }) {
   const tabs = [
     { key: "clos", label: "1. CLOs & PLO Mapping", href: `/instructor/courses/${courseId}/clos` },
@@ -7,6 +7,8 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
     { key: "schedule", label: "3. Lecture Content (Actual)", href: `/instructor/courses/${courseId}/schedule` },
     { key: "instruments", label: "4. Assessments", href: `/instructor/courses/${courseId}/instruments` },
     { key: "marks", label: "5. Marks Entry", href: `/instructor/courses/${courseId}/marks` },
+    { key: "paper-distribution", label: "6. Paper Distribution", href: `/instructor/courses/${courseId}/paper-distribution` },
+    { key: "attendance", label: "7. Attendance", href: `/instructor/courses/${courseId}/attendance` },
   ];
   return (
     <div style={{ marginBottom: 20 }}>

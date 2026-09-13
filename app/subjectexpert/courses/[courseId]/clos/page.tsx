@@ -18,7 +18,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
-    include: { clos: { where: { source: "SE" }, orderBy: { code: "asc" } }, benchmarkSource: { include: { batch: true } } },
+    include: { clos: { where: { source: "SE" }, orderBy: { orderIndex: "asc" } }, benchmarkSource: { include: { batch: true } } },
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
 

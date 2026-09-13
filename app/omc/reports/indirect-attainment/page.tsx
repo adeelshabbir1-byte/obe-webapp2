@@ -66,33 +66,70 @@ export default async function IndirectAttainmentPage() {
         source alongside direct (assessment-based) attainment, used to triangulate accreditation claims.
       </p>
 
-      {rows.length === 0 ? (
-        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No submitted survey responses mapped to a PLO yet.</p></div>
+      {rows.length === 0 && peoRows.length === 0 ? (
+        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No submitted survey responses mapped to a PLO or PEO yet.</p></div>
       ) : (
         <>
-          <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Average Rating per PLO (out of 5)</h3>
-            <SimpleBarChart bars={rows.map((r) => ({ label: r.label, value: r.avg }))} maxValue={5} />
-          </div>
+          {rows.length > 0 && (
+            <>
+              <div className="card">
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>Average Rating per PLO (out of 5)</h3>
+                <SimpleBarChart bars={rows.map((r) => ({ label: r.label, value: r.avg }))} maxValue={5} />
+              </div>
 
-          <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Detail — by Stakeholder Group</h3>
-            <table>
-              <thead><tr><th>PLO</th><th>Overall Avg</th><th>Responses</th><th>Breakdown</th></tr></thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.label}>
-                    <td style={{ fontWeight: 600 }}>{r.label}</td>
-                    <td>{r.avg.toFixed(2)}</td>
-                    <td>{r.count}</td>
-                    <td style={{ fontSize: 11.5 }}>
-                      {r.byStakeholder.map((s) => `${s.type}: ${s.avg.toFixed(2)} (n=${s.count})`).join(" · ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <div className="card" style={{ overflowX: "auto" }}>
+                <h3 style={{ fontSize: 14, marginBottom: 10 }}>Detail — by Stakeholder Group</h3>
+                <table>
+                  <thead><tr><th>PLO</th><th>Overall Avg</th><th>Responses</th><th>Breakdown</th></tr></thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.label}>
+                        <td style={{ fontWeight: 600 }}>{r.label}</td>
+                        <td>{r.avg.toFixed(2)}</td>
+                        <td>{r.count}</td>
+                        <td style={{ fontSize: 11.5 }}>
+                          {r.byStakeholder.map((s) => `${s.type}: ${s.avg.toFixed(2)} (n=${s.count})`).join(" · ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {peoRows.length > 0 && (
+            <>
+              <div className="card">
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>Average Rating per PEO (out of 5)</h3>
+                <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}>
+                  Program Educational Objectives are typically assessed on a longer horizon (career outcomes,
+                  usually 3–5 years post-graduation) — this is why PEO questions are answered mainly by alumni
+                  and employers, not current students.
+                </p>
+                <SimpleBarChart bars={peoRows.map((r) => ({ label: r.label, value: r.avg }))} maxValue={5} />
+              </div>
+
+              <div className="card" style={{ overflowX: "auto" }}>
+                <h3 style={{ fontSize: 14, marginBottom: 10 }}>Detail — PEOs by Stakeholder Group</h3>
+                <table>
+                  <thead><tr><th>PEO</th><th>Overall Avg</th><th>Responses</th><th>Breakdown</th></tr></thead>
+                  <tbody>
+                    {peoRows.map((r) => (
+                      <tr key={r.label}>
+                        <td style={{ fontWeight: 600 }}>{r.label}</td>
+                        <td>{r.avg.toFixed(2)}</td>
+                        <td>{r.count}</td>
+                        <td style={{ fontSize: 11.5 }}>
+                          {r.byStakeholder.map((s) => `${s.type}: ${s.avg.toFixed(2)} (n=${s.count})`).join(" · ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </>
       )}
     </Shell>

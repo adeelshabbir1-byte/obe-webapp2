@@ -20,9 +20,10 @@ export default async function AlumniReviewPage() {
     prisma.employer.findMany({ where: { chairmanId, status: "PENDING" }, orderBy: { createdAt: "asc" } }),
     prisma.alumniEmployment.findMany({ where: { status: "PENDING", alumni: { chairmanId } }, include: { alumni: true, employer: true }, orderBy: { createdAt: "asc" } }),
   ]);
+  const degreesRaw = await prisma.alumniAdditionalDegree.findMany({ where: { status: "PENDING", alumni: { chairmanId } }, include: { alumni: true }, orderBy: { createdAt: "asc" } });
 
   const submitterIds = Array.from(new Set([
-    ...alumni.map((a) => a.addedById), ...employers.map((e) => e.addedById), ...employmentRaw.map((e) => e.addedById),
+    ...alumni.map((a) => a.addedById), ...employers.map((e) => e.addedById), ...employmentRaw.map((e) => e.addedById), ...degreesRaw.map((d) => d.addedById),
   ].filter((id): id is string => !!id)));
   const submitters = submitterIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: submitterIds } } }) : [];
   const nameById = new Map(submitters.map((s) => [s.id, s.name]));
@@ -37,6 +38,7 @@ export default async function AlumniReviewPage() {
         alumni={alumni.map((a) => ({ id: a.id, name: a.name, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, submitterName: a.addedById ? nameById.get(a.addedById) || "—" : "—" }))}
         employers={employers.map((e) => ({ id: e.id, organizationName: e.organizationName, companySize: e.companySize, industryType: e.industryType, submitterName: e.addedById ? nameById.get(e.addedById) || "—" : "—" }))}
         employment={employmentRaw.map((e) => ({ id: e.id, alumniName: e.alumni.name, employerName: e.employer.organizationName, jobTitle: e.jobTitle, submitterName: e.addedById ? nameById.get(e.addedById) || "—" : "—" }))}
+        degrees={degreesRaw.map((d) => ({ id: d.id, alumniName: d.alumni.name, degreeName: d.degreeName, institution: d.institution, submitterName: d.addedById ? nameById.get(d.addedById) || "—" : "—" }))}
       />
     </Shell>
   );

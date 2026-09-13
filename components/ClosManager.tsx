@@ -49,7 +49,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: fd.get("code"), statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
+          statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
           mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
           targetPct: fd.get("targetPct") || 60,
         }),
@@ -84,6 +84,18 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
     setLoading(true);
     await fetch(`/api/subjectexpert/courses/${courseId}/clo/${cloId}`, { method: "DELETE" });
     setLoading(false); router.refresh();
+  }
+
+  async function moveClo(cloId: string, direction: "up" | "down") {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${cloId}/reorder`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ direction }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   const ploSelectOptions = (
@@ -121,7 +133,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
             {initialClos.length === 0 && (
               <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
-            {initialClos.map((c) => (
+            {initialClos.map((c, i) => (
               editingId === c.id ? (
                 <tr key={c.id}>
                   <td colSpan={7}>
@@ -143,7 +155,14 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                 </tr>
               ) : (
                 <tr key={c.id}>
-                  <td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
+                  <td>
+                    {c.code}
+                    <div style={{ display: "inline-flex", gap: 2, marginLeft: 6 }}>
+                      <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+                      <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === initialClos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === initialClos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === initialClos.length - 1 ? 0.3 : 1 }}>▼</button>
+                    </div>
+                  </td>
+                  <td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
                   <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
                   <td>{c.targetPct}%</td>
                   <td style={{ display: "flex", gap: 10 }}>
@@ -160,12 +179,9 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add CLO</h3>
         <form onSubmit={addClo}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div className="field"><label>CLO Code</label><input name="code" placeholder="CLO-1" required /></div>
-            <div className="field">
-              <label>Bloom's Level</label>
-              <select name="bloomLevel" required>{BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.label}</option>)}</select>
-            </div>
+          <div className="field">
+            <label>Bloom's Level</label>
+            <select name="bloomLevel" required>{BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.label}</option>)}</select>
           </div>
           <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
           <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 14 }}>

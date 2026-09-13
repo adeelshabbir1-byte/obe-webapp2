@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 type AlumniRow = { id: string; name: string; rollNumber: string; degreeProgram: string; graduationYear: number; submitterName: string };
 type EmployerRow = { id: string; organizationName: string; companySize: string | null; industryType: string | null; submitterName: string };
 type EmploymentRow = { id: string; alumniName: string; employerName: string; jobTitle: string | null; submitterName: string };
+type DegreeRow = { id: string; alumniName: string; degreeName: string; institution: string; submitterName: string };
 
-export default function AlumniReviewManager({ alumni, employers, employment }: { alumni: AlumniRow[]; employers: EmployerRow[]; employment: EmploymentRow[] }) {
+export default function AlumniReviewManager({ alumni, employers, employment, degrees }: { alumni: AlumniRow[]; employers: EmployerRow[]; employment: EmploymentRow[]; degrees: DegreeRow[] }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  async function decide(type: "alumni" | "employer" | "employment", id: string, decision: "APPROVED" | "REJECTED") {
+  async function decide(type: "alumni" | "employer" | "employment" | "degree", id: string, decision: "APPROVED" | "REJECTED") {
     setBusyId(id); setError("");
     try {
       const res = await fetch(`/api/faculty/alumni-review/${type}/${id}`, {
@@ -24,7 +25,7 @@ export default function AlumniReviewManager({ alumni, employers, employment }: {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
-  function Actions({ type, id }: { type: "alumni" | "employer" | "employment"; id: string }) {
+  function Actions({ type, id }: { type: "alumni" | "employer" | "employment" | "degree"; id: string }) {
     return (
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => decide(type, id, "APPROVED")} disabled={busyId === id} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11 }}>Approve</button>
@@ -79,6 +80,22 @@ export default function AlumniReviewManager({ alumni, employers, employment }: {
               <tr key={e.id}>
                 <td>{e.alumniName}</td><td>{e.employerName}</td><td>{e.jobTitle || "—"}</td><td>{e.submitterName}</td>
                 <td><Actions type="employment" id={e.id} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pending Additional Degrees ({degrees.length})</h3>
+        <table>
+          <thead><tr><th>Alumni</th><th>Degree</th><th>Institution</th><th>Submitted By</th><th></th></tr></thead>
+          <tbody>
+            {degrees.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>Nothing pending.</td></tr>}
+            {degrees.map((d) => (
+              <tr key={d.id}>
+                <td>{d.alumniName}</td><td>{d.degreeName}</td><td>{d.institution}</td><td>{d.submitterName}</td>
+                <td><Actions type="degree" id={d.id} /></td>
               </tr>
             ))}
           </tbody>

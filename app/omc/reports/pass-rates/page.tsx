@@ -48,9 +48,12 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         A student passes a CLO or PLO if they scored at least 50% of its maximum weighted marks.
       </p>
-      <div className="card no-print">
-        <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
-        <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
+      <div className="card no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
+          <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
+        </div>
+        {selectedCourseId && <a href={`/api/omc/reports/pass-rates-document?courseId=${selectedCourseId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Report (Word)</a>}
       </div>
 
       {course && (

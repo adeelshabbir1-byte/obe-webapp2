@@ -12,7 +12,12 @@ CREATE TABLE IF NOT EXISTS "Alumni" (
   "graduationYear" INTEGER NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS "Alumni_coordinatorId_idx" ON "Alumni"("coordinatorId");
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Alumni' AND column_name = 'coordinatorId') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS "Alumni_coordinatorId_idx" ON "Alumni"("coordinatorId")';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "Employer" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -22,7 +27,12 @@ CREATE TABLE IF NOT EXISTS "Employer" (
   "contactEmail" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS "Employer_coordinatorId_idx" ON "Employer"("coordinatorId");
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Employer' AND column_name = 'coordinatorId') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS "Employer_coordinatorId_idx" ON "Employer"("coordinatorId")';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "SurveyTemplate" (
   "id" TEXT NOT NULL PRIMARY KEY,

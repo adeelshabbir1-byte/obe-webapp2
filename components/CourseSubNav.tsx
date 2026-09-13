@@ -1,11 +1,12 @@
 export default function CourseSubNav({ courseId, active, code, title, status }: {
-  courseId: string; active: "clos" | "weights" | "instruments" | "schedule"; code: string; title: string; status: string;
+  courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution"; code: string; title: string; status: string;
 }) {
   const tabs = [
     { key: "clos", label: "1. CLOs & PLO Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
     { key: "weights", label: "2. Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
     { key: "schedule", label: "3. Lecture Content", href: `/subjectexpert/courses/${courseId}/schedule` },
     { key: "instruments", label: "4. Assessments & Submit", href: `/subjectexpert/courses/${courseId}/instruments` },
+    { key: "paper-distribution", label: "5. Paper Distribution", href: `/subjectexpert/courses/${courseId}/paper-distribution` },
   ];
   return (
     <div style={{ marginBottom: 20 }}>

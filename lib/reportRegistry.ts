@@ -23,6 +23,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
       { href: "/omc/plo-readiness", title: "PLO Readiness Matrix", desc: "Every PLO's status across every batch, in one color-coded grid." },
       { href: "/omc/reports/indirect-attainment", title: "Indirect PLO Attainment (Stakeholder Feedback)", desc: "Average rating per PLO from submitted student, alumni, and employer surveys — a second evidence source alongside direct attainment." },
       { href: "/omc/reports/attainment-analytics", title: "Program Attainment Analytics", desc: "NBA/Washington-Accord style: target vs actual CO attainment, PO levels (0-3), session-wise trend, and subject-wise comparison." },
+      { href: "/omc/reports/cross-instructor-comparison", title: "Cross-Instructor Topic Comparison", desc: "For one course code, compare every instructor's actual delivery — topic coverage, lectures per topic, and marks distribution." },
       { href: "/omc/reports/clo-plo-flow", title: "Assessment → CLO → PLO Flow", desc: "Visual flow of each assessment's weight through CLOs to PLOs, with weighted, color-coded connections." },
     ],
   },

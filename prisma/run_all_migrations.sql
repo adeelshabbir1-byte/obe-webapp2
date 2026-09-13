@@ -2286,7 +2286,12 @@ CREATE TABLE IF NOT EXISTS "Alumni" (
   "graduationYear" INTEGER NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS "Alumni_coordinatorId_idx" ON "Alumni"("coordinatorId");
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Alumni' AND column_name = 'coordinatorId') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS "Alumni_coordinatorId_idx" ON "Alumni"("coordinatorId")';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "Employer" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -2296,7 +2301,12 @@ CREATE TABLE IF NOT EXISTS "Employer" (
   "contactEmail" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS "Employer_coordinatorId_idx" ON "Employer"("coordinatorId");
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Employer' AND column_name = 'coordinatorId') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS "Employer_coordinatorId_idx" ON "Employer"("coordinatorId")';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "SurveyTemplate" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -2452,6 +2462,102 @@ ALTER TABLE "AlumniEmployment" ADD COLUMN IF NOT EXISTS "reviewedById" TEXT;
 ALTER TABLE "AlumniEmployment" ADD COLUMN IF NOT EXISTS "reviewNote" TEXT;
 CREATE INDEX IF NOT EXISTS "AlumniEmployment_alumniId_idx" ON "AlumniEmployment"("alumniId");
 CREATE INDEX IF NOT EXISTS "AlumniEmployment_employerId_idx" ON "AlumniEmployment"("employerId");
+-- Run in Supabase SQL Editor. Adds the "closing the loop" mechanism:
+-- structured source-linking and before/after verification on CqiRecord,
+-- and PEO-mapping on survey questions (alongside the existing PLO mapping).
+
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "sourceType" TEXT;
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "sourceReference" TEXT;
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "metricBefore" DOUBLE PRECISION;
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "metricAfter" DOUBLE PRECISION;
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "verifiedById" TEXT;
+ALTER TABLE "CqiRecord" ADD COLUMN IF NOT EXISTS "verifiedAt" TIMESTAMP(3);
+
+ALTER TABLE "SurveyQuestion" ADD COLUMN IF NOT EXISTS "mappedPeoLabel" TEXT;
+-- Run in Supabase SQL Editor. Adds CLO.orderIndex, and backfills it for any
+-- existing CLOs based on their current code's natural sort order — without
+-- this backfill, every existing row would default to orderIndex 0 and the
+-- move-up/move-down buttons would think every CLO is both first and last.
+
+ALTER TABLE "CLO" ADD COLUMN IF NOT EXISTS "orderIndex" INTEGER NOT NULL DEFAULT 0;
+
+WITH ranked AS (
+  SELECT "id", ROW_NUMBER() OVER (PARTITION BY "courseId", "source" ORDER BY "code" ASC) - 1 AS rn
+  FROM "CLO"
+)
+UPDATE "CLO"
+SET "orderIndex" = ranked.rn
+FROM ranked
+WHERE "CLO"."id" = ranked."id";
+
+-- Also clean up existing messy codes ("CLO 1", "CLO1", "clo-1"...) into the
+-- consistent "CLO-N" format, matching the new orderIndex — this is the same
+-- inconsistency the auto-numbering feature exists to prevent going forward.
+-- Two-phase update avoids tripping the @@unique([courseId, source, code])
+-- constraint mid-rewrite.
+UPDATE "CLO" SET "code" = 'TEMP-' || "id";
+UPDATE "CLO" SET "code" = 'CLO-' || ("orderIndex" + 1);
+-- Run in Supabase SQL Editor. Adds PaperDistributionItem — the final/
+-- mid-term exam question distribution, built by SE (planning) or
+-- Instructor (actual exam), with each question optionally linked back to
+-- a real lecture topic so its CLO and cognitive level come from actual
+-- course data.
+
+CREATE TABLE IF NOT EXISTS "PaperDistributionItem" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+  "source" TEXT NOT NULL DEFAULT 'SE',
+  "questionNo" INTEGER NOT NULL,
+  "lectureRowId" TEXT REFERENCES "LectureRow"("id"),
+  "topicText" TEXT NOT NULL,
+  "cloId" TEXT REFERENCES "CLO"("id"),
+  "cognitiveLevel" TEXT,
+  "marks" DOUBLE PRECISION NOT NULL,
+  "orderIndex" INTEGER NOT NULL DEFAULT 0,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "PaperDistributionItem_courseId_idx" ON "PaperDistributionItem"("courseId");
+-- Run in Supabase SQL Editor. Adds AlumniAdditionalDegree — further
+-- education (MS, PhD, certifications) an alumnus completed after
+-- graduating from this institution, going through the same
+-- submit-then-approve workflow as everything else in this system.
+
+CREATE TABLE IF NOT EXISTS "AlumniAdditionalDegree" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "alumniId" TEXT NOT NULL REFERENCES "Alumni"("id"),
+  "degreeName" TEXT NOT NULL,
+  "institution" TEXT NOT NULL,
+  "completionYear" INTEGER,
+  "addedById" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'PENDING',
+  "reviewedById" TEXT,
+  "reviewNote" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "AlumniAdditionalDegree_alumniId_idx" ON "AlumniAdditionalDegree"("alumniId");
+-- Run in Supabase SQL Editor. Adds the full attendance system:
+-- per-lecture, per-student attendance marking, and an institution-wide
+-- minimum attendance % threshold used to flag students falling short.
+
+CREATE TABLE IF NOT EXISTS "AttendanceRecord" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+  "lectureRowId" TEXT NOT NULL REFERENCES "LectureRow"("id"),
+  "studentId" TEXT NOT NULL REFERENCES "Student"("id"),
+  "status" TEXT NOT NULL,
+  "markedById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "AttendanceRecord_lectureRowId_studentId_key" ON "AttendanceRecord"("lectureRowId", "studentId");
+CREATE INDEX IF NOT EXISTS "AttendanceRecord_courseId_idx" ON "AttendanceRecord"("courseId");
+CREATE INDEX IF NOT EXISTS "AttendanceRecord_studentId_idx" ON "AttendanceRecord"("studentId");
+
+CREATE TABLE IF NOT EXISTS "AttendanceThreshold" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL UNIQUE,
+  "minPercentage" INTEGER NOT NULL DEFAULT 75
+);
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)
