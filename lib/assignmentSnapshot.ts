@@ -38,7 +38,7 @@ export async function snapshotCourseAssignmentsIfTermChanging(courseId: string, 
  * clean and never mixes with the old students' marks. Safe to call even if
  * no marks exist yet (nothing to snapshot or clear). */
 export async function snapshotAttainmentAndResetIfTermChanging(courseId: string, newTermName: string, newTermYear: number) {
-  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  const course = await prisma.course.findUnique({ where: { id: courseId }, include: { batch: true } });
   if (!course || !course.offeredTermName || !course.offeredTermYear) return;
   if (course.offeredTermName === newTermName && course.offeredTermYear === newTermYear) return;
 
