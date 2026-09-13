@@ -942,6 +942,7 @@ model Course {
   catalogDescription  String?  @db.Text
   programmingAssignmentsNote String? @db.Text
   labInstructorName   String?
+  instructorObservations String? @db.Text // free-text notes for the Course Evaluation Form ("Instructors Observations")
 
   // Instructor's OWN copy of the weights (separate from SE's plan above),
   // populated when the Instructor first opens their delivery page.

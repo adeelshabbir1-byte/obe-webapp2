@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
+import CourseEvaluationSection from "../../../../../components/CourseEvaluationSection";
 import InstructorLectureContentManager from "../../../../../components/InstructorLectureContentManager";
 
 const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
@@ -41,6 +42,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
         <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>
       </div>
+      <CourseEvaluationSection courseId={course.id} initialObservations={course.instructorObservations || ""} />
       <InstructorLectureContentManager
         courseId={course.id}
         initialRows={instructorRows.map((r) => {

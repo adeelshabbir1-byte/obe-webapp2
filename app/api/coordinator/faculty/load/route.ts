@@ -13,18 +13,27 @@ export async function PUT(req: NextRequest) {
   const faculty = await prisma.user.findUnique({ where: { id: body.userId } });
   if (!faculty || faculty.managedById !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  // Only allow switching between the two roles this page manages — never
+  // an arbitrary role change to something like OMC or Coordinator.
+  let newRole = faculty.role;
+  if (body.role !== undefined && ["SUBJECT_EXPERT", "INSTRUCTOR"].includes(body.role) && body.role !== faculty.role) {
+    newRole = body.role;
+  }
+
   const updated = await prisma.user.update({
     where: { id: body.userId },
     data: {
+      role: newRole,
       normalLoad: body.normalLoad !== undefined ? parseInt(body.normalLoad, 10) : faculty.normalLoad,
       externalLoadCount: body.externalLoadCount !== undefined ? parseInt(body.externalLoadCount, 10) : faculty.externalLoadCount,
       externalLoadNote: body.externalLoadNote !== undefined ? body.externalLoadNote || null : faculty.externalLoadNote,
       specialization: body.specialization !== undefined ? body.specialization || null : faculty.specialization,
-      secondaryRole: body.secondaryRole !== undefined ? (faculty.role === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null) : faculty.secondaryRole,
+      // secondaryRole only makes sense once the (possibly just-changed) primary role is Subject Expert.
+      secondaryRole: body.secondaryRole !== undefined ? (newRole === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null) : faculty.secondaryRole,
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "FACULTY_LOAD_UPDATED", entityType: "User", entityId: body.userId });
+  await writeAuditLog({ actorUserId: user.id, action: newRole !== faculty.role ? "FACULTY_ROLE_CHANGED" : "FACULTY_LOAD_UPDATED", entityType: "User", entityId: body.userId });
 
   const { passwordHash, ...safe } = updated;
   return NextResponse.json({ user: safe });

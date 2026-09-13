@@ -43,6 +43,18 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
+  async function removeBatch(batchId: string, batchName: string) {
+    const typed = prompt(`This permanently deletes the "${batchName}" batch — every course, student, PLO, and all their data. This cannot be undone.\n\nType the batch name exactly to confirm: ${batchName}`);
+    if (typed !== batchName) { if (typed !== null) alert("Name didn't match — nothing was deleted."); return; }
+    setBusyId(batchId); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/batches/${batchId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
+      setBusyId(null); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -70,7 +82,8 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
                   )}
                 </td>
                 <td>{b.courseCount}</td>
-                <td><a href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</a></td>
+                <td><a href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</a>
+                <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginLeft: 10 }}>Delete Batch</button></td>
               </tr>
             ))}
           </tbody>

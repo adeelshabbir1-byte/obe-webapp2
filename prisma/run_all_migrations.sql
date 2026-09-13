@@ -2678,6 +2678,11 @@ ALTER TABLE "GradingScale" ADD COLUMN IF NOT EXISTS "effectiveFromYear" INTEGER 
 DROP INDEX IF EXISTS "GradingScale_coordinatorId_letter_key";
 CREATE UNIQUE INDEX IF NOT EXISTS "GradingScale_coordinatorId_letter_effectiveFromTerm_effectiveFromYear_key"
   ON "GradingScale"("coordinatorId", "letter", "effectiveFromTerm", "effectiveFromYear");
+-- Run in Supabase SQL Editor. Adds Course.instructorObservations — the
+-- free-text notes field for the Course Evaluation Form, filled in by the
+-- Instructor and included in the downloadable Word document.
+
+ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "instructorObservations" TEXT;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)
