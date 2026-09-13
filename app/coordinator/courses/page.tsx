@@ -69,6 +69,15 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Import from any published curriculum into a specific batch, or add courses manually. Everything stays editable afterward.
       </p>
+      {selectedBatchId && courses.length > 50 && (
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
+          <p style={{ fontSize: 12.5, color: "var(--rust)" }}>
+            This batch has {courses.length} courses — unusually high for a typical program. This can happen if
+            "Copy From Another Batch" or an import was run more than once. Check for duplicate course codes
+            before proceeding.
+          </p>
+        </div>
+      )}
       <CoursesManager
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,

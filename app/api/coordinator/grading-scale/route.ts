@@ -6,7 +6,7 @@ import { writeAuditLog } from "../../../../lib/audit";
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const scale = await prisma.gradingScale.findMany({ where: { coordinatorId: user.id }, orderBy: { orderIndex: "asc" } });
+  const scale = await prisma.gradingScale.findMany({ where: { coordinatorId: user.id }, orderBy: [{ effectiveFromYear: "desc" }, { orderIndex: "asc" }] });
   return NextResponse.json({ scale });
 }
 
@@ -17,10 +17,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.letter || body.gpaValue === undefined) return NextResponse.json({ error: "letter and gpaValue are required" }, { status: 400 });
 
-  const count = await prisma.gradingScale.count({ where: { coordinatorId: user.id } });
+  const effectiveFromTerm = body.effectiveFromTerm || "Fall";
+  const effectiveFromYear = body.effectiveFromYear ? parseInt(body.effectiveFromYear, 10) : 2000;
+
+  const count = await prisma.gradingScale.count({ where: { coordinatorId: user.id, effectiveFromTerm, effectiveFromYear } });
   const entry = await prisma.gradingScale.upsert({
-    where: { coordinatorId_letter: { coordinatorId: user.id, letter: body.letter } },
-    create: { coordinatorId: user.id, letter: body.letter, gpaValue: parseFloat(body.gpaValue), orderIndex: body.orderIndex ?? count },
+    where: { coordinatorId_letter_effectiveFromTerm_effectiveFromYear: { coordinatorId: user.id, letter: body.letter, effectiveFromTerm, effectiveFromYear } },
+    create: { coordinatorId: user.id, letter: body.letter, gpaValue: parseFloat(body.gpaValue), orderIndex: body.orderIndex ?? count, effectiveFromTerm, effectiveFromYear },
     update: { gpaValue: parseFloat(body.gpaValue) },
   });
 

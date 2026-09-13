@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +27,7 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
   const [importCurriculumId, setImportCurriculumId] = useState(curricula[0]?.id || "");
   const [addBatchId, setAddBatchId] = useState(selectedBatchId || batches[0]?.id || "");
   const [copySourceBatchId, setCopySourceBatchId] = useState("");
+  const replaceCheckboxRef = useRef<HTMLInputElement>(null);
   const [copyResult, setCopyResult] = useState("");
 
   function switchBatch(batchId: string) {
@@ -36,17 +37,24 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
 
   async function copyFromBatch() {
     if (!copySourceBatchId || !selectedBatchId) { setError("View a specific batch first (that's the target), and pick a source batch to copy from."); return; }
+    const replaceExisting = replaceCheckboxRef.current?.checked || false;
+    if (replaceExisting) {
+      const proceed = confirm(
+        "This will permanently DELETE every existing course in this batch (and their CLOs, lecture plans, assessments, marks, enrollments) before copying fresh from the source batch. This cannot be undone.\n\nContinue?"
+      );
+      if (!proceed) return;
+    }
     setLoading(true); setError(""); setCopyResult("");
     try {
       const res = await fetch("/api/coordinator/courses/copy-from-batch", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: selectedBatchId }),
+        body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: selectedBatchId, replaceExisting }),
       });
       let data: any = {};
       try { data = await res.json(); } catch { setError("No response from server — check Runtime Logs, or try again."); setLoading(false); return; }
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       const errorNote = data.errors ? ` ${data.errors.length} failed: ${data.errors.slice(0, 3).join("; ")}` : "";
-      setCopyResult(`Copied ${data.created} course(s) from the source batch.${errorNote}`);
+      setCopyResult(`${data.deleted ? `Deleted ${data.deleted} existing course(s), then copied` : "Copied"} ${data.created} course(s) from the source batch.${data.skippedAsExisting ? ` ${data.skippedAsExisting} already existed in the target and were left alone.` : ""}${errorNote}`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -144,6 +152,20 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  async function removeCourse(courseId: string, code: string) {
+    const proceed = confirm(
+      `Delete ${code} completely? This also permanently deletes its CLOs, lecture plan, assessments, marks, and enrollments. This cannot be undone.`
+    );
+    if (!proceed) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/courses/${courseId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   if (batches.length === 0) {
     return (
       <div className="card" style={{ borderColor: "var(--rust)" }}>
@@ -187,6 +209,9 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
           <div style={{ fontSize: 12.5, color: "var(--slate)" }}>
             Into: <b style={{ color: "var(--ink)" }}>{batches.find((b) => b.id === selectedBatchId)?.batchName || "select a batch above to view first"}</b>
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--rust)" }}>
+            <input ref={replaceCheckboxRef} type="checkbox" /> Replace everything (delete existing courses in target batch first)
+          </label>
           <button onClick={copyFromBatch} disabled={loading || !selectedBatchId} className="btn btn-brass">{loading ? "Copying…" : "Copy Courses"}</button>
         </div>
         {!selectedBatchId && <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>Use "Viewing batch" above to pick the target batch first.</div>}
@@ -265,8 +290,9 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
                 <td>
                   <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
                   {c.courseType !== "Lab" && (
-                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Split into Lab</button>
+                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Split into Lab</button>
                   )}
+                  <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>
                 </td>
               </tr>
             ))}

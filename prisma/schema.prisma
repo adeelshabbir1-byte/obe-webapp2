@@ -752,8 +752,10 @@ model GradingScale {
   letter        String // "A", "A-", "B+", etc.
   gpaValue      Float
   orderIndex    Int    @default(0) // highest grade first
+  effectiveFromTerm String @default("Fall") // this version applies to batches whose OWN start term is on/after this point
+  effectiveFromYear Int    @default(2000) // low default so pre-existing rows keep applying to every already-created batch
 
-  @@unique([coordinatorId, letter])
+  @@unique([coordinatorId, letter, effectiveFromTerm, effectiveFromYear])
   @@index([coordinatorId])
 }
 

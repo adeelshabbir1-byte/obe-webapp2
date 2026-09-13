@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { computeResultMate } from "../../../lib/resultMate";
+import { getGradingScaleForBatch } from "../../../lib/gradingScaleLookup";
 import Shell from "../../../components/Shell";
 import ReportPrintHeader from "../../../components/ReportPrintHeader";
 
@@ -73,12 +74,12 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
     }
 
     // Currently-active enrollments (not yet reset by a re-offering) — live-computed.
-    const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId: student.id }, include: { course: true } });
+    const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId: student.id }, include: { course: { include: { batch: true } } } });
     for (const e of currentEnrollments) {
       const result = await computeResultMate(e.courseId);
       const row = result.rows.find((r) => r.studentId === student.id);
       if (!row) continue;
-      const gradingScale = await prisma.gradingScale.findMany({ where: { coordinatorId: e.course.coordinatorId } });
+      const gradingScale = e.course.batch ? await getGradingScaleForBatch(e.course.coordinatorId, e.course.batch) : [];
       const gpaPoints = gradingScale.find((g) => g.letter === row.grade)?.gpaValue ?? null;
       courseRows.push({
         code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: row.grade, gpaPoints,

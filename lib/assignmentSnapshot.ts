@@ -72,6 +72,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
     coordinatorId: course.coordinatorId, code: course.code, title: course.title,
     creditHours: course.creditHours, courseType: course.courseType,
     offeredTermName: course.offeredTermName, offeredTermYear: course.offeredTermYear,
+    batch: course.batch ? { startTerm: course.batch.startTerm, startYear: course.batch.startYear } : null,
   }, criteria);
 
   // Clear marks and enrollment so the new term's students start fresh —
@@ -85,8 +86,9 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
  * attainment for this course offering — called right before the reset
  * above wipes their marks, so a student's transcript survives across every
  * semester rather than just the current one. */
-async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number }, criteria: { cloPct: number; ploPct: number }) {
+async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number; batch: { startTerm: string; startYear: number } | null }, criteria: { cloPct: number; ploPct: number }) {
   const { computeResultMate } = await import("./resultMate");
+  const { getGradingScaleForBatch } = await import("./gradingScaleLookup");
   const result = await computeResultMate(courseId);
   if (result.rows.length === 0) return;
 
@@ -94,7 +96,7 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } }),
     prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
     prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId, source: "INSTRUCTOR" } }, include: { lectureRow: true } }),
-    prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId } }),
+    course.batch ? getGradingScaleForBatch(course.coordinatorId, course.batch) : Promise.resolve([]),
   ]);
   const instrumentToClo = new Map<string, string>();
   for (const link of links) if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);

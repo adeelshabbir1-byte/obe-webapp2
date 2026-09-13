@@ -14,6 +14,7 @@ import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import GradeCutoffsForm from "../../../../components/GradeCutoffsForm";
 import GradeBoundaryEditor from "../../../../components/GradeBoundaryEditor";
+import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
 
 export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -54,7 +55,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     }
   }
 
-  const gradingScale = course ? await prisma.gradingScale.findMany({ where: { coordinatorId: course.coordinatorId }, orderBy: { orderIndex: "asc" } }) : [];
+  const gradingScale = course?.batch ? await getGradingScaleForBatch(course.coordinatorId, course.batch) : [];
   const hasCutoffRole = course && (
     (user.role === "INSTRUCTOR" && course.instructorId === user.id) ||
     user.role === "CHAIRMAN"

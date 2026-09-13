@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
+import { deleteCourseCompletely } from "../../../../../lib/deleteCourseCompletely";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -23,6 +24,15 @@ export async function POST(req: NextRequest) {
   if (!sourceBatch || sourceBatch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid source batch" }, { status: 400 });
   if (!targetBatch || targetBatch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid target batch" }, { status: 400 });
 
+  let deleted = 0;
+  if (body.replaceExisting) {
+    const existingTargetCourses = await prisma.course.findMany({ where: { batchId: targetBatch.id }, select: { id: true } });
+    for (const c of existingTargetCourses) {
+      await deleteCourseCompletely(c.id);
+      deleted++;
+    }
+  }
+
   const [sourceCourses, existingInTarget] = await Promise.all([
     prisma.course.findMany({ where: { batchId: sourceBatch.id } }),
     prisma.course.findMany({ where: { batchId: targetBatch.id }, select: { code: true } }),
@@ -30,17 +40,20 @@ export async function POST(req: NextRequest) {
   const existingCodes = new Set(existingInTarget.map((c) => c.code));
 
   let created = 0;
+  let skippedAsExisting = 0;
   const errors: string[] = [];
 
   for (const sc of sourceCourses) {
     try {
-      let code = sc.code;
-      if (existingCodes.has(code)) code = `${sc.code}-copy`;
-      existingCodes.add(code);
+      // Skip (don't rename-and-duplicate) if this code already exists in
+      // the target — running this more than once on the same pair
+      // shouldn't keep piling up "-copy", "-copy-copy" duplicates.
+      if (existingCodes.has(sc.code)) { skippedAsExisting++; continue; }
+      existingCodes.add(sc.code);
 
       const newCourse = await prisma.course.create({
         data: {
-          code, title: sc.title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
+          code: sc.code, title: sc.title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
           coordinatorId: user.id, batchId: targetBatch.id, masterCourseId: sc.masterCourseId,
         },
       });
@@ -53,8 +66,8 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({
     actorUserId: user.id, action: "BATCH_COURSES_COPIED", entityType: "Batch", entityId: targetBatch.id,
-    metadata: { sourceBatchId: sourceBatch.id, created, errorCount: errors.length },
+    metadata: { sourceBatchId: sourceBatch.id, created, deleted, skippedAsExisting, errorCount: errors.length },
   });
 
-  return NextResponse.json({ created, errors: errors.length > 0 ? errors : undefined });
+  return NextResponse.json({ created, deleted, skippedAsExisting, errors: errors.length > 0 ? errors : undefined });
 }
