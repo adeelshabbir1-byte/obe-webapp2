@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AvailabilityGrid from "./AvailabilityGrid";
+import LocalSolutionUploader from "./LocalSolutionUploader";
 
 type Room = { id: string; name: string; type: string; capacity: number };
 type Batch = { id: string; label: string; workingDays: string[]; dailyStartHour: number; dailyEndHour: number };
@@ -311,7 +312,19 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       {tab === "Generate & View" && (
         <>
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Generate Timetable</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option A: Generate Locally on Your PC (recommended for larger institutions)</h3>
+            <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
+              Download your current setup as an Excel file, run the desktop tool on your own computer (no time
+              limit), then upload the solution file it produces.
+            </p>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <a href="/api/coordinator/timetable/download-constraints" className="btn btn-brass" style={{ textDecoration: "none" }}>1. Download Constraints (Excel)</a>
+              <LocalSolutionUploader />
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option B: Generate on the Web App</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
               Runs a genetic algorithm in the background, searching for a clash-free schedule. It keeps improving
               until it finds a perfect result or the time limit is reached — you can also accept the current best
