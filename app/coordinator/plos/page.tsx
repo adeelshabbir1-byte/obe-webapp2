@@ -11,6 +11,7 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },

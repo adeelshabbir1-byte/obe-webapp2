@@ -76,6 +76,10 @@ model User {
   reportAccessRules  ReportAccessRule[] @relation("ReportAccessChairman")
   programProfiles    ProgramProfile[] @relation("ProgramProfileCoordinator")
   alumni             Alumni[] @relation("AlumniChairman")
+  ownedRooms         Room[] @relation("RoomChairman")
+  scheduleSections   ScheduleSection[] @relation("ScheduleSectionInstructor")
+  facultyUnavailability FacultyUnavailability[] @relation("FacultyUnavailabilityFaculty")
+  timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
@@ -125,12 +129,14 @@ model Batch {
   startTerm      String   @default("Fall")   // "Fall" | "Spring" — which term this batch's Semester 1 falls in
   startYear      Int      @default(2025)
   studentCount   Int      @default(0) // current active student count — editable each semester as students join/leave
+  prerequisitesConfirmedAt DateTime? // set once the Coordinator has reviewed/set up this batch's Prerequisite Map — required before courses can be offered
   createdAt      DateTime @default(now())
 
   courses        Course[]
   plos           PLO[]    @relation("BatchPlos")
   cqiRecords     CqiRecord[]
   students       Student[]
+  scheduleConfig BatchScheduleConfig?
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
@@ -177,6 +183,107 @@ model AttendanceThreshold {
   id            String @id @default(cuid())
   chairmanId    String @unique
   minPercentage Int    @default(75)
+}
+
+// ===== Timetable Module =====
+// A room or lab, shared across the whole institution's timetable.
+model Room {
+  id         String @id @default(cuid())
+  chairmanId String
+  chairman   User   @relation("RoomChairman", fields: [chairmanId], references: [id])
+  name       String // e.g. "Room 204", "AI Lab"
+  type       String // "LECTURE" | "LAB"
+  capacity   Int
+
+  timetableEntries TimetableEntry[]
+  @@unique([chairmanId, name])
+  @@index([chairmanId])
+}
+
+// One schedulable teaching unit — a course taught by one instructor to one
+// section of students. PC sets how many sessions/week it needs, how long
+// each is, and what kind of room. Auto-generated from Course +
+// CourseSectionAssignment data, with PC free to add more or edit.
+model ScheduleSection {
+  id             String   @id @default(cuid())
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id])
+  instructorId   String
+  instructor     User     @relation("ScheduleSectionInstructor", fields: [instructorId], references: [id])
+  sectionLabel   String   @default("Section A")
+  sessionsPerWeek Int     @default(3)
+  sessionDurationMinutes Int @default(60)
+  roomTypeNeeded String   @default("LECTURE") // "LECTURE" | "LAB"
+  createdAt      DateTime @default(now())
+
+  timetableEntries TimetableEntry[]
+  @@index([courseId])
+  @@index([instructorId])
+}
+
+// Per-batch scheduling window — PC sets which days and hours that batch's
+// classes can be scheduled within.
+model BatchScheduleConfig {
+  id             String @id @default(cuid())
+  batchId        String @unique
+  batch          Batch  @relation(fields: [batchId], references: [id])
+  workingDaysJson String @default("[\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\"]")
+  dailyStartHour Int    @default(8)
+  dailyEndHour   Int    @default(16)
+}
+
+// A blocked time window for one faculty member — set by the PC on their
+// behalf, or by the faculty member themselves. The scheduler treats every
+// row here as a hard constraint never to schedule into.
+model FacultyUnavailability {
+  id           String @id @default(cuid())
+  facultyId    String
+  faculty      User   @relation("FacultyUnavailabilityFaculty", fields: [facultyId], references: [id])
+  dayOfWeek    String // "Mon".."Sun"
+  startHour    Int
+  endHour      Int
+  setById      String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([facultyId])
+}
+
+// One generated timetable — kept so a Coordinator can regenerate and
+// compare, rather than only ever having one live version.
+model TimetableRun {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  chairman     User     @relation("TimetableRunChairman", fields: [chairmanId], references: [id])
+  generatedById String
+  status       String   @default("COMPLETED") // "COMPLETED" | "FAILED"
+  fitnessScore Float?
+  hardViolations Int?
+  generations  Int?
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  entries TimetableEntry[]
+  @@index([chairmanId])
+}
+
+// One (day, time, room) assignment for one schedule section, within one
+// generated run.
+model TimetableEntry {
+  id                String          @id @default(cuid())
+  timetableRunId    String
+  timetableRun      TimetableRun    @relation(fields: [timetableRunId], references: [id])
+  scheduleSectionId String
+  scheduleSection   ScheduleSection @relation(fields: [scheduleSectionId], references: [id])
+  roomId            String
+  room              Room            @relation(fields: [roomId], references: [id])
+  dayOfWeek         String
+  startHour         Float
+  endHour           Float
+
+  @@index([timetableRunId])
+  @@index([scheduleSectionId])
+  @@index([roomId])
 }
 
 model PassingCriteria {
@@ -825,6 +932,7 @@ model Course {
   lectureRows         LectureRow[]
   paperDistributionItems PaperDistributionItem[]
   attendanceRecords   AttendanceRecord[]
+  scheduleSections    ScheduleSection[]
   ploMappings         CoursePloMapping[]
   weightExceptions    WeightExceptionRequest[]
   assessmentInstruments AssessmentInstrument[]

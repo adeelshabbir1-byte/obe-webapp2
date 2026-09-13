@@ -21,12 +21,25 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
 
   async function saveTerm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const newTermName = fd.get("termName") as string;
+    const newYear = fd.get("year") as string;
+
+    // Changing to a genuinely different term is a real transition (results
+    // get snapshotted, new courses get offered) — confirm deliberately
+    // rather than silently overwriting whatever term was set before.
+    if (currentTerm && (currentTerm.termName !== newTermName || String(currentTerm.year) !== newYear)) {
+      const proceed = confirm(
+        `You're currently on ${currentTerm.termName} ${currentTerm.year}. Setting this to ${newTermName} ${newYear} will make it your new active semester — courses will be offered based on THIS term going forward.\n\nMake sure ${currentTerm.termName} ${currentTerm.year} is fully wrapped up (marks entered, results finalized) before moving on, since re-offering a course resets its marks for the next cohort.\n\nContinue and start ${newTermName} ${newYear}?`
+      );
+      if (!proceed) return;
+    }
+
+    setLoading(true); setError("");
     try {
       const res = await fetch("/api/coordinator/current-term", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ termName: fd.get("termName"), year: fd.get("year") }),
+        body: JSON.stringify({ termName: newTermName, year: newYear }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -40,7 +53,13 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
       const res = await fetch("/api/coordinator/offer-semester", { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      const lines = data.perBatch.map((b: any) => `${b.batchName}: Semester ${b.semesterNumber}, ${b.coursesOffered} course(s) newly offered`);
+      const lines = data.perBatch.map((b: any) =>
+        b.notStarted
+          ? `${b.batchName}: hasn't started yet (its own intake term is still ahead) — nothing offered`
+          : b.prerequisitesNotConfirmed
+          ? `${b.batchName}: Prerequisite Map hasn't been confirmed yet — set it up first, then come back here`
+          : `${b.batchName}: Semester ${b.semesterNumber}, ${b.coursesOffered} course(s) newly offered`
+      );
       setResult(`${data.offered} course(s) offered in total.\n${lines.join("\n")}`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }

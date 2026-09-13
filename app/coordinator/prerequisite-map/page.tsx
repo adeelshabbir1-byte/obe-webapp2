@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
+import ConfirmPrerequisitesButton from "../../../components/ConfirmPrerequisitesButton";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -11,6 +12,7 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
@@ -73,6 +75,13 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           <button type="submit" className="btn btn-brass">Show Map</button>
         </form>
       </div>
+
+      {selectedBatchId && (
+        <ConfirmPrerequisitesButton
+          batchId={selectedBatchId}
+          confirmedAt={batchesForDegree.find((b) => b.id === selectedBatchId)?.prerequisitesConfirmedAt?.toISOString() || null}
+        />
+      )}
 
       {usedTypes.length > 0 && (
         <div className="card">
