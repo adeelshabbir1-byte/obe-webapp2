@@ -6,6 +6,7 @@ import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import PloMatrix from "../../../components/PloMatrix";
 import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 import CopyPloMappingsForm from "../../../components/CopyPloMappingsForm";
+import AutoMapHecButton from "../../../components/AutoMapHecButton";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -62,6 +63,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       <div className="card no-print">
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
       </div>
+      {searchParams.batchId && <AutoMapHecButton batchId={searchParams.batchId} />}
       {allBatches.length > 1 && (
         <div className="card">
           <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Copy Mappings from Another Batch</h3>

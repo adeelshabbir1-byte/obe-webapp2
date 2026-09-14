@@ -2692,6 +2692,17 @@ ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "instructorObservations" TEXT;
 ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "textbook" TEXT;
 ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "catalogDescription" TEXT;
 ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "referenceMaterial" TEXT;
+-- Run in Supabase SQL Editor. Adds HecPloSuggestion — HEC's own suggested
+-- course-to-PLO mapping, used by the "Auto-Map from HEC" button to
+-- bulk-create real CoursePloMapping records for a batch.
+
+CREATE TABLE IF NOT EXISTS "HecPloSuggestion" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "courseCode" TEXT NOT NULL,
+  "ploNumber" INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "HecPloSuggestion_courseCode_ploNumber_key" ON "HecPloSuggestion"("courseCode", "ploNumber");
+CREATE INDEX IF NOT EXISTS "HecPloSuggestion_courseCode_idx" ON "HecPloSuggestion"("courseCode");
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

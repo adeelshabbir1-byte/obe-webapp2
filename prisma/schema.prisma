@@ -1034,6 +1034,18 @@ model PLO {
 
 // OMC assigns which PLOs each course contributes to — a many-to-many matrix,
 // not something a Subject Expert or Coordinator sets themselves.
+// HEC's suggested course-to-PLO mapping, from the NCEAC workbook — used by
+// the "Auto-Map from HEC" button to bulk-create real CoursePloMapping
+// records for a batch, matched by course code.
+model HecPloSuggestion {
+  id         String @id @default(cuid())
+  courseCode String
+  ploNumber  Int
+
+  @@unique([courseCode, ploNumber])
+  @@index([courseCode])
+}
+
 model CoursePloMapping {
   id           String   @id @default(cuid())
   courseId     String
