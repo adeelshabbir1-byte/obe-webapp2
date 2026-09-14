@@ -1184,6 +1184,9 @@ model MasterCourse {
   creditHours         Int
   category            String   // General Education | Major | IDS | Certification | Capstone Project | Field Experience
   semesterNumber      Int?
+  textbook            String?  // flows into every Course created from this template on import
+  catalogDescription  String?  @db.Text
+  referenceMaterial    String?
 
   adoptedInto         Course[]
   seedClos            MasterCourseClo[]

@@ -2684,6 +2684,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS "GradingScale_coordinatorId_letter_effectiveFr
 -- Instructor and included in the downloadable Word document.
 
 ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "instructorObservations" TEXT;
+-- Run in Supabase SQL Editor. Adds textbook/catalogDescription/
+-- referenceMaterial to MasterCourse — these now flow into every Course
+-- created from this template on import, same as CLOs already do,
+-- instead of starting empty every time.
+
+ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "textbook" TEXT;
+ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "catalogDescription" TEXT;
+ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "referenceMaterial" TEXT;
 
 -- (migration_clo_plo_mapping.sql intentionally omitted: superseded by migration_institutional_plos.sql)
 -- (one-off repair scripts: constraint fixes, orphaned-row cleanups — not needed for a fresh database)

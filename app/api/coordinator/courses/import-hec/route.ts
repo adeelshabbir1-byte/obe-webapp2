@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         data: {
           code, title: mc.title, creditHours: mc.creditHours,
           courseType: mc.category, semesterNumber: mc.semesterNumber,
+          textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
           coordinatorId: user.id, batchId: batch.id, masterCourseId: mc.id,
         },
       });

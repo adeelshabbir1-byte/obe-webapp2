@@ -40,7 +40,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
 
       <CurriculumDetailManager
         curriculumId={curriculum.id}
-        courses={curriculum.courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber }))}
+        courses={curriculum.courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber, textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial }))}
         plos={curriculum.plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description }))}
       />
     </Shell>

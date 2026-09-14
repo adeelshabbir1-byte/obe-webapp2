@@ -20,6 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
     data: {
       code: body.code, title: body.title, creditHours: parseInt(body.creditHours, 10),
       category: body.category, semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
+      textbook: body.textbook !== undefined ? (body.textbook || null) : course.textbook,
+      catalogDescription: body.catalogDescription !== undefined ? (body.catalogDescription || null) : course.catalogDescription,
+      referenceMaterial: body.referenceMaterial !== undefined ? (body.referenceMaterial || null) : course.referenceMaterial,
     },
   });
 

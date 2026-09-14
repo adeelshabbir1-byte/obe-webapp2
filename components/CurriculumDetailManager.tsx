@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null };
+type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null };
 type MPlo = { id: string; number: number; title: string; description: string };
 
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
@@ -26,6 +26,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
         body: JSON.stringify({
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
+          textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
         }),
       });
       const data = await res.json();
@@ -44,6 +45,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
         body: JSON.stringify({
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
+          textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
         }),
       });
       const data = await res.json();
@@ -115,6 +117,9 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                       {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                     <input name="semesterNumber" type="number" min={1} max={8} defaultValue={c.semesterNumber ?? ""} style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} placeholder="Sem" />
+                    <input name="textbook" defaultValue={c.textbook ?? ""} placeholder="Textbook" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} />
+                    <input name="referenceMaterial" defaultValue={c.referenceMaterial ?? ""} placeholder="Reference material" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} />
+                    <textarea name="catalogDescription" defaultValue={c.catalogDescription ?? ""} placeholder="Catalog description / course outline" style={{ flex: "1 1 100%", padding: "6px 8px", border: "1px solid var(--line)", minHeight: 50 }} />
                     <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
                     <button type="button" onClick={() => setEditingCourseId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
                   </form>
@@ -143,6 +148,11 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
             <div className="field"><label>Category</label><select name="category" required>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
             <div className="field"><label>Semester</label><input name="semesterNumber" type="number" min={1} max={8} /></div>
           </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 4 }}>
+            <div className="field"><label>Textbook (optional)</label><input name="textbook" /></div>
+            <div className="field"><label>Reference Material (optional)</label><input name="referenceMaterial" /></div>
+          </div>
+          <div className="field"><label>Catalog Description / Course Outline (optional)</label><textarea name="catalogDescription" style={{ width: "100%", minHeight: 60, padding: "6px 8px", border: "1px solid var(--line)" }} /></div>
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add Course"}</button>
         </form>
       </div>
