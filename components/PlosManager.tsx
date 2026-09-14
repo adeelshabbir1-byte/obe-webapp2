@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
+import { safeFetchJson } from "../lib/safeFetchJson";
 
 type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; sourceMasterPloNumber: number | null };
 type HecPlo = { number: number; title: string; description: string };
@@ -33,8 +34,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       const res = await fetch("/api/coordinator/plos/bulk-add-hec", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const { ok, data } = await safeFetchJson(res);
+      if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setBulkResult(`Added ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -48,8 +49,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: batchId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const { ok, data } = await safeFetchJson(res);
+      if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setBulkResult(`Copied ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -62,8 +63,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ number: nextNumber, title: hp.title, description: hp.description, sourceMasterPloNumber: hp.number, batchId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const { ok, data } = await safeFetchJson(res);
+      if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -77,8 +78,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ number: fd.get("number"), title: fd.get("title"), description: fd.get("description"), batchId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const { ok, data } = await safeFetchJson(res);
+      if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -92,8 +93,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: fd.get("title"), description: fd.get("description") }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const { ok, data } = await safeFetchJson(res);
+      if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setEditingId(null); setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -101,8 +102,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
   async function removePlo(ploId: string) {
     setLoading(true);
     const res = await fetch(`/api/coordinator/plos/${ploId}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Could not delete."); }
+    const { ok, data } = await safeFetchJson(res);
+    if (!ok) { setError(data.error || "Could not delete."); }
     setLoading(false); router.refresh();
   }
 

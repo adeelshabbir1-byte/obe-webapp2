@@ -4,6 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import { deleteBatchCompletely } from "../../../../../lib/deleteBatchCompletely";
 import { writeAuditLog } from "../../../../../lib/audit";
 
+export const maxDuration = 60;
+
 export async function DELETE(req: Request, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });

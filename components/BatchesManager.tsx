@@ -12,6 +12,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   const [loading, setLoading] = useState(false);
   const [editingCountId, setEditingCountId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   async function addBatch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,17 +47,28 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   async function removeAllBatches() {
     const typed = prompt(`This permanently deletes EVERY batch you have (${initialBatches.length} total) — every course, student, PLO, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
     if (typed !== "DELETE ALL BATCHES") { if (typed !== null) alert("Confirmation phrase didn't match — nothing was deleted."); return; }
+
+    // Delete one batch at a time from here, rather than one big server-side
+    // loop — a single request deleting everything risks the platform's
+    // execution time limit on a large curriculum, which could leave things
+    // partially deleted mid-operation. This way each request only has to
+    // finish one batch, and progress is visible as it goes.
     setBusyId("__all__"); setError("");
-    try {
-      const res = await fetch("/api/coordinator/batches", {
-        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "DELETE ALL BATCHES" }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
-      setBusyId(null);
-      if (data.errors) setError(`Deleted ${data.deleted}/${data.total}, but some failed: ${data.errors.join("; ")}`);
-      router.refresh();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+    setBulkProgress({ done: 0, total: initialBatches.length });
+    const failures: string[] = [];
+    for (let i = 0; i < initialBatches.length; i++) {
+      const b = initialBatches[i];
+      try {
+        const res = await fetch(`/api/coordinator/batches/${b.id}`, { method: "DELETE" });
+        if (!res.ok) { const data = await res.json().catch(() => ({})); failures.push(`${b.batchName}: ${data.error || "failed"}`); }
+      } catch (err: any) {
+        failures.push(`${b.batchName}: ${err.message}`);
+      }
+      setBulkProgress({ done: i + 1, total: initialBatches.length });
+    }
+    setBusyId(null); setBulkProgress(null);
+    if (failures.length > 0) setError(`Deleted ${initialBatches.length - failures.length}/${initialBatches.length}, but some failed: ${failures.join("; ")}`);
+    router.refresh();
   }
 
   async function removeBatch(batchId: string, batchName: string) {
@@ -82,6 +94,11 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
           <button onClick={removeAllBatches} disabled={busyId === "__all__"} style={{ background: "var(--rust)", color: "#fff", border: "none", padding: "6px 14px", fontSize: 12.5, cursor: "pointer" }}>
             {busyId === "__all__" ? "Deleting…" : "Delete ALL Batches"}
           </button>
+          {bulkProgress && (
+            <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 8 }}>
+              Deleting batch {bulkProgress.done} of {bulkProgress.total}… (one at a time, so a large curriculum doesn't risk timing out mid-operation)
+            </p>
+          )}
         </div>
       )}
       <div className="card">
