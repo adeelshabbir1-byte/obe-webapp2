@@ -43,6 +43,22 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
+  async function removeAllBatches() {
+    const typed = prompt(`This permanently deletes EVERY batch you have (${initialBatches.length} total) — every course, student, PLO, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
+    if (typed !== "DELETE ALL BATCHES") { if (typed !== null) alert("Confirmation phrase didn't match — nothing was deleted."); return; }
+    setBusyId("__all__"); setError("");
+    try {
+      const res = await fetch("/api/coordinator/batches", {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "DELETE ALL BATCHES" }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
+      setBusyId(null);
+      if (data.errors) setError(`Deleted ${data.deleted}/${data.total}, but some failed: ${data.errors.join("; ")}`);
+      router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
+
   async function removeBatch(batchId: string, batchName: string) {
     const typed = prompt(`This permanently deletes the "${batchName}" batch — every course, student, PLO, and all their data. This cannot be undone.\n\nType the batch name exactly to confirm: ${batchName}`);
     if (typed !== batchName) { if (typed !== null) alert("Name didn't match — nothing was deleted."); return; }
@@ -58,6 +74,16 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {initialBatches.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
+          <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 8 }}>
+            <b>Danger zone.</b> Deletes every batch you have ({initialBatches.length} total) and everything under them — permanent, no undo.
+          </p>
+          <button onClick={removeAllBatches} disabled={busyId === "__all__"} style={{ background: "var(--rust)", color: "#fff", border: "none", padding: "6px 14px", fontSize: 12.5, cursor: "pointer" }}>
+            {busyId === "__all__" ? "Deleting…" : "Delete ALL Batches"}
+          </button>
+        </div>
+      )}
       <div className="card">
         <SortableTable>
           <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th></th></tr></thead>

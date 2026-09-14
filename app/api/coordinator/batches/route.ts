@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { deleteBatchCompletely } from "../../../../lib/deleteBatchCompletely";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -59,4 +60,35 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id });
 
   return NextResponse.json({ batch }, { status: 201 });
+}
+
+// Bulk delete — every batch this Coordinator owns. Requires an explicit
+// confirmation phrase in the body as a server-side backstop, since the
+// client-side confirmation alone shouldn't be the only thing standing
+// between a stray request and wiping out the whole curriculum.
+export async function DELETE(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const body = await req.json().catch(() => ({}));
+  if (body.confirm !== "DELETE ALL BATCHES") {
+    return NextResponse.json({ error: "confirmation phrase did not match" }, { status: 400 });
+  }
+
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, select: { id: true, batchName: true } });
+  let deleted = 0;
+  const errors: string[] = [];
+
+  for (const b of batches) {
+    try {
+      await deleteBatchCompletely(b.id);
+      deleted++;
+    } catch (err: any) {
+      errors.push(`${b.batchName}: ${err?.message || "failed"}`);
+    }
+  }
+
+  await writeAuditLog({ actorUserId: user.id, action: "ALL_BATCHES_DELETED", entityType: "Batch", entityId: "bulk", metadata: { deleted, errorCount: errors.length } });
+
+  return NextResponse.json({ deleted, total: batches.length, errors: errors.length > 0 ? errors : undefined });
 }
