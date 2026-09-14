@@ -52,7 +52,7 @@ export default async function CoordinatorSemesterPage() {
   });
 
   const instructors = await prisma.user.findMany({
-    where: { managedById: user.id, OR: [{ role: "INSTRUCTOR" }, { role: "SUBJECT_EXPERT", secondaryRole: "INSTRUCTOR" }] },
+    where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
     orderBy: { name: "asc" },
   });
 

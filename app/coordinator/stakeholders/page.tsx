@@ -5,6 +5,7 @@ import { roleLabel, chairmanIdFor } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import StakeholdersManager from "../../../components/StakeholdersManager";
+import BulkStakeholderImport from "../../../components/BulkStakeholderImport";
 
 const ALLOWED_ROLES = ["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR"];
 
@@ -39,6 +40,7 @@ export default async function StakeholdersPage() {
         from your institution's designated data custodian before it's used (e.g. for surveys). An alumni's roll
         number and an employer's name must be unique, so the same person or company is never added twice.
       </p>
+      <BulkStakeholderImport />
       <StakeholdersManager
         alumni={alumni.map((a) => ({ id: a.id, name: a.name, email: a.email, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, totalWorkExperienceYears: a.totalWorkExperienceYears, status: a.status }))}
         employers={employers.map((e) => ({ id: e.id, organizationName: e.organizationName, contactName: e.contactName, contactEmail: e.contactEmail, companySize: e.companySize, industryType: e.industryType, status: e.status }))}
