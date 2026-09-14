@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS "PLO" (
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "PLO_coordinatorId_idx" ON "PLO"("coordinatorId");
+CREATE UNIQUE INDEX IF NOT EXISTS "PLO_batchId_number_key" ON "PLO"("batchId", "number");
 
 -- Drop the old HEC-number-based column on CLO and add the new PLO reference.
 ALTER TABLE "CLO" DROP COLUMN IF EXISTS "mappedPloNumber";
