@@ -119,7 +119,16 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
 
         {result && (
           <div style={{ marginTop: 14, fontSize: 12.5 }}>
-            {result.created.length > 0 && <p style={{ color: "var(--sage)" }}>Created: {result.created.map((c) => c.batchName).join(", ")}</p>}
+            {result.created.length > 0 && (
+              <div style={{ color: "var(--sage)", marginBottom: 6 }}>
+                {result.created.map((c: any) => (
+                  <p key={c.batchName}>
+                    {c.batchName} created.
+                    {c.copiedFrom ? ` Copied ${c.coursesCopied} course(s) and ${c.plosCopied} PLO(s) forward from ${c.copiedFrom}.` : " No earlier batch of this program to copy from — starting empty."}
+                  </p>
+                ))}
+              </div>
+            )}
             {result.skipped.length > 0 && (
               <div style={{ color: "var(--rust)" }}>
                 {result.skipped.map((s, i) => <p key={i}>{s.degreeProgram}: {s.reason}</p>)}

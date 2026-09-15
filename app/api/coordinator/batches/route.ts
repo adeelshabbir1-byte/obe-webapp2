@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { deleteBatchCompletely } from "../../../../lib/deleteBatchCompletely";
+import { autoCopyFromPreviousBatch } from "../../../../lib/autoCopyPreviousBatch";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -57,9 +58,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id });
+  const copyResult = await autoCopyFromPreviousBatch(batch);
+  await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id, metadata: { autoCopy: copyResult } });
 
-  return NextResponse.json({ batch }, { status: 201 });
+  return NextResponse.json({ batch, autoCopy: copyResult }, { status: 201 });
 }
 
 // Bulk delete — every batch this Coordinator owns. Requires an explicit

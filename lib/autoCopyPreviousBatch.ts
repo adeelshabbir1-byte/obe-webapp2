@@ -1,0 +1,72 @@
+import { prisma } from "./db";
+import { copyCourseContent } from "./benchmarkCopy";
+import { termIndex } from "./termLogic";
+
+/** When a new batch is created, automatically copies courses (with their
+ * CLOs/lecture plan) and PLOs from the most recent EARLIER batch of the
+ * same degree program under the same coordinator — so a Coordinator never
+ * has to manually re-import data for every new intake of an existing
+ * program. Silently does nothing if no earlier batch exists (e.g. the
+ * very first batch of a brand new program) — that's a normal case, not
+ * an error. */
+export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordinatorId: string; degreeProgram: string; startTerm: string; startYear: number }) {
+  const candidates = await prisma.batch.findMany({
+    where: { coordinatorId: newBatch.coordinatorId, degreeProgram: newBatch.degreeProgram, id: { not: newBatch.id } },
+  });
+
+  const newIndex = termIndex(newBatch.startTerm, newBatch.startYear);
+  let previous: (typeof candidates)[number] | null = null;
+  let previousIndex = -Infinity;
+  for (const c of candidates) {
+    const idx = termIndex(c.startTerm, c.startYear);
+    if (idx < newIndex && idx > previousIndex) { previous = c; previousIndex = idx; }
+  }
+  if (!previous) return { copiedFrom: null, coursesCopied: 0, plosCopied: 0 };
+
+  // Courses — skip anything the new batch somehow already has (e.g. this
+  // ran twice), same as the manual "Copy From Another Batch" behavior.
+  const [sourceCourses, existingInTarget] = await Promise.all([
+    prisma.course.findMany({ where: { batchId: previous.id } }),
+    prisma.course.findMany({ where: { batchId: newBatch.id }, select: { code: true } }),
+  ]);
+  const existingCodes = new Set(existingInTarget.map((c) => c.code));
+
+  let coursesCopied = 0;
+  for (const sc of sourceCourses) {
+    if (existingCodes.has(sc.code)) continue;
+    try {
+      const newCourse = await prisma.course.create({
+        data: {
+          code: sc.code, title: sc.title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
+          coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, masterCourseId: sc.masterCourseId,
+        },
+      });
+      await copyCourseContent(sc.id, newCourse.id);
+      coursesCopied++;
+    } catch {
+      // Best-effort — one failed course shouldn't stop the rest from copying.
+    }
+  }
+
+  // PLOs
+  const [sourcePlos, existingPlos] = await Promise.all([
+    prisma.pLO.findMany({ where: { batchId: previous.id } }),
+    prisma.pLO.findMany({ where: { batchId: newBatch.id }, select: { number: true } }),
+  ]);
+  const existingNumbers = new Set(existingPlos.map((p) => p.number));
+
+  let plosCopied = 0;
+  for (const sp of sourcePlos) {
+    if (existingNumbers.has(sp.number)) continue;
+    try {
+      await prisma.pLO.create({
+        data: { coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, number: sp.number, title: sp.title, description: sp.description },
+      });
+      plosCopied++;
+    } catch {
+      // Best-effort here too.
+    }
+  }
+
+  return { copiedFrom: previous.batchName, coursesCopied, plosCopied };
+}

@@ -10,6 +10,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copyResultMsg, setCopyResultMsg] = useState("");
   const [editingCountId, setEditingCountId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
@@ -28,6 +29,12 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      const copy = data.autoCopy;
+      setCopyResultMsg(
+        copy?.copiedFrom
+          ? `Copied ${copy.coursesCopied} course(s) and ${copy.plosCopied} PLO(s) forward from ${copy.copiedFrom}.`
+          : "No earlier batch of this program to copy from — starting empty."
+      );
       (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -86,6 +93,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {copyResultMsg && <p style={{ fontSize: 12.5, color: "var(--sage)" }}>{copyResultMsg}</p>}
       {initialBatches.length > 0 && (
         <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 8 }}>

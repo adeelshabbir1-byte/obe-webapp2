@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { autoCopyFromPreviousBatch } from "../../../../lib/autoCopyPreviousBatch";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -51,8 +52,13 @@ export async function POST(req: NextRequest) {
       },
     });
     existingDistinctPrograms.add(p.name);
-    created.push({ batchName, degreeProgram: p.name });
-    await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id });
+
+    const copyResult = await autoCopyFromPreviousBatch(batch);
+    created.push({
+      batchName, degreeProgram: p.name,
+      copiedFrom: copyResult.copiedFrom, coursesCopied: copyResult.coursesCopied, plosCopied: copyResult.plosCopied,
+    });
+    await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id, metadata: { autoCopy: copyResult } });
   }
 
   return NextResponse.json({ created, skipped });
