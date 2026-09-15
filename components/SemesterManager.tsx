@@ -5,7 +5,7 @@ import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Instructor = { id: string; name: string };
-type OfferedCourse = { id: string; code: string; title: string; batchLabel: string; semesterNumber: number | null; instructorId: string | null };
+type OfferedCourse = { id: string; code: string; title: string; batchLabel: string; semesterNumber: number | null; instructorName: string | null };
 type NotOfferedCourse = { id: string; code: string; title: string; batchLabel: string; semesterNumber: number | null };
 
 export default function SemesterManager({ currentTerm, offeredCourses, notOfferedCourses, instructors }: {
@@ -65,14 +65,6 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function assignInstructor(courseId: string, instructorId: string) {
-    setLoading(true);
-    await fetch(`/api/coordinator/courses/${courseId}/assign-instructor`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instructorId: instructorId || null }),
-    });
-    setLoading(false); router.refresh();
-  }
-
   async function toggleOffered(courseId: string, isOffered: boolean) {
     setLoading(true);
     await fetch(`/api/coordinator/courses/${courseId}/offer-toggle`, {
@@ -124,12 +116,7 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
             {offeredCourses.map((c) => (
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5 }}>{c.batchLabel}</td><td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
-                <td>
-                  <select defaultValue={c.instructorId || ""} onChange={(e) => assignInstructor(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-                    <option value="">— Unassigned —</option>
-                    {instructors.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                  </select>
-                </td>
+                <td style={{ fontSize: 12.5 }}>{c.instructorName || <span style={{ color: "var(--slate)" }}>Not yet assigned — see Course Assigner</span>}</td>
                 <td><button onClick={() => toggleOffered(c.id, false)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
               </tr>
             ))}

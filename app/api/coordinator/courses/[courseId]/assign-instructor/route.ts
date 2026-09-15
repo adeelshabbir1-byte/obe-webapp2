@@ -5,10 +5,13 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || user.role !== "COURSE_ASSIGNER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinatorIds = coordinators.map((c) => c.id);
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
-  if (!course || course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!course || !coordinatorIds.includes(course.coordinatorId)) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   const instructorId = body.instructorId || null;
@@ -19,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   if (instructorId) {
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
-    const isValidInstructor = instructor && instructor.managedById === user.id && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
+    const isValidInstructor = instructor && coordinatorIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
     if (!isValidInstructor) {
       return NextResponse.json({ error: "invalid instructor" }, { status: 400 });
     }

@@ -26,8 +26,8 @@ export async function GET() {
   });
 
   const groups = await prisma.courseEquivalenceGroup.findMany({
-    where: { chairmanId: user.managedById || "" },
-    include: { members: { include: { course: { include: { batch: true } } } }, sectionAssignments: true },
+    where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true } } } },
+    include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true } } } }, sectionAssignments: true },
   });
 
   const standaloneCourses = offeredCourses.filter((c) => !c.equivalenceMember);

@@ -42,7 +42,7 @@ export default async function CoordinatorSemesterPage() {
   const offeredCourses = await prisma.course.findMany({
     where: { coordinatorId: user.id, isOffered: true },
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
-    include: { batch: true },
+    include: { batch: true, instructor: true },
   });
 
   const notOfferedCourses = await prisma.course.findMany({
@@ -60,12 +60,13 @@ export default async function CoordinatorSemesterPage() {
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Current Semester</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Set the current term to automatically offer every batch's current-semester courses, then assign instructors.
+        Set the current term to automatically offer every batch's current-semester courses. Instructor
+        assignment happens separately, via Course Assigner.
       </p>
       <SemesterManager
         currentTerm={currentTerm ? { termName: currentTerm.termName, year: currentTerm.year } : null}
         offeredCourses={offeredCourses.map((c) => ({
-          id: c.id, code: c.code, title: c.title, semesterNumber: c.semesterNumber, instructorId: c.instructorId,
+          id: c.id, code: c.code, title: c.title, semesterNumber: c.semesterNumber, instructorName: c.instructor?.name || null,
           batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
         }))}
         notOfferedCourses={notOfferedCourses.map((c) => ({
