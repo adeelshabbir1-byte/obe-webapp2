@@ -5,7 +5,6 @@ import { roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import AvailabilityGrid from "../../../components/AvailabilityGrid";
-import MyCoursePrioritiesManager from "../../../components/MyCoursePrioritiesManager";
 
 export default async function MyAvailabilityPage() {
   const user = await getAuthenticatedUser();
@@ -24,7 +23,6 @@ export default async function MyAvailabilityPage() {
         Coordinator's timetable generator.
       </p>
       <AvailabilityGrid existingUnavailable={records.map((r) => ({ dayOfWeek: r.dayOfWeek, startHour: r.startHour, endHour: r.endHour }))} />
-      <MyCoursePrioritiesManager />
     </Shell>
   );
 }

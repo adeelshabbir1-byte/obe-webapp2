@@ -75,7 +75,7 @@ export async function GET() {
   // actually in this matrix — the color-coded hint, and the basis for
   // nudging high-affinity instructor/course pairs closer together below.
   const codesInMatrix = Array.from(new Set(rows.map((r) => r.code).filter((c): c is string => !!c)));
-  const priorityRecords = await prisma.facultyCoursePriority.findMany({
+  const priorityRecords = await prisma.facultyCoursePreference.findMany({
     where: { facultyId: { in: instructors.map((i) => i.id) }, courseCode: { in: codesInMatrix } },
   });
   const priorities: Record<string, Record<string, number>> = {};
