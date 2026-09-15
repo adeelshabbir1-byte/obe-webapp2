@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[]; assignedByPloId?: Record<string, string | null> };
+type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[]; assignedByPloId?: Record<string, string | null>; hecSuggestedPloNumbers?: number[] };
 type Program = { coordinatorId: string; coordinatorName: string; plos: Plo[]; courses: Course[] };
 
 type SortKey = "code" | "type" | "semester";
@@ -90,12 +90,18 @@ export default function PloMatrix({ programs }: { programs: Program[] }) {
                         const checked = c.mappedPloIds.includes(p.id);
                         const key = c.id + p.id;
                         const assignedBy = c.assignedByPloId?.[p.id];
+                        const hecSuggests = !checked && (c.hecSuggestedPloNumbers || []).includes(p.number);
                         return (
-                          <td key={p.id} style={{ textAlign: "center" }} title={checked && assignedBy ? `Assigned by ${assignedBy}` : undefined}>
+                          <td
+                            key={p.id}
+                            style={{ textAlign: "center", background: hecSuggests ? "#FFF9C4" : undefined }}
+                            title={checked && assignedBy ? `Assigned by ${assignedBy}` : hecSuggests ? "HEC suggests this mapping — not yet set" : undefined}
+                          >
                             <input
                               type="checkbox" checked={checked} disabled={busyKey === key}
                               onChange={(e) => toggle(c.id, p.id, e.target.checked)}
                             />
+                            {hecSuggests && <div style={{ fontSize: 8, color: "#8A6D00" }}>HEC</div>}
                           </td>
                         );
                       })}

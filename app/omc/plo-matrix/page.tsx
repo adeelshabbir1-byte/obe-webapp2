@@ -42,6 +42,11 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
     const assignerNameById = new Map(assigners.map((a) => [a.id, a.name]));
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
     if (courses.length === 0 && plos.length === 0) continue;
+
+    const hecSuggestions = await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: courses.map((c) => c.code) } } });
+    const hecByCode = new Map<string, number[]>();
+    for (const s of hecSuggestions) hecByCode.set(s.courseCode, [...(hecByCode.get(s.courseCode) || []), s.ploNumber]);
+
     programs.push({
       coordinatorId: batch.id, coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`,
       plos: plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status })),
@@ -49,6 +54,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
         mappedPloIds: c.ploMappings.map((m) => m.ploId),
         assignedByPloId: Object.fromEntries(c.ploMappings.map((m) => [m.ploId, m.assignedById ? assignerNameById.get(m.assignedById) || null : null])),
+        hecSuggestedPloNumbers: hecByCode.get(c.code) || [],
       })),
     });
   }
@@ -58,7 +64,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO–Course Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
-        of the same degree can have different PLOs.
+        of the same degree can have different PLOs. Cells shaded <span style={{ background: "#FFF9C4", padding: "1px 5px" }}>yellow</span> with a small "HEC" label are HEC's own suggested mapping for that course — a hint only, not automatically applied; check the box yourself to actually set it.
       </p>
       <div className="card no-print">
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />

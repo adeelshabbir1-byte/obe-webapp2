@@ -37,10 +37,29 @@ export async function getBenchmarkCandidates(coordinatorId: string) {
 export async function seedFromMasterCourseIfAvailable(newCourseId: string, masterCourseId: string | null) {
   if (!masterCourseId) return null;
 
-  const [seedClos, seedTopics] = await Promise.all([
+  const [masterCourse, seedClos, seedTopics] = await Promise.all([
+    prisma.masterCourse.findUnique({ where: { id: masterCourseId } }),
     prisma.masterCourseClo.findMany({ where: { masterCourseId }, orderBy: { orderIndex: "asc" } }),
     prisma.masterCourseTopic.findMany({ where: { masterCourseId }, orderBy: { lectureNumber: "asc" } }),
   ]);
+
+  // Textbook/description/reference flow from the template regardless of
+  // whether there are any seed CLOs/topics to go with them — a course can
+  // have HEC-suggested reading material even with no CLO draft yet.
+  if (masterCourse && (masterCourse.textbook || masterCourse.catalogDescription || masterCourse.referenceMaterial)) {
+    const newCourse = await prisma.course.findUnique({ where: { id: newCourseId } });
+    if (newCourse) {
+      await prisma.course.update({
+        where: { id: newCourseId },
+        data: {
+          textbook: newCourse.textbook ?? masterCourse.textbook,
+          catalogDescription: newCourse.catalogDescription ?? masterCourse.catalogDescription,
+          referenceMaterial: newCourse.referenceMaterial ?? masterCourse.referenceMaterial,
+        },
+      });
+    }
+  }
+
   if (seedClos.length === 0 && seedTopics.length === 0) return null;
 
   for (const [i, c] of seedClos.entries()) {
@@ -132,6 +151,11 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
       assignmentPct: source.assignmentPct, quizPct: source.quizPct, projectPct: source.projectPct,
       labPct: source.labPct, midtermPct: source.midtermPct, finalPct: source.finalPct,
       benchmarkSourceId: source.id,
+      // Only fill these in if the new course doesn't already have its own
+      // — a benchmark shouldn't clobber content someone already typed.
+      textbook: newCourse.textbook ?? source.textbook,
+      catalogDescription: newCourse.catalogDescription ?? source.catalogDescription,
+      referenceMaterial: newCourse.referenceMaterial ?? source.referenceMaterial,
     },
   });
 
