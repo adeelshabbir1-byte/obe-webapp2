@@ -4,8 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import LectureContentManager from "../../../../../components/LectureContentManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function SchedulePage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -29,7 +29,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   const underCovered = course.clos.filter((c) => (cloHitCounts[c.id] || 0) < 3);
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} status={course.templateStatus} />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
         <a href={`/api/subjectexpert/courses/${course.id}/weekly-plan-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Tentative Weekly Plan (Word)</a>

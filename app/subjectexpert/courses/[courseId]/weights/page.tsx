@@ -4,8 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import WeightsForm from "../../../../../components/WeightsForm";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function WeightsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -23,7 +23,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
   });
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="weights" code={course.code} title={course.title} status={course.templateStatus} />
 
       {pendingException && pendingException.status === "pending" && (

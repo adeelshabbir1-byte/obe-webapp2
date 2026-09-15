@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SortableTable from "./SortableTable";
 
-type Course = { code: string; title: string; priority: number | null };
+type Course = { code: string; title: string; courseType: string; priority: number | null };
 
 const PRIORITY_COLORS: Record<number, string> = {
   1: "#2E7D32", // top priority - dark green
@@ -51,13 +52,13 @@ export default function CoursePreferencesManager() {
       {!loaded ? (
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p>
       ) : (
-        <table>
-          <thead><tr><th>Code</th><th>Title</th><th>Preference</th></tr></thead>
+        <SortableTable>
+          <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Preference</th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No courses on record yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No courses on record yet.</td></tr>}
             {courses.map((c) => (
               <tr key={c.code} style={{ background: c.priority ? PRIORITY_COLORS[c.priority] + "33" : undefined }}>
-                <td><b>{c.code}</b></td><td>{c.title}</td>
+                <td><b>{c.code}</b></td><td>{c.title}</td><td>{c.courseType}</td>
                 <td>
                   <select
                     value={c.priority ?? ""} disabled={savingCode === c.code}
@@ -73,7 +74,7 @@ export default function CoursePreferencesManager() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </SortableTable>
       )}
     </div>
   );

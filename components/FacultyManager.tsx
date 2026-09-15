@@ -31,6 +31,22 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  async function resetPassword(userId: string, name: string) {
+    const newPassword = prompt(`Set a new temporary password for ${name}. They'll be required to change it on their next login.`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) { alert("Password must be at least 6 characters."); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/faculty/${userId}/reset-password`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      alert(`Password reset. Give ${name} their new temporary password directly — it isn't stored anywhere retrievable.`);
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   async function removeFaculty(userId: string, name: string) {
     const proceed = confirm(`Delete ${name}'s account permanently? This cannot be undone.`);
     if (!proceed) return;
@@ -119,6 +135,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
                 <td><button onClick={() => setEditingId(f.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
+                <button onClick={() => resetPassword(f.id, f.name)} disabled={loading} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Reset Password</button>
                 <button onClick={() => removeFaculty(f.id, f.name)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button></td>
               </tr>
             ))}

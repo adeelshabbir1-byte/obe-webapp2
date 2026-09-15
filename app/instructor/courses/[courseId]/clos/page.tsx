@@ -5,8 +5,8 @@ import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import InstructorClosManager from "../../../../../components/InstructorClosManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorClosPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -28,7 +28,7 @@ export default async function InstructorClosPage({ params }: { params: { courseI
   const plos = mappings.map((m) => m.plo);
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} />
       <InstructorClosManager
         courseId={course.id}

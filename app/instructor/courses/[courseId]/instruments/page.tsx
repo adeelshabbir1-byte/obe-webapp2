@@ -9,8 +9,8 @@ import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import ReweightingSuggestions from "../../../../../components/ReweightingSuggestions";
 import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorInstrumentsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -49,7 +49,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
   const reweightingSuggestions = await suggestClOReweighting(course.id);
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={updated.id} active="instruments" code={updated.code} title={updated.title} />
 
       <AssessmentsManager

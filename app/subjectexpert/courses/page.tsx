@@ -3,8 +3,8 @@ import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
@@ -26,7 +26,7 @@ export default async function SubjectExpertCoursesPage() {
   });
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Assigned Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Build the gold-standard template for each course: CLOs, the 30-lecture schedule, and assessment weights.

@@ -6,8 +6,8 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import CourseEvaluationSection from "../../../../../components/CourseEvaluationSection";
 import InstructorLectureContentManager from "../../../../../components/InstructorLectureContentManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorSchedulePage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -37,7 +37,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
   const holidayLabelByDate = new Map(holidays.map((h) => [h.date.toISOString().slice(0, 10), h.label]));
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
         <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>

@@ -4,8 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import PaperDistributionManager from "../../../../../components/PaperDistributionManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function SePaperDistributionPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -24,7 +24,7 @@ export default async function SePaperDistributionPage({ params }: { params: { co
   ]);
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="paper-distribution" code={course.code} title={course.title} status={course.templateStatus} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Plan the final/mid-term paper's question distribution — pick a topic from your lecture plan to auto-fill

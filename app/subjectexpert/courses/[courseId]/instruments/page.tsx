@@ -5,8 +5,8 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstrumentsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -47,7 +47,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   const canSubmit = course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0;
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
 
       <AssessmentsManager

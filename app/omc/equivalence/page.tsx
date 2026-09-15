@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import EquivalenceManager from "../../../components/EquivalenceManager";
+import EquivalenceSuggestions from "../../../components/EquivalenceSuggestions";
 
 
 
@@ -24,6 +25,7 @@ export default async function OmcEquivalencePage() {
         underlying course, so they can be taught together as one combined class. Sections are calculated
         automatically once combined enrollment crosses 50 students.
       </p>
+      <EquivalenceSuggestions />
       <EquivalenceManager />
     </Shell>
   );

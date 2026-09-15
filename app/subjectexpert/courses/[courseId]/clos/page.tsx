@@ -6,8 +6,8 @@ import CourseSubNav from "../../../../../components/CourseSubNav";
 import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
 import LoadHecContentButton from "../../../../../components/LoadHecContentButton";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/subjectexpert/courses", label: "My Assigned Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function ClosPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -32,7 +32,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
   const plos = mappings.map((m) => m.plo);
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} status={course.templateStatus} />
       {course.benchmarkSource && (
         <div className="card" style={{ borderColor: "var(--brass)" }}>

@@ -11,8 +11,8 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function MarksEntryPage({ params, searchParams }: { params: { courseId: string }; searchParams: { combined?: string } }) {
   const user = await getAuthenticatedUser();
@@ -121,7 +121,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
   }
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="marks" code={course.code} title={course.title} />
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Marks Entry</h2>
       <div className="card" style={{ borderColor: "var(--brass)" }}>

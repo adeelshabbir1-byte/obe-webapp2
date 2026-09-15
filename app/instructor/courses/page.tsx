@@ -3,8 +3,8 @@ import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorCoursesPage() {
   const user = await getAuthenticatedUser();
@@ -55,7 +55,7 @@ export default async function InstructorCoursesPage() {
   const courses = Array.from(byId.values());
 
   return (
-    <Shell roleLabel="Faculty / Lecturer" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Faculty / Lecturer" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Semester Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses currently offered and assigned to you. Click "Open" to record your actual delivery — starts as

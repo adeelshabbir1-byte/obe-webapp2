@@ -4,8 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import PaperDistributionManager from "../../../../../components/PaperDistributionManager";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorPaperDistributionPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -39,7 +39,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
   }
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="paper-distribution" code={course.code} title={course.title} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Build the actual exam's question distribution — pick a topic from your delivered lecture content to

@@ -8,8 +8,8 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import InstructorWeightsForm from "../../../../../components/InstructorWeightsForm";
 import LinkedSectionsBanner from "../../../../../components/LinkedSectionsBanner";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [{ href: "/instructor/courses", label: "My Semester Courses" }, { href: "/omc/reports", label: "Reports" }];
 
 export default async function InstructorWeightsPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -29,7 +29,7 @@ export default async function InstructorWeightsPage({ params }: { params: { cour
   const linkedSections = await getLinkedSections(user.id, course.id);
 
   return (
-    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={updated.id} active="weights" code={updated.code} title={updated.title} />
       <LinkedSectionsBanner
         courseId={updated.id}

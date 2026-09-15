@@ -12,7 +12,7 @@ export async function GET() {
   // offered — the actual set they could plausibly be asked to teach.
   const courses = await prisma.course.findMany({
     where: { coordinatorId: user.managedById || "" },
-    select: { code: true, title: true },
+    select: { code: true, title: true, courseType: true },
     distinct: ["code"],
     orderBy: { code: "asc" },
   });
@@ -21,7 +21,7 @@ export async function GET() {
   const priorityByCode = new Map(preferences.map((p) => [p.courseCode, p.priority]));
 
   return NextResponse.json({
-    courses: courses.map((c) => ({ code: c.code, title: c.title, priority: priorityByCode.get(c.code) || null })),
+    courses: courses.map((c) => ({ code: c.code, title: c.title, courseType: c.courseType, priority: priorityByCode.get(c.code) || null })),
   });
 }
 
