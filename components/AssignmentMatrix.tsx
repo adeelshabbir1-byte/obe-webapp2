@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
-type Row = { kind: "course" | "group"; id: string; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
+type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
+
+const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FFF9C4", 3: "#FFE0B2" };
+const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
   if (row.courseType !== "Elective" || !instructor.specialization) return false;
@@ -16,6 +19,9 @@ function specializationMatches(row: Row, instructor: Instructor): boolean {
 export default function AssignmentMatrix() {
   const [rows, setRows] = useState<Row[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [priorities, setPriorities] = useState<Record<string, Record<string, number>>>({});
+  const [uncoveredCodes, setUncoveredCodes] = useState<string[]>([]);
+  const [strongCodes, setStrongCodes] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busyCell, setBusyCell] = useState<string | null>(null);
@@ -25,7 +31,9 @@ export default function AssignmentMatrix() {
       const res = await fetch("/api/assigner/matrix");
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
-      setRows(data.rows); setInstructors(data.instructors); setLoaded(true);
+      setRows(data.rows); setInstructors(data.instructors);
+      setPriorities(data.priorities || {}); setUncoveredCodes(data.uncoveredCodes || []); setStrongCodes(data.strongCodes || []);
+      setLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
   }
 
@@ -95,6 +103,30 @@ export default function AssignmentMatrix() {
         </div>
       </div>
 
+      {(uncoveredCodes.length > 0 || strongCodes.length > 0) && (
+        <div className="card">
+          <h3 style={{ fontSize: 14, marginBottom: 8 }}>Faculty Priority Feedback</h3>
+          {uncoveredCodes.length > 0 && (
+            <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 6 }}>
+              <b>No one has expressed interest in:</b> {uncoveredCodes.join(", ")} — worth checking with faculty directly before assigning.
+            </p>
+          )}
+          {strongCodes.length > 0 && (
+            <p style={{ fontSize: 12.5, color: "var(--sage)" }}>
+              <b>Strong interest (someone rated it top priority):</b> {strongCodes.join(", ")}
+            </p>
+          )}
+          <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
+            Cell colors in the matrix below reflect each faculty member's own stated priority for that course:
+            <span style={{ background: PRIORITY_COLORS[1], padding: "1px 6px", marginLeft: 6 }}>Top priority</span>
+            <span style={{ background: PRIORITY_COLORS[2], padding: "1px 6px", marginLeft: 4 }}>Good</span>
+            <span style={{ background: PRIORITY_COLORS[3], padding: "1px 6px", marginLeft: 4 }}>Neutral</span>
+            — a hint only, not automatically applied. Instructors and courses are also ordered to bring
+            high-affinity pairs closer together, based on both history and stated priority.
+          </p>
+        </div>
+      )}
+
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Section Assignment Matrix</h3>
         <SortableTable>
@@ -139,11 +171,16 @@ export default function AssignmentMatrix() {
                     const key = r.id + i.id;
                     const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                     const matches = specializationMatches(r, i);
+                    const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
                     const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
+                    const title = [
+                      priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
+                      matches ? `${i.name}'s specialization matches this elective` : undefined,
+                    ].filter(Boolean).join(" · ") || undefined;
                     return (
-                      <td key={i.id} title={matches ? `${i.name}'s specialization matches this elective` : undefined} style={{
+                      <td key={i.id} title={title} style={{
                         textAlign: "center",
-                        background: over && value > 0 ? "#FFE4DC" : matches ? "#CCFBF1" : undefined,
+                        background: over && value > 0 ? "#FFE4DC" : priority ? PRIORITY_COLORS[priority] : matches ? "#CCFBF1" : undefined,
                         borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined,
                       }}>
                         <input

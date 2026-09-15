@@ -58,7 +58,10 @@ export async function POST(req: NextRequest) {
       batchName, degreeProgram: p.name,
       copiedFrom: copyResult.copiedFrom, coursesCopied: copyResult.coursesCopied, plosCopied: copyResult.plosCopied,
     });
-    await writeAuditLog({ actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id, metadata: { autoCopy: copyResult } });
+    await writeAuditLog({
+      actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id,
+      metadata: { autoCopyFrom: copyResult.copiedFrom, autoCopyCourses: copyResult.coursesCopied, autoCopyPlos: copyResult.plosCopied },
+    });
   }
 
   return NextResponse.json({ created, skipped });

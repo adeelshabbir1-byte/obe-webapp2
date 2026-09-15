@@ -80,6 +80,9 @@ model User {
   ownedRooms         Room[] @relation("RoomChairman")
   scheduleSections   ScheduleSection[] @relation("ScheduleSectionInstructor")
   facultyUnavailability FacultyUnavailability[] @relation("FacultyUnavailabilityFaculty")
+  coursePriorities   FacultyCoursePriority[] @relation("FacultyCoursePriorityFaculty")
+  coursePreferences  FacultyCoursePreference[] @relation("FacultyCoursePreferenceFaculty")
+  coursePriorities   FacultyCoursePriority[] @relation("FacultyCoursePriorityFaculty")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -223,6 +226,23 @@ model Room {
 // section of students. PC sets how many sessions/week it needs, how long
 // each is, and what kind of room. Auto-generated from Course +
 // CourseSectionAssignment data, with PC free to add more or edit.
+// A faculty member's own stated priority for teaching a course code —
+// set on their own portal, visible to Course Assigner as a color-coded
+// hint. 1 = top priority, 2 = good, 3 = neutral/50-50. No row for a code
+// means "not interested" — never inferred, always an explicit choice.
+model FacultyCoursePriority {
+  id         String @id @default(cuid())
+  facultyId  String
+  faculty    User   @relation("FacultyCoursePriorityFaculty", fields: [facultyId], references: [id])
+  courseCode String
+  priority   Int    // 1 | 2 | 3
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facultyId, courseCode])
+  @@index([facultyId])
+  @@index([courseCode])
+}
+
 model ScheduleSection {
   id             String   @id @default(cuid())
   courseId       String
@@ -1037,12 +1057,46 @@ model PLO {
 // HEC's suggested course-to-PLO mapping, from the NCEAC workbook — used by
 // the "Auto-Map from HEC" button to bulk-create real CoursePloMapping
 // records for a batch, matched by course code.
+// A faculty member's own stated interest in teaching a given course code
+// — set on their own portal, visible to the Course Assigner as a
+// color-coded hint. No record for a (facultyId, courseCode) pair means
+// "not interested" (the default) rather than an explicit 4th value.
+model FacultyCoursePreference {
+  id         String @id @default(cuid())
+  facultyId  String
+  faculty    User   @relation("FacultyCoursePreferenceFaculty", fields: [facultyId], references: [id])
+  courseCode String
+  priority   Int    // 1 = top priority, 2 = good, 3 = fifty-fifty
+  createdAt  DateTime @default(now())
+
+  @@unique([facultyId, courseCode])
+  @@index([facultyId])
+  @@index([courseCode])
+}
+
 model HecPloSuggestion {
   id         String @id @default(cuid())
   courseCode String
   ploNumber  Int
 
   @@unique([courseCode, ploNumber])
+  @@index([courseCode])
+}
+
+// A faculty member's own stated interest in teaching a given course code
+// — set on their own portal, visible to Course Assigner as a color-coded
+// hint. Scoped by course CODE (not a specific batch/course row) since
+// interest in "teaching Database Systems" doesn't depend on which batch
+// it's offered to.
+model FacultyCoursePriority {
+  id         String   @id @default(cuid())
+  facultyId  String
+  faculty    User     @relation("FacultyCoursePriorityFaculty", fields: [facultyId], references: [id])
+  courseCode String
+  priority   Int      // 1 = top priority, 2 = good, 3 = 50/50, 4 = not interested
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facultyId, courseCode])
   @@index([courseCode])
 }
 

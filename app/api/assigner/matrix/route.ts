@@ -38,6 +38,7 @@ export async function GET() {
       return {
         kind: "course" as const,
         id: c.id,
+        code: c.code,
         label: `${c.code} — ${c.title}`,
         title: c.title,
         courseType: normalizeCourseType(c.courseType),
@@ -52,6 +53,7 @@ export async function GET() {
       return {
         kind: "group" as const,
         id: g.id,
+        code: null as string | null,
         label: g.name,
         title: g.name,
         courseType: "Combined",
@@ -68,6 +70,24 @@ export async function GET() {
   const instructors = await prisma.user.findMany({
     where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
   });
+
+  // Every faculty member's own stated priority for the course codes
+  // actually in this matrix — the color-coded hint, and the basis for
+  // nudging high-affinity instructor/course pairs closer together below.
+  const codesInMatrix = Array.from(new Set(rows.map((r) => r.code).filter((c): c is string => !!c)));
+  const priorityRecords = await prisma.facultyCoursePriority.findMany({
+    where: { facultyId: { in: instructors.map((i) => i.id) }, courseCode: { in: codesInMatrix } },
+  });
+  const priorities: Record<string, Record<string, number>> = {};
+  for (const p of priorityRecords) {
+    if (!priorities[p.courseCode]) priorities[p.courseCode] = {};
+    priorities[p.courseCode][p.facultyId] = p.priority;
+  }
+
+  // "Missing coverage" feedback — an offered course nobody expressed any
+  // interest in at all — surfaced separately so it's not buried in the grid.
+  const uncoveredCodes = codesInMatrix.filter((code) => !priorities[code] || Object.keys(priorities[code]).length === 0);
+  const strongCodes = codesInMatrix.filter((code) => priorities[code] && Object.values(priorities[code]).some((p) => p === 1));
 
   // Historical teaching pattern per instructor, across every semester ever
   // recorded — both direct assignment and the section-assignment matrix.
@@ -95,7 +115,17 @@ export async function GET() {
 
   // Cluster instructors: group by dominant course type taught historically
   // (those with no history yet fall to the end), so instructors who tend to
-  // teach similar things end up next to each other in the matrix.
+  // teach similar things end up next to each other in the matrix. Within
+  // that, break ties by how strongly they've prioritized courses actually
+  // in this matrix — someone who rated several of these top-priority sorts
+  // ahead of someone with no stated interest, nudging high-affinity pairs
+  // visually closer together.
+  function avgPriorityFor(instructorId: string): number {
+    const scores = codesInMatrix.map((code) => priorities[code]?.[instructorId]).filter((p): p is number => p !== undefined);
+    if (scores.length === 0) return 99; // no stated preference at all — sorts last within its cluster
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  }
+
   const instructorRows = instructors
     .map((i) => ({
       id: i.id, name: i.name, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
@@ -105,8 +135,8 @@ export async function GET() {
     .sort((a, b) => {
       const ra = a.dominantType ? typeRank(a.dominantType) : TYPE_ORDER.length + 1;
       const rb = b.dominantType ? typeRank(b.dominantType) : TYPE_ORDER.length + 1;
-      return ra - rb || a.name.localeCompare(b.name);
+      return ra - rb || avgPriorityFor(a.id) - avgPriorityFor(b.id) || a.name.localeCompare(b.name);
     });
 
-  return NextResponse.json({ rows, instructors: instructorRows });
+  return NextResponse.json({ rows, instructors: instructorRows, priorities, uncoveredCodes, strongCodes });
 }
