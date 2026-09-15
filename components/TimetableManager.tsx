@@ -389,7 +389,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                           <td key={d} style={{ fontSize: 11, verticalAlign: "top" }}>
                             {cellEntries.map((e) => (
                               <div key={e.id} style={{ marginBottom: 4, padding: 4, background: "#F0EDFB", borderRadius: 3 }}>
-                                <b>{e.courseCode}</b> ({e.sectionLabel})<br />{e.instructorName}<br />{e.roomName} · {e.batchLabel}
+                                <b>{e.courseCode}</b> ({e.sectionLabel})<br />{formatHour(e.startHour)}–{formatHour(e.endHour)}<br />{e.instructorName}<br />{e.roomName} · {e.batchLabel}
                               </div>
                             ))}
                           </td>
