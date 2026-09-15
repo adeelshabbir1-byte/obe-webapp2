@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const created: { batchName: string; degreeProgram: string }[] = [];
+  const created: { batchName: string; degreeProgram: string; copiedFrom: string | null; coursesCopied: number; plosCopied: number }[] = [];
   const skipped: { degreeProgram: string; reason: string }[] = [];
 
   for (const p of programs) {
