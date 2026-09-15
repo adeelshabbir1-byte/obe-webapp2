@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
-import AssignmentMatrix from "../../../components/AssignmentMatrix";
-import PrimaryInstructorAssigner from "../../../components/PrimaryInstructorAssigner";
+import AssignerMatrixTabs from "../../../components/AssignerMatrixTabs";
 
 const NAV = [{ href: "/assigner/matrix", label: "Section Assignment Matrix" }];
 
@@ -22,8 +21,7 @@ export default async function AssignerMatrixPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses on the left, faculty as columns — enter how many sections each faculty member is teaching.
       </p>
-      <PrimaryInstructorAssigner />
-      <AssignmentMatrix />
+      <AssignerMatrixTabs />
     </Shell>
   );
 }

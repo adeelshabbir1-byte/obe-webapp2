@@ -46,15 +46,20 @@ export default function PrimaryInstructorAssigner() {
       {!loaded ? (
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p>
       ) : (
-        <table>
+        <table style={{ tableLayout: "fixed", width: "100%" }}>
+          <colgroup>
+            <col style={{ width: "22%" }} /><col style={{ width: "12%" }} /><col style={{ width: "36%" }} /><col style={{ width: "30%" }} />
+          </colgroup>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Instructor</th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
             {courses.map((c) => (
               <tr key={c.id}>
-                <td style={{ fontSize: 11.5 }}>{c.batchLabel}</td><td>{c.code}</td><td>{c.title}</td>
+                <td style={{ fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.batchLabel}>{c.batchLabel}</td>
+                <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.code}</td>
+                <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.title}>{c.title}</td>
                 <td>
-                  <select defaultValue={c.instructorId || ""} onChange={(e) => assign(c.id, e.target.value)} disabled={busyId === c.id} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                  <select defaultValue={c.instructorId || ""} onChange={(e) => assign(c.id, e.target.value)} disabled={busyId === c.id} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
                     <option value="">— Unassigned —</option>
                     {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
