@@ -115,6 +115,9 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   const [runId, setRunId] = useState<string | null>(latestRunId);
   const [runInfo, setRunInfo] = useState<{ hardViolations: number; generations: number; notes: string } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [clashInfo, setClashInfo] = useState<{ entryIds: string[]; reasons: string[] } | null>(null);
+  const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
+  const [movingEntryId, setMovingEntryId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"batch" | "instructor" | "room" | "course">("batch");
   const [viewFilter, setViewFilter] = useState("");
   const [progressPct, setProgressPct] = useState(0);
@@ -128,6 +131,21 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     if (res.ok) { setEntries(data.entries || []); setRunInfo(data.run); }
   }
   useEffect(() => { if (runId) loadRun(runId); }, []);
+
+  async function moveEntry(entryId: string, day: string, startHour: number) {
+    if (!runId) return;
+    setMovingEntryId(entryId); setError(""); setClashInfo(null);
+    try {
+      const res = await fetch(`/api/coordinator/timetable/${runId}/entries/${entryId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ day, startHour }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setMovingEntryId(null); return; }
+      if (data.clashes) setClashInfo({ entryIds: [...data.clashes.entryIds, entryId], reasons: data.clashes.reasons });
+      await loadRun(runId);
+      setMovingEntryId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setMovingEntryId(null); }
+  }
 
   async function pollLoop(id: string) {
     pollingRef.current = true;
@@ -419,18 +437,38 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                         const entry = lane.find((e) => e.startHour === t);
                         if (entry) {
                           const span = Math.round((entry.endHour - entry.startHour) / 0.5);
+                          const isClashing = clashInfo?.entryIds.includes(entry.id);
                           cells.push(
-                            <td key={t} colSpan={span} style={{ fontSize: 11, verticalAlign: "top", padding: 3 }}>
-                              <div style={{ padding: 4, background: "#F0EDFB", borderRadius: 3 }}>
+                            <td key={t} colSpan={span} style={{ fontSize: 11, verticalAlign: "top", padding: 3 }}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => { e.preventDefault(); if (draggedEntryId && draggedEntryId !== entry.id) moveEntry(draggedEntryId, d, t); }}>
+                              <div
+                                draggable={!movingEntryId}
+                                onDragStart={() => setDraggedEntryId(entry.id)}
+                                onDragEnd={() => setDraggedEntryId(null)}
+                                title={isClashing ? clashInfo?.reasons.join("; ") : "Drag to move"}
+                                style={{
+                                  padding: 4, borderRadius: 3, cursor: movingEntryId ? "wait" : "grab",
+                                  background: isClashing ? "#FFE4DC" : "#F0EDFB",
+                                  border: isClashing ? "1.5px solid var(--rust)" : "1px solid transparent",
+                                  opacity: movingEntryId === entry.id ? 0.5 : 1,
+                                }}
+                              >
                                 <b>{entry.courseCode}</b> ({entry.sectionLabel})<br />
                                 {formatHour(entry.startHour)}–{formatHour(entry.endHour)}<br />
                                 {entry.instructorName}<br />{entry.roomName} · {entry.batchLabel}
+                                {isClashing && <div style={{ color: "var(--rust)", fontWeight: 700, marginTop: 2 }}>⚠ CLASH</div>}
                               </div>
                             </td>
                           );
                           col += span;
                         } else {
-                          cells.push(<td key={t} />);
+                          cells.push(
+                            <td key={t}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => { e.preventDefault(); if (draggedEntryId) moveEntry(draggedEntryId, d, t); }}
+                            />
+                          );
                           col += 1;
                         }
                       }
@@ -447,7 +485,14 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
                 Each column is a 30-minute slot. A theory session (1.5hr) spans 3 columns; a lab session (3hr)
                 spans 6. If a day shows more than one row, those sessions run in parallel (different rooms).
+                Drag a session to a new time to move it — a clash it creates (same room, instructor, or batch
+                double-booked) is highlighted in red on both sessions involved.
               </p>
+              {clashInfo && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "var(--rust)" }}>
+                  <b>This move created a clash:</b> {clashInfo.reasons.join("; ")}
+                </div>
+              )}
             </div>
           )}
         </>
