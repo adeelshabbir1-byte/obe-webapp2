@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AvailabilityGrid from "./AvailabilityGrid";
 import LocalSolutionUploader from "./LocalSolutionUploader";
@@ -194,7 +194,31 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
 
   const GRID_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const usedDays = GRID_DAYS.filter((d) => filteredEntries.some((e) => e.day === d));
-  const timeStarts = Array.from(new Set(filteredEntries.map((e) => e.startHour))).sort((a, b) => a - b);
+
+  // Half-hour columns spanning the full range actually used.
+  const minStart = filteredEntries.length > 0 ? Math.min(...filteredEntries.map((e) => e.startHour)) : 8;
+  const maxEnd = filteredEntries.length > 0 ? Math.max(...filteredEntries.map((e) => e.endHour)) : 17;
+  const timeColumns: number[] = [];
+  for (let t = minStart; t < maxEnd; t += 0.5) timeColumns.push(t);
+
+  // Greedy lane assignment per day, so overlapping sessions (e.g. viewing
+  // "All" with no filter, where two different rooms run in parallel) get
+  // their own sub-row instead of colliding in one.
+  function laneAssign(entries: Entry[]): Entry[][] {
+    const sorted = [...entries].sort((a, b) => a.startHour - b.startHour);
+    const lanes: Entry[][] = [];
+    for (const e of sorted) {
+      let placed = false;
+      for (const lane of lanes) {
+        const last = lane[lane.length - 1];
+        if (e.startHour >= last.endHour) { lane.push(e); placed = true; break; }
+      }
+      if (!placed) lanes.push([e]);
+    }
+    return lanes;
+  }
+  const lanesByDay = new Map<string, Entry[][]>();
+  for (const d of usedDays) lanesByDay.set(d, laneAssign(filteredEntries.filter((e) => e.day === d)));
 
   return (
     <>
@@ -378,27 +402,52 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               </div>
 
               <table>
-                <thead><tr><th>Time</th>{usedDays.map((d) => <th key={d}>{d}</th>)}</tr></thead>
+                <thead>
+                  <tr>
+                    <th style={{ position: "sticky", left: 0, background: "var(--card)", zIndex: 2 }}>Day</th>
+                    {timeColumns.map((t) => <th key={t} style={{ fontSize: 10, whiteSpace: "nowrap", padding: "4px 2px" }}>{formatHour(t)}</th>)}
+                  </tr>
+                </thead>
                 <tbody>
-                  {timeStarts.map((t) => (
-                    <tr key={t}>
-                      <td style={{ whiteSpace: "nowrap", fontSize: 11 }}>{formatHour(t)}</td>
-                      {usedDays.map((d) => {
-                        const cellEntries = filteredEntries.filter((e) => e.day === d && e.startHour === t);
-                        return (
-                          <td key={d} style={{ fontSize: 11, verticalAlign: "top" }}>
-                            {cellEntries.map((e) => (
-                              <div key={e.id} style={{ marginBottom: 4, padding: 4, background: "#F0EDFB", borderRadius: 3 }}>
-                                <b>{e.courseCode}</b> ({e.sectionLabel})<br />{formatHour(e.startHour)}–{formatHour(e.endHour)}<br />{e.instructorName}<br />{e.roomName} · {e.batchLabel}
+                  {usedDays.map((d) => {
+                    const lanes = lanesByDay.get(d) || [];
+                    return lanes.map((lane, laneIdx) => {
+                      const cells: ReactNode[] = [];
+                      let col = 0;
+                      while (col < timeColumns.length) {
+                        const t = timeColumns[col];
+                        const entry = lane.find((e) => e.startHour === t);
+                        if (entry) {
+                          const span = Math.round((entry.endHour - entry.startHour) / 0.5);
+                          cells.push(
+                            <td key={t} colSpan={span} style={{ fontSize: 11, verticalAlign: "top", padding: 3 }}>
+                              <div style={{ padding: 4, background: "#F0EDFB", borderRadius: 3 }}>
+                                <b>{entry.courseCode}</b> ({entry.sectionLabel})<br />
+                                {formatHour(entry.startHour)}–{formatHour(entry.endHour)}<br />
+                                {entry.instructorName}<br />{entry.roomName} · {entry.batchLabel}
                               </div>
-                            ))}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                            </td>
+                          );
+                          col += span;
+                        } else {
+                          cells.push(<td key={t} />);
+                          col += 1;
+                        }
+                      }
+                      return (
+                        <tr key={`${d}-${laneIdx}`}>
+                          {laneIdx === 0 && <td rowSpan={lanes.length} style={{ fontWeight: 600, position: "sticky", left: 0, background: "var(--card)", zIndex: 1 }}>{d}</td>}
+                          {cells}
+                        </tr>
+                      );
+                    });
+                  })}
                 </tbody>
               </table>
+              <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
+                Each column is a 30-minute slot. A theory session (1.5hr) spans 3 columns; a lab session (3hr)
+                spans 6. If a day shows more than one row, those sessions run in parallel (different rooms).
+              </p>
             </div>
           )}
         </>
