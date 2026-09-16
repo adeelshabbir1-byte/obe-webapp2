@@ -26,6 +26,18 @@ export default function AssignmentMatrix() {
   const [error, setError] = useState("");
   const [busyCell, setBusyCell] = useState<string | null>(null);
 
+  // Column visibility for the left-side info columns — Course and the
+  // section-progress figure stay on by default; Type/Batch/Students are
+  // off by default since most day-to-day assigning only needs the name.
+  const [showType, setShowType] = useState(false);
+  const [showBatch, setShowBatch] = useState(false);
+  const [showStudents, setShowStudents] = useState(false);
+  const [showProgress, setShowProgress] = useState(true);
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+
+  const [courseFilter, setCourseFilter] = useState("");
+  const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
+
   async function load() {
     try {
       const res = await fetch("/api/assigner/matrix");
@@ -75,6 +87,32 @@ export default function AssignmentMatrix() {
     return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No Course Instructors onboarded yet.</p></div>;
   }
 
+  // Filter by search text (code or title), then sort so fully-assigned
+  // ("settled") rows sink toward the bottom — pending ones stay near the
+  // top, closest to the course-name column, where attention is needed.
+  const filteredRows = rows.filter((r) => {
+    if (!courseFilter.trim()) return true;
+    const q = courseFilter.trim().toLowerCase();
+    return r.label.toLowerCase().includes(q) || r.title.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q);
+  });
+  const isRowSettled = (r: Row) => Object.values(r.assignments).reduce((a, b) => a + b, 0) >= r.sectionsNeeded;
+  const sortedRows = [...filteredRows].sort((a, b) => {
+    const as = isRowSettled(a), bs = isRowSettled(b);
+    if (as !== bs) return as ? 1 : -1;
+    return 0; // stable sort — preserves existing type-grouping within each partition
+  });
+
+  // Same idea for instructors: whoever's already at/over their normal load
+  // moves toward the end (right side); those with room left stay near the
+  // course names on the left, where they're easiest to assign to next.
+  const visibleInstructors = instructors.filter((i) => !hiddenInstructorIds.has(i.id));
+  const isInstructorSettled = (i: Instructor) => totalFor(i.id) + i.externalLoadCount >= i.normalLoad;
+  const sortedInstructors = [...visibleInstructors].sort((a, b) => {
+    const as = isInstructorSettled(a), bs = isInstructorSettled(b);
+    if (as !== bs) return as ? 1 : -1;
+    return 0;
+  });
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -121,58 +159,100 @@ export default function AssignmentMatrix() {
             <span style={{ background: PRIORITY_COLORS[1], padding: "1px 6px", marginLeft: 6 }}>Top priority</span>
             <span style={{ background: PRIORITY_COLORS[2], padding: "1px 6px", marginLeft: 4 }}>Good</span>
             <span style={{ background: PRIORITY_COLORS[3], padding: "1px 6px", marginLeft: 4 }}>Neutral</span>
-            — a hint only, not automatically applied. Instructors and courses are also ordered to bring
-            high-affinity pairs closer together, based on both history and stated priority.
+            — a hint only, not automatically applied.
           </p>
         </div>
       )}
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Section Assignment Matrix</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+          <h3 style={{ fontSize: 14 }}>Section Assignment Matrix</h3>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)}
+              placeholder="Filter courses…" style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5, width: 160 }}
+            />
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowColumnPicker((v) => !v)} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
+                Columns ▾
+              </button>
+              {showColumnPicker && (
+                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "var(--card)", border: "1px solid var(--line)", padding: 10, zIndex: 10, minWidth: 260, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6 }}>Show columns</div>
+                  <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showType} onChange={(e) => setShowType(e.target.checked)} /> Type</label>
+                  <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showBatch} onChange={(e) => setShowBatch(e.target.checked)} /> Batch</label>
+                  <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showStudents} onChange={(e) => setShowStudents(e.target.checked)} /> Students</label>
+                  <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} /> Assigned / Needed</label>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6, borderTop: "1px solid var(--line)", paddingTop: 8 }}>Show faculty</div>
+                  <div style={{ maxHeight: 160, overflowY: "auto" }}>
+                    {instructors.map((i) => (
+                      <label key={i.id} style={{ display: "block", fontSize: 12, marginBottom: 3 }}>
+                        <input
+                          type="checkbox" checked={!hiddenInstructorIds.has(i.id)}
+                          onChange={(e) => {
+                            const next = new Set(hiddenInstructorIds);
+                            if (e.target.checked) next.delete(i.id); else next.add(i.id);
+                            setHiddenInstructorIds(next);
+                          }}
+                        /> {i.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <SortableTable>
           <thead>
             <tr>
               <th className="sticky-corner">Course</th>
-              <th className="sticky-row">Type</th>
-              <th className="sticky-row">Batch</th>
-              <th className="sticky-row">Students</th>
-              <th className="sticky-row">Sections Needed</th>
-              {instructors.map((i, idx) => {
+              {showType && <th className="sticky-row">Type</th>}
+              {showBatch && <th className="sticky-row">Batch</th>}
+              {showStudents && <th className="sticky-row">Students</th>}
+              {showProgress && <th className="sticky-row">Assigned/Needed</th>}
+              {sortedInstructors.map((i, idx) => {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
-                const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
+                const settled = isInstructorSettled(i);
+                const newBoundary = idx > 0 && isInstructorSettled(sortedInstructors[idx - 1]) !== settled;
                 return (
-                  <th key={i.id} className="sticky-row" style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined }}>
+                  <th key={i.id} className="sticky-row" style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newBoundary ? "2px solid var(--rust)" : undefined, opacity: settled ? 0.6 : 1 }}>
                     {i.name}
                     {i.specialization && <div style={{ fontSize: 9, fontWeight: 400, color: "var(--slate)" }}>{i.specialization}</div>}
+                    {settled && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--sage)" }}>FULL</div>}
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, rowIdx) => {
+            {sortedRows.map((r, rowIdx) => {
               const assignedTotal = Object.values(r.assignments).reduce((a, b) => a + b, 0);
               const shortOrOver = assignedTotal !== r.sectionsNeeded;
-              const newBlock = rowIdx === 0 || rows[rowIdx - 1].courseType !== r.courseType;
+              const settled = isRowSettled(r);
+              const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
               return (
-                <tr key={r.kind + r.id} style={{ borderTop: newBlock && rowIdx > 0 ? "2px solid var(--brass)" : undefined }}>
+                <tr key={r.kind + r.id} style={{ borderTop: newBoundary ? "2px solid var(--sage)" : undefined, opacity: settled ? 0.65 : 1 }}>
                   <td className="sticky-col" style={{ whiteSpace: "nowrap" }}>
                     <b>{r.label}</b>
                     {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                    {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                   </td>
-                  <td style={{ fontSize: 11.5 }}>{r.courseType}</td>
-                  <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>{r.batchLabel}</td>
-                  <td style={{ fontSize: 12 }}>{r.studentCount}</td>
-                  <td style={{ fontSize: 12, fontWeight: 600, color: shortOrOver ? "var(--brass-dark)" : "var(--sage)" }}>
-                    {assignedTotal} / {r.sectionsNeeded}
-                  </td>
-                  {instructors.map((i, idx) => {
+                  {showType && <td style={{ fontSize: 11.5 }}>{r.courseType}</td>}
+                  {showBatch && <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>{r.batchLabel}</td>}
+                  {showStudents && <td style={{ fontSize: 12 }}>{r.studentCount}</td>}
+                  {showProgress && (
+                    <td style={{ fontSize: 12, fontWeight: 600, color: shortOrOver ? "var(--brass-dark)" : "var(--sage)" }}>
+                      {assignedTotal} / {r.sectionsNeeded}
+                    </td>
+                  )}
+                  {sortedInstructors.map((i) => {
                     const value = r.assignments[i.id] || 0;
                     const key = r.id + i.id;
                     const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                     const matches = specializationMatches(r, i);
                     const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
-                    const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
                     const title = [
                       priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
                       matches ? `${i.name}'s specialization matches this elective` : undefined,
@@ -181,7 +261,6 @@ export default function AssignmentMatrix() {
                       <td key={i.id} title={title} style={{
                         textAlign: "center",
                         background: over && value > 0 ? "#FFE4DC" : priority ? PRIORITY_COLORS[priority] : matches ? "#CCFBF1" : undefined,
-                        borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined,
                       }}>
                         <input
                           type="number" min={0} defaultValue={value} disabled={busyCell === key}
@@ -197,12 +276,10 @@ export default function AssignmentMatrix() {
           </tbody>
         </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-          "Combined" rows are equivalence groups (courses from different batches/programs taught together).
-          Sections Needed is calculated automatically at 1 section per 50 students. Going over a faculty
-          member's normal load is allowed but highlighted in red as a warning. Courses are grouped by type;
-          instructors are ordered by the type of course they've historically taught most (a thicker line marks
-          each new group), and a cell is highlighted green when an instructor's specialization matches an
-          elective's title.
+          "Combined" rows are equivalence groups. Rows/columns already fully assigned ("SETTLED"/"FULL") sink
+          toward the bottom/right and are dimmed, keeping what still needs attention near the top-left. Use
+          "Filter courses" to search, and "Columns ▾" to show/hide the Type/Batch/Students/Progress columns
+          or hide specific faculty from view.
         </p>
       </div>
     </>
