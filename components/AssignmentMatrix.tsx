@@ -34,7 +34,6 @@ export default function AssignmentMatrix() {
   const [showStudents, setShowStudents] = useState(false);
   const [showProgress, setShowProgress] = useState(true);
   const [showColumnPicker, setShowColumnPicker] = useState(false);
-  const [shortCourseNames, setShortCourseNames] = useState(false);
 
   const [courseFilter, setCourseFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
@@ -184,7 +183,6 @@ export default function AssignmentMatrix() {
                   <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showBatch} onChange={(e) => setShowBatch(e.target.checked)} /> Batch</label>
                   <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showStudents} onChange={(e) => setShowStudents(e.target.checked)} /> Students</label>
                   <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} /> Assigned / Needed</label>
-                  <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={shortCourseNames} onChange={(e) => setShortCourseNames(e.target.checked)} /> Shorten course names (first 3 letters)</label>
                   <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6, borderTop: "1px solid var(--line)", paddingTop: 8 }}>Show faculty</div>
                   <div style={{ maxHeight: 160, overflowY: "auto" }}>
                     {instructors.map((i) => (
@@ -206,9 +204,9 @@ export default function AssignmentMatrix() {
           </div>
         </div>
 
-        <SortableTable>
-          <thead>
-            <tr>
+        {(() => {
+          const headerCells = (
+            <>
               <th className="sticky-corner">Course</th>
               {showType && <th className="sticky-row">Type</th>}
               {showBatch && <th className="sticky-row">Batch</th>}
@@ -230,57 +228,70 @@ export default function AssignmentMatrix() {
                   </th>
                 );
               })}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedRows.map((r, rowIdx) => {
-              const assignedTotal = Object.values(r.assignments).reduce((a, b) => a + b, 0);
-              const shortOrOver = assignedTotal !== r.sectionsNeeded;
-              const settled = isRowSettled(r);
-              const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
-              return (
-                <tr key={r.kind + r.id} style={{ borderTop: newBoundary ? "2px solid var(--sage)" : undefined, opacity: settled ? 0.65 : 1 }}>
-                  <td className="sticky-col" title={shortCourseNames ? r.label : undefined} style={{ whiteSpace: "nowrap", maxWidth: shortCourseNames ? 60 : undefined }}>
-                    <b>{shortCourseNames ? (r.code ? r.code.slice(0, 3) : r.label.slice(0, 3)) : r.label}</b>
-                    {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
-                    {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
-                  </td>
-                  {showType && <td style={{ fontSize: 11.5 }}>{r.courseType}</td>}
-                  {showBatch && <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>{r.batchLabel}</td>}
-                  {showStudents && <td style={{ fontSize: 12 }}>{r.studentCount}</td>}
-                  {showProgress && (
-                    <td style={{ fontSize: 12, fontWeight: 600, color: shortOrOver ? "var(--brass-dark)" : "var(--sage)" }}>
-                      {assignedTotal} / {r.sectionsNeeded}
+              <th className="sticky-corner" style={{ left: "auto", right: 0 }}>Course</th>
+            </>
+          );
+
+          return (
+            <SortableTable>
+              <thead><tr>{headerCells}</tr></thead>
+              <tbody>
+                {sortedRows.map((r, rowIdx) => {
+                  const assignedTotal = Object.values(r.assignments).reduce((a, b) => a + b, 0);
+                  const shortOrOver = assignedTotal !== r.sectionsNeeded;
+                  const settled = isRowSettled(r);
+                  const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
+                  const shortLabel = r.code ? r.code.slice(0, 3) : r.label.slice(0, 3);
+                  const nameCell = (
+                    <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
+                      <b>{shortLabel}</b>
+                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                      {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                     </td>
-                  )}
-                  {sortedInstructors.map((i) => {
-                    const value = r.assignments[i.id] || 0;
-                    const key = r.id + i.id;
-                    const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
-                    const matches = specializationMatches(r, i);
-                    const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
-                    const title = [
-                      priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
-                      matches ? `${i.name}'s specialization matches this elective` : undefined,
-                    ].filter(Boolean).join(" · ") || undefined;
-                    return (
-                      <td key={i.id} title={title} style={{
-                        textAlign: "center",
-                        background: over && value > 0 ? "#FFE4DC" : priority ? PRIORITY_COLORS[priority] : matches ? "#CCFBF1" : undefined,
-                      }}>
-                        <input
-                          type="number" min={0} defaultValue={value} disabled={busyCell === key}
-                          onBlur={(e) => { const n = parseInt(e.target.value, 10) || 0; if (n !== value) setCount(r, i.id, n); }}
-                          style={{ width: 44, padding: "3px 4px", border: matches ? "1px solid var(--sage)" : "1px solid var(--line)", textAlign: "center", fontSize: 12 }}
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </SortableTable>
+                  );
+                  return (
+                    <tr key={r.kind + r.id} style={{ borderTop: newBoundary ? "2px solid var(--sage)" : undefined, opacity: settled ? 0.65 : 1 }}>
+                      {nameCell}
+                      {showType && <td style={{ fontSize: 11.5 }}>{r.courseType}</td>}
+                      {showBatch && <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>{r.batchLabel}</td>}
+                      {showStudents && <td style={{ fontSize: 12 }}>{r.studentCount}</td>}
+                      {showProgress && (
+                        <td style={{ fontSize: 12, fontWeight: 600, color: shortOrOver ? "var(--brass-dark)" : "var(--sage)" }}>
+                          {assignedTotal} / {r.sectionsNeeded}
+                        </td>
+                      )}
+                      {sortedInstructors.map((i) => {
+                        const value = r.assignments[i.id] || 0;
+                        const key = r.id + i.id;
+                        const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
+                        const matches = specializationMatches(r, i);
+                        const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
+                        const title = [
+                          priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
+                          matches ? `${i.name}'s specialization matches this elective` : undefined,
+                        ].filter(Boolean).join(" · ") || undefined;
+                        return (
+                          <td key={i.id} title={title} style={{
+                            textAlign: "center",
+                            background: over && value > 0 ? "#FFE4DC" : priority ? PRIORITY_COLORS[priority] : matches ? "#CCFBF1" : undefined,
+                          }}>
+                            <input
+                              type="number" min={0} defaultValue={value} disabled={busyCell === key}
+                              onBlur={(e) => { const n = parseInt(e.target.value, 10) || 0; if (n !== value) setCount(r, i.id, n); }}
+                              style={{ width: 44, padding: "3px 4px", border: matches ? "1px solid var(--sage)" : "1px solid var(--line)", textAlign: "center", fontSize: 12 }}
+                            />
+                          </td>
+                        );
+                      })}
+                      {nameCell}
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot><tr>{headerCells}</tr></tfoot>
+            </SortableTable>
+          );
+        })()}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           "Combined" rows are equivalence groups. Rows/columns already fully assigned ("SETTLED"/"FULL") sink
           toward the bottom/right and are dimmed, keeping what still needs attention near the top-left. Use
