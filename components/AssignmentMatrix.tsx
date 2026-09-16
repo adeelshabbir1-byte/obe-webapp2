@@ -34,6 +34,7 @@ export default function AssignmentMatrix() {
   const [showStudents, setShowStudents] = useState(false);
   const [showProgress, setShowProgress] = useState(true);
   const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [shortCourseNames, setShortCourseNames] = useState(false);
 
   const [courseFilter, setCourseFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
@@ -183,6 +184,7 @@ export default function AssignmentMatrix() {
                   <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showBatch} onChange={(e) => setShowBatch(e.target.checked)} /> Batch</label>
                   <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showStudents} onChange={(e) => setShowStudents(e.target.checked)} /> Students</label>
                   <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} /> Assigned / Needed</label>
+                  <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={shortCourseNames} onChange={(e) => setShortCourseNames(e.target.checked)} /> Shorten course names (first 3 letters)</label>
                   <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6, borderTop: "1px solid var(--line)", paddingTop: 8 }}>Show faculty</div>
                   <div style={{ maxHeight: 160, overflowY: "auto" }}>
                     {instructors.map((i) => (
@@ -211,7 +213,7 @@ export default function AssignmentMatrix() {
               {showType && <th className="sticky-row">Type</th>}
               {showBatch && <th className="sticky-row">Batch</th>}
               {showStudents && <th className="sticky-row">Students</th>}
-              {showProgress && <th className="sticky-row">Assigned/Needed</th>}
+              {showProgress && <th className="sticky-row" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", padding: "8px 4px", height: 140, width: 30, maxWidth: 30, whiteSpace: "nowrap", textAlign: "left" }}>Assigned/Needed</th>}
               {sortedInstructors.map((i, idx) => {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                 const settled = isInstructorSettled(i);
@@ -238,8 +240,8 @@ export default function AssignmentMatrix() {
               const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
               return (
                 <tr key={r.kind + r.id} style={{ borderTop: newBoundary ? "2px solid var(--sage)" : undefined, opacity: settled ? 0.65 : 1 }}>
-                  <td className="sticky-col" style={{ whiteSpace: "nowrap" }}>
-                    <b>{r.label}</b>
+                  <td className="sticky-col" title={shortCourseNames ? r.label : undefined} style={{ whiteSpace: "nowrap", maxWidth: shortCourseNames ? 60 : undefined }}>
+                    <b>{shortCourseNames ? (r.code ? r.code.slice(0, 3) : r.label.slice(0, 3)) : r.label}</b>
                     {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
                     {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                   </td>

@@ -78,7 +78,7 @@ tbody tr:hover{background:#F0EDFB;}
    can't repeat the same "position" key with two values). Also forces its
    own stacking context and an opaque background so row-hover/striping
    CSS painted on the <tr> can't show through the frozen cell. */
-.sticky-col{position:-webkit-sticky;position:sticky;left:0;z-index:1;background:var(--card);}
-.sticky-row{position:-webkit-sticky;position:sticky;top:0;z-index:2;background:var(--card);}
-.sticky-corner{position:-webkit-sticky;position:sticky;left:0;top:0;z-index:3;background:var(--card);}
+.sticky-col{position:-webkit-sticky !important;position:sticky !important;left:0;z-index:1;background:var(--card);}
+.sticky-row{position:-webkit-sticky !important;position:sticky !important;top:0;z-index:2;background:var(--card);}
+.sticky-corner{position:-webkit-sticky !important;position:sticky !important;left:0;top:0;z-index:3;background:var(--card);}
 
