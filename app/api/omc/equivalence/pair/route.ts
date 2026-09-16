@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "two different courseIds are required" }, { status: 400 });
   }
 
+  try {
+
   const [courseA, courseB, memberA, memberB] = await Promise.all([
     prisma.course.findUnique({ where: { id: courseIdA } }),
     prisma.course.findUnique({ where: { id: courseIdB } }),
@@ -72,6 +74,9 @@ export async function POST(req: NextRequest) {
   await copyPloMappingByNumber(courseIdB, courseIdA);
 
   return NextResponse.json({ groupId });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "something went wrong pairing these courses" }, { status: 500 });
+  }
 }
 
 async function copyFullContentIfEmpty(fromCourseId: string, toCourseId: string) {
