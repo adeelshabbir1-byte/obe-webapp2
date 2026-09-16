@@ -132,16 +132,16 @@ export default function AssignmentMatrix() {
         <SortableTable>
           <thead>
             <tr>
-              <th style={{ position: "sticky", left: 0, top: 0, background: "var(--card)", zIndex: 3 }}>Course</th>
-              <th style={{ position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>Type</th>
-              <th style={{ position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>Batch</th>
-              <th style={{ position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>Students</th>
-              <th style={{ position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>Sections Needed</th>
+              <th className="sticky-corner">Course</th>
+              <th className="sticky-row">Type</th>
+              <th className="sticky-row">Batch</th>
+              <th className="sticky-row">Students</th>
+              <th className="sticky-row">Sections Needed</th>
               {instructors.map((i, idx) => {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                 const newCluster = idx === 0 || instructors[idx - 1].dominantType !== i.dominantType;
                 return (
-                  <th key={i.id} style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined, position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>
+                  <th key={i.id} className="sticky-row" style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newCluster && idx > 0 ? "2px solid var(--brass)" : undefined }}>
                     {i.name}
                     {i.specialization && <div style={{ fontSize: 9, fontWeight: 400, color: "var(--slate)" }}>{i.specialization}</div>}
                   </th>
@@ -156,7 +156,7 @@ export default function AssignmentMatrix() {
               const newBlock = rowIdx === 0 || rows[rowIdx - 1].courseType !== r.courseType;
               return (
                 <tr key={r.kind + r.id} style={{ borderTop: newBlock && rowIdx > 0 ? "2px solid var(--brass)" : undefined }}>
-                  <td style={{ whiteSpace: "nowrap", position: "sticky", left: 0, background: "var(--card)", zIndex: 1 }}>
+                  <td className="sticky-col" style={{ whiteSpace: "nowrap" }}>
                     <b>{r.label}</b>
                     {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
                   </td>

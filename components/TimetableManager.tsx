@@ -422,7 +422,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               <table>
                 <thead>
                   <tr>
-                    <th style={{ position: "sticky", left: 0, background: "var(--card)", zIndex: 2 }}>Day</th>
+                    <th className="sticky-col">Day</th>
                     {timeColumns.map((t) => <th key={t} style={{ fontSize: 10, whiteSpace: "nowrap", padding: "4px 2px" }}>{formatHour(t)}</th>)}
                   </tr>
                 </thead>
@@ -474,7 +474,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                       }
                       return (
                         <tr key={`${d}-${laneIdx}`}>
-                          {laneIdx === 0 && <td rowSpan={lanes.length} style={{ fontWeight: 600, position: "sticky", left: 0, background: "var(--card)", zIndex: 1 }}>{d}</td>}
+                          {laneIdx === 0 && <td rowSpan={lanes.length} className="sticky-col" style={{ fontWeight: 600 }}>{d}</td>}
                           {cells}
                         </tr>
                       );

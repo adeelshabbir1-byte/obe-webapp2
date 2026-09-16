@@ -73,3 +73,12 @@ tbody tr:hover{background:#F0EDFB;}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
 .skeleton{background:linear-gradient(90deg,#EFEADC 25%,#F5F2E6 37%,#EFEADC 63%);background-size:400% 100%;animation:pulse 1.4s ease-in-out infinite;border-radius:var(--radius-sm);}
 
+/* Sticky table cells — includes the -webkit-sticky fallback for older
+   Safari, which React inline style objects can't express (a JS object
+   can't repeat the same "position" key with two values). Also forces its
+   own stacking context and an opaque background so row-hover/striping
+   CSS painted on the <tr> can't show through the frozen cell. */
+.sticky-col{position:-webkit-sticky;position:sticky;left:0;z-index:1;background:var(--card);}
+.sticky-row{position:-webkit-sticky;position:sticky;top:0;z-index:2;background:var(--card);}
+.sticky-corner{position:-webkit-sticky;position:sticky;left:0;top:0;z-index:3;background:var(--card);}
+
