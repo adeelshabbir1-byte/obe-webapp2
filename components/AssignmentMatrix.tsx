@@ -20,6 +20,7 @@ export default function AssignmentMatrix() {
   const [rows, setRows] = useState<Row[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [priorities, setPriorities] = useState<Record<string, Record<string, number>>>({});
+  const [shortNames, setShortNames] = useState<Record<string, string>>({});
   const [uncoveredCodes, setUncoveredCodes] = useState<string[]>([]);
   const [strongCodes, setStrongCodes] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -45,6 +46,7 @@ export default function AssignmentMatrix() {
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
       setRows(data.rows); setInstructors(data.instructors);
       setPriorities(data.priorities || {}); setUncoveredCodes(data.uncoveredCodes || []); setStrongCodes(data.strongCodes || []);
+      setShortNames(data.shortNames || {});
       setLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
   }
@@ -241,7 +243,7 @@ export default function AssignmentMatrix() {
                   const shortOrOver = assignedTotal !== r.sectionsNeeded;
                   const settled = isRowSettled(r);
                   const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
-                  const shortLabel = r.code ? r.code.slice(0, 3) : r.label.slice(0, 3);
+                  const shortLabel = (r.code && shortNames[r.code]) || (r.code ? r.code.slice(0, 3) : r.label.slice(0, 3));
                   const nameCell = (
                     <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
                       <b>{shortLabel}</b>

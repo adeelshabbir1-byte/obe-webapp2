@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
-import AssignerMatrixTabs from "../../../components/AssignerMatrixTabs";
+import CourseShortNamesManager from "../../../components/CourseShortNamesManager";
 
 const NAV = [
   { href: "/assigner/matrix", label: "Section Assignment Matrix" },
   { href: "/assigner/course-short-names", label: "Course Short Names" },
 ];
 
-export default async function AssignerMatrixPage() {
+export default async function CourseShortNamesPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -17,14 +17,11 @@ export default async function AssignerMatrixPage() {
 
   return (
     <Shell roleLabel="Course Assigner" userName={user.name} navLinks={NAV}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Section Assignment Matrix</h1>
-        <a href="/api/assigner/matrix/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
-      </div>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Short Names</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Courses on the left, faculty as columns — enter how many sections each faculty member is teaching.
+        Choose your own compact display names for the matrix, instead of the automatic first-letters abbreviation.
       </p>
-      <AssignerMatrixTabs />
+      <CourseShortNamesManager />
     </Shell>
   );
 }

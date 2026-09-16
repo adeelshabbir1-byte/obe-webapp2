@@ -89,6 +89,9 @@ export async function GET() {
   const uncoveredCodes = codesInMatrix.filter((code) => !priorities[code] || Object.keys(priorities[code]).length === 0);
   const strongCodes = codesInMatrix.filter((code) => priorities[code] && Object.values(priorities[code]).some((p) => p === 1));
 
+  const shortNameRecords = await prisma.courseShortName.findMany({ where: { chairmanId: user.managedById || "", courseCode: { in: codesInMatrix } } });
+  const shortNames: Record<string, string> = Object.fromEntries(shortNameRecords.map((s) => [s.courseCode, s.shortName]));
+
   // Historical teaching pattern per instructor, across every semester ever
   // recorded — both direct assignment and the section-assignment matrix.
   const [allDirectCourses, allSectionAssignments] = await Promise.all([
@@ -138,5 +141,5 @@ export async function GET() {
       return ra - rb || avgPriorityFor(a.id) - avgPriorityFor(b.id) || a.name.localeCompare(b.name);
     });
 
-  return NextResponse.json({ rows, instructors: instructorRows, priorities, uncoveredCodes, strongCodes });
+  return NextResponse.json({ rows, instructors: instructorRows, priorities, uncoveredCodes, strongCodes, shortNames });
 }
