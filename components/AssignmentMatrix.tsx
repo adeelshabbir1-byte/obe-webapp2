@@ -216,11 +216,15 @@ export default function AssignmentMatrix() {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                 const settled = isInstructorSettled(i);
                 const newBoundary = idx > 0 && isInstructorSettled(sortedInstructors[idx - 1]) !== settled;
+                const title = [i.name, i.specialization ? `Specialization: ${i.specialization}` : undefined, settled ? "At/over normal load" : undefined].filter(Boolean).join(" · ");
                 return (
-                  <th key={i.id} className="sticky-row" style={{ textAlign: "center", color: over ? "var(--rust)" : undefined, whiteSpace: "nowrap", borderLeft: newBoundary ? "2px solid var(--rust)" : undefined, opacity: settled ? 0.6 : 1 }}>
-                    {i.name}
-                    {i.specialization && <div style={{ fontSize: 9, fontWeight: 400, color: "var(--slate)" }}>{i.specialization}</div>}
-                    {settled && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--sage)" }}>FULL</div>}
+                  <th key={i.id} className="sticky-row" title={title} style={{
+                    textAlign: "left", color: over ? "var(--rust)" : undefined,
+                    borderLeft: newBoundary ? "2px solid var(--rust)" : undefined, opacity: settled ? 0.6 : 1,
+                    writingMode: "vertical-rl", transform: "rotate(180deg)", padding: "8px 4px",
+                    height: 140, width: 30, maxWidth: 30, whiteSpace: "nowrap",
+                  }}>
+                    {i.name}{settled ? " (FULL)" : ""}
                   </th>
                 );
               })}
