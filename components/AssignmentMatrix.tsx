@@ -203,6 +203,9 @@ export default function AssignmentMatrix() {
                 </div>
               )}
             </div>
+            <a href="/api/assigner/matrix/export-grid" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
+              Download as Excel
+            </a>
           </div>
         </div>
 

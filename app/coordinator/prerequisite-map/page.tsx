@@ -43,7 +43,13 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const selectedDegree = searchParams.degree || degrees[0] || "";
   const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);
-  const selectedBatchId = searchParams.batchId || batchesForDegree[0]?.id || "";
+  // A batchId from the URL only makes sense if it actually belongs to the
+  // selected degree — otherwise it's a stale value left over from
+  // switching the Degree dropdown without also re-picking a batch (the
+  // form submits both fields together, so an out-of-sync batchId from
+  // the previous selection was silently winning over the new degree).
+  const requestedBatchId = searchParams.batchId && batchesForDegree.some((b) => b.id === searchParams.batchId) ? searchParams.batchId : "";
+  const selectedBatchId = requestedBatchId || batchesForDegree[0]?.id || "";
 
   const courses = selectedBatchId
     ? await prisma.course.findMany({ where: { batchId: selectedBatchId }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] })
