@@ -56,6 +56,44 @@ export async function blockedAsNonBaseCourse(courseId: string): Promise<string |
 }
 
 /**
+ * Links a newly-copied course as a follower of the course it was copied
+ * from — used when a program/batch is itself a copy of another (auto-
+ * copy-from-previous-batch, or the manual "copy from another batch"
+ * flow), so the two stay in sync going forward rather than just sharing
+ * a one-time snapshot. If the source course is already part of a
+ * content-sync group (e.g. it was itself copied from an even earlier
+ * batch), the new course joins that same group as a follower instead of
+ * starting a separate one — so a whole lineage of batches stays linked
+ * to a single base, not a chain of pairs.
+ *
+ * Silently does nothing if the two courses are already linked (e.g. this
+ * ran twice) or if sourceCourseId doesn't exist — best-effort, since one
+ * failed link shouldn't stop the rest of a batch copy.
+ */
+export async function linkAsFollowerOfSource(sourceCourseId: string, newCourseId: string, chairmanId: string) {
+  const [existingSourceMembership, existingNewMembership] = await Promise.all([
+    prisma.courseContentSyncMember.findUnique({ where: { courseId: sourceCourseId } }),
+    prisma.courseContentSyncMember.findUnique({ where: { courseId: newCourseId } }),
+  ]);
+  if (existingNewMembership) return; // already linked to something — don't disturb it
+
+  if (existingSourceMembership) {
+    await prisma.courseContentSyncMember.create({ data: { groupId: existingSourceMembership.groupId, courseId: newCourseId, isBase: false } });
+    return;
+  }
+
+  const sourceCourse = await prisma.course.findUnique({ where: { id: sourceCourseId } });
+  if (!sourceCourse) return;
+
+  const group = await prisma.courseContentSyncGroup.create({
+    data: { chairmanId, createdById: null, name: `${sourceCourse.code} (batch copy lineage)` },
+  });
+  await prisma.courseContentSyncMember.createMany({
+    data: [{ groupId: group.id, courseId: sourceCourseId, isBase: true }, { groupId: group.id, courseId: newCourseId, isBase: false }],
+  });
+}
+
+/**
  * Call this at the end of any Subject Expert action that changes a
  * course's content (CLOs, PLO mappings, weekly lecture plan, assessment
  * instruments, textbook/description fields, or assessment weight %s).
@@ -93,19 +131,32 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
   const synced: string[] = [];
   const skippedGraded: string[] = [];
 
-  for (const targetId of otherCourseIds) {
-    if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); continue; }
+  // Different targets are fully independent of each other (different
+  // courseId), so they're processed in parallel — the sequence WITHIN
+  // each target still has to stay in order (instrument links before
+  // lecture rows, since the links reference them) but there's no reason
+  // multiple linked courses should wait on each other one at a time.
+  await Promise.all(otherCourseIds.map(async (targetId) => {
+    if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); return; }
 
     await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId } } });
+    // PaperDistributionItem references both LectureRow and CLO via FK,
+    // so it must clear first. Then LectureRow itself references CLO
+    // (via cloId), so it has to go before CLO too — only once both of
+    // those are gone can CLO, AssessmentInstrument, and
+    // CoursePloMapping (none of which anything else still points at)
+    // safely run together.
     await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId } });
     await prisma.lectureRow.deleteMany({ where: { courseId: targetId } });
-    await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } });
-    await prisma.cLO.deleteMany({ where: { courseId: targetId } });
-    await prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } });
+    await Promise.all([
+      prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } }),
+      prisma.cLO.deleteMany({ where: { courseId: targetId } }),
+      prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } }),
+    ]);
 
     await copyCourseContent(sourceCourseId, targetId);
     synced.push(targetId);
-  }
+  }));
 
   return { synced, skippedGraded };
 }

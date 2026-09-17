@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
 import { deleteCourseCompletely } from "../../../../../lib/deleteCourseCompletely";
+import { linkAsFollowerOfSource } from "../../../../../lib/contentSync";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -59,6 +60,11 @@ export async function POST(req: NextRequest) {
       });
       created++;
       await copyCourseContent(sc.id, newCourse.id);
+      // This target batch's course is a copy of the source batch's —
+      // link them for content sync automatically, so future Subject
+      // Expert updates on the source keep propagating forward instead
+      // of this being a one-time snapshot that immediately drifts.
+      if (user.managedById) await linkAsFollowerOfSource(sc.id, newCourse.id, user.managedById);
     } catch (err: any) {
       errors.push(`${sc.code}: ${err?.message || "failed"}`);
     }

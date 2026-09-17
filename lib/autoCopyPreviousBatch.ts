@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { copyCourseContent } from "./benchmarkCopy";
+import { linkAsFollowerOfSource } from "./contentSync";
 import { termIndex } from "./termLogic";
 
 /** When a new batch is created, automatically copies courses (with their
@@ -23,6 +24,11 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
   }
   if (!previous) return { copiedFrom: null, coursesCopied: 0, plosCopied: 0 };
 
+  // The chairman this batch's coordinator reports to — needed to scope
+  // the content-sync link each copied course gets below.
+  const coordinator = await prisma.user.findUnique({ where: { id: newBatch.coordinatorId } });
+  const chairmanId = coordinator?.managedById || null;
+
   // Courses — skip anything the new batch somehow already has (e.g. this
   // ran twice), same as the manual "Copy From Another Batch" behavior.
   const [sourceCourses, existingInTarget] = await Promise.all([
@@ -42,6 +48,12 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
         },
       });
       await copyCourseContent(sc.id, newCourse.id);
+      // The new batch's course is a copy of the previous batch's — link
+      // them for content sync automatically, so future Subject Expert
+      // updates on the (more senior) source keep propagating forward,
+      // rather than this being a one-time snapshot that immediately
+      // drifts out of sync.
+      if (chairmanId) await linkAsFollowerOfSource(sc.id, newCourse.id, chairmanId);
       coursesCopied++;
     } catch {
       // Best-effort — one failed course shouldn't stop the rest from copying.

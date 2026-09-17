@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { randomUUID } from "crypto";
 
 type CandidateCourse = Awaited<ReturnType<typeof fetchCandidates>>[number];
 
@@ -129,45 +130,58 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
     });
   }
 
+  // Every id is generated up front (instead of relying on the DB's
+  // default and reading it back one row at a time) specifically so every
+  // table can be inserted with ONE createMany call instead of N
+  // sequential creates — this used to be the actual bottleneck making
+  // every single SE save on a linked course noticeably slower, since
+  // the whole sync ran synchronously inside that save's request.
   const instrumentIdMap: Record<string, string> = {};
-  for (const inst of instruments) {
-    const created = await prisma.assessmentInstrument.create({
-      data: { courseId: newCourseId, source: "SE", type: inst.type, label: inst.label, marksPct: inst.marksPct, maxScore: inst.maxScore },
+  for (const inst of instruments) instrumentIdMap[inst.id] = randomUUID();
+  if (instruments.length > 0) {
+    await prisma.assessmentInstrument.createMany({
+      data: instruments.map((inst) => ({
+        id: instrumentIdMap[inst.id], courseId: newCourseId, source: "SE",
+        type: inst.type, label: inst.label, marksPct: inst.marksPct, maxScore: inst.maxScore,
+      })),
     });
-    instrumentIdMap[inst.id] = created.id;
   }
 
   const cloIdMap: Record<string, string> = {};
-  for (const c of clos) {
-    const translatedPlo = c.mappedPlo ? targetPloByNumber.get(c.mappedPlo.number) : null;
-    const created = await prisma.cLO.create({
-      data: {
-        courseId: newCourseId, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: c.orderIndex, targetPct: c.targetPct,
-        mappedPloId: translatedPlo?.id || null, ploContributionPct: translatedPlo ? c.ploContributionPct : null,
-      },
+  for (const c of clos) cloIdMap[c.id] = randomUUID();
+  if (clos.length > 0) {
+    await prisma.cLO.createMany({
+      data: clos.map((c) => {
+        const translatedPlo = c.mappedPlo ? targetPloByNumber.get(c.mappedPlo.number) : null;
+        return {
+          id: cloIdMap[c.id], courseId: newCourseId, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel,
+          orderIndex: c.orderIndex, targetPct: c.targetPct,
+          mappedPloId: translatedPlo?.id || null, ploContributionPct: translatedPlo ? c.ploContributionPct : null,
+        };
+      }),
     });
-    cloIdMap[c.id] = created.id;
   }
 
-  // Individual create() calls (not createMany) because each new lecture
-  // row's id is needed right after, to re-link its instrument
-  // associations onto the newly copied instruments, and again below for
-  // paper distribution items that reference a specific lecture row.
   const lectureRowIdMap: Record<string, string> = {};
-  for (const r of lectureRows) {
-    const createdRow = await prisma.lectureRow.create({
-      data: {
-        courseId: newCourseId, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
-        cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
-      },
+  for (const r of lectureRows) lectureRowIdMap[r.id] = randomUUID();
+  if (lectureRows.length > 0) {
+    await prisma.lectureRow.createMany({
+      data: lectureRows.map((r) => ({
+        id: lectureRowIdMap[r.id], courseId: newCourseId, week: r.week, lectureNumber: r.lectureNumber,
+        topic: r.topic, subtopic: r.subtopic, cloId: r.cloId ? cloIdMap[r.cloId] || null : null,
+        bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+      })),
     });
-    lectureRowIdMap[r.id] = createdRow.id;
-    const newInstrumentIds = r.instrumentLinks.map((l) => instrumentIdMap[l.instrumentId]).filter(Boolean);
-    if (newInstrumentIds.length > 0) {
-      await prisma.lectureRowInstrument.createMany({
-        data: newInstrumentIds.map((instrumentId) => ({ lectureRowId: createdRow.id, instrumentId })),
-      });
-    }
+  }
+
+  const instrumentLinkRows = lectureRows.flatMap((r) =>
+    r.instrumentLinks
+      .map((l) => instrumentIdMap[l.instrumentId])
+      .filter((id): id is string => !!id)
+      .map((instrumentId) => ({ lectureRowId: lectureRowIdMap[r.id], instrumentId }))
+  );
+  if (instrumentLinkRows.length > 0) {
+    await prisma.lectureRowInstrument.createMany({ data: instrumentLinkRows });
   }
 
   if (paperItems.length > 0) {
