@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { recomputeRowWeight } from "../../../../../../../lib/lectureWeights";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
@@ -34,6 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   for (const link of links) await recomputeRowWeight(link.lectureRowId);
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_UPDATED", entityType: "AssessmentInstrument", entityId: params.instrumentId, metadata: data });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ instrument: updated });
 }
@@ -59,6 +61,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_DELETED", entityType: "AssessmentInstrument", entityId: params.instrumentId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true });
 }

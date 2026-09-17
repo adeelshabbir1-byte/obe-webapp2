@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { seedFromMasterCourseIfAvailable } from "../../../../../../lib/benchmarkCopy";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -25,6 +26,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "HEC_CONTENT_LOADED_RETROACTIVELY", entityType: "Course", entityId: course.id, metadata: result });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true, ...result });
 }

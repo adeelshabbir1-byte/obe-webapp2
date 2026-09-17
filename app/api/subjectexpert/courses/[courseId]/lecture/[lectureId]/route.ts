@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -27,6 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_UPDATED", entityType: "LectureRow", entityId: params.lectureId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ row: updated });
 }
@@ -41,6 +43,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   await prisma.lectureRow.delete({ where: { id: params.lectureId } });
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_DELETED", entityType: "LectureRow", entityId: params.lectureId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true });
 }

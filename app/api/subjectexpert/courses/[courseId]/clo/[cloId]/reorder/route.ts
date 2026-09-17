@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { renumberClos } from "../../../../../../../../lib/cloOrdering";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -31,6 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   await renumberClos(course.id, "SE");
   await writeAuditLog({ actorUserId: user.id, action: "CLO_REORDERED", entityType: "CLO", entityId: clo.id });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true });
 }

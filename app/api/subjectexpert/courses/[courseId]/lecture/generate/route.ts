@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -30,6 +31,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
 
   await prisma.lectureRow.createMany({ data: rows });
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_TEMPLATE_GENERATED", entityType: "Course", entityId: course.id });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ created: rows.length }, { status: 201 });
 }

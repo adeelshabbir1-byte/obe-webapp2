@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { renumberPaperDistribution } from "../../../../../../../lib/paperDistributionOrdering";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; itemId: string } }) {
   const user = await getAuthenticatedUser();
@@ -26,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "PAPER_DISTRIBUTION_ITEM_UPDATED", entityType: "PaperDistributionItem", entityId: params.itemId });
+  await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ item: updated });
 }
 
@@ -40,6 +42,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   await prisma.paperDistributionItem.delete({ where: { id: params.itemId } });
   await renumberPaperDistribution(course.id, "SE");
   await writeAuditLog({ actorUserId: user.id, action: "PAPER_DISTRIBUTION_ITEM_DELETED", entityType: "PaperDistributionItem", entityId: params.itemId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true });
 }

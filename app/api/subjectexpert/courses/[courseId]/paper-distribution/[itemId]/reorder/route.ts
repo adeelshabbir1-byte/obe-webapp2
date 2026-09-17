@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { renumberPaperDistribution } from "../../../../../../../../lib/paperDistributionOrdering";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; itemId: string } }) {
   const user = await getAuthenticatedUser();
@@ -26,5 +27,6 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await prisma.paperDistributionItem.update({ where: { id: b.id }, data: { orderIndex: a.orderIndex } });
 
   await renumberPaperDistribution(course.id, "SE");
+  await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ ok: true });
 }

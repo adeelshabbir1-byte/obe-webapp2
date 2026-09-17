@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { recomputeAffectedRows } from "../../../../../../../../lib/lectureWeights";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -36,5 +37,6 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await recomputeAffectedRows([instrumentId]);
 
   const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
+  await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
 }

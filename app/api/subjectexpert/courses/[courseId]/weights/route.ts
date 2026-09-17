@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { getPolicyForCourse, checkPolicyCompliance } from "../../../../../../lib/weightPolicy";
+import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -53,6 +54,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const updated = await prisma.course.update({ where: { id: course.id }, data: vals });
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ course: updated, pendingApproval: false });
 }

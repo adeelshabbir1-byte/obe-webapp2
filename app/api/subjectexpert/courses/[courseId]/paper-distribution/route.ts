@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "PAPER_DISTRIBUTION_ITEM_ADDED", entityType: "PaperDistributionItem", entityId: item.id });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ item }, { status: 201 });
 }

@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 const TYPES = ["Assignment", "Quiz", "Midterm", "Final", "Project", "Lab"];
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_ADDED", entityType: "AssessmentInstrument", entityId: instrument.id });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ instrument }, { status: 201 });
 }

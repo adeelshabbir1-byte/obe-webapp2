@@ -82,6 +82,7 @@ model User {
   facultyUnavailability FacultyUnavailability[] @relation("FacultyUnavailabilityFaculty")
   coursePreferences  FacultyCoursePreference[] @relation("FacultyCoursePreferenceFaculty")
   courseShortNames   CourseShortName[] @relation("CourseShortNameChairman")
+  contentSyncGroups  CourseContentSyncGroup[] @relation("ContentSyncChairman")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -397,6 +398,35 @@ model CourseSectionAssignment {
 // across different batches/programs (even with different codes/names) and
 // can be taught together as one combined class, split into sections once
 // combined enrollment crosses the 50-student cap.
+// A separate, independent link from Course Equivalence — pairing two or
+// more courses here does NOT combine their teaching/sections. It ONLY
+// means: whenever a Subject Expert saves a content change (CLOs, PLO
+// mappings, weekly lecture plan, assessment instruments, textbook/
+// description fields) on any member, that same content is automatically
+// copied onto every OTHER member of the group, replacing what they had.
+model CourseContentSyncGroup {
+  id         String   @id @default(cuid())
+  chairmanId String
+  chairman   User     @relation("ContentSyncChairman", fields: [chairmanId], references: [id])
+  createdById String?
+  name       String
+  createdAt  DateTime @default(now())
+
+  members    CourseContentSyncMember[]
+
+  @@index([chairmanId])
+}
+
+model CourseContentSyncMember {
+  id       String @id @default(cuid())
+  groupId  String
+  group    CourseContentSyncGroup @relation(fields: [groupId], references: [id])
+  courseId String @unique // a course can only be in one content-sync group
+  course   Course @relation(fields: [courseId], references: [id])
+
+  @@index([groupId])
+}
+
 model CourseEquivalenceGroup {
   id         String   @id @default(cuid())
   chairmanId String
@@ -972,6 +1002,7 @@ model Course {
   studentEnrollments  StudentEnrollment[]
   gradeCutoffs        CourseGradeCutoff[]
   studentMarks        StudentMark[]
+  contentSyncMember   CourseContentSyncMember?
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])

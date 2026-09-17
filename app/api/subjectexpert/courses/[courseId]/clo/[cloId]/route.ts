@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { renumberClos } from "../../../../../../../lib/cloOrdering";
+import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -30,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: params.cloId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ clo: updated });
 }
@@ -45,6 +47,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   await prisma.cLO.delete({ where: { id: params.cloId } });
   await renumberClos(course.id, "SE");
   await writeAuditLog({ actorUserId: user.id, action: "CLO_DELETED", entityType: "CLO", entityId: params.cloId });
+  await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ ok: true });
 }
