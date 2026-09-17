@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" }, select: { id: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
-  // select (not include) — only the handful of fields the dropdowns and
-  // group list actually use, not full nested Batch/CLO/etc records for
-  // every one of what can now be several hundred offered courses.
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
+  // Courses are only fetched for whichever batches the person actually
+  // checked — with potentially several hundred offered courses across
+  // every batch, loading them all just to populate two dropdowns was
+  // the real source of the page hanging on "Loading…".
+  const batchIdsParam = req.nextUrl.searchParams.get("batchIds");
+  const selectedBatchIds = batchIdsParam ? batchIdsParam.split(",").filter(Boolean) : [];
+
+  const courses = selectedBatchIds.length === 0 ? [] : await prisma.course.findMany({
+    where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds }, isOffered: true },
     select: {
       id: true, code: true, title: true, semesterNumber: true,
       batch: { select: { degreeProgram: true, batchName: true } },
@@ -22,8 +26,11 @@ export async function GET() {
     orderBy: [{ code: "asc" }],
   });
 
-  const groups = await prisma.courseContentSyncGroup.findMany({
-    where: { chairmanId: user.managedById || "" },
+  // Same reasoning as courses above — recent auto-linking during batch
+  // copies means this list can now be large too, so it's scoped to the
+  // selected batches rather than loaded in full every time.
+  const groups = selectedBatchIds.length === 0 ? [] : await prisma.courseContentSyncGroup.findMany({
+    where: { chairmanId: user.managedById || "", members: { some: { course: { batchId: { in: selectedBatchIds } } } } },
     select: {
       id: true, name: true, createdById: true,
       members: {
