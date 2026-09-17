@@ -27,6 +27,12 @@ export async function deleteCourseCompletely(courseId: string) {
     prisma.courseEquivalenceMember.deleteMany({ where: { courseId } }),
     // Preserve CQI history rather than deleting it outright.
     prisma.cqiRecord.updateMany({ where: { courseId }, data: { courseId: null } }),
+    // Other courses can point BACK at this one (as their benchmark
+    // source, or as their prerequisite) — those references have to be
+    // cleared before this course can be deleted, or the delete fails on
+    // a foreign key violation the moment either link exists.
+    prisma.course.updateMany({ where: { benchmarkSourceId: courseId }, data: { benchmarkSourceId: null } }),
+    prisma.course.updateMany({ where: { prerequisiteCourseId: courseId }, data: { prerequisiteCourseId: null } }),
     // Mid-level: things that reference lecture rows / CLOs / instruments directly
     prisma.scheduleSection.deleteMany({ where: { courseId } }),
     prisma.lectureRow.deleteMany({ where: { courseId } }),

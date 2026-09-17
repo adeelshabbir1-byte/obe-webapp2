@@ -11,6 +11,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/equivalence", label: "Course Equivalence" },
+  { href: "/omc/import-content", label: "Import Course Content" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/omc/section-comparison", label: "Section Comparison" },
   { href: "/omc/passing-criteria", label: "Passing Criteria" },

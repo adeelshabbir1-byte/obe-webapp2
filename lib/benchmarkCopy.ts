@@ -96,10 +96,14 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
   ]);
   if (!source || !newCourse) return null;
 
-  const [ploMappings, clos, lectureRows] = await Promise.all([
+  const [ploMappings, clos, lectureRows, instruments] = await Promise.all([
     prisma.coursePloMapping.findMany({ where: { courseId: source.id }, include: { plo: true } }),
     prisma.cLO.findMany({ where: { courseId: source.id }, include: { mappedPlo: true } }),
-    prisma.lectureRow.findMany({ where: { courseId: source.id } }),
+    prisma.lectureRow.findMany({ where: { courseId: source.id }, include: { instrumentLinks: true } }),
+    // Only the Subject Expert's own template instruments — anything an
+    // instructor added themselves for their own section shouldn't be
+    // copied into a different course as if it were shared content.
+    prisma.assessmentInstrument.findMany({ where: { courseId: source.id, source: "SE" } }),
   ]);
 
   // PLOs are scoped per BATCH, so a PLO id from the source course's batch is
@@ -124,6 +128,14 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
     });
   }
 
+  const instrumentIdMap: Record<string, string> = {};
+  for (const inst of instruments) {
+    const created = await prisma.assessmentInstrument.create({
+      data: { courseId: newCourseId, source: "SE", type: inst.type, label: inst.label, marksPct: inst.marksPct, maxScore: inst.maxScore },
+    });
+    instrumentIdMap[inst.id] = created.id;
+  }
+
   const cloIdMap: Record<string, string> = {};
   for (const c of clos) {
     const translatedPlo = c.mappedPlo ? targetPloByNumber.get(c.mappedPlo.number) : null;
@@ -136,13 +148,22 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
     cloIdMap[c.id] = created.id;
   }
 
-  if (lectureRows.length > 0) {
-    await prisma.lectureRow.createMany({
-      data: lectureRows.map((r) => ({
+  // Individual create() calls (not createMany) because each new lecture
+  // row's id is needed right after, to re-link its instrument
+  // associations onto the newly copied instruments.
+  for (const r of lectureRows) {
+    const createdRow = await prisma.lectureRow.create({
+      data: {
         courseId: newCourseId, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
         cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
-      })),
+      },
     });
+    const newInstrumentIds = r.instrumentLinks.map((l) => instrumentIdMap[l.instrumentId]).filter(Boolean);
+    if (newInstrumentIds.length > 0) {
+      await prisma.lectureRowInstrument.createMany({
+        data: newInstrumentIds.map((instrumentId) => ({ lectureRowId: createdRow.id, instrumentId })),
+      });
+    }
   }
 
   await prisma.course.update({
@@ -159,7 +180,7 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
     },
   });
 
-  return { cloCount: clos.length, lectureRowCount: lectureRows.length };
+  return { cloCount: clos.length, lectureRowCount: lectureRows.length, instrumentCount: instruments.length };
 }
 
 /**
