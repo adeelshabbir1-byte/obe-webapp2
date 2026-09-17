@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
+import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { recomputeRowWeight } from "../../../../../../../lib/lectureWeights";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const blocked = await blockedAsNonBaseCourse(course.id);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: params.instrumentId } });
   if (!instrument || instrument.courseId !== course.id || instrument.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -44,6 +47,9 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const blocked = await blockedAsNonBaseCourse(course.id);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: params.instrumentId } });
   if (!instrument || instrument.courseId !== course.id || instrument.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });

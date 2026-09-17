@@ -423,6 +423,11 @@ model CourseContentSyncMember {
   group    CourseContentSyncGroup @relation(fields: [groupId], references: [id])
   courseId String @unique // a course can only be in one content-sync group
   course   Course @relation(fields: [courseId], references: [id])
+  // Exactly one member per group is the "base" — only the base course can
+  // have a Subject Expert assigned and can have its content edited by
+  // one; the others inherit and are read-only for SE purposes. Enforced
+  // at the DB level too via a partial unique index (see the migration).
+  isBase   Boolean @default(false)
 
   @@index([groupId])
 }

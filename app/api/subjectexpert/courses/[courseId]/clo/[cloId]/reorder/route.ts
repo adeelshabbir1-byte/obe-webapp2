@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
+import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 import { renumberClos } from "../../../../../../../../lib/cloOrdering";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const blocked = await blockedAsNonBaseCourse(course.id);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
   if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });

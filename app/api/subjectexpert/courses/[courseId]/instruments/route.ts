@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
+import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 const TYPES = ["Assignment", "Quiz", "Midterm", "Final", "Project", "Lab"];
 
@@ -11,6 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const blocked = await blockedAsNonBaseCourse(course.id);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   const body = await req.json();
   if (!body.type || !TYPES.includes(body.type) || !body.label || body.marksPct === undefined) {

@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
+import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const blocked = await blockedAsNonBaseCourse(course.id);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   const existingCount = await prisma.lectureRow.count({ where: { courseId: course.id, source: "SE" } });
   if (existingCount > 0) {

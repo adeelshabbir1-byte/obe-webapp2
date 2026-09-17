@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../lib/contentSync";
+import { syncCourseContentToLinkedCourses, determineBaseCourseId } from "../../../../../lib/contentSync";
+import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
@@ -31,39 +32,71 @@ export async function POST(req: NextRequest) {
   let groupId: string;
 
   if (memberA && !memberB) {
+    // Joining an established group — it already has a base (fixed by
+    // seniority when the group was first formed), so the new course
+    // simply joins as a follower, whatever its own seniority is.
     groupId = memberA.groupId;
-    await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdB } });
+    await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdB, isBase: false } });
   } else if (memberB && !memberA) {
     groupId = memberB.groupId;
-    await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdA } });
+    await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdA, isBase: false } });
   } else if (memberA && memberB) {
-    // Both already grouped, but in different groups — merge B's group into A's.
+    // Both already grouped, but in different groups — merge B's group
+    // into A's. A's existing base stays the base; B's base (if it had
+    // one) is demoted to a follower, since a merged group can only have
+    // one — B's own content isn't lost, it was already synced within
+    // its own group before this merge.
     groupId = memberA.groupId;
-    await prisma.courseContentSyncMember.updateMany({ where: { groupId: memberB.groupId }, data: { groupId } });
+    await prisma.courseContentSyncMember.updateMany({ where: { groupId: memberB.groupId }, data: { groupId, isBase: false } });
     await prisma.courseContentSyncGroup.delete({ where: { id: memberB.groupId } }).catch(() => {});
   } else {
+    // New group: the base is decided by the fixed seniority/degree-
+    // program rule, not by which course happens to have content.
+    const baseCourseId = await determineBaseCourseId(courseIdA, courseIdB);
     const group = await prisma.courseContentSyncGroup.create({
       data: { chairmanId: user.managedById, createdById: user.id, name: `${courseA.code} / ${courseB.code}` },
     });
     groupId = group.id;
-    await prisma.courseContentSyncMember.createMany({ data: [{ groupId, courseId: courseIdA }, { groupId, courseId: courseIdB }] });
+    await prisma.courseContentSyncMember.createMany({
+      data: [
+        { groupId, courseId: courseIdA, isBase: baseCourseId === courseIdA },
+        { groupId, courseId: courseIdB, isBase: baseCourseId === courseIdB },
+      ],
+    });
+
+    // The senior/priority course is the base by rule — but if it has no
+    // content yet while the OTHER course does, inherit that content
+    // upward onto the base first, so real Subject Expert work already
+    // sitting on the junior course is never simply discarded just
+    // because that course lost the base designation.
+    const otherCourseId = baseCourseId === courseIdA ? courseIdB : courseIdA;
+    const [baseCloCount, otherCloCount] = await Promise.all([
+      prisma.cLO.count({ where: { courseId: baseCourseId } }),
+      prisma.cLO.count({ where: { courseId: otherCourseId } }),
+    ]);
+    if (baseCloCount === 0 && otherCloCount > 0) {
+      await copyCourseContent(otherCourseId, baseCourseId);
+    }
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_PAIRED", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIdA, courseIdB } });
 
-  // The first sync event: sync FROM whichever of the two actually has
-  // content, not blindly from A — otherwise pairing an empty course
-  // against one with real work would wipe that work out immediately.
-  // If both have content, A wins (same "replace, don't merge" rule as
-  // everywhere else here) — disclosed in the UI before pairing, not
-  // silently decided here. If neither has content yet, there's nothing
-  // to propagate either direction.
-  const [cloCountA, cloCountB] = await Promise.all([
-    prisma.cLO.count({ where: { courseId: courseIdA } }),
-    prisma.cLO.count({ where: { courseId: courseIdB } }),
-  ]);
-  const syncSourceId = cloCountA > 0 ? courseIdA : cloCountB > 0 ? courseIdB : null;
-  const result = syncSourceId ? await syncCourseContentToLinkedCourses(syncSourceId) : { synced: [], skippedGraded: [] };
+  // Now that the base has whatever content it should (its own, or
+  // inherited from the other course above if it had none), propagate
+  // it out to every follower — including back onto a course that just
+  // gave it its content, which is now identical anyway.
+  const groupBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId, isBase: true }, include: { course: true } });
+  const result = groupBase ? await syncCourseContentToLinkedCourses(groupBase.courseId) : { synced: [], skippedGraded: [] };
+
+  // Any SE previously assigned to a course that's now non-base is
+  // cleared — it's read-only going forward, so it shouldn't still show
+  // someone assigned to edit it.
+  if (groupBase) {
+    await prisma.course.updateMany({
+      where: { contentSyncMember: { groupId, isBase: false } },
+      data: { subjectExpertId: null },
+    });
+  }
 
   // If these two are also actually offered in the same term, they're
   // genuinely the same real class running twice — combine them for
@@ -78,5 +111,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ groupId, alsoMadeEquivalent, ...result });
+  return NextResponse.json({ groupId, alsoMadeEquivalent, baseCourseCode: groupBase?.course.code || null, ...result });
 }

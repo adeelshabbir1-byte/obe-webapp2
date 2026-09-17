@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { blockedAsNonBaseCourse } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -16,6 +17,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const subjectExpertId = body.subjectExpertId || null;
+
+  // Only actually ASSIGNING someone is blocked on a non-base course —
+  // clearing an assignment (subjectExpertId: null) is always fine.
+  if (subjectExpertId) {
+    const blocked = await blockedAsNonBaseCourse(course.id);
+    if (blocked) return NextResponse.json({ error: blocked.replace("edited directly", "assigned a Subject Expert directly") }, { status: 409 });
+  }
 
   if (subjectExpertId) {
     const se = await prisma.user.findUnique({ where: { id: subjectExpertId } });

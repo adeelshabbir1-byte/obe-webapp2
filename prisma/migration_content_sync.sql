@@ -15,6 +15,11 @@ CREATE INDEX IF NOT EXISTS "CourseContentSyncGroup_chairmanId_idx" ON "CourseCon
 CREATE TABLE IF NOT EXISTS "CourseContentSyncMember" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "groupId" TEXT NOT NULL REFERENCES "CourseContentSyncGroup"("id"),
-  "courseId" TEXT NOT NULL UNIQUE REFERENCES "Course"("id")
+  "courseId" TEXT NOT NULL UNIQUE REFERENCES "Course"("id"),
+  "isBase" BOOLEAN NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS "CourseContentSyncMember_groupId_idx" ON "CourseContentSyncMember"("groupId");
+-- Enforces exactly one base course per group at the DB level too, not
+-- just in application code.
+CREATE UNIQUE INDEX IF NOT EXISTS "CourseContentSyncMember_one_base_per_group"
+  ON "CourseContentSyncMember"("groupId") WHERE "isBase" = true;
