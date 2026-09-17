@@ -35,6 +35,8 @@ export default function AssignmentMatrix() {
   const [showStudents, setShowStudents] = useState(false);
   const [showProgress, setShowProgress] = useState(true);
   const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
 
   const [courseFilter, setCourseFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
@@ -52,6 +54,26 @@ export default function AssignmentMatrix() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true); setImportResult(null); setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/assigner/matrix/import-grid", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Import failed."); setImporting(false); return; }
+      setImportResult(data);
+      await load();
+    } catch (err: any) {
+      setError("Unexpected error: " + err.message);
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
 
   async function setCount(row: Row, instructorId: string, sectionCount: number) {
     const currentValue = row.assignments[instructorId] || 0;
@@ -206,8 +228,19 @@ export default function AssignmentMatrix() {
             <a href="/api/assigner/matrix/export-grid" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
               Download as Excel
             </a>
+            <label className="btn" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
+              {importing ? "Uploading…" : "Upload edited Excel"}
+              <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />
+            </label>
           </div>
         </div>
+        {importResult && (
+          <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
+            Applied: {importResult.coursesUpdated} course row(s), {importResult.groupsUpdated} combined-group row(s).
+            {importResult.rowsSkipped > 0 && <> {importResult.rowsSkipped} row(s) skipped (didn't match any of your courses/groups — check for hand-edited ids).</>}
+            {importResult.skippedInstructorNames?.length > 0 && <> Columns not recognized as a unique faculty name: {importResult.skippedInstructorNames.join(", ")}.</>}
+          </div>
+        )}
 
         {(() => {
           const headerCells = (
