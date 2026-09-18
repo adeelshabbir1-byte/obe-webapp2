@@ -13,6 +13,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/equivalence", label: "Course Equivalence" },
   { href: "/omc/import-content", label: "Import Course Content" },
   { href: "/omc/content-sync", label: "Content Sync" },
+  { href: "/omc/prerequisite-correlation", label: "Prerequisite Correlation" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/omc/section-comparison", label: "Section Comparison" },
   { href: "/omc/passing-criteria", label: "Passing Criteria" },
