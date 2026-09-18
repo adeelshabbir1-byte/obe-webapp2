@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_GROUPED_MULTIPLE", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIds, baseCourseId } });
+  await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_GROUPED_MULTIPLE", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIds: courseIds.join(","), baseCourseId } });
 
   const result = await syncCourseContentToLinkedCourses(baseCourseId);
 
