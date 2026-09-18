@@ -211,8 +211,8 @@ export default function ContentSyncManager() {
                         return (
                           <td key={b.id} style={{ padding: 4, verticalAlign: "top" }}>
                             {cellCourses.map((c) => {
-                              const isSelected = selected?.courseId === c.courseId || selected?.courseId === (c as Course).id;
                               const cId = (c as Course).id || (c as GroupMember).courseId;
+                              const isSelected = selected?.courseId === cId;
                               const cIsBase = (c as Course).isBase ?? (c as GroupMember).isBase;
                               return (
                                 <div
