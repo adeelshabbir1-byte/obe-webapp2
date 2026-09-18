@@ -32,7 +32,14 @@ export default function ContentSyncManager() {
     try {
       const ids = Array.from(selectedBatchIds).join(",");
       const res = await fetch(`/api/omc/content-sync?batchIds=${ids}`);
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setError(`The server returned an unreadable response (status ${res.status}). This usually means the request took too long or hit an unexpected error — try selecting fewer batches at once.`);
+        return;
+      }
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
       setCourses(data.courses); setGroups(data.groups); setCoursesLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
