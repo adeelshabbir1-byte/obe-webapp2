@@ -29,23 +29,31 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   async function linkThese(s: Suggestion) {
     const key = keyFor(s);
     setBusyKey(key); setError("");
-    try {
-      // Pair the first course with each of the others in turn — the pair
-      // endpoint already handles joining an unlinked course into an
-      // existing group, so this naturally combines all of them into one,
-      // with the base decided by the usual seniority/degree-program rule.
-      for (let i = 1; i < s.courses.length; i++) {
+    const failures: string[] = [];
+    let successCount = 0;
+    // Pair the first course with each of the others in turn — but keep
+    // going even if one pairing fails, rather than stopping the whole
+    // group partway through. A single failure previously meant every
+    // course after it in the list was silently never even attempted.
+    for (let i = 1; i < s.courses.length; i++) {
+      try {
         const res = await fetch("/api/omc/content-sync/pair", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ courseIdA: s.courses[0].id, courseIdB: s.courses[i].id }),
         });
         const data = await res.json();
-        if (!res.ok) { setError(`${s.courses[0].code}: ${data.error || "something went wrong"}`); setBusyKey(null); return; }
+        if (!res.ok) failures.push(`${s.courses[i].code} (${s.courses[i].batchLabel}): ${data.error || "unknown error"}`);
+        else successCount++;
+      } catch (err: any) {
+        failures.push(`${s.courses[i].code} (${s.courses[i].batchLabel}): ${err.message}`);
       }
-      await load();
-      setBusyKey(null);
-      onLinked?.();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyKey(null); }
+    }
+    if (failures.length > 0) {
+      setError(`Linked ${successCount} of ${s.courses.length - 1} — failed: ${failures.join("; ")}`);
+    }
+    await load();
+    setBusyKey(null);
+    onLinked?.();
   }
 
   const visible = suggestions.filter((s) => !dismissed.has(keyFor(s)));

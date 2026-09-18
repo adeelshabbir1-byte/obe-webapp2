@@ -131,13 +131,14 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
   const synced: string[] = [];
   const skippedGraded: string[] = [];
 
-  // Different targets are fully independent of each other (different
-  // courseId), so they're processed in parallel — the sequence WITHIN
-  // each target still has to stay in order (instrument links before
-  // lecture rows, since the links reference them) but there's no reason
-  // multiple linked courses should wait on each other one at a time.
-  await Promise.all(otherCourseIds.map(async (targetId) => {
-    if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); return; }
+  // Sequential across targets, not parallel — this project's DB
+  // connection is constrained to a small pool (connection_limit=1, set
+  // earlier to fix a different exhaustion issue), so running several
+  // targets' queries concurrently risks contention/timeouts rather than
+  // actually saving time; a failure partway through previously meant
+  // every course after it in a larger group was silently never synced.
+  for (const targetId of otherCourseIds) {
+    if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); continue; }
 
     await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId } } });
     // PaperDistributionItem references both LectureRow and CLO via FK,
@@ -148,15 +149,13 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
     // safely run together.
     await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId } });
     await prisma.lectureRow.deleteMany({ where: { courseId: targetId } });
-    await Promise.all([
-      prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } }),
-      prisma.cLO.deleteMany({ where: { courseId: targetId } }),
-      prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } }),
-    ]);
+    await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } });
+    await prisma.cLO.deleteMany({ where: { courseId: targetId } });
+    await prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } });
 
     await copyCourseContent(sourceCourseId, targetId);
     synced.push(targetId);
-  }));
+  }
 
   return { synced, skippedGraded };
 }
