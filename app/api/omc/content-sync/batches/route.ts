@@ -14,8 +14,16 @@ export async function GET() {
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" }, select: { id: true } });
     const coordinatorIds = coordinators.map((c) => c.id);
 
+    // Only the last 4 admission years are shown — a batch older than
+    // that has already graduated, so there's nothing left to link for
+    // content sync purposes. 4 years, not "this year minus 4", since a
+    // batch admitted 4 years ago is still mid-way through its final
+    // year right now.
+    const currentYear = new Date().getFullYear();
+    const earliestRelevantYear = currentYear - 3;
+
     const batches = await prisma.batch.findMany({
-      where: { coordinatorId: { in: coordinatorIds } },
+      where: { coordinatorId: { in: coordinatorIds }, startYear: { gte: earliestRelevantYear } },
       select: { id: true, degreeProgram: true, batchName: true, _count: { select: { courses: { where: { isOffered: true } } } } },
       orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
     });

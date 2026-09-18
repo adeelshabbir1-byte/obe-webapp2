@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; offeredCourseCount: number };
 type Course = { id: string; code: string; title: string; degreeProgram: string; batchName: string; semesterNumber: number | null; groupId: string | null; isBase: boolean | null };
@@ -124,6 +125,8 @@ export default function ContentSyncManager() {
 
       {coursesLoaded && (
         <>
+          <ContentSyncSuggestions batchIds={Array.from(selectedBatchIds)} onLinked={loadCoursesAndGroups} />
+
           <div className="card" style={{ marginBottom: 16 }}>
             <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 12 }}>
               Pick any two courses to link for content sync — any semester, any batch, any program; there's no
