@@ -59,16 +59,24 @@ export async function GET(req: NextRequest) {
     const creators = creatorIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: creatorIds } }, select: { id: true, name: true } }) : [];
     const creatorNameById = new Map(creators.map((u) => [u.id, u.name]));
 
+    // The short display names OMC/Course Assigner already set up for the
+    // Section Assignment Matrix — reused here too, so the grid shows the
+    // same compact label instead of the raw (often long) course code.
+    const shortNameRecords = await prisma.courseShortName.findMany({ where: { chairmanId: user.managedById || "" } });
+    const shortNameByCode = new Map(shortNameRecords.map((s) => [s.courseCode, s.shortName]));
+
     return NextResponse.json({
       courses: courses.map((c) => ({
-        id: c.id, code: c.code, title: c.title, degreeProgram: c.batch?.degreeProgram || "", batchName: c.batch?.batchName || "",
+        id: c.id, code: c.code, shortName: shortNameByCode.get(c.code) || null, title: c.title,
+        degreeProgram: c.batch?.degreeProgram || "", batchName: c.batch?.batchName || "",
         batchId: c.batchId, semesterNumber: c.semesterNumber, courseType: c.courseType,
         groupId: c.contentSyncMember?.groupId || null, isBase: c.contentSyncMember?.isBase ?? null,
       })),
       groups: groups.map((g) => ({
         id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
         members: g.members.map((m) => ({
-          courseId: m.courseId, isBase: m.isBase, code: m.course.code, title: m.course.title, batchId: m.course.batchId,
+          courseId: m.courseId, isBase: m.isBase, code: m.course.code, shortName: shortNameByCode.get(m.course.code) || null,
+          title: m.course.title, batchId: m.course.batchId,
           degreeProgram: m.course.batch?.degreeProgram || "", batchName: m.course.batch?.batchName || "",
           semesterNumber: m.course.semesterNumber, courseType: m.course.courseType,
         })),

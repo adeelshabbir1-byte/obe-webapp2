@@ -5,11 +5,11 @@ import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; offeredCourseCount: number };
 type Course = {
-  id: string; code: string; title: string; degreeProgram: string; batchName: string; batchId: string;
+  id: string; code: string; shortName: string | null; title: string; degreeProgram: string; batchName: string; batchId: string;
   semesterNumber: number | null; courseType: string; groupId: string | null; isBase: boolean | null;
 };
 type GroupMember = {
-  courseId: string; isBase: boolean; code: string; title: string; batchId: string;
+  courseId: string; isBase: boolean; code: string; shortName: string | null; title: string; batchId: string;
   degreeProgram: string; batchName: string; semesterNumber: number | null; courseType: string;
 };
 type Group = { id: string; name: string; createdByName?: string | null; members: GroupMember[] };
@@ -219,6 +219,7 @@ export default function ContentSyncManager() {
                                   key={cId}
                                   onClick={() => !busy && handleClick(b.id, cId)}
                                   onDoubleClick={() => row.kind === "group" && row.groupId && !busy && handleRemove(row.groupId, cId)}
+                                  title={`${c.code} — ${c.title}`}
                                   style={{
                                     cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
                                     background: isSelected ? "#E8E6FB" : row.kind === "group" ? "#FEF3C7" : undefined,
@@ -226,7 +227,7 @@ export default function ContentSyncManager() {
                                   }}
                                 >
                                   {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2, marginRight: 4 }}>BASE</span>}
-                                  {c.code}
+                                  {c.shortName || c.code}
                                 </div>
                               );
                             })}
