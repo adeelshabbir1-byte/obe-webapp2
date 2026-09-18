@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const selectedBatchIds = batchIdsParam ? batchIdsParam.split(",").filter(Boolean) : [];
 
     const courses = selectedBatchIds.length === 0 ? [] : await prisma.course.findMany({
-      where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds }, isOffered: true },
+      where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds } },
       select: {
         id: true, code: true, title: true, semesterNumber: true, courseType: true, batchId: true,
         batch: { select: { degreeProgram: true, batchName: true } },

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const [courses, existingMembers] = await Promise.all([
       prisma.course.findMany({
-        where: { coordinatorId: { in: coordinatorIds }, isOffered: true, batchId: { in: selectedBatchIds } },
+        where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds } },
         select: { id: true, code: true, title: true, semesterNumber: true, batch: { select: { degreeProgram: true, batchName: true } } },
       }),
       prisma.courseContentSyncMember.findMany({ select: { courseId: true } }),

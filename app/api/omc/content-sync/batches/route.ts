@@ -24,12 +24,12 @@ export async function GET() {
 
     const batches = await prisma.batch.findMany({
       where: { coordinatorId: { in: coordinatorIds }, startYear: { gte: earliestRelevantYear } },
-      select: { id: true, degreeProgram: true, batchName: true, _count: { select: { courses: { where: { isOffered: true } } } } },
+      select: { id: true, degreeProgram: true, batchName: true, _count: { select: { courses: true } } },
       orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
     });
 
     return NextResponse.json({
-      batches: batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, offeredCourseCount: b._count.courses })),
+      batches: batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, courseCount: b._count.courses })),
     });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "something went wrong loading batches" }, { status: 500 });

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; offeredCourseCount: number };
+type Batch = { id: string; degreeProgram: string; batchName: string; courseCount: number };
 type Course = {
   id: string; code: string; shortName: string | null; title: string; degreeProgram: string; batchName: string; batchId: string;
   semesterNumber: number | null; courseType: string; groupId: string | null; isBase: boolean | null;
@@ -163,7 +163,7 @@ export default function ContentSyncManager() {
           {batches.map((b) => (
             <label key={b.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, border: "1px solid var(--line)", padding: "4px 8px" }}>
               <input type="checkbox" checked={selectedBatchIds.has(b.id)} onChange={() => toggleBatch(b.id)} />
-              {b.degreeProgram} — {b.batchName} ({b.offeredCourseCount})
+              {b.degreeProgram} — {b.batchName} ({b.courseCount})
             </label>
           ))}
           {batches.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No batches yet.</p>}
