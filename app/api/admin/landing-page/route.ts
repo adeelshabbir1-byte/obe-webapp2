@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 
+// Without this, Next.js's build-time static optimizer sees a GET
+// handler with no dynamic API calls (no cookies/headers — this route
+// intentionally has no auth check, since landing page content is
+// public) and tries to pre-render it at BUILD time, which means it
+// actually queries the live database during the build itself. If the
+// build environment's DB credentials are ever invalid or the database
+// is briefly unreachable, that fails the entire deployment over a page
+// that should just be a normal per-request API call at runtime.
+export const dynamic = "force-dynamic";
+
 async function getOrCreate() {
   const existing = await prisma.landingPageContent.findFirst();
   if (existing) return existing;
