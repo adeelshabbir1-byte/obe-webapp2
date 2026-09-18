@@ -4,9 +4,21 @@ import { useState, useEffect } from "react";
 import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; offeredCourseCount: number };
-type Course = { id: string; code: string; title: string; degreeProgram: string; batchName: string; semesterNumber: number | null; groupId: string | null; isBase: boolean | null };
-type GroupMember = { courseId: string; isBase: boolean; code: string; title: string; degreeProgram: string; batchName: string; semesterNumber: number | null };
+type Course = {
+  id: string; code: string; title: string; degreeProgram: string; batchName: string; batchId: string;
+  semesterNumber: number | null; courseType: string; groupId: string | null; isBase: boolean | null;
+};
+type GroupMember = {
+  courseId: string; isBase: boolean; code: string; title: string; batchId: string;
+  degreeProgram: string; batchName: string; semesterNumber: number | null; courseType: string;
+};
 type Group = { id: string; name: string; createdByName?: string | null; members: GroupMember[] };
+
+const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
+function typeRank(t: string): number {
+  const i = TYPE_ORDER.indexOf(t);
+  return i === -1 ? TYPE_ORDER.length : i;
+}
 
 export default function ContentSyncManager() {
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -17,8 +29,7 @@ export default function ContentSyncManager() {
   const [coursesLoaded, setCoursesLoaded] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [courseIdA, setCourseIdA] = useState("");
-  const [courseIdB, setCourseIdB] = useState("");
+  const [selected, setSelected] = useState<{ batchId: string; courseId: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -35,10 +46,8 @@ export default function ContentSyncManager() {
       const res = await fetch(`/api/omc/content-sync?batchIds=${ids}`);
       const text = await res.text();
       let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        setError(`The server returned an unreadable response (status ${res.status}). This usually means the request took too long or hit an unexpected error — try selecting fewer batches at once.`);
+      try { data = JSON.parse(text); } catch {
+        setError(`The server returned an unreadable response (status ${res.status}). Try selecting fewer batches at once.`);
         return;
       }
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
@@ -55,10 +64,7 @@ export default function ContentSyncManager() {
     setCoursesLoaded(false);
   }
 
-  const optionLabel = (c: Course) => `${c.code} — ${c.title} [${c.degreeProgram}, ${c.batchName}, Sem ${c.semesterNumber ?? "?"}]${c.groupId ? (c.isBase ? " (already BASE elsewhere)" : " (already linked elsewhere)") : ""}`;
-
-  async function handlePair() {
-    if (!courseIdA || !courseIdB || courseIdA === courseIdB) return;
+  async function pairCourses(courseIdA: string, courseIdB: string) {
     setBusy(true); setError(""); setNotice("");
     try {
       const res = await fetch("/api/omc/content-sync/pair", {
@@ -72,8 +78,19 @@ export default function ContentSyncManager() {
       if (data.skippedGraded?.length > 0) parts.push(`${data.skippedGraded.length} course(s) skipped — they already have entered grades.`);
       if (data.alsoMadeEquivalent) parts.push(`They're offered in the same term, so they were also combined as one class in Course Equivalence.`);
       setNotice(parts.join(" "));
-      setCourseIdA(""); setCourseIdB(""); setBusy(false); await loadCoursesAndGroups();
+      setBusy(false); await loadCoursesAndGroups();
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
+  function handleClick(batchId: string, courseId: string) {
+    if (!selected) { setSelected({ batchId, courseId }); return; }
+    if (selected.courseId === courseId) { setSelected(null); return; }
+    // No same-batch restriction — content sync doesn't care about term
+    // or batch, unlike Course Equivalence, so pairing within the same
+    // column is allowed too.
+    const a = selected.courseId, b = courseId;
+    setSelected(null);
+    pairCourses(a, b);
   }
 
   async function handleMakeBase(groupId: string, courseId: string) {
@@ -99,6 +116,39 @@ export default function ContentSyncManager() {
 
   if (!batchesLoaded) return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Loading batches…</p></div>;
 
+  // Row layout: existing groups first (sorted by their base's semester +
+  // type), then ungrouped courses clustered by (semester, type, title)
+  // so same-named courses from different batches naturally land in the
+  // same row, side by side, ready to click and pair — same visual style
+  // as the Course Equivalence grid.
+  const batchColumns = batches.filter((b) => selectedBatchIds.has(b.id));
+
+  type Row = { key: string; label: string; kind: "group" | "ungrouped"; groupId?: string; semesterNumber: number | null; courseType: string; courses: (Course | GroupMember)[] };
+
+  const groupRows: Row[] = groups.map((g) => {
+    const base = g.members.find((m) => m.isBase) || g.members[0];
+    return { key: `group:${g.id}`, label: g.name, kind: "group", groupId: g.id, semesterNumber: base?.semesterNumber ?? null, courseType: base?.courseType ?? "Core", courses: g.members };
+  });
+
+  const ungroupedCourses = courses.filter((c) => !c.groupId);
+  const ungroupedClusters = new Map<string, Course[]>();
+  for (const c of ungroupedCourses) {
+    const clusterKey = `${c.semesterNumber}|${c.courseType}|${c.title.trim().toLowerCase()}`;
+    if (!ungroupedClusters.has(clusterKey)) ungroupedClusters.set(clusterKey, []);
+    ungroupedClusters.get(clusterKey)!.push(c);
+  }
+  const ungroupedRows: Row[] = Array.from(ungroupedClusters.entries()).map(([key, cs]) => ({
+    key: `ungrouped:${key}`, label: cs[0].title, kind: "ungrouped", semesterNumber: cs[0].semesterNumber, courseType: cs[0].courseType, courses: cs,
+  }));
+
+  const allRows = [...groupRows, ...ungroupedRows].sort((a, b) =>
+    (a.semesterNumber ?? 999) - (b.semesterNumber ?? 999) || typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label)
+  );
+
+  function coursesInCell(row: Row, batchId: string): (Course | GroupMember)[] {
+    return row.courses.filter((c) => c.batchId === batchId);
+  }
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -106,8 +156,8 @@ export default function ContentSyncManager() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 8 }}>
-          Check which batches to work with — with potentially hundreds of courses across every batch, only the
-          ones you actually check get loaded below, instead of everything at once.
+          Check which batches to work with — only the last 4 admission years are listed, and only what you check
+          gets loaded below.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
           {batches.map((b) => (
@@ -127,62 +177,67 @@ export default function ContentSyncManager() {
         <>
           <ContentSyncSuggestions batchIds={Array.from(selectedBatchIds)} onLinked={loadCoursesAndGroups} />
 
-          <div className="card" style={{ marginBottom: 16 }}>
-            <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 12 }}>
-              Pick any two courses to link for content sync — any semester, any batch, any program; there's no
-              restriction, since the SE's saved content is what's shared, not the teaching schedule. One becomes the
-              <b> base</b> (senior batch wins; if tied, Computer Science &gt; Software Engineering &gt; Artificial
-              Intelligence &gt; Cyber Security &gt; Data Science) — only it can have a Subject Expert assigned and be
-              edited; the other inherits automatically and is read-only for SE purposes. If they also happen to be
-              offered in the same term, they're additionally combined as one class in Course Equivalence.
+          <div className="card" style={{ overflowX: "auto" }}>
+            <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 10 }}>
+              Click a course, then click another (any batch, any semester, even the same batch) to link them —
+              one becomes the <b>base</b> (senior batch wins; tie broken by Computer Science &gt; Software
+              Engineering &gt; Artificial Intelligence &gt; Cyber Security &gt; Data Science). Clicking two
+              courses that are each already a base merges their two groups into one. Rows are sorted by semester,
+              then course type, so related courses line up together. Double-click a linked course to unlink it.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "end" }}>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Course A</label>
-                <select value={courseIdA} onChange={(e) => setCourseIdA(e.target.value)} style={{ width: "100%", padding: 6, border: "1px solid var(--line)", fontSize: 13 }}>
-                  <option value="">Select a course…</option>
-                  {courses.map((c) => <option key={c.id} value={c.id}>{optionLabel(c)}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Course B</label>
-                <select value={courseIdB} onChange={(e) => setCourseIdB(e.target.value)} style={{ width: "100%", padding: 6, border: "1px solid var(--line)", fontSize: 13 }}>
-                  <option value="">Select a course…</option>
-                  {courses.filter((c) => c.id !== courseIdA).map((c) => <option key={c.id} value={c.id}>{optionLabel(c)}</option>)}
-                </select>
-              </div>
-              <button onClick={handlePair} disabled={!courseIdA || !courseIdB || busy} className="btn btn-brass">
-                {busy ? "Linking…" : "Link"}
-              </button>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Existing links (for the checked batches)</h3>
-            {groups.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No content-sync links yet for these batches.</p>}
-            {groups.map((g) => (
-              <div key={g.id} style={{ marginBottom: 14, paddingBottom: 10, borderBottom: "1px solid var(--line)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-                  {g.name}{g.createdByName && <span style={{ fontSize: 10, color: "var(--slate)", fontWeight: 400 }}> — by {g.createdByName}</span>}
-                </div>
-                {g.members.map((m) => (
-                  <div key={m.courseId} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "4px 0" }}>
-                    {m.isBase && <span style={{ fontSize: 9, background: "var(--sage)", color: "#fff", padding: "1px 5px", borderRadius: 2 }}>BASE</span>}
-                    <span style={{ fontWeight: m.isBase ? 600 : 400 }}>{m.code} — {m.title}</span>
-                    <span style={{ color: "var(--slate)", fontSize: 10.5 }}>[{m.degreeProgram}, {m.batchName}, Sem {m.semesterNumber ?? "?"}]</span>
-                    <span style={{ flex: 1 }} />
-                    {!m.isBase && (
-                      <button onClick={() => !busy && handleMakeBase(g.id, m.courseId)} style={{ fontSize: 10, padding: "2px 6px", border: "1px solid var(--line)", background: "#fff" }}>
-                        Make base
-                      </button>
-                    )}
-                    <button onClick={() => !busy && handleRemove(g.id, m.courseId)} style={{ fontSize: 10, padding: "2px 6px", border: "1px solid var(--line)", background: "#fff" }}>
-                      Unlink
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ))}
+            {selected && <p style={{ fontSize: 12, color: "var(--brass-dark)", marginBottom: 8 }}>Selected — click another course to link.</p>}
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ minWidth: 140, textAlign: "left", fontSize: 11, padding: 4 }}>Course</th>
+                  {batchColumns.map((b) => (
+                    <th key={b.id} style={{ minWidth: 170, textAlign: "left", fontSize: 11, padding: 4 }}>{b.degreeProgram} — {b.batchName}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allRows.map((row, idx) => {
+                  const prevRow = allRows[idx - 1];
+                  const newSemester = idx > 0 && prevRow.semesterNumber !== row.semesterNumber;
+                  return (
+                    <tr key={row.key} style={{ borderTop: newSemester ? "2px solid var(--line)" : undefined }}>
+                      <td style={{ fontSize: 10.5, color: "var(--slate)", padding: 4, verticalAlign: "top" }}>
+                        {idx === 0 || newSemester ? <b style={{ color: "var(--ink)" }}>Sem {row.semesterNumber ?? "?"}</b> : null}
+                        <div>{row.courseType}</div>
+                        <div style={{ fontStyle: "italic" }}>{row.label}</div>
+                      </td>
+                      {batchColumns.map((b) => {
+                        const cellCourses = coursesInCell(row, b.id);
+                        return (
+                          <td key={b.id} style={{ padding: 4, verticalAlign: "top" }}>
+                            {cellCourses.map((c) => {
+                              const isSelected = selected?.courseId === c.courseId || selected?.courseId === (c as Course).id;
+                              const cId = (c as Course).id || (c as GroupMember).courseId;
+                              const cIsBase = (c as Course).isBase ?? (c as GroupMember).isBase;
+                              return (
+                                <div
+                                  key={cId}
+                                  onClick={() => !busy && handleClick(b.id, cId)}
+                                  onDoubleClick={() => row.kind === "group" && row.groupId && !busy && handleRemove(row.groupId, cId)}
+                                  style={{
+                                    cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
+                                    background: isSelected ? "#E8E6FB" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                    border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
+                                  }}
+                                >
+                                  {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2, marginRight: 4 }}>BASE</span>}
+                                  {c.code}
+                                </div>
+                              );
+                            })}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}

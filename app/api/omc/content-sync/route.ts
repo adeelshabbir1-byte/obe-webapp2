@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const courses = selectedBatchIds.length === 0 ? [] : await prisma.course.findMany({
       where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds }, isOffered: true },
       select: {
-        id: true, code: true, title: true, semesterNumber: true,
+        id: true, code: true, title: true, semesterNumber: true, courseType: true, batchId: true,
         batch: { select: { degreeProgram: true, batchName: true } },
         contentSyncMember: { select: { groupId: true, isBase: true } },
       },
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         members: {
           select: {
             courseId: true, isBase: true,
-            course: { select: { code: true, title: true, semesterNumber: true, batch: { select: { degreeProgram: true, batchName: true } } } },
+            course: { select: { code: true, title: true, semesterNumber: true, courseType: true, batchId: true, batch: { select: { degreeProgram: true, batchName: true } } } },
           },
         },
       },
@@ -62,13 +62,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       courses: courses.map((c) => ({
         id: c.id, code: c.code, title: c.title, degreeProgram: c.batch?.degreeProgram || "", batchName: c.batch?.batchName || "",
-        semesterNumber: c.semesterNumber, groupId: c.contentSyncMember?.groupId || null, isBase: c.contentSyncMember?.isBase ?? null,
+        batchId: c.batchId, semesterNumber: c.semesterNumber, courseType: c.courseType,
+        groupId: c.contentSyncMember?.groupId || null, isBase: c.contentSyncMember?.isBase ?? null,
       })),
       groups: groups.map((g) => ({
         id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
         members: g.members.map((m) => ({
-          courseId: m.courseId, isBase: m.isBase, code: m.course.code, title: m.course.title,
-          degreeProgram: m.course.batch?.degreeProgram || "", batchName: m.course.batch?.batchName || "", semesterNumber: m.course.semesterNumber,
+          courseId: m.courseId, isBase: m.isBase, code: m.course.code, title: m.course.title, batchId: m.course.batchId,
+          degreeProgram: m.course.batch?.degreeProgram || "", batchName: m.course.batch?.batchName || "",
+          semesterNumber: m.course.semesterNumber, courseType: m.course.courseType,
         })),
       })),
     });
