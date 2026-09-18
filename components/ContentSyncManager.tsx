@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; courseCount: number };
+type Batch = { id: string; degreeProgram: string; batchName: string; startYear: number; courseCount: number };
 type Course = {
   id: string; code: string; shortName: string | null; title: string; degreeProgram: string; batchName: string; batchId: string;
   semesterNumber: number | null; courseType: string; groupId: string | null; isBase: boolean | null;
@@ -29,7 +29,7 @@ export default function ContentSyncManager() {
   const [coursesLoaded, setCoursesLoaded] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [selected, setSelected] = useState<{ batchId: string; courseId: string } | null>(null);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -64,34 +64,83 @@ export default function ContentSyncManager() {
     setCoursesLoaded(false);
   }
 
-  async function pairCourses(courseIdA: string, courseIdB: string) {
+  function selectBatches(ids: string[]) {
+    setSelectedBatchIds(new Set(ids));
+    setCoursesLoaded(false);
+  }
+
+  // Click accumulates a selection instead of immediately pairing on the
+  // second click — pick as many courses as you want across any number
+  // of columns/rows, then submit them ALL at once (button or "S" key),
+  // which links every one of them into a single group in one request
+  // instead of one round-trip per pair.
+  function handleClick(courseId: string) {
+    setSelectedCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(courseId)) next.delete(courseId); else next.add(courseId);
+      return next;
+    });
+  }
+
+  async function handleSubmitGroup() {
+    if (selectedCourseIds.size < 2) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const res = await fetch("/api/omc/content-sync/pair", {
+      const res = await fetch("/api/omc/content-sync/group-multiple", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseIdA, courseIdB }),
+        body: JSON.stringify({ courseIds: Array.from(selectedCourseIds) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      const parts = [`Linked — ${data.baseCourseCode || "one course"} is the base; the other now inherits from it and is read-only for SE purposes.`];
-      if (data.synced?.length > 0) parts.push(`Content copied to ${data.synced.length} course(s) right away.`);
-      if (data.skippedGraded?.length > 0) parts.push(`${data.skippedGraded.length} course(s) skipped — they already have entered grades.`);
-      if (data.alsoMadeEquivalent) parts.push(`They're offered in the same term, so they were also combined as one class in Course Equivalence.`);
+      const parts = [`Linked ${selectedCourseIds.size} courses — ${data.baseCourseCode || "one"} is the base.`];
+      if (data.synced?.length > 0) parts.push(`Content copied to ${data.synced.length} course(s).`);
+      if (data.skippedGraded?.length > 0) parts.push(`${data.skippedGraded.length} skipped — already have entered grades.`);
+      if (data.equivalencePairsMade > 0) parts.push(`${data.equivalencePairsMade} pair(s) among them are also offered in the same term, so were combined for teaching too.`);
       setNotice(parts.join(" "));
+      setSelectedCourseIds(new Set());
       setBusy(false); await loadCoursesAndGroups();
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
-  function handleClick(batchId: string, courseId: string) {
-    if (!selected) { setSelected({ batchId, courseId }); return; }
-    if (selected.courseId === courseId) { setSelected(null); return; }
-    // No same-batch restriction — content sync doesn't care about term
-    // or batch, unlike Course Equivalence, so pairing within the same
-    // column is allowed too.
-    const a = selected.courseId, b = courseId;
-    setSelected(null);
-    pairCourses(a, b);
+  async function handleDetachSelected() {
+    if (selectedCourseIds.size < 1) return;
+    setBusy(true); setError(""); setNotice("");
+    // One at a time, not in parallel — same reasoning as everywhere
+    // else in this feature: the DB connection pool here is small, so
+    // concurrent requests risk contention rather than saving time.
+    const failures: string[] = [];
+    let detachedCount = 0;
+    for (const courseId of selectedCourseIds) {
+      const course = courses.find((c) => c.id === courseId);
+      if (!course?.groupId) continue; // not actually linked to anything — nothing to detach
+      try {
+        const res = await fetch(`/api/omc/content-sync/${course.groupId}/members/${courseId}`, { method: "DELETE" });
+        if (res.ok) detachedCount++;
+        else { const data = await res.json().catch(() => ({})); failures.push(`${course.code}: ${data.error || "unknown error"}`); }
+      } catch (err: any) {
+        failures.push(`${course.code}: ${err.message}`);
+      }
+    }
+    setNotice(`Detached ${detachedCount} course(s).` + (failures.length > 0 ? ` Issues: ${failures.join("; ")}` : ""));
+    setSelectedCourseIds(new Set());
+    setBusy(false);
+    await loadCoursesAndGroups();
   }
+
+  // "S" groups the current selection, "D" detaches it — same selection,
+  // two different actions, so there's no separate "mode" to enter or
+  // exit; just click courses, then press whichever key does what you want.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (busy) return;
+      if (e.key.toLowerCase() === "s" && selectedCourseIds.size >= 2) handleSubmitGroup();
+      if (e.key.toLowerCase() === "d" && selectedCourseIds.size >= 1) handleDetachSelected();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedCourseIds, busy]);
 
   async function handleMakeBase(groupId: string, courseId: string) {
     setBusy(true); setError(""); setNotice("");
@@ -159,6 +208,25 @@ export default function ContentSyncManager() {
           Check which batches to work with — only the last 4 admission years are listed, and only what you check
           gets loaded below.
         </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: "var(--slate)" }}>Quick select:</span>
+          <button onClick={() => selectBatches(batches.map((b) => b.id))} style={{ fontSize: 10.5, padding: "2px 7px", border: "1px solid var(--line)", background: "#fff" }}>
+            All
+          </button>
+          {Array.from(new Set(batches.map((b) => b.degreeProgram))).map((program) => (
+            <button key={program} onClick={() => selectBatches(batches.filter((b) => b.degreeProgram === program).map((b) => b.id))} style={{ fontSize: 10.5, padding: "2px 7px", border: "1px solid var(--line)", background: "#fff" }}>
+              {program}
+            </button>
+          ))}
+          {Array.from(new Set(batches.map((b) => b.startYear))).sort((a, b) => b - a).map((year) => (
+            <button key={year} onClick={() => selectBatches(batches.filter((b) => b.startYear === year).map((b) => b.id))} style={{ fontSize: 10.5, padding: "2px 7px", border: "1px solid var(--line)", background: "#fff" }}>
+              {year}
+            </button>
+          ))}
+          <button onClick={() => selectBatches([])} style={{ fontSize: 10.5, padding: "2px 7px", border: "1px solid var(--line)", background: "#fff" }}>
+            None
+          </button>
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
           {batches.map((b) => (
             <label key={b.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, border: "1px solid var(--line)", padding: "4px 8px" }}>
@@ -179,13 +247,29 @@ export default function ContentSyncManager() {
 
           <div className="card" style={{ overflowX: "auto" }}>
             <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 10 }}>
-              Click a course, then click another (any batch, any semester, even the same batch) to link them —
-              one becomes the <b>base</b> (senior batch wins; tie broken by Computer Science &gt; Software
-              Engineering &gt; Artificial Intelligence &gt; Cyber Security &gt; Data Science). Clicking two
-              courses that are each already a base merges their two groups into one. Rows are sorted by semester,
-              then course type, so related courses line up together. Double-click a linked course to unlink it.
+              Click any number of courses to select them (any batch, any semester, even several from the same
+              batch), then click "Group Selected" or press <b>S</b> to link them all at once into one group, or
+              click "Detach Selected" / press <b>D</b> to unlink whichever of the selected courses are
+              currently linked — whichever is from the most senior batch becomes the <b>base</b> (tie broken by
+              Computer Science &gt; Software Engineering &gt; Artificial Intelligence &gt; Cyber Security &gt;
+              Data Science). If any selected course is already a group's base, that group is reused and the
+              rest merge into it. Rows are sorted by semester, then course type, so related courses line up
+              together. (Double-click a single linked course to unlink just that one, without selecting first.)
             </p>
-            {selected && <p style={{ fontSize: 12, color: "var(--brass-dark)", marginBottom: 8 }}>Selected — click another course to link.</p>}
+            {selectedCourseIds.size > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F5F3FF", padding: 8, border: "1px solid var(--brass)" }}>
+                <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
+                <button onClick={handleSubmitGroup} disabled={selectedCourseIds.size < 2 || busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>
+                  Group Selected ({selectedCourseIds.size}) — or press S
+                </button>
+                <button onClick={handleDetachSelected} disabled={selectedCourseIds.size < 1 || busy} style={{ fontSize: 11.5, padding: "4px 10px", border: "1px solid var(--rust)", background: "#fff", color: "var(--rust)" }}>
+                  Detach Selected — or press D
+                </button>
+                <button onClick={() => setSelectedCourseIds(new Set())} style={{ fontSize: 11.5, padding: "4px 10px", border: "1px solid var(--line)", background: "#fff" }}>
+                  Clear
+                </button>
+              </div>
+            )}
             <table style={{ borderCollapse: "collapse", width: "100%" }}>
               <thead>
                 <tr>
@@ -212,12 +296,12 @@ export default function ContentSyncManager() {
                           <td key={b.id} style={{ padding: 4, verticalAlign: "top" }}>
                             {cellCourses.map((c) => {
                               const cId = (c as Course).id || (c as GroupMember).courseId;
-                              const isSelected = selected?.courseId === cId;
+                              const isSelected = selectedCourseIds.has(cId);
                               const cIsBase = (c as Course).isBase ?? (c as GroupMember).isBase;
                               return (
                                 <div
                                   key={cId}
-                                  onClick={() => !busy && handleClick(b.id, cId)}
+                                  onClick={() => !busy && handleClick(cId)}
                                   onDoubleClick={() => row.kind === "group" && row.groupId && !busy && handleRemove(row.groupId, cId)}
                                   title={`${c.code} — ${c.title}`}
                                   style={{
