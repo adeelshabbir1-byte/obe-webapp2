@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, Fragment } from "react";
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type Pair = {
   prereqCode: string; prereqTitle: string; dependentCode: string; dependentTitle: string;
@@ -18,6 +17,33 @@ function strengthLabel(r: number | null): { text: string; color: string } {
   if (abs >= 0.4) return { text: r > 0 ? "Moderate positive" : "Moderate negative", color: r > 0 ? "var(--sage)" : "var(--rust)" };
   if (abs >= 0.2) return { text: r > 0 ? "Weak positive" : "Weak negative", color: "var(--brass-dark)" };
   return { text: "Little to no correlation", color: "var(--slate)" };
+}
+
+function ScatterPlot({ points, xLabel, yLabel }: { points: { prereqPct: number; dependentPct: number }[]; xLabel: string; yLabel: string }) {
+  const size = 220, margin = 30, plotSize = size - margin - 10;
+  const toX = (v: number) => margin + (v / 100) * plotSize;
+  const toY = (v: number) => size - margin - (v / 100) * plotSize;
+  const ticks = [0, 25, 50, 75, 100];
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280 }}>
+      {/* axes */}
+      <line x1={margin} y1={size - margin} x2={size - 10} y2={size - margin} stroke="var(--line)" />
+      <line x1={margin} y1={10} x2={margin} y2={size - margin} stroke="var(--line)" />
+      {ticks.map((t) => (
+        <Fragment key={t}>
+          <text x={toX(t)} y={size - margin + 12} fontSize={7} textAnchor="middle" fill="var(--slate)">{t}</text>
+          <text x={margin - 4} y={toY(t) + 3} fontSize={7} textAnchor="end" fill="var(--slate)">{t}</text>
+        </Fragment>
+      ))}
+      <text x={(margin + size - 10) / 2} y={size - 2} fontSize={8} textAnchor="middle" fill="var(--slate)">{xLabel} %</text>
+      <text x={8} y={(10 + size - margin) / 2} fontSize={8} textAnchor="middle" fill="var(--slate)" transform={`rotate(-90, 8, ${(10 + size - margin) / 2})`}>{yLabel} %</text>
+      {points.map((p, i) => (
+        <circle key={i} cx={toX(p.prereqPct)} cy={toY(p.dependentPct)} r={3} fill="var(--brass-dark)" opacity={0.65}>
+          <title>{`${xLabel}: ${p.prereqPct}%, ${yLabel}: ${p.dependentPct}%`}</title>
+        </circle>
+      ))}
+    </svg>
+  );
 }
 
 export default function PrerequisiteCorrelationReport() {
@@ -89,16 +115,7 @@ export default function PrerequisiteCorrelationReport() {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                           <div>
                             <h4 style={{ fontSize: 12, marginBottom: 8 }}>Grade scatter</h4>
-                            <ResponsiveContainer width="100%" height={220}>
-                              <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" dataKey="prereqPct" name={p.prereqCode} unit="%" domain={[0, 100]} label={{ value: `${p.prereqCode} %`, position: "insideBottom", offset: -5, fontSize: 10 }} tick={{ fontSize: 10 }} />
-                                <YAxis type="number" dataKey="dependentPct" name={p.dependentCode} unit="%" domain={[0, 100]} label={{ value: `${p.dependentCode} %`, angle: -90, position: "insideLeft", fontSize: 10 }} tick={{ fontSize: 10 }} />
-                                <ZAxis range={[40, 40]} />
-                                <Tooltip formatter={(v: number) => `${v}%`} />
-                                <Scatter data={p.scatterPoints} fill="var(--brass-dark)" />
-                              </ScatterChart>
-                            </ResponsiveContainer>
+                            <ScatterPlot points={p.scatterPoints} xLabel={p.prereqCode} yLabel={p.dependentCode} />
                           </div>
                           <div>
                             <h4 style={{ fontSize: 12, marginBottom: 8 }}>Pass / fail crosstab</h4>
