@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { groupId: string } }) {
   const user = await getAuthenticatedUser();
@@ -27,6 +26,11 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
   await prisma.$transaction([
     prisma.courseContentSyncMember.updateMany({ where: { groupId: params.groupId }, data: { isBase: false } }),
     prisma.courseContentSyncMember.update({ where: { id: member.id }, data: { isBase: true } }),
+    // Switching the base doesn't copy content immediately either — it
+    // just flags the group as needing a sync, same as every other link
+    // action. "Sync All Content" propagates the new base's content out
+    // once it's actually run.
+    prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } }),
   ]);
   if (previousBase) {
     await prisma.course.update({ where: { id: previousBase.courseId }, data: { subjectExpertId: null } });
@@ -34,9 +38,5 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_BASE_CHANGED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { newBaseCourseId: courseId } });
 
-  // The new base's own content (if it has any of its own from before)
-  // now propagates outward to the rest of the group.
-  const result = await syncCourseContentToLinkedCourses(courseId);
-
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true });
 }

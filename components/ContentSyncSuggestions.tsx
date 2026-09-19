@@ -13,6 +13,8 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   const [acceptingAll, setAcceptingAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
+  const [notice, setNotice] = useState("");
+
   function keyFor(s: Suggestion) {
     return s.courses.map((c) => c.id).join(",");
   }
@@ -61,7 +63,8 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   }
 
   async function handleAcceptAll() {
-    setAcceptingAll(true); setError("");
+    setAcceptingAll(true); setError(""); setNotice("");
+    const startCount = visible.length;
     // One suggestion at a time, not in parallel — this project's DB
     // connection is deliberately limited to a small pool, so running
     // many of these concurrently risks contention rather than saving
@@ -73,7 +76,8 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
       if (!failure) linkedCount++;
       else allFailures.push(`${s.courses[0].title}: ${failure}`);
     }
-    if (allFailures.length > 0) setError(`Linked ${linkedCount} of ${visible.length} suggestions fully — issues: ${allFailures.join(" | ")}`);
+    if (allFailures.length > 0) setError(`Linked ${linkedCount} of ${startCount} suggestions fully — issues: ${allFailures.join(" | ")}`);
+    else setNotice(`Linked all ${linkedCount} suggestion(s) that were showing.`);
     await load();
     setAcceptingAll(false);
     onLinked?.();
@@ -85,6 +89,7 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       {error && <div className="err">{error}</div>}
+      {notice && <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 6, marginBottom: 8 }}>{notice}</div>}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Suggested Content Sync Links</h3>
         <button onClick={handleAcceptAll} disabled={acceptingAll || busyKey !== null} className="btn btn-brass" style={{ fontSize: 11.5, padding: "5px 10px", whiteSpace: "nowrap" }}>

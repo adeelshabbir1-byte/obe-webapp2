@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 
 // Adds a course directly to an existing group, as a follower — the
 // direct equivalent of the "pair" endpoint's "memberA && !memberB"
@@ -25,11 +24,12 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
     return NextResponse.json({ error: "that course is already linked in a different group — unlink it from there first" }, { status: 409 });
   }
 
+  // Only updates membership and flags the group as needing a sync — no
+  // immediate content copy. See "Sync All Content" for when that
+  // actually happens.
   await prisma.courseContentSyncMember.create({ data: { groupId: params.groupId, courseId, isBase: false } });
+  await prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } });
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_MEMBER_ADDED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { courseId } });
 
-  const groupBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId: params.groupId, isBase: true } });
-  const result = groupBase ? await syncCourseContentToLinkedCourses(groupBase.courseId) : { synced: [], skippedGraded: [] };
-
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true });
 }

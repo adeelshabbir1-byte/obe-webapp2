@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { syncCourseContentToLinkedCourses, determineBaseCourseId } from "../../../../../lib/contentSync";
-import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
+import { determineBaseCourseId } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 // Links any number of courses (2+) into one group in a single request —
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
       baseCourseId = await determineBaseCourseId(baseCourseId, courseIds[i]);
     }
     const group = await prisma.courseContentSyncGroup.create({
-      data: { chairmanId: user.managedById, createdById: user.id, name: `${courses[0].code} group (${courseIds.length} courses)` },
+      data: { chairmanId: user.managedById, createdById: user.id, name: `${courses[0].code} group (${courseIds.length} courses)`, needsSync: true },
     });
     groupId = group.id;
   }
@@ -74,22 +73,14 @@ export async function POST(req: NextRequest) {
   await prisma.courseContentSyncMember.updateMany({ where: { groupId, courseId: { not: baseCourseId } }, data: { isBase: false } });
   await prisma.courseContentSyncMember.updateMany({ where: { groupId, courseId: baseCourseId }, data: { isBase: true } });
 
-  // If the base has no content yet but some other selected course does,
-  // inherit that content upward first — same safeguard as /pair, so a
-  // real Subject Expert's work never just disappears because its course
-  // wasn't picked as the base.
-  const baseCloCount = await prisma.cLO.count({ where: { courseId: baseCourseId } });
-  if (baseCloCount === 0) {
-    for (const c of courses) {
-      if (c.id === baseCourseId) continue;
-      const otherCloCount = await prisma.cLO.count({ where: { courseId: c.id } });
-      if (otherCloCount > 0) { await copyCourseContent(c.id, baseCourseId); break; }
-    }
-  }
+  // Linking only ever updates group membership and flags it as needing
+  // a sync — it never copies content immediately. That used to happen
+  // right here, which was the actual reason "Accept All" could take
+  // hours: every course added meant a full content copy on the spot.
+  // Content only moves once, explicitly, via "Sync All Content".
+  await prisma.courseContentSyncGroup.update({ where: { id: groupId }, data: { needsSync: true } });
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_GROUPED_MULTIPLE", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIds: courseIds.join(","), baseCourseId } });
-
-  const result = await syncCourseContentToLinkedCourses(baseCourseId);
 
   await prisma.course.updateMany({ where: { contentSyncMember: { groupId, isBase: false } }, data: { subjectExpertId: null } });
 
@@ -107,5 +98,5 @@ export async function POST(req: NextRequest) {
   }
 
   const baseCourse = courses.find((c) => c.id === baseCourseId);
-  return NextResponse.json({ groupId, baseCourseCode: baseCourse?.code || null, equivalencePairsMade, ...result });
+  return NextResponse.json({ groupId, baseCourseCode: baseCourse?.code || null, equivalencePairsMade });
 }

@@ -411,6 +411,13 @@ model CourseContentSyncGroup {
   createdById String?
   name       String
   createdAt  DateTime @default(now())
+  // Linking courses together no longer copies content immediately — that
+  // was the actual source of "Accept All takes hours": every link
+  // triggered a full content copy right then. A group is marked as
+  // needing a sync whenever its membership or base changes, and only
+  // the explicit "Sync All Content" action actually performs the copy,
+  // once, for everything pending at once.
+  needsSync  Boolean  @default(true)
 
   members    CourseContentSyncMember[]
 

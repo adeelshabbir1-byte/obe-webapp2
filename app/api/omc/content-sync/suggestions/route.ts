@@ -21,22 +21,25 @@ export async function GET(req: NextRequest) {
     const selectedBatchIds = batchIdsParam ? batchIdsParam.split(",").filter(Boolean) : [];
     if (selectedBatchIds.length === 0) return NextResponse.json({ suggestions: [] });
 
-    const [courses, existingMembers] = await Promise.all([
+    const [courses, existingMembers, shortNameRecords] = await Promise.all([
       prisma.course.findMany({
         where: { coordinatorId: { in: coordinatorIds }, batchId: { in: selectedBatchIds } },
         select: { id: true, code: true, title: true, semesterNumber: true, batch: { select: { degreeProgram: true, batchName: true } } },
       }),
       prisma.courseContentSyncMember.findMany({ select: { courseId: true } }),
+      prisma.courseShortName.findMany({ where: { chairmanId: user.managedById } }),
     ]);
     const alreadyLinked = new Set(existingMembers.map((m) => m.courseId));
+    const shortNameByCode = new Map(shortNameRecords.map((s) => [s.courseCode, s.shortName.trim().toLowerCase()]));
 
     // Unlike Course Equivalence, this has no same-term restriction —
     // content sync only cares whether two courses are really the same
     // taught material, regardless of which semester or batch offers it,
     // so matches are found across ALL of the last 4 years at once, not
     // scoped to one term. Same union-find approach otherwise: any two
-    // courses sharing a code or title link transitively into one
-    // suggested group, even across more than two courses.
+    // courses sharing a code, title, or the short name you've already
+    // assigned them link transitively into one suggested group, even
+    // across more than two courses.
     const eligible = courses.filter((c) => !alreadyLinked.has(c.id));
 
     const parent = new Map<string, string>();
@@ -57,7 +60,9 @@ export async function GET(req: NextRequest) {
         const a = eligible[i], b = eligible[j];
         const sameTitle = a.title.trim().toLowerCase() === b.title.trim().toLowerCase();
         const sameCode = a.code.trim().toLowerCase() === b.code.trim().toLowerCase();
-        if (sameTitle || sameCode) union(a.id, b.id);
+        const shortA = shortNameByCode.get(a.code), shortB = shortNameByCode.get(b.code);
+        const sameShortName = !!shortA && shortA === shortB;
+        if (sameTitle || sameCode || sameShortName) union(a.id, b.id);
       }
     }
 

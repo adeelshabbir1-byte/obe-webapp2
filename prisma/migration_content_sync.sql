@@ -23,3 +23,10 @@ CREATE INDEX IF NOT EXISTS "CourseContentSyncMember_groupId_idx" ON "CourseConte
 -- just in application code.
 CREATE UNIQUE INDEX IF NOT EXISTS "CourseContentSyncMember_one_base_per_group"
   ON "CourseContentSyncMember"("groupId") WHERE "isBase" = true;
+
+-- Added later: linking courses no longer copies content immediately —
+-- that was the actual source of "Accept All takes hours". A group is
+-- flagged as needing a sync whenever its membership/base changes; the
+-- explicit "Sync All Content" action clears the flag once it actually
+-- runs the copy.
+ALTER TABLE "CourseContentSyncGroup" ADD COLUMN IF NOT EXISTS "needsSync" BOOLEAN NOT NULL DEFAULT true;

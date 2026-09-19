@@ -12,7 +12,7 @@ type GroupMember = {
   courseId: string; isBase: boolean; code: string; shortName: string | null; title: string; batchId: string;
   degreeProgram: string; batchName: string; semesterNumber: number | null; courseType: string;
 };
-type Group = { id: string; name: string; createdByName?: string | null; members: GroupMember[] };
+type Group = { id: string; name: string; needsSync: boolean; createdByName?: string | null; members: GroupMember[] };
 
 const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
 function typeRank(t: string): number {
@@ -92,9 +92,7 @@ export default function ContentSyncManager() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      const parts = [`Linked ${selectedCourseIds.size} courses — ${data.baseCourseCode || "one"} is the base.`];
-      if (data.synced?.length > 0) parts.push(`Content copied to ${data.synced.length} course(s).`);
-      if (data.skippedGraded?.length > 0) parts.push(`${data.skippedGraded.length} skipped — already have entered grades.`);
+      const parts = [`Linked ${selectedCourseIds.size} courses — ${data.baseCourseCode || "one"} is the base. Content hasn't been copied yet — use "Sync All Content" when you're ready.`];
       if (data.equivalencePairsMade > 0) parts.push(`${data.equivalencePairsMade} pair(s) among them are also offered in the same term, so were combined for teaching too.`);
       setNotice(parts.join(" "));
       setSelectedCourseIds(new Set());
@@ -155,6 +153,21 @@ export default function ContentSyncManager() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  async function handleSyncAll() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/omc/content-sync/sync-all", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      if (data.totalPending === 0) { setNotice("Nothing pending — everything's already synced."); setBusy(false); return; }
+      const parts = [`Synced ${data.groupsSynced} of ${data.totalPending} group(s), copying content to ${data.coursesSynced} course(s).`];
+      if (data.coursesSkippedGraded > 0) parts.push(`${data.coursesSkippedGraded} course(s) skipped — already have entered grades.`);
+      if (data.failures?.length > 0) parts.push(`Issues: ${data.failures.join(" | ")}`);
+      setNotice(parts.join(" "));
+      setBusy(false); await loadCoursesAndGroups();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
   async function handleRemove(groupId: string, courseId: string) {
     setBusy(true); setError(""); setNotice("");
     try {
@@ -182,7 +195,12 @@ export default function ContentSyncManager() {
   const ungroupedCourses = courses.filter((c) => !c.groupId);
   const ungroupedClusters = new Map<string, Course[]>();
   for (const c of ungroupedCourses) {
-    const clusterKey = `${c.semesterNumber}|${c.courseType}|${c.title.trim().toLowerCase()}`;
+    // Cluster by (semester, type, short name if set, else title) — two
+    // courses across different batches with slightly different exact
+    // titles but the same short name you've assigned are still the same
+    // real course, so they should line up in the same row too.
+    const nameKey = (c.shortName || c.title).trim().toLowerCase();
+    const clusterKey = `${c.semesterNumber}|${c.courseType}|${nameKey}`;
     if (!ungroupedClusters.has(clusterKey)) ungroupedClusters.set(clusterKey, []);
     ungroupedClusters.get(clusterKey)!.push(c);
   }
@@ -244,6 +262,17 @@ export default function ContentSyncManager() {
       {coursesLoaded && (
         <>
           <ContentSyncSuggestions batchIds={Array.from(selectedBatchIds)} onLinked={loadCoursesAndGroups} />
+
+          {groups.some((g) => g.needsSync) && (
+            <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: "#FFFBEB" }}>
+              <span style={{ fontSize: 12.5 }}>
+                <b>{groups.filter((g) => g.needsSync).length}</b> group(s) linked but not yet synced — their base's content hasn't been copied to followers yet.
+              </span>
+              <button onClick={handleSyncAll} disabled={busy} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 12px", whiteSpace: "nowrap" }}>
+                {busy ? "Syncing…" : "Sync All Content"}
+              </button>
+            </div>
+          )}
 
           <div className="card" style={{ overflowX: "auto" }}>
             <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 10 }}>

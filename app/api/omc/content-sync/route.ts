@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const groups = uniqueGroupIds.length === 0 ? [] : await prisma.courseContentSyncGroup.findMany({
       where: { id: { in: uniqueGroupIds }, chairmanId: user.managedById || "" },
       select: {
-        id: true, name: true, createdById: true,
+        id: true, name: true, createdById: true, needsSync: true,
         members: {
           select: {
             courseId: true, isBase: true,
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         groupId: c.contentSyncMember?.groupId || null, isBase: c.contentSyncMember?.isBase ?? null,
       })),
       groups: groups.map((g) => ({
-        id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
+        id: g.id, name: g.name, needsSync: g.needsSync, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
         members: g.members.map((m) => ({
           courseId: m.courseId, isBase: m.isBase, code: m.course.code, shortName: shortNameByCode.get(m.course.code) || null,
           title: m.course.title, batchId: m.course.batchId,
