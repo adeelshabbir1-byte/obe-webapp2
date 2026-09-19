@@ -12,7 +12,7 @@ export async function GET() {
 
   const [courses, shortNames] = await Promise.all([
     prisma.course.findMany({
-      where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
+      where: { coordinatorId: { in: coordinatorIds } },
       select: { code: true, title: true },
       distinct: ["code"],
       orderBy: { code: "asc" },
