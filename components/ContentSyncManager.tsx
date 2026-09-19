@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ContentSyncSuggestions from "./ContentSyncSuggestions";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; startYear: number; courseCount: number };
+type Batch = { id: string; degreeProgram: string; batchName: string; startYear: number; startTerm: string; courseCount: number };
 type Course = {
   id: string; code: string; shortName: string | null; title: string; degreeProgram: string; batchName: string; batchId: string;
   semesterNumber: number | null; courseType: string; groupId: string | null; isBase: boolean | null;
@@ -153,19 +153,45 @@ export default function ContentSyncManager() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null);
+
   async function handleSyncAll() {
-    setBusy(true); setError(""); setNotice("");
+    setBusy(true); setError(""); setNotice(""); setSyncProgress(null);
+    let totalGroupsSynced = 0, totalCoursesSynced = 0, totalSkippedGraded = 0, totalPending = 0;
+    const allFailures: string[] = [];
     try {
-      const res = await fetch("/api/omc/content-sync/sync-all", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      if (data.totalPending === 0) { setNotice("Nothing pending — everything's already synced."); setBusy(false); return; }
-      const parts = [`Synced ${data.groupsSynced} of ${data.totalPending} group(s), copying content to ${data.coursesSynced} course(s).`];
-      if (data.coursesSkippedGraded > 0) parts.push(`${data.coursesSkippedGraded} course(s) skipped — already have entered grades.`);
-      if (data.failures?.length > 0) parts.push(`Issues: ${data.failures.join(" | ")}`);
+      // Loop, processing a small batch per request, until nothing's left
+      // pending — a single request trying to sync everything at once was
+      // exactly what could silently exceed a serverless function's
+      // execution time limit with a large number of groups, leaving the
+      // pending count looking completely unchanged.
+      while (true) {
+        const res = await fetch("/api/omc/content-sync/sync-all", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchSize: 3 }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); setSyncProgress(null); return; }
+
+        totalPending = data.totalPending;
+        totalGroupsSynced += data.groupsSynced;
+        totalCoursesSynced += data.coursesSynced;
+        totalSkippedGraded += data.coursesSkippedGraded;
+        if (data.failures?.length > 0) allFailures.push(...data.failures);
+        setSyncProgress({ done: totalGroupsSynced + allFailures.length, total: totalPending });
+
+        if (data.remainingPending <= 0) break;
+        // Safety valve: if a batch made no progress at all (0 synced, 0
+        // failed), stop rather than looping forever.
+        if (data.groupsSynced === 0 && data.failures.length === 0) break;
+      }
+
+      if (totalPending === 0) { setNotice("Nothing pending — everything's already synced."); setBusy(false); setSyncProgress(null); return; }
+      const parts = [`Synced ${totalGroupsSynced} of ${totalPending} group(s), copying content to ${totalCoursesSynced} course(s).`];
+      if (totalSkippedGraded > 0) parts.push(`${totalSkippedGraded} course(s) skipped — already have entered grades.`);
+      if (allFailures.length > 0) parts.push(`Issues: ${allFailures.join(" | ")}`);
       setNotice(parts.join(" "));
-      setBusy(false); await loadCoursesAndGroups();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+      setBusy(false); setSyncProgress(null); await loadCoursesAndGroups();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); setSyncProgress(null); }
   }
 
   const [editingCodeCourseId, setEditingCodeCourseId] = useState<string | null>(null);
@@ -210,7 +236,24 @@ export default function ContentSyncManager() {
   // so same-named courses from different batches naturally land in the
   // same row, side by side, ready to click and pair — same visual style
   // as the Course Equivalence grid.
-  const batchColumns = batches.filter((b) => selectedBatchIds.has(b.id));
+  // Same rule that decides which course becomes a group's BASE
+  // (lib/contentSync.ts's determineBaseCourseId) — sorting columns this
+  // way means the base tends to land toward the left for most rows,
+  // without needing to reorder columns differently per row (which isn't
+  // possible anyway, since a group's base can be a different batch than
+  // another group's).
+  const DEGREE_PRIORITY = ["computer science", "software engineering", "artificial intelligence", "cyber", "data science"];
+  function degreePriorityRank(degreeProgram: string): number {
+    const lower = degreeProgram.toLowerCase();
+    const i = DEGREE_PRIORITY.findIndex((d) => lower.includes(d));
+    return i === -1 ? DEGREE_PRIORITY.length : i;
+  }
+  function batchTermIndex(b: Batch): number {
+    return b.startTerm === "Spring" ? b.startYear * 2 - 1 : b.startYear * 2;
+  }
+  const batchColumns = batches
+    .filter((b) => selectedBatchIds.has(b.id))
+    .sort((a, b) => batchTermIndex(a) - batchTermIndex(b) || degreePriorityRank(a.degreeProgram) - degreePriorityRank(b.degreeProgram));
 
   type Row = { key: string; label: string; kind: "group" | "ungrouped"; groupId?: string; semesterNumber: number | null; courseType: string; courses: (Course | GroupMember)[] };
 
@@ -296,7 +339,7 @@ export default function ContentSyncManager() {
                 <b>{groups.filter((g) => g.needsSync).length}</b> group(s) linked but not yet synced — their base's content hasn't been copied to followers yet.
               </span>
               <button onClick={handleSyncAll} disabled={busy} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 12px", whiteSpace: "nowrap" }}>
-                {busy ? "Syncing…" : "Sync All Content"}
+                {syncProgress ? `Syncing… ${syncProgress.done}/${syncProgress.total}` : busy ? "Syncing…" : "Sync All Content"}
               </button>
             </div>
           )}
