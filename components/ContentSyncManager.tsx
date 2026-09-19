@@ -168,6 +168,29 @@ export default function ContentSyncManager() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  const [editingCodeCourseId, setEditingCodeCourseId] = useState<string | null>(null);
+  const [editCodeValue, setEditCodeValue] = useState("");
+  const [editCodeApplyAll, setEditCodeApplyAll] = useState(true);
+
+  function startEditCode(courseId: string, currentCode: string) {
+    setEditingCodeCourseId(courseId); setEditCodeValue(currentCode); setEditCodeApplyAll(true);
+  }
+
+  async function saveEditCode() {
+    if (!editingCodeCourseId || !editCodeValue.trim()) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/omc/content-sync/courses/change-code", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId: editingCodeCourseId, newCode: editCodeValue.trim(), applyToAllPrograms: editCodeApplyAll }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      setNotice(`Code updated on ${data.updatedCount} course(s) — earlier batches were left untouched.`);
+      setEditingCodeCourseId(null); setBusy(false); await loadCoursesAndGroups();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
   async function handleRemove(groupId: string, courseId: string) {
     setBusy(true); setError(""); setNotice("");
     try {
@@ -328,19 +351,48 @@ export default function ContentSyncManager() {
                               const isSelected = selectedCourseIds.has(cId);
                               const cIsBase = (c as Course).isBase ?? (c as GroupMember).isBase;
                               return (
-                                <div
-                                  key={cId}
-                                  onClick={() => !busy && handleClick(cId)}
-                                  onDoubleClick={() => row.kind === "group" && row.groupId && !busy && handleRemove(row.groupId, cId)}
-                                  title={`${c.code} — ${c.title}`}
-                                  style={{
-                                    cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                    background: isSelected ? "#E8E6FB" : row.kind === "group" ? "#FEF3C7" : undefined,
-                                    border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
-                                  }}
-                                >
-                                  {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2, marginRight: 4 }}>BASE</span>}
-                                  {c.shortName || c.code}
+                                <div key={cId}>
+                                  <div
+                                    onClick={() => !busy && handleClick(cId)}
+                                    onDoubleClick={() => row.kind === "group" && row.groupId && !busy && handleRemove(row.groupId, cId)}
+                                    title={`${c.code} — ${c.title}`}
+                                    style={{
+                                      cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
+                                      background: isSelected ? "#E8E6FB" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
+                                      display: "flex", alignItems: "center", gap: 4,
+                                    }}
+                                  >
+                                    {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2 }}>BASE</span>}
+                                    <span style={{ flex: 1 }}>{c.shortName || c.code}</span>
+                                    <span
+                                      onClick={(e) => { e.stopPropagation(); startEditCode(cId, c.code); }}
+                                      title="Edit course code"
+                                      style={{ fontSize: 9, color: "var(--slate)", cursor: "pointer" }}
+                                    >
+                                      ✎
+                                    </span>
+                                  </div>
+                                  {editingCodeCourseId === cId && (
+                                    <div style={{ fontSize: 10.5, background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
+                                      <input
+                                        value={editCodeValue} onChange={(e) => setEditCodeValue(e.target.value)}
+                                        style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
+                                        placeholder="New code"
+                                      />
+                                      {row.kind === "group" && (
+                                        <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                                          <input type="checkbox" checked={editCodeApplyAll} onChange={(e) => setEditCodeApplyAll(e.target.checked)} />
+                                          Apply to all programs (uncheck for electives — same program only)
+                                        </label>
+                                      )}
+                                      <div style={{ color: "var(--slate)", marginBottom: 4 }}>Only this batch and later ones are changed — earlier batches keep their code.</div>
+                                      <div style={{ display: "flex", gap: 4 }}>
+                                        <button onClick={saveEditCode} disabled={busy} className="btn btn-brass" style={{ fontSize: 10.5, padding: "2px 8px" }}>Save</button>
+                                        <button onClick={() => setEditingCodeCourseId(null)} style={{ fontSize: 10.5, padding: "2px 8px", border: "1px solid var(--line)", background: "#fff" }}>Cancel</button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
