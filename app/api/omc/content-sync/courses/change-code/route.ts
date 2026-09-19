@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest) {
   // Every course this change should touch — starts with just the edited
   // course itself; linked courses are added below if there's a group.
   const targets: { id: string; coordinatorId: string; batchId: string; code: string }[] = [
-    { id: editedCourse.id, coordinatorId: editedCourse.coordinatorId, batchId: editedCourse.batchId, code: editedCourse.code },
+    { id: editedCourse.id, coordinatorId: editedCourse.coordinatorId, batchId: editedCourse.batchId!, code: editedCourse.code },
   ];
 
   if (membership) {
@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest) {
       const memberTermIndex = termIndex(m.course.batch.startTerm, m.course.batch.startYear);
       if (memberTermIndex < editedTermIndex) continue; // strictly earlier batches are never touched
       if (!applyToAllPrograms && m.course.batch.degreeProgram !== editedCourse.batch.degreeProgram) continue;
-      targets.push({ id: m.course.id, coordinatorId: m.course.coordinatorId, batchId: m.course.batchId, code: m.course.code });
+      targets.push({ id: m.course.id, coordinatorId: m.course.coordinatorId, batchId: m.course.batchId!, code: m.course.code });
     }
   }
 
