@@ -3,10 +3,18 @@ import { copyCourseContent } from "./benchmarkCopy";
 
 /** Marks two courses as one combined class for teaching purposes (Course
  * Equivalence) — merges/creates the CourseEquivalenceGroup they belong
- * to, and gives an empty course a head start from the other's content if
- * one side has none yet. Only makes sense when both are actually offered
- * in the same term; callers should check that before calling this. */
-export async function pairForEquivalence(courseIdA: string, courseIdB: string, chairmanId: string, actorUserId: string) {
+ * to, and (unless skipContentCopy is set) gives an empty course a head
+ * start from the other's content if one side has none yet. Only makes
+ * sense when both are actually offered in the same term; callers should
+ * check that before calling this.
+ *
+ * skipContentCopy is set by Content Sync's own pairing/grouping, since
+ * that feature already owns content-copying via its own explicit "Sync
+ * All Content" step — running this function's copy too, on every
+ * same-term pair among potentially many selected courses, was a real
+ * source of "linking still takes a while" even after content sync's own
+ * copy step was made explicit and deferred. */
+export async function pairForEquivalence(courseIdA: string, courseIdB: string, chairmanId: string, actorUserId: string, skipContentCopy = false) {
   const [courseA, courseB, memberA, memberB] = await Promise.all([
     prisma.course.findUnique({ where: { id: courseIdA } }),
     prisma.course.findUnique({ where: { id: courseIdB } }),
@@ -36,10 +44,12 @@ export async function pairForEquivalence(courseIdA: string, courseIdB: string, c
     await prisma.courseEquivalenceMember.createMany({ data: [{ groupId, courseId: courseIdA }, { groupId, courseId: courseIdB }] });
   }
 
-  await copyFullContentIfEmpty(courseIdA, courseIdB);
-  await copyFullContentIfEmpty(courseIdB, courseIdA);
-  await copyPloMappingByNumber(courseIdA, courseIdB);
-  await copyPloMappingByNumber(courseIdB, courseIdA);
+  if (!skipContentCopy) {
+    await copyFullContentIfEmpty(courseIdA, courseIdB);
+    await copyFullContentIfEmpty(courseIdB, courseIdA);
+    await copyPloMappingByNumber(courseIdA, courseIdB);
+    await copyPloMappingByNumber(courseIdB, courseIdA);
+  }
 
   return { groupId };
 }

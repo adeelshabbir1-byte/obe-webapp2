@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < courses.length; i++) {
     for (let j = i + 1; j < courses.length; j++) {
       if (courses[i].offeredTermName && courses[i].offeredTermName === courses[j].offeredTermName && courses[i].offeredTermYear === courses[j].offeredTermYear) {
-        const eqResult = await pairForEquivalence(courses[i].id, courses[j].id, user.managedById, user.id);
+        const eqResult = await pairForEquivalence(courses[i].id, courses[j].id, user.managedById, user.id, true);
         if (eqResult) equivalencePairsMade++;
       }
     }

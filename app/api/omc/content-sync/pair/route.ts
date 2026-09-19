@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   // just means "share content", nothing more.
   let alsoMadeEquivalent = false;
   if (courseA.offeredTermName && courseA.offeredTermName === courseB.offeredTermName && courseA.offeredTermYear === courseB.offeredTermYear) {
-    const eqResult = await pairForEquivalence(courseIdA, courseIdB, user.managedById, user.id);
+    const eqResult = await pairForEquivalence(courseIdA, courseIdB, user.managedById, user.id, true);
     if (eqResult) {
       alsoMadeEquivalent = true;
       await writeAuditLog({ actorUserId: user.id, action: "EQUIVALENCE_PAIRED", entityType: "CourseEquivalenceGroup", entityId: eqResult.groupId, metadata: { courseIdA, courseIdB, viaContentSync: true } });
