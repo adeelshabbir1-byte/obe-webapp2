@@ -30,12 +30,19 @@ export async function POST(req: NextRequest) {
 
   if (existingGroupIds.length > 0) {
     // At least one selected course already belongs to a group — reuse
-    // the first such group (and its existing base) rather than starting
-    // a new one; merge every other existing group among the selection
-    // into it, same as /pair's merge behavior for two groups at a time.
+    // the first such group rather than starting a new one, and merge
+    // every other existing group among the selection into it, same as
+    // /pair's merge behavior for two groups at a time. The base is NOT
+    // just assumed to stay whatever it already was — it's re-decided
+    // across every selected course PLUS the existing base, since one of
+    // the newly-added courses might actually be more recent.
     groupId = existingGroupIds[0];
     const existingBase = memberships.find((m) => m.groupId === groupId && m.isBase);
-    baseCourseId = existingBase?.courseId || memberships.find((m) => m.groupId === groupId)!.courseId;
+    const candidateIds = existingBase ? [existingBase.courseId, ...courseIds] : courseIds;
+    baseCourseId = candidateIds[0];
+    for (let i = 1; i < candidateIds.length; i++) {
+      baseCourseId = await determineBaseCourseId(baseCourseId, candidateIds[i]);
+    }
 
     for (const otherGroupId of existingGroupIds.slice(1)) {
       await prisma.courseContentSyncMember.updateMany({ where: { groupId: otherGroupId }, data: { groupId, isBase: false } });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { determineBaseCourseId } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, reconsiderGroupBase } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
@@ -36,24 +36,29 @@ export async function POST(req: NextRequest) {
   // every single course added meant a full content copy right then.
   // Content only moves once, explicitly, via "Sync All Content".
   if (memberA && !memberB) {
-    // Joining an established group — it already has a base (fixed by
-    // seniority when the group was first formed), so the new course
-    // simply joins as a follower, whatever its own seniority is.
+    // Joining an established group — but the newly-joining course might
+    // actually be MORE recent than the group's current base, so the
+    // base is re-checked below rather than assumed to stay put.
     groupId = memberA.groupId;
     await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdB, isBase: false } });
+    await reconsiderGroupBase(groupId, courseIdB);
     await prisma.courseContentSyncGroup.update({ where: { id: groupId }, data: { needsSync: true } });
   } else if (memberB && !memberA) {
     groupId = memberB.groupId;
     await prisma.courseContentSyncMember.create({ data: { groupId, courseId: courseIdA, isBase: false } });
+    await reconsiderGroupBase(groupId, courseIdA);
     await prisma.courseContentSyncGroup.update({ where: { id: groupId }, data: { needsSync: true } });
   } else if (memberA && memberB) {
     // Both already grouped, but in different groups — merge B's group
-    // into A's. A's existing base stays the base; B's base (if it had
-    // one) is demoted to a follower, since a merged group can only have
-    // one.
+    // into A's. A's existing base stays the base UNLESS B's own base is
+    // actually more recent, in which case the base switches — same
+    // reconsideration as joining a single course, just checked against
+    // whichever course was B's base specifically.
     groupId = memberA.groupId;
+    const bGroupBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId: memberB.groupId, isBase: true } });
     await prisma.courseContentSyncMember.updateMany({ where: { groupId: memberB.groupId }, data: { groupId, isBase: false } });
     await prisma.courseContentSyncGroup.delete({ where: { id: memberB.groupId } }).catch(() => {});
+    if (bGroupBase) await reconsiderGroupBase(groupId, bGroupBase.courseId);
     await prisma.courseContentSyncGroup.update({ where: { id: groupId }, data: { needsSync: true } });
   } else {
     // New group: the base is decided by the fixed seniority/degree-

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { reconsiderGroupBase } from "../../../../../../lib/contentSync";
 
 // Adds a course directly to an existing group, as a follower — the
 // direct equivalent of the "pair" endpoint's "memberA && !memberB"
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   // immediate content copy. See "Sync All Content" for when that
   // actually happens.
   await prisma.courseContentSyncMember.create({ data: { groupId: params.groupId, courseId, isBase: false } });
+  // The newly-added course might actually be more senior than the
+  // group's current base — re-checked here rather than assuming the
+  // existing base stays correct just because it was added second.
+  await reconsiderGroupBase(params.groupId, courseId);
   await prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } });
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_MEMBER_ADDED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { courseId } });
 

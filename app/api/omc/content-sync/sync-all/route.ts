@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
   let groupsSynced = 0;
   let coursesSynced = 0;
   let coursesSkippedGraded = 0;
+  let coursesSkippedOlderBatch = 0;
   const failures: string[] = [];
 
   // One group at a time, not in parallel — same reasoning as
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       const result = await syncCourseContentToLinkedCourses(base.courseId);
       coursesSynced += result.synced.length;
       coursesSkippedGraded += result.skippedGraded.length;
+      coursesSkippedOlderBatch += result.skippedOlderBatch.length;
       await prisma.courseContentSyncGroup.update({ where: { id: group.id }, data: { needsSync: false } });
       groupsSynced++;
     } catch (err: any) {
@@ -67,5 +69,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_ALL_RUN", entityType: "CourseContentSyncGroup", entityId: "bulk", metadata: { groupsSynced, coursesSynced } });
 
   const remainingPending = Math.max(0, totalPendingCount - groupsSynced - failures.length);
-  return NextResponse.json({ groupsSynced, coursesSynced, coursesSkippedGraded, failures, totalPending: totalPendingCount, remainingPending });
+  return NextResponse.json({ groupsSynced, coursesSynced, coursesSkippedGraded, coursesSkippedOlderBatch, failures, totalPending: totalPendingCount, remainingPending });
 }

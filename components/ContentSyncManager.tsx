@@ -155,9 +155,21 @@ export default function ContentSyncManager() {
 
   const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null);
 
+  async function handleFixAllBases() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/omc/content-sync/fix-all-bases", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      if (data.groupsFixed === 0) { setNotice(`Checked ${data.groupsChecked} group(s) — all bases were already correct.`); setBusy(false); return; }
+      setNotice(`Corrected ${data.groupsFixed} of ${data.groupsChecked} group(s): ${data.corrections.join("; ")}. Run "Sync All Content" to propagate from the corrected bases.`);
+      setBusy(false); await loadCoursesAndGroups();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
   async function handleSyncAll() {
     setBusy(true); setError(""); setNotice(""); setSyncProgress(null);
-    let totalGroupsSynced = 0, totalCoursesSynced = 0, totalSkippedGraded = 0, totalPending = 0;
+    let totalGroupsSynced = 0, totalCoursesSynced = 0, totalSkippedGraded = 0, totalSkippedOlderBatch = 0, totalPending = 0;
     const allFailures: string[] = [];
     try {
       // Loop, processing a small batch per request, until nothing's left
@@ -176,6 +188,7 @@ export default function ContentSyncManager() {
         totalGroupsSynced += data.groupsSynced;
         totalCoursesSynced += data.coursesSynced;
         totalSkippedGraded += data.coursesSkippedGraded;
+        totalSkippedOlderBatch += data.coursesSkippedOlderBatch || 0;
         if (data.failures?.length > 0) allFailures.push(...data.failures);
         setSyncProgress({ done: totalGroupsSynced + allFailures.length, total: totalPending });
 
@@ -188,6 +201,7 @@ export default function ContentSyncManager() {
       if (totalPending === 0) { setNotice("Nothing pending — everything's already synced."); setBusy(false); setSyncProgress(null); return; }
       const parts = [`Synced ${totalGroupsSynced} of ${totalPending} group(s), copying content to ${totalCoursesSynced} course(s).`];
       if (totalSkippedGraded > 0) parts.push(`${totalSkippedGraded} course(s) skipped — already have entered grades.`);
+      if (totalSkippedOlderBatch > 0) parts.push(`${totalSkippedOlderBatch} course(s) in older, already-completed batches were left untouched, as intended.`);
       if (allFailures.length > 0) parts.push(`Issues: ${allFailures.join(" | ")}`);
       setNotice(parts.join(" "));
       setBusy(false); setSyncProgress(null); await loadCoursesAndGroups();
@@ -253,7 +267,7 @@ export default function ContentSyncManager() {
   }
   const batchColumns = batches
     .filter((b) => selectedBatchIds.has(b.id))
-    .sort((a, b) => batchTermIndex(a) - batchTermIndex(b) || degreePriorityRank(a.degreeProgram) - degreePriorityRank(b.degreeProgram));
+    .sort((a, b) => batchTermIndex(b) - batchTermIndex(a) || degreePriorityRank(a.degreeProgram) - degreePriorityRank(b.degreeProgram));
 
   type Row = { key: string; label: string; kind: "group" | "ungrouped"; groupId?: string; semesterNumber: number | null; courseType: string; courses: (Course | GroupMember)[] };
 
@@ -327,6 +341,9 @@ export default function ContentSyncManager() {
         <button onClick={loadCoursesAndGroups} disabled={selectedBatchIds.size === 0} className="btn btn-brass" style={{ fontSize: 12.5 }}>
           Load courses for checked batches
         </button>
+        <button onClick={handleFixAllBases} disabled={busy} style={{ fontSize: 12.5, padding: "5px 10px", border: "1px solid var(--line)", background: "#fff", marginLeft: 8 }}>
+          Fix All Bases (one-time correction for older links)
+        </button>
       </div>
 
       {coursesLoaded && (
@@ -349,10 +366,12 @@ export default function ContentSyncManager() {
               Click any number of courses to select them (any batch, any semester, even several from the same
               batch), then click "Group Selected" or press <b>S</b> to link them all at once into one group, or
               click "Detach Selected" / press <b>D</b> to unlink whichever of the selected courses are
-              currently linked — whichever is from the most senior batch becomes the <b>base</b> (tie broken by
-              Computer Science &gt; Software Engineering &gt; Artificial Intelligence &gt; Cyber Security &gt;
-              Data Science). If any selected course is already a group's base, that group is reused and the
-              rest merge into it. Rows are sorted by semester, then course type, so related courses line up
+              currently linked — whichever is from the most RECENT batch becomes the editable <b>base</b> (tie
+              broken by Computer Science &gt; Software Engineering &gt; Artificial Intelligence &gt; Cyber
+              Security &gt; Data Science). Changes to the base only ever propagate to same-term-or-later
+              members — an older, already-completed batch's course is never rewritten, so it stays an accurate
+              historical record of what that batch was actually taught. If any selected course is already a
+              group's base, that group is reused and the rest merge into it. Rows are sorted by semester, then course type, so related courses line up
               together. (Double-click a single linked course to unlink just that one, without selecting first.)
             </p>
             {selectedCourseIds.size > 0 && (
