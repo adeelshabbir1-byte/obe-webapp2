@@ -172,8 +172,12 @@ export default function ContentSyncManager() {
   const [editCodeValue, setEditCodeValue] = useState("");
   const [editCodeApplyAll, setEditCodeApplyAll] = useState(true);
 
-  function startEditCode(courseId: string, currentCode: string) {
-    setEditingCodeCourseId(courseId); setEditCodeValue(currentCode); setEditCodeApplyAll(true);
+  function startEditCode(courseId: string, currentCode: string, courseType: string) {
+    setEditingCodeCourseId(courseId); setEditCodeValue(currentCode);
+    // Electives are inherently program-specific — defaulting to
+    // "same program only" means you don't have to remember to uncheck
+    // this every single time for what's usually the common case.
+    setEditCodeApplyAll(courseType !== "Elective");
   }
 
   async function saveEditCode() {
@@ -366,7 +370,7 @@ export default function ContentSyncManager() {
                                     {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2 }}>BASE</span>}
                                     <span style={{ flex: 1 }}>{c.shortName || c.code}</span>
                                     <span
-                                      onClick={(e) => { e.stopPropagation(); startEditCode(cId, c.code); }}
+                                      onClick={(e) => { e.stopPropagation(); startEditCode(cId, c.code, row.courseType); }}
                                       title="Edit course code"
                                       style={{ fontSize: 9, color: "var(--slate)", cursor: "pointer" }}
                                     >
@@ -383,7 +387,7 @@ export default function ContentSyncManager() {
                                       {row.kind === "group" && (
                                         <label style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
                                           <input type="checkbox" checked={editCodeApplyAll} onChange={(e) => setEditCodeApplyAll(e.target.checked)} />
-                                          Apply to all programs (uncheck for electives — same program only)
+                                          Apply to all programs {row.courseType === "Elective" ? "(unchecked by default for electives)" : "(checked by default for non-electives)"}
                                         </label>
                                       )}
                                       <div style={{ color: "var(--slate)", marginBottom: 4 }}>Only this batch and later ones are changed — earlier batches keep their code.</div>
