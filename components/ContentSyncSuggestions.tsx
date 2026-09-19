@@ -27,36 +27,34 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   }
   useEffect(() => { load(); }, [batchIds.join(",")]);
 
-  // Shared by both the individual "Link These" button and "Accept All" —
-  // pairs the first course with each of the others in turn, continuing
-  // even if one pairing fails rather than abandoning the rest, and
-  // returns what happened instead of touching component state directly
-  // so a caller processing many suggestions in a row can collect results
-  // across all of them before refreshing once at the end.
-  async function linkOneSuggestion(s: Suggestion): Promise<string[]> {
-    const failures: string[] = [];
-    for (let i = 1; i < s.courses.length; i++) {
-      try {
-        const res = await fetch("/api/omc/content-sync/pair", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseIdA: s.courses[0].id, courseIdB: s.courses[i].id }),
-        });
-        const data = await res.json();
-        if (!res.ok) failures.push(`${s.courses[i].code} (${s.courses[i].batchLabel}): ${data.error || "unknown error"}`);
-      } catch (err: any) {
-        failures.push(`${s.courses[i].code} (${s.courses[i].batchLabel}): ${err.message}`);
-      }
+  // Shared by both the individual "Link These" button and "Accept All".
+  // This used to loop calling /pair once per course, which re-synced the
+  // ENTIRE group from scratch on every single call — for a group of N
+  // courses that's N full content copies of an ever-growing group
+  // (quadratic work for what should be linear), which is exactly what
+  // was making this take hours instead of seconds on a large suggestion
+  // like "Programming Fundamentals" across many programs and years. The
+  // bulk endpoint does the base-selection and the sync exactly once,
+  // regardless of how many courses are in the group.
+  async function linkOneSuggestion(s: Suggestion): Promise<string | null> {
+    try {
+      const res = await fetch("/api/omc/content-sync/group-multiple", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseIds: s.courses.map((c) => c.id) }),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error || "unknown error";
+      return null;
+    } catch (err: any) {
+      return err.message;
     }
-    return failures;
   }
 
   async function linkThese(s: Suggestion) {
     const key = keyFor(s);
     setBusyKey(key); setError("");
-    const failures = await linkOneSuggestion(s);
-    if (failures.length > 0) {
-      setError(`Linked ${s.courses.length - 1 - failures.length} of ${s.courses.length - 1} — failed: ${failures.join("; ")}`);
-    }
+    const failure = await linkOneSuggestion(s);
+    if (failure) setError(`${s.courses[0].title}: ${failure}`);
     await load();
     setBusyKey(null);
     onLinked?.();
@@ -71,9 +69,9 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
     const allFailures: string[] = [];
     let linkedCount = 0;
     for (const s of visible) {
-      const failures = await linkOneSuggestion(s);
-      if (failures.length === 0) linkedCount++;
-      else allFailures.push(`${s.courses[0].title}: ${failures.join("; ")}`);
+      const failure = await linkOneSuggestion(s);
+      if (!failure) linkedCount++;
+      else allFailures.push(`${s.courses[0].title}: ${failure}`);
     }
     if (allFailures.length > 0) setError(`Linked ${linkedCount} of ${visible.length} suggestions fully — issues: ${allFailures.join(" | ")}`);
     await load();
