@@ -10,6 +10,30 @@ export async function deleteCourseCompletely(courseId: string) {
   const lectureRowIds = (await prisma.lectureRow.findMany({ where: { courseId }, select: { id: true } })).map((r) => r.id);
   const scheduleSectionIds = (await prisma.scheduleSection.findMany({ where: { courseId }, select: { id: true } })).map((s) => s.id);
 
+  // A course can also be a Content Sync group's member — deleting it
+  // outright would fail on that foreign key alone, exactly like the
+  // benchmark/prerequisite back-references below. If it's the group's
+  // BASE specifically, another member is promoted first (or the whole
+  // group is cleaned up if it was the last one), same as manually
+  // unlinking it through the UI — a course being deleted shouldn't
+  // silently leave a group without a base for the others to inherit
+  // from.
+  const contentSyncMembership = await prisma.courseContentSyncMember.findUnique({ where: { courseId } });
+  if (contentSyncMembership?.isBase) {
+    const otherMembers = await prisma.courseContentSyncMember.findMany({ where: { groupId: contentSyncMembership.groupId, courseId: { not: courseId } }, orderBy: { id: "asc" } });
+    // The old base's row is removed FIRST — promoting the new one before
+    // that would mean two rows in the same group are both isBase=true
+    // at once, which the one-base-per-group unique constraint rejects
+    // immediately (Postgres checks it per-statement, not deferred to
+    // commit).
+    await prisma.courseContentSyncMember.delete({ where: { courseId } });
+    if (otherMembers.length > 0) {
+      await prisma.courseContentSyncMember.update({ where: { id: otherMembers[0].id }, data: { isBase: true } });
+    } else {
+      await prisma.courseContentSyncGroup.delete({ where: { id: contentSyncMembership.groupId } }).catch(() => {});
+    }
+  }
+
   await prisma.$transaction([
     // Leaf-level records referencing lecture rows / sections / instruments
     prisma.attendanceRecord.deleteMany({ where: { courseId } }),
@@ -25,6 +49,7 @@ export async function deleteCourseCompletely(courseId: string) {
     prisma.courseSectionAssignment.deleteMany({ where: { courseId } }),
     prisma.studentEnrollment.deleteMany({ where: { courseId } }),
     prisma.courseEquivalenceMember.deleteMany({ where: { courseId } }),
+    prisma.courseContentSyncMember.deleteMany({ where: { courseId } }),
     // Preserve CQI history rather than deleting it outright.
     prisma.cqiRecord.updateMany({ where: { courseId }, data: { courseId: null } }),
     // Other courses can point BACK at this one (as their benchmark

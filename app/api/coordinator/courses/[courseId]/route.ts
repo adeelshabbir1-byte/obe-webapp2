@@ -11,7 +11,11 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { batch: true } });
   if (!course || !course.batch || course.batch.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  await deleteCourseCompletely(params.courseId);
+  try {
+    await deleteCourseCompletely(params.courseId);
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "something went wrong deleting this course" }, { status: 500 });
+  }
   await writeAuditLog({ actorUserId: user.id, action: "COURSE_DELETED", entityType: "Course", entityId: params.courseId });
 
   return NextResponse.json({ ok: true });
