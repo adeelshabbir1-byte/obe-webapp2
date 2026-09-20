@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { copyCourseContent } from "./benchmarkCopy";
+import { pairForEquivalence } from "./equivalencePairing";
 
 const DEGREE_PRIORITY = ["computer science", "software engineering", "artificial intelligence", "cyber", "data science"];
 function degreePriorityRank(degreeProgram: string | null | undefined): number {
@@ -123,6 +124,24 @@ export async function linkAsFollowerOfSource(sourceCourseId: string, newCourseId
   if (existingSourceMembership) {
     await prisma.courseContentSyncMember.create({ data: { groupId: existingSourceMembership.groupId, courseId: newCourseId, isBase: false } });
     await reconsiderGroupBase(existingSourceMembership.groupId, newCourseId);
+    // If the newly-added course happens to be offered in the same term
+    // as any existing group member, they're genuinely the same real
+    // class running twice — combine them for teaching too, same as
+    // every other way a course can join a group. Uncommon on this
+    // specific path (a newly-created batch is usually for a LATER term
+    // than what's already in the group), but still possible when two
+    // different programs' new batches both land in the same term.
+    const newCourse = await prisma.course.findUnique({ where: { id: newCourseId } });
+    if (newCourse?.offeredTermName) {
+      const otherMembers = await prisma.courseContentSyncMember.findMany({
+        where: { groupId: existingSourceMembership.groupId, courseId: { not: newCourseId } }, include: { course: true },
+      });
+      for (const m of otherMembers) {
+        if (m.course.offeredTermName === newCourse.offeredTermName && m.course.offeredTermYear === newCourse.offeredTermYear) {
+          await pairForEquivalence(newCourseId, m.course.id, chairmanId, chairmanId, true);
+        }
+      }
+    }
     return;
   }
 

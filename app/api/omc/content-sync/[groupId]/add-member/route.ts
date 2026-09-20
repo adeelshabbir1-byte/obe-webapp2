@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { reconsiderGroupBase } from "../../../../../../lib/contentSync";
+import { pairForEquivalence } from "../../../../../../lib/equivalencePairing";
 
 // Adds a course directly to an existing group, as a follower — the
 // direct equivalent of the "pair" endpoint's "memberA && !memberB"
@@ -35,6 +36,22 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   await reconsiderGroupBase(params.groupId, courseId);
   await prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } });
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_MEMBER_ADDED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { courseId } });
+
+  // If the newly-added course turns out to actually be offered in the
+  // same term as any existing member, they're genuinely the same real
+  // class running twice — combine them for teaching too, same as
+  // /pair and /group-multiple already do. This check was previously
+  // missing from this specific path, which is why courses added this
+  // way could stay content-linked without ever becoming equivalent.
+  const newCourse = await prisma.course.findUnique({ where: { id: courseId } });
+  const otherMembers = await prisma.courseContentSyncMember.findMany({ where: { groupId: params.groupId, courseId: { not: courseId } }, include: { course: true } });
+  if (newCourse?.offeredTermName) {
+    for (const m of otherMembers) {
+      if (m.course.offeredTermName === newCourse.offeredTermName && m.course.offeredTermYear === newCourse.offeredTermYear) {
+        await pairForEquivalence(newCourse.id, m.course.id, user.managedById, user.id, true);
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

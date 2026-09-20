@@ -168,6 +168,18 @@ export default function ContentSyncManager() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  async function handleFixMissingEquivalence() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/omc/content-sync/fix-missing-equivalence", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      if (data.pairsCreated === 0) { setNotice(`Checked ${data.pairsChecked} same-term pair(s) — all were already marked equivalent.`); setBusy(false); return; }
+      setNotice(`Created ${data.pairsCreated} missing equivalence link(s): ${data.created.join(", ")}.`);
+      setBusy(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
   async function handleSyncAll() {
     setBusy(true); setError(""); setNotice(""); setSyncProgress(null);
     let totalGroupsSynced = 0, totalCoursesSynced = 0, totalSkippedGraded = 0, totalSkippedOlderBatch = 0, totalPending = 0;
@@ -406,6 +418,9 @@ export default function ContentSyncManager() {
         </button>
         <button onClick={handleFixAllBases} disabled={busy} style={{ fontSize: 12.5, padding: "5px 10px", border: "1px solid var(--line)", background: "#fff", marginLeft: 8 }}>
           Fix All Bases (one-time correction for older links)
+        </button>
+        <button onClick={handleFixMissingEquivalence} disabled={busy} style={{ fontSize: 12.5, padding: "5px 10px", border: "1px solid var(--line)", background: "#fff", marginLeft: 8 }}>
+          Fix Missing Equivalence (link same-term pairs for teaching too)
         </button>
       </div>
 
