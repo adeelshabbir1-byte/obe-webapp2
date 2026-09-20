@@ -19,7 +19,7 @@ export async function GET() {
 
   const allCourses = await prisma.course.findMany({
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
-    include: { equivalenceMember: true },
+    include: { equivalenceMember: true, masterCourse: { select: { id: true, code: true, title: true } } },
     orderBy: [{ code: "asc" }],
   });
 
@@ -35,9 +35,22 @@ export async function GET() {
   const creators = creatorIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: creatorIds } } }) : [];
   const creatorNameById = new Map(creators.map((u) => [u.id, u.name]));
 
+  // A group's members SHOULD all share the same masterCourse link, once
+  // set together via this page — but if only some were set (e.g. before
+  // this feature existed, or set individually elsewhere), the first
+  // non-null one found is shown as the group's current value.
+  const masterCourseByGroupId = new Map<string, { id: string; code: string; title: string }>();
+  for (const c of allCourses) {
+    const groupId = c.equivalenceMember?.groupId;
+    if (groupId && c.masterCourse && !masterCourseByGroupId.has(groupId)) masterCourseByGroupId.set(groupId, c.masterCourse);
+  }
+
   return NextResponse.json({
     batches: batchColumns,
-    groups: groups.map((g) => ({ id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null })),
+    groups: groups.map((g) => ({
+      id: g.id, name: g.name, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
+      masterCourse: masterCourseByGroupId.get(g.id) || null,
+    })),
   });
 }
 

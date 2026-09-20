@@ -35,7 +35,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
     const courses = await prisma.course.findMany({
       where: { batchId: batch.id },
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
-      include: { ploMappings: true },
+      include: { ploMappings: true, masterCourse: { select: { code: true } } },
     });
     const assignerIds = Array.from(new Set(courses.flatMap((c) => c.ploMappings.map((m) => m.assignedById)).filter((id): id is string => !!id)));
     const assigners = assignerIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: assignerIds } } }) : [];
@@ -43,7 +43,13 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
     const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
     if (courses.length === 0 && plos.length === 0) continue;
 
-    const hecSuggestions = await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: courses.map((c) => c.code) } } });
+    // Prefer each course's explicitly-linked MasterCourse's own code
+    // over the course's own code string — HEC suggestions are keyed by
+    // HEC's code convention, which often doesn't match what actually
+    // got imported as this course's local code, so relying on the
+    // course's own code alone silently misses most matches.
+    const lookupCode = (c: (typeof courses)[number]) => c.masterCourse?.code || c.code;
+    const hecSuggestions = await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: courses.map(lookupCode) } } });
     const hecByCode = new Map<string, number[]>();
     for (const s of hecSuggestions) hecByCode.set(s.courseCode, [...(hecByCode.get(s.courseCode) || []), s.ploNumber]);
 
@@ -54,7 +60,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
         mappedPloIds: c.ploMappings.map((m) => m.ploId),
         assignedByPloId: Object.fromEntries(c.ploMappings.map((m) => [m.ploId, m.assignedById ? assignerNameById.get(m.assignedById) || null : null])),
-        hecSuggestedPloNumbers: hecByCode.get(c.code) || [],
+        hecSuggestedPloNumbers: hecByCode.get(lookupCode(c)) || [],
       })),
     });
   }

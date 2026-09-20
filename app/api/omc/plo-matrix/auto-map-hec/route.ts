@@ -14,12 +14,17 @@ export async function POST(req: NextRequest) {
   if (!batch) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
 
   const [courses, plos] = await Promise.all([
-    prisma.course.findMany({ where: { batchId: batch.id } }),
+    prisma.course.findMany({ where: { batchId: batch.id }, include: { masterCourse: { select: { code: true } } } }),
     prisma.pLO.findMany({ where: { batchId: batch.id } }),
   ]);
   const ploByNumber = new Map(plos.map((p) => [p.number, p]));
 
-  const codes = Array.from(new Set(courses.map((c) => c.code)));
+  // Prefer the course's explicitly-linked MasterCourse's own code over
+  // the course's own code string — HEC suggestions are keyed by HEC's
+  // code convention, which often doesn't match what actually got
+  // imported as this course's local code.
+  const lookupCode = (c: (typeof courses)[number]) => c.masterCourse?.code || c.code;
+  const codes = Array.from(new Set(courses.map(lookupCode)));
   const suggestions = await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: codes } } });
   const suggestionsByCode = new Map<string, number[]>();
   for (const s of suggestions) suggestionsByCode.set(s.courseCode, [...(suggestionsByCode.get(s.courseCode) || []), s.ploNumber]);
@@ -27,7 +32,7 @@ export async function POST(req: NextRequest) {
   let created = 0, skippedNoPlo = 0, skippedNoSuggestion = 0, alreadyMapped = 0;
 
   for (const course of courses) {
-    const ploNumbers = suggestionsByCode.get(course.code);
+    const ploNumbers = suggestionsByCode.get(lookupCode(course));
     if (!ploNumbers) { skippedNoSuggestion++; continue; }
 
     for (const num of ploNumbers) {

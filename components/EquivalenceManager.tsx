@@ -5,7 +5,8 @@ import SortableTable from "./SortableTable";
 
 type Course = { id: string; code: string; title: string; studentCount: number; groupId: string | null; offeredTermName: string | null; offeredTermYear: number | null };
 type BatchColumn = { batchId: string; batchLabel: string; courses: Course[] };
-type Group = { id: string; name: string; createdByName?: string | null };
+type Group = { id: string; name: string; createdByName?: string | null; masterCourse: { id: string; code: string; title: string } | null };
+type MasterCourseOption = { id: string; code: string; title: string; degreeProgram: string; hasPloSuggestions: boolean };
 
 export default function EquivalenceManager() {
   const [batches, setBatches] = useState<BatchColumn[]>([]);
@@ -14,6 +15,26 @@ export default function EquivalenceManager() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<{ batchId: string; courseId: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
+  const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
+  const [pickerSearch, setPickerSearch] = useState("");
+
+  useEffect(() => {
+    fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); });
+  }, []);
+
+  async function setGroupMasterCourse(groupId: string, masterCourseId: string | null) {
+    setBusy(true); setError("");
+    try {
+      const res = await fetch("/api/omc/equivalence/set-master-course", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId, masterCourseId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      setPickerOpenForGroup(null); setPickerSearch(""); setBusy(false); await load();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
 
   async function load() {
     try {
@@ -83,6 +104,11 @@ export default function EquivalenceManager() {
           back to the bottom of its own column).
         </p>
         {selected && <p style={{ fontSize: 12, color: "var(--brass-dark)" }}>Selected — click a course in another column to pair.</p>}
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>
+          The <b>HEC Course</b> column links a group to its matching HEC/standard-curriculum course — once set,
+          HEC's suggested PLO mapping becomes available on the PLO-Course Matrix page for that course in every
+          batch it's linked to ("Auto-map HEC" there applies it, one batch at a time).
+        </p>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
@@ -91,6 +117,7 @@ export default function EquivalenceManager() {
             <tr>
               <th style={{ minWidth: 130 }}>Group</th>
               {batches.map((b) => <th key={b.batchId} style={{ minWidth: 200 }}>{b.batchLabel}</th>)}
+              <th style={{ minWidth: 220 }}>HEC Course</th>
             </tr>
           </thead>
           <tbody>
@@ -124,6 +151,56 @@ export default function EquivalenceManager() {
                     </td>
                   );
                 })}
+                <td>
+                  {rowIndex < groups.length && (() => {
+                    const group = groups[rowIndex];
+                    const isOpen = pickerOpenForGroup === group.id;
+                    if (!isOpen) {
+                      return (
+                        <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11.5 }}>
+                          {group.masterCourse ? (
+                            <>
+                              <div style={{ fontWeight: 600 }}>{group.masterCourse.code}</div>
+                              <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
+                            </>
+                          ) : (
+                            <span style={{ color: "var(--slate)" }}>Not linked — click to set</span>
+                          )}
+                        </div>
+                      );
+                    }
+                    const filtered = masterOptions.filter((o) =>
+                      !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
+                    ).slice(0, 30);
+                    return (
+                      <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, minWidth: 260 }}>
+                        <input
+                          autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
+                          placeholder="Search HEC course code or title…"
+                          style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
+                        />
+                        <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                          {group.masterCourse && (
+                            <div onClick={() => setGroupMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
+                              ✕ Clear link
+                            </div>
+                          )}
+                          {filtered.map((o) => (
+                            <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
+                              <b>{o.code}</b> — {o.title}
+                              {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                              <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
+                            </div>
+                          ))}
+                          {filtered.length === 0 && <div style={{ fontSize: 11, color: "var(--slate)", padding: 4 }}>No matches.</div>}
+                        </div>
+                        <button onClick={() => { setPickerOpenForGroup(null); setPickerSearch(""); }} style={{ fontSize: 10.5, padding: "2px 6px", marginTop: 4, border: "1px solid var(--line)", background: "#fff" }}>
+                          Cancel
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </td>
               </tr>
             ))}
           </tbody>
