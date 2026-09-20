@@ -5,7 +5,7 @@ import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
 type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number };
-type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
+type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
@@ -64,6 +64,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
           textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
+          prerequisiteCourseId: fd.get("prerequisiteCourseId") || null,
         }),
       });
       const data = await res.json();
@@ -83,6 +84,7 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
           textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
+          prerequisiteCourseId: fd.get("prerequisiteCourseId") || null,
         }),
       });
       const data = await res.json();
@@ -154,6 +156,12 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                       {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                     <input name="semesterNumber" type="number" min={1} max={8} defaultValue={c.semesterNumber ?? ""} style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} placeholder="Sem" />
+                    <select name="prerequisiteCourseId" defaultValue={c.prerequisiteCourseId ?? ""} style={{ padding: "6px 8px", border: "1px solid var(--line)", minWidth: 160 }}>
+                      <option value="">No prerequisite</option>
+                      {courses.filter((other) => other.id !== c.id).map((other) => (
+                        <option key={other.id} value={other.id}>{other.title}</option>
+                      ))}
+                    </select>
                     <input name="textbook" defaultValue={c.textbook ?? ""} placeholder="Textbook" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} />
                     <input name="referenceMaterial" defaultValue={c.referenceMaterial ?? ""} placeholder="Reference material" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} />
                     <textarea name="catalogDescription" defaultValue={c.catalogDescription ?? ""} placeholder="Catalog description / course outline" style={{ flex: "1 1 100%", padding: "6px 8px", border: "1px solid var(--line)", minHeight: 50 }} />
@@ -165,7 +173,12 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
             ) : (
               <Fragment key={c.id}>
                 <tr>
-                  <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td><td>{c.category}</td><td>{c.semesterNumber ?? "—"}</td>
+                  <td>{c.code}</td>
+                  <td>
+                    {c.title}
+                    {c.prerequisiteCourseTitle && <div style={{ fontSize: 10, color: "var(--slate)" }}>Prereq: {c.prerequisiteCourseTitle}</div>}
+                  </td>
+                  <td>{c.creditHours}</td><td>{c.category}</td><td>{c.semesterNumber ?? "—"}</td>
                   <td style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setEditingCourseId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
                     <button onClick={() => setExpandedClosCourseId(expandedClosCourseId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
@@ -228,6 +241,12 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
             <div className="field"><label>Credits</label><input name="creditHours" type="number" required /></div>
             <div className="field"><label>Category</label><select name="category" required>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
             <div className="field"><label>Semester</label><input name="semesterNumber" type="number" min={1} max={8} /></div>
+            <div className="field"><label>Prerequisite</label>
+              <select name="prerequisiteCourseId" defaultValue="">
+                <option value="">No prerequisite</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
+            </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 4 }}>
             <div className="field"><label>Textbook (optional)</label><input name="textbook" /></div>

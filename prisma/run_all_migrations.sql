@@ -2768,6 +2768,91 @@ ALTER TABLE "CourseContentSyncGroup" ADD COLUMN IF NOT EXISTS "needsSync" BOOLEA
 -- editable by OMC); set means a specific chairman's own clone, freely
 -- editable by their OMC, invisible to every other chairman.
 ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "chairmanId" TEXT;
-ALTER TABLE "MasterCurriculum" ADD CONSTRAINT IF NOT EXISTS "MasterCurriculum_chairmanId_fkey"
-  FOREIGN KEY ("chairmanId") REFERENCES "User"(id) ON DELETE SET NULL ON UPDATE CASCADE;
+-- Postgres has no "ADD CONSTRAINT IF NOT EXISTS" — this is the standard
+-- idiom for the same idempotent effect.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'MasterCurriculum_chairmanId_fkey') THEN
+    ALTER TABLE "MasterCurriculum" ADD CONSTRAINT "MasterCurriculum_chairmanId_fkey"
+      FOREIGN KEY ("chairmanId") REFERENCES "User"(id) ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS "MasterCurriculum_chairmanId_idx" ON "MasterCurriculum"("chairmanId");
+
+-- Adds PLO mapping to MasterCourseClo, mirroring the real CLO model's
+-- mappedPloId — one primary PLO per CLO.
+ALTER TABLE "MasterCourseClo" ADD COLUMN IF NOT EXISTS "mappedPloId" TEXT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'MasterCourseClo_mappedPloId_fkey') THEN
+    ALTER TABLE "MasterCourseClo" ADD CONSTRAINT "MasterCourseClo_mappedPloId_fkey"
+      FOREIGN KEY ("mappedPloId") REFERENCES "MasterPLO"(id) ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS "MasterCourseClo_mappedPloId_idx" ON "MasterCourseClo"("mappedPloId");
+
+-- Supports program-specific copies of the grand HEC master curriculum
+-- (e.g. "BS Artificial Intelligence" built from "BS Computer Science -
+-- HEC 2025"), tracked back to their source for the sync mechanism.
+ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "degreeProgram" TEXT;
+ALTER TABLE "MasterCurriculum" ADD COLUMN IF NOT EXISTS "parentCurriculumId" TEXT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'MasterCurriculum_parentCurriculumId_fkey') THEN
+    ALTER TABLE "MasterCurriculum" ADD CONSTRAINT "MasterCurriculum_parentCurriculumId_fkey"
+      FOREIGN KEY ("parentCurriculumId") REFERENCES "MasterCurriculum"(id) ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS "MasterCurriculum_parentCurriculumId_idx" ON "MasterCurriculum"("parentCurriculumId");
+
+-- A proper domain field for grouping Domain Elective courses (AI,
+-- Cyber Security, Data Science, etc.) when building program-specific
+-- copies of a grand master curriculum, rather than parsing it out of
+-- free-text catalogDescription.
+ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "domain" TEXT;
+
+-- Distinguishes HEC-sourced PLO mappings (the official document itself
+-- tagged the CLO) from system-suggested ones (inferred from the CLO's
+-- wording by keyword rules) — shown differently in the Course-PLO
+-- matrix so the two are never confused.
+ALTER TABLE "MasterCourseClo" ADD COLUMN IF NOT EXISTS "ploMappingSource" TEXT;
+
+-- Course prerequisite within the same master curriculum, mirroring the
+-- real Course model's self-referencing prerequisiteCourseId.
+ALTER TABLE "MasterCourse" ADD COLUMN IF NOT EXISTS "prerequisiteCourseId" TEXT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'MasterCourse_prerequisiteCourseId_fkey') THEN
+    ALTER TABLE "MasterCourse" ADD CONSTRAINT "MasterCourse_prerequisiteCourseId_fkey"
+      FOREIGN KEY ("prerequisiteCourseId") REFERENCES "MasterCourse"(id) ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS "MasterCourse_prerequisiteCourseId_idx" ON "MasterCourse"("prerequisiteCourseId");
+
+-- Staging tables for the "equate courses" review workflow: newly
+-- fetched/researched courses wait here for Super User review before
+-- being permanently embedded in a master curriculum.
+CREATE TABLE IF NOT EXISTS "PendingMasterCourse" (
+  id TEXT PRIMARY KEY,
+  "masterCurriculumId" TEXT NOT NULL REFERENCES "MasterCurriculum"(id),
+  title TEXT NOT NULL,
+  "suggestedCode" TEXT,
+  category TEXT,
+  domain TEXT,
+  source TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  "reviewedByUserId" TEXT,
+  "reviewedAt" TIMESTAMP,
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "PendingMasterCourse_masterCurriculumId_idx" ON "PendingMasterCourse"("masterCurriculumId");
+CREATE INDEX IF NOT EXISTS "PendingMasterCourse_status_idx" ON "PendingMasterCourse"(status);
+
+CREATE TABLE IF NOT EXISTS "PendingMasterCourseClo" (
+  id TEXT PRIMARY KEY,
+  "pendingMasterCourseId" TEXT NOT NULL REFERENCES "PendingMasterCourse"(id),
+  statement TEXT NOT NULL,
+  "bloomLevel" TEXT NOT NULL,
+  "orderIndex" INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS "PendingMasterCourseClo_pendingMasterCourseId_idx" ON "PendingMasterCourseClo"("pendingMasterCourseId");

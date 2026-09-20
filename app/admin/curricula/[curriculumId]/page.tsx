@@ -23,7 +23,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: params.curriculumId },
     include: {
-      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" } } } },
+      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" } }, prerequisiteCourse: { select: { title: true } } } },
       plos: { orderBy: { number: "asc" } },
     },
   });
@@ -44,6 +44,9 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
           </div>
         </div>
         <a href="/admin/curricula" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to Master Curricula</a>
+        <a href={`/admin/curricula/${curriculum.id}/create-program`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Create Program Copy</a>
+        <a href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</a>
+        <a href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</a>
       </div>
 
       <CurriculumDetailManager
@@ -51,6 +54,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
         courses={curriculum.courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber,
           textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial,
+          prerequisiteCourseId: c.prerequisiteCourseId, prerequisiteCourseTitle: c.prerequisiteCourse?.title ?? null,
           seedClos: c.seedClos, suggestedPloNumbers: ploNumbersByCode.get(c.code) || [],
         }))}
         plos={curriculum.plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description }))}

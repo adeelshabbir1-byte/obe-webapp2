@@ -1264,6 +1264,17 @@ model MasterCurriculum {
   sourceReference    String?  // e.g. "HEC/NCRC/CS&IT/2025/8163"
   status             String   @default("PUBLISHED") // DRAFT | PUBLISHED | SUPERSEDED
   createdAt          DateTime @default(now())
+  // The specific degree program this curriculum is for — e.g. "BS
+  // Computer Science", "BS Artificial Intelligence". Null for the one
+  // grand HEC curriculum, which spans every discipline's electives
+  // rather than belonging to a single program.
+  degreeProgram       String?
+  // The grand HEC curriculum this program copy was built from, if any
+  // — lets the sync mechanism trace a program copy (and, transitively,
+  // any institute clone of it) back to its HEC source.
+  parentCurriculumId  String?
+  parentCurriculum    MasterCurriculum? @relation("ProgramCopyParent", fields: [parentCurriculumId], references: [id])
+  programCopies       MasterCurriculum[] @relation("ProgramCopyParent")
   // Null = the shared, official reference copy — visible to every
   // chairman, but never directly editable by OMC (only a Super User
   // curator edits the official copy). Set = a specific chairman's own
@@ -1276,8 +1287,10 @@ model MasterCurriculum {
 
   courses            MasterCourse[]
   plos               MasterPLO[]
+  pendingCourses     PendingMasterCourse[]
 
   @@index([chairmanId])
+  @@index([parentCurriculumId])
 }
 
 model MasterCourse {
@@ -1288,7 +1301,14 @@ model MasterCourse {
   title               String
   creditHours         Int
   category            String   // General Education | Major | IDS | Certification | Capstone Project | Field Experience
+  domain              String?  // for Domain Elective courses: which specialization track it belongs to
+                                // (e.g. "Artificial Intelligence", "Cyber Security") — used to group
+                                // electives when building a program-specific copy of a grand curriculum
   semesterNumber      Int?
+  prerequisiteCourseId String? // the course that should be taken before this one, within the same curriculum —
+                                // mirrors the real Course model's prerequisiteCourseId
+  prerequisiteCourse  MasterCourse? @relation("MasterPrerequisiteLineage", fields: [prerequisiteCourseId], references: [id])
+  postrequisiteCourses MasterCourse[] @relation("MasterPrerequisiteLineage")
   textbook            String?  // flows into every Course created from this template on import
   catalogDescription  String?  @db.Text
   referenceMaterial    String?
@@ -1298,6 +1318,7 @@ model MasterCourse {
   seedTopics          MasterCourseTopic[]
 
   @@index([masterCurriculumId])
+  @@index([prerequisiteCourseId])
   @@unique([masterCurriculumId, code])
 }
 
@@ -1310,8 +1331,19 @@ model MasterCourseClo {
   statement      String @db.Text
   bloomLevel     String // C1..C6, inferred from the outcome's verb
   orderIndex     Int    @default(0)
+  mappedPloId    String? // references this same curriculum's own MasterPLO —
+                          // mirrors the real CLO model's mappedPloId, one primary
+                          // PLO per CLO (not several), matching how the source
+                          // HEC document itself tags each CLO
+  mappedPlo      MasterPLO? @relation(fields: [mappedPloId], references: [id])
+  ploMappingSource String? // "HEC" | "SYSTEM" — HEC: the official document
+                           // itself tagged this CLO with a PLO number. SYSTEM:
+                           // inferred from the CLO's verbs/content by keyword
+                           // rules, unverified — shown differently in the
+                           // Course-PLO matrix so the two are never confused
 
   @@index([masterCourseId])
+  @@index([mappedPloId])
 }
 
 // A real (or standard-curriculum-synthesized) 32-lecture topic breakdown for
@@ -1336,8 +1368,49 @@ model MasterPLO {
   title               String
   description         String   @db.Text
 
+  mappedClos          MasterCourseClo[]
+
   @@index([masterCurriculumId])
   @@unique([masterCurriculumId, number])
+}
+
+// A newly-fetched/researched course (e.g. from a web research pass)
+// staged for Super User review before it's permanently embedded in a
+// master curriculum — the "equate courses" workflow: the reviewer sees
+// this alongside a fuzzy-matched existing course (if any) and either
+// confirms it as that same course (discarding the duplicate, or
+// merging its CLOs in), or confirms it as a genuinely new course
+// (creating a real MasterCourse from this staged data), or rejects it
+// outright.
+model PendingMasterCourse {
+  id                 String   @id @default(cuid())
+  masterCurriculumId String
+  masterCurriculum   MasterCurriculum @relation(fields: [masterCurriculumId], references: [id])
+  title              String
+  suggestedCode      String?
+  category           String?  // General Education | Major | Domain Elective | ...
+  domain             String?
+  source             String   @db.Text // where this was fetched from — e.g. "NUST course_content_files, CS-343" or "web research pass, 2026-09-20"
+  status             String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedByUserId   String?
+  reviewedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  clos               PendingMasterCourseClo[]
+
+  @@index([masterCurriculumId])
+  @@index([status])
+}
+
+model PendingMasterCourseClo {
+  id                     String @id @default(cuid())
+  pendingMasterCourseId  String
+  pendingMasterCourse    PendingMasterCourse @relation(fields: [pendingMasterCourseId], references: [id])
+  statement              String @db.Text
+  bloomLevel             String
+  orderIndex             Int    @default(0)
+
+  @@index([pendingMasterCourseId])
 }
 
 model AuditLog {

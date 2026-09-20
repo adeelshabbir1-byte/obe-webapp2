@@ -14,6 +14,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
   if (!body.code || !body.title || !body.creditHours || !body.category) {
     return NextResponse.json({ error: "code, title, creditHours, category are required" }, { status: 400 });
   }
+  if (body.prerequisiteCourseId && body.prerequisiteCourseId === params.courseId) {
+    return NextResponse.json({ error: "a course cannot be its own prerequisite" }, { status: 400 });
+  }
 
   const updated = await prisma.masterCourse.update({
     where: { id: params.courseId },
@@ -23,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
       textbook: body.textbook !== undefined ? (body.textbook || null) : course.textbook,
       catalogDescription: body.catalogDescription !== undefined ? (body.catalogDescription || null) : course.catalogDescription,
       referenceMaterial: body.referenceMaterial !== undefined ? (body.referenceMaterial || null) : course.referenceMaterial,
+      prerequisiteCourseId: body.prerequisiteCourseId !== undefined ? (body.prerequisiteCourseId || null) : course.prerequisiteCourseId,
     },
   });
 
