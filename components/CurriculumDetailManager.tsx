@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null };
+type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number };
+type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
+const BLOOM_LEVELS = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
 export default function CurriculumDetailManager({ curriculumId, courses, plos }: { curriculumId: string; courses: MCourse[]; plos: MPlo[] }) {
   const router = useRouter();
@@ -15,6 +17,41 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
   const [loading, setLoading] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editingPloId, setEditingPloId] = useState<string | null>(null);
+  const [expandedClosCourseId, setExpandedClosCourseId] = useState<string | null>(null);
+  const [newCloStatement, setNewCloStatement] = useState("");
+  const [newCloBloom, setNewCloBloom] = useState("C2");
+
+  async function addClo(courseId: string) {
+    if (!newCloStatement.trim()) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/admin/curricula/${curriculumId}/courses/${courseId}/clos`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statement: newCloStatement, bloomLevel: newCloBloom }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setNewCloStatement(""); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
+  async function deleteClo(cloId: string) {
+    setLoading(true);
+    await fetch(`/api/admin/curricula/clos/${cloId}`, { method: "DELETE" });
+    setLoading(false); router.refresh();
+  }
+
+  async function togglePlo(courseId: string, current: number[], ploNumber: number) {
+    const next = current.includes(ploNumber) ? current.filter((n) => n !== ploNumber) : [...current, ploNumber];
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/admin/curricula/${curriculumId}/courses/${courseId}/plo-suggestions`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ploNumbers: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
 
   async function addCourse(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -126,13 +163,57 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                 </td>
               </tr>
             ) : (
-              <tr key={c.id}>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td><td>{c.category}</td><td>{c.semesterNumber ?? "—"}</td>
-                <td style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setEditingCourseId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                  <button onClick={() => removeCourse(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
-                </td>
-              </tr>
+              <Fragment key={c.id}>
+                <tr>
+                  <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td><td>{c.category}</td><td>{c.semesterNumber ?? "—"}</td>
+                  <td style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setEditingCourseId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
+                    <button onClick={() => setExpandedClosCourseId(expandedClosCourseId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                      CLOs ({c.seedClos.length}) / PLOs ({c.suggestedPloNumbers.length})
+                    </button>
+                    <button onClick={() => removeCourse(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                  </td>
+                </tr>
+                {expandedClosCourseId === c.id && (
+                  <tr>
+                    <td colSpan={6} style={{ background: "#FAFAF8", padding: 12 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                        <div>
+                          <h4 style={{ fontSize: 12, marginBottom: 6 }}>Seed CLOs</h4>
+                          {c.seedClos.map((clo) => (
+                            <div key={clo.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", gap: 6 }}>
+                              <span><b>{clo.bloomLevel}</b> — {clo.statement}</span>
+                              <button onClick={() => deleteClo(clo.id)} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff", flexShrink: 0 }}>✕</button>
+                            </div>
+                          ))}
+                          {c.seedClos.length === 0 && <p style={{ fontSize: 11, color: "var(--slate)" }}>No seed CLOs yet.</p>}
+                          <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                            <select value={newCloBloom} onChange={(e) => setNewCloBloom(e.target.value)} style={{ fontSize: 11, padding: 3 }}>
+                              {BLOOM_LEVELS.map((b) => <option key={b} value={b}>{b}</option>)}
+                            </select>
+                            <input value={newCloStatement} onChange={(e) => setNewCloStatement(e.target.value)} placeholder="New CLO statement…" style={{ fontSize: 11, padding: 3, flex: 1 }} />
+                            <button onClick={() => addClo(c.id)} disabled={loading} className="btn btn-brass" style={{ fontSize: 11, padding: "3px 10px" }}>Add</button>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: 12, marginBottom: 6 }}>
+                            PLO suggestions <span style={{ fontWeight: 400, color: "var(--slate)" }}>(shared by course code across every curriculum using it)</span>
+                          </h4>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {plos.map((p) => (
+                              <label key={p.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}>
+                                <input type="checkbox" checked={c.suggestedPloNumbers.includes(p.number)} disabled={loading} onChange={() => togglePlo(c.id, c.suggestedPloNumbers, p.number)} />
+                                PLO-{p.number}
+                              </label>
+                            ))}
+                            {plos.length === 0 && <p style={{ fontSize: 11, color: "var(--slate)" }}>Add PLOs to this curriculum first.</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </SortableTable>

@@ -83,6 +83,7 @@ model User {
   coursePreferences  FacultyCoursePreference[] @relation("FacultyCoursePreferenceFaculty")
   courseShortNames   CourseShortName[] @relation("CourseShortNameChairman")
   contentSyncGroups  CourseContentSyncGroup[] @relation("ContentSyncChairman")
+  ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -1263,9 +1264,20 @@ model MasterCurriculum {
   sourceReference    String?  // e.g. "HEC/NCRC/CS&IT/2025/8163"
   status             String   @default("PUBLISHED") // DRAFT | PUBLISHED | SUPERSEDED
   createdAt          DateTime @default(now())
+  // Null = the shared, official reference copy — visible to every
+  // chairman, but never directly editable by OMC (only a Super User
+  // curator edits the official copy). Set = a specific chairman's own
+  // clone, freely editable by their OMC, invisible to every other
+  // chairman. Cloning exists specifically so a chairman can adapt HEC's
+  // curriculum for their own future imports without ever touching the
+  // shared original other institutions rely on too.
+  chairmanId         String?
+  chairman           User?    @relation("MasterCurriculumOwner", fields: [chairmanId], references: [id])
 
   courses            MasterCourse[]
   plos               MasterPLO[]
+
+  @@index([chairmanId])
 }
 
 model MasterCourse {

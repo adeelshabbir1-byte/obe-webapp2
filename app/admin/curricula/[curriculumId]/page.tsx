@@ -22,9 +22,17 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
 
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: params.curriculumId },
-    include: { courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] }, plos: { orderBy: { number: "asc" } } },
+    include: {
+      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" } } } },
+      plos: { orderBy: { number: "asc" } },
+    },
   });
   if (!curriculum) notFound();
+
+  const codes = curriculum.courses.map((c) => c.code);
+  const suggestions = codes.length > 0 ? await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: codes } } }) : [];
+  const ploNumbersByCode = new Map<string, number[]>();
+  for (const s of suggestions) ploNumbersByCode.set(s.courseCode, [...(ploNumbersByCode.get(s.courseCode) || []), s.ploNumber]);
 
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
@@ -40,7 +48,11 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
 
       <CurriculumDetailManager
         curriculumId={curriculum.id}
-        courses={curriculum.courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber, textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial }))}
+        courses={curriculum.courses.map((c) => ({
+          id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber,
+          textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial,
+          seedClos: c.seedClos, suggestedPloNumbers: ploNumbersByCode.get(c.code) || [],
+        }))}
         plos={curriculum.plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description }))}
       />
     </Shell>

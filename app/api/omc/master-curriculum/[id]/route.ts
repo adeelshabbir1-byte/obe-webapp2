@@ -30,6 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     curriculum: {
       id: curriculum.id, title: curriculum.title, authority: curriculum.authority, version: curriculum.version,
       status: curriculum.status, sourceReference: curriculum.sourceReference,
+      isOwned: curriculum.chairmanId === user.managedById,
       plos: curriculum.plos,
       courses: curriculum.courses.map((c) => ({
         id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category,
@@ -44,6 +45,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const existing = await prisma.masterCurriculum.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (existing.chairmanId !== user.managedById) {
+    return NextResponse.json({ error: "this is the shared official reference copy (or another institution's own copy) — clone it first to make your own editable version" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { title, authority, version, status, sourceReference } = body;

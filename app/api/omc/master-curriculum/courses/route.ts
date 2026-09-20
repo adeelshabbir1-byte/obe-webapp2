@@ -13,6 +13,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "masterCurriculumId, code, title, creditHours, and category are required" }, { status: 400 });
   }
 
+  const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: masterCurriculumId } });
+  if (!curriculum) return NextResponse.json({ error: "curriculum not found" }, { status: 404 });
+  if (curriculum.chairmanId !== user.managedById) {
+    return NextResponse.json({ error: "this is the shared official reference copy (or another institution's own copy) — clone it first to make your own editable version" }, { status: 403 });
+  }
+
   const clash = await prisma.masterCourse.findUnique({ where: { masterCurriculumId_code: { masterCurriculumId, code: code.trim() } } });
   if (clash) return NextResponse.json({ error: `"${code}" already exists in this curriculum` }, { status: 409 });
 
