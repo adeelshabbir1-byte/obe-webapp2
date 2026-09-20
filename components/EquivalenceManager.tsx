@@ -82,16 +82,22 @@ export default function EquivalenceManager() {
 
   // Row layout: grouped rows first (aligned by group order), then each
   // column's remaining ungrouped courses stacked independently below.
+  const [showOnlyUnlinked, setShowOnlyUnlinked] = useState(false);
+  const visibleGroups = showOnlyUnlinked ? groups.filter((g) => !g.masterCourse) : groups;
   const maxUngrouped = Math.max(0, ...batches.map((b) => b.courses.filter((c) => !c.groupId).length));
-  const totalRows = groups.length + maxUngrouped;
+  // Ungrouped rows have no group to link to a HEC course at all, so
+  // they're excluded when filtering to "not yet linked", same as
+  // Content Sync's version of this filter.
+  const totalRows = showOnlyUnlinked ? visibleGroups.length : visibleGroups.length + maxUngrouped;
 
   function cellFor(batch: BatchColumn, rowIndex: number): Course | null {
-    if (rowIndex < groups.length) {
-      const g = groups[rowIndex];
+    if (rowIndex < visibleGroups.length) {
+      const g = visibleGroups[rowIndex];
       return batch.courses.find((c) => c.groupId === g.id) || null;
     }
+    if (showOnlyUnlinked) return null;
     const ungrouped = batch.courses.filter((c) => !c.groupId);
-    return ungrouped[rowIndex - groups.length] || null;
+    return ungrouped[rowIndex - visibleGroups.length] || null;
   }
 
   return (
@@ -104,6 +110,10 @@ export default function EquivalenceManager() {
           back to the bottom of its own column).
         </p>
         {selected && <p style={{ fontSize: 12, color: "var(--brass-dark)" }}>Selected — click a course in another column to pair.</p>}
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginTop: 6 }}>
+          <input type="checkbox" checked={showOnlyUnlinked} onChange={(e) => setShowOnlyUnlinked(e.target.checked)} />
+          Show only groups not yet linked to a HEC course
+        </label>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>
           The <b>HEC Course</b> column links a group to its matching HEC/standard-curriculum course — once set,
           HEC's suggested PLO mapping becomes available on the PLO-Course Matrix page for that course in every
@@ -116,44 +126,24 @@ export default function EquivalenceManager() {
           <thead>
             <tr>
               <th style={{ minWidth: 130 }}>Group</th>
-              {batches.map((b) => <th key={b.batchId} style={{ minWidth: 200 }}>{b.batchLabel}</th>)}
               <th style={{ minWidth: 220 }}>HEC Course</th>
+              {batches.map((b) => <th key={b.batchId} style={{ minWidth: 200 }}>{b.batchLabel}</th>)}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: totalRows }).map((_, rowIndex) => (
-              <tr key={rowIndex} style={{ borderTop: rowIndex === groups.length ? "2px solid var(--line)" : undefined }}>
+              <tr key={rowIndex} style={{ borderTop: rowIndex === visibleGroups.length ? "2px solid var(--line)" : undefined }}>
                 <td style={{ fontSize: 11, color: "var(--slate)" }}>
-                  {rowIndex < groups.length && (
+                  {rowIndex < visibleGroups.length && (
                     <>
-                      {groups[rowIndex].name}
-                      {groups[rowIndex].createdByName && <div style={{ fontSize: 9.5 }}>by {groups[rowIndex].createdByName}</div>}
+                      {visibleGroups[rowIndex].name}
+                      {visibleGroups[rowIndex].createdByName && <div style={{ fontSize: 9.5 }}>by {visibleGroups[rowIndex].createdByName}</div>}
                     </>
                   )}
                 </td>
-                {batches.map((b) => {
-                  const course = cellFor(b, rowIndex);
-                  if (!course) return <td key={b.batchId}></td>;
-                  const isSelected = selected?.courseId === course.id;
-                  return (
-                    <td key={b.batchId}
-                      onClick={() => !busy && handleClick(b.batchId, course.id)}
-                      onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
-                      style={{
-                        cursor: "pointer", padding: "6px 8px",
-                        background: isSelected ? "#E8E6FB" : course.groupId ? "#CCFBF1" : undefined,
-                        border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>{course.code}</div>
-                      <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{course.title} ({course.studentCount})</div>
-                      <div style={{ fontSize: 9.5, color: "var(--brass-dark)", fontWeight: 600 }}>{course.offeredTermName ? `${course.offeredTermName} ${course.offeredTermYear}` : "Term not set"}</div>
-                    </td>
-                  );
-                })}
-                <td>
-                  {rowIndex < groups.length && (() => {
-                    const group = groups[rowIndex];
+                <td style={{ background: rowIndex < visibleGroups.length && !visibleGroups[rowIndex].masterCourse ? "#FEE2E2" : undefined }}>
+                  {rowIndex < visibleGroups.length && (() => {
+                    const group = visibleGroups[rowIndex];
                     const isOpen = pickerOpenForGroup === group.id;
                     if (!isOpen) {
                       return (
@@ -164,7 +154,7 @@ export default function EquivalenceManager() {
                               <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
                             </>
                           ) : (
-                            <span style={{ color: "var(--slate)" }}>Not linked — click to set</span>
+                            <span style={{ color: "var(--rust)", fontWeight: 600 }}>Not linked — click to set</span>
                           )}
                         </div>
                       );
@@ -201,6 +191,26 @@ export default function EquivalenceManager() {
                     );
                   })()}
                 </td>
+                {batches.map((b) => {
+                  const course = cellFor(b, rowIndex);
+                  if (!course) return <td key={b.batchId}></td>;
+                  const isSelected = selected?.courseId === course.id;
+                  return (
+                    <td key={b.batchId}
+                      onClick={() => !busy && handleClick(b.batchId, course.id)}
+                      onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
+                      style={{
+                        cursor: "pointer", padding: "6px 8px",
+                        background: isSelected ? "#E8E6FB" : course.groupId ? "#CCFBF1" : undefined,
+                        border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{course.code}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{course.title} ({course.studentCount})</div>
+                      <div style={{ fontSize: 9.5, color: "var(--brass-dark)", fontWeight: 600 }}>{course.offeredTermName ? `${course.offeredTermName} ${course.offeredTermYear}` : "Term not set"}</div>
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

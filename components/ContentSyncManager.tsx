@@ -212,6 +212,7 @@ export default function ContentSyncManager() {
   const [editingCodeCourseId, setEditingCodeCourseId] = useState<string | null>(null);
   const [editCodeValue, setEditCodeValue] = useState("");
   const [editCodeApplyAll, setEditCodeApplyAll] = useState(true);
+  const [showOnlyUnlinked, setShowOnlyUnlinked] = useState(false);
   const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
   const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
@@ -316,6 +317,12 @@ export default function ContentSyncManager() {
   const allRows = [...groupRows, ...ungroupedRows].sort((a, b) =>
     (a.semesterNumber ?? 999) - (b.semesterNumber ?? 999) || typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label)
   );
+  // Only group rows can actually be "linked" or not — an ungrouped row
+  // has no group to attach a HEC link to at all, so it's excluded from
+  // this filter too rather than shown as a false positive.
+  const visibleRows = showOnlyUnlinked
+    ? allRows.filter((row) => row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse)
+    : allRows;
 
   function coursesInCell(row: Row, batchId: string): (Course | GroupMember)[] {
     return row.courses.filter((c) => c.batchId === batchId);
@@ -395,6 +402,10 @@ export default function ContentSyncManager() {
               group's base, that group is reused and the rest merge into it. Rows are sorted by semester, then course type, so related courses line up
               together. (Double-click a single linked course to unlink just that one, without selecting first.)
             </p>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 10 }}>
+              <input type="checkbox" checked={showOnlyUnlinked} onChange={(e) => setShowOnlyUnlinked(e.target.checked)} />
+              Show only groups not yet linked to a HEC course
+            </label>
             {selectedCourseIds.size > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F5F3FF", padding: 8, border: "1px solid var(--brass)" }}>
                 <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
@@ -413,15 +424,15 @@ export default function ContentSyncManager() {
               <thead>
                 <tr>
                   <th style={{ minWidth: 140, textAlign: "left", fontSize: 11, padding: 4 }}>Course</th>
+                  <th style={{ minWidth: 200, textAlign: "left", fontSize: 11, padding: 4 }}>HEC Course</th>
                   {batchColumns.map((b) => (
                     <th key={b.id} style={{ minWidth: 170, textAlign: "left", fontSize: 11, padding: 4 }}>{b.degreeProgram} — {b.batchName}</th>
                   ))}
-                  <th style={{ minWidth: 200, textAlign: "left", fontSize: 11, padding: 4 }}>HEC Course</th>
                 </tr>
               </thead>
               <tbody>
-                {allRows.map((row, idx) => {
-                  const prevRow = allRows[idx - 1];
+                {visibleRows.map((row, idx) => {
+                  const prevRow = visibleRows[idx - 1];
                   const newSemester = idx > 0 && prevRow.semesterNumber !== row.semesterNumber;
                   return (
                     <tr key={row.key} style={{ borderTop: newSemester ? "2px solid var(--line)" : undefined }}>
@@ -429,6 +440,57 @@ export default function ContentSyncManager() {
                         {idx === 0 || newSemester ? <b style={{ color: "var(--ink)" }}>Sem {row.semesterNumber ?? "?"}</b> : null}
                         <div>{row.courseType}</div>
                         <div style={{ fontStyle: "italic" }}>{row.label}</div>
+                      </td>
+                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse ? "#FEE2E2" : undefined }}>
+                        {row.kind === "group" && row.groupId && (() => {
+                          const group = groups.find((g) => g.id === row.groupId);
+                          if (!group) return null;
+                          const isOpen = pickerOpenForGroup === group.id;
+                          if (!isOpen) {
+                            return (
+                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11 }}>
+                                {group.masterCourse ? (
+                                  <>
+                                    <div style={{ fontWeight: 600 }}>{group.masterCourse.code}</div>
+                                    <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
+                                  </>
+                                ) : (
+                                  <span style={{ color: "var(--rust)", fontWeight: 600 }}>Not linked — click to set</span>
+                                )}
+                              </div>
+                            );
+                          }
+                          const filtered = masterOptions.filter((o) =>
+                            !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
+                          ).slice(0, 30);
+                          return (
+                            <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                              <input
+                                autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
+                                placeholder="Search HEC course code or title…"
+                                style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
+                              />
+                              <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                                {group.masterCourse && (
+                                  <div onClick={() => setGroupMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
+                                    ✕ Clear link
+                                  </div>
+                                )}
+                                {filtered.map((o) => (
+                                  <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
+                                    <b>{o.code}</b> — {o.title}
+                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                                    <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
+                                  </div>
+                                ))}
+                                {filtered.length === 0 && <div style={{ fontSize: 11, color: "var(--slate)", padding: 4 }}>No matches.</div>}
+                              </div>
+                              <button onClick={() => { setPickerOpenForGroup(null); setPickerSearch(""); }} style={{ fontSize: 10.5, padding: "2px 6px", marginTop: 4, border: "1px solid var(--line)", background: "#fff" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </td>
                       {batchColumns.map((b) => {
                         const cellCourses = coursesInCell(row, b.id);
@@ -487,57 +549,6 @@ export default function ContentSyncManager() {
                           </td>
                         );
                       })}
-                      <td style={{ padding: 4, verticalAlign: "top" }}>
-                        {row.kind === "group" && row.groupId && (() => {
-                          const group = groups.find((g) => g.id === row.groupId);
-                          if (!group) return null;
-                          const isOpen = pickerOpenForGroup === group.id;
-                          if (!isOpen) {
-                            return (
-                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11 }}>
-                                {group.masterCourse ? (
-                                  <>
-                                    <div style={{ fontWeight: 600 }}>{group.masterCourse.code}</div>
-                                    <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
-                                  </>
-                                ) : (
-                                  <span style={{ color: "var(--slate)" }}>Not linked — click to set</span>
-                                )}
-                              </div>
-                            );
-                          }
-                          const filtered = masterOptions.filter((o) =>
-                            !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
-                          ).slice(0, 30);
-                          return (
-                            <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
-                              <input
-                                autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
-                                placeholder="Search HEC course code or title…"
-                                style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
-                              />
-                              <div style={{ maxHeight: 180, overflowY: "auto" }}>
-                                {group.masterCourse && (
-                                  <div onClick={() => setGroupMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
-                                    ✕ Clear link
-                                  </div>
-                                )}
-                                {filtered.map((o) => (
-                                  <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
-                                    <b>{o.code}</b> — {o.title}
-                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
-                                    <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
-                                  </div>
-                                ))}
-                                {filtered.length === 0 && <div style={{ fontSize: 11, color: "var(--slate)", padding: 4 }}>No matches.</div>}
-                              </div>
-                              <button onClick={() => { setPickerOpenForGroup(null); setPickerSearch(""); }} style={{ fontSize: 10.5, padding: "2px 6px", marginTop: 4, border: "1px solid var(--line)", background: "#fff" }}>
-                                Cancel
-                              </button>
-                            </div>
-                          );
-                        })()}
-                      </td>
                     </tr>
                   );
                 })}
