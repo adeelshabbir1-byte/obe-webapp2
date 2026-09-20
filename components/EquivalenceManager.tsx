@@ -18,6 +18,7 @@ export default function EquivalenceManager() {
   const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
   const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [showOnlyUnlinked, setShowOnlyUnlinked] = useState(false);
 
   useEffect(() => {
     fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); });
@@ -82,7 +83,6 @@ export default function EquivalenceManager() {
 
   // Row layout: grouped rows first (aligned by group order), then each
   // column's remaining ungrouped courses stacked independently below.
-  const [showOnlyUnlinked, setShowOnlyUnlinked] = useState(false);
   const visibleGroups = showOnlyUnlinked ? groups.filter((g) => !g.masterCourse) : groups;
   const maxUngrouped = Math.max(0, ...batches.map((b) => b.courses.filter((c) => !c.groupId).length));
   // Ungrouped rows have no group to link to a HEC course at all, so
