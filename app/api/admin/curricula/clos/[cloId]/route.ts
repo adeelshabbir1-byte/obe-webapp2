@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
-import { prisma } from "../../../../../lib/db";
-import { writeAuditLog } from "../../../../../lib/audit";
+import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { prisma } from "../../../../../../lib/db";
+import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function PUT(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
