@@ -192,30 +192,36 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
   const synced: string[] = [];
   const skippedGraded: string[] = [];
 
-  // Sequential across targets, not parallel — this project's DB
-  // connection is constrained to a small pool (connection_limit=1, set
-  // earlier to fix a different exhaustion issue), so running several
-  // targets' queries concurrently risks contention/timeouts rather than
-  // actually saving time; a failure partway through previously meant
-  // every course after it in a larger group was silently never synced.
-  for (const targetId of otherCourseIds) {
-    if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); continue; }
+  // Limited concurrency (4 at a time) rather than one at a time — the
+  // connection pool was widened to connection_limit=5 earlier
+  // specifically to allow this. Strictly sequential syncing was
+  // originally chosen when the pool was capped at 1, but with a group
+  // having 20+ members, doing every single one fully sequentially made
+  // even one large group's sync alone take long enough to exceed a
+  // request's time budget — this is what was actually causing "sync
+  // all" to stall on the same group every retry.
+  const CONCURRENCY = 4;
+  for (let i = 0; i < otherCourseIds.length; i += CONCURRENCY) {
+    const chunk = otherCourseIds.slice(i, i + CONCURRENCY);
+    await Promise.all(chunk.map(async (targetId) => {
+      if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); return; }
 
-    await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId } } });
-    // PaperDistributionItem references both LectureRow and CLO via FK,
-    // so it must clear first. Then LectureRow itself references CLO
-    // (via cloId), so it has to go before CLO too — only once both of
-    // those are gone can CLO, AssessmentInstrument, and
-    // CoursePloMapping (none of which anything else still points at)
-    // safely run together.
-    await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId } });
-    await prisma.lectureRow.deleteMany({ where: { courseId: targetId } });
-    await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } });
-    await prisma.cLO.deleteMany({ where: { courseId: targetId } });
-    await prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } });
+      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId } } });
+      // PaperDistributionItem references both LectureRow and CLO via FK,
+      // so it must clear first. Then LectureRow itself references CLO
+      // (via cloId), so it has to go before CLO too — only once both of
+      // those are gone can CLO, AssessmentInstrument, and
+      // CoursePloMapping (none of which anything else still points at)
+      // safely run together.
+      await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId } });
+      await prisma.lectureRow.deleteMany({ where: { courseId: targetId } });
+      await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } });
+      await prisma.cLO.deleteMany({ where: { courseId: targetId } });
+      await prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } });
 
-    await copyCourseContent(sourceCourseId, targetId);
-    synced.push(targetId);
+      await copyCourseContent(sourceCourseId, targetId);
+      synced.push(targetId);
+    }));
   }
 
   return { synced, skippedGraded, skippedOlderBatch };

@@ -179,13 +179,17 @@ export default function ContentSyncManager() {
       // function's execution time limit whenever one of them had many
       // members (some have 20+), leaving the pending count looking
       // completely unchanged or the request hanging indefinitely.
+      let consecutiveTimeouts = 0;
       while (true) {
         // A hard client-side timeout on top of the smaller batch size:
-        // if a single group's sync still somehow hangs (rather than
-        // failing with a clean error), this aborts it after 45s so the
-        // person sees a real error instead of "Syncing…" forever.
+        // if a single group's sync still somehow takes very long, this
+        // aborts it after 60s. Rather than stopping the whole process
+        // over one slow group, it's counted as a failure and the loop
+        // moves on — since the server always retries the OLDEST
+        // pending group first, stopping entirely here would mean
+        // getting stuck retrying that exact same group forever.
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         let res: Response;
         try {
           res = await fetch("/api/omc/content-sync/sync-all", {
@@ -195,13 +199,24 @@ export default function ContentSyncManager() {
         } catch (fetchErr: any) {
           clearTimeout(timeoutId);
           if (fetchErr.name === "AbortError") {
-            setError(`Synced ${totalGroupsSynced} of ${totalPending || "?"} so far, then one group's sync took too long (over 45s) and was stopped. Try again — it'll pick up from wherever it left off.`);
-          } else {
-            setError(`Synced ${totalGroupsSynced} of ${totalPending || "?"} so far, then hit a network error: ${fetchErr.message}`);
+            consecutiveTimeouts++;
+            allFailures.push(`One group's sync exceeded 60s and was skipped for this run (attempt ${consecutiveTimeouts}).`);
+            if (consecutiveTimeouts >= 5) {
+              setError(`Stopped after 5 groups in a row took too long. Synced ${totalGroupsSynced} so far — try again, or check if one specific group has an unusually large number of members.`);
+              setBusy(false); setSyncProgress(null); return;
+            }
+            // Aborting the client's fetch doesn't necessarily cancel
+            // the server-side work — it may still be running. A short
+            // pause before retrying reduces the chance of a new
+            // request picking up the exact same still-processing group.
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            continue;
           }
+          setError(`Synced ${totalGroupsSynced} of ${totalPending || "?"} so far, then hit a network error: ${fetchErr.message}`);
           setBusy(false); setSyncProgress(null); return;
         }
         clearTimeout(timeoutId);
+        consecutiveTimeouts = 0;
         const data = await res.json();
         if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); setSyncProgress(null); return; }
 
