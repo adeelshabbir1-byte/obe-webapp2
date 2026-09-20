@@ -17,7 +17,7 @@ export async function GET() {
 
   const [masterCourses, hecCodes] = await Promise.all([
     prisma.masterCourse.findMany({
-      select: { id: true, code: true, title: true, masterCurriculum: { select: { degreeProgram: true } } },
+      select: { id: true, code: true, title: true, masterCurriculum: { select: { title: true } } },
       orderBy: [{ code: "asc" }],
     }),
     prisma.hecPloSuggestion.findMany({ select: { courseCode: true }, distinct: ["courseCode"] }),
@@ -26,7 +26,7 @@ export async function GET() {
 
   return NextResponse.json({
     options: masterCourses.map((mc) => ({
-      id: mc.id, code: mc.code, title: mc.title, degreeProgram: mc.masterCurriculum.degreeProgram,
+      id: mc.id, code: mc.code, title: mc.title, degreeProgram: mc.masterCurriculum.title,
       hasPloSuggestions: hecCodeSet.has(mc.code),
     })),
   });
