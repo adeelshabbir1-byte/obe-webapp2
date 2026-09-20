@@ -12,7 +12,8 @@ type GroupMember = {
   courseId: string; isBase: boolean; code: string; shortName: string | null; title: string; batchId: string;
   degreeProgram: string; batchName: string; semesterNumber: number | null; courseType: string;
 };
-type Group = { id: string; name: string; needsSync: boolean; createdByName?: string | null; members: GroupMember[] };
+type Group = { id: string; name: string; needsSync: boolean; createdByName?: string | null; masterCourse: { id: string; code: string; title: string } | null; members: GroupMember[] };
+type MasterCourseOption = { id: string; code: string; title: string; degreeProgram: string; hasPloSuggestions: boolean };
 
 const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
 function typeRank(t: string): number {
@@ -211,6 +212,26 @@ export default function ContentSyncManager() {
   const [editingCodeCourseId, setEditingCodeCourseId] = useState<string | null>(null);
   const [editCodeValue, setEditCodeValue] = useState("");
   const [editCodeApplyAll, setEditCodeApplyAll] = useState(true);
+  const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
+  const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
+  const [pickerSearch, setPickerSearch] = useState("");
+
+  useEffect(() => {
+    fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); });
+  }, []);
+
+  async function setGroupMasterCourse(contentSyncGroupId: string, masterCourseId: string | null) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch("/api/omc/equivalence/set-master-course", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentSyncGroupId, masterCourseId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      setPickerOpenForGroup(null); setPickerSearch(""); setBusy(false); await loadCoursesAndGroups();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
 
   function startEditCode(courseId: string, currentCode: string, courseType: string) {
     setEditingCodeCourseId(courseId); setEditCodeValue(currentCode);
@@ -395,6 +416,7 @@ export default function ContentSyncManager() {
                   {batchColumns.map((b) => (
                     <th key={b.id} style={{ minWidth: 170, textAlign: "left", fontSize: 11, padding: 4 }}>{b.degreeProgram} — {b.batchName}</th>
                   ))}
+                  <th style={{ minWidth: 200, textAlign: "left", fontSize: 11, padding: 4 }}>HEC Course</th>
                 </tr>
               </thead>
               <tbody>
@@ -465,6 +487,57 @@ export default function ContentSyncManager() {
                           </td>
                         );
                       })}
+                      <td style={{ padding: 4, verticalAlign: "top" }}>
+                        {row.kind === "group" && row.groupId && (() => {
+                          const group = groups.find((g) => g.id === row.groupId);
+                          if (!group) return null;
+                          const isOpen = pickerOpenForGroup === group.id;
+                          if (!isOpen) {
+                            return (
+                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11 }}>
+                                {group.masterCourse ? (
+                                  <>
+                                    <div style={{ fontWeight: 600 }}>{group.masterCourse.code}</div>
+                                    <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
+                                  </>
+                                ) : (
+                                  <span style={{ color: "var(--slate)" }}>Not linked — click to set</span>
+                                )}
+                              </div>
+                            );
+                          }
+                          const filtered = masterOptions.filter((o) =>
+                            !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
+                          ).slice(0, 30);
+                          return (
+                            <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                              <input
+                                autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
+                                placeholder="Search HEC course code or title…"
+                                style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
+                              />
+                              <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                                {group.masterCourse && (
+                                  <div onClick={() => setGroupMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
+                                    ✕ Clear link
+                                  </div>
+                                )}
+                                {filtered.map((o) => (
+                                  <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
+                                    <b>{o.code}</b> — {o.title}
+                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                                    <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
+                                  </div>
+                                ))}
+                                {filtered.length === 0 && <div style={{ fontSize: 11, color: "var(--slate)", padding: 4 }}>No matches.</div>}
+                              </div>
+                              <button onClick={() => { setPickerOpenForGroup(null); setPickerSearch(""); }} style={{ fontSize: 10.5, padding: "2px 6px", marginTop: 4, border: "1px solid var(--line)", background: "#fff" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   );
                 })}

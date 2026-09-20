@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         members: {
           select: {
             courseId: true, isBase: true,
-            course: { select: { code: true, title: true, semesterNumber: true, courseType: true, batchId: true, batch: { select: { degreeProgram: true, batchName: true } } } },
+            course: { select: { code: true, title: true, semesterNumber: true, courseType: true, batchId: true, batch: { select: { degreeProgram: true, batchName: true } }, masterCourse: { select: { id: true, code: true, title: true } } } },
           },
         },
       },
@@ -74,6 +74,11 @@ export async function GET(req: NextRequest) {
       })),
       groups: groups.map((g) => ({
         id: g.id, name: g.name, needsSync: g.needsSync, createdByName: g.createdById ? creatorNameById.get(g.createdById) || null : null,
+        // A group's members should all share one HEC link once set
+        // together via this page — the first non-null one found is
+        // shown as the group's current value, in case only some were
+        // set individually before/elsewhere.
+        masterCourse: g.members.map((m) => m.course.masterCourse).find((mc) => mc) || null,
         members: g.members.map((m) => ({
           courseId: m.courseId, isBase: m.isBase, code: m.course.code, shortName: shortNameByCode.get(m.course.code) || null,
           title: m.course.title, batchId: m.course.batchId,

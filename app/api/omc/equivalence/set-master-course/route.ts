@@ -12,17 +12,20 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // PLO-Course Matrix page) instead of relying on the course's own code
 // string happening to match HEC's convention exactly.
 //
-// Pass either courseId (a single course) or groupId (every course
-// currently in that Course Equivalence group at once) — a group
-// represents "the same real course across batches", so they share one
-// HEC link rather than needing it set separately per batch.
+// Pass ONE of: courseId (a single course), groupId (every course
+// currently in that Course Equivalence group), or contentSyncGroupId
+// (every course in that Content Sync group) — a group represents "the
+// same real course across batches" either way, so they share one HEC
+// link rather than needing it set separately per batch.
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { courseId, groupId, masterCourseId } = body; // masterCourseId may be null, to clear the link
-  if (!courseId && !groupId) return NextResponse.json({ error: "courseId or groupId is required" }, { status: 400 });
+  const { courseId, groupId, contentSyncGroupId, masterCourseId } = body; // masterCourseId may be null, to clear the link
+  if (!courseId && !groupId && !contentSyncGroupId) {
+    return NextResponse.json({ error: "courseId, groupId, or contentSyncGroupId is required" }, { status: 400 });
+  }
 
   if (masterCourseId) {
     const masterCourse = await prisma.masterCourse.findUnique({ where: { id: masterCourseId } });
@@ -33,12 +36,15 @@ export async function PUT(req: NextRequest) {
   if (groupId) {
     const result = await prisma.course.updateMany({ where: { equivalenceMember: { groupId } }, data: { masterCourseId: masterCourseId || null } });
     updatedCount = result.count;
+  } else if (contentSyncGroupId) {
+    const result = await prisma.course.updateMany({ where: { contentSyncMember: { groupId: contentSyncGroupId } }, data: { masterCourseId: masterCourseId || null } });
+    updatedCount = result.count;
   } else {
     await prisma.course.update({ where: { id: courseId }, data: { masterCourseId: masterCourseId || null } });
     updatedCount = 1;
   }
 
-  await writeAuditLog({ actorUserId: user.id, action: "COURSE_MASTER_LINK_SET", entityType: "Course", entityId: courseId || groupId, metadata: { masterCourseId: masterCourseId || "cleared", updatedCount } });
+  await writeAuditLog({ actorUserId: user.id, action: "COURSE_MASTER_LINK_SET", entityType: "Course", entityId: courseId || groupId || contentSyncGroupId, metadata: { masterCourseId: masterCourseId || "cleared", updatedCount } });
 
   return NextResponse.json({ ok: true, updatedCount });
 }
