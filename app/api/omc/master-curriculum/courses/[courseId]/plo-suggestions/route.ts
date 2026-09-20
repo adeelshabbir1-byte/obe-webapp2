@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       skipDuplicates: true,
     });
   }
-  await writeAuditLog({ actorUserId: user.id, action: "HEC_PLO_SUGGESTIONS_UPDATED", entityType: "MasterCourse", entityId: params.courseId, metadata: { courseCode: course.code, ploNumbers } });
+  await writeAuditLog({ actorUserId: user.id, action: "HEC_PLO_SUGGESTIONS_UPDATED", entityType: "MasterCourse", entityId: params.courseId, metadata: { courseCode: course.code, ploNumbers: ploNumbers.join(",") } });
 
   return NextResponse.json({ ok: true });
 }

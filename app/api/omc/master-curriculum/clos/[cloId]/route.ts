@@ -18,7 +18,7 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
       ...(orderIndex !== undefined && { orderIndex: Number(orderIndex) }),
     },
   });
-  await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_CLO_UPDATED", entityType: "MasterCourseClo", entityId: params.cloId, metadata: body });
+  await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_CLO_UPDATED", entityType: "MasterCourseClo", entityId: params.cloId, metadata: { statement, bloomLevel, orderIndex } });
 
   return NextResponse.json({ ok: true });
 }

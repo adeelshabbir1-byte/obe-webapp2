@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       ...(referenceMaterial !== undefined && { referenceMaterial: referenceMaterial?.trim() || null }),
     },
   });
-  await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_UPDATED", entityType: "MasterCourse", entityId: params.courseId, metadata: body });
+  await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_UPDATED", entityType: "MasterCourse", entityId: params.courseId, metadata: { code, title, creditHours, category, semesterNumber, textbook } });
 
   return NextResponse.json({ ok: true });
 }

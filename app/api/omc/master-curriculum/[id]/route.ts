@@ -58,7 +58,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(sourceReference !== undefined && { sourceReference }),
     },
   });
-  await writeAuditLog({ actorUserId: user.id, action: "MASTER_CURRICULUM_UPDATED", entityType: "MasterCurriculum", entityId: params.id, metadata: body });
+  await writeAuditLog({ actorUserId: user.id, action: "MASTER_CURRICULUM_UPDATED", entityType: "MasterCurriculum", entityId: params.id, metadata: { title, authority, version, status, sourceReference } });
 
   return NextResponse.json({ ok: true });
 }
