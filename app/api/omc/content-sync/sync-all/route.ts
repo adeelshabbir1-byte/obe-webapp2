@@ -24,7 +24,14 @@ export async function POST(req: NextRequest) {
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   const body = await req.json().catch(() => ({}));
-  const batchSize = Math.min(Math.max(Number(body.batchSize) || 3, 1), 10);
+  // Reduced from 3 to 1 — some groups have 20+ members (courses
+  // shared across many batches/programs), and syncing even one such
+  // group is a lot of sequential clear-and-copy work on its own.
+  // Batching several of those together risked exceeding the
+  // serverless function's execution time limit, which could hang the
+  // request rather than fail cleanly — exactly what looked like
+  // "syncing never completes".
+  const batchSize = Math.min(Math.max(Number(body.batchSize) || 1, 1), 10);
 
   const [pendingGroups, totalPendingCount] = await Promise.all([
     prisma.courseContentSyncGroup.findMany({

@@ -173,15 +173,35 @@ export default function ContentSyncManager() {
     let totalGroupsSynced = 0, totalCoursesSynced = 0, totalSkippedGraded = 0, totalSkippedOlderBatch = 0, totalPending = 0;
     const allFailures: string[] = [];
     try {
-      // Loop, processing a small batch per request, until nothing's left
-      // pending — a single request trying to sync everything at once was
-      // exactly what could silently exceed a serverless function's
-      // execution time limit with a large number of groups, leaving the
-      // pending count looking completely unchanged.
+      // Loop, processing one group per request, until nothing's left
+      // pending — a single request trying to sync several groups at
+      // once was exactly what could silently exceed a serverless
+      // function's execution time limit whenever one of them had many
+      // members (some have 20+), leaving the pending count looking
+      // completely unchanged or the request hanging indefinitely.
       while (true) {
-        const res = await fetch("/api/omc/content-sync/sync-all", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchSize: 3 }),
-        });
+        // A hard client-side timeout on top of the smaller batch size:
+        // if a single group's sync still somehow hangs (rather than
+        // failing with a clean error), this aborts it after 45s so the
+        // person sees a real error instead of "Syncing…" forever.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        let res: Response;
+        try {
+          res = await fetch("/api/omc/content-sync/sync-all", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchSize: 1 }),
+            signal: controller.signal,
+          });
+        } catch (fetchErr: any) {
+          clearTimeout(timeoutId);
+          if (fetchErr.name === "AbortError") {
+            setError(`Synced ${totalGroupsSynced} of ${totalPending || "?"} so far, then one group's sync took too long (over 45s) and was stopped. Try again — it'll pick up from wherever it left off.`);
+          } else {
+            setError(`Synced ${totalGroupsSynced} of ${totalPending || "?"} so far, then hit a network error: ${fetchErr.message}`);
+          }
+          setBusy(false); setSyncProgress(null); return;
+        }
+        clearTimeout(timeoutId);
         const data = await res.json();
         if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); setSyncProgress(null); return; }
 
