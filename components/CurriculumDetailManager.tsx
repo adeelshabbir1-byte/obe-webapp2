@@ -4,7 +4,7 @@ import { useState, Fragment } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number };
+type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number; mappedPloNumber: number | null; ploMappingSource: string | null };
 type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
@@ -38,6 +38,18 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
     setLoading(true);
     await fetch(`/api/admin/curricula/clos/${cloId}`, { method: "DELETE" });
     setLoading(false); router.refresh();
+  }
+
+  async function updateCloPlo(cloId: string, ploId: string) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/admin/curricula/clos/${cloId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mappedPloId: ploId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function togglePlo(courseId: string, current: number[], ploNumber: number) {
@@ -193,12 +205,29 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                         <div>
                           <h4 style={{ fontSize: 12, marginBottom: 6 }}>Seed CLOs</h4>
-                          {c.seedClos.map((clo) => (
-                            <div key={clo.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", gap: 6 }}>
-                              <span><b>{clo.bloomLevel}</b> — {clo.statement}</span>
-                              <button onClick={() => deleteClo(clo.id)} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff", flexShrink: 0 }}>✕</button>
-                            </div>
-                          ))}
+                          {c.seedClos.map((clo) => {
+                            const sourceColor = clo.ploMappingSource === "HEC" ? "#F5E27A" : clo.ploMappingSource === "PU" ? "#B8E6B8" : clo.ploMappingSource === "SYSTEM" ? "#CFE3F5" : clo.ploMappingSource === "MANUAL" ? "#E0C6F0" : "#eee";
+                            return (
+                              <div key={clo.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                                  <span><b>{clo.bloomLevel}</b> — {clo.statement}</span>
+                                  <button onClick={() => deleteClo(clo.id)} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff", flexShrink: 0 }}>✕</button>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                                  <select
+                                    value={plos.find((p) => p.number === clo.mappedPloNumber)?.id ?? ""}
+                                    disabled={loading}
+                                    onChange={(e) => updateCloPlo(clo.id, e.target.value)}
+                                    style={{ fontSize: 10.5, padding: 2, background: sourceColor, border: "1px solid var(--line)" }}
+                                  >
+                                    <option value="">No PLO mapped</option>
+                                    {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}</option>)}
+                                  </select>
+                                  {clo.ploMappingSource && <span style={{ fontSize: 9.5, color: "var(--slate)" }}>({clo.ploMappingSource === "MANUAL" ? "set by you" : clo.ploMappingSource === "SYSTEM" ? "system-suggested" : `${clo.ploMappingSource}-sourced`})</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
                           {c.seedClos.length === 0 && <p style={{ fontSize: 11, color: "var(--slate)" }}>No seed CLOs yet.</p>}
                           <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
                             <select value={newCloBloom} onChange={(e) => setNewCloBloom(e.target.value)} style={{ fontSize: 11, padding: 3 }}>

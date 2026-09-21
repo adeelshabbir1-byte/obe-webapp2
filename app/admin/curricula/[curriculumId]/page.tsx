@@ -23,7 +23,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: params.curriculumId },
     include: {
-      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" } }, prerequisiteCourse: { select: { title: true } } } },
+      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" }, include: { mappedPlo: { select: { number: true } } } }, prerequisiteCourse: { select: { title: true } } } },
       plos: { orderBy: { number: "asc" } },
     },
   });
@@ -55,7 +55,8 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber,
           textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial,
           prerequisiteCourseId: c.prerequisiteCourseId, prerequisiteCourseTitle: c.prerequisiteCourse?.title ?? null,
-          seedClos: c.seedClos, suggestedPloNumbers: ploNumbersByCode.get(c.code) || [],
+          seedClos: c.seedClos.map((clo) => ({ id: clo.id, statement: clo.statement, bloomLevel: clo.bloomLevel, orderIndex: clo.orderIndex, mappedPloNumber: clo.mappedPlo?.number ?? null, ploMappingSource: clo.ploMappingSource })),
+          suggestedPloNumbers: ploNumbersByCode.get(c.code) || [],
         }))}
         plos={curriculum.plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description }))}
       />

@@ -8,7 +8,7 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
   if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { statement, bloomLevel, orderIndex } = body;
+  const { statement, bloomLevel, orderIndex, mappedPloId } = body;
 
   await prisma.masterCourseClo.update({
     where: { id: params.cloId },
@@ -16,9 +16,13 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
       ...(statement !== undefined && { statement: statement.trim() }),
       ...(bloomLevel !== undefined && { bloomLevel }),
       ...(orderIndex !== undefined && { orderIndex: Number(orderIndex) }),
+      // Setting this from the UI is a human decision — always tagged
+      // MANUAL regardless of what it was before (HEC/PU/SYSTEM), since
+      // an admin explicitly choosing it here supersedes any prior source.
+      ...(mappedPloId !== undefined && { mappedPloId: mappedPloId || null, ploMappingSource: mappedPloId ? "MANUAL" : null }),
     },
   });
-  await writeAuditLog({ actorUserId: user.id, action: "ADMIN_MASTER_COURSE_CLO_UPDATED", entityType: "MasterCourseClo", entityId: params.cloId, metadata: { statement, bloomLevel, orderIndex } });
+  await writeAuditLog({ actorUserId: user.id, action: "ADMIN_MASTER_COURSE_CLO_UPDATED", entityType: "MasterCourseClo", entityId: params.cloId, metadata: { statement, bloomLevel, orderIndex, mappedPloId } });
 
   return NextResponse.json({ ok: true });
 }

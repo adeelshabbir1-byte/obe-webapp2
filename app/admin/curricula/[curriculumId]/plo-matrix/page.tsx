@@ -27,7 +27,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
   // For each course × PLO number, determine the cell state: 'hec' if
   // any CLO mapping to that PLO is HEC-sourced, 'system' if only
   // system-suggested ones map there, or empty.
-  type CellState = "hec" | "system" | null;
+  type CellState = "hec" | "pu" | "system" | null;
   const matrix: Record<string, Record<number, CellState>> = {};
   for (const course of curriculum.courses) {
     matrix[course.id] = {};
@@ -36,13 +36,14 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
       const num = clo.mappedPlo.number;
       const current = matrix[course.id][num];
       if (clo.ploMappingSource === "HEC") matrix[course.id][num] = "hec";
-      else if (current !== "hec") matrix[course.id][num] = "system";
+      else if (clo.ploMappingSource === "PU" && current !== "hec") matrix[course.id][num] = "pu";
+      else if (current !== "hec" && current !== "pu") matrix[course.id][num] = "system";
     }
   }
 
   const cellStyle = (state: CellState) => ({
     textAlign: "center" as const, fontSize: 11, padding: "4px 2px", border: "1px solid var(--line)",
-    background: state === "hec" ? "#F5E27A" : state === "system" ? "#CFE3F5" : "#fff",
+    background: state === "hec" ? "#F5E27A" : state === "pu" ? "#B8E6B8" : state === "system" ? "#CFE3F5" : "#fff",
   });
 
   return (
@@ -59,6 +60,10 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 14, height: 14, background: "#F5E27A", border: "1px solid var(--line)", display: "inline-block" }} />
           HEC-sourced — the official document itself specifies this mapping
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 14, height: 14, background: "#B8E6B8", border: "1px solid var(--line)", display: "inline-block" }} />
+          PU-sourced — Punjab University's own document specifies this mapping
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 14, height: 14, background: "#CFE3F5", border: "1px solid var(--line)", display: "inline-block" }} />
