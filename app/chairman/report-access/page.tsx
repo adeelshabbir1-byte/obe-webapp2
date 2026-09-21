@@ -30,7 +30,7 @@ export default async function ReportAccessPage() {
       { href: "/chairman/audit-log", label: "Audit Log" },
       { href: "/chairman/report-access", label: "Report Access Control" },
       { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-      { href: "/omc/reports", label: "Reports" },
+      { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
     ]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Report Access Control</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>

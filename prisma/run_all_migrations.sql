@@ -2875,3 +2875,19 @@ CREATE TABLE IF NOT EXISTS "InstrumentEvidence" (
   "validatedAt" TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "InstrumentEvidence_instrumentId_idx" ON "InstrumentEvidence"("instrumentId");
+
+-- Per-institution AI configuration — lets a Chairman bring their own
+-- provider/model/API key rather than relying on the platform-wide one.
+CREATE TABLE IF NOT EXISTS "AiConfig" (
+  id TEXT PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL UNIQUE REFERENCES "User"(id),
+  provider TEXT NOT NULL DEFAULT 'anthropic',
+  "apiKey" TEXT,
+  model TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  "lastTestedAt" TIMESTAMP,
+  "lastTestOk" BOOLEAN,
+  "lastTestNote" TEXT,
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+);

@@ -14,7 +14,7 @@ const NAV = [
   { href: "/chairman/audit-log", label: "Audit Log" },
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-  { href: "/omc/reports", label: "Reports" },
+  { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
 ];
 
 export default async function ChairmanOmcPage() {

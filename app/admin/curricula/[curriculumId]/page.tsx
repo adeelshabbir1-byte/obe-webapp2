@@ -47,6 +47,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
         <a href={`/admin/curricula/${curriculum.id}/create-program`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Create Program Copy</a>
         <a href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</a>
         <a href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</a>
+        <a href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</a>
       </div>
 
       <CurriculumDetailManager

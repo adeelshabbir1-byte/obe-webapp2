@@ -36,7 +36,7 @@ export default async function CqiPage() {
         { href: "/chairman/audit-log", label: "Audit Log" },
         { href: "/chairman/report-access", label: "Report Access Control" },
         { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-        { href: "/omc/reports", label: "Reports" },
+        { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
       ]
     : [
         { href: "/omc/queue", label: "Review Queue" },
@@ -46,7 +46,7 @@ export default async function CqiPage() {
         { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
         { href: "/omc/equivalence", label: "Course Equivalence" },
         { href: "/chairman/cqi", label: "CQI Records" },
-        { href: "/omc/reports", label: "Reports" },
+        { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
       ];
 
   return (

@@ -1,5 +1,44 @@
 import { prisma } from "./db";
 
+// Traces a course up to its owning Chairman: Course -> Batch ->
+// Coordinator -> managedBy -> Chairman. Used to look up that
+// institution's own AI configuration rather than the platform default.
+async function findChairmanIdForCourse(courseId: string): Promise<string | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: { batch: { include: { coordinator: true } } },
+  });
+  const coordinator = course?.batch?.coordinator;
+  if (!coordinator) return null;
+  if (coordinator.role === "CHAIRMAN") return coordinator.id;
+  // walk up managedBy until we hit a CHAIRMAN (coordinator is typically managed directly by one, but this is defensive against deeper chains)
+  let current = coordinator;
+  for (let i = 0; i < 5 && current.managedById; i++) {
+    const next = await prisma.user.findUnique({ where: { id: current.managedById } });
+    if (!next) break;
+    if (next.role === "CHAIRMAN") return next.id;
+    current = next;
+  }
+  return null;
+}
+
+// Resolves which API key/model to use for a given course: that
+// institution's own AiConfig if they've set one up and enabled it,
+// otherwise the platform-wide ANTHROPIC_API_KEY env var. Returns null
+// if neither is available (falls back to the deterministic check).
+async function resolveAiCredentials(courseId: string): Promise<{ apiKey: string; model: string } | null> {
+  const chairmanId = await findChairmanIdForCourse(courseId);
+  if (chairmanId) {
+    const config = await prisma.aiConfig.findUnique({ where: { chairmanId } });
+    if (config?.enabled && config.apiKey) {
+      return { apiKey: config.apiKey, model: config.model };
+    }
+  }
+  const platformKey = process.env.ANTHROPIC_API_KEY;
+  if (platformKey) return { apiKey: platformKey, model: "claude-sonnet-4-6" };
+  return null;
+}
+
 // Uploads a file buffer to Supabase Storage via its REST API directly
 // (no SDK dependency). Requires SUPABASE_URL and
 // SUPABASE_SERVICE_ROLE_KEY to already be set as env vars — the same
@@ -67,10 +106,11 @@ export async function validateEvidence(evidenceId: string, fileBuffer: Buffer, c
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (apiKey && (contentType === "application/pdf" || contentType.startsWith("image/"))) {
+  const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: evidence.instrumentId } });
+  const aiCreds = instrument ? await resolveAiCredentials(instrument.courseId) : null;
+  if (aiCreds && (contentType === "application/pdf" || contentType.startsWith("image/"))) {
     try {
-      const result = await runAiCheck(apiKey, fileBuffer, contentType, clos);
+      const result = await runAiCheck(aiCreds.apiKey, aiCreds.model, fileBuffer, contentType, clos);
       await prisma.instrumentEvidence.update({
         where: { id: evidenceId },
         data: { status: result.verdict, method: "AI", reasoning: result.reasoning, checkedCloIds: cloIdsJson, validatedAt: new Date() },
@@ -85,15 +125,15 @@ export async function validateEvidence(evidenceId: string, fileBuffer: Buffer, c
     where: { id: evidenceId },
     data: {
       status: "FLAGGED", method: "DETERMINISTIC",
-      reasoning: apiKey
+      reasoning: aiCreds
         ? "The AI check couldn't run for this file (only PDF and image evidence are AI-checked currently, or the check itself failed) — please review manually."
-        : "No AI model is configured (ANTHROPIC_API_KEY not set), so this evidence hasn't been automatically checked against its CLOs. The upload itself succeeded — please review it manually.",
+        : "No AI model is configured for this institution or the platform (set one up under AI Configuration), so this evidence hasn't been automatically checked against its CLOs. The upload itself succeeded — please review it manually.",
       checkedCloIds: cloIdsJson, validatedAt: new Date(),
     },
   });
 }
 
-async function runAiCheck(apiKey: string, fileBuffer: Buffer, contentType: string, clos: { id: string; statement: string }[]): Promise<{ verdict: string; reasoning: string }> {
+async function runAiCheck(apiKeyStr: string, modelStr: string, fileBuffer: Buffer, contentType: string, clos: { id: string; statement: string }[]): Promise<{ verdict: string; reasoning: string }> {
   const base64 = fileBuffer.toString("base64");
   const isImage = contentType.startsWith("image/");
   const cloList = clos.map((c, i) => `${i + 1}. ${c.statement}`).join("\n");
@@ -108,7 +148,7 @@ async function runAiCheck(apiKey: string, fileBuffer: Buffer, contentType: strin
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: modelStr,
       max_tokens: 500,
       messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
     }),

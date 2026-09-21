@@ -37,6 +37,7 @@ model User {
   managedById        String?
   managedBy          User?    @relation("UserManagement", fields: [managedById], references: [id])
   managedUsers       User[]   @relation("UserManagement")
+  aiConfig           AiConfig? @relation("AiConfigChairman")
 
   mustChangePassword Boolean  @default(false)
   mfaEnabled         Boolean  @default(false)
@@ -1396,6 +1397,27 @@ model MasterPLO {
 
   @@index([masterCurriculumId])
   @@unique([masterCurriculumId, number])
+}
+
+// Per-institution AI configuration — lets a Chairman bring their own
+// provider/model/API key rather than relying on one platform-wide key.
+// Evidence validation (DotAI) and CQI auto-drafting both check here
+// first, falling back to the platform's own ANTHROPIC_API_KEY env var
+// if the institution hasn't configured one — so nothing breaks for
+// institutions that never set this up.
+model AiConfig {
+  id            String   @id @default(cuid())
+  chairmanId    String   @unique
+  chairman      User     @relation("AiConfigChairman", fields: [chairmanId], references: [id])
+  provider      String   @default("anthropic") // "anthropic" | "openai" — only anthropic actually wired up initially
+  apiKey        String?  @db.Text // stored as given; only ever displayed masked (last 4 chars) in the UI
+  model         String   @default("claude-sonnet-4-6")
+  enabled       Boolean  @default(false)
+  lastTestedAt  DateTime?
+  lastTestOk    Boolean?
+  lastTestNote  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // A newly-fetched/researched course (e.g. from a web research pass)
