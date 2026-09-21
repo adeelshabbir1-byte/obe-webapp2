@@ -2856,3 +2856,22 @@ CREATE TABLE IF NOT EXISTS "PendingMasterCourseClo" (
   "orderIndex" INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS "PendingMasterCourseClo_pendingMasterCourseId_idx" ON "PendingMasterCourseClo"("pendingMasterCourseId");
+
+-- DotAI-style evidence: a rubric/paper/project attached to an
+-- assessment instrument, checked against the CLOs it's meant to
+-- measure — AI-checked when configured, deterministic fallback
+-- otherwise, so a review is never blocked.
+CREATE TABLE IF NOT EXISTS "InstrumentEvidence" (
+  id TEXT PRIMARY KEY,
+  "instrumentId" TEXT NOT NULL REFERENCES "AssessmentInstrument"(id),
+  "fileName" TEXT NOT NULL,
+  "fileUrl" TEXT NOT NULL,
+  "uploadedByUserId" TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  method TEXT,
+  reasoning TEXT,
+  "checkedCloIds" TEXT,
+  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+  "validatedAt" TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "InstrumentEvidence_instrumentId_idx" ON "InstrumentEvidence"("instrumentId");

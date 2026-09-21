@@ -1232,8 +1232,32 @@ model AssessmentInstrument {
 
   lectureLinks LectureRowInstrument[]
   studentMarks StudentMark[]
+  evidence     InstrumentEvidence[]
 
   @@index([courseId])
+}
+
+// DotAI-style evidence: the rubric, exam paper, or project brief behind
+// an instrument, checked against every CLO that instrument's linked
+// LectureRows map to (via LectureRowInstrument -> LectureRow -> CLO).
+// A real AI check runs when ANTHROPIC_API_KEY is configured server-side;
+// otherwise a deterministic keyword-overlap fallback runs instead, so a
+// review is never blocked on having AI configured.
+model InstrumentEvidence {
+  id               String   @id @default(cuid())
+  instrumentId     String
+  instrument       AssessmentInstrument @relation(fields: [instrumentId], references: [id])
+  fileName         String
+  fileUrl          String   @db.Text // Supabase Storage public/signed URL
+  uploadedByUserId String
+  status           String   @default("PENDING") // PENDING | VALIDATED | FLAGGED | ERROR
+  method           String?  // "AI" | "DETERMINISTIC" — which check actually ran
+  reasoning        String?  @db.Text // the AI's explanation, or the fallback's note
+  checkedCloIds    String?  @db.Text // JSON array of CLO ids this evidence was checked against
+  createdAt        DateTime @default(now())
+  validatedAt      DateTime?
+
+  @@index([instrumentId])
 }
 
 model LectureRowInstrument {

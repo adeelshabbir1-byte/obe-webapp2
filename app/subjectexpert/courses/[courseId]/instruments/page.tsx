@@ -18,7 +18,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
     include: {
-      assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }] },
+      assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }], include: { evidence: { orderBy: { createdAt: "desc" } } } },
       lectureRows: { where: { source: "SE" }, orderBy: { lectureNumber: "asc" }, include: { instrumentLinks: true } },
       clos: { where: { source: "SE" } },
       coordinator: true,
@@ -52,7 +52,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
 
       <AssessmentsManager
         courseId={course.id}
-        initialInstruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore }))}
+        initialInstruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore, evidence: i.evidence.map((e) => ({ id: e.id, fileName: e.fileName, fileUrl: e.fileUrl, status: e.status, method: e.method, reasoning: e.reasoning })) }))}
         targets={{
           assignmentPct: course.assignmentPct, quizPct: course.quizPct,
           midtermPct: course.midtermPct, finalPct: course.finalPct,

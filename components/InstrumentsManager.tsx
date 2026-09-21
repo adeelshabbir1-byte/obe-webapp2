@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Instrument = { id: string; type: string; label: string; marksPct: number };
+type Evidence = { id: string; fileName: string; fileUrl: string; status: string; method: string | null; reasoning: string | null; createdAt: string };
+type Instrument = { id: string; type: string; label: string; marksPct: number; evidence: Evidence[] };
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
@@ -12,10 +13,23 @@ const TARGET_KEY: Record<string, keyof Targets> = {
   Quiz: "quizPct", Assignment: "assignmentPct", Midterm: "midtermPct", Final: "finalPct", Project: "projectPct", Lab: "labPct",
 };
 
+function statusBadge(status: string) {
+  const styles: Record<string, { bg: string; label: string }> = {
+    PENDING: { bg: "#eee", label: "Checking…" },
+    VALIDATED: { bg: "#B8E6B8", label: "Validated" },
+    FLAGGED: { bg: "#F5D0A9", label: "Needs review" },
+    ERROR: { bg: "#F5B8B8", label: "Error" },
+  };
+  const s = styles[status] || styles.PENDING;
+  return <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: s.bg }}>{s.label}</span>;
+}
+
 export default function InstrumentsManager({ courseId, initialInstruments, targets }: { courseId: string; initialInstruments: Instrument[]; targets: Targets }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function addInstrument(type: string, nextLabel: string, marksPct: string) {
     setLoading(true); setError("");
@@ -34,6 +48,18 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
     setLoading(true);
     await fetch(`/api/subjectexpert/courses/${courseId}/instruments/${id}`, { method: "DELETE" });
     setLoading(false); router.refresh();
+  }
+
+  async function uploadEvidence(instrumentId: string, file: File) {
+    setUploadingId(instrumentId); setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/subjectexpert/courses/${courseId}/instruments/${instrumentId}/evidence`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setUploadingId(null); return; }
+      setUploadingId(null); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setUploadingId(null); }
   }
 
   return (
@@ -56,14 +82,47 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
               </span>
             </div>
             <SortableTable>
-              <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
+              <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th>Evidence</th><th></th></tr></thead>
               <tbody>
-                {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
+                {items.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
                 {items.map((i) => (
-                  <tr key={i.id}>
-                    <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
-                    <td><button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
-                  </tr>
+                  <Fragment key={i.id}>
+                    <tr>
+                      <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
+                      <td>
+                        {i.evidence.length === 0 ? (
+                          <span style={{ fontSize: 11, color: "var(--slate)" }}>None attached</span>
+                        ) : (
+                          <button onClick={() => setExpandedId(expandedId === i.id ? null : i.id)} style={{ fontSize: 11, background: "none", border: "1px solid var(--line)", padding: "2px 8px", cursor: "pointer" }}>
+                            {i.evidence.length} file{i.evidence.length > 1 ? "s" : ""} {statusBadge(i.evidence[0].status)}
+                          </button>
+                        )}
+                      </td>
+                      <td style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <label style={{ fontSize: 11, color: "var(--brass-dark)", textDecoration: "underline", cursor: uploadingId === i.id ? "default" : "pointer" }}>
+                          {uploadingId === i.id ? "Uploading…" : "Attach rubric/paper"}
+                          <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: "none" }} disabled={uploadingId === i.id}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadEvidence(i.id, f); e.target.value = ""; }} />
+                        </label>
+                        <button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                      </td>
+                    </tr>
+                    {expandedId === i.id && i.evidence.length > 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ background: "#FAFAF8", padding: 10 }}>
+                          {i.evidence.map((e) => (
+                            <div key={e.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <a href={e.fileUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brass-dark)" }}>{e.fileName}</a>
+                                {statusBadge(e.status)}
+                              </div>
+                              {e.reasoning && <div style={{ color: "var(--slate)", fontSize: 10.5, marginTop: 2 }}>{e.method === "AI" ? "AI: " : "Note: "}{e.reasoning}</div>}
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </SortableTable>
