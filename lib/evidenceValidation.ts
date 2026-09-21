@@ -146,7 +146,7 @@ async function runAiCheck(apiKeyStr: string, modelStr: string, fileBuffer: Buffe
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    headers: { "Content-Type": "application/json", "x-api-key": apiKeyStr, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
       model: modelStr,
       max_tokens: 500,
