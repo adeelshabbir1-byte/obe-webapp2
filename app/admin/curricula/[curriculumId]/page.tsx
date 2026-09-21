@@ -53,7 +53,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
       <CurriculumDetailManager
         curriculumId={curriculum.id}
         courses={curriculum.courses.map((c) => ({
-          id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, semesterNumber: c.semesterNumber,
+          id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, category: c.category, domain: c.domain, semesterNumber: c.semesterNumber,
           textbook: c.textbook, catalogDescription: c.catalogDescription, referenceMaterial: c.referenceMaterial,
           prerequisiteCourseId: c.prerequisiteCourseId, prerequisiteCourseTitle: c.prerequisiteCourse?.title ?? null,
           seedClos: c.seedClos.map((clo) => ({ id: clo.id, statement: clo.statement, bloomLevel: clo.bloomLevel, orderIndex: clo.orderIndex, mappedPloNumber: clo.mappedPlo?.number ?? null, ploMappingSource: clo.ploMappingSource })),

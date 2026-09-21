@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
+import { courseTypeColor } from "../lib/courseTypeColors";
+
+// Master Curriculum's own category labels differ slightly from the
+// real Course model's courseType strings (e.g. "Domain Elective" vs
+// "Elective") — map to the shared color scheme's keys so both views
+// render the same type with the same color.
+function masterCategoryColor(category: string): string {
+  const map: Record<string, string> = {
+    "Major": "Core", "Domain Elective": "Elective", "General Education / Other": "General Education",
+  };
+  return courseTypeColor(map[category] || category);
+}
 
 type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number; mappedPloNumber: number | null; ploMappingSource: string | null };
-type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
+type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; domain: string | null; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
@@ -18,6 +30,8 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editingPloId, setEditingPloId] = useState<string | null>(null);
   const [expandedClosCourseId, setExpandedClosCourseId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [domainFilter, setDomainFilter] = useState("");
   const [newCloStatement, setNewCloStatement] = useState("");
   const [newCloBloom, setNewCloBloom] = useState("C2");
 
@@ -147,17 +161,35 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
     setLoading(false); router.refresh();
   }
 
+  const uniqueCategories = useMemo(() => Array.from(new Set(courses.map((c) => c.category))).sort(), [courses]);
+  const uniqueDomains = useMemo(() => Array.from(new Set(courses.map((c) => c.domain).filter((d): d is string => !!d))).sort(), [courses]);
+  const filteredCourses = useMemo(() => courses.filter((c) =>
+    (!categoryFilter || c.category === categoryFilter) && (!domainFilter || c.domain === domainFilter)
+  ), [courses, categoryFilter, domainFilter]);
+
   return (
     <>
       {error && <div className="err">{error}</div>}
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Courses ({courses.length})</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Courses ({filteredCourses.length} of {courses.length})</h3>
+        <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12 }}>
+            <option value="">All categories</option>
+            {uniqueCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+          {categoryFilter === "Domain Elective" && (
+            <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12 }}>
+              <option value="">All domains</option>
+              {uniqueDomains.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          )}
+        </div>
         <SortableTable>
           <thead><tr><th>Code</th><th>Title</th><th>Credits</th><th>Category</th><th>Sem</th><th></th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
-            {courses.map((c) => editingCourseId === c.id ? (
+            {filteredCourses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses match this filter.</td></tr>}
+            {filteredCourses.map((c) => editingCourseId === c.id ? (
               <tr key={c.id}>
                 <td colSpan={6}>
                   <form onSubmit={(e) => saveCourseEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
@@ -190,7 +222,14 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                     {c.title}
                     {c.prerequisiteCourseTitle && <div style={{ fontSize: 10, color: "var(--slate)" }}>Prereq: {c.prerequisiteCourseTitle}</div>}
                   </td>
-                  <td>{c.creditHours}</td><td>{c.category}</td><td>{c.semesterNumber ?? "—"}</td>
+                  <td>{c.creditHours}</td>
+                  <td>
+                    <span style={{ fontSize: 10.5, padding: "2px 7px", borderRadius: 3, background: masterCategoryColor(c.category), color: "#fff" }}>
+                      {c.category}
+                    </span>
+                    {c.domain && <div style={{ fontSize: 9.5, color: "var(--slate)", marginTop: 2 }}>{c.domain}</div>}
+                  </td>
+                  <td>{c.semesterNumber ?? "—"}</td>
                   <td style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setEditingCourseId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
                     <button onClick={() => setExpandedClosCourseId(expandedClosCourseId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>

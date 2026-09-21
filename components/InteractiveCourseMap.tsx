@@ -21,6 +21,10 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewSemester, setPreviewSemester] = useState<number | null>(null);
+  const [electiveModalCourseId, setElectiveModalCourseId] = useState<string | null>(null);
+  const [electiveOptions, setElectiveOptions] = useState<{ id: string; code: string; title: string; domain: string | null }[]>([]);
+  const [electiveSearch, setElectiveSearch] = useState("");
+  const [loadingElectives, setLoadingElectives] = useState(false);
 
   const maxSemester = initialCourses.length > 0 ? Math.max(8, ...initialCourses.map((c) => c.semesterNumber || 1)) : 8;
   const byRow: Record<number, Course[]> = {};
@@ -70,12 +74,39 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
 
   function onCourseClick(c: Course) {
     if (loading) return;
+    if (mode === "reposition" && c.courseType === "Elective" && !c.isOffered) {
+      openElectiveModal(c.id);
+      return;
+    }
     if (!selectedId) { setSelectedId(c.id); return; }
     if (selectedId === c.id) { setSelectedId(null); return; }
 
     if (mode === "prereq") {
       setPrerequisite(c.id, selectedId); // selectedId becomes c's prerequisite
     }
+  }
+
+  function openElectiveModal(courseId: string) {
+    setElectiveModalCourseId(courseId);
+    setElectiveSearch("");
+    setLoadingElectives(true);
+    fetch("/api/omc/curriculum-electives").then((r) => r.json()).then((data) => {
+      setElectiveOptions(data.courses || []);
+      setLoadingElectives(false);
+    });
+  }
+
+  async function fillElective(masterCourseId: string) {
+    if (!electiveModalCourseId) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/omc/courses/${electiveModalCourseId}/fill-elective`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ masterCourseId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setElectiveModalCourseId(null); setLoading(false); router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   function onRowClick(semesterNumber: number) {
@@ -107,7 +138,7 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
           {mode === "prereq"
             ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
-            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there.")}
+            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. Click an unfilled elective slot to choose a real course for it from your curriculum.")}
         </p>
       </div>
 
@@ -172,6 +203,26 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
           </svg>
         )}
       </div>
+
+      {electiveModalCourseId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setElectiveModalCourseId(null)}>
+          <div style={{ background: "#fff", padding: 20, width: 480, maxHeight: "70vh", overflowY: "auto", border: "1px solid var(--line)" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 14, marginBottom: 4 }}>Choose a course for this elective slot</h3>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>From your institution's own curriculum — this will rename the course and seed its CLOs.</p>
+            <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }} />
+            {loadingElectives && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading…</p>}
+            {!loadingElectives && electiveOptions
+              .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
+              .map((o) => (
+                <button key={o.id} onClick={() => fillElective(o.id)} disabled={loading} style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 8px", border: "1px solid var(--line)", background: "#fff", marginBottom: 4, fontSize: 12, cursor: "pointer" }}>
+                  {o.title} {o.domain && <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({o.domain})</span>}
+                </button>
+              ))}
+            {!loadingElectives && electiveOptions.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>No electives found in your institution's curriculum.</p>}
+            <button onClick={() => setElectiveModalCourseId(null)} style={{ marginTop: 10, fontSize: 11.5, background: "none", border: "1px solid var(--line)", padding: "4px 10px", cursor: "pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

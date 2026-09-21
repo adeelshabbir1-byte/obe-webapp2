@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const existingCodes = new Set(existingInBatch.map((c) => c.code));
   const importedIds = new Set(existingInBatch.map((c) => c.masterCourseId).filter(Boolean));
 
-  const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id));
+  const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id) && (!Array.isArray(body.courseIds) || body.courseIds.includes(mc.id)));
 
   let created = 0;
   let benchmarksCopied = 0;

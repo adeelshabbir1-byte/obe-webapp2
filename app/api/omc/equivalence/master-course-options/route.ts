@@ -1,25 +1,28 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { findOwnInstitutionCurriculum } from "../../../../../lib/institutionCurriculum";
 
-// Every MasterCourse (HEC/standard-curriculum template), for the "equate
-// with HEC course" picker on the Course Equivalence page. Not scoped to
-// the course's own program's curriculum — a general-education or shared
-// course can legitimately match a MasterCourse from a different
-// program's curriculum, so every option across every curriculum is
-// offered rather than narrowed. Each is flagged with whether it
-// actually has HEC PLO suggestion data, since linking to one that
-// doesn't wouldn't help with PLO copying (though the link itself is
-// still valid as general traceability).
+// Every MasterCourse from the OMC's OWN institution's curriculum copy
+// (the "HEC course" picker on the Course Equivalence page), not every
+// MasterCourse across every institution's clone — each institute now
+// has its own full clone of the grand curriculum with identical course
+// titles, so an unscoped query would offer the same course repeated
+// once per institution that happens to have a clone.
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
+  const curriculum = await findOwnInstitutionCurriculum(user.id);
+
   const [masterCourses, hecCodes] = await Promise.all([
-    prisma.masterCourse.findMany({
-      select: { id: true, code: true, title: true, masterCurriculum: { select: { title: true } } },
-      orderBy: [{ code: "asc" }],
-    }),
+    curriculum
+      ? prisma.masterCourse.findMany({
+          where: { masterCurriculumId: curriculum.id },
+          select: { id: true, code: true, title: true, masterCurriculum: { select: { title: true } } },
+          orderBy: [{ code: "asc" }],
+        })
+      : Promise.resolve([]),
     prisma.hecPloSuggestion.findMany({ select: { courseCode: true }, distinct: ["courseCode"] }),
   ]);
   const hecCodeSet = new Set(hecCodes.map((h) => h.courseCode));
@@ -31,3 +34,5 @@ export async function GET() {
     })),
   });
 }
+
+

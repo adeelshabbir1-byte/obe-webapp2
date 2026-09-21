@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CoursesManager from "../../../components/CoursesManager";
+import { findOwnInstitutionCurriculum } from "../../../lib/institutionCurriculum";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -55,10 +56,8 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 
-  const curricula = await prisma.masterCurriculum.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: [{ authority: "asc" }, { title: "asc" }, { version: "desc" }],
-  });
+  const ownCurriculum = await findOwnInstitutionCurriculum(user.id);
+  const curricula = ownCurriculum ? [ownCurriculum] : [];
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>

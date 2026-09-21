@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
@@ -25,6 +25,10 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
   const [importResult, setImportResult] = useState("");
   const [importBatchId, setImportBatchId] = useState(selectedBatchId || batches[0]?.id || "");
   const [importCurriculumId, setImportCurriculumId] = useState(curricula[0]?.id || "");
+  const [curriculumCourses, setCurriculumCourses] = useState<{ id: string; code: string; title: string; category: string; domain: string | null }[]>([]);
+  const [selectedImportIds, setSelectedImportIds] = useState<Set<string>>(new Set());
+  const [loadingCourseList, setLoadingCourseList] = useState(false);
+  const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [addBatchId, setAddBatchId] = useState(selectedBatchId || batches[0]?.id || "");
   const [copySourceBatchId, setCopySourceBatchId] = useState("");
   const replaceCheckboxRef = useRef<HTMLInputElement>(null);
@@ -33,6 +37,37 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
     router.push(url);
+  }
+
+  useEffect(() => {
+    if (!importCurriculumId) return;
+    setLoadingCourseList(true);
+    fetch(`/api/coordinator/curricula/${importCurriculumId}/courses`)
+      .then((r) => r.json())
+      .then((data) => {
+        const list = data.courses || [];
+        setCurriculumCourses(list);
+        // pre-select everything except Domain Electives — those are optional, picked explicitly
+        setSelectedImportIds(new Set(list.filter((c: any) => c.category !== "Domain Elective").map((c: any) => c.id)));
+        setLoadingCourseList(false);
+      });
+  }, [importCurriculumId]);
+
+  function toggleImportCourse(id: string) {
+    setSelectedImportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleImportDomain(domain: string, select: boolean) {
+    const ids = curriculumCourses.filter((c) => (c.domain || "Uncategorized") === domain).map((c) => c.id);
+    setSelectedImportIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) select ? next.add(id) : next.delete(id);
+      return next;
+    });
   }
 
   async function copyFromBatch() {
@@ -61,11 +96,12 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
 
   async function importHec() {
     if (!importBatchId || !importCurriculumId) { setError("Select both a batch and a curriculum first."); return; }
+    if (selectedImportIds.size === 0) { setError("Select at least one course to import."); return; }
     setLoading(true); setError(""); setImportResult("");
     try {
       const res = await fetch("/api/coordinator/courses/import-hec", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId: importBatchId, curriculumId: importCurriculumId }),
+        body: JSON.stringify({ batchId: importBatchId, curriculumId: importCurriculumId, courseIds: Array.from(selectedImportIds) }),
       });
       let data: any = {};
       try { data = await res.json(); }
@@ -236,7 +272,73 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
               {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
             </select>
           </div>
-          <button onClick={importHec} disabled={loading} className="btn btn-brass">{loading ? "Importing…" : "Import Courses"}</button>
+        </div>
+
+        {loadingCourseList && <p style={{ fontSize: 12, color: "var(--slate)", marginTop: 10 }}>Loading course list…</p>}
+
+        {!loadingCourseList && curriculumCourses.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 6 }}>
+              {selectedImportIds.size} of {curriculumCourses.length} courses selected — core/GE/IDS courses are pre-checked, electives are optional
+            </div>
+            {(() => {
+              const core = curriculumCourses.filter((c) => c.category !== "Domain Elective");
+              const domainMap = new Map<string, typeof curriculumCourses>();
+              for (const c of curriculumCourses.filter((c) => c.category === "Domain Elective")) {
+                const key = c.domain || "Uncategorized";
+                if (!domainMap.has(key)) domainMap.set(key, []);
+                domainMap.get(key)!.push(c);
+              }
+              return (
+                <>
+                  {core.length > 0 && (
+                    <div style={{ border: "1px solid var(--line)", marginBottom: 6, padding: 8, background: "#FAFAF8" }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6 }}>Core / GE / IDS ({core.length})</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {core.map((c) => (
+                          <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                            <input type="checkbox" checked={selectedImportIds.has(c.id)} onChange={() => toggleImportCourse(c.id)} />
+                            {c.title}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {[...domainMap.keys()].sort().map((domain) => {
+                    const list = domainMap.get(domain)!;
+                    const selectedCount = list.filter((c) => selectedImportIds.has(c.id)).length;
+                    const isExpanded = expandedDomains.has(domain);
+                    return (
+                      <div key={domain} style={{ border: "1px solid var(--line)", marginBottom: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#FAFAF8", cursor: "pointer" }}
+                          onClick={() => setExpandedDomains((prev) => { const next = new Set(prev); next.has(domain) ? next.delete(domain) : next.add(domain); return next; })}>
+                          <span style={{ fontSize: 11.5 }}>{isExpanded ? "▾" : "▸"} {domain} ({list.length}, {selectedCount} selected)</span>
+                          <span style={{ display: "flex", gap: 6 }}>
+                            <button onClick={(e) => { e.stopPropagation(); toggleImportDomain(domain, true); }} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff" }}>Select all</button>
+                            <button onClick={(e) => { e.stopPropagation(); toggleImportDomain(domain, false); }} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff" }}>Clear</button>
+                          </span>
+                        </div>
+                        {isExpanded && (
+                          <div style={{ padding: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {list.map((c) => (
+                              <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                                <input type="checkbox" checked={selectedImportIds.has(c.id)} onChange={() => toggleImportCourse(c.id)} />
+                                {c.title}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        <div style={{ marginTop: 12 }}>
+          <button onClick={importHec} disabled={loading} className="btn btn-brass">{loading ? "Importing…" : `Import ${selectedImportIds.size} Course(s)`}</button>
         </div>
       </div>
 
