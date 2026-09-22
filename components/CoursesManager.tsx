@@ -167,24 +167,40 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function assignSe(courseId: string, subjectExpertId: string) {
-    setLoading(true);
-    await fetch(`/api/coordinator/courses/${courseId}/assign-se`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
-    });
-    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, subjectExpertId: subjectExpertId || null } : c));
-    setLoading(false);
+  async function assignSe(courseId: string, subjectExpertId: string, revertEl?: HTMLSelectElement, revertValue?: string) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/courses/${courseId}/assign-se`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Couldn't assign — the course still shows its previous Subject Expert.");
+        if (revertEl) revertEl.value = revertValue || "";
+        setLoading(false); return;
+      }
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, subjectExpertId: subjectExpertId || null } : c));
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function setPrerequisite(courseId: string, prerequisiteCourseId: string) {
-    setLoading(true);
-    await fetch(`/api/coordinator/courses/${courseId}/prerequisite`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prerequisiteCourseId: prerequisiteCourseId || null }),
-    });
-    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, prerequisiteCourseId: prerequisiteCourseId || null } : c));
-    setLoading(false);
+  async function setPrerequisite(courseId: string, prerequisiteCourseId: string, revertEl?: HTMLSelectElement, revertValue?: string) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/courses/${courseId}/prerequisite`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prerequisiteCourseId: prerequisiteCourseId || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Couldn't set the prerequisite — nothing changed.");
+        if (revertEl) revertEl.value = revertValue || "";
+        setLoading(false); return;
+      }
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, prerequisiteCourseId: prerequisiteCourseId || null } : c));
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function splitIntoLab(courseId: string, currentCredit: number) {
@@ -396,13 +412,13 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                       Pre-filled from prior batch
                     </span>
                   )}
-                  <select defaultValue={c.subjectExpertId || ""} onChange={(e) => assignSe(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                  <select defaultValue={c.subjectExpertId || ""} onChange={(e) => assignSe(c.id, e.target.value, e.target, c.subjectExpertId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— Unassigned —</option>
                     {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
                   </select>
                 </td>
                 <td>
-                  <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value)} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                  <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value, e.target, c.prerequisiteCourseId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— None —</option>
                     {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
                   </select>

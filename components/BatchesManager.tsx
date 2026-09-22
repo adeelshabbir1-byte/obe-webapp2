@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number };
 
 export default function BatchesManager({ initialBatches }: { initialBatches: Batch[] }) {
-  const router = useRouter();
+  const [batches, setBatches] = useState<Batch[]>(initialBatches);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyResultMsg, setCopyResultMsg] = useState("");
@@ -35,7 +34,8 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
           ? `Copied ${copy.coursesCopied} course(s) and ${copy.plosCopied} PLO(s) forward from ${copy.copiedFrom}.`
           : "No earlier batch of this program to copy from — starting empty."
       );
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setBatches((prev) => [...prev, { ...data.batch, courseCount: copy?.coursesCopied || 0 }]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -47,12 +47,13 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
-      setEditingCountId(null); setBusyId(null); router.refresh();
+      setBatches((prev) => prev.map((b) => b.id === batchId ? { ...b, studentCount: Number(value) } : b));
+      setEditingCountId(null); setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
   async function removeAllBatches() {
-    const typed = prompt(`This permanently deletes EVERY batch you have (${initialBatches.length} total) — every course, student, PLO, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
+    const typed = prompt(`This permanently deletes EVERY batch you have (${batches.length} total) — every course, student, PLO, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
     if (typed !== "DELETE ALL BATCHES") { if (typed !== null) alert("Confirmation phrase didn't match — nothing was deleted."); return; }
 
     // Delete one batch at a time from here, rather than one big server-side
@@ -61,21 +62,23 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
     // partially deleted mid-operation. This way each request only has to
     // finish one batch, and progress is visible as it goes.
     setBusyId("__all__"); setError("");
-    setBulkProgress({ done: 0, total: initialBatches.length });
+    setBulkProgress({ done: 0, total: batches.length });
     const failures: string[] = [];
-    for (let i = 0; i < initialBatches.length; i++) {
-      const b = initialBatches[i];
+    const succeededIds: string[] = [];
+    for (let i = 0; i < batches.length; i++) {
+      const b = batches[i];
       try {
         const res = await fetch(`/api/coordinator/batches/${b.id}`, { method: "DELETE" });
         if (!res.ok) { const data = await res.json().catch(() => ({})); failures.push(`${b.batchName}: ${data.error || "failed"}`); }
+        else succeededIds.push(b.id);
       } catch (err: any) {
         failures.push(`${b.batchName}: ${err.message}`);
       }
-      setBulkProgress({ done: i + 1, total: initialBatches.length });
+      setBulkProgress({ done: i + 1, total: batches.length });
     }
+    setBatches((prev) => prev.filter((b) => !succeededIds.includes(b.id)));
     setBusyId(null); setBulkProgress(null);
-    if (failures.length > 0) setError(`Deleted ${initialBatches.length - failures.length}/${initialBatches.length}, but some failed: ${failures.join("; ")}`);
-    router.refresh();
+    if (failures.length > 0) setError(`Deleted ${succeededIds.length}/${batches.length}, but some failed: ${failures.join("; ")}`);
   }
 
   async function removeBatch(batchId: string, batchName: string) {
@@ -86,7 +89,8 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
       const res = await fetch(`/api/coordinator/batches/${batchId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
-      setBusyId(null); router.refresh();
+      setBatches((prev) => prev.filter((b) => b.id !== batchId));
+      setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
@@ -94,10 +98,10 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
     <>
       {error && <div className="err">{error}</div>}
       {copyResultMsg && <p style={{ fontSize: 12.5, color: "var(--sage)" }}>{copyResultMsg}</p>}
-      {initialBatches.length > 0 && (
+      {batches.length > 0 && (
         <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 8 }}>
-            <b>Danger zone.</b> Deletes every batch you have ({initialBatches.length} total) and everything under them — permanent, no undo.
+            <b>Danger zone.</b> Deletes every batch you have ({batches.length} total) and everything under them — permanent, no undo.
           </p>
           <button onClick={removeAllBatches} disabled={busyId === "__all__"} style={{ background: "var(--rust)", color: "#fff", border: "none", padding: "6px 14px", fontSize: 12.5, cursor: "pointer" }}>
             {busyId === "__all__" ? "Deleting…" : "Delete ALL Batches"}
@@ -113,8 +117,8 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
         <SortableTable>
           <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th></th></tr></thead>
           <tbody>
-            {initialBatches.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
-            {initialBatches.map((b) => (
+            {batches.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
+            {batches.map((b) => (
               <tr key={b.id}>
                 <td>{b.degreeProgram}</td><td>{b.batchName}</td><td>{b.startTerm} {b.startYear}</td>
                 <td>

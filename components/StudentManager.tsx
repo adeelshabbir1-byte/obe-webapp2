@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 type Student = { id: string; name: string; rollNumber: string };
 type Batch = { id: string; label: string };
 
-export default function StudentManager({ batches, initialBatchId, students }: { batches: Batch[]; initialBatchId: string; students: Student[] }) {
+export default function StudentManager({ batches, initialBatchId, students: initialStudents }: { batches: Batch[]; initialBatchId: string; students: Student[] }) {
   const router = useRouter();
   const [batchId, setBatchId] = useState(initialBatchId);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
   const [csvText, setCsvText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -31,7 +32,8 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setResult(`Imported ${data.imported} student(s) from ${file.name}.${data.skipped ? ` Skipped ${data.skipped} row(s).` : ""}`);
-      setFile(null); setLoading(false); router.refresh();
+      if (data.students) setStudents(data.students);
+      setFile(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -45,7 +47,8 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setResult(`Imported ${data.imported} student(s).${data.skipped ? ` Skipped ${data.skipped} line(s).` : ""}`);
-      setCsvText(""); setLoading(false); router.refresh();
+      if (data.students) setStudents(data.students);
+      setCsvText(""); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -53,7 +56,8 @@ export default function StudentManager({ batches, initialBatchId, students }: { 
     if (!confirm("Remove this student? This also deletes their marks and enrollments.")) return;
     setLoading(true);
     await fetch(`/api/coordinator/students/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+    setLoading(false);
   }
 
   return (

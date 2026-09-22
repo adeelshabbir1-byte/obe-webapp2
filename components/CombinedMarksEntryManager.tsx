@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; maxScore: number }; // id here is the SLOT key (type::label)
 type Student = { id: string; name: string; rollNumber: string; isRepeat: boolean; marks: Record<string, number> };
 type Section = { courseId: string; sectionLabel: string; sectionFullLabel: string; students: Student[] };
 
-export default function CombinedMarksEntryManager({ instruments, sections, instrumentIdBySlot }: {
+export default function CombinedMarksEntryManager({ instruments, sections: initialSections, instrumentIdBySlot }: {
   instruments: Instrument[]; sections: Section[]; instrumentIdBySlot: Record<string, Record<string, string>>;
 }) {
-  const router = useRouter();
+  const [sections, setSections] = useState<Section[]>(initialSections);
   const [error, setError] = useState("");
   const [busyCell, setBusyCell] = useState<string | null>(null);
 
@@ -30,7 +29,10 @@ export default function CombinedMarksEntryManager({ instruments, sections, instr
         inputEl.style.borderColor = "var(--rust)"; setTimeout(() => { inputEl.style.borderColor = ""; }, 1500);
         setBusyCell(null); return;
       }
-      setBusyCell(null); router.refresh();
+      setSections((prev) => prev.map((sec) => sec.courseId !== courseId ? sec : {
+        ...sec, students: sec.students.map((s) => s.id === studentId ? { ...s, marks: { ...s.marks, [slotKey]: data.mark.score } } : s),
+      }));
+      setBusyCell(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
 

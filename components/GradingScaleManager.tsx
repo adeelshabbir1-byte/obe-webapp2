@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type ScaleEntry = { id: string; letter: string; gpaValue: number; orderIndex: number; effectiveFromTerm: string; effectiveFromYear: number };
 
-export default function GradingScaleManager({ initialScale }: { initialScale: ScaleEntry[] }) {
-  const router = useRouter();
+export default function GradingScaleManager({ initialScale: initialScaleProp }: { initialScale: ScaleEntry[] }) {
+  const [initialScale, setScale] = useState<ScaleEntry[]>(initialScaleProp);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -32,14 +31,21 @@ export default function GradingScaleManager({ initialScale }: { initialScale: Sc
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      // Adding a letter that already exists for the same effective-from term/year updates it in place instead.
+      setScale((prev) => {
+        const idx = prev.findIndex((s) => s.letter === data.entry.letter && s.effectiveFromTerm === data.entry.effectiveFromTerm && s.effectiveFromYear === data.entry.effectiveFromYear);
+        if (idx === -1) return [...prev, data.entry];
+        const next = [...prev]; next[idx] = data.entry; return next;
+      });
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function remove(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/grading-scale/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setScale((prev) => prev.filter((s) => s.id !== id));
+    setLoading(false);
   }
 
   return (

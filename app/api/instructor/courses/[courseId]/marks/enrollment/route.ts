@@ -32,7 +32,21 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_STUDENTS_ADDED", entityType: "Course", entityId: course.id, metadata: { added, notFound: notFound.join(", ") } });
 
-  return NextResponse.json({ added, notFound: notFound.length > 0 ? notFound : undefined });
+  const [allEnrollments, allMarks] = await Promise.all([
+    prisma.studentEnrollment.findMany({ where: { courseId: course.id }, include: { student: true } }),
+    prisma.studentMark.findMany({ where: { courseId: course.id } }),
+  ]);
+  const marksByStudent = new Map<string, Record<string, number>>();
+  for (const m of allMarks) {
+    if (!marksByStudent.has(m.studentId)) marksByStudent.set(m.studentId, {});
+    marksByStudent.get(m.studentId)![m.instrumentId] = m.score;
+  }
+  const allStudents = allEnrollments.map((e) => ({
+    id: e.student.id, name: e.student.name, rollNumber: e.student.rollNumber, isRepeat: e.isRepeat,
+    marks: marksByStudent.get(e.student.id) || {},
+  }));
+
+  return NextResponse.json({ added, notFound: notFound.length > 0 ? notFound : undefined, students: allStudents });
 }
 
 // Drop a single student from this course.

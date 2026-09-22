@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Cqi = {
   id: string; finding: string; actionTaken: string | null; status: string; createdAt: string;
@@ -12,7 +11,7 @@ type Batch = { id: string; label: string };
 type Course = { id: string; label: string };
 
 export default function CqiManager({ initialRecords, batches, courses }: { initialRecords: Cqi[]; batches: Batch[]; courses: Course[] }) {
-  const router = useRouter();
+  const [records, setRecords] = useState<Cqi[]>(initialRecords);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,7 +28,8 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setRecords((prev) => [data.record, ...prev]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -41,7 +41,8 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setRecords((prev) => prev.map((r) => r.id === id ? data.record : r));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -53,7 +54,8 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setVerifyingId(null); setLoading(false); router.refresh();
+      setRecords((prev) => prev.map((r) => r.id === id ? data.record : r));
+      setVerifyingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -66,8 +68,8 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
     <>
       {error && <div className="err">{error}</div>}
       <div className="card">
-        {initialRecords.length === 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No CQI records yet.</p>}
-        {initialRecords.map((r) => (
+        {records.length === 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No CQI records yet.</p>}
+        {records.map((r) => (
           <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>

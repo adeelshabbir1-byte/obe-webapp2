@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Respondent = { id: string; label: string; alreadyLinked: boolean };
 type ResponseRow = { respondentLabel: string; submitted: boolean; token: string };
 
-export default function SurveyDetailManager({ surveyId, respondents, existingResponses, origin }: {
+export default function SurveyDetailManager({ surveyId, respondents: initialRespondents, existingResponses: initialResponses, origin }: {
   surveyId: string; respondents: Respondent[]; existingResponses: ResponseRow[]; origin: string;
 }) {
-  const router = useRouter();
+  const [respondents, setRespondents] = useState<Respondent[]>(initialRespondents);
+  const [existingResponses, setExistingResponses] = useState<ResponseRow[]>(initialResponses);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,7 +28,10 @@ export default function SurveyDetailManager({ surveyId, respondents, existingRes
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setNewLinks(data.links); setSelected([]); setLoading(false); router.refresh();
+      const distributedIds = new Set(selected);
+      setRespondents((prev) => prev.map((r) => distributedIds.has(r.id) ? { ...r, alreadyLinked: true } : r));
+      setExistingResponses((prev) => [...prev, ...data.links.map((l: any) => ({ respondentLabel: l.respondentLabel, submitted: false, token: l.token }))]);
+      setNewLinks(data.links); setSelected([]); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

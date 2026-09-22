@@ -8,13 +8,15 @@ type Instructor = { id: string; name: string };
 type OfferedCourse = { id: string; code: string; title: string; batchLabel: string; semesterNumber: number | null; instructorName: string | null };
 type NotOfferedCourse = { id: string; code: string; title: string; batchLabel: string; semesterNumber: number | null };
 
-export default function SemesterManager({ currentTerm, offeredCourses, notOfferedCourses, instructors }: {
+export default function SemesterManager({ currentTerm, offeredCourses: initialOffered, notOfferedCourses: initialNotOffered, instructors }: {
   currentTerm: { termName: string; year: number } | null;
   offeredCourses: OfferedCourse[];
   notOfferedCourses: NotOfferedCourse[];
   instructors: Instructor[];
 }) {
   const router = useRouter();
+  const [offeredCourses, setOfferedCourses] = useState<OfferedCourse[]>(initialOffered);
+  const [notOfferedCourses, setNotOfferedCourses] = useState<NotOfferedCourse[]>(initialNotOffered);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
@@ -67,10 +69,25 @@ export default function SemesterManager({ currentTerm, offeredCourses, notOffere
 
   async function toggleOffered(courseId: string, isOffered: boolean) {
     setLoading(true);
-    await fetch(`/api/coordinator/courses/${courseId}/offer-toggle`, {
+    const res = await fetch(`/api/coordinator/courses/${courseId}/offer-toggle`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isOffered }),
     });
-    setLoading(false); router.refresh();
+    if (res.ok) {
+      if (isOffered) {
+        const moved = notOfferedCourses.find((c) => c.id === courseId);
+        if (moved) {
+          setNotOfferedCourses((prev) => prev.filter((c) => c.id !== courseId));
+          setOfferedCourses((prev) => [...prev, { ...moved, instructorName: null }]);
+        }
+      } else {
+        const moved = offeredCourses.find((c) => c.id === courseId);
+        if (moved) {
+          setOfferedCourses((prev) => prev.filter((c) => c.id !== courseId));
+          setNotOfferedCourses((prev) => [...prev, moved]);
+        }
+      }
+    }
+    setLoading(false);
   }
 
   return (

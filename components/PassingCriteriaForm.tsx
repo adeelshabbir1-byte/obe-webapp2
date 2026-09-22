@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function PassingCriteriaForm({ initial }: { initial: { cloPassingPct: number; ploPassingPct: number } }) {
-  const router = useRouter();
   const [cloPct, setCloPct] = useState(String(initial.cloPassingPct));
   const [ploPct, setPloPct] = useState(String(initial.ploPassingPct));
   const [loading, setLoading] = useState(false);
@@ -20,7 +18,7 @@ export default function PassingCriteriaForm({ initial }: { initial: { cloPassing
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

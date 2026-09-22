@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Instrument = { id: string; type: string; label: string; maxScore: number };
 type Student = { id: string; name: string; rollNumber: string; isRepeat: boolean; marks: Record<string, number> };
 
-export default function MarksEntryManager({ courseId, instruments, students, hasUnenrolledBatchStudents }: {
+export default function MarksEntryManager({ courseId, instruments, students: initialStudents, hasUnenrolledBatchStudents }: {
   courseId: string; instruments: Instrument[]; students: Student[]; hasUnenrolledBatchStudents: boolean;
 }) {
-  const router = useRouter();
+  const [students, setStudents] = useState<Student[]>(initialStudents);
   const [error, setError] = useState("");
   const [busyCell, setBusyCell] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,7 +32,8 @@ export default function MarksEntryManager({ courseId, instruments, students, has
         setBusyCell(null);
         return;
       }
-      setBusyCell(null); router.refresh();
+      setStudents((prev) => prev.map((s) => s.id === studentId ? { ...s, marks: { ...s.marks, [instrumentId]: data.mark.score } } : s));
+      setBusyCell(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
 
@@ -41,8 +41,9 @@ export default function MarksEntryManager({ courseId, instruments, students, has
     setLoading(true); setError("");
     const res = await fetch(`/api/instructor/courses/${courseId}/marks/auto-enroll`, { method: "POST" });
     const data = await res.json();
-    if (!res.ok) setError(data.error || "Something went wrong.");
-    setLoading(false); router.refresh();
+    if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+    if (data.students) setStudents(data.students);
+    setLoading(false);
   }
 
   async function addByRollNumbers() {
@@ -55,7 +56,8 @@ export default function MarksEntryManager({ courseId, instruments, students, has
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setAddResult(`Added ${data.added} student(s).${data.notFound ? ` Not found: ${data.notFound.join(", ")}` : ""}`);
-      setRollNumbersToAdd(""); setLoading(false); router.refresh();
+      if (data.students) setStudents(data.students);
+      setRollNumbersToAdd(""); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -65,7 +67,8 @@ export default function MarksEntryManager({ courseId, instruments, students, has
     await fetch(`/api/instructor/courses/${courseId}/marks/enrollment`, {
       method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId }),
     });
-    setLoading(false); router.refresh();
+    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+    setLoading(false);
   }
 
   return (

@@ -178,7 +178,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       setRunInfo({ hardViolations: data.hardViolations, generations: data.generations, notes: "" });
       setProgressPct(data.percentTimeUsed ?? 0);
       if (data.status === "COMPLETED" || data.status === "STOPPED") {
-        setRunStatus(data.status); setGenerating(false); await loadRun(id); router.refresh(); break;
+        setRunStatus(data.status); setGenerating(false); await loadRun(id); break;
       }
       await new Promise((r) => setTimeout(r, 400));
     }
@@ -203,7 +203,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     setGenerating(false);
     const res = await fetch(`/api/coordinator/timetable/${runId}/stop`, { method: "POST" });
     const data = await res.json();
-    if (res.ok) { setRunStatus(data.status); await loadRun(runId); router.refresh(); }
+    if (res.ok) { setRunStatus(data.status); await loadRun(runId); }
   }
 
   const groupKeyFor = (e: Entry) => (viewMode === "batch" ? e.batchLabel : viewMode === "instructor" ? e.instructorName : viewMode === "room" ? e.roomName : `${e.courseCode} — ${e.courseTitle}`);

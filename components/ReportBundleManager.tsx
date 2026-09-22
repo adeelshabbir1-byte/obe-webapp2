@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type ReportDef = { id: string; title: string };
 type Bundle = { id: string; name: string; description: string | null; reportIds: string[] };
 
-export default function ReportBundleManager({ apiEndpoint, reports, bundles, extraBundles, extraLabel, readOnlyExtra }: {
+export default function ReportBundleManager({ apiEndpoint, reports, bundles: initialBundles, extraBundles: initialExtraBundles, extraLabel, readOnlyExtra }: {
   apiEndpoint: string; reports: ReportDef[]; bundles: Bundle[];
   extraBundles?: Bundle[]; extraLabel?: string; readOnlyExtra?: boolean;
 }) {
-  const router = useRouter();
+  const [bundles, setBundles] = useState<Bundle[]>(initialBundles);
+  const [extraBundles, setExtraBundles] = useState<Bundle[] | undefined>(initialExtraBundles);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -31,14 +31,18 @@ export default function ReportBundleManager({ apiEndpoint, reports, bundles, ext
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setName(""); setDescription(""); setSelected([]); setLoading(false); router.refresh();
+      // This form always creates in the primary (non-extra) list, since apiEndpoint here is that list's own POST route.
+      setBundles((prev) => [...prev, data.bundle]);
+      setName(""); setDescription(""); setSelected([]); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function remove(id: string, endpoint: string) {
     setLoading(true);
     await fetch(`${endpoint}/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    if (endpoint === apiEndpoint) setBundles((prev) => prev.filter((b) => b.id !== id));
+    else setExtraBundles((prev) => prev?.filter((b) => b.id !== id));
+    setLoading(false);
   }
 
   function BundleList({ list, endpoint, deletable }: { list: Bundle[]; endpoint: string; deletable: boolean }) {

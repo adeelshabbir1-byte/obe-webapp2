@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Item = { id: string; type: string; label: string; currentWeight: number; suggestedWeight: number; avgPct: number | null; gradedCount: number };
 type Suggestion = { cloCode: string; totalWeight: number; items: Item[] };
 
-export default function ReweightingSuggestions({ courseId, suggestions }: { courseId: string; suggestions: Suggestion[] }) {
-  const router = useRouter();
+export default function ReweightingSuggestions({ courseId, suggestions: initialSuggestions }: { courseId: string; suggestions: Suggestion[] }) {
+  const [suggestions, setSuggestions] = useState<Suggestion[]>(initialSuggestions);
   const [loading, setLoading] = useState<string | null>(null);
   const [applyingAll, setApplyingAll] = useState(false);
   const [error, setError] = useState("");
+
+  function markApplied(instrumentId: string, weight: number) {
+    setSuggestions((prev) => prev.map((s) => ({
+      ...s, items: s.items.map((it) => it.id === instrumentId ? { ...it, currentWeight: weight } : it),
+    })));
+  }
 
   async function apply(instrumentId: string, weight: number) {
     setLoading(instrumentId); setError("");
@@ -20,7 +25,8 @@ export default function ReweightingSuggestions({ courseId, suggestions }: { cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(null); return; }
-      setLoading(null); router.refresh();
+      markApplied(instrumentId, weight);
+      setLoading(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(null); }
   }
 
@@ -34,9 +40,10 @@ export default function ReweightingSuggestions({ courseId, suggestions }: { cour
         const res = await fetch(`/api/instructor/courses/${courseId}/instruments/${it.id}`, {
           method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marksPct: it.suggestedWeight }),
         });
-        if (!res.ok) { const data = await res.json(); setError(data.error || "Something went wrong partway through — some changes may not have applied."); setApplyingAll(false); router.refresh(); return; }
+        if (!res.ok) { const data = await res.json(); setError(data.error || "Something went wrong partway through — some changes may not have applied."); setApplyingAll(false); return; }
+        markApplied(it.id, it.suggestedWeight);
       }
-      setApplyingAll(false); router.refresh();
+      setApplyingAll(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setApplyingAll(false); }
   }
 

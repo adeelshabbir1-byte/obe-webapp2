@@ -2,7 +2,6 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; coordinatorName: string; degreeProgram: string };
 
@@ -15,13 +14,13 @@ function statusBadge(status: string) {
 }
 
 export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[] }) {
-  const router = useRouter();
+  const [plos, setPlos] = useState<Plo[]>(initialPlos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [bulkResult, setBulkResult] = useState("");
 
-  const pendingCount = initialPlos.filter((p) => p.status !== "approved").length;
+  const pendingCount = plos.filter((p) => p.status !== "approved").length;
 
   async function approveAll() {
     if (!confirm(`Approve all ${pendingCount} pending PLO(s)? This can't be undone in bulk.`)) return;
@@ -31,7 +30,8 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setBulkResult(`Approved ${data.approved} PLO(s).`);
-      setLoading(false); router.refresh();
+      setPlos((prev) => prev.map((p) => p.status !== "approved" ? { ...p, status: "approved" } : p));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -39,14 +39,16 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const comment = (fd.get("comment") as string) || "";
     try {
       const res = await fetch(`/api/chairman/plos/${ploId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: fd.get("title"), description: fd.get("description"), status, chairmanComment: fd.get("comment") || "" }),
+        body: JSON.stringify({ title: fd.get("title"), description: fd.get("description"), status, chairmanComment: comment }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOpenId(null); setLoading(false); router.refresh();
+      setPlos((prev) => prev.map((p) => p.id === ploId ? { ...p, title: data.plo.title, description: data.plo.description, status: data.plo.status, chairmanComment: comment } : p));
+      setOpenId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -64,8 +66,8 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
       <SortableTable>
         <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
         <tbody>
-          {initialPlos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
-          {initialPlos.map((p) => (
+          {plos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
+          {plos.map((p) => (
             <Fragment key={p.id}>
               <tr>
                 <td>PLO-{p.number}</td><td>{p.title}</td><td style={{ fontSize: 11.5 }}>{p.degreeProgram}</td><td>{p.coordinatorName}</td>

@@ -2,13 +2,12 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Course = { id: string; code: string; title: string; batchLabel: string; isOffered: boolean; offeredTermName: string | null; offeredTermYear: number | null; enrolledStudents: { id: string; name: string; rollNumber: string; batchLabel: string }[] };
 type Student = { id: string; name: string; rollNumber: string; batchLabel: string };
 
 export default function RepeatOfferingManager({ initialCourses, allStudents }: { initialCourses: Course[]; allStudents: Student[] }) {
-  const router = useRouter();
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -16,10 +15,12 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
 
   async function toggleOffer(courseId: string, offer: boolean) {
     setLoading(true); setError("");
-    await fetch(`/api/coordinator/courses/${courseId}/repeat-offer`, {
+    const res = await fetch(`/api/coordinator/courses/${courseId}/repeat-offer`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offer, year: new Date().getFullYear() }),
     });
-    setLoading(false); router.refresh();
+    const data = await res.json();
+    if (res.ok) setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, isOffered: data.course.isOffered, offeredTermName: data.course.offeredTermName, offeredTermYear: data.course.offeredTermYear } : c));
+    setLoading(false);
   }
 
   async function enrollStudent(courseId: string, studentId: string) {
@@ -29,8 +30,10 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId }),
     });
     const data = await res.json();
-    if (!res.ok) setError(data.error || "Something went wrong.");
-    setLoading(false); router.refresh();
+    if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+    const student = allStudents.find((s) => s.id === studentId);
+    if (student) setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, enrolledStudents: [...c.enrolledStudents, student] } : c));
+    setLoading(false);
   }
 
   async function removeEnrollment(courseId: string, studentId: string) {
@@ -38,10 +41,11 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
     await fetch(`/api/coordinator/courses/${courseId}/enroll`, {
       method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId }),
     });
-    setLoading(false); router.refresh();
+    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, enrolledStudents: c.enrolledStudents.filter((s) => s.id !== studentId) } : c));
+    setLoading(false);
   }
 
-  const filtered = initialCourses.filter((c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = courses.filter((c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>

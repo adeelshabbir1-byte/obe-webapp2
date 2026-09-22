@@ -43,5 +43,8 @@ export async function POST(req: NextRequest) {
     metadata: { sourceBatchId: sourceBatch.id, created: toCreate.length },
   });
 
-  return NextResponse.json({ created: toCreate.length, skipped: sourcePlos.length - toCreate.length });
+  const createdPlos = toCreate.length > 0
+    ? await prisma.pLO.findMany({ where: { batchId: targetBatch.id, number: { in: toCreate.map((p) => p.number) } } })
+    : [];
+  return NextResponse.json({ created: toCreate.length, skipped: sourcePlos.length - toCreate.length, plos: createdPlos });
 }

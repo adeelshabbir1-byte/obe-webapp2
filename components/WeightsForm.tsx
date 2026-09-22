@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Weights = { assignmentPct: number; quizPct: number; projectPct: number; labPct: number; midtermPct: number; finalPct: number };
 type Policy = {
@@ -20,7 +19,6 @@ const ROWS: { key: keyof Weights; label: string; minKey: string; maxKey: string 
 ];
 
 export default function WeightsForm({ courseId, current, policy, hasLab }: { courseId: string; current: Weights; policy: Policy; hasLab: boolean }) {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
   const [pending, setPending] = useState<string[] | null>(null);
@@ -53,10 +51,10 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
       });
       const data = await res.json();
       if (res.status === 202 && data.pendingApproval) {
-        setPending(data.violations || []); setLoading(false); router.refresh(); return;
+        setPending(data.violations || []); setLoading(false); return;
       }
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

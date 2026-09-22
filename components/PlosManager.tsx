@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 import { safeFetchJson } from "../lib/safeFetchJson";
 
 type Plo = { id: string; number: number; title: string; description: string; status: string; chairmanComment: string | null; sourceMasterPloNumber: number | null };
@@ -19,14 +18,14 @@ function statusBadge(status: string) {
 export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatches }: {
   initialPlos: Plo[]; hecPlos: HecPlo[]; batchId: string; otherBatches: { id: string; label: string }[];
 }) {
-  const router = useRouter();
+  const [plos, setPlos] = useState<Plo[]>(initialPlos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [copySourceBatchId, setCopySourceBatchId] = useState("");
   const [bulkResult, setBulkResult] = useState("");
 
-  const nextNumber = initialPlos.length ? Math.max(...initialPlos.map((p) => p.number)) + 1 : 1;
+  const nextNumber = plos.length ? Math.max(...plos.map((p) => p.number)) + 1 : 1;
 
   async function addAllHec() {
     setLoading(true); setError(""); setBulkResult("");
@@ -37,7 +36,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setBulkResult(`Added ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
-      setLoading(false); router.refresh();
+      if (data.plos) setPlos((prev) => [...prev, ...data.plos].sort((a, b) => a.number - b.number));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -52,7 +52,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setBulkResult(`Copied ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
-      setLoading(false); router.refresh();
+      if (data.plos) setPlos((prev) => [...prev, ...data.plos].sort((a, b) => a.number - b.number));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -65,7 +66,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       });
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setPlos((prev) => [...prev, data.plo].sort((a, b) => a.number - b.number));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -80,7 +82,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       });
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setPlos((prev) => [...prev, data.plo].sort((a, b) => a.number - b.number));
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -95,7 +98,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       });
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setPlos((prev) => prev.map((p) => p.id === ploId ? { ...p, ...data.plo } : p));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -103,8 +107,9 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
     setLoading(true);
     const res = await fetch(`/api/coordinator/plos/${ploId}`, { method: "DELETE" });
     const { ok, data } = await safeFetchJson(res);
-    if (!ok) { setError(data.error || "Could not delete."); }
-    setLoading(false); router.refresh();
+    if (!ok) { setError(data.error || "Could not delete."); setLoading(false); return; }
+    setPlos((prev) => prev.filter((p) => p.id !== ploId));
+    setLoading(false);
   }
 
   return (
@@ -139,8 +144,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
         <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th>Description</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            {initialPlos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined yet.</td></tr>}
-            {initialPlos.map((p) => editingId === p.id ? (
+            {plos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined yet.</td></tr>}
+            {plos.map((p) => editingId === p.id ? (
               <tr key={p.id}>
                 <td colSpan={5}>
                   <form onSubmit={(e) => saveEdit(e, p.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>

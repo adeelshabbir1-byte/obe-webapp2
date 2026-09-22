@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Holiday = { id: string; date: string; label: string };
 type DayMode = { id: string; date: string; mode: string };
@@ -31,17 +30,20 @@ function suggestExamWeeks(semesterStartDate: string) {
   return { midterm: weekRange(9), final: weekRange(17) };
 }
 
-export default function CalendarManager({ initialHolidays, initialDayModes, courses, degreePrograms, initialSemesterDates, defaultTermName, defaultTermYear }: {
+export default function CalendarManager({ initialHolidays, initialDayModes, courses: initialCourses, degreePrograms, initialSemesterDates, defaultTermName, defaultTermYear }: {
   initialHolidays: Holiday[]; initialDayModes: DayMode[]; courses: Course[];
   degreePrograms: string[]; initialSemesterDates: SemesterDate[]; defaultTermName: string; defaultTermYear: number;
 }) {
-  const router = useRouter();
+  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
+  const [dayModes, setDayModes] = useState<DayMode[]>(initialDayModes);
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [semesterDates, setSemesterDates] = useState<SemesterDate[]>(initialSemesterDates);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id || "");
   const [selectedDegree, setSelectedDegree] = useState(degreePrograms[0] || "");
 
-  const currentDegreeDates = initialSemesterDates.find((d) => d.degreeProgram === selectedDegree && d.termName === defaultTermName && d.termYear === defaultTermYear);
+  const currentDegreeDates = semesterDates.find((d) => d.degreeProgram === selectedDegree && d.termName === defaultTermName && d.termYear === defaultTermYear);
 
   const [semesterStart, setSemesterStart] = useState(currentDegreeDates?.semesterStartDate ? currentDegreeDates.semesterStartDate.slice(0, 10) : "");
   const [midtermStart, setMidtermStart] = useState(currentDegreeDates?.midtermStartDate ? currentDegreeDates.midtermStartDate.slice(0, 10) : "");
@@ -74,7 +76,12 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setSemesterDates((prev) => {
+        const idx = prev.findIndex((d) => d.degreeProgram === data.record.degreeProgram && d.termName === data.record.termName && d.termYear === data.record.termYear);
+        if (idx === -1) return [...prev, data.record];
+        const next = [...prev]; next[idx] = data.record; return next;
+      });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -89,14 +96,16 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setHolidays((prev) => [...prev, data.holiday].sort((a, b) => a.date.localeCompare(b.date)));
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeHoliday(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/holidays/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setHolidays((prev) => prev.filter((h) => h.id !== id));
+    setLoading(false);
   }
 
   async function addDayMode(e: React.FormEvent<HTMLFormElement>) {
@@ -110,14 +119,16 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setDayModes((prev) => [...prev, data.mode].sort((a, b) => a.date.localeCompare(b.date)));
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeDayMode(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/class-day-modes/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setDayModes((prev) => prev.filter((m) => m.id !== id));
+    setLoading(false);
   }
 
   async function saveExamDates(e: React.FormEvent<HTMLFormElement>) {
@@ -134,7 +145,8 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setCourses((prev) => prev.map((c) => c.id === selectedCourseId ? { ...c, ...data.course } : c));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -197,8 +209,8 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
         <SortableTable>
           <thead><tr><th>Date</th><th>Label</th><th></th></tr></thead>
           <tbody>
-            {initialHolidays.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
-            {initialHolidays.map((h) => (
+            {holidays.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
+            {holidays.map((h) => (
               <tr key={h.id}><td>{h.date.slice(0, 10)}</td><td>{h.label}</td>
                 <td><button onClick={() => removeHoliday(h.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
               </tr>
@@ -217,8 +229,8 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
         <SortableTable>
           <thead><tr><th>Date</th><th>Mode</th><th></th></tr></thead>
           <tbody>
-            {initialDayModes.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None set — days default to On-Campus.</td></tr>}
-            {initialDayModes.map((m) => (
+            {dayModes.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None set — days default to On-Campus.</td></tr>}
+            {dayModes.map((m) => (
               <tr key={m.id}><td>{m.date.slice(0, 10)}</td><td>{m.mode === "Online" ? "Online" : "On-Campus"}</td>
                 <td><button onClick={() => removeDayMode(m.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
               </tr>

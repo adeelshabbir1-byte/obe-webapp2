@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; secondaryRole: string | null };
 
 export default function FacultyManager({ initialFaculty }: { initialFaculty: Faculty[] }) {
-  const router = useRouter();
+  const [faculty, setFaculty] = useState<Faculty[]>(initialFaculty);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,7 +26,8 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setFaculty((prev) => [...prev, data.user]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -55,7 +55,8 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
       const res = await fetch(`/api/coordinator/faculty/${userId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setFaculty((prev) => prev.filter((f) => f.id !== userId));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -77,7 +78,8 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setFaculty((prev) => prev.map((f) => f.id === userId ? { ...f, ...data.user } : f));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -88,8 +90,8 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Specialization</th><th>Load (Normal / External)</th><th></th></tr></thead>
           <tbody>
-            {initialFaculty.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>}
-            {initialFaculty.map((f) => editingId === f.id ? (
+            {faculty.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No faculty onboarded yet.</td></tr>}
+            {faculty.map((f) => editingId === f.id ? (
               <tr key={f.id}>
                 <td colSpan={7}>
                   <form onSubmit={(e) => saveLoad(e, f.id, f.role)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>

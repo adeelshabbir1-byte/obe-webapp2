@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 type Course = {
@@ -15,8 +14,8 @@ function contactHoursFor(c: Course) {
   return c.courseType === "Lab" ? c.creditHours * 3 : c.creditHours;
 }
 
-export default function InteractiveCourseMap({ courses: initialCourses, mode }: { courses: Course[]; mode: "prereq" | "reposition" }) {
-  const router = useRouter();
+export default function InteractiveCourseMap({ courses: initialCoursesProp, mode }: { courses: Course[]; mode: "prereq" | "reposition" }) {
+  const [initialCourses, setCourses] = useState<Course[]>(initialCoursesProp);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -56,7 +55,8 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); setSelectedId(null); router.refresh();
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, prerequisiteCourseId } : c));
+      setLoading(false); setSelectedId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -68,7 +68,8 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); setSelectedId(null); setPreviewSemester(null); router.refresh();
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, semesterNumber: data.course.semesterNumber } : c));
+      setLoading(false); setSelectedId(null); setPreviewSemester(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -105,7 +106,8 @@ export default function InteractiveCourseMap({ courses: initialCourses, mode }: 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setElectiveModalCourseId(null); setLoading(false); router.refresh();
+      setCourses((prev) => prev.map((c) => c.id === electiveModalCourseId ? { ...c, ...data.course } : c));
+      setElectiveModalCourseId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

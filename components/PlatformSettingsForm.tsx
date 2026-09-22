@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 function fileToDataUri(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -13,7 +12,6 @@ function fileToDataUri(file: File): Promise<string> {
 }
 
 export default function PlatformSettingsForm({ initial }: { initial: { ownerLogo: string | null; nceacLogo: string | null } }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +36,7 @@ export default function PlatformSettingsForm({ initial }: { initial: { ownerLogo
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

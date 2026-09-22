@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-
 type Alum = { id: string; name: string; email: string | null; rollNumber: string; degreeProgram: string; graduationYear: number; totalWorkExperienceYears: number | null; status: string };
 type Employer = { id: string; organizationName: string; contactName: string | null; contactEmail: string | null; companySize: string | null; industryType: string | null; status: string };
 type Employment = { id: string; alumniId: string; employerId: string; jobTitle: string | null; startDate: string | null; endDate: string | null; salaryRange: string | null; status: string };
@@ -10,8 +8,11 @@ type Degree = { id: string; alumniId: string; degreeName: string; institution: s
 
 const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "500+"];
 
-export default function StakeholdersManager({ alumni, employers, employment, degrees }: { alumni: Alum[]; employers: Employer[]; employment: Employment[]; degrees: Degree[] }) {
-  const router = useRouter();
+export default function StakeholdersManager({ alumni: initialAlumni, employers: initialEmployers, employment: initialEmployment, degrees: initialDegrees }: { alumni: Alum[]; employers: Employer[]; employment: Employment[]; degrees: Degree[] }) {
+  const [alumni, setAlumni] = useState<Alum[]>(initialAlumni);
+  const [employers, setEmployers] = useState<Employer[]>(initialEmployers);
+  const [employment, setEmployment] = useState<Employment[]>(initialEmployment);
+  const [degrees, setDegrees] = useState<Degree[]>(initialDegrees);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [empAlumniId, setEmpAlumniId] = useState(alumni[0]?.id || "");
@@ -33,7 +34,8 @@ export default function StakeholdersManager({ alumni, employers, employment, deg
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setAlumni((prev) => [...prev, data.alumni]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -51,7 +53,8 @@ export default function StakeholdersManager({ alumni, employers, employment, deg
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setEmployers((prev) => [...prev, data.employer]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -70,24 +73,28 @@ export default function StakeholdersManager({ alumni, employers, employment, deg
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setEmployment((prev) => [...prev, data.employment]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeAlumni(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/alumni/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setAlumni((prev) => prev.filter((a) => a.id !== id));
+    setLoading(false);
   }
   async function removeEmployer(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/employers/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setEmployers((prev) => prev.filter((e) => e.id !== id));
+    setLoading(false);
   }
   async function removeEmployment(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/alumni-employment/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setEmployment((prev) => prev.filter((e) => e.id !== id));
+    setLoading(false);
   }
 
   async function addDegree(e: React.FormEvent<HTMLFormElement>) {
@@ -102,14 +109,16 @@ export default function StakeholdersManager({ alumni, employers, employment, deg
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setDegrees((prev) => [...prev, data.degree]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeDegree(id: string) {
     setLoading(true);
     await fetch(`/api/coordinator/alumni-degrees/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setDegrees((prev) => prev.filter((d) => d.id !== id));
+    setLoading(false);
   }
 
   function alumName(id: string) { return alumni.find((a) => a.id === id)?.name || "—"; }

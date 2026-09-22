@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Clo = { id: string; statement: string; bloomLevel: string };
 type Suggestion = { id: string; title: string };
@@ -13,8 +12,8 @@ type ExistingCourse = { id: string; title: string; category: string };
 
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience", "Major", "Domain Elective", "General Education / Other"];
 
-export default function PendingCourseReview({ curriculumId, pendingCourses, allCourses }: { curriculumId: string; pendingCourses: PendingCourse[]; allCourses: ExistingCourse[] }) {
-  const router = useRouter();
+export default function PendingCourseReview({ curriculumId, pendingCourses: initialPendingCourses, allCourses }: { curriculumId: string; pendingCourses: PendingCourse[]; allCourses: ExistingCourse[] }) {
+  const [pendingCourses, setPendingCourses] = useState<PendingCourse[]>(initialPendingCourses);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -32,7 +31,7 @@ export default function PendingCourseReview({ curriculumId, pendingCourses, allC
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoadingId(null); return; }
-      router.refresh(); setLoadingId(null);
+      setPendingCourses((prev) => prev.filter((p) => p.id !== pendingId)); setLoadingId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoadingId(null); }
   }
 
@@ -45,7 +44,7 @@ export default function PendingCourseReview({ curriculumId, pendingCourses, allC
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoadingId(null); return; }
-      router.refresh(); setLoadingId(null);
+      setPendingCourses((prev) => prev.filter((p) => p.id !== pendingId)); setLoadingId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoadingId(null); }
   }
 
@@ -55,7 +54,7 @@ export default function PendingCourseReview({ curriculumId, pendingCourses, allC
       const res = await fetch(`/api/admin/curricula/pending-courses/${pendingId}/reject`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoadingId(null); return; }
-      router.refresh(); setLoadingId(null);
+      setPendingCourses((prev) => prev.filter((p) => p.id !== pendingId)); setLoadingId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoadingId(null); }
   }
 

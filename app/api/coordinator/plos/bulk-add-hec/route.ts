@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog({ actorUserId: user.id, action: "PLOS_BULK_ADDED_HEC", entityType: "Batch", entityId: batch.id, metadata: { count: toCreate.length } });
 
-    return NextResponse.json({ created: toCreate.length, skipped: dedupedHecPlos.length - toCreate.length });
+    const createdPlos = toCreate.length > 0
+      ? await prisma.pLO.findMany({ where: { batchId: batch.id, number: { in: toCreate.map((h) => h.number) } } })
+      : [];
+    return NextResponse.json({ created: toCreate.length, skipped: dedupedHecPlos.length - toCreate.length, plos: createdPlos });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "something went wrong adding HEC PLOs" }, { status: 500 });
   }

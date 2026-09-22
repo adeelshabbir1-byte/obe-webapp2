@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Profile = { departmentIntro: string | null; departmentVision: string | null; departmentMission: string | null; peos: string[] };
 
 export default function ProgramProfileForm({ degreeProgram, initial }: { degreeProgram: string; initial: Profile }) {
-  const router = useRouter();
   const [peos, setPeos] = useState<string[]>(initial.peos.length > 0 ? initial.peos : [""]);
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
@@ -33,7 +31,7 @@ export default function ProgramProfileForm({ degreeProgram, initial }: { degreeP
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

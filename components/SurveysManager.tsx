@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string };
 type Survey = { id: string; title: string; stakeholderType: string; questions: { id: string; text: string }[]; _count: { responses: number } };
@@ -42,8 +41,8 @@ const QUICK_START_TEMPLATES: Record<string, { title: string; stakeholderType: st
   },
 };
 
-export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; plos: Plo[] }) {
-  const router = useRouter();
+export default function SurveysManager({ surveys: initialSurveys, plos }: { surveys: Survey[]; plos: Plo[] }) {
+  const [surveys, setSurveys] = useState<Survey[]>(initialSurveys);
   const [title, setTitle] = useState("");
   const [stakeholderType, setStakeholderType] = useState("STUDENT");
   const [questions, setQuestions] = useState<{ text: string; mappedPloId: string; mappedPeoLabel: string }[]>([{ text: "", mappedPloId: "", mappedPeoLabel: "" }]);
@@ -75,7 +74,8 @@ export default function SurveysManager({ surveys, plos }: { surveys: Survey[]; p
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setTitle(""); setQuestions([{ text: "", mappedPloId: "", mappedPeoLabel: "" }]); setLoading(false); router.refresh();
+      setSurveys((prev) => [...prev, { ...data.survey, _count: { responses: 0 } }]);
+      setTitle(""); setQuestions([{ text: "", mappedPloId: "", mappedPeoLabel: "" }]); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

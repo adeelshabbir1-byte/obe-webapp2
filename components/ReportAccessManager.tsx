@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type ReportDef = { id: string; title: string; hasEditActions?: boolean };
 type Rule = { id: string; reportId: string; subjectType: string; subjectValue: string; canView: boolean; canEdit: boolean };
 type Person = { id: string; name: string; role: string };
 
-export default function ReportAccessManager({ reports, initialRules, people }: { reports: ReportDef[]; initialRules: Rule[]; people: Person[] }) {
-  const router = useRouter();
+export default function ReportAccessManager({ reports, initialRules: initialRulesProp, people }: { reports: ReportDef[]; initialRules: Rule[]; people: Person[] }) {
+  const [initialRules, setRules] = useState<Rule[]>(initialRulesProp);
   const [selectedReportId, setSelectedReportId] = useState(reports[0]?.id || "");
   const [subjectType, setSubjectType] = useState<"ROLE" | "USER">("ROLE");
   const [subjectValue, setSubjectValue] = useState("OMC");
@@ -29,14 +28,21 @@ export default function ReportAccessManager({ reports, initialRules, people }: {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      // A rule for this exact (report, subjectType, subjectValue) may already exist — this save updates it.
+      setRules((prev) => {
+        const idx = prev.findIndex((r) => r.reportId === data.rule.reportId && r.subjectType === data.rule.subjectType && r.subjectValue === data.rule.subjectValue);
+        if (idx === -1) return [...prev, data.rule];
+        const next = [...prev]; next[idx] = data.rule; return next;
+      });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function remove(ruleId: string) {
     setLoading(true);
     await fetch(`/api/chairman/report-access/${ruleId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    setLoading(false);
   }
 
   function personName(id: string) { return people.find((p) => p.id === id)?.name || id; }

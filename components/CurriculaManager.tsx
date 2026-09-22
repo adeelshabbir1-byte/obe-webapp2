@@ -8,6 +8,7 @@ type Curriculum = { id: string; authority: string; title: string; version: strin
 
 export default function CurriculaManager({ initialCurricula }: { initialCurricula: Curriculum[] }) {
   const router = useRouter();
+  const [curricula, setCurricula] = useState<Curriculum[]>(initialCurricula);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
@@ -24,7 +25,8 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setCloningId(null); setLoading(false); router.refresh();
+      setCurricula((prev) => [...prev, { ...data.curriculum, courseCount: 0, ploCount: 0 }]);
+      setCloningId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -39,7 +41,8 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setCurricula((prev) => [...prev, { ...data.curriculum, courseCount: 0, ploCount: 0 }]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -53,7 +56,8 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       const res = await fetch(`/api/admin/curricula/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setCurricula((prev) => prev.filter((c) => c.id !== id));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -77,8 +81,8 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
         <SortableTable>
           <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>PLOs</th><th></th></tr></thead>
           <tbody>
-            {initialCurricula.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
-            {initialCurricula.map((c) => (
+            {curricula.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
+            {curricula.map((c) => (
               <Fragment key={c.id}>
                 <tr>
                   <td>{c.authority}</td><td>{c.title}</td><td>{c.version}</td><td>{c.courseCount}</td><td>{c.ploCount}</td>

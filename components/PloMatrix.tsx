@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 type Plo = { id: string; number: number; title: string; status: string };
@@ -23,20 +22,27 @@ function sortCourses(courses: Course[], key: SortKey): Course[] {
   return copy;
 }
 
-export default function PloMatrix({ programs }: { programs: Program[] }) {
-  const router = useRouter();
+export default function PloMatrix({ programs: initialPrograms }: { programs: Program[] }) {
+  const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("semester");
 
   async function toggle(courseId: string, ploId: string, mapped: boolean) {
     const key = courseId + ploId;
     setBusyKey(key);
-    await fetch("/api/omc/plo-matrix/toggle", {
+    const res = await fetch("/api/omc/plo-matrix/toggle", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ courseId, ploId, mapped }),
     });
+    if (res.ok) {
+      setPrograms((prev) => prev.map((prog) => ({
+        ...prog,
+        courses: prog.courses.map((c) => c.id !== courseId ? c : {
+          ...c, mappedPloIds: mapped ? [...c.mappedPloIds, ploId] : c.mappedPloIds.filter((id) => id !== ploId),
+        }),
+      })));
+    }
     setBusyKey(null);
-    router.refresh();
   }
 
   if (programs.length === 0) {

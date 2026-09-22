@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type LectureRow = { id: string; topic: string; cloId: string | null; bloomLevel: string | null };
 type Clo = { id: string; code: string; statement: string };
@@ -19,11 +18,11 @@ const BLOOM_VERBS: Record<string, string> = {
   C6: "Design, Develop, Construct, Formulate, Propose, Compose, Create, Devise",
 };
 
-export default function PaperDistributionManager({ apiBase, items, lectureRows, clos, coverageByTopic }: {
+export default function PaperDistributionManager({ apiBase, items: initialItems, lectureRows, clos, coverageByTopic }: {
   apiBase: string; items: Item[]; lectureRows: LectureRow[]; clos: Clo[];
   coverageByTopic?: Record<string, { lectureCount: number; covered: boolean; deliveredMarksPct: number }>;
 }) {
-  const router = useRouter();
+  const [items, setItems] = useState<Item[]>(initialItems);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,8 +55,9 @@ export default function PaperDistributionManager({ apiBase, items, lectureRows, 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setItems((prev) => [...prev, data.item]);
       setNewTopicSource(""); setNewTopicText(""); setNewCloId(""); setNewLevel(""); setNewMarks("");
-      setLoading(false); router.refresh();
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -75,14 +75,16 @@ export default function PaperDistributionManager({ apiBase, items, lectureRows, 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setItems((prev) => prev.map((it) => it.id === itemId ? data.item : it));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeItem(itemId: string) {
     setLoading(true);
     await fetch(`${apiBase}/${itemId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setItems((prev) => prev.filter((it) => it.id !== itemId).map((it, i) => ({ ...it, questionNo: i + 1 })));
+    setLoading(false);
   }
 
   async function moveItem(itemId: string, direction: "up" | "down") {
@@ -93,7 +95,16 @@ export default function PaperDistributionManager({ apiBase, items, lectureRows, 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      // Mirror the server's swap-then-renumber (questionNo always == position + 1).
+      setItems((prev) => {
+        const idx = prev.findIndex((it) => it.id === itemId);
+        const swapWith = direction === "up" ? idx - 1 : idx + 1;
+        if (swapWith < 0 || swapWith >= prev.length) return prev;
+        const next = [...prev];
+        [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+        return next.map((it, i) => ({ ...it, questionNo: i + 1 }));
+      });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
