@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Comment = { id: string; body: string; authorRole: string; createdAt: string };
 
-export default function GuidanceThread({ courseId, initialComments, apiBase }: { courseId: string; initialComments: Comment[]; apiBase: string }) {
-  const router = useRouter();
+export default function GuidanceThread({ courseId, initialComments: initialCommentsProp, apiBase }: { courseId: string; initialComments: Comment[]; apiBase: string }) {
+  const [initialComments, setComments] = useState<Comment[]>(initialCommentsProp);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
@@ -20,7 +19,8 @@ export default function GuidanceThread({ courseId, initialComments, apiBase }: {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setText(""); setLoading(false); router.refresh();
+      setComments((prev) => [...prev, data.comment]);
+      setText(""); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -33,7 +33,7 @@ export default function GuidanceThread({ courseId, initialComments, apiBase }: {
         {initialComments.map((c) => (
           <div key={c.id} style={{
             alignSelf: c.authorRole === "OMC" ? "flex-start" : "flex-end",
-            background: c.authorRole === "OMC" ? "#E8E6FB" : "#CCFBF1", padding: "8px 12px", maxWidth: "80%",
+            background: c.authorRole === "OMC" ? "#F3E4E7" : "#E2F4E8", padding: "8px 12px", maxWidth: "80%",
           }}>
             <div style={{ fontSize: 10, textTransform: "uppercase", color: "var(--slate)", marginBottom: 3 }}>{c.authorRole === "OMC" ? "OMC" : "Instructor"}</div>
             <div style={{ fontSize: 12.5 }}>{c.body}</div>

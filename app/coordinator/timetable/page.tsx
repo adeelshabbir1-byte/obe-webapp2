@@ -8,6 +8,7 @@ const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
+  { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/omc/reports", label: "OMC Reports" },

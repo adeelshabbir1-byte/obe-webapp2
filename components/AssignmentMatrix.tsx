@@ -6,7 +6,7 @@ import SortableTable from "./SortableTable";
 type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
 
-const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FFF9C4", 3: "#FFE0B2" };
+const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
 const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
@@ -151,7 +151,7 @@ export default function AssignmentMatrix() {
             return (
               <div key={i.id} style={{
                 border: `1px solid ${over ? "var(--rust)" : "var(--line)"}`, padding: "8px 12px",
-                background: over ? "#FFE4DC" : "var(--card)", minWidth: 150,
+                background: over ? "#FBE2DF" : "var(--card)", minWidth: 150,
               }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600 }}>{i.name}</div>
                 <div style={{ fontSize: 11.5, color: over ? "var(--rust)" : "var(--slate)" }}>
@@ -283,7 +283,7 @@ export default function AssignmentMatrix() {
                   const nameCell = (
                     <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
                       <b>{shortLabel}</b>
-                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E8E6FB", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F3E4E7", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
                       {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                     </td>
                   );
@@ -311,7 +311,7 @@ export default function AssignmentMatrix() {
                         return (
                           <td key={i.id} title={title} style={{
                             textAlign: "center",
-                            background: over && value > 0 ? "#FFE4DC" : priority ? PRIORITY_COLORS[priority] : matches ? "#CCFBF1" : undefined,
+                            background: over && value > 0 ? "#FBE2DF" : priority ? PRIORITY_COLORS[priority] : matches ? "#E2F4E8" : undefined,
                           }}>
                             <input
                               type="number" min={0} defaultValue={value} disabled={busyCell === key}

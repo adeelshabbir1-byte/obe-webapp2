@@ -82,16 +82,16 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* Assessment boxes */}
       {assessments.map((a) => (
         <g key={a.id}>
-          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#2563EB" />
+          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F66A0" />
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">{a.type} {a.label}</text>
-          <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#DBEAFE">{a.marksPct}% of course grade</text>
+          <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#D4E3F3">{a.marksPct}% of course grade</text>
         </g>
       ))}
 
       {/* CLO boxes */}
       {usedClos.map((c) => (
         <g key={c.id}>
-          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#7C3AED" />
+          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#5A4AA0" />
           <text x={col2X + 10} y={(cPos.get(c.id) || 0) + 24} fontSize={12} fontWeight={600} fill="#fff">{c.code}</text>
         </g>
       ))}
@@ -99,9 +99,9 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* PLO boxes */}
       {usedPlos.map((p) => (
         <g key={p.id}>
-          <rect x={col3X} y={pPos.get(p.id)} width={COL_W} height={BOX_H} rx={5} fill="#EA580C" />
+          <rect x={col3X} y={pPos.get(p.id)} width={COL_W} height={BOX_H} rx={5} fill="#A85D1F" />
           <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">PLO-{p.number}</text>
-          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 31} fontSize={9} fill="#FFE4DC">{p.title.length > 26 ? p.title.slice(0, 24) + "…" : p.title}</text>
+          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 31} fontSize={9} fill="#FBE2DF">{p.title.length > 26 ? p.title.slice(0, 24) + "…" : p.title}</text>
         </g>
       ))}
     </svg>

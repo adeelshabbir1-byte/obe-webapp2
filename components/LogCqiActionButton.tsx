@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LogCqiActionButton({ courseId, batchId, sourceType, sourceReference, defaultFinding, metricBefore }: {
   courseId?: string; batchId?: string; sourceType: "CLO" | "PLO" | "PEO" | "GENERAL";
   sourceReference: string; defaultFinding: string; metricBefore?: number;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [finding, setFinding] = useState(defaultFinding);
   const [actionTaken, setActionTaken] = useState("");
@@ -24,7 +22,7 @@ export default function LogCqiActionButton({ courseId, batchId, sourceType, sour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

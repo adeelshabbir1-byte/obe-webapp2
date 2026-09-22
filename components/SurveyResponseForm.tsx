@@ -29,7 +29,7 @@ export default function SurveyResponseForm({ token, questions }: { token: string
 
   return (
     <div>
-      {error && <div style={{ background: "#FFE4DC", color: "#B1512E", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{error}</div>}
+      {error && <div style={{ background: "#FBE2DF", color: "#C0312B", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{error}</div>}
       {questions.map((q, i) => (
         <div key={q.id} style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 13.5, marginBottom: 8 }}>{i + 1}. {q.text}</p>
@@ -40,9 +40,9 @@ export default function SurveyResponseForm({ token, questions }: { token: string
                 onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: v }))}
                 style={{
                   width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
-                  border: answers[q.id] === v ? "2px solid #4338CA" : "1px solid #D4D0C4",
-                  background: answers[q.id] === v ? "#4338CA" : "#fff",
-                  color: answers[q.id] === v ? "#fff" : "#1E1B4B", fontWeight: 600, fontSize: 14,
+                  border: answers[q.id] === v ? "2px solid #5A1923" : "1px solid #D4D0C4",
+                  background: answers[q.id] === v ? "#5A1923" : "#fff",
+                  color: answers[q.id] === v ? "#fff" : "#241A1D", fontWeight: 600, fontSize: 14,
                 }}
               >
                 {v}

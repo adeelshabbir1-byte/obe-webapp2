@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type IncomingNote = { id: string; body: string; createdAt: string; fromCourse: string };
 type MyNote = { id: string; body: string; createdAt: string };
 
-export default function FeedForwardNotes({ courseId, incoming, myNotes }: { courseId: string; incoming: IncomingNote[]; myNotes: MyNote[] }) {
-  const router = useRouter();
+export default function FeedForwardNotes({ courseId, incoming, myNotes: initialMyNotes }: { courseId: string; incoming: IncomingNote[]; myNotes: MyNote[] }) {
+  const [myNotes, setMyNotes] = useState<MyNote[]>(initialMyNotes);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
@@ -21,7 +20,8 @@ export default function FeedForwardNotes({ courseId, incoming, myNotes }: { cour
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setText(""); setLoading(false); router.refresh();
+      setMyNotes((prev) => [...prev, data.note]);
+      setText(""); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

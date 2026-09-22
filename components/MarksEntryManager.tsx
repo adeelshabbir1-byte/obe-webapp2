@@ -86,7 +86,7 @@ export default function MarksEntryManager({ courseId, instruments, students: ini
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Useful for adding a student from a different batch (repeat), or anyone not auto-enrolled. One roll number per line or comma-separated — their details are pulled from the existing student records.
         </p>
-        {addResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{addResult}</div>}
+        {addResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{addResult}</div>}
         <textarea value={rollNumbersToAdd} onChange={(e) => setRollNumbersToAdd(e.target.value)} rows={2} placeholder={"2026-CS-045\n2026-CS-046"} style={{ width: "100%", padding: 8, border: "1px solid var(--line)", fontFamily: "monospace", fontSize: 12.5, marginBottom: 8 }} />
         <button onClick={addByRollNumbers} disabled={loading || !rollNumbersToAdd.trim()} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>{loading ? "Adding…" : "Add Students"}</button>
       </div>

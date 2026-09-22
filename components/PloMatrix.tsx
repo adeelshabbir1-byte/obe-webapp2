@@ -100,7 +100,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                         return (
                           <td
                             key={p.id}
-                            style={{ textAlign: "center", background: hecSuggests ? "#FFF9C4" : undefined }}
+                            style={{ textAlign: "center", background: hecSuggests ? "#FBEED2" : undefined }}
                             title={checked && assignedBy ? `Assigned by ${assignedBy}` : hecSuggests ? "HEC suggests this mapping — not yet set" : undefined}
                           >
                             <input

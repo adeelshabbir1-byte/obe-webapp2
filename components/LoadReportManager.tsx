@@ -84,7 +84,7 @@ export default function LoadReportManager() {
             <tbody>
               {rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
               {rows.map((r) => (
-                <tr key={r.instructorId} style={{ background: r.over ? "#FFE4DC" : undefined }}>
+                <tr key={r.instructorId} style={{ background: r.over ? "#FBE2DF" : undefined }}>
                   <td>{r.name}</td><td>{r.assigned}</td>
                   <td>{r.externalLoadCount}{r.externalLoadNote ? ` (${r.externalLoadNote})` : ""}</td>
                   <td style={{ fontWeight: 600 }}>{r.total}</td><td>{r.normalLoad}</td>

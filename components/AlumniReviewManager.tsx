@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type AlumniRow = { id: string; name: string; rollNumber: string; degreeProgram: string; graduationYear: number; submitterName: string };
 type EmployerRow = { id: string; organizationName: string; companySize: string | null; industryType: string | null; submitterName: string };
 type EmploymentRow = { id: string; alumniName: string; employerName: string; jobTitle: string | null; submitterName: string };
 type DegreeRow = { id: string; alumniName: string; degreeName: string; institution: string; submitterName: string };
 
-export default function AlumniReviewManager({ alumni, employers, employment, degrees }: { alumni: AlumniRow[]; employers: EmployerRow[]; employment: EmploymentRow[]; degrees: DegreeRow[] }) {
-  const router = useRouter();
+export default function AlumniReviewManager({ alumni: initialAlumni, employers: initialEmployers, employment: initialEmployment, degrees: initialDegrees }: { alumni: AlumniRow[]; employers: EmployerRow[]; employment: EmploymentRow[]; degrees: DegreeRow[] }) {
+  const [alumni, setAlumni] = useState<AlumniRow[]>(initialAlumni);
+  const [employers, setEmployers] = useState<EmployerRow[]>(initialEmployers);
+  const [employment, setEmployment] = useState<EmploymentRow[]>(initialEmployment);
+  const [degrees, setDegrees] = useState<DegreeRow[]>(initialDegrees);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -21,7 +23,11 @@ export default function AlumniReviewManager({ alumni, employers, employment, deg
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
-      setBusyId(null); router.refresh();
+      if (type === "alumni") setAlumni((prev) => prev.filter((a) => a.id !== id));
+      else if (type === "employer") setEmployers((prev) => prev.filter((e) => e.id !== id));
+      else if (type === "employment") setEmployment((prev) => prev.filter((e) => e.id !== id));
+      else setDegrees((prev) => prev.filter((d) => d.id !== id));
+      setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 

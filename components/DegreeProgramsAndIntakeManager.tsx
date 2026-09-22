@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Program = { id: string; name: string; shortCode: string; defaultIntakeSize: number; usuallyOfferedInFall: boolean; usuallyOfferedInSpring: boolean };
 
 export default function DegreeProgramsAndIntakeManager({ programs: initialPrograms }: { programs: Program[] }) {
-  const router = useRouter();
   const [programs, setPrograms] = useState(initialPrograms);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -58,7 +56,7 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setResult(data); setLoading(false); router.refresh();
+      setResult(data); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

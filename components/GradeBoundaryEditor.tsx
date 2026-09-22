@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 
 type Student = { name: string; rollNumber: string; totalPct: number };
 type ScaleEntry = { letter: string; gpaValue: number };
@@ -12,7 +11,6 @@ const BAR_GAP = 3;
 export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScale, initialCutoffs }: {
   apiEndpoint: string; students: Student[]; gradingScale: ScaleEntry[]; initialCutoffs: Record<string, number>;
 }) {
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [cutoffs, setCutoffs] = useState<Record<string, number>>(initialCutoffs);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -65,7 +63,7 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

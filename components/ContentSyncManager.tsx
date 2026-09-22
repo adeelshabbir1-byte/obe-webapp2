@@ -487,7 +487,7 @@ export default function ContentSyncManager() {
               Show only groups not yet linked to a HEC course
             </label>
             {selectedCourseIds.size > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F5F3FF", padding: 8, border: "1px solid var(--brass)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F8EEF0", padding: 8, border: "1px solid var(--brass)" }}>
                 <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
                 <button onClick={handleSubmitGroup} disabled={selectedCourseIds.size < 2 || busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>
                   Group Selected ({selectedCourseIds.size}) — or press S
@@ -556,7 +556,7 @@ export default function ContentSyncManager() {
                             !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
                           ).slice(0, 30);
                           return (
-                            <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                            <div style={{ background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
                               <input
                                 autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                                 placeholder="Search HEC course code or title…"
@@ -571,7 +571,7 @@ export default function ContentSyncManager() {
                                 {filtered.map((o) => (
                                   <div key={o.id} onClick={() => selectPendingMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                                     <b>{o.code}</b> — {o.title}
-                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
                                     <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
                                   </div>
                                 ))}
@@ -600,7 +600,7 @@ export default function ContentSyncManager() {
                                     title={`${c.code} — ${c.title}`}
                                     style={{
                                       cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                      background: isSelected ? "#E8E6FB" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      background: isSelected ? "#F3E4E7" : row.kind === "group" ? "#FEF3C7" : undefined,
                                       border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}
@@ -616,7 +616,7 @@ export default function ContentSyncManager() {
                                     </span>
                                   </div>
                                   {editingCodeCourseId === cId && (
-                                    <div style={{ fontSize: 10.5, background: "#F5F3FF", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
+                                    <div style={{ fontSize: 10.5, background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
                                       <input
                                         value={editCodeValue} onChange={(e) => setEditCodeValue(e.target.value)}
                                         style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}

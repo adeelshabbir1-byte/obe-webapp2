@@ -7,7 +7,7 @@ type Plo = { id: string; number: number; title: string; description: string; sta
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
-    draft: ["#EFECE3", "#5B6B7C"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
+    draft: ["#EFECE3", "#574C50"], approved: ["#E2F4E8", "#1D8A4E"], "changes-requested": ["#FBE2DF", "#C0312B"],
   };
   const [bg, fg] = map[status] || map.draft;
   return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
@@ -55,7 +55,7 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
   return (
     <div className="card">
       {error && <div className="err">{error}</div>}
-      {bulkResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
+      {bulkResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
       {pendingCount > 0 && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
           <button onClick={approveAll} disabled={loading} className="btn" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>

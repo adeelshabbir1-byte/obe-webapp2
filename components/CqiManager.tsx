@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 type Cqi = {
   id: string; finding: string; actionTaken: string | null; status: string; createdAt: string;
@@ -16,6 +16,20 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [draftingId, setDraftingId] = useState<string | null>(null);
+  const actionTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  async function draftAction(id: string) {
+    setDraftingId(id); setError("");
+    try {
+      const res = await fetch(`/api/chairman/cqi/${id}/draft-action`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setDraftingId(null); return; }
+      const el = actionTextareaRefs.current[id];
+      if (el) { el.value = data.draft; el.focus(); }
+      setDraftingId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setDraftingId(null); }
+  }
 
   async function addRecord(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -94,7 +108,19 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
             </div>
             {editingId === r.id ? (
               <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); updateRecord(r.id, fd.get("actionTaken") as string, fd.get("status") as string); }} style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-end" }}>
-                <div style={{ flex: 1 }}><textarea name="actionTaken" defaultValue={r.actionTaken || ""} placeholder="Action taken..." rows={2} style={{ width: "100%", padding: 6, border: "1px solid var(--line)", fontSize: 12.5 }} /></div>
+                <div style={{ flex: 1 }}>
+                  <textarea
+                    name="actionTaken" defaultValue={r.actionTaken || ""} placeholder="Action taken..." rows={2}
+                    ref={(el) => { actionTextareaRefs.current[r.id] = el; }}
+                    style={{ width: "100%", padding: 6, border: "1px solid var(--line)", fontSize: 12.5 }}
+                  />
+                  <button
+                    type="button" onClick={() => draftAction(r.id)} disabled={draftingId === r.id}
+                    style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11, textDecoration: "underline", cursor: "pointer", padding: "2px 0 0" }}
+                  >
+                    {draftingId === r.id ? "Drafting…" : "✨ AI Draft"}
+                  </button>
+                </div>
                 <select name="status" defaultValue={r.status} style={{ padding: 6, border: "1px solid var(--line)", fontSize: 12.5 }}>
                   <option value="open">Open</option><option value="in-progress">In Progress</option><option value="closed">Closed</option>
                 </select>

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 
-export default function LocalSolutionUploader() {
-  const router = useRouter();
+export default function LocalSolutionUploader({ onUploaded }: { onUploaded?: (runId: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +20,7 @@ export default function LocalSolutionUploader() {
       if (!res.ok) { setError(data.error || "Something went wrong."); setUploading(false); return; }
       setOk(true); setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
-      router.refresh();
+      onUploaded?.(data.runId);
     } catch (err: any) { setError("Unexpected error: " + err.message); setUploading(false); }
   }
 

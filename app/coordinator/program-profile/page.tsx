@@ -3,11 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import ProgramProfileForm from "../../../components/ProgramProfileForm";
+import PeoAlignmentCheck from "../../../components/PeoAlignmentCheck";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
+  { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/timetable", label: "Timetable" },
@@ -84,13 +86,20 @@ export default async function ProgramProfilePage({ searchParams }: { searchParam
             }}
           />
           {selectedBatchId && (
-            <div className="card">
-              <h3 style={{ fontSize: 14, marginBottom: 8 }}>Generate the Document</h3>
-              <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
-                Uses this batch's current courses and their Subject Experts' plans (CLOs, weekly content, textbooks).
-              </p>
-              <a href={`/api/coordinator/program-document?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Word Document</a>
-            </div>
+            <>
+              <PeoAlignmentCheck
+                degreeProgram={selectedDegree}
+                batchId={selectedBatchId}
+                peoCount={profile?.peos ? JSON.parse(profile.peos).length : 0}
+              />
+              <div className="card">
+                <h3 style={{ fontSize: 14, marginBottom: 8 }}>Generate the Document</h3>
+                <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
+                  Uses this batch's current courses and their Subject Experts' plans (CLOs, weekly content, textbooks).
+                </p>
+                <a href={`/api/coordinator/program-document?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Word Document</a>
+              </div>
+            </>
           )}
         </>
       )}

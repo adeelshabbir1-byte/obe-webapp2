@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-export default function MfaSetupManager({ mfaEnabled }: { mfaEnabled: boolean }) {
-  const router = useRouter();
+export default function MfaSetupManager({ mfaEnabled: initialMfaEnabled }: { mfaEnabled: boolean }) {
+  const [mfaEnabled, setMfaEnabled] = useState(initialMfaEnabled);
   const [step, setStep] = useState<"idle" | "setup" | "done">("idle");
   const [secret, setSecret] = useState("");
   const [uri, setUri] = useState("");
@@ -29,14 +28,15 @@ export default function MfaSetupManager({ mfaEnabled }: { mfaEnabled: boolean })
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-    setBackupCodes(data.backupCodes); setStep("done"); setLoading(false);
+    setBackupCodes(data.backupCodes); setStep("done"); setMfaEnabled(true); setLoading(false);
   }
 
   async function disable() {
     if (!confirm("Turn off two-factor authentication for your account?")) return;
     setLoading(true);
     await fetch("/api/settings/mfa/disable", { method: "POST" });
-    setLoading(false); router.refresh();
+    setMfaEnabled(false);
+    setLoading(false);
   }
 
   if (mfaEnabled) {

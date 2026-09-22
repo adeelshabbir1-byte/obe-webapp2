@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function CourseDescriptionFieldsForm({ courseId, initial }: {
   courseId: string;
   initial: { textbook: string; referenceMaterial: string; catalogDescription: string; programmingAssignmentsNote: string; labInstructorName: string };
 }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
 
@@ -23,14 +21,14 @@ export default function CourseDescriptionFieldsForm({ courseId, initial }: {
         labInstructorName: fd.get("labInstructorName"),
       }),
     });
-    setOk(true); setLoading(false); router.refresh();
+    setOk(true); setLoading(false);
   }
 
   return (
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 10 }}>Additional Course Information</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Feeds into the Course Description Form and Course Monitoring Form reports.</p>
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <form onSubmit={onSubmit}>
         <div className="field"><label>Catalog Description</label><textarea name="catalogDescription" defaultValue={initial.catalogDescription} rows={3} style={{ width: "100%", padding: "8px", border: "1px solid var(--line)" }} /></div>
         <div className="field"><label>Textbook</label><input name="textbook" defaultValue={initial.textbook} /></div>

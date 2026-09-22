@@ -87,7 +87,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
-        {result && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
+        {result && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Column A = Name, Column B = Roll Number. A header row is fine — it's detected and skipped automatically.
         </p>

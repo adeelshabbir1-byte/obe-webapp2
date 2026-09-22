@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function AttendanceThresholdForm({ initial }: { initial: number }) {
-  const router = useRouter();
   const [pct, setPct] = useState(String(initial));
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
@@ -18,7 +16,7 @@ export default function AttendanceThresholdForm({ initial }: { initial: number }
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -29,7 +27,7 @@ export default function AttendanceThresholdForm({ initial }: { initial: number }
         Students below this percentage are flagged in each course's Attendance Summary. Defaults to 75%.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
         <div className="field" style={{ margin: 0 }}>
           <label>Minimum %</label>

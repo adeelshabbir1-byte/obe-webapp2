@@ -133,7 +133,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
           PDF's formatting allows, but this always needs your review afterward in the curriculum editor
           before publishing. Different institutions format these documents differently, so results vary.
         </p>
-        {uploadResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{uploadResult} Redirecting to the editor…</div>}
+        {uploadResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{uploadResult} Redirecting to the editor…</div>}
         <form onSubmit={uploadPdf}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 14 }}>
             <div className="field"><label>Authority</label><input name="authority" placeholder="e.g. University of the Punjab" required /></div>

@@ -2,19 +2,22 @@
 // with the same color, making the two views visually consistent. Chosen to
 // be maximally distinct from each other (spread around the color wheel),
 // not just "on brand" — similar-looking colors defeat the point of coding by type.
+// Palette kept warm and muted (not bright "SaaS" tones) to match the site's
+// maroon/cream theme; several values reuse the theme's own azure/teal/
+// purple/gold accents directly for consistency.
 export const COURSE_TYPE_COLORS: Record<string, string> = {
-  "Core": "#2563EB",
-  "Fundamentals": "#2563EB",
-  "Major": "#2563EB", // legacy synonym, kept for courses created before the rename
-  "Elective": "#16A34A",
-  "Lab": "#EA580C",
-  "IDS": "#DC2626",
-  "General Education": "#7C3AED",
-  "Capstone Project": "#DB2777",
-  "Field Experience": "#0891B2",
-  "Certification": "#CA8A04",
+  "Core": "#3F66A0",
+  "Fundamentals": "#3F66A0",
+  "Major": "#3F66A0", // legacy synonym, kept for courses created before the rename
+  "Elective": "#1D8A4E",
+  "Lab": "#A85D1F",
+  "IDS": "#963C2C",
+  "General Education": "#5A4AA0",
+  "Capstone Project": "#8A3A5C",
+  "Field Experience": "#1F7A72",
+  "Certification": "#96650F",
 };
-export const COURSE_TYPE_FALLBACK_COLOR = "#64748B";
+export const COURSE_TYPE_FALLBACK_COLOR = "#574C50";
 
 export function courseTypeColor(type: string): string {
   return COURSE_TYPE_COLORS[type] || COURSE_TYPE_FALLBACK_COLOR;

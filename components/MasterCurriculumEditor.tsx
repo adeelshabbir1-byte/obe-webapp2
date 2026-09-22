@@ -161,7 +161,7 @@ export default function MasterCurriculumEditor() {
             )}
           </div>
           {!detail.isOwned && (
-            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10, background: "#FFF9C4", padding: 8 }}>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10, background: "#FBEED2", padding: 8 }}>
               This is the shared official reference copy — read-only. Clone it to get your own editable version;
               future imports can then use your copy instead of the original, and any edits you make (including
               new PLO suggestions) are available for your institution going forward. Note: PLO suggestion
@@ -172,7 +172,7 @@ export default function MasterCurriculumEditor() {
           )}
 
           {showAddCourse && detail.isOwned && (
-            <div style={{ background: "#F5F3FF", border: "1px solid var(--brass)", padding: 10, marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ background: "#F8EEF0", border: "1px solid var(--brass)", padding: 10, marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Code</label><input value={newCourse.code} onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })} style={{ fontSize: 12, padding: 4, width: 100 }} /></div>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Title</label><input value={newCourse.title} onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })} style={{ fontSize: 12, padding: 4, width: 220 }} /></div>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Credit Hrs</label><input type="number" value={newCourse.creditHours} onChange={(e) => setNewCourse({ ...newCourse, creditHours: e.target.value })} style={{ fontSize: 12, padding: 4, width: 60 }} /></div>

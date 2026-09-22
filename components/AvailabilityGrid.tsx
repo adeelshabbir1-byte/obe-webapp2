@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HOURS = Array.from({ length: 12 }, (_, i) => 8 + i); // 8:00 - 19:00
@@ -9,7 +8,6 @@ const HOURS = Array.from({ length: 12 }, (_, i) => 8 + i); // 8:00 - 19:00
 export default function AvailabilityGrid({ facultyId, existingUnavailable }: {
   facultyId?: string; existingUnavailable: { dayOfWeek: string; startHour: number; endHour: number }[];
 }) {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -46,7 +44,7 @@ export default function AvailabilityGrid({ facultyId, existingUnavailable }: {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
-      setSaved(true); setSaving(false); router.refresh();
+      setSaved(true); setSaving(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 
@@ -75,7 +73,7 @@ export default function AvailabilityGrid({ facultyId, existingUnavailable }: {
             <tr key={h}>
               <td style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>{h}:00–{h + 1}:00</td>
               {DAYS.map((d) => (
-                <td key={d} style={{ textAlign: "center", background: available[d][h] ? undefined : "#FFE4DC" }}>
+                <td key={d} style={{ textAlign: "center", background: available[d][h] ? undefined : "#FBE2DF" }}>
                   <input type="checkbox" checked={available[d][h]} onChange={() => toggle(d, h)} />
                 </td>
               ))}

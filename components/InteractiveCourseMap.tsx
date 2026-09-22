@@ -188,11 +188,11 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
               return (
                 <g key={c.id} style={{ cursor: loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType)} opacity={c.isOffered ? 0.5 : 0.9}
-                    stroke={isSelected ? "#1E1B4B" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
+                    stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
                   <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
                   {mode === "prereq" && c.prerequisiteCourseId && (
                     <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>
-                      <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#B1512E" />
+                      <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#C0312B" />
                       <text x={pos.x + BOX_W - 10} y={pos.y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">×</text>
                     </g>
                   )}

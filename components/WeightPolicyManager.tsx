@@ -15,16 +15,16 @@ type Policy = {
 };
 
 const COMPONENTS: { key: string; label: string; color: string }[] = [
-  { key: "assignment", label: "Assignment", color: "#2563EB" },
-  { key: "quiz", label: "Quiz", color: "#16A34A" },
-  { key: "project", label: "Project", color: "#7C3AED" },
-  { key: "lab", label: "Lab", color: "#EA580C" },
-  { key: "midterm", label: "Midterm", color: "#DB2777" },
-  { key: "final", label: "Final", color: "#CA8A04" },
+  { key: "assignment", label: "Assignment", color: "#3F66A0" },
+  { key: "quiz", label: "Quiz", color: "#1D8A4E" },
+  { key: "project", label: "Project", color: "#5A4AA0" },
+  { key: "lab", label: "Lab", color: "#A85D1F" },
+  { key: "midterm", label: "Midterm", color: "#8A3A5C" },
+  { key: "final", label: "Final", color: "#96650F" },
 ];
-const MIN_BG = "#DBEAFE";   // light blue — every Min % cell
-const MAX_BG = "#DCFCE7";   // light green — every Max % cell
-const COUNT_BG = "#FEF3C7"; // light amber — every # Min (minimum count) cell
+const MIN_BG = "#E3EBF3";   // light warm blue — every Min % cell
+const MAX_BG = "#E4F0D6";   // light warm green — every Max % cell
+const COUNT_BG = "#FBEED2"; // light warm gold — every # Min (minimum count) cell
 
 export default function WeightPolicyManager({ initialPolicies }: { initialPolicies: Policy[] }) {
   const [error, setError] = useState("");
@@ -61,11 +61,11 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       <SortableTable className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}>Course Type</th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E8E6FB)" }}></th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (

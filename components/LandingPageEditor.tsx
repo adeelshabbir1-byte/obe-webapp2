@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Feature = { title: string; description: string };
 type Testimonial = { quote: string; author: string };
@@ -12,7 +11,6 @@ type Content = {
 };
 
 export default function LandingPageEditor({ initial }: { initial: Content }) {
-  const router = useRouter();
   const [headline, setHeadline] = useState(initial.headline);
   const [subheadline, setSubheadline] = useState(initial.subheadline);
   const [aboutText, setAboutText] = useState(initial.aboutText);
@@ -42,14 +40,14 @@ export default function LandingPageEditor({ initial }: { initial: Content }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved. <a href="/" target="_blank" style={{ color: "var(--sage)" }}>View the live page →</a></div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved. <a href="/" target="_blank" style={{ color: "var(--sage)" }}>View the live page →</a></div>}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Hero</h3>

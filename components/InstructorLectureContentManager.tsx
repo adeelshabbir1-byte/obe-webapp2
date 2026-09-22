@@ -133,7 +133,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                   <th style={{ width: 34 }} rowSpan={2}>Wk</th>
                   <th style={{ width: 50 }} rowSpan={2}>Lec</th>
                   <th colSpan={1} style={{ background: "#F4EFE1", textAlign: "center" }}>Subject Expert (Planned)</th>
-                  <th colSpan={6} style={{ background: "#E8E6FB", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
+                  <th colSpan={6} style={{ background: "#F3E4E7", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
                 </tr>
                 <tr>
                   <th style={{ width: "16%", background: "#F4EFE1" }}>Topic</th>
@@ -175,7 +175,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                           onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
                           style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                       </td>
-                      <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FFE4DC" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
+                      <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FBE2DF" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
                         <input key={`date-${r.id}-${r.actualDate}`} type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
                           onBlur={(e) => { const prev = r.actualDate ? r.actualDate.slice(0, 10) : ""; if (e.target.value !== prev) saveField(r, { actualDate: e.target.value }, e.target, prev); }}
                           style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />

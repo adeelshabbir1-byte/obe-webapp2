@@ -250,7 +250,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {importResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{importResult}</div>}
+      {importResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{importResult}</div>}
 
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Viewing batch</label>
@@ -267,7 +267,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           each course's CLOs, weights, and lecture schedule) — useful when a program has no official curriculum
           to import from HEC.
         </p>
-        {copyResult && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{copyResult}</div>}
+        {copyResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{copyResult}</div>}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div className="field" style={{ marginBottom: 0 }}>
             <label>Copy From</label>
@@ -408,7 +408,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
                   {c.fromBenchmark && (
-                    <span style={{ fontSize: 10, background: "#E8E6FB", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 2, marginRight: 6 }}>
+                    <span style={{ fontSize: 10, background: "#F3E4E7", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 2, marginRight: 6 }}>
                       Pre-filled from prior batch
                     </span>
                   )}

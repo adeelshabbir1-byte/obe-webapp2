@@ -82,9 +82,9 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
         Going outside the OMC's allowed range asks for confirmation before it's sent for approval. The total below updates as you type.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {pending && (
-        <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "10px 12px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#FBE2DF", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "10px 12px", fontSize: 12.5, marginBottom: 12 }}>
           <b>Not saved — held for OMC approval.</b> {pending.message}
           {pending.violations.length > 0 && (
             <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
@@ -95,7 +95,7 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
       )}
 
       {confirming && (
-        <div style={{ background: "#FFE4DC", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "12px 14px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#FBE2DF", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "12px 14px", fontSize: 12.5, marginBottom: 12 }}>
           <b>These are outside the OMC's allowed range:</b>
           <ul style={{ margin: "6px 0 10px", paddingLeft: 18 }}>{confirming.violations.map((v) => <li key={v}>{v}</li>)}</ul>
           <p style={{ marginBottom: 10 }}>Do you want to send this for OMC approval, or go back and adjust the values to stay within range?</p>

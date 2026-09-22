@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type ScaleEntry = { letter: string; gpaValue: number };
 type SavedCutoff = { letter: string; minPercent: number };
@@ -10,7 +9,6 @@ export default function GradeCutoffsForm({ courseId, apiEndpoint, gradingScale, 
   courseId: string; apiEndpoint: string; gradingScale: ScaleEntry[]; savedCutoffs: SavedCutoff[];
   suggestion: { A: number; B: number; C: number; D: number };
 }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +35,7 @@ export default function GradeCutoffsForm({ courseId, apiEndpoint, gradingScale, 
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOk(true); setLoading(false); router.refresh();
+      setOk(true); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -51,7 +49,7 @@ export default function GradeCutoffsForm({ courseId, apiEndpoint, gradingScale, 
       <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
         Minimum % needed for each letter — pre-filled with the computed suggestion for A/B/C/D, fully editable. Once saved, these are what's actually used to assign grades.
       </p>
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>Saved.</div>}
       {error && <div className="err">{error}</div>}
       <form onSubmit={onSubmit}>
         <table>

@@ -2,7 +2,6 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 function fileToDataUri(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -15,8 +14,8 @@ function fileToDataUri(file: File): Promise<string> {
 
 type Chairman = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
 
-export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairman[] }) {
-  const router = useRouter();
+export default function ChairmenBrandingManager({ chairmen: initialChairmen }: { chairmen: Chairman[] }) {
+  const [chairmen, setChairmen] = useState<Chairman[]>(initialChairmen);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [instituteName, setInstituteName] = useState("");
@@ -48,7 +47,8 @@ export default function ChairmenBrandingManager({ chairmen }: { chairmen: Chairm
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setExpandedId(null); setLoading(false); router.refresh();
+      setChairmen((prev) => prev.map((c) => c.id === chairmanId ? { ...c, name, instituteName, instituteLogo, maxDegreePrograms: maxDegreePrograms === "" ? null : parseInt(maxDegreePrograms, 10) } : c));
+      setExpandedId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

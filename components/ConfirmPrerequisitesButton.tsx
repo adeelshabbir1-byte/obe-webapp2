@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-export default function ConfirmPrerequisitesButton({ batchId, confirmedAt }: { batchId: string; confirmedAt: string | null }) {
-  const router = useRouter();
+export default function ConfirmPrerequisitesButton({ batchId, confirmedAt: initialConfirmedAt }: { batchId: string; confirmedAt: string | null }) {
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(initialConfirmedAt);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +13,8 @@ export default function ConfirmPrerequisitesButton({ batchId, confirmedAt }: { b
       const res = await fetch(`/api/coordinator/batches/${batchId}/confirm-prerequisites`, { method: "PUT" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setConfirmedAt(data.prerequisitesConfirmedAt || new Date().toISOString());
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

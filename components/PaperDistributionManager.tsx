@@ -181,7 +181,7 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
                   {coverageByTopic && (() => {
                     const cov = actualCoverageFor(it.topicText);
                     return (
-                      <td style={!cov?.covered ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)" }}>
+                      <td style={!cov?.covered ? { background: "#FBE2DF", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)" }}>
                         {cov ? `${cov.covered ? "Covered" : "Not Yet"} · ${cov.lectureCount} lec · ${Math.round(cov.deliveredMarksPct)}% delivered` : "No matching topic"}
                       </td>
                     );

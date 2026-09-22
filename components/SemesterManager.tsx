@@ -93,7 +93,7 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {result && <div style={{ background: "#CCFBF1", color: "var(--sage)", border: "1px solid #99F1E4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12, whiteSpace: "pre-line" }}>{result}</div>}
+      {result && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12, whiteSpace: "pre-line" }}>{result}</div>}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Current Term</h3>

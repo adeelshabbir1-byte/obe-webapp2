@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { safeFetchJson } from "../lib/safeFetchJson";
 
 type SuggestedCourse = { id: string; code: string; title: string; batchLabel: string };
 type Suggestion = { term: string; courses: SuggestedCourse[] };
 
 export default function EquivalenceSuggestions() {
-  const router = useRouter();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -45,7 +43,6 @@ export default function EquivalenceSuggestions() {
       }
       await load();
       setBusyKey(null);
-      router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyKey(null); }
   }
 

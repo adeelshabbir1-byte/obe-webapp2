@@ -361,7 +361,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             </p>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <a href="/api/coordinator/timetable/download-constraints" className="btn btn-brass" style={{ textDecoration: "none" }}>1. Download Constraints (Excel)</a>
-              <LocalSolutionUploader />
+              <LocalSolutionUploader onUploaded={(runId) => { setRunId(runId); loadRun(runId); }} />
             </div>
           </div>
 
@@ -449,7 +449,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                                 title={isClashing ? clashInfo?.reasons.join("; ") : "Drag to move"}
                                 style={{
                                   padding: 4, borderRadius: 3, cursor: movingEntryId ? "wait" : "grab",
-                                  background: isClashing ? "#FFE4DC" : "#F0EDFB",
+                                  background: isClashing ? "#FBE2DF" : "#F0EDFB",
                                   border: isClashing ? "1.5px solid var(--rust)" : "1px solid transparent",
                                   opacity: movingEntryId === entry.id ? 0.5 : 1,
                                 }}
