@@ -38,8 +38,15 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // Recompute every row sharing this instrument — the split changes for
   // all of them whenever the count of linked rows changes.
   await recomputeAffectedRows([instrumentId]);
-
-  const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
   await syncCourseContentToLinkedCourses(course.id);
-  return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
+
+  // Return every row for this course (not just the one that was
+  // clicked) — the weight split can shift for every row sharing this
+  // instrument, so the client needs the full, fresh picture to stay
+  // accurate without a full-page refetch.
+  const allRows = await prisma.lectureRow.findMany({
+    where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" },
+    include: { instrumentLinks: { select: { instrumentId: true } } },
+  });
+  return NextResponse.json({ rows: allRows.map((r) => ({ id: r.id, weightPct: r.weightPct, linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId) })) });
 }

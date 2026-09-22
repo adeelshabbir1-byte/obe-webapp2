@@ -2,7 +2,6 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Policy = {
   courseType: string;
@@ -28,7 +27,6 @@ const MAX_BG = "#DCFCE7";   // light green — every Max % cell
 const COUNT_BG = "#FEF3C7"; // light amber — every # Min (minimum count) cell
 
 export default function WeightPolicyManager({ initialPolicies }: { initialPolicies: Policy[] }) {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [savingType, setSavingType] = useState<string | null>(null);
   const [savedType, setSavedType] = useState<string | null>(null);
@@ -48,7 +46,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSavingType(null); return; }
-      setSavedType(courseType); setSavingType(null); router.refresh();
+      setSavedType(courseType); setSavingType(null);
       setTimeout(() => setSavedType(null), 2000);
     } catch (err: any) { setError("Unexpected error: " + err.message); setSavingType(null); }
   }

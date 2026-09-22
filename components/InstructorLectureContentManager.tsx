@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
 type Clo = { id: string; code: string };
@@ -11,8 +10,21 @@ type SePlanRow = { lectureNumber: number; week: number; topic: string; subtopic:
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
 
+function normalizeRow(raw: any, prev: Row): Row {
+  return {
+    ...prev,
+    topic: raw.topic, subtopic: raw.subtopic, cloId: raw.cloId, bloomLevel: raw.bloomLevel,
+    weightPct: raw.weightPct, actualDate: raw.actualDate ? new Date(raw.actualDate).toISOString() : null,
+    rescheduledNote: raw.rescheduledNote,
+  };
+}
+
+// Every action updates local state from its own response — a cell
+// edit touches one row, a move swaps two, auto-fill genuinely does
+// touch most/all rows (so returning the full list there is correct,
+// not wasteful) — none of them re-fetch the whole page anymore.
 export default function InstructorLectureContentManager({ courseId, initialRows, sePlan, clos }: { courseId: string; initialRows: Row[]; sePlan: SePlanRow[]; clos: Clo[] }) {
-  const router = useRouter();
+  const [rows, setRows] = useState<Row[]>(initialRows);
   const [error, setError] = useState("");
   const [busyRow, setBusyRow] = useState<string | null>(null);
   const [autoFilling, setAutoFilling] = useState(false);
@@ -26,7 +38,11 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
       const res = await fetch(`/api/instructor/courses/${courseId}/lecture/auto-fill-dates`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setAutoFilling(false); return; }
-      setAutoFilling(false); router.refresh();
+      setRows((prev) => {
+        const byId = new Map((data.rows || []).map((r: any) => [r.id, r]));
+        return prev.map((r) => byId.has(r.id) ? normalizeRow(byId.get(r.id), r) : r);
+      });
+      setAutoFilling(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setAutoFilling(false); }
   }
 
@@ -47,7 +63,9 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
         if (revertEl) { revertEl.value = revertValue || ""; revertEl.style.borderColor = "var(--rust)"; setTimeout(() => { revertEl.style.borderColor = ""; }, 1500); }
         setBusyRow(null); return;
       }
-      setBusyRow(null); router.refresh();
+      const cloCode = data.row.cloId ? clos.find((c) => c.id === data.row.cloId)?.code || null : null;
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...normalizeRow(data.row, r), cloCode } : r));
+      setBusyRow(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
 
@@ -59,11 +77,20 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
-      setBusyRow(null); router.refresh();
+      setRows((prev) => {
+        const byId = new Map((data.rows || []).map((r: any) => [r.id, r]));
+        return prev.map((r) => {
+          if (!byId.has(r.id)) return r;
+          const raw = byId.get(r.id);
+          const cloCode = raw.cloId ? clos.find((c) => c.id === raw.cloId)?.code || null : null;
+          return { ...normalizeRow(raw, r), cloCode };
+        });
+      });
+      setBusyRow(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
 
-  const filledCount = initialRows.filter((r) => r.actualDate).length;
+  const filledCount = rows.filter((r) => r.actualDate).length;
 
   // A changed cell gets a small amber left-border flag — comparing against
   // the Subject Expert's corresponding value for that same lecture number.
@@ -76,7 +103,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <h3 style={{ fontSize: 14 }}>Lecture Content — Actual Delivery</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} lectures dated</span>
+            <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} lectures dated</span>
             <button onClick={autoFillDates} disabled={autoFilling} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>
               {autoFilling ? "Filling…" : "Auto-fill Dates"}
             </button>
@@ -119,7 +146,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                 </tr>
               </thead>
               <tbody>
-                {initialRows.map((r) => {
+                {rows.map((r) => {
                   const se = sePlanByLecture.get(r.lectureNumber);
                   const topicChanged = se && r.topic !== se.topic;
                   const subtopicChanged = se && (r.subtopic || "") !== (se.subtopic || "");

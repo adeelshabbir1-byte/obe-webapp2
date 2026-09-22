@@ -2,7 +2,6 @@
 
 import { useState, Fragment, useMemo } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 // Master Curriculum's own category labels differ slightly from the
@@ -23,8 +22,16 @@ type MPlo = { id: string; number: number; title: string; description: string };
 const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
 const BLOOM_LEVELS = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
-export default function CurriculumDetailManager({ curriculumId, courses, plos }: { curriculumId: string; courses: MCourse[]; plos: MPlo[] }) {
-  const router = useRouter();
+// Everything below updates its own local state directly from each
+// request's own response, instead of calling router.refresh() after
+// every small edit — which used to re-fetch this entire curriculum's
+// full course list (hundreds of courses, each with CLOs and PLO
+// mappings) from the server on every single save. One section changes,
+// only that section's local state updates — matching how a
+// well-behaved multi-section form should feel.
+export default function CurriculumDetailManager({ curriculumId, courses: initialCourses, plos: initialPlos }: { curriculumId: string; courses: MCourse[]; plos: MPlo[] }) {
+  const [courses, setCourses] = useState<MCourse[]>(initialCourses);
+  const [plos, setPlos] = useState<MPlo[]>(initialPlos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
@@ -35,6 +42,10 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
   const [newCloStatement, setNewCloStatement] = useState("");
   const [newCloBloom, setNewCloBloom] = useState("C2");
 
+  function updateCourseLocal(courseId: string, patch: Partial<MCourse>) {
+    setCourses((prev) => prev.map((c) => (c.id === courseId ? { ...c, ...patch } : c)));
+  }
+
   async function addClo(courseId: string) {
     if (!newCloStatement.trim()) return;
     setLoading(true); setError("");
@@ -44,17 +55,20 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setNewCloStatement(""); setLoading(false); router.refresh();
+      const newClo: Clo = { id: data.clo.id, statement: data.clo.statement, bloomLevel: data.clo.bloomLevel, orderIndex: data.clo.orderIndex, mappedPloNumber: null, ploMappingSource: null };
+      updateCourseLocal(courseId, { seedClos: [...(courses.find((c) => c.id === courseId)?.seedClos || []), newClo] });
+      setNewCloStatement(""); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function deleteClo(cloId: string) {
+  async function deleteClo(courseId: string, cloId: string) {
     setLoading(true);
     await fetch(`/api/admin/curricula/clos/${cloId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    updateCourseLocal(courseId, { seedClos: (courses.find((c) => c.id === courseId)?.seedClos || []).filter((clo) => clo.id !== cloId) });
+    setLoading(false);
   }
 
-  async function updateCloPlo(cloId: string, ploId: string) {
+  async function updateCloPlo(courseId: string, cloId: string, ploId: string) {
     setLoading(true); setError("");
     try {
       const res = await fetch(`/api/admin/curricula/clos/${cloId}`, {
@@ -62,7 +76,12 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      const ploNumber = ploId ? plos.find((p) => p.id === ploId)?.number ?? null : null;
+      const course = courses.find((c) => c.id === courseId);
+      updateCourseLocal(courseId, {
+        seedClos: (course?.seedClos || []).map((clo) => clo.id === cloId ? { ...clo, mappedPloNumber: ploNumber, ploMappingSource: ploId ? "MANUAL" : null } : clo),
+      });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -75,7 +94,8 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      updateCourseLocal(courseId, { suggestedPloNumbers: next });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -95,7 +115,9 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      const prereq = courses.find((c) => c.id === data.course.prerequisiteCourseId);
+      setCourses((prev) => [...prev, { ...data.course, prerequisiteCourseTitle: prereq?.title ?? null, seedClos: [], suggestedPloNumbers: [] }]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -103,26 +125,29 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const payload = {
+      code: fd.get("code") as string, title: fd.get("title") as string, creditHours: Number(fd.get("creditHours")),
+      category: fd.get("category") as string, semesterNumber: fd.get("semesterNumber") ? Number(fd.get("semesterNumber")) : null,
+      textbook: (fd.get("textbook") as string) || null, catalogDescription: (fd.get("catalogDescription") as string) || null, referenceMaterial: (fd.get("referenceMaterial") as string) || null,
+      prerequisiteCourseId: (fd.get("prerequisiteCourseId") as string) || null,
+    };
     try {
       const res = await fetch(`/api/admin/curricula/${curriculumId}/courses/${courseId}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
-          category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
-          textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
-          prerequisiteCourseId: fd.get("prerequisiteCourseId") || null,
-        }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingCourseId(null); setLoading(false); router.refresh();
+      const prereqTitle = payload.prerequisiteCourseId ? courses.find((c) => c.id === payload.prerequisiteCourseId)?.title ?? null : null;
+      updateCourseLocal(courseId, { ...payload, prerequisiteCourseTitle: prereqTitle });
+      setEditingCourseId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeCourse(courseId: string) {
     setLoading(true);
     await fetch(`/api/admin/curricula/${curriculumId}/courses/${courseId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setCourses((prev) => prev.filter((c) => c.id !== courseId));
+    setLoading(false);
   }
 
   async function addPlo(e: React.FormEvent<HTMLFormElement>) {
@@ -136,7 +161,8 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setPlos((prev) => [...prev, data.plo].sort((a, b) => a.number - b.number));
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -144,21 +170,23 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const title = fd.get("title") as string, description = fd.get("description") as string;
     try {
       const res = await fetch(`/api/admin/curricula/${curriculumId}/plos/${ploId}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: fd.get("title"), description: fd.get("description") }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, description }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingPloId(null); setLoading(false); router.refresh();
+      setPlos((prev) => prev.map((p) => p.id === ploId ? { ...p, title, description } : p));
+      setEditingPloId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removePlo(ploId: string) {
     setLoading(true);
     await fetch(`/api/admin/curricula/${curriculumId}/plos/${ploId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setPlos((prev) => prev.filter((p) => p.id !== ploId));
+    setLoading(false);
   }
 
   const uniqueCategories = useMemo(() => Array.from(new Set(courses.map((c) => c.category))).sort(), [courses]);
@@ -250,13 +278,13 @@ export default function CurriculumDetailManager({ curriculumId, courses, plos }:
                               <div key={clo.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
                                   <span><b>{clo.bloomLevel}</b> — {clo.statement}</span>
-                                  <button onClick={() => deleteClo(clo.id)} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff", flexShrink: 0 }}>✕</button>
+                                  <button onClick={() => deleteClo(c.id, clo.id)} style={{ fontSize: 10, padding: "1px 6px", border: "1px solid var(--line)", background: "#fff", flexShrink: 0 }}>✕</button>
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                                   <select
                                     value={plos.find((p) => p.number === clo.mappedPloNumber)?.id ?? ""}
                                     disabled={loading}
-                                    onChange={(e) => updateCloPlo(clo.id, e.target.value)}
+                                    onChange={(e) => updateCloPlo(c.id, clo.id, e.target.value)}
                                     style={{ fontSize: 10.5, padding: 2, background: sourceColor, border: "1px solid var(--line)" }}
                                   >
                                     <option value="">No PLO mapped</option>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Req = {
   id: string; courseCode: string; courseTitle: string; source: string; proposedBy: string;
@@ -10,7 +9,7 @@ type Req = {
 };
 
 export default function WeightExceptionsManager({ initialRequests }: { initialRequests: Req[] }) {
-  const router = useRouter();
+  const [requests, setRequests] = useState<Req[]>(initialRequests);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -25,7 +24,8 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setOpenId(null); setLoading(false); router.refresh();
+      setRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setOpenId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -36,8 +36,8 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
         <SortableTable>
           <thead><tr><th>Course</th><th>Proposed By</th><th>Proposed Weights</th><th></th></tr></thead>
           <tbody>
-            {initialRequests.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No pending weight exception requests.</td></tr>}
-            {initialRequests.map((r) => (
+            {requests.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No pending weight exception requests.</td></tr>}
+            {requests.map((r) => (
               <tr key={r.id}>
                 <td><b>{r.courseCode}</b><br /><span style={{ color: "var(--slate)", fontSize: 11.5 }}>{r.courseTitle}</span></td>
                 <td>{r.proposedBy} <span className="badge badge-neutral" style={{ marginLeft: 4 }}>{r.source === "INSTRUCTOR" ? "Instructor" : "Subject Expert"}</span></td>

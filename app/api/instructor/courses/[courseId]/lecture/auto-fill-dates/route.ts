@@ -87,5 +87,6 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
 
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_DATES_AUTO_FILLED", entityType: "Course", entityId: course.id, metadata: { filled } });
 
-  return NextResponse.json({ filled });
+  const updated = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" } });
+  return NextResponse.json({ filled, rows: updated });
 }

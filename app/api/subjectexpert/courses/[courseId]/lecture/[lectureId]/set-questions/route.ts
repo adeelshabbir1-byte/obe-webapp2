@@ -52,8 +52,12 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // the split changes for all of them whenever the linked-row count changes.
   const addedInstrumentIds = numbers.map((n: string) => byLabel.get(n)!.id);
   await recomputeAffectedRows([...new Set([...removedInstrumentIds, ...addedInstrumentIds])]);
-
-  const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
   await syncCourseContentToLinkedCourses(course.id);
-  return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
+
+  // Same reasoning as instrument-toggle: return every row so the client
+  // can stay accurate without a full-page refetch.
+  const allRows = await prisma.lectureRow.findMany({
+    where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" },
+  });
+  return NextResponse.json({ rows: allRows.map((r) => ({ id: r.id, weightPct: r.weightPct, midtermQuestions: r.midtermQuestions, finalQuestions: r.finalQuestions })) });
 }

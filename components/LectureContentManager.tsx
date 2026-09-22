@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 import { colorForTopic } from "../lib/topicColor";
 
 type Clo = { id: string; code: string };
@@ -10,10 +9,13 @@ type Row = { id: string; week: number; lectureNumber: number; topic: string; sub
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
 
+// Each cell edit updates only its own row's local state from the PATCH
+// response, instead of router.refresh() re-fetching all 32 rows (plus
+// the course's full CLO list) on every single blur/change event.
 export default function LectureContentManager({ courseId, initialRows, clos, apiBase, generateEndpoint }: {
   courseId: string; initialRows: Row[]; clos: Clo[]; apiBase: string; generateEndpoint: string;
 }) {
-  const router = useRouter();
+  const [rows, setRows] = useState<Row[]>(initialRows);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [busyRow, setBusyRow] = useState<string | null>(null);
@@ -24,7 +26,8 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
       const res = await fetch(generateEndpoint, { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setRows(data.rows || []);
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -42,11 +45,12 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
-      setBusyRow(null); router.refresh();
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, topic: data.row.topic, subtopic: data.row.subtopic, cloId: data.row.cloId, bloomLevel: data.row.bloomLevel } : r));
+      setBusyRow(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
 
-  if (initialRows.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Generate the lecture schedule</h3>
@@ -59,7 +63,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
     );
   }
 
-  const filledCount = initialRows.filter((r) => r.topic.trim().length > 0).length;
+  const filledCount = rows.filter((r) => r.topic.trim().length > 0).length;
 
   return (
     <>
@@ -67,14 +71,14 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
       <div className="card" style={{ overflowX: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <h3 style={{ fontSize: 14 }}>Lecture Content</h3>
-          <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} topics filled in — click any cell to edit</span>
+          <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} topics filled in — click any cell to edit</span>
         </div>
         <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
             <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
           </thead>
           <tbody>
-            {initialRows.map((r) => (
+            {rows.map((r) => (
               <tr key={r.id}>
                 <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.week}</td>
                 <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.lectureNumber}</td>

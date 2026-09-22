@@ -33,5 +33,11 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     }),
   ]);
 
-  return NextResponse.json({ ok: true });
+  // Only these two rows' content changed — return both so the client
+  // can update just them, not the whole 32-row list.
+  const [updatedRow, updatedTarget] = await Promise.all([
+    prisma.lectureRow.findUnique({ where: { id: row.id } }),
+    prisma.lectureRow.findUnique({ where: { id: target.id } }),
+  ]);
+  return NextResponse.json({ rows: [updatedRow, updatedTarget] });
 }

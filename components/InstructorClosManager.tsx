@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
 type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null };
@@ -20,7 +19,7 @@ function ploLabel(plos: Plo[], id: string | null) {
 }
 
 export default function InstructorClosManager({ courseId, initialClos, plos, seClos }: { courseId: string; initialClos: Clo[]; plos: Plo[]; seClos: Clo[] }) {
-  const router = useRouter();
+  const [clos, setClos] = useState<Clo[]>(initialClos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,7 +35,8 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setClos((prev) => [...prev, data.clo]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -44,21 +44,23 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const payload = { statement: fd.get("statement") as string, bloomLevel: fd.get("bloomLevel") as string, mappedPloId: (fd.get("mappedPloId") as string) || null };
     try {
       const res = await fetch(`/api/instructor/courses/${courseId}/clo/${cloId}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"), mappedPloId: fd.get("mappedPloId") || null }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setClos((prev) => prev.map((c) => c.id === cloId ? { ...c, ...payload } : c));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeClo(cloId: string) {
     setLoading(true);
     await fetch(`/api/instructor/courses/${courseId}/clo/${cloId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setClos((prev) => prev.filter((c) => c.id !== cloId));
+    setLoading(false);
   }
 
   const ploSelectOptions = (
@@ -85,8 +87,8 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
         <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th></th></tr></thead>
           <tbody>
-            {initialClos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
-            {initialClos.map((c) => (
+            {clos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
+            {clos.map((c) => (
               editingId === c.id ? (
                 <tr key={c.id}>
                   <td colSpan={5}>

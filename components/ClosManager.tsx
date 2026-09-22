@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Plo = { id: string; number: number; title: string; status: string };
 type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null; targetPct: number };
@@ -34,8 +33,11 @@ function contributionWarnings(clos: Clo[], plos: Plo[]) {
     });
 }
 
+// Every action here updates local state directly from its own request,
+// instead of router.refresh() re-fetching this whole course's data
+// (CLOs, PLOs, everything) on every single small edit.
 export default function ClosManager({ courseId, initialClos, plos }: { courseId: string; initialClos: Clo[]; plos: Plo[] }) {
-  const router = useRouter();
+  const [clos, setClos] = useState<Clo[]>(initialClos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,7 +58,8 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setClos((prev) => [...prev, data.clo]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -64,26 +67,28 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    const payload = {
+      statement: fd.get("statement") as string, bloomLevel: fd.get("bloomLevel") as string,
+      mappedPloId: (fd.get("mappedPloId") as string) || null,
+      ploContributionPct: fd.get("ploContributionPct") ? Number(fd.get("ploContributionPct")) : null,
+      targetPct: Number(fd.get("targetPct") || 60),
+    };
     try {
       const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${cloId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
-          mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
-          targetPct: fd.get("targetPct") || 60,
-        }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setClos((prev) => prev.map((c) => c.id === cloId ? { ...c, ...payload } : c));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
   async function removeClo(cloId: string) {
     setLoading(true);
     await fetch(`/api/subjectexpert/courses/${courseId}/clo/${cloId}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setClos((prev) => prev.filter((c) => c.id !== cloId));
+    setLoading(false);
   }
 
   async function moveClo(cloId: string, direction: "up" | "down") {
@@ -94,7 +99,17 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      // Mirror the server's swap-then-renumber logic locally (codes are
+      // always "CLO-1", "CLO-2"... by position).
+      setClos((prev) => {
+        const idx = prev.findIndex((c) => c.id === cloId);
+        const swapWith = direction === "up" ? idx - 1 : idx + 1;
+        if (swapWith < 0 || swapWith >= prev.length) return prev;
+        const next = [...prev];
+        [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+        return next.map((c, i) => ({ ...c, code: `CLO-${i + 1}` }));
+      });
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -105,7 +120,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
     </>
   );
 
-  const warnings = contributionWarnings(initialClos, plos);
+  const warnings = contributionWarnings(clos, plos);
 
   return (
     <>
@@ -130,10 +145,10 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         <SortableTable>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th><th></th></tr></thead>
           <tbody>
-            {initialClos.length === 0 && (
+            {clos.length === 0 && (
               <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
-            {initialClos.map((c, i) => (
+            {clos.map((c, i) => (
               editingId === c.id ? (
                 <tr key={c.id}>
                   <td colSpan={7}>
@@ -159,7 +174,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                     {c.code}
                     <div style={{ display: "inline-flex", gap: 2, marginLeft: 6 }}>
                       <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
-                      <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === initialClos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === initialClos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === initialClos.length - 1 ? 0.3 : 1 }}>▼</button>
+                      <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
                     </div>
                   </td>
                   <td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>

@@ -2,7 +2,6 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
-import { useRouter } from "next/navigation";
 
 type Evidence = { id: string; fileName: string; fileUrl: string; status: string; method: string | null; reasoning: string | null };
 type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number; evidence: Evidence[] };
@@ -29,10 +28,15 @@ function statusBadge(status: string) {
   return <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: s.bg }}>{s.label}</span>;
 }
 
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, rows, apiBase }: {
+// Every action here updates local state directly from its own
+// response, instead of router.refresh() re-fetching this course's
+// full instrument list, lecture rows, and evidence on every single
+// edit, upload, or checkbox toggle.
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, rows: initialRows, apiBase }: {
   courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; rows: Row[]; apiBase: string;
 }) {
-  const router = useRouter();
+  const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
+  const [rows, setRows] = useState<Row[]>(initialRows);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [busyCell, setBusyCell] = useState<string | null>(null);
@@ -47,7 +51,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${instrumentId}/evidence`, { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setUploadingId(null); return; }
-      setUploadingId(null); router.refresh();
+      setInstruments((prev) => prev.map((i) => i.id === instrumentId ? { ...i, evidence: [data.evidence, ...i.evidence] } : i));
+      setUploadingId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setUploadingId(null); }
   }
 
@@ -59,7 +64,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setInstruments((prev) => [...prev, { ...data.instrument, evidence: [] }]);
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -71,23 +77,30 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
-      setBusyCell(null); router.refresh();
+      setInstruments((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
+      setBusyCell(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
 
   async function removeInstrument(id: string) {
     setLoading(true);
     await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, { method: "DELETE" });
-    setLoading(false); router.refresh();
+    setInstruments((prev) => prev.filter((i) => i.id !== id));
+    setLoading(false);
   }
 
   async function toggleInstrument(rowId: string, instrumentId: string, linked: boolean) {
     const key = rowId + instrumentId;
     setBusyCell(key);
-    await fetch(`${apiBase}/courses/${courseId}/lecture/${rowId}/instrument-toggle`, {
+    const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${rowId}/instrument-toggle`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked }),
     });
-    setBusyCell(null); router.refresh();
+    const data = await res.json().catch(() => null);
+    if (data?.rows) {
+      const byId = new Map(data.rows.map((r: any) => [r.id, r]));
+      setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, linkedInstrumentIds: (byId.get(r.id) as any).linkedInstrumentIds } : r));
+    }
+    setBusyCell(null);
   }
 
   async function saveQuestions(rowId: string, type: "Midterm" | "Final", value: string) {
@@ -99,13 +112,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
-      setBusyCell(null); router.refresh();
+      if (data.rows) {
+        const byId = new Map(data.rows.map((r: any) => [r.id, r]));
+        setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, midtermQuestions: (byId.get(r.id) as any).midtermQuestions, finalQuestions: (byId.get(r.id) as any).finalQuestions } : r));
+      }
+      setBusyCell(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
   }
 
-  const checkboxInstruments = initialInstruments.filter((i) => i.type === "Quiz" || i.type === "Assignment");
-  const hasMidterm = initialInstruments.some((i) => i.type === "Midterm");
-  const hasFinal = initialInstruments.some((i) => i.type === "Final");
+  const checkboxInstruments = instruments.filter((i) => i.type === "Quiz" || i.type === "Assignment");
+  const hasMidterm = instruments.some((i) => i.type === "Midterm");
+  const hasFinal = instruments.some((i) => i.type === "Final");
   const filledRows = rows.filter((r) => r.topic.trim().length > 0);
 
   return (
@@ -113,7 +130,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       {error && <div className="err">{error}</div>}
 
       {TYPES.map((type) => {
-        const items = initialInstruments.filter((i) => i.type === type);
+        const items = instruments.filter((i) => i.type === type);
         const sum = items.reduce((s, i) => s + i.marksPct, 0);
         const target = targets[TARGET_KEY[type]];
         const max = policyMax?.[POLICY_MAX_KEY[type]];
@@ -213,7 +230,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Which Lectures Does Each Instrument Test?</h3>
         {filledRows.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Fill in some lecture topics on the Lecture Content tab first.</p>
-        ) : initialInstruments.length === 0 ? (
+        ) : instruments.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Define at least one instrument above first.</p>
         ) : (
           <SortableTable>

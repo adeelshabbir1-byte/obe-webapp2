@@ -36,5 +36,6 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_TEMPLATE_GENERATED", entityType: "Course", entityId: course.id });
   await syncCourseContentToLinkedCourses(course.id);
 
-  return NextResponse.json({ created: rows.length }, { status: 201 });
+  const created = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" } });
+  return NextResponse.json({ rows: created }, { status: 201 });
 }
