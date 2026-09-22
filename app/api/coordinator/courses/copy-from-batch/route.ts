@@ -75,5 +75,22 @@ export async function POST(req: NextRequest) {
     metadata: { sourceBatchId: sourceBatch.id, created, deleted, skippedAsExisting, errorCount: errors.length },
   });
 
-  return NextResponse.json({ created, deleted, skippedAsExisting, errors: errors.length > 0 ? errors : undefined });
+  // Same reasoning as import-hec: this is a rare bulk action, and most
+  // or all of the target batch's courses just changed (possibly every
+  // one, if replaceExisting was used), so returning the full fresh list
+  // for just this batch is both correct and still far cheaper than a
+  // full page refetch.
+  const freshCourses = await prisma.course.findMany({
+    where: { batchId: targetBatch.id },
+    include: { batch: { select: { batchName: true } } },
+    orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
+  });
+  return NextResponse.json({
+    created, deleted, skippedAsExisting, errors: errors.length > 0 ? errors : undefined,
+    courses: freshCourses.map((c) => ({
+      id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType, semesterNumber: c.semesterNumber,
+      fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId, batchName: c.batch?.batchName ?? null, fromBenchmark: !!c.benchmarkSourceId,
+      prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab,
+    })),
+  });
 }

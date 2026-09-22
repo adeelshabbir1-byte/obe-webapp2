@@ -73,8 +73,22 @@ export async function POST(req: NextRequest) {
     metadata: { count: created, curriculumId: curriculum.id, benchmarksCopied, errorCount: errors.length },
   });
 
+  // Rare, one-time bulk action — returning this batch's full fresh
+  // course list here (not the whole page's data across every batch) is
+  // still far cheaper than a full page refetch, and lets the client
+  // update immediately without guessing which courses actually landed.
+  const freshCourses = await prisma.course.findMany({
+    where: { batchId: batch.id },
+    include: { batch: { select: { batchName: true } } },
+    orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
+  });
   return NextResponse.json({
     created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, benchmarksCopied,
     errors: errors.length > 0 ? errors : undefined,
+    courses: freshCourses.map((c) => ({
+      id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType, semesterNumber: c.semesterNumber,
+      fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId, batchName: c.batch?.batchName ?? null, fromBenchmark: !!c.benchmarkSourceId,
+      prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab,
+    })),
   });
 }

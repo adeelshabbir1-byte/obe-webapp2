@@ -263,22 +263,38 @@ export default function ContentSyncManager() {
   const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
   const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
+  // Selecting an HEC course no longer saves immediately — it just
+  // records the choice here. Nothing hits the database (or re-fetches
+  // this whole batch's data) until "Save HEC Links" is clicked, which
+  // commits everything pending in one request.
+  const [pendingLinks, setPendingLinks] = useState<Map<string, string | null>>(new Map());
+  const [savingLinks, setSavingLinks] = useState(false);
 
   useEffect(() => {
     fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); });
   }, []);
 
-  async function setGroupMasterCourse(contentSyncGroupId: string, masterCourseId: string | null) {
-    setBusy(true); setError(""); setNotice("");
+  function selectPendingMasterCourse(contentSyncGroupId: string, masterCourseId: string | null) {
+    setPendingLinks((prev) => new Map(prev).set(contentSyncGroupId, masterCourseId));
+    setPickerOpenForGroup(null); setPickerSearch("");
+  }
+
+  async function saveHecLinks() {
+    if (pendingLinks.size === 0) return;
+    setSavingLinks(true); setError(""); setNotice("");
     try {
-      const res = await fetch("/api/omc/equivalence/set-master-course", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentSyncGroupId, masterCourseId }),
+      const links = Array.from(pendingLinks.entries()).map(([contentSyncGroupId, masterCourseId]) => ({ contentSyncGroupId, masterCourseId }));
+      const res = await fetch("/api/omc/equivalence/set-master-course-batch", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ links }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      setPickerOpenForGroup(null); setPickerSearch(""); setBusy(false); await loadCoursesAndGroups();
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSavingLinks(false); return; }
+      const updates: Map<string, any> = new Map((data.updated || []).map((u: any) => [u.groupId, u.masterCourse]));
+      setGroups((prev) => prev.map((g) => updates.has(g.id) ? { ...g, masterCourse: updates.get(g.id) as any } : g));
+      setPendingLinks(new Map());
+      setNotice(`Saved ${links.length} HEC course link(s).`);
+      setSavingLinks(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSavingLinks(false); }
   }
 
   function startEditCode(courseId: string, currentCode: string, courseType: string) {
@@ -428,6 +444,20 @@ export default function ContentSyncManager() {
         <>
           <ContentSyncSuggestions batchIds={Array.from(selectedBatchIds)} onLinked={loadCoursesAndGroups} />
 
+          {pendingLinks.size > 0 && (
+            <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: "#FFF7ED", position: "sticky", top: 0, zIndex: 5 }}>
+              <span style={{ fontSize: 12.5 }}>
+                <b>{pendingLinks.size}</b> HEC course link(s) selected but not saved yet.
+              </span>
+              <button onClick={saveHecLinks} disabled={savingLinks} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 12px", whiteSpace: "nowrap" }}>
+                {savingLinks ? "Saving…" : `Save HEC Links (${pendingLinks.size})`}
+              </button>
+              <button onClick={() => setPendingLinks(new Map())} disabled={savingLinks} style={{ fontSize: 11.5, padding: "5px 10px", border: "1px solid var(--line)", background: "#fff" }}>
+                Discard
+              </button>
+            </div>
+          )}
+
           {groups.some((g) => g.needsSync) && (
             <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: "#FFFBEB" }}>
               <span style={{ fontSize: 12.5 }}>
@@ -491,15 +521,27 @@ export default function ContentSyncManager() {
                         <div>{row.courseType}</div>
                         <div style={{ fontStyle: "italic" }}>{row.label}</div>
                       </td>
-                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse ? "#FEE2E2" : undefined }}>
+                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse && !pendingLinks.has(row.groupId || "") ? "#FEE2E2" : undefined }}>
                         {row.kind === "group" && row.groupId && (() => {
                           const group = groups.find((g) => g.id === row.groupId);
                           if (!group) return null;
+                          const hasPending = pendingLinks.has(group.id);
+                          const pendingId = pendingLinks.get(group.id);
+                          const pendingOption = pendingId ? masterOptions.find((o) => o.id === pendingId) : null;
                           const isOpen = pickerOpenForGroup === group.id;
                           if (!isOpen) {
                             return (
-                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11 }}>
-                                {group.masterCourse ? (
+                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11, ...(hasPending ? { boxShadow: "inset 3px 0 0 0 #D97706" } : {}) }} title={hasPending ? "Not saved yet — click Save HEC Links" : undefined}>
+                                {hasPending ? (
+                                  pendingOption ? (
+                                    <>
+                                      <div style={{ fontWeight: 600 }}>{pendingOption.code} <span style={{ fontSize: 9.5, color: "#D97706", fontWeight: 400 }}>(unsaved)</span></div>
+                                      <div style={{ color: "var(--slate)" }}>{pendingOption.title}</div>
+                                    </>
+                                  ) : (
+                                    <span style={{ color: "#D97706", fontWeight: 600 }}>Cleared (unsaved)</span>
+                                  )
+                                ) : group.masterCourse ? (
                                   <>
                                     <div style={{ fontWeight: 600 }}>{group.masterCourse.code}</div>
                                     <div style={{ color: "var(--slate)" }}>{group.masterCourse.title}</div>
@@ -521,13 +563,13 @@ export default function ContentSyncManager() {
                                 style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}
                               />
                               <div style={{ maxHeight: 180, overflowY: "auto" }}>
-                                {group.masterCourse && (
-                                  <div onClick={() => setGroupMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
+                                {(group.masterCourse || hasPending) && (
+                                  <div onClick={() => selectPendingMasterCourse(group.id, null)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", color: "var(--rust)" }}>
                                     ✕ Clear link
                                   </div>
                                 )}
                                 {filtered.map((o) => (
-                                  <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
+                                  <div key={o.id} onClick={() => selectPendingMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                                     <b>{o.code}</b> — {o.title}
                                     {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF9C4", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
                                     <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>

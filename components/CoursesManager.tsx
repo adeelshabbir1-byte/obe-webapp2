@@ -15,10 +15,11 @@ type Curriculum = { id: string; authority: string; title: string; version: strin
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
-export default function CoursesManager({ courses, subjectExperts, batches, curricula, selectedBatchId }: {
+export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId }: {
   courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string;
 }) {
   const router = useRouter();
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,7 +91,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       const errorNote = data.errors ? ` ${data.errors.length} failed: ${data.errors.slice(0, 3).join("; ")}` : "";
       setCopyResult(`${data.deleted ? `Deleted ${data.deleted} existing course(s), then copied` : "Copied"} ${data.created} course(s) from the source batch.${data.skippedAsExisting ? ` ${data.skippedAsExisting} already existed in the target and were left alone.` : ""}${errorNote}`);
-      setLoading(false); router.refresh();
+      if (data.courses) setCourses(data.courses);
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -114,7 +116,17 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       const errorNote = data.errors ? ` ${data.errors.length} course(s) failed: ${data.errors.slice(0, 3).join("; ")}${data.errors.length > 3 ? "…" : ""}` : "";
       setImportResult(`Imported ${data.created} new course(s) into this batch.${data.alreadyPresent ? ` (${data.alreadyPresent} were already imported into it.)` : ""}${data.benchmarksCopied ? ` ${data.benchmarksCopied} started pre-filled from a previous batch's template.` : ""}${errorNote}`);
-      setLoading(false); router.push(`/coordinator/courses?batchId=${importBatchId}`); router.refresh();
+      setLoading(false);
+      if (importBatchId === selectedBatchId || !selectedBatchId) {
+        // Already viewing the batch that was just imported into (or viewing "all batches") — update in place.
+        if (data.courses) setCourses((prev) => {
+          const otherBatches = prev.filter((c) => c.batchId !== importBatchId);
+          return [...otherBatches, ...data.courses].sort((a, b) => (a.semesterNumber ?? 99) - (b.semesterNumber ?? 99) || a.code.localeCompare(b.code));
+        });
+      } else {
+        // Imported into a different batch than the one being viewed — navigate to it, since that's a real view change.
+        router.push(`/coordinator/courses?batchId=${importBatchId}`);
+      }
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -130,7 +142,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      (e.target as HTMLFormElement).reset(); setLoading(false); router.refresh();
+      setCourses((prev) => [...prev, data.course]);
+      (e.target as HTMLFormElement).reset(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -149,7 +162,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setEditingId(null); setLoading(false); router.refresh();
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, ...data.course } : c));
+      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -159,7 +173,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
     });
-    setLoading(false); router.refresh();
+    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, subjectExpertId: subjectExpertId || null } : c));
+    setLoading(false);
   }
 
   async function setPrerequisite(courseId: string, prerequisiteCourseId: string) {
@@ -168,7 +183,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prerequisiteCourseId: prerequisiteCourseId || null }),
     });
-    setLoading(false); router.refresh();
+    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, prerequisiteCourseId: prerequisiteCourseId || null } : c));
+    setLoading(false);
   }
 
   async function splitIntoLab(courseId: string, currentCredit: number) {
@@ -184,7 +200,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setCourses((prev) => [...prev.map((c) => c.id === courseId ? { ...c, ...data.theoryCourse } : c), data.labCourse]);
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -198,7 +215,8 @@ export default function CoursesManager({ courses, subjectExperts, batches, curri
       const res = await fetch(`/api/coordinator/courses/${courseId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setLoading(false); router.refresh();
+      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+      setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
