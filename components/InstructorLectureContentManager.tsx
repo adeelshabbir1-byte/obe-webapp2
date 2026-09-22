@@ -39,7 +39,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setAutoFilling(false); return; }
       setRows((prev) => {
-        const byId = new Map((data.rows || []).map((r: any) => [r.id, r]));
+        const byId: Map<string, any> = new Map((data.rows || []).map((r: any) => [r.id, r]));
         return prev.map((r) => byId.has(r.id) ? normalizeRow(byId.get(r.id), r) : r);
       });
       setAutoFilling(false);
@@ -78,10 +78,10 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
       setRows((prev) => {
-        const byId = new Map((data.rows || []).map((r: any) => [r.id, r]));
+        const byId: Map<string, any> = new Map((data.rows || []).map((r: any) => [r.id, r]));
         return prev.map((r) => {
           if (!byId.has(r.id)) return r;
-          const raw = byId.get(r.id);
+          const raw: any = byId.get(r.id);
           const cloCode = raw.cloId ? clos.find((c) => c.id === raw.cloId)?.code || null : null;
           return { ...normalizeRow(raw, r), cloCode };
         });

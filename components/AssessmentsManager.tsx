@@ -97,7 +97,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     });
     const data = await res.json().catch(() => null);
     if (data?.rows) {
-      const byId = new Map(data.rows.map((r: any) => [r.id, r]));
+      const byId: Map<string, any> = new Map(data.rows.map((r: any) => [r.id, r]));
       setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, linkedInstrumentIds: (byId.get(r.id) as any).linkedInstrumentIds } : r));
     }
     setBusyCell(null);
@@ -113,7 +113,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
       if (data.rows) {
-        const byId = new Map(data.rows.map((r: any) => [r.id, r]));
+        const byId: Map<string, any> = new Map(data.rows.map((r: any) => [r.id, r]));
         setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, midtermQuestions: (byId.get(r.id) as any).midtermQuestions, finalQuestions: (byId.get(r.id) as any).finalQuestions } : r));
       }
       setBusyCell(null);
