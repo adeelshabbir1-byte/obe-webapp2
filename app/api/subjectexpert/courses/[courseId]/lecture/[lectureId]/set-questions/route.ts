@@ -55,9 +55,18 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await syncCourseContentToLinkedCourses(course.id);
 
   // Same reasoning as instrument-toggle: return every row so the client
-  // can stay accurate without a full-page refetch.
+  // can stay accurate without a full-page refetch. midtermQuestions /
+  // finalQuestions aren't stored fields — derive them from each row's
+  // linked instruments, same as the page that first renders this data.
   const allRows = await prisma.lectureRow.findMany({
     where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" },
+    include: { instrumentLinks: { include: { instrument: true } } },
   });
-  return NextResponse.json({ rows: allRows.map((r) => ({ id: r.id, weightPct: r.weightPct, midtermQuestions: r.midtermQuestions, finalQuestions: r.finalQuestions })) });
+  return NextResponse.json({
+    rows: allRows.map((r) => ({
+      id: r.id, weightPct: r.weightPct,
+      midtermQuestions: r.instrumentLinks.filter((l) => l.instrument.type === "Midterm").map((l) => l.instrument.label).join(", "),
+      finalQuestions: r.instrumentLinks.filter((l) => l.instrument.type === "Final").map((l) => l.instrument.label).join(", "),
+    })),
+  });
 }
