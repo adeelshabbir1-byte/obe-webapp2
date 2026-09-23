@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
+import { getNavIcon } from "../lib/navIcons";
 
 export default function Shell({
   roleLabel,
@@ -67,9 +68,14 @@ export default function Shell({
             </div>
             {section.links.map((n) => {
               const isActive = pathname === n.href;
+              const Icon = getNavIcon(n.label);
               return (
-                <a key={n.href} href={n.href} className="nav-link" style={isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : undefined}>
-                  {n.label}
+                <a key={n.href} href={n.href} className="nav-link" style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
+                }}>
+                  <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
+                  <span>{n.label}</span>
                 </a>
               );
             })}
