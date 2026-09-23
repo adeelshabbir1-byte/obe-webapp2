@@ -21,7 +21,18 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course) return NextResponse.json({ error: "course not found" }, { status: 404 });
-  if (course.isOffered) return NextResponse.json({ error: "this course is already offered — can't be changed" }, { status: 400 });
+
+  // Being "offered" for the current term isn't itself a reason to block
+  // this — an OMC often offers a semester's courses first and decides
+  // which elective to actually run afterward, and the two shouldn't be
+  // strictly ordered. What actually matters is whether anyone has real,
+  // live data riding on this course's current identity yet: once a
+  // student is enrolled, changing the title/code/template out from
+  // under them would be genuinely confusing, so that's the real gate.
+  const enrollmentCount = await prisma.studentEnrollment.count({ where: { courseId: course.id } });
+  if (enrollmentCount > 0) {
+    return NextResponse.json({ error: `${enrollmentCount} student(s) are already enrolled in this course — it can't be renamed/relinked anymore. Use the Equivalence page instead if this was meant to be treated as an existing, already-taught course.` }, { status: 400 });
+  }
 
   const masterCourse = await prisma.masterCourse.findUnique({ where: { id: body.masterCourseId }, include: { masterCurriculum: { select: { chairmanId: true } } } });
   if (!masterCourse) return NextResponse.json({ error: "that curriculum course wasn't found" }, { status: 404 });

@@ -71,19 +71,6 @@ export async function GET() {
     where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
   });
 
-  // Each Availability Grid slot is exactly one hour, so counting a
-  // faculty member's own unavailable rows directly gives hours/week
-  // they've marked as unavailable — a coarse, whole-week signal (this
-  // matrix assigns section counts, not specific time slots, so it has
-  // no way to check a precise per-course scheduling conflict; this is
-  // "how open is this person's week overall", not "are they free for
-  // this exact course").
-  const unavailabilityCounts = await prisma.facultyUnavailability.groupBy({
-    by: ["facultyId"], where: { facultyId: { in: instructors.map((i) => i.id) } }, _count: { id: true },
-  });
-  const unavailableHoursById = new Map(unavailabilityCounts.map((u) => [u.facultyId, u._count.id]));
-  const TRACKED_HOURS_PER_WEEK = 6 * 12; // 6 days (Mon-Sat) x 12 tracked hours (8:00-19:00), matching AvailabilityGrid
-
   // Every faculty member's own stated priority for the course codes
   // actually in this matrix — the color-coded hint, and the basis for
   // nudging high-affinity instructor/course pairs closer together below.
@@ -147,8 +134,6 @@ export async function GET() {
       id: i.id, name: i.name, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
       externalLoadNote: i.externalLoadNote, specialization: i.specialization,
       dominantType: dominantTypeFor(i.id),
-      unavailableHours: unavailableHoursById.get(i.id) || 0,
-      trackedHoursPerWeek: TRACKED_HOURS_PER_WEEK,
     }))
     .sort((a, b) => {
       const ra = a.dominantType ? typeRank(a.dominantType) : TYPE_ORDER.length + 1;

@@ -43,6 +43,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
+  { href: "/coordinator/elective-options", label: "Elective Options" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },

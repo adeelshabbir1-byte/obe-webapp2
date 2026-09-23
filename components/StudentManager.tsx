@@ -13,6 +13,8 @@ export default function StudentManager({ batches, initialBatchId, students: init
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [csvText, setCsvText] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [activatingLogins, setActivatingLogins] = useState(false);
+  const [loginActivationResult, setLoginActivationResult] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,20 @@ export default function StudentManager({ batches, initialBatchId, students: init
     setLoading(false);
   }
 
+  async function activateLogins(force: boolean) {
+    if (force && !confirm("This resets EVERY student's login in this batch back to their roll number, even ones who already set their own password. Continue?")) return;
+    setActivatingLogins(true); setLoginActivationResult(""); setError("");
+    try {
+      const res = await fetch("/api/coordinator/students/activate-logins", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId, force }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setActivatingLogins(false); return; }
+      setLoginActivationResult(`Activated ${data.activated} student login(s) — their initial password is their own roll number, and they'll be asked to set a new one on first sign-in.`);
+      setActivatingLogins(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setActivatingLogins(false); }
+  }
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -68,6 +84,24 @@ export default function StudentManager({ batches, initialBatchId, students: init
         <select value={batchId} onChange={(e) => switchBatch(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
           {batches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
         </select>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 6 }}>Student Portal Logins</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+          Students have no email on file, so a login can't be emailed to them — instead, activate their
+          account and their initial password becomes their own roll number; they'll be prompted to set a
+          real password the first time they sign in at <code>/student/login</code>.
+        </p>
+        {loginActivationResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{loginActivationResult}</div>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => activateLogins(false)} disabled={activatingLogins} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
+            {activatingLogins ? "Activating…" : "Activate New Logins"}
+          </button>
+          <button onClick={() => activateLogins(true)} disabled={activatingLogins} className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
+            Reset Everyone's Login
+          </button>
+        </div>
       </div>
 
       <div className="card">

@@ -4,21 +4,21 @@ import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
 type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
-type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null; unavailableHours: number; trackedHoursPerWeek: number };
+type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
 
 const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
 const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
 
-// Coarse availability signal, since this matrix assigns section counts,
-// not specific time slots -- it has no way to check whether an
-// instructor is free for one particular course's actual schedule. This
-// is "how open is their week overall" (from the Availability Grid),
-// not a real per-course conflict check.
-function availabilityLevel(i: Instructor): { label: string; color: string; fg: string } {
-  const pct = i.trackedHoursPerWeek > 0 ? i.unavailableHours / i.trackedHoursPerWeek : 0;
-  if (pct >= 0.5) return { label: `Mostly unavailable (${i.unavailableHours}h/week blocked)`, color: "#FBE2DF", fg: "var(--rust)" };
-  if (pct >= 0.2) return { label: `Limited availability (${i.unavailableHours}h/week blocked)`, color: "#FBEED2", fg: "#96650F" };
-  return { label: i.unavailableHours > 0 ? `Mostly available (${i.unavailableHours}h/week blocked)` : "Fully available", color: "#E2F4E8", fg: "var(--sage)" };
+// "Available" = workload capacity remaining, not a time-slot check:
+// normalLoad minus what's already assigned to them in this matrix plus
+// their external load (taught elsewhere, not tracked here). E.g. a
+// load of 3 with 2 sections assigned so far shows "available for 1
+// more section."
+function availabilityLevel(i: Instructor, assignedSoFar: number): { label: string; color: string; fg: string; remaining: number } {
+  const remaining = i.normalLoad - assignedSoFar - i.externalLoadCount;
+  if (remaining > 0) return { label: `Available for ${remaining} more section${remaining === 1 ? "" : "s"}`, color: "#E2F4E8", fg: "var(--sage)", remaining };
+  if (remaining === 0) return { label: "At full load (0 sections remaining)", color: "#FBEED2", fg: "#96650F", remaining };
+  return { label: `Overloaded by ${-remaining} section${-remaining === 1 ? "" : "s"}`, color: "#FBE2DF", fg: "var(--rust)", remaining };
 }
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
@@ -51,6 +51,9 @@ export default function AssignmentMatrix() {
   const [importResult, setImportResult] = useState<any>(null);
 
   const [courseFilter, setCourseFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [batchFilter, setBatchFilter] = useState("");
+  const [specializationFilter, setSpecializationFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
 
   async function load() {
@@ -123,10 +126,16 @@ export default function AssignmentMatrix() {
     return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No Course Instructors onboarded yet.</p></div>;
   }
 
-  // Filter by search text (code or title), then sort so fully-assigned
+  // Filter by search text (code or title), course type, and/or batch —
+  // lets an Assigner work through one slice at a time (e.g. Core now,
+  // IDS/Elective in a later pass), then sort so fully-assigned
   // ("settled") rows sink toward the bottom — pending ones stay near the
   // top, closest to the course-name column, where attention is needed.
+  const courseTypes = Array.from(new Set(rows.map((r) => r.courseType))).sort();
+  const batchLabels = Array.from(new Set(rows.map((r) => r.batchLabel))).sort();
   const filteredRows = rows.filter((r) => {
+    if (typeFilter && r.courseType !== typeFilter) return false;
+    if (batchFilter && r.batchLabel !== batchFilter) return false;
     if (!courseFilter.trim()) return true;
     const q = courseFilter.trim().toLowerCase();
     return r.label.toLowerCase().includes(q) || r.title.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q);
@@ -141,7 +150,12 @@ export default function AssignmentMatrix() {
   // Same idea for instructors: whoever's already at/over their normal load
   // moves toward the end (right side); those with room left stay near the
   // course names on the left, where they're easiest to assign to next.
-  const visibleInstructors = instructors.filter((i) => !hiddenInstructorIds.has(i.id));
+  const specializations = Array.from(new Set(instructors.map((i) => i.specialization).filter((s): s is string => !!s))).sort();
+  const visibleInstructors = instructors.filter((i) => {
+    if (hiddenInstructorIds.has(i.id)) return false;
+    if (specializationFilter && i.specialization !== specializationFilter) return false;
+    return true;
+  });
   const isInstructorSettled = (i: Instructor) => totalFor(i.id) + i.externalLoadCount >= i.normalLoad;
   const sortedInstructors = [...visibleInstructors].sort((a, b) => {
     const as = isInstructorSettled(a), bs = isInstructorSettled(b);
@@ -208,6 +222,14 @@ export default function AssignmentMatrix() {
               value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)}
               placeholder="Filter courses…" style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5, width: 160 }}
             />
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+              <option value="">All types</option>
+              {courseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)} style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+              <option value="">All batches</option>
+              {batchLabels.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowColumnPicker((v) => !v)} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
                 Columns ▾
@@ -220,6 +242,15 @@ export default function AssignmentMatrix() {
                   <label style={{ display: "block", fontSize: 12, marginBottom: 4 }}><input type="checkbox" checked={showStudents} onChange={(e) => setShowStudents(e.target.checked)} /> Students</label>
                   <label style={{ display: "block", fontSize: 12, marginBottom: 8 }}><input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} /> Assigned / Needed</label>
                   <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6, borderTop: "1px solid var(--line)", paddingTop: 8 }}>Show faculty</div>
+                  {specializations.length > 0 && (
+                    <select
+                      value={specializationFilter} onChange={(e) => setSpecializationFilter(e.target.value)}
+                      style={{ width: "100%", padding: "4px 6px", border: "1px solid var(--line)", fontSize: 11.5, marginBottom: 8 }}
+                    >
+                      <option value="">All specializations</option>
+                      {specializations.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
                   <div style={{ maxHeight: 160, overflowY: "auto" }}>
                     {instructors.map((i) => (
                       <label key={i.id} style={{ display: "block", fontSize: 12, marginBottom: 3 }}>
@@ -266,7 +297,7 @@ export default function AssignmentMatrix() {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                 const settled = isInstructorSettled(i);
                 const newBoundary = idx > 0 && isInstructorSettled(sortedInstructors[idx - 1]) !== settled;
-                const avail = availabilityLevel(i);
+                const avail = availabilityLevel(i, totalFor(i.id));
                 const title = [i.name, i.specialization ? `Specialization: ${i.specialization}` : undefined, avail.label, settled ? "At/over normal load" : undefined].filter(Boolean).join(" · ");
                 return (
                   <th key={i.id} className="sticky-row" title={title} style={{
@@ -318,7 +349,7 @@ export default function AssignmentMatrix() {
                         const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                         const matches = specializationMatches(r, i);
                         const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
-                        const avail = availabilityLevel(i);
+                        const avail = availabilityLevel(i, totalFor(i.id));
                         const needsAllocation = !settled && value === 0;
                         const title = [
                           `${r.label} · ${i.name}`,
@@ -353,11 +384,13 @@ export default function AssignmentMatrix() {
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           "Combined" rows are equivalence groups. Rows/columns already fully assigned ("SETTLED"/"FULL") sink
           toward the bottom/right and are dimmed, keeping what still needs attention near the top-left. Use
-          "Filter courses" to search, and "Columns ▾" to show/hide the Type/Batch/Students/Progress columns
-          or hide specific faculty from view. Hover any cell for course, instructor, and availability details
-          together. The colored bar on each instructor's name shows their overall availability (from their
-          own Availability Grid) — green mostly free, amber some hours blocked, red heavily booked; this is
-          a whole-week signal, not a check against this specific course's actual schedule. A dashed outline
+          "Filter courses" plus the Type/Batch dropdowns to work through one slice at a time — e.g. assign
+          Core courses now, come back for IDS/Elective in a later pass. "Columns ▾" shows/hides the
+          Type/Batch/Students/Progress columns, lets you hide specific faculty, and includes a specialization
+          filter to quickly narrow the faculty shown. Hover any cell for course, instructor, and
+          workload-availability details together. The colored bar on each instructor's name shows how much of
+          their normal load is still unfilled — green has room, amber exactly full, red already over — based
+          on what's assigned to them here plus their external load, not a time-slot check. A dashed outline
           marks an empty cell on a course that still needs allocating.
         </p>
       </div>

@@ -35,6 +35,9 @@ export default async function CourseRepositioningPage({ searchParams }: { search
         Move an HEC-approved course to a different semester before it's offered — click a course, then a
         semester row. Blocked if it would land before its own prerequisite, or ahead of a course that depends
         on it, or once the course is already offered. Semester load (credit / contact hours) updates live.
+        Clicking an unfilled Elective slot instead opens a picker to choose which course it actually is —
+        that's a separate decision from whether the semester's courses are offered, so it stays available
+        until a student is actually enrolled in it.
       </p>
 
       <div className="card">
@@ -67,6 +70,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
+          masterCourseId: c.masterCourseId,
         }))}
       />
     </Shell>

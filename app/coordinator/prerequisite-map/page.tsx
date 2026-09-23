@@ -11,6 +11,7 @@ const NAV = [
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
+  { href: "/coordinator/elective-options", label: "Elective Options" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/timetable", label: "Timetable" },
@@ -108,6 +109,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
+          masterCourseId: c.masterCourseId,
         }))}
       />
     </Shell>

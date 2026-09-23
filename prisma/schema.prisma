@@ -61,6 +61,7 @@ model User {
   sessions           Session[]
   resetTokens        PasswordResetToken[]
   courses            Course[] @relation("CourseCoordinator")
+  electiveGroups     ElectiveSlotGroup[] @relation("ElectiveGroupCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
   teachingCourses    Course[] @relation("CourseInstructor")
   sectionAssignments CourseSectionAssignment[] @relation("SectionInstructor")
@@ -161,6 +162,7 @@ model Batch {
   cqiRecords     CqiRecord[]
   students       Student[]
   scheduleConfig BatchScheduleConfig?
+  electiveGroups ElectiveSlotGroup[]
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
@@ -695,14 +697,99 @@ model Student {
   rollNumber String
   createdAt  DateTime @default(now())
 
+  // A student's own login — fully separate from staff auth (User/
+  // Session) by design, so nothing here can ever affect or break
+  // staff login. Null passwordHash = never activated yet; a Coordinator
+  // sets/resets it (bootstrapped to the student's own roll number, same
+  // pattern as staff onboarding), and mustChangePassword forces them to
+  // pick their own on first login.
+  passwordHash       String?
+  mustChangePassword Boolean  @default(true)
+  sessions           StudentSession[]
+
   enrollments StudentEnrollment[]
   marks       StudentMark[]
   transcriptRecords StudentTranscriptRecord[]
   surveyResponses SurveyResponse[]
   attendanceRecords AttendanceRecord[]
+  electiveChoices ElectiveChoice[]
 
   @@unique([batchId, rollNumber])
   @@index([batchId])
+}
+
+// Mirrors Session (used for staff/User) exactly, but fully independent
+// — a different cookie, a different table, a different auth helper.
+// Deliberately not reusing Session/User at all: those are the most
+// security-sensitive, load-bearing models in the whole app, and this
+// keeps zero risk of a student-auth change ever touching staff login.
+model StudentSession {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+}
+
+// A named elective slot (e.g. "Elective-I") for one batch/semester,
+// offering multiple real, independently-taught courses as alternative
+// options — each option keeps its own CLOs, content, and roster; this
+// only groups them together for a combined view and for collecting
+// student choices. Registration is a public, no-login form (same
+// pattern as Feedback Surveys' distributed links) since students have
+// no account in this system at all.
+model ElectiveSlotGroup {
+  id               String   @id @default(cuid())
+  batchId          String
+  batch            Batch    @relation(fields: [batchId], references: [id])
+  label            String   // e.g. "Elective-I"
+  semesterNumber   Int
+  coordinatorId    String
+  coordinator      User     @relation("ElectiveGroupCoordinator", fields: [coordinatorId], references: [id])
+  registrationOpen Boolean  @default(false)
+  finalized        Boolean  @default(false) // once true, choices have been turned into real enrollments
+  createdAt        DateTime @default(now())
+
+  options ElectiveSlotOption[]
+  choices ElectiveChoice[]
+
+  @@index([batchId])
+}
+
+model ElectiveSlotOption {
+  id       String            @id @default(cuid())
+  groupId  String
+  group    ElectiveSlotGroup @relation(fields: [groupId], references: [id])
+  courseId String            @unique // a course can only be one option, in one group
+  course   Course            @relation(fields: [courseId], references: [id])
+  capacity Int?              // null = unlimited
+
+  choices ElectiveChoice[]
+
+  @@index([groupId])
+}
+
+// One student's pick for one elective group — identified by roll
+// number on the public form, not a login. Can be resubmitted (updates
+// in place) while registration is still open; @@unique enforces one
+// active choice per student per group.
+model ElectiveChoice {
+  id          String             @id @default(cuid())
+  groupId     String
+  group       ElectiveSlotGroup  @relation(fields: [groupId], references: [id])
+  studentId   String
+  student     Student            @relation(fields: [studentId], references: [id])
+  optionId    String
+  option      ElectiveSlotOption @relation(fields: [optionId], references: [id])
+  submittedAt DateTime           @default(now())
+  applied     Boolean            @default(false) // whether this has become a real StudentEnrollment yet
+
+  @@unique([groupId, studentId])
+  @@index([optionId])
 }
 
 // A student taking a specific course — decoupled from their home batch so a
@@ -1017,6 +1104,7 @@ model Course {
   gradeCutoffs        CourseGradeCutoff[]
   studentMarks        StudentMark[]
   contentSyncMember   CourseContentSyncMember?
+  electiveOption      ElectiveSlotOption?
 
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])

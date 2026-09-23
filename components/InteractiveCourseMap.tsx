@@ -6,6 +6,7 @@ import { courseTypeColor } from "../lib/courseTypeColors";
 type Course = {
   id: string; code: string; title: string; courseType: string; creditHours: number;
   semesterNumber: number | null; prerequisiteCourseId: string | null; isOffered: boolean;
+  masterCourseId: string | null;
 };
 
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
@@ -75,7 +76,13 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
 
   function onCourseClick(c: Course) {
     if (loading) return;
-    if (mode === "reposition" && c.courseType === "Elective" && !c.isOffered) {
+    // Being offered for the current term doesn't block choosing which
+    // elective this slot actually is -- that's a separate decision from
+    // whether the semester's courses have been activated, and the two
+    // shouldn't be strictly ordered. The backend still blocks this once
+    // a student is actually enrolled, which is the real point past which
+    // changing the course's identity would be disruptive.
+    if (mode === "reposition" && c.courseType === "Elective" && !c.masterCourseId) {
       openElectiveModal(c.id);
       return;
     }
