@@ -6,6 +6,7 @@ import AutoSubmitSelect from "../../../components/AutoSubmitSelect";
 
 const NAV = [
   { href: "/admin/users", label: "Chairman Accounts" },
+  { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/curricula", label: "Master Curricula" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
   { href: "/admin/platform-settings", label: "Platform Settings" },

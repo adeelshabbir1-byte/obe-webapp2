@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -50,16 +51,18 @@ export default function Shell({
   return (
     <div className="shell">
       <div className="sidebar">
-        {nceacLogo ? (
-          <img src={nceacLogo} alt="NCEAC" style={{ width: 40, height: 40, objectFit: "contain", margin: "0 0 8px", background: "#fff", borderRadius: "50%", padding: 2 }} />
-        ) : (
-          <div className="seal" style={{ width: 36, height: 36, fontSize: 12, margin: "0 0 8px" }}>NC</div>
-        )}
-        <h2 style={{ fontSize: 14, color: "#fff" }}>OBE Curriculum Governance</h2>
-        {instituteLogo && <img src={instituteLogo} alt={instituteName || "Institute"} style={{ maxWidth: 100, maxHeight: 34, marginTop: 6, background: "#fff", padding: 4, borderRadius: 3 }} />}
-        {instituteName && <div style={{ fontSize: 11, color: "#B7AE97", marginTop: 2 }}>{instituteName}</div>}
-        <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#B7AE97", margin: "5px 0 20px" }}>
-          {roleLabel}
+        <div style={{ textAlign: "center" }}>
+          {nceacLogo ? (
+            <img src={nceacLogo} alt="NCEAC" style={{ width: 40, height: 40, objectFit: "contain", margin: "0 auto 8px", display: "block", background: "#fff", borderRadius: "50%", padding: 2 }} />
+          ) : (
+            <div className="seal" style={{ width: 36, height: 36, fontSize: 12, margin: "0 auto 8px" }}>NC</div>
+          )}
+          <h2 style={{ fontSize: 14, color: "#fff" }}>OBE Curriculum Governance</h2>
+          {instituteLogo && <img src={instituteLogo} alt={instituteName || "Institute"} style={{ maxWidth: 100, maxHeight: 34, margin: "6px auto 0", display: "block", background: "#fff", padding: 4, borderRadius: 3 }} />}
+          {instituteName && <div style={{ fontSize: 11, color: "#B7AE97", marginTop: 2 }}>{instituteName}</div>}
+          <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#B7AE97", margin: "5px 0 20px" }}>
+            {roleLabel}
+          </div>
         </div>
         {groupNavLinks(navLinks).map((section) => (
           <div key={section.title} style={{ marginBottom: 14 }}>
@@ -70,20 +73,20 @@ export default function Shell({
               const isActive = pathname === n.href;
               const Icon = getNavIcon(n.label);
               return (
-                <a key={n.href} href={n.href} className="nav-link" style={{
+                <Link key={n.href} href={n.href} className="nav-link" style={{
                   display: "flex", alignItems: "center", gap: 9,
                   ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
                 }}>
                   <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
                   <span>{n.label}</span>
-                </a>
+                </Link>
               );
             })}
           </div>
         ))}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
-          <a href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</a>
+          <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
           {roleSwitch && (
             <button onClick={switchRole} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: "pointer", padding: 0, textAlign: "left" }}>
               Switch to {roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}
@@ -91,12 +94,12 @@ export default function Shell({
           )}
           {isAlumniCustodian && (
             <>
-              <a href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+              <Link href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
                 Review Alumni & Employer Data
-              </a>
-              <a href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+              </Link>
+              <Link href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
                 Manage Feedback Surveys
-              </a>
+              </Link>
             </>
           )}
           <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>

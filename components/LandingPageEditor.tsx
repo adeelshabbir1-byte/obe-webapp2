@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Feature = { title: string; description: string };
 type Testimonial = { quote: string; author: string };
@@ -47,7 +48,7 @@ export default function LandingPageEditor({ initial }: { initial: Content }) {
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved. <a href="/" target="_blank" style={{ color: "var(--sage)" }}>View the live page →</a></div>}
+      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved. <Link href="/" target="_blank" style={{ color: "var(--sage)" }}>View the live page →</Link></div>}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Hero</h3>

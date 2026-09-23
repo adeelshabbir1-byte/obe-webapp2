@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
+import Link from "next/link";
 
 
 
@@ -38,7 +39,7 @@ export default async function InstructorReviewListPage() {
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td>
                 <td>{c.code}</td><td>{c.title}</td><td>{c.instructor?.name || "—"}</td>
-                <td><a href={`/omc/instructor-review/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</a></td>
+                <td><Link href={`/omc/instructor-review/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</Link></td>
               </tr>
             ))}
           </tbody>

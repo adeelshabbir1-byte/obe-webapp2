@@ -8,6 +8,7 @@ import { courseTypeColor } from "../../../../lib/courseTypeColors";
 import Shell from "../../../../components/Shell";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import CourseOfferingMap from "../../../../components/CourseOfferingMap";
+import Link from "next/link";
 
 export default async function CourseOfferingMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string; semester?: string; view?: string } }) {
   const user = await getAuthenticatedUser();
@@ -67,7 +68,7 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
               </select>
             </div>
             <button type="submit" className="btn btn-brass">Show</button>
-            <a href="/omc/reports/course-offering-map" className="btn" style={{ textDecoration: "none", background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Switch to Per-Batch View</a>
+            <Link href="/omc/reports/course-offering-map" className="btn" style={{ textDecoration: "none", background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Switch to Per-Batch View</Link>
           </form>
         </div>
 
@@ -143,7 +144,7 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
             </select>
           </div>
           <button type="submit" className="btn btn-brass">Show Map</button>
-          <a href="/omc/reports/course-offering-map?view=semester" className="btn" style={{ textDecoration: "none", background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Switch to By-Semester View (All Degrees)</a>
+          <Link href="/omc/reports/course-offering-map?view=semester" className="btn" style={{ textDecoration: "none", background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Switch to By-Semester View (All Degrees)</Link>
         </form>
       </div>
 

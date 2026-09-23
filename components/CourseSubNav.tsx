@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution"; code: string; title: string; status: string;
 }) {
@@ -15,7 +16,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           <h1 style={{ fontSize: 22 }}>{code} — {title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Template status: {status}</div>
         </div>
-        <a href="/subjectexpert/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</a>
+        <Link href="/subjectexpert/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</Link>
       </div>
       <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--line)" }}>
         {tabs.map((t) => (

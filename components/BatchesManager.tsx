@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
+import Link from "next/link";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number };
 
@@ -137,7 +138,7 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
                   )}
                 </td>
                 <td>{b.courseCount}</td>
-                <td><a href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</a>
+                <td><Link href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</Link>
                 <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginLeft: 10 }}>Delete Batch</button></td>
               </tr>
             ))}

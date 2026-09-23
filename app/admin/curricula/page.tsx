@@ -6,6 +6,7 @@ import CurriculaManager from "../../../components/CurriculaManager";
 
 const NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
+  { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/curricula", label: "Master Curricula" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
   { href: "/admin/platform-settings", label: "Platform Settings" },

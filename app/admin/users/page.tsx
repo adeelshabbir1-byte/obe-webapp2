@@ -15,7 +15,8 @@ export default async function AdminUsersPage() {
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Chairmen" }, { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/curriculum-migration", label: "Version Migration" }, { href: "/admin/platform-settings", label: "Platform Settings" }, { href: "/admin/report-bundles", label: "Report Bundles" }, { href: "/admin/landing-page", label: "Landing Page" }]}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Chairmen" },
+  { href: "/admin/account-requests", label: "Account Requests" }, { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/curriculum-migration", label: "Version Migration" }, { href: "/admin/platform-settings", label: "Platform Settings" }, { href: "/admin/report-bundles", label: "Report Bundles" }, { href: "/admin/landing-page", label: "Landing Page" }]}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Chairmen</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create the Chairman account(s) who each run a department's accreditation pipeline. Each is its own

@@ -61,6 +61,7 @@ model User {
   sessions           Session[]
   resetTokens        PasswordResetToken[]
   courses            Course[] @relation("CourseCoordinator")
+  reviewedAccountRequests AccountRequest[] @relation("AccountRequestReviewer")
   electiveGroups     ElectiveSlotGroup[] @relation("ElectiveGroupCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
   teachingCourses    Course[] @relation("CourseInstructor")
@@ -1367,6 +1368,28 @@ model LectureRowInstrument {
 // once published — institutions adopt a copy via Course.masterCourseId, they
 // never edit these rows directly.
 // ============================================================================
+
+// A prospective Chairman's request for a new institution account —
+// public, no login required to submit. A Super User reviews and either
+// approves (which creates the Chairman account and clones the grand
+// curriculum for them in one step) or rejects it.
+model AccountRequest {
+  id              String    @id @default(cuid())
+  name            String
+  email           String
+  institutionName String
+  phone           String?
+  message         String?   @db.Text
+  status          String    @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  reviewedById    String?
+  reviewedBy      User?     @relation("AccountRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  reviewNote      String?   @db.Text
+  createdChairmanId String? // set once approved, so the reviewer can jump straight to the new account
+  createdAt       DateTime  @default(now())
+
+  @@index([status])
+}
 
 model MasterCurriculum {
   id                 String   @id @default(cuid())

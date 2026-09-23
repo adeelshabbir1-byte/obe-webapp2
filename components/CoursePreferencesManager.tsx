@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
-type Course = { code: string; title: string; courseType: string; priority: number | null };
+type Course = { code: string; title: string; courseType: string; domain: string | null; priority: number | null };
 
 const PRIORITY_COLORS: Record<number, string> = {
   1: "#2E7D32", // top priority - dark green
@@ -14,6 +14,7 @@ const PRIORITY_LABELS: Record<number, string> = { 1: "1 — Top priority", 2: "2
 
 export default function CoursePreferencesManager() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [mySpecialization, setMySpecialization] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [savingCode, setSavingCode] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export default function CoursePreferencesManager() {
       const res = await fetch("/api/faculty/course-preferences");
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
-      setCourses(data.courses); setLoaded(true);
+      setCourses(data.courses); setMySpecialization(data.mySpecialization); setLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
   }
   useEffect(() => { load(); }, []);
@@ -47,6 +48,7 @@ export default function CoursePreferencesManager() {
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         Rank how interested you are in teaching each course — this is visible to the Course Assigner as a hint
         when they're deciding assignments. Leave unset if you're not interested.
+        {mySpecialization && <> Courses in your specialization (<b>{mySpecialization}</b>) are listed first below.</>}
       </p>
       {error && <div className="err">{error}</div>}
       {!loaded ? (
@@ -58,7 +60,12 @@ export default function CoursePreferencesManager() {
             {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No courses on record yet.</td></tr>}
             {courses.map((c) => (
               <tr key={c.code} style={{ background: c.priority ? PRIORITY_COLORS[c.priority] + "33" : undefined }}>
-                <td><b>{c.code}</b></td><td>{c.title}</td><td>{c.courseType}</td>
+                <td><b>{c.code}</b></td>
+                <td>
+                  {c.title}
+                  {c.domain === mySpecialization && <span className="badge badge-ok" style={{ marginLeft: 6, fontSize: 9.5 }}>Your specialization</span>}
+                </td>
+                <td>{c.courseType}</td>
                 <td>
                   <select
                     value={c.priority ?? ""} disabled={savingCode === c.code}

@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
+import Link from "next/link";
 
 type Evidence = { id: string; fileName: string; fileUrl: string; status: string; method: string | null; reasoning: string | null };
 type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number; evidence: Evidence[] };
@@ -208,7 +209,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                         {i.evidence.map((e) => (
                           <div key={e.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <a href={e.fileUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brass-dark)" }}>{e.fileName}</a>
+                              <Link href={e.fileUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brass-dark)" }}>{e.fileName}</Link>
                               {statusBadge(e.status)}
                             </div>
                             {e.reasoning && <div style={{ color: "var(--slate)", fontSize: 10.5, marginTop: 2 }}>{e.method === "AI" ? "AI: " : "Note: "}{e.reasoning}</div>}

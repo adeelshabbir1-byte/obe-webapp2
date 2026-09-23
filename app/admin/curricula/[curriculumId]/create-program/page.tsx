@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import ProgramCopyBuilder from "../../../../../components/ProgramCopyBuilder";
+import Link from "next/link";
 
 const NAV = [
   { href: "/admin/curricula", label: "Master Curricula" },
@@ -26,7 +27,7 @@ export default async function CreateProgramPage({ params }: { params: { curricul
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           From: {curriculum.authority} {curriculum.title} ({curriculum.version})
         </div>
-        <a href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</a>
+        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
       </div>
 
       <ProgramCopyBuilder
