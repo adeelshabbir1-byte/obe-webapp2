@@ -8,6 +8,8 @@ import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 import CopyPloMappingsForm from "../../../components/CopyPloMappingsForm";
 import AutoMapHecButton from "../../../components/AutoMapHecButton";
 import AutoMapHecAllButton from "../../../components/AutoMapHecAllButton";
+import AutoMapSystemButton from "../../../components/AutoMapSystemButton";
+import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -84,12 +86,14 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
       </div>
       <AutoMapHecAllButton />
+      <AutoMapSystemAllButton />
       {!hasFilter && (
         <div className="card">
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Select a program or a specific batch above to load its PLO-Course Matrix.</p>
         </div>
       )}
       {hasFilter && searchParams.batchId && <AutoMapHecButton batchId={searchParams.batchId} />}
+      {hasFilter && searchParams.batchId && <AutoMapSystemButton batchId={searchParams.batchId} />}
       {hasFilter && allBatches.length > 1 && (
         <div className="card">
           <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Copy Mappings from Another Batch</h3>

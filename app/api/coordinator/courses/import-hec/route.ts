@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
+import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -27,6 +28,18 @@ export async function POST(req: NextRequest) {
     include: { courses: true },
   });
   if (!curriculum) return NextResponse.json({ error: "curriculum not found" }, { status: 404 });
+
+  // Defense in depth: the frontend only ever offers this coordinator's
+  // own institution's curriculum (via findOwnInstitutionCurriculum), but
+  // this endpoint shouldn't simply trust whatever curriculumId it's
+  // handed — a stale client, a direct API call, or a future UI bug could
+  // otherwise import courses linked to a DIFFERENT institution's clone,
+  // which is exactly how courses ended up mis-linked historically.
+  const owningChairmanId = await findOwningChairmanId(user.id);
+  const curriculumBelongsHere = curriculum.chairmanId === null || curriculum.chairmanId === owningChairmanId;
+  if (!curriculumBelongsHere) {
+    return NextResponse.json({ error: "that curriculum doesn't belong to your institution" }, { status: 403 });
+  }
 
   // Fetch everything we need ONCE up front, instead of once per course in
   // the loop below — the per-course version of this was slow enough on a

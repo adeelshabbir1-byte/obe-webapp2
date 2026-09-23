@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { copyBenchmarkIfAvailable, seedFromMasterCourseIfAvailable } from "../../../../lib/benchmarkCopy";
+import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
   const batch = await prisma.batch.findUnique({ where: { id: body.batchId } });
   if (!batch || batch.coordinatorId !== user.id) {
     return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  }
+
+  // Same defense-in-depth check as import-hec and fill-elective: an
+  // optional masterCourseId here must actually belong to this
+  // coordinator's own institution, never trusted as-is from the client.
+  if (body.masterCourseId) {
+    const masterCourse = await prisma.masterCourse.findUnique({ where: { id: body.masterCourseId }, include: { masterCurriculum: { select: { chairmanId: true } } } });
+    if (!masterCourse) return NextResponse.json({ error: "that curriculum course wasn't found" }, { status: 404 });
+    const owningChairmanId = await findOwningChairmanId(user.id);
+    const belongsHere = masterCourse.masterCurriculum.chairmanId === null || masterCourse.masterCurriculum.chairmanId === owningChairmanId;
+    if (!belongsHere) return NextResponse.json({ error: "that course doesn't belong to your institution's curriculum" }, { status: 403 });
   }
 
   const course = await prisma.course.create({

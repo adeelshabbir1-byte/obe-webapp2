@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { seedFromMasterCourseIfAvailable } from "../../../../../../lib/benchmarkCopy";
+import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculum";
 
 // Fills a generic elective placeholder (e.g. "Elective-I") with a real,
 // named course chosen from the institution's own curriculum — renames
@@ -22,8 +23,16 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (!course) return NextResponse.json({ error: "course not found" }, { status: 404 });
   if (course.isOffered) return NextResponse.json({ error: "this course is already offered — can't be changed" }, { status: 400 });
 
-  const masterCourse = await prisma.masterCourse.findUnique({ where: { id: body.masterCourseId } });
+  const masterCourse = await prisma.masterCourse.findUnique({ where: { id: body.masterCourseId }, include: { masterCurriculum: { select: { chairmanId: true } } } });
   if (!masterCourse) return NextResponse.json({ error: "that curriculum course wasn't found" }, { status: 404 });
+
+  // Same defense-in-depth check as import-hec: never trust that a
+  // client-supplied masterCourseId actually belongs to this OMC's own
+  // institution — that mismatch is exactly how courses have ended up
+  // mis-linked to a different institution's curriculum clone before.
+  const owningChairmanId = await findOwningChairmanId(user.id);
+  const belongsHere = masterCourse.masterCurriculum.chairmanId === null || masterCourse.masterCurriculum.chairmanId === owningChairmanId;
+  if (!belongsHere) return NextResponse.json({ error: "that course doesn't belong to your institution's curriculum" }, { status: 403 });
 
   // Avoid a duplicate code within the same batch
   let code = masterCourse.code;
