@@ -6,7 +6,7 @@ type Section = { title: string; links: Link[] };
 // how it passes navLinks.
 const RULES: { match: (href: string) => boolean; section: string }[] = [
   // Coordinator
-  { match: (h) => /\/coordinator\/(faculty|batches|courses|plos|calendar|students|grading-scale|prerequisite-map)$/.test(h), section: "Setup" },
+  { match: (h) => /\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale|prerequisite-map)$/.test(h), section: "Setup" },
   { match: (h) => /\/coordinator\/(semester|repeat-offering)$/.test(h), section: "Semester Operations" },
   { match: (h) => /\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest)$/.test(h), section: "Reports & Analytics" },
 

@@ -28,19 +28,30 @@ export async function POST(req: NextRequest) {
 
   for (const batch of pageOfBatches) {
     const [courses, plos] = await Promise.all([
-      prisma.course.findMany({ where: { batchId: batch.id }, include: { masterCourse: { select: { code: true } } } }),
+      prisma.course.findMany({ where: { batchId: batch.id } }),
       prisma.pLO.findMany({ where: { batchId: batch.id } }),
     ]);
     const ploByNumber = new Map(plos.map((p) => [p.number, p]));
-    const lookupCode = (c: (typeof courses)[number]) => c.masterCourse?.code || c.code;
-    const codes = Array.from(new Set(courses.map(lookupCode)));
-    const suggestions = codes.length > 0 ? await prisma.hecPloSuggestion.findMany({ where: { courseCode: { in: codes } } }) : [];
-    const suggestionsByCode = new Map<string, number[]>();
-    for (const s of suggestions) suggestionsByCode.set(s.courseCode, [...(suggestionsByCode.get(s.courseCode) || []), s.ploNumber]);
+
+    // Same real-FK-chain derivation as auto-map-hec/route.ts — see the
+    // comment there for why this replaced the old code-matched table.
+    const masterCourseIds = Array.from(new Set(courses.map((c) => c.masterCourseId).filter((id): id is string => !!id)));
+    const hecClos = masterCourseIds.length > 0
+      ? await prisma.masterCourseClo.findMany({
+          where: { masterCourseId: { in: masterCourseIds }, ploMappingSource: "HEC", mappedPloId: { not: null } },
+          include: { mappedPlo: { select: { number: true } } },
+        })
+      : [];
+    const ploNumbersByMasterCourseId = new Map<string, Set<number>>();
+    for (const clo of hecClos) {
+      if (!clo.mappedPlo) continue;
+      if (!ploNumbersByMasterCourseId.has(clo.masterCourseId)) ploNumbersByMasterCourseId.set(clo.masterCourseId, new Set());
+      ploNumbersByMasterCourseId.get(clo.masterCourseId)!.add(clo.mappedPlo.number);
+    }
 
     for (const course of courses) {
-      const ploNumbers = suggestionsByCode.get(lookupCode(course));
-      if (!ploNumbers) { totalSkippedNoSuggestion++; continue; }
+      const ploNumbers = course.masterCourseId ? ploNumbersByMasterCourseId.get(course.masterCourseId) : undefined;
+      if (!ploNumbers || ploNumbers.size === 0) { totalSkippedNoSuggestion++; continue; }
       for (const num of ploNumbers) {
         const plo = ploByNumber.get(num);
         if (!plo) { totalSkippedNoPlo++; continue; }

@@ -4,18 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SortableTable from "./SortableTable";
 
-type Course = {
-  id: string; code: string; title: string; courseType: string; semesterNumber: number | null;
-  subjectExpertId: string | null; batchLabel: string; linkedFollowerCodes: string[];
+type Section = { id: string; subjectExpertId: string | null; batchLabel: string };
+type CourseGroup = {
+  code: string; title: string; courseType: string; semesterNumber: number | null;
+  linkedFollowerCodes: string[]; sections: Section[];
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
 
-export default function AssignSubjectExpertsManager({ courses: initialCourses, subjectExperts, batches, selectedBatchId }: {
-  courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; selectedBatchId: string;
+export default function AssignSubjectExpertsManager({ courseGroups: initialGroups, subjectExperts, batches, selectedBatchId }: {
+  courseGroups: CourseGroup[]; subjectExperts: SubjectExpert[]; batches: Batch[]; selectedBatchId: string;
 }) {
   const router = useRouter();
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [groups, setGroups] = useState<CourseGroup[]>(initialGroups);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,22 +24,48 @@ export default function AssignSubjectExpertsManager({ courses: initialCourses, s
     router.push(batchId ? `/coordinator/assign-subject-experts?batchId=${batchId}` : "/coordinator/assign-subject-experts");
   }
 
-  async function assignSe(courseId: string, subjectExpertId: string, revertEl: HTMLSelectElement, revertValue: string) {
+  // Assigns the chosen SE to every section sharing this course code at
+  // once — one request per section, run together. If a section's
+  // request fails partway through (e.g. it turns out to be a non-base
+  // follower after all), that one section's dropdown reverts to its
+  // previous value and the rest keep whatever succeeded, rather than
+  // silently claiming the whole group updated.
+  async function assignSeToGroup(code: string, subjectExpertId: string, revertEl: HTMLSelectElement, revertValue: string) {
+    const group = groups.find((g) => g.code === code);
+    if (!group) return;
     setLoading(true); setError("");
-    try {
-      const res = await fetch(`/api/coordinator/courses/${courseId}/assign-se`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || "Couldn't assign — the course still shows its previous Subject Expert.");
-        revertEl.value = revertValue;
-        setLoading(false); return;
+
+    const outcomes = await Promise.all(group.sections.map(async (s) => {
+      try {
+        const res = await fetch(`/api/coordinator/courses/${s.id}/assign-se`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
+        });
+        const data = await res.json().catch(() => ({}));
+        return { sectionId: s.id, ok: res.ok, error: data.error as string | undefined };
+      } catch (err: any) {
+        return { sectionId: s.id, ok: false, error: err?.message };
       }
-      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, subjectExpertId: subjectExpertId || null } : c));
-      setLoading(false);
-    } catch (err: any) { setError("Unexpected error: " + err.message); revertEl.value = revertValue; setLoading(false); }
+    }));
+
+    const failures = outcomes.filter((o) => !o.ok);
+    setGroups((prev) => prev.map((g) => g.code !== code ? g : {
+      ...g,
+      sections: g.sections.map((s) => {
+        const outcome = outcomes.find((o) => o.sectionId === s.id);
+        return outcome?.ok ? { ...s, subjectExpertId: subjectExpertId || null } : s;
+      }),
+    }));
+
+    if (failures.length > 0) {
+      revertEl.value = revertValue;
+      setError(
+        failures.length === group.sections.length
+          ? (failures[0].error || "Couldn't assign to any section — nothing changed.")
+          : `Assigned to ${group.sections.length - failures.length}/${group.sections.length} section(s) — ${failures.length} failed: ${failures[0].error || "unknown error"}`
+      );
+    }
+    setLoading(false);
   }
 
   return (
@@ -57,29 +84,40 @@ export default function AssignSubjectExpertsManager({ courses: initialCourses, s
 
       <div className="card" style={{ overflowX: "auto" }}>
         <SortableTable>
-          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Type</th><th>Semester</th><th>Also Covers</th><th>Subject Expert</th></tr></thead>
+          <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Semester</th><th>Sections</th><th>Also Covers</th><th>Subject Expert</th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No assignable courses in this view.</td></tr>}
-            {courses.map((c) => (
-              <tr key={c.id}>
-                <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{c.batchLabel}</td>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.courseType}</td>
-                <td>{c.semesterNumber ?? "—"}</td>
-                <td style={{ fontSize: 11 }}>
-                  {c.linkedFollowerCodes.length > 0 ? c.linkedFollowerCodes.join(", ") : <span style={{ color: "var(--slate)" }}>—</span>}
-                </td>
-                <td>
-                  <select
-                    defaultValue={c.subjectExpertId || ""} disabled={loading}
-                    onChange={(e) => assignSe(c.id, e.target.value, e.target, c.subjectExpertId || "")}
-                    style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}
-                  >
-                    <option value="">— Unassigned —</option>
-                    {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
-                  </select>
-                </td>
-              </tr>
-            ))}
+            {groups.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No assignable courses in this view.</td></tr>}
+            {groups.map((g) => {
+              const distinctSe = new Set(g.sections.map((s) => s.subjectExpertId || ""));
+              const isMixed = distinctSe.size > 1;
+              const currentValue = isMixed ? "" : g.sections[0]?.subjectExpertId || "";
+              return (
+                <tr key={g.code}>
+                  <td>{g.code}</td><td>{g.title}</td><td>{g.courseType}</td>
+                  <td>{g.semesterNumber ?? "—"}</td>
+                  <td style={{ fontSize: 11 }}>{g.sections.map((s) => s.batchLabel).join(", ")}</td>
+                  <td style={{ fontSize: 11 }}>
+                    {g.linkedFollowerCodes.length > 0 ? g.linkedFollowerCodes.join(", ") : <span style={{ color: "var(--slate)" }}>—</span>}
+                  </td>
+                  <td>
+                    <select
+                      value={currentValue} disabled={loading}
+                      onChange={(e) => assignSeToGroup(g.code, e.target.value, e.target, currentValue)}
+                      style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                    >
+                      {isMixed && <option value="" disabled>— Mixed, pick one to unify —</option>}
+                      <option value="">— Unassigned —</option>
+                      {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
+                    </select>
+                    {g.sections.length > 1 && (
+                      <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>
+                        Applies to all {g.sections.length} sections above.
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </SortableTable>
         {subjectExperts.length === 0 && (

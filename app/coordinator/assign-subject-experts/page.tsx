@@ -54,6 +54,36 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   const courses = allCourses.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
   const followerCount = allCourses.length - courses.length;
 
+  // Multiple batches/sections often run the same course under the same
+  // code without ever being explicitly content-linked together (that
+  // linking is opt-in, for when Subject Expert edits should actually
+  // flow between them) — group by code here purely for a cleaner
+  // Coordinator view, one row per course rather than one per section,
+  // with a quick way to assign the same SE across every section at once.
+  const groupsByCode = new Map<string, typeof courses>();
+  for (const c of courses) {
+    if (!groupsByCode.has(c.code)) groupsByCode.set(c.code, []);
+    groupsByCode.get(c.code)!.push(c);
+  }
+  const courseGroups = Array.from(groupsByCode.values()).map((members) => {
+    const first = members[0];
+    const followerCodes = new Set<string>();
+    for (const m of members) {
+      if (m.contentSyncMember?.group.members.length) {
+        for (const gm of m.contentSyncMember.group.members) if (gm.course.code !== m.code) followerCodes.add(gm.course.code);
+      }
+    }
+    return {
+      code: first.code, title: first.title, courseType: first.courseType, semesterNumber: first.semesterNumber,
+      linkedFollowerCodes: Array.from(followerCodes),
+      sections: members.map((m) => ({
+        id: m.id, subjectExpertId: m.subjectExpertId,
+        batchLabel: m.batch ? `${m.batch.degreeProgram} — ${m.batch.batchName}` : "—",
+      })),
+    };
+  });
+  courseGroups.sort((a, b) => (a.semesterNumber ?? 99) - (b.semesterNumber ?? 99) || a.code.localeCompare(b.code));
+
   const subjectExperts = await prisma.user.findMany({
     where: { role: "SUBJECT_EXPERT", managedById: user.id },
     orderBy: { name: "asc" },
@@ -68,19 +98,13 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assign Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Only courses that can actually take a direct assignment are listed here — a course that's linked as
-        a follower of another section inherits its Subject Expert automatically and isn't shown.
+        One row per course code — sections across different batches are grouped together, with a single
+        assignment applying to all of them at once. Courses linked as a follower of another section
+        (inheriting their Subject Expert automatically) aren't shown.
         {followerCount > 0 && ` (${followerCount} linked follower course${followerCount === 1 ? "" : "s"} hidden.)`}
       </p>
       <AssignSubjectExpertsManager
-        courses={courses.map((c) => ({
-          id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
-          subjectExpertId: c.subjectExpertId,
-          batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
-          linkedFollowerCodes: c.contentSyncMember?.group.members.length
-            ? c.contentSyncMember.group.members.filter((m) => m.course.code !== c.code).map((m) => m.course.code)
-            : [],
-        }))}
+        courseGroups={courseGroups}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
         selectedBatchId={selectedBatchId}

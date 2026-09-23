@@ -25,8 +25,8 @@ export default function AutoMapHecButton({ batchId }: { batchId: string }) {
     <div className="card">
       <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Auto-Map from HEC</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-        Bulk-creates course-PLO mappings for this batch from HEC's own suggested mapping (matched by course
-        code) — only fills in gaps, never overwrites or removes anything already set.
+        Bulk-creates course-PLO mappings for this batch from HEC's own CLO-level PLO tags (matched via each course's link to its HEC
+        master template) — only fills in gaps, never overwrites or removes anything already set.
       </p>
       {error && <div className="err">{error}</div>}
       <button onClick={run} disabled={loading} className="btn btn-brass">{loading ? "Mapping…" : "Auto-Map from HEC"}</button>
