@@ -3,7 +3,6 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import CurriculumDetailManager from "../../../../components/CurriculumDetailManager";
-import Link from "next/link";
 
 const NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
@@ -44,11 +43,11 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
             {curriculum.sourceReference || "No source reference"}
           </div>
         </div>
-        <Link href="/admin/curricula" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to Master Curricula</Link>
-        <Link href={`/admin/curricula/${curriculum.id}/create-program`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Create Program Copy</Link>
-        <Link href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</Link>
-        <Link href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</Link>
-        <Link href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</Link>
+        <a href="/admin/curricula" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to Master Curricula</a>
+        <a href={`/admin/curricula/${curriculum.id}/create-program`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Create Program Copy</a>
+        <a href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</a>
+        <a href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</a>
+        <a href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</a>
       </div>
 
       <CurriculumDetailManager

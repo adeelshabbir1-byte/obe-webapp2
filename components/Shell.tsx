@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -73,20 +72,20 @@ export default function Shell({
               const isActive = pathname === n.href;
               const Icon = getNavIcon(n.label);
               return (
-                <Link key={n.href} href={n.href} className="nav-link" style={{
+                <a key={n.href} href={n.href} className="nav-link" style={{
                   display: "flex", alignItems: "center", gap: 9,
                   ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
                 }}>
                   <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
                   <span>{n.label}</span>
-                </Link>
+                </a>
               );
             })}
           </div>
         ))}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
-          <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
+          <a href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</a>
           {roleSwitch && (
             <button onClick={switchRole} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: "pointer", padding: 0, textAlign: "left" }}>
               Switch to {roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}
@@ -94,12 +93,12 @@ export default function Shell({
           )}
           {isAlumniCustodian && (
             <>
-              <Link href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+              <a href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
                 Review Alumni & Employer Data
-              </Link>
-              <Link href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
+              </a>
+              <a href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
                 Manage Feedback Surveys
-              </Link>
+              </a>
             </>
           )}
           <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>

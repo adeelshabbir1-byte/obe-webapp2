@@ -4,7 +4,6 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
-import Link from "next/link";
 
 
 export default async function InstructorCoursesPage() {
@@ -75,7 +74,7 @@ export default async function InstructorCoursesPage() {
                 <td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
                 <td>{c.sectionCount ?? "—"}</td>
                 <td>{c.subjectExpert?.name || "—"}</td>
-                <td><Link href={`/instructor/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td>
+                <td><a href={`/instructor/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</a></td>
               </tr>
             ))}
           </tbody>

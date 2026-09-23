@@ -12,7 +12,6 @@ import InstructorCourseSubNav from "../../../../../components/InstructorCourseSu
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
 import { navForRole } from "../../../../../components/reportNav";
-import Link from "next/link";
 
 
 export default async function MarksEntryPage({ params, searchParams }: { params: { courseId: string }; searchParams: { combined?: string } }) {
@@ -127,7 +126,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Marks Entry</h2>
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <p style={{ fontSize: 12.5, marginBottom: 8 }}>Once marks are entered, view computed grades, CLO/PLO attainment, and set grade cutoffs for this course.</p>
-        <Link href={`/omc/reports/result-mate?courseId=${course.id}`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>View Results for This Course</Link>
+        <a href={`/omc/reports/result-mate?courseId=${course.id}`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>View Results for This Course</a>
       </div>
 
       {result.rows.length > 0 && (
@@ -164,9 +163,9 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
               Couldn't build the combined view just now — showing this section only below instead. This usually means the sections' assessment setups have diverged; try syncing them from the Weights tab.
             </p>
           )}
-          <Link href={wantsCombined ? `/instructor/courses/${course.id}/marks` : `/instructor/courses/${course.id}/marks?combined=1`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>
+          <a href={wantsCombined ? `/instructor/courses/${course.id}/marks` : `/instructor/courses/${course.id}/marks?combined=1`} className="btn btn-brass" style={{ textDecoration: "none", display: "inline-block" }}>
             {wantsCombined ? "Show This Section Only" : "Grade All Sections Together"}
-          </Link>
+          </a>
         </div>
       )}
 

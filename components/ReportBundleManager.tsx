@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 type ReportDef = { id: string; title: string };
 type Bundle = { id: string; name: string; description: string | null; reportIds: string[] };
@@ -58,7 +57,7 @@ export default function ReportBundleManager({ apiEndpoint, reports, bundles: ini
                 <td><b>{b.name}</b>{b.description && <div style={{ fontSize: 11, color: "var(--slate)" }}>{b.description}</div>}</td>
                 <td style={{ fontSize: 11.5 }}>{b.reportIds.length} report(s)</td>
                 <td style={{ display: "flex", gap: 10 }}>
-                  <Link href={`/reports/print-bundle/${b.id}`} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11, textDecoration: "none" }}>Open</Link>
+                  <a href={`/reports/print-bundle/${b.id}`} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11, textDecoration: "none" }}>Open</a>
                   {deletable && <button onClick={() => remove(b.id, endpoint)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>}
                 </td>
               </tr>

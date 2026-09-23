@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 type ReportDef = { id: string; href: string; title: string };
 
@@ -60,7 +59,7 @@ export default function PrintBundleClient({ bundleName, reports }: { bundleName:
       <ul style={{ listStyle: "none", padding: 0 }}>
         {reports.map((r) => (
           <li key={r.id} style={{ marginBottom: 8 }}>
-            <Link href={r.href} target="_blank" rel="noopener noreferrer" style={{ color: "#5A1923", textDecoration: "underline", fontSize: 13.5 }}>{r.title}</Link>
+            <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ color: "#5A1923", textDecoration: "underline", fontSize: 13.5 }}>{r.title}</a>
           </li>
         ))}
       </ul>

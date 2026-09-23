@@ -4,7 +4,6 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
-import Link from "next/link";
 
 
 function statusLabel(status: string) {
@@ -42,7 +41,7 @@ export default async function SubjectExpertCoursesPage() {
             {courses.map((c) => (
               <tr key={c.id}>
                 <td>{c.code}</td><td>{c.title}</td><td>{statusLabel(c.templateStatus)}</td>
-                <td><Link href={`/subjectexpert/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td>
+                <td><a href={`/subjectexpert/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</a></td>
               </tr>
             ))}
           </tbody>

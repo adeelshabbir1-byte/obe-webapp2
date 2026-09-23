@@ -5,7 +5,6 @@ import { prisma } from "../../../../lib/db";
 import { computeTopicVariance } from "../../../../lib/varianceReport";
 import Shell from "../../../../components/Shell";
 import GuidanceThread from "../../../../components/GuidanceThread";
-import Link from "next/link";
 
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
@@ -39,7 +38,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
             Instructor: {course.instructor?.name || "—"} · {course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"}
           </div>
         </div>
-        <Link href="/omc/instructor-review" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to list</Link>
+        <a href="/omc/instructor-review" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to list</a>
       </div>
 
       <div className="card">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 type Plo = { id: string; number: number; title: string };
 type Survey = { id: string; title: string; stakeholderType: string; questions: { id: string; text: string }[]; _count: { responses: number } };
@@ -93,7 +92,7 @@ export default function SurveysManager({ surveys: initialSurveys, plos }: { surv
             {surveys.map((s) => (
               <tr key={s.id}>
                 <td>{s.title}</td><td>{s.stakeholderType}</td><td>{s.questions.length}</td><td>{s._count.responses}</td>
-                <td><Link href={`/coordinator/surveys/${s.id}`} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11, textDecoration: "none" }}>Manage</Link></td>
+                <td><a href={`/coordinator/surveys/${s.id}`} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11, textDecoration: "none" }}>Manage</a></td>
               </tr>
             ))}
           </tbody>

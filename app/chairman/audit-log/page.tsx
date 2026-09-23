@@ -3,7 +3,6 @@ import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
-import Link from "next/link";
 
 export default async function AuditLogPage({ searchParams }: { searchParams: { page?: string } }) {
   const user = await getAuthenticatedUser();
@@ -66,8 +65,8 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>Page {pageNum} of {totalPages} ({total} total)</span>
           <div style={{ display: "flex", gap: 8 }}>
-            {pageNum > 1 && <Link href={`/chairman/audit-log?page=${pageNum - 1}`} style={{ fontSize: 12, color: "var(--brass-dark)" }}>← Previous</Link>}
-            {pageNum < totalPages && <Link href={`/chairman/audit-log?page=${pageNum + 1}`} style={{ fontSize: 12, color: "var(--brass-dark)" }}>Next →</Link>}
+            {pageNum > 1 && <a href={`/chairman/audit-log?page=${pageNum - 1}`} style={{ fontSize: 12, color: "var(--brass-dark)" }}>← Previous</a>}
+            {pageNum < totalPages && <a href={`/chairman/audit-log?page=${pageNum + 1}`} style={{ fontSize: 12, color: "var(--brass-dark)" }}>Next →</a>}
           </div>
         </div>
       </div>

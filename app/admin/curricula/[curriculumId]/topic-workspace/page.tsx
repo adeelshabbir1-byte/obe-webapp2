@@ -3,7 +3,6 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import TopicWorkspace from "../../../../../components/TopicWorkspace";
-import Link from "next/link";
 
 const NAV = [
   { href: "/admin/curricula", label: "Master Curricula" },
@@ -27,7 +26,7 @@ export default async function TopicWorkspacePage({ params }: { params: { curricu
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version}) — pick 2 or 3 courses, then drag topics between their lecture plans
         </div>
-        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
+        <a href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</a>
       </div>
 
       <TopicWorkspace
