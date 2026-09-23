@@ -4,10 +4,22 @@ import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
 type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
-type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
+type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null; unavailableHours: number; trackedHoursPerWeek: number };
 
 const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
 const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
+
+// Coarse availability signal, since this matrix assigns section counts,
+// not specific time slots -- it has no way to check whether an
+// instructor is free for one particular course's actual schedule. This
+// is "how open is their week overall" (from the Availability Grid),
+// not a real per-course conflict check.
+function availabilityLevel(i: Instructor): { label: string; color: string; fg: string } {
+  const pct = i.trackedHoursPerWeek > 0 ? i.unavailableHours / i.trackedHoursPerWeek : 0;
+  if (pct >= 0.5) return { label: `Mostly unavailable (${i.unavailableHours}h/week blocked)`, color: "#FBE2DF", fg: "var(--rust)" };
+  if (pct >= 0.2) return { label: `Limited availability (${i.unavailableHours}h/week blocked)`, color: "#FBEED2", fg: "#96650F" };
+  return { label: i.unavailableHours > 0 ? `Mostly available (${i.unavailableHours}h/week blocked)` : "Fully available", color: "#E2F4E8", fg: "var(--sage)" };
+}
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
   if (row.courseType !== "Elective" || !instructor.specialization) return false;
@@ -254,13 +266,15 @@ export default function AssignmentMatrix() {
                 const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                 const settled = isInstructorSettled(i);
                 const newBoundary = idx > 0 && isInstructorSettled(sortedInstructors[idx - 1]) !== settled;
-                const title = [i.name, i.specialization ? `Specialization: ${i.specialization}` : undefined, settled ? "At/over normal load" : undefined].filter(Boolean).join(" · ");
+                const avail = availabilityLevel(i);
+                const title = [i.name, i.specialization ? `Specialization: ${i.specialization}` : undefined, avail.label, settled ? "At/over normal load" : undefined].filter(Boolean).join(" · ");
                 return (
                   <th key={i.id} className="sticky-row" title={title} style={{
                     textAlign: "left", color: over ? "var(--rust)" : undefined,
                     borderLeft: newBoundary ? "2px solid var(--rust)" : undefined, opacity: settled ? 0.6 : 1,
                     writingMode: "vertical-rl", transform: "rotate(180deg)", padding: "8px 4px",
                     height: 140, width: 30, maxWidth: 30, whiteSpace: "nowrap",
+                    boxShadow: `inset 3px 0 0 0 ${avail.color}`,
                   }}>
                     {i.name}{settled ? " (FULL)" : ""}
                   </th>
@@ -304,14 +318,20 @@ export default function AssignmentMatrix() {
                         const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                         const matches = specializationMatches(r, i);
                         const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
+                        const avail = availabilityLevel(i);
+                        const needsAllocation = !settled && value === 0;
                         const title = [
+                          `${r.label} · ${i.name}`,
+                          avail.label,
                           priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
                           matches ? `${i.name}'s specialization matches this elective` : undefined,
-                        ].filter(Boolean).join(" · ") || undefined;
+                          needsAllocation ? "This course still needs allocation" : undefined,
+                        ].filter(Boolean).join(" · ");
                         return (
                           <td key={i.id} title={title} style={{
                             textAlign: "center",
                             background: over && value > 0 ? "#FBE2DF" : priority ? PRIORITY_COLORS[priority] : matches ? "#E2F4E8" : undefined,
+                            outline: needsAllocation ? `1px dashed ${avail.fg}` : undefined, outlineOffset: needsAllocation ? "-1px" : undefined,
                           }}>
                             <input
                               type="number" min={0} defaultValue={value} disabled={busyCell === key}
@@ -334,7 +354,11 @@ export default function AssignmentMatrix() {
           "Combined" rows are equivalence groups. Rows/columns already fully assigned ("SETTLED"/"FULL") sink
           toward the bottom/right and are dimmed, keeping what still needs attention near the top-left. Use
           "Filter courses" to search, and "Columns ▾" to show/hide the Type/Batch/Students/Progress columns
-          or hide specific faculty from view.
+          or hide specific faculty from view. Hover any cell for course, instructor, and availability details
+          together. The colored bar on each instructor's name shows their overall availability (from their
+          own Availability Grid) — green mostly free, amber some hours blocked, red heavily booked; this is
+          a whole-week signal, not a check against this specific course's actual schedule. A dashed outline
+          marks an empty cell on a course that still needs allocating.
         </p>
       </div>
     </>
