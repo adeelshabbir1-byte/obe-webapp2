@@ -12,7 +12,10 @@ export default async function DegreePlanPage() {
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
           <h1 style={{ fontSize: 22 }}>Degree Plan</h1>
-          <a href="/student/registration" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Course Registration</a>
+          <div style={{ display: "flex", gap: 14 }}>
+            <a href="/student/registration" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Course Registration</a>
+            <a href="/student/obe-analytics" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My OBE Progress →</a>
+          </div>
         </div>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 20 }}>
           Plan out your future semesters, try different course orderings, and play with hypothetical grades to
