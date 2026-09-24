@@ -12,7 +12,10 @@ export default async function StudentRegistrationPage() {
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
           <h1 style={{ fontSize: 22 }}>Course Registration</h1>
-          <a href="/student/dashboard" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Elective Choices →</a>
+          <div style={{ display: "flex", gap: 14 }}>
+            <a href="/student/dashboard" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Elective Choices</a>
+            <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan →</a>
+          </div>
         </div>
         <StudentRegistrationManager />
       </div>

@@ -11,8 +11,9 @@ export default async function StudentDashboardPage() {
     <div style={{ minHeight: "100vh", background: "var(--paper)", padding: "40px 20px" }}>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <h1 style={{ fontSize: 22, marginBottom: 20 }}>Elective Choices</h1>
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 14, display: "flex", gap: 14 }}>
           <a href="/student/registration" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Course Registration</a>
+          <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan</a>
         </div>
         <StudentElectiveDashboard studentName={student.name} />
       </div>

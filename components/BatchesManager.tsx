@@ -4,9 +4,10 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number; registrationOpen: boolean };
+type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number; registrationOpen: boolean; advisorId: string | null };
+type Faculty = { id: string; name: string };
 
-export default function BatchesManager({ initialBatches }: { initialBatches: Batch[] }) {
+export default function BatchesManager({ initialBatches, faculty }: { initialBatches: Batch[]; faculty: Faculty[] }) {
   const [batches, setBatches] = useState<Batch[]>(initialBatches);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,6 +16,19 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [enrollResultMsg, setEnrollResultMsg] = useState<Record<string, string>>({});
+
+  async function setAdvisor(batch: Batch, advisorId: string) {
+    setBusyId(batch.id); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/batches/${batch.id}/set-advisor`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ advisorId: advisorId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
+      setBatches((prev) => prev.map((b) => b.id === batch.id ? { ...b, advisorId: data.advisorId } : b));
+      setBusyId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
 
   async function toggleRegistration(batch: Batch) {
     setBusyId(batch.id); setError("");
@@ -142,9 +156,9 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th>Registration</th><th></th></tr></thead>
+          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th>Registration</th><th>Advisor</th><th></th></tr></thead>
           <tbody>
-            {batches.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
+            {batches.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {batches.map((b) => (
               <tr key={b.id}>
                 <td>{b.degreeProgram}</td><td>{b.batchName}</td><td>{b.startTerm} {b.startYear}</td>
@@ -172,6 +186,12 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
                     Run Default Enrollment
                   </button>
                   {enrollResultMsg[b.id] && <div style={{ fontSize: 10, color: "var(--sage)", marginTop: 2 }}>{enrollResultMsg[b.id]}</div>}
+                </td>
+                <td>
+                  <select value={b.advisorId || ""} onChange={(e) => setAdvisor(b, e.target.value)} disabled={busyId === b.id} style={{ fontSize: 11.5, padding: "3px 4px", border: "1px solid var(--line)" }}>
+                    <option value="">— None —</option>
+                    {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
                 </td>
                 <td><Link href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</Link>
                 <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginLeft: 10 }}>Delete Batch</button></td>

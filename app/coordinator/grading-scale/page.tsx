@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import GradingScaleManager from "../../../components/GradingScaleManager";
+import CreditLimitsEditor from "../../../components/CreditLimitsEditor";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -51,6 +52,7 @@ export default async function GradingScalePage() {
         then set the % cutoff for each of these letters on their own course.
       </p>
       <GradingScaleManager initialScale={scale} />
+      <CreditLimitsEditor />
     </Shell>
   );
 }

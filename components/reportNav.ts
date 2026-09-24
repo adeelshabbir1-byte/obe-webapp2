@@ -24,6 +24,7 @@ export const OMC_ACTION_NAV = [
 
 export const INSTRUCTOR_NAV = [
   { href: "/instructor/courses", label: "My Semester Courses" },
+  { href: "/advisor/dashboard", label: "Advisor Dashboard" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
@@ -32,6 +33,7 @@ export const INSTRUCTOR_NAV = [
 
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },
+  { href: "/advisor/dashboard", label: "Advisor Dashboard" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },

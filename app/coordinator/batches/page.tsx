@@ -48,6 +48,7 @@ export default async function BatchesPage() {
     include: { _count: { select: { courses: true } } },
   });
   const degreePrograms = await prisma.degreeProgram.findMany({ where: { coordinatorId: user.id }, orderBy: { name: "asc" } });
+  const faculty = await prisma.user.findMany({ where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } });
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
@@ -61,7 +62,8 @@ export default async function BatchesPage() {
       </p>
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
       <BatchesManager
-        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses, registrationOpen: b.registrationOpen }))}
+        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses, registrationOpen: b.registrationOpen, advisorId: b.advisorId }))}
+        faculty={faculty.map((f) => ({ id: f.id, name: f.name }))}
       />
     </Shell>
   );
