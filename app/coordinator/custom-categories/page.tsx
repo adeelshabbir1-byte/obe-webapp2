@@ -43,11 +43,40 @@ export default async function CustomCategoriesPage() {
 
   const chairmanId = user.managedById || "";
 
-  const [categories, courses, faculty] = await Promise.all([
+  const [categories, allCourses, faculty] = await Promise.all([
     prisma.customCategory.findMany({ where: { chairmanId }, include: { _count: { select: { courses: true, faculty: true } } }, orderBy: { name: "asc" } }),
-    prisma.course.findMany({ where: { coordinatorId: user.id }, select: { id: true, code: true, title: true, customCategoryId: true }, orderBy: { code: "asc" } }),
+    prisma.course.findMany({
+      where: { coordinatorId: user.id },
+      select: { id: true, code: true, title: true, customCategoryId: true, contentSyncMember: { select: { isBase: true } } },
+      orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
+    }),
     prisma.user.findMany({ where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, select: { id: true, name: true, role: true, customCategoryId: true }, orderBy: { name: "asc" } }),
   ]);
+
+  // Same "base courses only" idea as Assign Subject Experts: a
+  // content-sync follower inherits everything from its base, including
+  // its category, so it never needs its own picker row — but it still
+  // needs the category actually SET on it directly (there's no
+  // inherit-at-read-time logic for categories elsewhere in the app), so
+  // group ALL courses (base and follower alike) by code for the full
+  // set of ids a category application should touch, while only using
+  // the base/unlinked ones to decide which codes get shown as rows at
+  // all. The same course code often repeats across several
+  // batches/cohorts too — one row per unique code covers all of them.
+  const groupsByCode = new Map<string, typeof allCourses>();
+  for (const c of allCourses) {
+    if (!groupsByCode.has(c.code)) groupsByCode.set(c.code, []);
+    groupsByCode.get(c.code)!.push(c);
+  }
+  const codesWithABaseRow = new Set(
+    allCourses.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase).map((c) => c.code)
+  );
+  // Only the still-uncategorized ones need to show up in the picker at
+  // all — this is what actually shrinks the Coordinator's remaining
+  // workload as they go, rather than re-showing everything every time.
+  const uncategorizedCourseGroups = Array.from(groupsByCode.entries())
+    .filter(([code, members]) => codesWithABaseRow.has(code) && members.every((m) => m.customCategoryId === null))
+    .map(([code, members]) => ({ code, title: members[0].title, courseIds: members.map((m) => m.id) }));
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
@@ -58,7 +87,7 @@ export default async function CustomCategoriesPage() {
       </p>
       <CustomCategoriesManager
         initialCategories={categories.map((c) => ({ id: c.id, name: c.name, courseCount: c._count.courses, facultyCount: c._count.faculty }))}
-        courses={courses}
+        courseGroups={uncategorizedCourseGroups}
         faculty={faculty}
       />
     </Shell>
