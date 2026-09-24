@@ -28,6 +28,8 @@ const NAV = [
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
+  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },

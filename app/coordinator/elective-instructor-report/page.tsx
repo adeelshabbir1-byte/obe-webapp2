@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
-import LoadReportManager from "../../../components/LoadReportManager";
+import ElectiveInstructorReportManager from "../../../components/ElectiveInstructorReportManager";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -35,7 +35,7 @@ const NAV = [
   { href: "/omc/reports", label: "OMC Reports" },
 ];
 
-export default async function LoadReportPage() {
+export default async function ElectiveInstructorReportPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -44,11 +44,12 @@ export default async function LoadReportPage() {
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Teacher Load Report</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Elective Instructor Report</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Select any combination of past or current semesters to see total faculty load across them.
+        Who taught each specialization elective, by degree program and semester — the record NCEAC asks for
+        when reviewing elective delivery.
       </p>
-      <LoadReportManager />
+      <ElectiveInstructorReportManager />
     </Shell>
   );
 }

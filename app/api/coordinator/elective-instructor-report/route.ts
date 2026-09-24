@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { getAvailableTerms, getTeacherLoadReport } from "../../../../lib/loadReport";
+import { getAvailableTerms } from "../../../../lib/loadReport";
+import { getElectiveInstructorReport } from "../../../../lib/electiveInstructorReport";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -18,6 +19,6 @@ export async function POST(req: NextRequest) {
   const selectedTerms = Array.isArray(body.terms) ? body.terms : [];
   if (selectedTerms.length === 0) return NextResponse.json({ error: "select at least one term" }, { status: 400 });
 
-  const result = await getTeacherLoadReport(user.id, selectedTerms);
-  return NextResponse.json(result);
+  const rows = await getElectiveInstructorReport(user.id, selectedTerms);
+  return NextResponse.json({ rows });
 }

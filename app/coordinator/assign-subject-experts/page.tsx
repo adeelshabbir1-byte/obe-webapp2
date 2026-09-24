@@ -27,6 +27,8 @@ const NAV = [
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
+  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -107,6 +109,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
         {followerCount > 0 && ` (${followerCount} linked follower course${followerCount === 1 ? "" : "s"} hidden.)`}
       </p>
       <AssignSubjectExpertsManager
+        key={selectedBatchId || "all"}
         courseGroups={courseGroups}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}

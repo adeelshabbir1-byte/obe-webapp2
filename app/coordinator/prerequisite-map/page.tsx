@@ -5,6 +5,7 @@ import { courseTypeColor } from "../../../lib/courseTypeColors";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import ConfirmPrerequisitesButton from "../../../components/ConfirmPrerequisitesButton";
+import BatchCoursesQuickEditTable from "../../../components/BatchCoursesQuickEditTable";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -29,6 +30,8 @@ const NAV = [
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
+  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -86,6 +89,27 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         </form>
       </div>
 
+      {(() => {
+        const pendingBatches = allBatches.filter((b) => !b.prerequisitesConfirmedAt);
+        if (pendingBatches.length === 0) return null;
+        return (
+          <div className="card" style={{ background: "#FBEED2" }}>
+            <h3 style={{ fontSize: 13, marginBottom: 8 }}>Still needs a prerequisite map ({pendingBatches.length})</h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {pendingBatches.map((b) => (
+                <a
+                  key={b.id}
+                  href={`/coordinator/prerequisite-map?degree=${encodeURIComponent(b.degreeProgram)}&batchId=${b.id}`}
+                  style={{ fontSize: 12, color: "#96650F", textDecoration: "underline", background: b.id === selectedBatchId ? "#F5DDA3" : "transparent", padding: "2px 6px", borderRadius: 3 }}
+                >
+                  {b.degreeProgram} — {b.batchName}
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {selectedBatchId && (
         <ConfirmPrerequisitesButton
           batchId={selectedBatchId}
@@ -107,6 +131,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
       )}
 
       <InteractiveCourseMap
+        key={selectedBatchId || "none"}
         mode="prereq"
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
@@ -114,6 +139,13 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           masterCourseId: c.masterCourseId,
         }))}
       />
+
+      {selectedBatchId && (
+        <BatchCoursesQuickEditTable
+          key={selectedBatchId}
+          initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
+        />
+      )}
     </Shell>
   );
 }

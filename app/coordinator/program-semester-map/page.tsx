@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { courseTypeColor } from "../../../lib/courseTypeColors";
 import Shell from "../../../components/Shell";
-import ProgramProfileForm from "../../../components/ProgramProfileForm";
-import PeoAlignmentCheck from "../../../components/PeoAlignmentCheck";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -37,77 +36,81 @@ const NAV = [
   { href: "/omc/reports", label: "OMC Reports" },
 ];
 
-export default async function ProgramProfilePage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
+export default async function ProgramSemesterMapPage({ searchParams }: { searchParams: { degree?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
-  const degrees = Array.from(new Set(batches.map((b) => b.degreeProgram)));
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const selectedDegree = searchParams.degree || degrees[0] || "";
-  const batchesForDegree = batches.filter((b) => b.degreeProgram === selectedDegree);
-  const selectedBatchId = searchParams.batchId || batchesForDegree[0]?.id || "";
+  const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);
+  const batchIds = batchesForDegree.map((b) => b.id);
 
-  const profile = selectedDegree
-    ? await prisma.programProfile.findUnique({ where: { coordinatorId_degreeProgram: { coordinatorId: user.id, degreeProgram: selectedDegree } } })
-    : null;
+  // Every currently-offered course across every one of this program's
+  // batches, overlaid by semester — so semester 5 shows every active
+  // batch's own semester 5 side by side, not just one batch at a time.
+  const courses = batchIds.length > 0
+    ? await prisma.course.findMany({
+        where: { batchId: { in: batchIds }, isOffered: true },
+        include: { batch: true, instructor: true },
+        orderBy: [{ semesterNumber: "asc" }, { batchId: "asc" }, { code: "asc" }],
+      })
+    : [];
+
+  const maxSemester = courses.length > 0 ? Math.max(8, ...courses.map((c) => c.semesterNumber || 1)) : 8;
+  const bySemester: Record<number, typeof courses> = {};
+  for (const c of courses) {
+    const sem = c.semesterNumber || 1;
+    bySemester[sem] = [...(bySemester[sem] || []), c];
+  }
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Document</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Semester Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Fill in your department's narrative content once per degree program, then generate the full program
-        document (title page, PEOs/PLOs, program structure, study plan, and every course's detailed syllabus)
-        as a Word file, matching a full curriculum submission format.
+        Every currently-offered course across all of a program's batches, one row per semester, with who's
+        teaching it and which batch it belongs to. Read-only — this is a report, not an editor.
       </p>
 
       <div className="card">
         <form method="GET" style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
           <div>
-            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Degree</label>
+            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Degree Program</label>
             <select name="degree" defaultValue={selectedDegree} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
               {degrees.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Batch (used for the study plan & syllabi)</label>
-            <select name="batchId" defaultValue={selectedBatchId} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-              {batchesForDegree.map((b) => <option key={b.id} value={b.id}>{b.batchName}</option>)}
-            </select>
-          </div>
-          <button type="submit" className="btn btn-brass">Load</button>
+          <button type="submit" className="btn btn-brass">Show Map</button>
         </form>
       </div>
 
-      {selectedDegree && (
-        <>
-          <ProgramProfileForm
-            degreeProgram={selectedDegree}
-            initial={{
-              departmentIntro: profile?.departmentIntro || null, departmentVision: profile?.departmentVision || null,
-              departmentMission: profile?.departmentMission || null, peos: profile?.peos ? JSON.parse(profile.peos) : [],
-            }}
-          />
-          {selectedBatchId && (
-            <>
-              <PeoAlignmentCheck
-                degreeProgram={selectedDegree}
-                batchId={selectedBatchId}
-                peoCount={profile?.peos ? JSON.parse(profile.peos).length : 0}
-              />
-              <div className="card">
-                <h3 style={{ fontSize: 14, marginBottom: 8 }}>Generate the Document</h3>
-                <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
-                  Uses this batch's current courses and their Subject Experts' plans (CLOs, weekly content, textbooks).
-                </p>
-                <a href={`/api/coordinator/program-document?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Word Document</a>
-              </div>
-            </>
-          )}
-        </>
+      {courses.length === 0 && (
+        <div className="card"><p style={{ fontSize: 12.5, color: "var(--slate)" }}>No offered courses found for this program.</p></div>
       )}
+
+      {Array.from({ length: maxSemester }, (_, i) => i + 1).map((sem) => {
+        const semCourses = bySemester[sem] || [];
+        if (semCourses.length === 0) return null;
+        return (
+          <div key={sem} className="card">
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Semester {sem}</h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {semCourses.map((c) => (
+                <div key={c.id} style={{ minWidth: 200, maxWidth: 240, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(c.courseType)}`, padding: "8px 10px", borderRadius: 3 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title}</div>
+                  <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>
+                    {c.instructor ? c.instructor.name : <span style={{ color: "var(--rust)" }}>No instructor assigned</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </Shell>
   );
 }

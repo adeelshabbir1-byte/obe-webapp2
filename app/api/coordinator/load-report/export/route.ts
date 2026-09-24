@@ -11,11 +11,12 @@ export async function POST(req: NextRequest) {
   const selectedTerms = Array.isArray(body.terms) ? body.terms : [];
   if (selectedTerms.length === 0) return NextResponse.json({ error: "select at least one term" }, { status: 400 });
 
-  const rows = await getTeacherLoadReport(user.id, selectedTerms);
-  const termLabel = selectedTerms.map((t: any) => `${t.termName} ${t.year}`).join(", ");
+  const { rows, termLabels } = await getTeacherLoadReport(user.id, selectedTerms);
 
   const summaryRows = rows.map((r) => ({
-    name: r.name, assigned: r.assigned, external: r.externalLoadCount, externalNote: r.externalLoadNote || "",
+    name: r.name, role: r.role === "SUBJECT_EXPERT" ? "SE" : "Instructor",
+    ...Object.fromEntries(termLabels.map((label) => [`term_${label}`, r.byTerm[label] ?? 0])),
+    assigned: r.assigned, external: r.externalLoadCount, externalNote: r.externalLoadNote || "",
     total: r.total, normalLoad: r.normalLoad, status: r.over ? "OVER" : "OK",
   }));
 
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
       name: "Load Summary",
       columns: [
         { header: "Faculty", key: "name", width: 24 },
+        { header: "Role", key: "role", width: 12 },
+        ...termLabels.map((label) => ({ header: label, key: `term_${label}`, width: 14 })),
         { header: "Assigned Sections", key: "assigned", width: 16 },
         { header: "External Load", key: "external", width: 14 },
         { header: "External Note", key: "externalNote", width: 26 },
