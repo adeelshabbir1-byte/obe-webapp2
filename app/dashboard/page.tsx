@@ -77,7 +77,7 @@ async function coordinatorStats(coordinatorId: string): Promise<Stat[]> {
   ];
 }
 
-async function omcStats(user: { id: string; managedById: string | null }): Promise<Stat[]> {
+async function omcStats(user: { id: string; role: string; managedById: string | null }): Promise<Stat[]> {
   const coordinatorIds = await coordinatorIdsFor(user);
   const [pendingReview, coursesWithoutPlo, pendingWeightExceptions, totalCourses] = await Promise.all([
     prisma.pendingMasterCourse.count({ where: { masterCurriculum: { chairmanId: await chairmanIdFor(user) } } }),
