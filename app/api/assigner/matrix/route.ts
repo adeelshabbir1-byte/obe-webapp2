@@ -22,12 +22,12 @@ export async function GET() {
   const offeredCourses = await prisma.course.findMany({
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true },
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
-    include: { batch: true, sectionAssignments: true, equivalenceMember: true },
+    include: { batch: true, sectionAssignments: true, equivalenceMember: true, customCategory: true },
   });
 
   const groups = await prisma.courseEquivalenceGroup.findMany({
     where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true } } } },
-    include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true } } } }, sectionAssignments: true },
+    include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true, customCategory: true } } } }, sectionAssignments: true },
   });
 
   const standaloneCourses = offeredCourses.filter((c) => !c.equivalenceMember);
@@ -43,6 +43,7 @@ export async function GET() {
         title: c.title,
         courseType: normalizeCourseType(c.courseType),
         batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
+        customCategoryName: c.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
         assignments: Object.fromEntries(c.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
@@ -58,6 +59,7 @@ export async function GET() {
         title: g.name,
         courseType: "Combined",
         batchLabel: g.members.map((m) => m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—").join("; "),
+        customCategoryName: g.members[0]?.course.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
         assignments: Object.fromEntries(g.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
@@ -69,6 +71,7 @@ export async function GET() {
 
   const instructors = await prisma.user.findMany({
     where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+    include: { customCategory: true },
   });
 
   // Every faculty member's own stated priority for the course codes
@@ -133,6 +136,7 @@ export async function GET() {
     .map((i) => ({
       id: i.id, name: i.name, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
       externalLoadNote: i.externalLoadNote, specialization: i.specialization,
+      customCategoryName: i.customCategory?.name || null,
       dominantType: dominantTypeFor(i.id),
     }))
     .sort((a, b) => {

@@ -16,13 +16,17 @@ export async function GET() {
   // the "same" course often differ slightly in title (a stray space, a
   // punctuation difference), which would otherwise still show up as
   // separate rows despite sharing a code.
+  //
+  // "domain" (the specialization track, e.g. "Artificial Intelligence")
+  // lives on MasterCourse, not on Course itself — Course only carries a
+  // masterCourseId link, so it has to be fetched through that relation.
   const allCourses = await prisma.course.findMany({
     where: { coordinatorId: user.managedById || "" },
-    select: { code: true, title: true, courseType: true, domain: true },
+    select: { code: true, title: true, courseType: true, masterCourse: { select: { domain: true } } },
     orderBy: { createdAt: "desc" }, // so the first one kept per code is the most recently offered
   });
   const byCode = new Map<string, { code: string; title: string; courseType: string; domain: string | null }>();
-  for (const c of allCourses) if (!byCode.has(c.code)) byCode.set(c.code, c);
+  for (const c of allCourses) if (!byCode.has(c.code)) byCode.set(c.code, { code: c.code, title: c.title, courseType: c.courseType, domain: c.masterCourse?.domain || null });
   const courses = Array.from(byCode.values());
 
   const preferences = await prisma.facultyCoursePreference.findMany({ where: { facultyId: user.id } });

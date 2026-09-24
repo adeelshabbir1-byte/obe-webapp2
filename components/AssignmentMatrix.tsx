@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 
-type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
-type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; dominantType: string | null };
+type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; customCategoryName: string | null; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
+type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; customCategoryName: string | null; dominantType: string | null };
 
 const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
 const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
@@ -53,7 +53,9 @@ export default function AssignmentMatrix() {
   const [courseFilter, setCourseFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("");
+  const [instructorCategoryFilter, setInstructorCategoryFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
 
   async function load() {
@@ -133,9 +135,11 @@ export default function AssignmentMatrix() {
   // top, closest to the course-name column, where attention is needed.
   const courseTypes = Array.from(new Set(rows.map((r) => r.courseType))).sort();
   const batchLabels = Array.from(new Set(rows.map((r) => r.batchLabel))).sort();
+  const courseCategories = Array.from(new Set(rows.map((r) => r.customCategoryName).filter((c): c is string => !!c))).sort();
   const filteredRows = rows.filter((r) => {
     if (typeFilter && r.courseType !== typeFilter) return false;
     if (batchFilter && r.batchLabel !== batchFilter) return false;
+    if (categoryFilter && r.customCategoryName !== categoryFilter) return false;
     if (!courseFilter.trim()) return true;
     const q = courseFilter.trim().toLowerCase();
     return r.label.toLowerCase().includes(q) || r.title.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q);
@@ -151,9 +155,11 @@ export default function AssignmentMatrix() {
   // moves toward the end (right side); those with room left stay near the
   // course names on the left, where they're easiest to assign to next.
   const specializations = Array.from(new Set(instructors.map((i) => i.specialization).filter((s): s is string => !!s))).sort();
+  const instructorCategories = Array.from(new Set(instructors.map((i) => i.customCategoryName).filter((c): c is string => !!c))).sort();
   const visibleInstructors = instructors.filter((i) => {
     if (hiddenInstructorIds.has(i.id)) return false;
     if (specializationFilter && i.specialization !== specializationFilter) return false;
+    if (instructorCategoryFilter && i.customCategoryName !== instructorCategoryFilter) return false;
     return true;
   });
   const isInstructorSettled = (i: Instructor) => totalFor(i.id) + i.externalLoadCount >= i.normalLoad;
@@ -230,6 +236,12 @@ export default function AssignmentMatrix() {
               <option value="">All batches</option>
               {batchLabels.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
+            {courseCategories.length > 0 && (
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+                <option value="">All categories</option>
+                {courseCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowColumnPicker((v) => !v)} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
                 Columns ▾
@@ -249,6 +261,15 @@ export default function AssignmentMatrix() {
                     >
                       <option value="">All specializations</option>
                       {specializations.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  {instructorCategories.length > 0 && (
+                    <select
+                      value={instructorCategoryFilter} onChange={(e) => setInstructorCategoryFilter(e.target.value)}
+                      style={{ width: "100%", padding: "4px 6px", border: "1px solid var(--line)", fontSize: 11.5, marginBottom: 8 }}
+                    >
+                      <option value="">All categories</option>
+                      {instructorCategories.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   )}
                   <div style={{ maxHeight: 160, overflowY: "auto" }}>
@@ -384,10 +405,11 @@ export default function AssignmentMatrix() {
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           "Combined" rows are equivalence groups. Rows/columns already fully assigned ("SETTLED"/"FULL") sink
           toward the bottom/right and are dimmed, keeping what still needs attention near the top-left. Use
-          "Filter courses" plus the Type/Batch dropdowns to work through one slice at a time — e.g. assign
-          Core courses now, come back for IDS/Elective in a later pass. "Columns ▾" shows/hides the
-          Type/Batch/Students/Progress columns, lets you hide specific faculty, and includes a specialization
-          filter to quickly narrow the faculty shown. Hover any cell for course, instructor, and
+          "Filter courses" plus the Type/Batch/Category dropdowns to work through one slice at a time — e.g.
+          assign Core courses now, come back for IDS/Elective in a later pass. "Columns ▾" shows/hides the
+          Type/Batch/Students/Progress columns, lets you hide specific faculty, and includes specialization
+          and category filters to quickly narrow the faculty shown — categories are your own institution's
+          labels (set under "Course & Faculty Categories"), separate from HEC's official course type. Hover any cell for course, instructor, and
           workload-availability details together. The colored bar on each instructor's name shows how much of
           their normal load is still unfilled — green has room, amber exactly full, red already over — based
           on what's assigned to them here plus their external load, not a time-slot check. A dashed outline

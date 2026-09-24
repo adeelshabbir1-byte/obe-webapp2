@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import OmcDecisionForm from "../../../../components/OmcDecisionForm";
+import Link from "next/link";
 
 const NAV = [
   { href: "/omc/queue", label: "Review Queue" },
@@ -41,7 +42,7 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
           <h1 style={{ fontSize: 22 }}>{course.code} — {course.title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Subject Expert: {course.subjectExpert?.name || "—"}</div>
         </div>
-        <a href="/omc/queue" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to queue</a>
+        <Link href="/omc/queue" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to queue</Link>
       </div>
 
       <div className="card">

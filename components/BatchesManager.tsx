@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
+import Link from "next/link";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number };
+type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number; registrationOpen: boolean };
 
 export default function BatchesManager({ initialBatches }: { initialBatches: Batch[] }) {
   const [batches, setBatches] = useState<Batch[]>(initialBatches);
@@ -13,6 +14,32 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
   const [editingCountId, setEditingCountId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [enrollResultMsg, setEnrollResultMsg] = useState<Record<string, string>>({});
+
+  async function toggleRegistration(batch: Batch) {
+    setBusyId(batch.id); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/batches/${batch.id}/toggle-registration`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ open: !batch.registrationOpen }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
+      setBatches((prev) => prev.map((b) => b.id === batch.id ? { ...b, registrationOpen: data.registrationOpen } : b));
+      setBusyId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
+
+  async function runDefaultEnrollment(batch: Batch) {
+    if (!confirm(`Enroll every student in ${batch.batchName} into their own current semester's Core/IDS/GE/Lab courses (never Electives, and never touching anyone already enrolled)?`)) return;
+    setBusyId(batch.id); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/batches/${batch.id}/run-default-enrollment`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
+      setEnrollResultMsg((prev) => ({ ...prev, [batch.id]: `${data.totalEnrolled} new enrollment(s) across ${data.studentsAffected} of ${data.totalStudents} student(s).` }));
+      setBusyId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
 
   async function addBatch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -115,9 +142,9 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th></th></tr></thead>
+          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th>Registration</th><th></th></tr></thead>
           <tbody>
-            {batches.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
+            {batches.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {batches.map((b) => (
               <tr key={b.id}>
                 <td>{b.degreeProgram}</td><td>{b.batchName}</td><td>{b.startTerm} {b.startYear}</td>
@@ -137,7 +164,16 @@ export default function BatchesManager({ initialBatches }: { initialBatches: Bat
                   )}
                 </td>
                 <td>{b.courseCount}</td>
-                <td><a href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</a>
+                <td>
+                  <button onClick={() => toggleRegistration(b)} disabled={busyId === b.id} className={b.registrationOpen ? "badge badge-ok" : "badge badge-warn"} style={{ border: "none", cursor: "pointer" }}>
+                    {b.registrationOpen ? "Open" : "Closed"}
+                  </button>
+                  <button onClick={() => runDefaultEnrollment(b)} disabled={busyId === b.id} style={{ display: "block", background: "none", border: "none", color: "var(--brass-dark)", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 }}>
+                    Run Default Enrollment
+                  </button>
+                  {enrollResultMsg[b.id] && <div style={{ fontSize: 10, color: "var(--sage)", marginTop: 2 }}>{enrollResultMsg[b.id]}</div>}
+                </td>
+                <td><Link href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</Link>
                 <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginLeft: 10 }}>Delete Batch</button></td>
               </tr>
             ))}

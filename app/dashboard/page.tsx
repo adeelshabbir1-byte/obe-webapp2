@@ -5,6 +5,7 @@ import { coordinatorIdsFor, chairmanIdFor, roleLabel } from "../../lib/reportSco
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
+import Link from "next/link";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
@@ -38,9 +39,9 @@ export default async function Dashboard() {
       </p>
       <OverviewStatGrid stats={stats} />
       <div className="card">
-        <a href={ROLE_HOME[user.role] || "/login"} className="btn btn-brass" style={{ textDecoration: "none" }}>
+        <Link href={ROLE_HOME[user.role] || "/login"} className="btn btn-brass" style={{ textDecoration: "none" }}>
           Go to {roleLabel(user.role)} workspace →
-        </a>
+        </Link>
       </div>
     </Shell>
   );

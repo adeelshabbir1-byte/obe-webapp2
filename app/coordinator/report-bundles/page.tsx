@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { ALL_REPORTS } from "../../../lib/reportRegistry";
+import { ALL_REPORTS, NCEAC_PACKAGE_REPORT_HREFS, reportIdForHref } from "../../../lib/reportRegistry";
 import Shell from "../../../components/Shell";
 import ReportBundleManager from "../../../components/ReportBundleManager";
+import NceacPackageButton from "../../../components/NceacPackageButton";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -11,6 +12,8 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
+  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/timetable", label: "Timetable" },
@@ -51,6 +54,11 @@ export default async function CoordinatorReportBundlesPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Group reports together for one-go printing — like a full "NCEAC Visit Package."
       </p>
+      <NceacPackageButton
+        apiEndpoint="/api/coordinator/report-bundles"
+        reportIds={NCEAC_PACKAGE_REPORT_HREFS.map(reportIdForHref)}
+        alreadyExists={own.some((b) => b.name === "NCEAC Accreditation Package")}
+      />
       <ReportBundleManager
         apiEndpoint="/api/coordinator/report-bundles"
         reports={ALL_REPORTS}

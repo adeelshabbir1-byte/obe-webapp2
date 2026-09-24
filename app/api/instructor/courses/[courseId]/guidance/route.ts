@@ -3,12 +3,15 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 
-// Shared by both the assigned Instructor and any OMC member who can see this
-// course — a running two-way thread, not a single overwritable comment.
+// Shared by the assigned Instructor, the assigned Subject Expert, and
+// any OMC member who can see this course — a running thread between
+// whoever planned the course and whoever actually delivered it, not a
+// single overwritable comment.
 async function canAccess(user: any, courseId: string) {
   const course = await prisma.course.findUnique({ where: { id: courseId }, include: { coordinator: true } });
   if (!course) return null;
   if (user.role === "INSTRUCTOR" && course.instructorId === user.id) return course;
+  if (user.role === "SUBJECT_EXPERT" && course.subjectExpertId === user.id) return course;
   if (user.role === "OMC" && course.coordinator.managedById === user.managedById) return course;
   return null;
 }

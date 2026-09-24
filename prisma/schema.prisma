@@ -47,6 +47,8 @@ model User {
   instituteLogo      String? @db.Text // base64 data URI, set by Super User only, per-Chairman
   normalLoad         Int      @default(3)  // standard course/lab-section load, set by Coordinator at onboarding
   specialization     String?  // e.g. "Software Engineering", "AI", "Networks" — set by Coordinator, used to suggest a good fit for elective/specialization courses
+  customCategoryId   String?  // faculty's own institution-defined category (see CustomCategory) — separate from specialization, e.g. "Maths", "Management"
+  customCategory     CustomCategory? @relation("FacultyCustomCategory", fields: [customCategoryId], references: [id])
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited
   isAlumniCustodian  Boolean  @default(false) // set by Chairman on ONE faculty member — that person reviews/approves all alumni & employer data submitted by any faculty
@@ -61,6 +63,9 @@ model User {
   sessions           Session[]
   resetTokens        PasswordResetToken[]
   courses            Course[] @relation("CourseCoordinator")
+  omcReviewAssignments Course[] @relation("CourseOmcReviewer")
+  customCategories   CustomCategory[] @relation("CustomCategoryChairman")
+  reviewedOutOfBatchRequests OutOfBatchRequest[] @relation("OutOfBatchRequestReviewer")
   reviewedAccountRequests AccountRequest[] @relation("AccountRequestReviewer")
   electiveGroups     ElectiveSlotGroup[] @relation("ElectiveGroupCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
@@ -155,6 +160,7 @@ model Batch {
   startTerm      String   @default("Fall")   // "Fall" | "Spring" — which term this batch's Semester 1 falls in
   startYear      Int      @default(2025)
   studentCount   Int      @default(0) // current active student count — editable each semester as students join/leave
+  registrationOpen Boolean @default(false) // Coordinator toggle: whether students in this batch can self-register/withdraw for the current term right now
   prerequisitesConfirmedAt DateTime? // set once the Coordinator has reviewed/set up this batch's Prerequisite Map — required before courses can be offered
   createdAt      DateTime @default(now())
 
@@ -706,6 +712,7 @@ model Student {
   // pick their own on first login.
   passwordHash       String?
   mustChangePassword Boolean  @default(true)
+  currentSemesterNumber Int   @default(1) // the Coordinator advances this each term; drives which semester's courses are this student's own default enrollment
   sessions           StudentSession[]
 
   enrollments StudentEnrollment[]
@@ -714,6 +721,7 @@ model Student {
   surveyResponses SurveyResponse[]
   attendanceRecords AttendanceRecord[]
   electiveChoices ElectiveChoice[]
+  outOfBatchRequests OutOfBatchRequest[]
 
   @@unique([batchId, rollNumber])
   @@index([batchId])
@@ -734,6 +742,29 @@ model StudentSession {
   revokedAt  DateTime?
   ipAddress  String?
   userAgent  String?
+}
+
+// A student's request to enroll in a course belonging to a DIFFERENT
+// batch than their own — e.g. a course only offered to a cohort ahead
+// of or behind them, needed for degree completion due to their own
+// unique progression. Requires explicit Coordinator approval; never
+// auto-enrolls.
+model OutOfBatchRequest {
+  id           String    @id @default(cuid())
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id])
+  courseId     String
+  course       Course    @relation(fields: [courseId], references: [id])
+  reason       String?   @db.Text
+  status       String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedById String?
+  reviewedBy   User?     @relation("OutOfBatchRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  reviewNote   String?   @db.Text
+  createdAt    DateTime  @default(now())
+
+  @@index([courseId])
+  @@index([studentId])
 }
 
 // A named elective slot (e.g. "Elective-I") for one batch/semester,
@@ -1062,6 +1093,16 @@ model Course {
 
   // Gold-standard template fields, set by the Subject Expert
   templateStatus      String   @default("draft") // draft | submitted | approved | changes-requested
+  // Load-balancing only — every OMC member can still see, comment on,
+  // and even approve/reject ANY course regardless of this field. This
+  // just marks who's primarily responsible for getting to it, so the
+  // team can split up the queue instead of everyone reviewing whatever
+  // catches their eye.
+  assignedOmcReviewerId String?
+  assignedOmcReviewer   User?  @relation("CourseOmcReviewer", fields: [assignedOmcReviewerId], references: [id])
+  customCategoryId String?
+  customCategory   CustomCategory? @relation(fields: [customCategoryId], references: [id])
+  outOfBatchRequests OutOfBatchRequest[]
   assignmentPct       Int      @default(15)
   quizPct             Int      @default(20)
   projectPct          Int      @default(0)
@@ -1389,6 +1430,26 @@ model AccountRequest {
   createdAt       DateTime  @default(now())
 
   @@index([status])
+}
+
+// An institution's own course/faculty classification, entirely separate
+// from HEC's official courseType (Core/Elective/Lab/IDS/...) — e.g.
+// "Fundamentals", "Management", "Maths", "Engineering", "Specialization
+// Elective". Shared across every program under one chairman, since
+// these groupings are usually institution-wide, not per-degree. Used to
+// tag both courses and faculty with the same labels, so the Coordinator
+// can match one against the other when assigning instructors.
+model CustomCategory {
+  id         String   @id @default(cuid())
+  chairmanId String
+  chairman   User     @relation("CustomCategoryChairman", fields: [chairmanId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+
+  courses  Course[]
+  faculty  User[]   @relation("FacultyCustomCategory")
+
+  @@unique([chairmanId, name])
 }
 
 model MasterCurriculum {

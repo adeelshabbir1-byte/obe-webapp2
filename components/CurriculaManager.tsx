@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Curriculum = { id: string; authority: string; title: string; version: string; courseCount: number; ploCount: number };
 
@@ -87,7 +88,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                 <tr>
                   <td>{c.authority}</td><td>{c.title}</td><td>{c.version}</td><td>{c.courseCount}</td><td>{c.ploCount}</td>
                   <td style={{ display: "flex", gap: 10 }}>
-                    <a href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</a>
+                    <Link href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</Link>
                     <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
                       {cloningId === c.id ? "Cancel" : "Clone as New Version"}
                     </button>

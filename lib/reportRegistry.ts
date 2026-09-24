@@ -79,3 +79,41 @@ export const ALL_REPORTS: ReportDef[] = REPORT_SECTIONS.flatMap((s) => s.cards).
 export function reportIdForHref(href: string): string {
   return idFor(href);
 }
+
+// A curated starting point for NCEAC's Self-Assessment Report (SAR) and
+// its Annexure B document requirements — based on NCEAC's 2023
+// Accreditation Manual. This is a starting bundle, not a complete
+// substitute for the SAR: NCEAC also requires narrative sections (vision/
+// mission, program objectives, industrial linkages, quality-improvement
+// policy) and non-academic records this app doesn't track (faculty
+// contracts, annual budget, BOG/BOS meeting minutes, physical facilities
+// inventory) — those still need to be prepared separately.
+export const NCEAC_PACKAGE_REPORT_HREFS = [
+  // Criterion 2 (Graduate Attributes) / Criterion 3 (Curriculum & Learning Process) evidence
+  "/omc/reports/coverage",
+  "/omc/reports/heatmap",
+  "/omc/reports/progression",
+  "/omc/reports/audit",
+  "/omc/reports/bloom",
+  "/omc/plo-readiness",
+  "/omc/reports/attainment-analytics",
+  "/omc/reports/indirect-attainment",
+  "/omc/reports/clo-plo-flow",
+  // Annexure B's per-course "single page course requirements" and course folder contents
+  "/omc/reports/course-description",
+  "/omc/reports/course-monitoring",
+  "/omc/reports/weekly-plan",
+  "/omc/reports/log-file",
+  "/omc/total-summary",
+  "/omc/weight-compliance",
+  "/omc/reports/midterm-distribution",
+  "/omc/reports/final-distribution",
+  // Annexure B's "comprehensive result of the course" and outcomes assessment
+  "/omc/reports/result-mate",
+  "/omc/reports/pass-rates",
+  // Annexure B's faculty-course linkage and delivery/adherence evidence
+  "/omc/reports/course-offering-map",
+  "/omc/adherence-report",
+  "/omc/submission-timeliness",
+  "/omc/delivery-completion",
+];

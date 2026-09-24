@@ -1,4 +1,5 @@
 import RequestAccountForm from "../../components/RequestAccountForm";
+import Link from "next/link";
 
 export default function RequestAccountPage() {
   return (
@@ -11,7 +12,7 @@ export default function RequestAccountPage() {
         </p>
         <RequestAccountForm />
         <p style={{ textAlign: "center", fontSize: 11.5, color: "var(--slate)", marginTop: 16 }}>
-          Already have an account? <a href="/login" style={{ color: "var(--brass-dark)" }}>Sign in</a>
+          Already have an account? <Link href="/login" style={{ color: "var(--brass-dark)" }}>Sign in</Link>
         </p>
       </div>
     </div>

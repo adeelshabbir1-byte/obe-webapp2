@@ -11,6 +11,8 @@ const NAV = [
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
+  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/timetable", label: "Timetable" },
@@ -59,7 +61,7 @@ export default async function BatchesPage() {
       </p>
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
       <BatchesManager
-        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses }))}
+        initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, courseCount: b._count.courses, registrationOpen: b.registrationOpen }))}
       />
     </Shell>
   );

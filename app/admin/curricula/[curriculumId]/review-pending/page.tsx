@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import PendingCourseReview from "../../../../../components/PendingCourseReview";
+import Link from "next/link";
 
 const NAV = [
   { href: "/admin/curricula", label: "Master Curricula" },
@@ -43,7 +44,7 @@ export default async function ReviewPendingPage({ params }: { params: { curricul
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version}) — {pendingWithSuggestions.length} awaiting review
         </div>
-        <a href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</a>
+        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
       </div>
 
       <PendingCourseReview curriculumId={curriculum.id} pendingCourses={pendingWithSuggestions} allCourses={curriculum.courses.map((c) => ({ id: c.id, title: c.title, category: c.category }))} />
