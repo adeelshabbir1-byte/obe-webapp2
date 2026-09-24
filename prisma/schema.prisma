@@ -68,8 +68,6 @@ model User {
   omcReviewAssignments Course[] @relation("CourseOmcReviewer")
   customCategories   CustomCategory[] @relation("CustomCategoryChairman")
   reviewedOutOfBatchRequests OutOfBatchRequest[] @relation("OutOfBatchRequestReviewer")
-  advisedBatches     Batch[] @relation("BatchAdvisor")
-  reviewedRegistrationApprovals RegistrationApprovalRequest[] @relation("RegistrationApprovalReviewer")
   reviewedAccountRequests AccountRequest[] @relation("AccountRequestReviewer")
   electiveGroups     ElectiveSlotGroup[] @relation("ElectiveGroupCoordinator")
   seCourses          Course[] @relation("CourseSubjectExpert")
@@ -165,8 +163,6 @@ model Batch {
   startYear      Int      @default(2025)
   studentCount   Int      @default(0) // current active student count — editable each semester as students join/leave
   registrationOpen Boolean @default(false) // Coordinator toggle: whether students in this batch can self-register/withdraw for the current term right now
-  advisorId      String?  // the faculty member designated to mentor/approve registration for this batch's students
-  advisor        User?    @relation("BatchAdvisor", fields: [advisorId], references: [id])
   prerequisitesConfirmedAt DateTime? // set once the Coordinator has reviewed/set up this batch's Prerequisite Map — required before courses can be offered
   createdAt      DateTime @default(now())
 
@@ -729,7 +725,6 @@ model Student {
   electiveChoices ElectiveChoice[]
   outOfBatchRequests OutOfBatchRequest[]
   degreePlanEntries DegreePlanEntry[]
-  registrationApprovalRequests RegistrationApprovalRequest[]
 
   @@unique([batchId, rollNumber])
   @@index([batchId])
@@ -796,33 +791,6 @@ model DegreePlanEntry {
 
   @@unique([studentId, courseId])
   @@index([studentId])
-}
-
-// A registration action (register or withdraw) that's held for an
-// Advisor's decision instead of applying immediately — triggered by
-// either an academic-standing override (student on Warning/Probation:
-// ANY registration change needs approval) or a modified-plan flag
-// (the course being registered isn't at the student's own current
-// semester, i.e. they're deviating from the standard batch track).
-// Approving it actually performs the underlying register/withdraw;
-// rejecting it just discards the request, leaving nothing applied.
-model RegistrationApprovalRequest {
-  id           String    @id @default(cuid())
-  studentId    String
-  student      Student   @relation(fields: [studentId], references: [id])
-  courseId     String
-  course       Course    @relation(fields: [courseId], references: [id])
-  actionType   String    // "REGISTER" | "WITHDRAW"
-  reasonCode   String    // "ACADEMIC_STANDING" | "MODIFIED_PLAN"
-  status       String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  reviewedById String?
-  reviewedBy   User?     @relation("RegistrationApprovalReviewer", fields: [reviewedById], references: [id])
-  reviewedAt   DateTime?
-  reviewNote   String?   @db.Text
-  createdAt    DateTime  @default(now())
-
-  @@index([studentId])
-  @@index([courseId])
 }
 
 // A named elective slot (e.g. "Elective-I") for one batch/semester,
@@ -1162,7 +1130,6 @@ model Course {
   customCategory   CustomCategory? @relation(fields: [customCategoryId], references: [id])
   outOfBatchRequests OutOfBatchRequest[]
   degreePlanEntries DegreePlanEntry[]
-  registrationApprovalRequests RegistrationApprovalRequest[]
   assignmentPct       Int      @default(15)
   quizPct             Int      @default(20)
   projectPct          Int      @default(0)

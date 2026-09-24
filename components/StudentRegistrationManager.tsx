@@ -13,7 +13,6 @@ export default function StudentRegistrationManager() {
     availableElectives: Elective[]; otherBatchCourses: OtherBatchCourse[]; myOutOfBatchRequests: OutOfBatchReq[];
   } | null>(null);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [otherBatchSearch, setOtherBatchSearch] = useState("");
 
@@ -28,28 +27,26 @@ export default function StudentRegistrationManager() {
   useEffect(() => { load(); }, []);
 
   async function register(courseId: string) {
-    setBusyId(courseId); setError(""); setInfo("");
+    setBusyId(courseId); setError("");
     try {
       const res = await fetch("/api/student/registration/register", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId }),
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || "Something went wrong."); setBusyId(null); return; }
-      if (json.pendingApproval) setInfo(json.message);
       await load(); setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
   async function withdraw(courseId: string) {
     if (!confirm("Withdraw from this course? Any marks already recorded for it will be removed too.")) return;
-    setBusyId(courseId); setError(""); setInfo("");
+    setBusyId(courseId); setError("");
     try {
       const res = await fetch("/api/student/registration/withdraw", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId }),
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || "Something went wrong."); setBusyId(null); return; }
-      if (json.pendingApproval) setInfo(json.message);
       await load(); setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
@@ -78,7 +75,6 @@ export default function StudentRegistrationManager() {
   return (
     <div>
       {error && <div className="err">{error}</div>}
-      {info && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{info}</div>}
 
       {!data.registrationOpen && (
         <div className="card" style={{ background: "#FBEED2" }}>
