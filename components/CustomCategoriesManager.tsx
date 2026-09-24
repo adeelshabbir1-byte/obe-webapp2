@@ -80,6 +80,15 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
     return categories.find((c) => c.id === id)?.name || "Uncategorized";
   }
 
+  // Already-categorized faculty sink to the bottom (dimmed, not hidden —
+  // unlike courses, the Coordinator may still want to re-tag someone)
+  // so whoever still needs attention stays at the top of the list.
+  const sortedFaculty = [...faculty].sort((a, b) => {
+    const aCat = a.customCategoryId ? 1 : 0;
+    const bCat = b.customCategoryId ? 1 : 0;
+    return aCat - bCat || a.name.localeCompare(b.name);
+  });
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -138,8 +147,8 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
           <div>
             <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Faculty ({selectedFacultyIds.size} selected)</p>
             <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid var(--line)", padding: 8 }}>
-              {faculty.map((f) => (
-                <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0" }}>
+              {sortedFaculty.map((f) => (
+                <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0", opacity: f.customCategoryId ? 0.55 : 1 }}>
                   <input type="checkbox" checked={selectedFacultyIds.has(f.id)} onChange={() => toggleFaculty(f.id)} />
                   {f.name} <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({categoryName(f.customCategoryId)})</span>
                 </label>

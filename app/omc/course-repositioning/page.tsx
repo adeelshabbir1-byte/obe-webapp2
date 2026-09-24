@@ -66,6 +66,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
       )}
 
       <InteractiveCourseMap
+        key={selectedBatchId || "none"}
         mode="reposition"
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,

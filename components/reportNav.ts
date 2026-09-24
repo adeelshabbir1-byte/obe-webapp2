@@ -58,6 +58,8 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/report-bundles", label: "Report Bundles" },
   { href: "/coordinator/program-profile", label: "Program Document" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
+  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },

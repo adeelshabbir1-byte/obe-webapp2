@@ -1,21 +1,22 @@
 // Shared across the PLO report and matrix so a course type always renders
-// with the same color, making the two views visually consistent. Chosen to
-// be maximally distinct from each other (spread around the color wheel),
-// not just "on brand" — similar-looking colors defeat the point of coding by type.
-// Palette kept warm and muted (not bright "SaaS" tones) to match the site's
-// maroon/cream theme; several values reuse the theme's own azure/teal/
-// purple/gold accents directly for consistency.
+// with the same color, making the two views visually consistent. Spread
+// evenly around the color wheel (45° apart, same saturation/lightness for
+// each) rather than picked ad hoc — the previous palette had IDS, Lab, and
+// Certification all crowded within a 29° span of each other (all
+// red-orange-brown), which is exactly the kind of near-identical coloring
+// that defeats the purpose of color-coding by type. Kept warm and muted
+// (not bright "SaaS" tones) to match the site's maroon/cream theme.
 export const COURSE_TYPE_COLORS: Record<string, string> = {
-  "Core": "#3F66A0",
-  "Fundamentals": "#3F66A0",
-  "Major": "#3F66A0", // legacy synonym, kept for courses created before the rename
-  "Elective": "#1D8A4E",
-  "Lab": "#A85D1F",
-  "IDS": "#963C2C",
-  "General Education": "#5A4AA0",
-  "Capstone Project": "#8A3A5C",
-  "Field Experience": "#1F7A72",
-  "Certification": "#96650F",
+  "Core": "#2C578C",
+  "Fundamentals": "#2C578C",
+  "Major": "#2C578C", // legacy synonym, kept for courses created before the rename
+  "Elective": "#2C8C31",
+  "Lab": "#8C612C",
+  "IDS": "#8C2C3F",
+  "General Education": "#492C8C",
+  "Capstone Project": "#8C2C87",
+  "Field Experience": "#2C8C78",
+  "Certification": "#6F8C2C",
 };
 export const COURSE_TYPE_FALLBACK_COLOR = "#574C50";
 

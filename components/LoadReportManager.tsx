@@ -5,14 +5,16 @@ import SortableTable from "./SortableTable";
 
 type Term = { termName: string; year: number };
 type Row = {
-  instructorId: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null;
+  instructorId: string; name: string; role: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null;
   assigned: number; total: number; over: boolean; details: { label: string; term: string; sections: number }[];
+  byTerm: Record<string, number>;
 };
 
 export default function LoadReportManager() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [termLabels, setTermLabels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +40,7 @@ export default function LoadReportManager() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setRows(data.rows); setLoading(false);
+      setRows(data.rows); setTermLabels(data.termLabels || []); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -80,12 +82,20 @@ export default function LoadReportManager() {
             <button onClick={exportExcel} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
           </div>
           <SortableTable>
-            <thead><tr><th>Faculty</th><th>Assigned Sections</th><th>External</th><th>Total</th><th>Normal Load</th><th>Status</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Faculty</th>
+                {termLabels.map((label) => <th key={label}>{label}</th>)}
+                <th>Assigned Sections</th><th>External</th><th>Total</th><th>Normal Load</th><th>Status</th>
+              </tr>
+            </thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={6 + termLabels.length} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
               {rows.map((r) => (
                 <tr key={r.instructorId} style={{ background: r.over ? "#FBE2DF" : undefined }}>
-                  <td>{r.name}</td><td>{r.assigned}</td>
+                  <td>{r.name} {r.role === "SUBJECT_EXPERT" && <span className="badge badge-warn" style={{ fontSize: 9, marginLeft: 4 }}>SE</span>}</td>
+                  {termLabels.map((label) => <td key={label}>{r.byTerm[label] ?? 0}</td>)}
+                  <td>{r.assigned}</td>
                   <td>{r.externalLoadCount}{r.externalLoadNote ? ` (${r.externalLoadNote})` : ""}</td>
                   <td style={{ fontWeight: 600 }}>{r.total}</td><td>{r.normalLoad}</td>
                   <td>{r.over ? <span className="badge badge-no">Over</span> : <span className="badge badge-ok">OK</span>}</td>

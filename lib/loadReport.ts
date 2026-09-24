@@ -19,7 +19,11 @@ function matchesSelectedTerms(course: { offeredTermName: string | null; offeredT
 }
 
 export async function getTeacherLoadReport(coordinatorId: string, selectedTerms: TermKey[]) {
-  const instructors = await prisma.user.findMany({ where: { role: "INSTRUCTOR", managedById: coordinatorId }, orderBy: { name: "asc" } });
+  // Both roles: a Subject Expert can also carry a teaching section
+  // assignment just like an Instructor can, and section assignments
+  // don't discriminate by role — leaving SE out here undercounts real
+  // load exactly the way the Assignment Matrix already avoids doing.
+  const instructors = await prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: coordinatorId }, orderBy: { name: "asc" } });
 
   const courses = await prisma.course.findMany({
     where: { coordinatorId, isOffered: true },
@@ -33,15 +37,22 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
   });
   const relevantGroups = groups.filter((g) => g.members.some((m) => matchesSelectedTerms(m.course, selectedTerms)));
 
+  // A stable label per selected term, e.g. "Fall 2024" — used both to
+  // key the per-term breakdown and to label its column in the UI.
+  const termLabels = selectedTerms.map((t) => `${t.termName} ${t.year}`);
+
   const rows = instructors.map((i) => {
     let assigned = 0;
     const details: { label: string; term: string; sections: number }[] = [];
+    const byTerm: Record<string, number> = Object.fromEntries(termLabels.map((l) => [l, 0]));
 
     for (const c of relevantCourses) {
       const a = c.sectionAssignments.find((x) => x.instructorId === i.id);
       if (a) {
         assigned += a.sectionCount;
-        details.push({ label: `${c.code} — ${c.title}`, term: `${c.offeredTermName} ${c.offeredTermYear}`, sections: a.sectionCount });
+        const termLabel = `${c.offeredTermName} ${c.offeredTermYear}`;
+        details.push({ label: `${c.code} — ${c.title}`, term: termLabel, sections: a.sectionCount });
+        if (termLabel in byTerm) byTerm[termLabel] += a.sectionCount;
       }
     }
     for (const g of relevantGroups) {
@@ -49,15 +60,24 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
       if (a) {
         assigned += a.sectionCount;
         details.push({ label: `${g.name} (combined)`, term: "multiple", sections: a.sectionCount });
+        // A combined group can span courses from more than one term, so
+        // its sections are split evenly across every term any of its
+        // member courses actually falls in — an approximation, but a
+        // far better one than dropping the group from every term column.
+        const groupTermLabels = Array.from(new Set(g.members.filter((m) => matchesSelectedTerms(m.course, selectedTerms)).map((m) => `${m.course.offeredTermName} ${m.course.offeredTermYear}`)));
+        if (groupTermLabels.length > 0) {
+          const share = a.sectionCount / groupTermLabels.length;
+          for (const label of groupTermLabels) if (label in byTerm) byTerm[label] += share;
+        }
       }
     }
 
     return {
-      instructorId: i.id, name: i.name, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
+      instructorId: i.id, name: i.name, role: i.role, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
       externalLoadNote: i.externalLoadNote, assigned, total: assigned + i.externalLoadCount,
-      over: assigned + i.externalLoadCount > i.normalLoad, details,
+      over: assigned + i.externalLoadCount > i.normalLoad, details, byTerm,
     };
   });
 
-  return rows;
+  return { rows, termLabels };
 }
