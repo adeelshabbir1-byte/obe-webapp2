@@ -10,13 +10,20 @@ import { writeAuditLog } from "../../../../lib/audit";
 // carrying seeded CLOs/lectures at the MasterCourse template level,
 // waiting for every Subject Expert to click that button individually
 // on every course is impractical — this does the same underlying copy
-// (seedFromMasterCourseIfAvailable), but across every eligible course
-// in every one of the Coordinator's own batches in a single request.
-// Eligible = linked to a MasterCourse, has no existing CLOs yet (so
-// nobody's own work is ever touched or overwritten), and isn't a
-// content-sync follower course (those inherit from their base course
-// automatically and are never edited directly).
-export async function POST() {
+// (seedFromMasterCourseIfAvailable), across every eligible course in
+// every one of the Coordinator's own batches, in small chunks per
+// call (the client loops this automatically) rather than all at once
+// in one request — a single request covering potentially hundreds of
+// courses, each needing several sequential DB round-trips, risks
+// exceeding the serverless function's time limit and returning an
+// empty, unparseable response. Eligible = linked to a MasterCourse,
+// has no existing CLOs yet (so nobody's own work is ever touched or
+// overwritten), and isn't a content-sync follower course (those
+// inherit from their base course automatically and are never edited
+// directly).
+const CHUNK_SIZE = 15;
+
+export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -27,6 +34,7 @@ export async function POST() {
       clos: { none: { source: "SE" } },
     },
     select: { id: true, code: true, title: true, masterCourseId: true, batch: { select: { degreeProgram: true, batchName: true } } },
+    take: CHUNK_SIZE,
   });
 
   let seeded = 0;
@@ -49,13 +57,19 @@ export async function POST() {
     perBatch.set(batchLabel, entry);
   }
 
+  // A chunk landing exactly at CHUNK_SIZE candidates doesn't prove more
+  // remain (this batch might have been the last CHUNK_SIZE exactly) —
+  // but it's a cheap, safe signal to keep looping on, and the next call
+  // simply returns an empty candidate set and reports nothing left.
+  const mightHaveMore = candidates.length === CHUNK_SIZE;
+
   await writeAuditLog({
     actorUserId: user.id, action: "BULK_HEC_CONTENT_LOADED",
     metadata: { seeded, skippedFollower, skippedNoContent, candidateCount: candidates.length },
   });
 
   return NextResponse.json({
-    seeded, skippedFollower, skippedNoContent,
+    seeded, skippedFollower, skippedNoContent, mightHaveMore,
     perBatch: Array.from(perBatch.values()).sort((a, b) => a.batchLabel.localeCompare(b.batchLabel)),
   });
 }
