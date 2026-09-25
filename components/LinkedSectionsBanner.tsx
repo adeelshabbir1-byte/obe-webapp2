@@ -30,7 +30,7 @@ export default function LinkedSectionsBanner({ courseId, linkedSections, showSyn
         Settings aren't shared automatically — use the buttons below to copy this section's setup to the others whenever you want them to match.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok !== null && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "6px 10px", fontSize: 12, marginBottom: 8 }}>Synced to {ok} other section(s).</div>}
+      {ok !== null && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "6px 10px", fontSize: 12, marginBottom: 8 }}>Synced to {ok} other section(s).</div>}
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={() => sync(false)} disabled={loading} className="btn btn-brass" style={{ padding: "5px 12px", fontSize: 12 }}>
           {loading ? "Syncing…" : "Copy Weights to Other Sections"}

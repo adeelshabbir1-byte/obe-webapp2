@@ -93,12 +93,12 @@ export default function StudentManager({ batches, initialBatchId, students: init
           account and their initial password becomes their own roll number; they'll be prompted to set a
           real password the first time they sign in at <code>/student/login</code>.
         </p>
-        {loginActivationResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{loginActivationResult}</div>}
+        {loginActivationResult && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{loginActivationResult}</div>}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => activateLogins(false)} disabled={activatingLogins} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
+          <button onClick={() => activateLogins(false)} disabled={activatingLogins} className="btn btn-approve" style={{ fontSize: 12, padding: "5px 10px" }}>
             {activatingLogins ? "Activating…" : "Activate New Logins"}
           </button>
-          <button onClick={() => activateLogins(true)} disabled={activatingLogins} className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
+          <button onClick={() => activateLogins(true)} disabled={activatingLogins} className="btn btn-warn" style={{ fontSize: 12, padding: "5px 10px" }}>
             Reset Everyone's Login
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
             {students.map((s) => (
               <tr key={s.id}>
                 <td>{s.name}</td><td>{s.rollNumber}</td>
-                <td><button onClick={() => removeStudent(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeStudent(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -121,19 +121,19 @@ export default function StudentManager({ batches, initialBatchId, students: init
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
-        {result && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
+        {result && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Column A = Name, Column B = Roll Number. A header row is fine — it's detected and skipped automatically.
         </p>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 12.5, marginBottom: 10, display: "block" }} />
-        <button onClick={importFile} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
+        <button onClick={importFile} disabled={loading || !file} className="btn btn-import">{loading ? "Importing…" : "Import File"}</button>
       </div>
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Or Paste Student Data Directly</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>One student per line, as "Name, Roll Number" (comma or tab separated) — works directly from a copied Excel column.</p>
         <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8} placeholder={"Ali Khan, 2026-CS-001\nSara Ahmed, 2026-CS-002"} style={{ width: "100%", padding: 8, border: "1px solid var(--line)", fontFamily: "monospace", fontSize: 12.5 }} />
-        <button onClick={importCsv} disabled={loading || !csvText.trim()} className="btn btn-brass" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Pasted Text"}</button>
+        <button onClick={importCsv} disabled={loading || !csvText.trim()} className="btn btn-import" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Pasted Text"}</button>
       </div>
     </>
   );

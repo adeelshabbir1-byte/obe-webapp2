@@ -57,7 +57,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {usedTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
+                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                 {t}
               </span>
             ))}

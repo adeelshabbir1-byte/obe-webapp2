@@ -89,7 +89,7 @@ export default function TopicWorkspace({ curriculumId, courses }: { curriculumId
         <div style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>{selectedIds.length} of 3 selected</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, maxHeight: 500, overflowY: "auto", border: "1px solid var(--line)", padding: 10, marginBottom: 14 }}>
           {filtered.map((c) => (
-            <label key={c.id} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", background: selectedIds.includes(c.id) ? "#F0EAD6" : "transparent" }}>
+            <label key={c.id} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", background: selectedIds.includes(c.id) ? "#EEF2FA" : "transparent" }}>
               <input type="checkbox" checked={selectedIds.includes(c.id)} disabled={!selectedIds.includes(c.id) && selectedIds.length >= 3} onChange={() => toggleSelect(c.id)} />
               {c.code} — {c.title} <span style={{ color: "var(--slate)" }}>({c.topicCount} topics)</span>
             </label>
@@ -119,8 +119,8 @@ export default function TopicWorkspace({ curriculumId, courses }: { curriculumId
 
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns.length}, 1fr)`, gap: 12 }}>
         {columns.map((col, colIdx) => (
-          <div key={col.id} style={{ border: "1px solid var(--line)", background: "#FAFAF8" }}>
-            <div style={{ padding: "8px 10px", background: "#4A4A6A", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>
+          <div key={col.id} style={{ border: "1px solid var(--line)", background: "#F7F9FE" }}>
+            <div style={{ padding: "8px 10px", background: "#14215B", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>
               {col.code} — {col.title} <span style={{ fontWeight: 400 }}>({col.topics.length})</span>
             </div>
             <div

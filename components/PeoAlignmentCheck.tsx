@@ -5,9 +5,9 @@ import { useState } from "react";
 type Result = { peo: string; status: "STRONG" | "PARTIAL" | "GAP"; supportingPloNumbers: number[]; reasoning: string };
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
-  STRONG: { bg: "#E2F4E8", fg: "#1D8A4E", label: "Strong" },
-  PARTIAL: { bg: "#FBEED2", fg: "#96650F", label: "Partial" },
-  GAP: { bg: "#FBE2DF", fg: "#C0312B", label: "Gap" },
+  STRONG: { bg: "#E3F8EF", fg: "#059669", label: "Strong" },
+  PARTIAL: { bg: "#FFF3DC", fg: "#8A4B00", label: "Partial" },
+  GAP: { bg: "#FFE8ED", fg: "#E11D48", label: "Gap" },
 };
 
 export default function PeoAlignmentCheck({ degreeProgram, batchId, peoCount }: { degreeProgram: string; batchId: string; peoCount: number }) {
@@ -50,7 +50,7 @@ export default function PeoAlignmentCheck({ degreeProgram, batchId, peoCount }: 
               <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < results.length - 1 ? "1px solid var(--line)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ fontSize: 12.5, flex: 1 }}>{r.peo}</div>
-                  <span style={{ background: style.bg, color: style.fg, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, whiteSpace: "nowrap" }}>
+                  <span style={{ background: style.bg, color: style.fg, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
                     {style.label}
                   </span>
                 </div>

@@ -59,7 +59,7 @@ export default function ReportBundleManager({ apiEndpoint, reports, bundles: ini
                 <td style={{ fontSize: 11.5 }}>{b.reportIds.length} report(s)</td>
                 <td style={{ display: "flex", gap: 10 }}>
                   <Link href={`/reports/print-bundle/${b.id}`} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11, textDecoration: "none" }}>Open</Link>
-                  {deletable && <button onClick={() => remove(b.id, endpoint)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>}
+                  {deletable && <button onClick={() => remove(b.id, endpoint)} disabled={loading} className="act act-danger">Delete</button>}
                 </td>
               </tr>
             ))}

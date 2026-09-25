@@ -76,16 +76,16 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
       <h3 style={{ fontSize: 14, marginBottom: 12 }}>Assessment Weights</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>The total below updates as you type.</p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", border: "1px solid #BDEBD6", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {pending && (
-        <div style={{ background: "#F3E4E7", color: "var(--brass-dark)", border: "1px solid #C7C2F0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#EEF2FF", color: "var(--brass-dark)", border: "1px solid #C7C2F0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
           Outside policy range — sent to the OMC for approval instead of saving directly:
           <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>{pending.map((v) => <li key={v}>{v}</li>)}</ul>
         </div>
       )}
 
       {confirming && (
-        <div style={{ background: "#FBE2DF", color: "var(--rust)", border: "1px solid #FBC4B4", padding: "12px 14px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#FFE8ED", color: "var(--rust)", border: "1px solid #FFC7D3", padding: "12px 14px", fontSize: 12.5, marginBottom: 12 }}>
           <b>These are outside the OMC's allowed range:</b>
           <ul style={{ margin: "6px 0 10px", paddingLeft: 18 }}>{confirming.violations.map((v) => <li key={v}>{v}</li>)}</ul>
           <p style={{ marginBottom: 10 }}>Do you want to send this for OMC approval, or go back and adjust the values to stay within range?</p>

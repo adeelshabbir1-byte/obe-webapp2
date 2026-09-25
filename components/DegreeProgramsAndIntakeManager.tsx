@@ -74,7 +74,7 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
               <tr key={p.id}>
                 <td>{p.name}</td><td>{p.shortCode}</td><td>{p.defaultIntakeSize}</td>
                 <td>{p.usuallyOfferedInFall ? "Yes" : "No"}</td><td>{p.usuallyOfferedInSpring ? "Yes" : "No"}</td>
-                <td><button onClick={() => removeProgram(p.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeProgram(p.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

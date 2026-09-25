@@ -70,7 +70,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
             ) : prog.courses.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No courses in this program yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>Course</th><th>Type</th><th>Sem</th>
@@ -100,7 +100,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                         return (
                           <td
                             key={p.id}
-                            style={{ textAlign: "center", background: hecSuggests ? "#FBEED2" : undefined }}
+                            style={{ textAlign: "center", background: hecSuggests ? "#FFF3DC" : undefined }}
                             title={checked && assignedBy ? `Assigned by ${assignedBy}` : hecSuggests ? "HEC suggests this mapping — not yet set" : undefined}
                           >
                             <input

@@ -75,7 +75,7 @@ export default async function InstructorCoursesPage() {
                 <td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
                 <td>{c.sectionCount ?? "—"}</td>
                 <td>{c.subjectExpert?.name || "—"}</td>
-                <td><Link href={`/instructor/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td>
+                <td><Link href={`/instructor/courses/${c.id}/clos`} className="act act-primary">Open</Link></td>
               </tr>
             ))}
           </tbody>

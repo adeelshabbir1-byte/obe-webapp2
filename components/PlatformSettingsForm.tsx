@@ -52,7 +52,7 @@ export default function PlatformSettingsForm({ initial }: { initial: { ownerLogo
 
   return (
     <div className="card">
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {error && <div className="err">{error}</div>}
       <form onSubmit={onSubmit}>
         <LogoField label="NCEAC Logo" value={nceacLogo} onChange={(e) => handleFile(e, setNceacLogo)} />

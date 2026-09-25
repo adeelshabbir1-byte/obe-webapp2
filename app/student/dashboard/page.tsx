@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import StudentElectiveDashboard from "../../../components/StudentElectiveDashboard";
+import StudentShell from "../../../components/StudentShell";
 
 export default async function StudentDashboardPage() {
   const student = await getAuthenticatedStudent();
@@ -8,15 +9,11 @@ export default async function StudentDashboardPage() {
   if (student.mustChangePassword) redirect("/student/change-password");
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--paper)", padding: "40px 20px" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+    <StudentShell studentName={student.name}>
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <h1 style={{ fontSize: 22, marginBottom: 20 }}>Elective Choices</h1>
-        <div style={{ marginBottom: 14, display: "flex", gap: 14 }}>
-          <a href="/student/registration" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Course Registration</a>
-          <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan</a>
-        </div>
         <StudentElectiveDashboard studentName={student.name} />
       </div>
-    </div>
+    </StudentShell>
   );
 }

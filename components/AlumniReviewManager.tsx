@@ -34,7 +34,7 @@ export default function AlumniReviewManager({ alumni: initialAlumni, employers: 
   function Actions({ type, id }: { type: "alumni" | "employer" | "employment" | "degree"; id: string }) {
     return (
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => decide(type, id, "APPROVED")} disabled={busyId === id} className="btn btn-brass" style={{ padding: "3px 10px", fontSize: 11 }}>Approve</button>
+        <button onClick={() => decide(type, id, "APPROVED")} disabled={busyId === id} className="btn btn-approve" style={{ padding: "3px 10px", fontSize: 11 }}>Approve</button>
         <button onClick={() => decide(type, id, "REJECTED")} disabled={busyId === id} style={{ background: "none", border: "1px solid var(--rust)", color: "var(--rust)", padding: "3px 10px", fontSize: 11, cursor: "pointer" }}>Reject</button>
       </div>
     );

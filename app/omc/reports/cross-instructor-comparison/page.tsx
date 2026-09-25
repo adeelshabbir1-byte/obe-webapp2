@@ -115,7 +115,7 @@ export default async function CrossInstructorComparisonPage({ searchParams }: { 
                     const cell = o.byTopic.get(key);
                     return (
                       <Fragment key={i}>
-                        <td style={!cell?.covered ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)", fontWeight: 700 }}>
+                        <td style={!cell?.covered ? { background: "#FFE8ED", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)", fontWeight: 700 }}>
                           {cell ? (cell.covered ? "Yes" : "Not Yet") : "Not Planned"}
                         </td>
                         <td>{cell?.lectureCount || 0}</td>

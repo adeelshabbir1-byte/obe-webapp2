@@ -19,7 +19,7 @@ export default async function AssignerMatrixPage() {
     <Shell roleLabel="Course Assigner" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Section Assignment Matrix</h1>
-        <a href="/api/assigner/matrix/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/assigner/matrix/export" className="btn btn-export" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses on the left, faculty as columns — enter how many sections each faculty member is teaching.

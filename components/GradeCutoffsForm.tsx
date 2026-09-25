@@ -49,7 +49,7 @@ export default function GradeCutoffsForm({ courseId, apiEndpoint, gradingScale, 
       <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
         Minimum % needed for each letter — pre-filled with the computed suggestion for A/B/C/D, fully editable. Once saved, these are what's actually used to assign grades.
       </p>
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>Saved.</div>}
       {error && <div className="err">{error}</div>}
       <form onSubmit={onSubmit}>
         <table>

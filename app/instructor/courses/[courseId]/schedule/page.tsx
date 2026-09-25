@@ -40,7 +40,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
-        <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>
+        <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-export" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>
       </div>
       <CourseEvaluationSection courseId={course.id} initialObservations={course.instructorObservations || ""} />
       <InstructorLectureContentManager

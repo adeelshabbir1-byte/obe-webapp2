@@ -108,7 +108,7 @@ export default async function AssignmentHistoryPage({ searchParams }: { searchPa
           </div>
           <button type="submit" className="btn btn-brass">Load</button>
           {selectedTermName && selectedTermYear && (
-            <a href={`/api/coordinator/assignment-history/export?termName=${selectedTermName}&termYear=${selectedTermYear}${selectedIsCurrent ? "&current=1" : ""}`} className="btn btn-brass" style={{ textDecoration: "none" }}>
+            <a href={`/api/coordinator/assignment-history/export?termName=${selectedTermName}&termYear=${selectedTermYear}${selectedIsCurrent ? "&current=1" : ""}`} className="btn btn-export" style={{ textDecoration: "none" }}>
               Export to Excel
             </a>
           )}

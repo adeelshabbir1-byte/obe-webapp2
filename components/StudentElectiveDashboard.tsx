@@ -55,7 +55,7 @@ export default function StudentElectiveDashboard({ studentName }: { studentName:
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: "var(--slate)" }}>Signed in as <b>{studentName}</b></p>
-        <button onClick={logout} style={{ background: "none", border: "none", color: "var(--brass-dark)", textDecoration: "underline", cursor: "pointer", fontSize: 12.5 }}>
+        <button onClick={logout} className="act act-primary">
           Sign out
         </button>
       </div>
@@ -81,7 +81,7 @@ export default function StudentElectiveDashboard({ studentName }: { studentName:
                 style={{
                   display: "block", padding: "12px 14px", marginBottom: 8, cursor: o.full && currentSelection !== o.id ? "not-allowed" : "pointer",
                   border: currentSelection === o.id ? "2px solid var(--brass-dark)" : "1px solid var(--line)",
-                  background: o.full && currentSelection !== o.id ? "#F4EFEE" : currentSelection === o.id ? "#F8EEF0" : "#fff",
+                  background: o.full && currentSelection !== o.id ? "#F3F6FD" : currentSelection === o.id ? "#F4F0FF" : "#fff",
                   opacity: o.full && currentSelection !== o.id ? 0.6 : 1,
                 }}
               >
@@ -102,7 +102,7 @@ export default function StudentElectiveDashboard({ studentName }: { studentName:
               </label>
             ))}
 
-            <button onClick={() => submit(g)} disabled={busyGroupId === g.id} className="btn btn-brass" style={{ marginTop: 6 }}>
+            <button onClick={() => submit(g)} disabled={busyGroupId === g.id} className="btn btn-approve" style={{ marginTop: 6 }}>
               {busyGroupId === g.id ? "Saving…" : g.myChoiceOptionId ? "Update My Choice" : "Submit My Choice"}
             </button>
           </div>

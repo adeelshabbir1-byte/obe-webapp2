@@ -121,7 +121,7 @@ export default function AttendanceManager({ courseId, lectureRows }: { courseId:
             <tbody>
               {(!summary || summary.summary.length === 0) && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No attendance marked yet.</td></tr>}
               {summary?.summary.map((s) => (
-                <tr key={s.studentId} style={s.flagged ? { background: "#FBE2DF" } : undefined}>
+                <tr key={s.studentId} style={s.flagged ? { background: "#FFE8ED" } : undefined}>
                   <td>{s.rollNumber}</td><td>{s.name}</td><td>{s.present}</td><td>{s.absent}</td><td>{s.leave}</td>
                   <td style={{ fontWeight: 700, color: s.flagged ? "var(--rust)" : "var(--sage)" }}>{s.percentage !== null ? `${s.percentage}%` : "—"}</td>
                   <td>{s.flagged && <span className="badge badge-no">Below Threshold</span>}</td>

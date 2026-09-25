@@ -111,7 +111,7 @@ export default function PrerequisiteCorrelationReport() {
                   </tr>
                   {isOpen && (
                     <tr key={key + "-detail"}>
-                      <td colSpan={5} style={{ padding: 12, background: "#FAFAF8" }}>
+                      <td colSpan={5} style={{ padding: 12, background: "#F7F9FE" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                           <div>
                             <h4 style={{ fontSize: 12, marginBottom: 8 }}>Grade scatter</h4>

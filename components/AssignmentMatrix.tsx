@@ -6,7 +6,7 @@ import SortableTable from "./SortableTable";
 type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; customCategoryName: string | null; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; customCategoryName: string | null; dominantType: string | null };
 
-const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
+const PRIORITY_COLORS: Record<number, string> = { 1: "#BDEBD6", 2: "#FFF3DC", 3: "#FFE0B2" };
 const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 3: "Neutral/50-50" };
 
 // "Available" = workload capacity remaining, not a time-slot check:
@@ -16,9 +16,9 @@ const PRIORITY_LABELS: Record<number, string> = { 1: "Top priority", 2: "Good", 
 // more section."
 function availabilityLevel(i: Instructor, assignedSoFar: number): { label: string; color: string; fg: string; remaining: number } {
   const remaining = i.normalLoad - assignedSoFar - i.externalLoadCount;
-  if (remaining > 0) return { label: `Available for ${remaining} more section${remaining === 1 ? "" : "s"}`, color: "#E2F4E8", fg: "var(--sage)", remaining };
-  if (remaining === 0) return { label: "At full load (0 sections remaining)", color: "#FBEED2", fg: "#96650F", remaining };
-  return { label: `Overloaded by ${-remaining} section${-remaining === 1 ? "" : "s"}`, color: "#FBE2DF", fg: "var(--rust)", remaining };
+  if (remaining > 0) return { label: `Available for ${remaining} more section${remaining === 1 ? "" : "s"}`, color: "#E3F8EF", fg: "var(--sage)", remaining };
+  if (remaining === 0) return { label: "At full load (0 sections remaining)", color: "#FFF3DC", fg: "#8A4B00", remaining };
+  return { label: `Overloaded by ${-remaining} section${-remaining === 1 ? "" : "s"}`, color: "#FFE8ED", fg: "var(--rust)", remaining };
 }
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
@@ -183,7 +183,7 @@ export default function AssignmentMatrix() {
             return (
               <div key={i.id} style={{
                 border: `1px solid ${over ? "var(--rust)" : "var(--line)"}`, padding: "8px 12px",
-                background: over ? "#FBE2DF" : "var(--card)", minWidth: 150,
+                background: over ? "#FFE8ED" : "var(--card)", minWidth: 150,
               }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600 }}>{i.name}</div>
                 <div style={{ fontSize: 11.5, color: over ? "var(--rust)" : "var(--slate)" }}>
@@ -289,17 +289,17 @@ export default function AssignmentMatrix() {
                 </div>
               )}
             </div>
-            <a href="/api/assigner/matrix/export-grid" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
+            <a href="/api/assigner/matrix/export-grid" className="btn btn-export" style={{ fontSize: 12, padding: "5px 10px" }}>
               Download as Excel
             </a>
-            <label className="btn" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
+            <label className="btn btn-import" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
               {importing ? "Uploading…" : "Upload edited Excel"}
               <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />
             </label>
           </div>
         </div>
         {importResult && (
-          <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
+          <div style={{ fontSize: 12, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
             Applied: {importResult.coursesUpdated} course row(s), {importResult.groupsUpdated} combined-group row(s).
             {importResult.rowsSkipped > 0 && <> {importResult.rowsSkipped} row(s) skipped (didn't match any of your courses/groups — check for hand-edited ids).</>}
             {importResult.skippedInstructorNames?.length > 0 && <> Columns not recognized as a unique faculty name: {importResult.skippedInstructorNames.join(", ")}.</>}
@@ -337,7 +337,7 @@ export default function AssignmentMatrix() {
           );
 
           return (
-            <SortableTable>
+            <SortableTable paginate={false}>
               <thead><tr>{headerCells}</tr></thead>
               <tbody>
                 {sortedRows.map((r, rowIdx) => {
@@ -349,7 +349,7 @@ export default function AssignmentMatrix() {
                   const nameCell = (
                     <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
                       <b>{shortLabel}</b>
-                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F3E4E7", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#EEF2FF", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>Combined</span>}
                       {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                     </td>
                   );
@@ -382,7 +382,7 @@ export default function AssignmentMatrix() {
                         return (
                           <td key={i.id} title={title} style={{
                             textAlign: "center",
-                            background: over && value > 0 ? "#FBE2DF" : priority ? PRIORITY_COLORS[priority] : matches ? "#E2F4E8" : undefined,
+                            background: over && value > 0 ? "#FFE8ED" : priority ? PRIORITY_COLORS[priority] : matches ? "#E3F8EF" : undefined,
                             outline: needsAllocation ? `1px dashed ${avail.fg}` : undefined, outlineOffset: needsAllocation ? "-1px" : undefined,
                           }}>
                             <input

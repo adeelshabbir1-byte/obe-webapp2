@@ -70,13 +70,13 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Courses</h1>
-        <a href="/api/coordinator/courses/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/coordinator/courses/export" className="btn btn-export" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Import from any published curriculum into a specific batch, or add courses manually. Everything stays editable afterward.
       </p>
       {selectedBatchId && courses.length > 50 && (
-        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F7" }}>
           <p style={{ fontSize: 12.5, color: "var(--rust)" }}>
             This batch has {courses.length} courses — unusually high for a typical program. This can happen if
             "Copy From Another Batch" or an import was run more than once. Check for duplicate course codes

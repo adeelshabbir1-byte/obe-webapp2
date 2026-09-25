@@ -16,15 +16,15 @@ type Policy = {
 
 const COMPONENTS: { key: string; label: string; color: string }[] = [
   { key: "assignment", label: "Assignment", color: "#3F66A0" },
-  { key: "quiz", label: "Quiz", color: "#1D8A4E" },
+  { key: "quiz", label: "Quiz", color: "#059669" },
   { key: "project", label: "Project", color: "#5A4AA0" },
   { key: "lab", label: "Lab", color: "#A85D1F" },
   { key: "midterm", label: "Midterm", color: "#8A3A5C" },
-  { key: "final", label: "Final", color: "#96650F" },
+  { key: "final", label: "Final", color: "#8A4B00" },
 ];
 const MIN_BG = "#E3EBF3";   // light warm blue — every Min % cell
 const MAX_BG = "#E4F0D6";   // light warm green — every Max % cell
-const COUNT_BG = "#FBEED2"; // light warm gold — every # Min (minimum count) cell
+const COUNT_BG = "#FFF3DC"; // light warm gold — every # Min (minimum count) cell
 
 export default function WeightPolicyManager({ initialPolicies }: { initialPolicies: Policy[] }) {
   const [error, setError] = useState("");
@@ -58,14 +58,14 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
   return (
     <div className="card" style={{ overflowX: "auto" }}>
       {error && <div className="err">{error}</div>}
-      <SortableTable className="xlgrid" style={{ borderCollapse: "collapse" }}>
+      <SortableTable paginate={false} className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}>Course Type</th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EEF2FF)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}></th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EEF2FF)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (

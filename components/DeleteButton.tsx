@@ -15,7 +15,7 @@ export default function DeleteButton({ endpoint }: { endpoint: string }) {
   }
 
   return (
-    <button onClick={onClick} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+    <button onClick={onClick} disabled={loading} className="act act-danger">
       {loading ? "…" : "Remove"}
     </button>
   );

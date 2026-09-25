@@ -174,7 +174,7 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
           <div>
             <h4 style={{ fontSize: 12, marginBottom: 6 }}>Seed CLOs</h4>
             {clos.map((clo) => {
-              const sourceColor = clo.ploMappingSource === "HEC" ? "#F5E27A" : clo.ploMappingSource === "PU" ? "#B8E6B8" : clo.ploMappingSource === "SYSTEM" ? "#CFE3F5" : clo.ploMappingSource === "MANUAL" ? "#E0C6F0" : "#eee";
+              const sourceColor = clo.ploMappingSource === "HEC" ? "#F5E27A" : clo.ploMappingSource === "PU" ? "#BDEBD6" : clo.ploMappingSource === "SYSTEM" ? "#CFE3F5" : clo.ploMappingSource === "MANUAL" ? "#E0C6F0" : "#eee";
               return (
                 <div key={clo.id} style={{ fontSize: 11.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>

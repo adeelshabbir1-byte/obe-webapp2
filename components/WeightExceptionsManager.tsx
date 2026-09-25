@@ -45,15 +45,15 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
                   A {r.assignmentPct}% · Q {r.quizPct}% · P {r.projectPct}% · L {r.labPct}% · Mid {r.midtermPct}% · Final {r.finalPct}%
                 </td>
                 <td>
-                  <button onClick={() => setOpenId(openId === r.id ? null : r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                  <button onClick={() => setOpenId(openId === r.id ? null : r.id)} className="act act-primary">
                     {openId === r.id ? "Close" : "Review"}
                   </button>
                   {openId === r.id && (
                     <div style={{ marginTop: 10 }}>
                       <textarea id={`comment-${r.id}`} rows={2} placeholder="Comment for the Subject Expert (optional)..." style={{ width: 220, padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12, marginBottom: 8 }} />
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => decide(r.id, "approved")} disabled={loading} className="btn" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff", padding: "5px 10px", fontSize: 11.5 }}>Approve</button>
-                        <button onClick={() => decide(r.id, "rejected")} disabled={loading} className="btn" style={{ background: "var(--rust)", borderColor: "var(--rust)", color: "#fff", padding: "5px 10px", fontSize: 11.5 }}>Reject</button>
+                        <button onClick={() => decide(r.id, "approved")} disabled={loading} className="btn btn-approve" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff", padding: "5px 10px", fontSize: 11.5 }}>Approve</button>
+                        <button onClick={() => decide(r.id, "rejected")} disabled={loading} className="btn btn-danger" style={{ background: "var(--rust)", borderColor: "var(--rust)", color: "#fff", padding: "5px 10px", fontSize: 11.5 }}>Reject</button>
                       </div>
                     </div>
                   )}

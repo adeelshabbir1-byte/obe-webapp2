@@ -65,7 +65,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
               <thead><tr><th>Topic</th><th>Lec</th>{summary.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
-                  <tr key={t.topic} style={{ background: t.mismatch ? "#FFE4DC" : undefined }}>
+                  <tr key={t.topic} style={{ background: t.mismatch ? "#FFE8ED" : undefined }}>
                     <td>{t.topic}{t.mismatch && <span style={{ color: "var(--rust)", fontWeight: 700 }}> ⚠</span>}</td><td>{t.lectures}</td>
                     {summary.cloCodes.map((c) => <td key={c}>{t.byClo[c] || 0}</td>)}
                     <td style={{ fontWeight: 600 }}>{t.cloTotal}%</td>
@@ -86,7 +86,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
               <thead><tr><th>Topic</th><th>Lec</th><th>Assignment</th><th>Quiz</th><th>Project</th><th>Lab</th><th>Mid</th><th>Final</th><th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
-                  <tr key={t.topic} style={{ background: t.mismatch ? "#FFE4DC" : undefined }}>
+                  <tr key={t.topic} style={{ background: t.mismatch ? "#FFE8ED" : undefined }}>
                     <td>{t.topic}</td><td>{t.lectures}</td>
                     <td>{t.byType.Assignment || 0}</td><td>{t.byType.Quiz || 0}</td><td>{t.byType.Project || 0}</td>
                     <td>{t.byType.Lab || 0}</td><td>{t.byType.Midterm || 0}</td><td>{t.byType.Final || 0}</td>
@@ -111,7 +111,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
                 <thead><tr><th>Topic</th><th>Lec</th>{summary.ploLabels.map((p) => <th key={p}>{p}</th>)}<th>Total</th></tr></thead>
                 <tbody>
                   {summary.topics.map((t) => (
-                    <tr key={t.topic} style={{ background: t.mismatch ? "#FFE4DC" : undefined }}>
+                    <tr key={t.topic} style={{ background: t.mismatch ? "#FFE8ED" : undefined }}>
                       <td>{t.topic}</td><td>{t.lectures}</td>
                       {summary.ploLabels.map((p) => <td key={p}>{t.byPlo[p] || 0}</td>)}
                       <td style={{ fontWeight: 600 }}>{t.ploTotal}%</td>

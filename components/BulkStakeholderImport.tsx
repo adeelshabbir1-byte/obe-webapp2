@@ -35,9 +35,9 @@ export default function BulkStakeholderImport() {
       </p>
       {error && <div className="err">{error}</div>}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: summary ? 14 : 0 }}>
-        <a href="/api/coordinator/stakeholders/download-template" className="btn btn-brass" style={{ textDecoration: "none" }}>Download Template</a>
+        <a href="/api/coordinator/stakeholders/download-template" className="btn btn-export" style={{ textDecoration: "none" }}>Download Template</a>
         <input ref={fileRef} type="file" accept=".xlsx" style={{ fontSize: 12 }} />
-        <button onClick={upload} disabled={uploading} className="btn btn-brass">{uploading ? "Uploading…" : "Upload Filled Template"}</button>
+        <button onClick={upload} disabled={uploading} className="btn btn-import">{uploading ? "Uploading…" : "Upload Filled Template"}</button>
       </div>
       {summary && (
         <div style={{ fontSize: 12.5 }}>

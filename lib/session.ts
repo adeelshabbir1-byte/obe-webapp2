@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 
 const SESSION_COOKIE = "session_token";
@@ -38,23 +40,40 @@ export async function destroySession() {
   cookies().delete(SESSION_COOKIE);
 }
 
-export async function getAuthenticatedUser() {
+// Every scalar User column except the ones no request-level code needs:
+// password/MFA secrets (read explicitly by the auth routes that need them)
+// and the institute logo, a base64 image that used to be loaded on every
+// single authenticated request.
+const SESSION_USER_SELECT = {
+  id: true, email: true, username: true, name: true, role: true, department: true, managedById: true,
+  mustChangePassword: true, mfaEnabled: true, instituteName: true, normalLoad: true, specialization: true,
+  minCreditsPerSemester: true, maxCreditsPerSemester: true, customCategoryId: true, secondaryRole: true,
+  maxDegreePrograms: true, isAlumniCustodian: true, externalLoadCount: true, externalLoadNote: true,
+  isActive: true, failedLoginCount: true, lockedUntil: true, createdAt: true, updatedAt: true,
+} satisfies Prisma.UserSelect;
+
+// Memoised per request: a page, its Shell and any helpers can all ask for
+// the current user and the session lookup still runs only once.
+export const getAuthenticatedUser = cache(async () => {
   const raw = cookies().get(SESSION_COOKIE)?.value;
   if (!raw) return null;
 
   const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
-  const session = await prisma.session.findUnique({ where: { tokenHash }, include: { user: true } });
+  const session = await prisma.session.findUnique({
+    where: { tokenHash },
+    select: { revokedAt: true, expiresAt: true, activeRole: true, mfaVerified: true, user: { select: SESSION_USER_SELECT } },
+  });
 
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
-  const { passwordHash, ...safeUser } = session.user;
+  const safeUser = session.user;
   // A dual-capable Subject Expert's chosen role for this session overrides
   // their stored role everywhere else in the app checks `user.role` —
   // rawRole/secondaryRole stay available for the few places (onboarding,
   // the choice screen itself, dropdowns) that need the true picture.
   const effectiveRole = session.activeRole || safeUser.role;
   return { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified };
-}
+});
 
 /** Called from the role-choice screen once a dual-capable person picks
  * which role to act as for this session. */

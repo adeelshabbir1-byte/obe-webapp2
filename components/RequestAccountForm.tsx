@@ -56,7 +56,7 @@ export default function RequestAccountForm() {
         <label>Anything else we should know? (optional)</label>
         <textarea name="message" rows={3} style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", fontSize: 14, fontFamily: "var(--font-ui)" }} />
       </div>
-      <button className="btn btn-full" type="submit" disabled={loading}>
+      <button className="btn btn-full btn-approve" type="submit" disabled={loading}>
         {loading && <span className="spinner" />}
         {loading ? "Submitting…" : "Submit Request"}
       </button>

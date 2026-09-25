@@ -31,7 +31,7 @@ export default function CopyPloMappingsForm({ batches }: { batches: Batch[] }) {
     <div>
       {error && <div className="err">{error}</div>}
       {result && (
-        <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>
+        <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>
           Copied {result.copiedCount} mapping(s).{result.skippedNoMatch > 0 && ` ${result.skippedNoMatch} couldn't be matched (different course codes or PLO numbers).`}
         </div>
       )}

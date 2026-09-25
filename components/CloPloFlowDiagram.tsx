@@ -101,7 +101,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
         <g key={p.id}>
           <rect x={col3X} y={pPos.get(p.id)} width={COL_W} height={BOX_H} rx={5} fill="#A85D1F" />
           <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">PLO-{p.number}</text>
-          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 31} fontSize={9} fill="#FBE2DF">{p.title.length > 26 ? p.title.slice(0, 24) + "…" : p.title}</text>
+          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 31} fontSize={9} fill="#FFE8ED">{p.title.length > 26 ? p.title.slice(0, 24) + "…" : p.title}</text>
         </g>
       ))}
     </svg>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { invalidateInstituteBranding } from "../../../../../../lib/branding";
 
 export async function PUT(req: NextRequest, { params }: { params: { chairmanId: string } }) {
   const user = await getAuthenticatedUser();
@@ -17,6 +18,7 @@ export async function PUT(req: NextRequest, { params }: { params: { chairmanId: 
   if (body.maxDegreePrograms !== undefined) data.maxDegreePrograms = body.maxDegreePrograms === null ? null : parseInt(body.maxDegreePrograms, 10);
 
   const updated = await prisma.user.update({ where: { id: params.chairmanId }, data });
+  invalidateInstituteBranding(params.chairmanId);
 
   return NextResponse.json({ name: updated.name, instituteName: updated.instituteName, instituteLogo: updated.instituteLogo, maxDegreePrograms: updated.maxDegreePrograms });
 }

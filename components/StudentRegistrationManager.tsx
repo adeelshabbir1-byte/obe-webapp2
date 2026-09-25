@@ -78,10 +78,10 @@ export default function StudentRegistrationManager() {
   return (
     <div>
       {error && <div className="err">{error}</div>}
-      {info && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{info}</div>}
+      {info && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{info}</div>}
 
       {!data.registrationOpen && (
-        <div className="card" style={{ background: "#FBEED2" }}>
+        <div className="card" style={{ background: "#FFF3DC" }}>
           <p style={{ fontSize: 12.5 }}>Registration isn't open right now — you can still see your courses below, but registering, withdrawing, or requesting an out-of-batch course is closed until your Coordinator opens it.</p>
         </div>
       )}

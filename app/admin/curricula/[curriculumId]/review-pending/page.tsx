@@ -44,7 +44,7 @@ export default async function ReviewPendingPage({ params }: { params: { curricul
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version}) — {pendingWithSuggestions.length} awaiting review
         </div>
-        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
+        <Link href={`/admin/curricula/${curriculum.id}`} className="btn btn-secondary btn-sm">← Back to curriculum</Link>
       </div>
 
       <PendingCourseReview curriculumId={curriculum.id} pendingCourses={pendingWithSuggestions} allCourses={curriculum.courses.map((c) => ({ id: c.id, title: c.title, category: c.category }))} />

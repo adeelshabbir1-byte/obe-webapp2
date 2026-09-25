@@ -116,7 +116,7 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
                   />
                   <button
                     type="button" onClick={() => draftAction(r.id)} disabled={draftingId === r.id}
-                    style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11, textDecoration: "underline", cursor: "pointer", padding: "2px 0 0" }}
+                    className="act act-primary"
                   >
                     {draftingId === r.id ? "Drafting…" : "✨ AI Draft"}
                   </button>
@@ -142,9 +142,9 @@ export default function CqiManager({ initialRecords, batches, courses }: { initi
             ) : (
               <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 6 }}>
                 {r.actionTaken && <div style={{ fontSize: 12, color: "var(--slate)" }}><b>Action:</b> {r.actionTaken}</div>}
-                <button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Update</button>
+                <button onClick={() => setEditingId(r.id)} className="act act-primary">Update</button>
                 {r.metricBefore !== null && r.metricAfter === null && (
-                  <button onClick={() => setVerifyingId(r.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Verify Now — Did It Work?</button>
+                  <button onClick={() => setVerifyingId(r.id)} className="act act-danger">Verify Now — Did It Work?</button>
                 )}
               </div>
             )}

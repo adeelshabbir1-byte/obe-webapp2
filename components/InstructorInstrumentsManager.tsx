@@ -53,14 +53,14 @@ export default function InstructorInstrumentsManager({ courseId, initialInstrume
                 {sum}% defined {target ? `(target: ${target}%)` : ""}{mismatch && <span style={{ marginLeft: 6, fontWeight: 600 }}>— doesn't match</span>}
               </span>
             </div>
-            <SortableTable>
+            <SortableTable paginate={false}>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th></th></tr></thead>
               <tbody>
                 {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
                 {items.map((i) => (
                   <tr key={i.id}>
                     <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
-                    <td><button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                    <td><button onClick={() => removeInstrument(i.id)} className="act act-danger">Remove</button></td>
                   </tr>
                 ))}
               </tbody>

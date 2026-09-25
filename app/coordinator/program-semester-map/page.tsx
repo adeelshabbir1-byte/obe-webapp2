@@ -136,7 +136,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Semester {sem}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {semCourses.map((c) => (
-                <div key={c.id} style={{ minWidth: 200, maxWidth: 240, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(c.courseType)}`, padding: "8px 10px", borderRadius: 3 }}>
+                <div key={c.id} style={{ minWidth: 200, maxWidth: 240, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(c.courseType)}`, padding: "8px 10px", borderRadius: 6 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title}</div>
                   <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</div>
                   {c.offeredTermName && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.offeredTermName} {c.offeredTermYear}</div>}

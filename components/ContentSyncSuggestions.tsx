@@ -89,10 +89,10 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       {error && <div className="err">{error}</div>}
-      {notice && <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 6, marginBottom: 8 }}>{notice}</div>}
+      {notice && <div style={{ fontSize: 12, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 6, marginBottom: 8 }}>{notice}</div>}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Suggested Content Sync Links</h3>
-        <button onClick={handleAcceptAll} disabled={acceptingAll || busyKey !== null} className="btn btn-brass" style={{ fontSize: 11.5, padding: "5px 10px", whiteSpace: "nowrap" }}>
+        <button onClick={handleAcceptAll} disabled={acceptingAll || busyKey !== null} className="btn btn-approve" style={{ fontSize: 11.5, padding: "5px 10px", whiteSpace: "nowrap" }}>
           {acceptingAll ? "Linking all…" : `Accept All (${visible.length})`}
         </button>
       </div>

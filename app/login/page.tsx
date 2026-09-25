@@ -1,65 +1,39 @@
-"use client";
+import Link from "next/link";
+import { GraduationCap, Building2, ChevronRight } from "lucide-react";
+import AuthLayout from "../../components/auth/AuthLayout";
+import LoginForm from "../../components/auth/LoginForm";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+export const metadata = { title: "Sign in" };
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const fd = new FormData(e.currentTarget);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usernameOrEmail: fd.get("username"),
-          password: fd.get("password"),
-        }),
-      });
-      if (!res.ok) {
-        setError("Incorrect username or password.");
-        setLoading(false);
-        return;
-      }
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: any) {
-      setError("Unexpected error: " + err.message);
-      setLoading(false);
-    }
-  }
-
   return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="seal">NC</div>
-        <h1 style={{ textAlign: "center", fontSize: 20, marginBottom: 4 }}>OBE Curriculum Governance</h1>
-        <p style={{ textAlign: "center", color: "var(--slate)", fontSize: 13, marginBottom: 24 }}>
-          Sign in to your institutional account
-        </p>
-        {error && <div className="err">{error}</div>}
-        <form onSubmit={onSubmit}>
-          <div className="field">
-            <label>Username</label>
-            <input name="username" required />
-          </div>
-          <div className="field">
-            <label>Password</label>
-            <input name="password" type="password" required />
-          </div>
-          <button className="btn btn-full" type="submit" disabled={loading}>
-            {loading && <span className="spinner" style={{ borderColor: "rgba(30,27,75,.3)", borderTopColor: "#fff" }} />}
-            {loading ? "Signing in…" : "Sign In"}
-          </button>
-        </form>
+    <AuthLayout
+      heroTitle={<>Outcome-based education, <em>measured end to end.</em></>}
+      heroText="Curricula, CLO–PLO mapping, assessments, attainment and accreditation evidence — one governed workspace for your whole institution."
+    >
+      <div className="auth-card">
+        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB — Outcome · Learn · Assess · Excel" width={720} height={501} />
+        <h1>Welcome back</h1>
+        <p className="auth-sub">Sign in to your institutional account.</p>
+        <LoginForm />
+        <div className="auth-links">
+          <Link href="/student/login" className="auth-link-row">
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <GraduationCap size={18} style={{ color: "var(--violet-600)" }} />
+              <span>Student Portal<small>Sign in with your roll number</small></span>
+            </span>
+            <ChevronRight size={16} />
+          </Link>
+          <Link href="/request-account" className="auth-link-row">
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Building2 size={18} style={{ color: "var(--emerald-600)" }} />
+              <span>New institution?<small>Request an account</small></span>
+            </span>
+            <ChevronRight size={16} />
+          </Link>
+        </div>
+        <p className="auth-foot">© {new Date().getFullYear()} Lets Innovate Pvt Ltd</p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

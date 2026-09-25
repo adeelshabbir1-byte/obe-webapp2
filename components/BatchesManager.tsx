@@ -140,7 +140,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       {error && <div className="err">{error}</div>}
       {copyResultMsg && <p style={{ fontSize: 12.5, color: "var(--sage)" }}>{copyResultMsg}</p>}
       {batches.length > 0 && (
-        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F7" }}>
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 8 }}>
             <b>Danger zone.</b> Deletes every batch you have ({batches.length} total) and everything under them — permanent, no undo.
           </p>
@@ -174,7 +174,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                       <button onClick={() => saveStudentCount(b.id, (document.getElementById(`count-${b.id}`) as HTMLInputElement).value)} disabled={busyId === b.id} className="btn btn-brass" style={{ padding: "3px 8px", fontSize: 11 }}>Save</button>
                     </span>
                   ) : (
-                    <span>{b.studentCount} <button onClick={() => setEditingCountId(b.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11, textDecoration: "underline", cursor: "pointer", marginLeft: 6 }}>Edit</button></span>
+                    <span>{b.studentCount} <button onClick={() => setEditingCountId(b.id)} className="act act-primary" style={{ marginLeft: 6 }}>Edit</button></span>
                   )}
                 </td>
                 <td>{b.courseCount}</td>
@@ -182,7 +182,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                   <button onClick={() => toggleRegistration(b)} disabled={busyId === b.id} className={b.registrationOpen ? "badge badge-ok" : "badge badge-warn"} style={{ border: "none", cursor: "pointer" }}>
                     {b.registrationOpen ? "Open" : "Closed"}
                   </button>
-                  <button onClick={() => runDefaultEnrollment(b)} disabled={busyId === b.id} style={{ display: "block", background: "none", border: "none", color: "var(--brass-dark)", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 }}>
+                  <button onClick={() => runDefaultEnrollment(b)} disabled={busyId === b.id} className="act act-primary" style={{ display: "block", marginTop: 4 }}>
                     Run Default Enrollment
                   </button>
                   {enrollResultMsg[b.id] && <div style={{ fontSize: 10, color: "var(--sage)", marginTop: 2 }}>{enrollResultMsg[b.id]}</div>}
@@ -193,8 +193,8 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                     {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                 </td>
-                <td><Link href={`/coordinator/courses?batchId=${b.id}`} style={{ color: "var(--brass-dark)", fontSize: 12 }}>View Courses</Link>
-                <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginLeft: 10 }}>Delete Batch</button></td>
+                <td><Link href={`/coordinator/courses?batchId=${b.id}`} className="act act-primary">View Courses</Link>
+                <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} className="act act-danger" style={{ marginLeft: 10 }}>Delete Batch</button></td>
               </tr>
             ))}
           </tbody>

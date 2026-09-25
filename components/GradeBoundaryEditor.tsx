@@ -112,7 +112,7 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
                 onMouseDown={() => setDragging(g.letter)}
                 style={{ position: "absolute", top: y - 9, left: 0, right: 0, height: 18, cursor: "ns-resize", display: "flex", alignItems: "center", zIndex: 10 }}
               >
-                <span style={{ background: "var(--rust)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 3, marginRight: 6, cursor: "ns-resize" }}>
+                <span style={{ background: "var(--rust)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, marginRight: 6, cursor: "ns-resize" }}>
                   {g.letter}: {Math.round((cutoffs[g.letter] ?? 0) * 10) / 10}%
                 </span>
                 <div style={{ flex: 1, borderTop: "2px dashed var(--rust)" }} />

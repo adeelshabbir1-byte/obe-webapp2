@@ -29,7 +29,7 @@ export default function AutoMapHecButton({ batchId }: { batchId: string }) {
         master template) — only fills in gaps, never overwrites or removes anything already set.
       </p>
       {error && <div className="err">{error}</div>}
-      <button onClick={run} disabled={loading} className="btn btn-brass">{loading ? "Mapping…" : "Auto-Map from HEC"}</button>
+      <button onClick={run} disabled={loading} className="btn btn-ai">{loading ? "Mapping…" : "Auto-Map from HEC"}</button>
       {result && (
         <p style={{ fontSize: 12, marginTop: 10, color: "var(--sage)" }}>
           Created {result.created} new mapping(s). {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching PLO number in this batch), {result.skippedNoSuggestion} course(s) had no HEC suggestion on record.

@@ -31,7 +31,7 @@ export default function FeedForwardNotes({ courseId, incoming, myNotes: initialM
         <div className="card" style={{ borderColor: "var(--brass)" }}>
           <h3 style={{ fontSize: 14, marginBottom: 10, color: "var(--brass-dark)" }}>Notes From Previous Instructors</h3>
           {incoming.map((n) => (
-            <div key={n.id} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #EFEADC" }}>
+            <div key={n.id} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #EEF2FA" }}>
               <div style={{ fontSize: 11, color: "var(--slate)", marginBottom: 3 }}>From {n.fromCourse}</div>
               <div style={{ fontSize: 12.5 }}>{n.body}</div>
             </div>

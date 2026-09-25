@@ -85,14 +85,14 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
 
       {error && <div style={{ color: "var(--rust)", fontSize: 12.5, marginBottom: 12 }}>{error}</div>}
 
-      <div style={{ marginBottom: 24, padding: 12, background: "#FAFAF8", border: "1px solid var(--line)" }}>
+      <div style={{ marginBottom: 24, padding: 12, background: "#F7F9FE", border: "1px solid var(--line)" }}>
         <h3 style={{ fontSize: 13, marginBottom: 6 }}>Always included — shared core ({core.length} courses)</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Mandatory Major and General Education / Other courses apply to every program and are included automatically.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {core.map((c) => (
-            <span key={c.id} style={{ fontSize: 11, padding: "2px 8px", background: "#fff", border: "1px solid var(--line)", borderRadius: 3 }}>
+            <span key={c.id} style={{ fontSize: 11, padding: "2px 8px", background: "#fff", border: "1px solid var(--line)", borderRadius: 6 }}>
               {c.title}{c.semesterNumber ? ` (Sem ${c.semesterNumber})` : ""}
             </span>
           ))}
@@ -109,7 +109,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
           const isExpanded = expandedDomains.has(domain);
           return (
             <div key={domain} style={{ border: "1px solid var(--line)", marginBottom: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#FAFAF8", cursor: "pointer" }} onClick={() => toggleDomain(domain)}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F7F9FE", cursor: "pointer" }} onClick={() => toggleDomain(domain)}>
                 <span style={{ fontSize: 12.5, fontWeight: 600 }}>{isExpanded ? "▾" : "▸"} {domain} ({list.length} courses, {selectedInDomain} selected)</span>
                 <span style={{ display: "flex", gap: 8 }}>
                   <button onClick={(e) => { e.stopPropagation(); selectAllInDomain(domain); }} style={{ fontSize: 10.5, background: "none", border: "1px solid var(--line)", padding: "2px 6px", cursor: "pointer" }}>Select all</button>
@@ -119,7 +119,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
               {isExpanded && (
                 <div style={{ padding: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {list.map((c) => (
-                    <label key={c.id} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", border: "1px solid var(--line)", borderRadius: 3, background: selectedElectiveIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                    <label key={c.id} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", border: "1px solid var(--line)", borderRadius: 6, background: selectedElectiveIds.has(c.id) ? "#EEF2FA" : "#fff" }}>
                       <input type="checkbox" checked={selectedElectiveIds.has(c.id)} onChange={() => toggleElective(c.id)} />
                       {c.title}
                     </label>

@@ -58,7 +58,7 @@ export default async function LogFilePage({ searchParams }: { searchParams: { co
             {rows.map((r) => {
               const dateStr = r.actualDate ? r.actualDate.toISOString().slice(0, 10) : "";
               return (
-                <tr key={r.id} style={{ background: r.rescheduledNote ? "#FFE4DC" : undefined }}>
+                <tr key={r.id} style={{ background: r.rescheduledNote ? "#FFE8ED" : undefined }}>
                   <td>{r.week}</td><td>{r.lectureNumber}</td><td>{dateStr || "—"}</td>
                   <td>{dateStr ? (modeByDate.get(dateStr) === "Online" ? "Online" : "On-Campus") : "—"}</td>
                   <td>{r.topic || "—"}</td><td>{r.subtopic || "—"}</td><td>{r.clo?.code || "—"}</td>

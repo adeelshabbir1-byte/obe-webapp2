@@ -18,14 +18,14 @@ export default async function ElectiveChoicePage({ params }: { params: { groupId
   }));
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F4EA", padding: 20 }}>
-      <div style={{ background: "#fff", padding: "36px 40px", maxWidth: 560, width: "100%", border: "1px solid #E4DFCE" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F9FE", padding: 20 }}>
+      <div style={{ background: "#fff", padding: "36px 40px", maxWidth: 560, width: "100%", border: "1px solid #E3E8F3" }}>
         <h1 style={{ fontSize: 20, marginBottom: 4 }}>{group.label}</h1>
-        <p style={{ fontSize: 12.5, color: "#5B6B7C", marginBottom: 20 }}>
+        <p style={{ fontSize: 12.5, color: "#46507A", marginBottom: 20 }}>
           {group.batch.degreeProgram} — {group.batch.batchName} · Semester {group.semesterNumber}
         </p>
         {group.finalized ? (
-          <p style={{ fontSize: 14, color: "#5B6B7C" }}>Registration for this elective has closed and choices have been finalized. Contact your Program Coordinator if you have questions.</p>
+          <p style={{ fontSize: 14, color: "#46507A" }}>Registration for this elective has closed and choices have been finalized. Contact your Program Coordinator if you have questions.</p>
         ) : (
           <ElectiveChoiceForm groupId={group.id} initialOptions={options} registrationOpen={group.registrationOpen} />
         )}

@@ -199,7 +199,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             <div className="field" style={{ marginBottom: 0 }}><label>Midterm End</label><input name="midtermEndDate" type="date" defaultValue={selectedCourse.midtermEndDate ? selectedCourse.midtermEndDate.slice(0, 10) : ""} /></div>
             <div className="field" style={{ marginBottom: 0 }}><label>Final Start</label><input name="finalStartDate" type="date" defaultValue={selectedCourse.finalStartDate ? selectedCourse.finalStartDate.slice(0, 10) : ""} /></div>
             <div className="field" style={{ marginBottom: 0 }}><label>Final End</label><input name="finalEndDate" type="date" defaultValue={selectedCourse.finalEndDate ? selectedCourse.finalEndDate.slice(0, 10) : ""} /></div>
-            <button type="submit" disabled={loading} className="btn btn-brass">{loading ? "Saving…" : "Save Override"}</button>
+            <button type="submit" disabled={loading} className="btn btn-warn">{loading ? "Saving…" : "Save Override"}</button>
           </form>
         )}
       </div>
@@ -212,7 +212,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             {holidays.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
             {holidays.map((h) => (
               <tr key={h.id}><td>{h.date.slice(0, 10)}</td><td>{h.label}</td>
-                <td><button onClick={() => removeHoliday(h.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeHoliday(h.id)} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -232,7 +232,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             {dayModes.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None set — days default to On-Campus.</td></tr>}
             {dayModes.map((m) => (
               <tr key={m.id}><td>{m.date.slice(0, 10)}</td><td>{m.mode === "Online" ? "Online" : "On-Campus"}</td>
-                <td><button onClick={() => removeDayMode(m.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeDayMode(m.id)} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

@@ -394,7 +394,7 @@ export default function ContentSyncManager() {
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {notice && <div style={{ fontSize: 12.5, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>{notice}</div>}
+      {notice && <div style={{ fontSize: 12.5, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>{notice}</div>}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 8 }}>
@@ -463,7 +463,7 @@ export default function ContentSyncManager() {
               <span style={{ fontSize: 12.5 }}>
                 <b>{groups.filter((g) => g.needsSync).length}</b> group(s) linked but not yet synced — their base's content hasn't been copied to followers yet.
               </span>
-              <button onClick={handleSyncAll} disabled={busy} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 12px", whiteSpace: "nowrap" }}>
+              <button onClick={handleSyncAll} disabled={busy} className="btn btn-ai" style={{ fontSize: 12, padding: "5px 12px", whiteSpace: "nowrap" }}>
                 {syncProgress ? `Syncing… ${syncProgress.done}/${syncProgress.total}` : busy ? "Syncing…" : "Sync All Content"}
               </button>
             </div>
@@ -487,7 +487,7 @@ export default function ContentSyncManager() {
               Show only groups not yet linked to a HEC course
             </label>
             {selectedCourseIds.size > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F8EEF0", padding: 8, border: "1px solid var(--brass)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F4F0FF", padding: 8, border: "1px solid var(--brass)" }}>
                 <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
                 <button onClick={handleSubmitGroup} disabled={selectedCourseIds.size < 2 || busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>
                   Group Selected ({selectedCourseIds.size}) — or press S
@@ -521,7 +521,7 @@ export default function ContentSyncManager() {
                         <div>{row.courseType}</div>
                         <div style={{ fontStyle: "italic" }}>{row.label}</div>
                       </td>
-                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse && !pendingLinks.has(row.groupId || "") ? "#FEE2E2" : undefined }}>
+                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse && !pendingLinks.has(row.groupId || "") ? "#FFE8ED" : undefined }}>
                         {row.kind === "group" && row.groupId && (() => {
                           const group = groups.find((g) => g.id === row.groupId);
                           if (!group) return null;
@@ -556,7 +556,7 @@ export default function ContentSyncManager() {
                             !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
                           ).slice(0, 30);
                           return (
-                            <div style={{ background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                            <div style={{ background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
                               <input
                                 autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                                 placeholder="Search HEC course code or title…"
@@ -571,7 +571,7 @@ export default function ContentSyncManager() {
                                 {filtered.map((o) => (
                                   <div key={o.id} onClick={() => selectPendingMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                                     <b>{o.code}</b> — {o.title}
-                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF3DC", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
                                     <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
                                   </div>
                                 ))}
@@ -600,12 +600,12 @@ export default function ContentSyncManager() {
                                     title={`${c.code} — ${c.title}`}
                                     style={{
                                       cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                      background: isSelected ? "#F3E4E7" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      background: isSelected ? "#EEF2FF" : row.kind === "group" ? "#FEF3C7" : undefined,
                                       border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}
                                   >
-                                    {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2 }}>BASE</span>}
+                                    {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 6 }}>BASE</span>}
                                     <span style={{ flex: 1 }}>{c.shortName || c.code}</span>
                                     <span
                                       onClick={(e) => { e.stopPropagation(); startEditCode(cId, c.code, row.courseType); }}
@@ -616,7 +616,7 @@ export default function ContentSyncManager() {
                                     </span>
                                   </div>
                                   {editingCodeCourseId === cId && (
-                                    <div style={{ fontSize: 10.5, background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
+                                    <div style={{ fontSize: 10.5, background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
                                       <input
                                         value={editCodeValue} onChange={(e) => setEditCodeValue(e.target.value)}
                                         style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}

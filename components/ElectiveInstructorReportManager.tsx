@@ -71,7 +71,7 @@ export default function ElectiveInstructorReportManager() {
             </label>
           ))}
         </div>
-        <button onClick={generate} disabled={loading || terms.length === 0} className="btn btn-brass">{loading ? "Generating…" : "Generate Report"}</button>
+        <button onClick={generate} disabled={loading || terms.length === 0} className="btn btn-ai">{loading ? "Generating…" : "Generate Report"}</button>
       </div>
 
       {rows && (
@@ -85,7 +85,7 @@ export default function ElectiveInstructorReportManager() {
                   {degrees.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               )}
-              <button onClick={exportExcel} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
+              <button onClick={exportExcel} className="btn btn-export" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
             </div>
           </div>
           <SortableTable>

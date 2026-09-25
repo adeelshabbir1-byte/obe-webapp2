@@ -94,14 +94,14 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         const pendingBatches = allBatches.filter((b) => !b.prerequisitesConfirmedAt);
         if (pendingBatches.length === 0) return null;
         return (
-          <div className="card" style={{ background: "#FBEED2" }}>
+          <div className="card" style={{ background: "#FFF3DC" }}>
             <h3 style={{ fontSize: 13, marginBottom: 8 }}>Still needs a prerequisite map ({pendingBatches.length})</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {pendingBatches.map((b) => (
                 <a
                   key={b.id}
                   href={`/coordinator/prerequisite-map?degree=${encodeURIComponent(b.degreeProgram)}&batchId=${b.id}`}
-                  style={{ fontSize: 12, color: "#96650F", textDecoration: "underline", background: b.id === selectedBatchId ? "#F5DDA3" : "transparent", padding: "2px 6px", borderRadius: 3 }}
+                  style={{ fontSize: 12, color: "#8A4B00", textDecoration: "underline", background: b.id === selectedBatchId ? "#FBDFA6" : "transparent", padding: "2px 6px", borderRadius: 6 }}
                 >
                   {b.degreeProgram} — {b.batchName}
                 </a>
@@ -123,7 +123,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {usedTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
+                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                 {t}
               </span>
             ))}

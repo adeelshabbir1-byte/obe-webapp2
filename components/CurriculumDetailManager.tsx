@@ -149,17 +149,17 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
                 </td>
                 <td>{c.creditHours}</td>
                 <td>
-                  <span style={{ fontSize: 10.5, padding: "2px 7px", borderRadius: 3, background: masterCategoryColor(c.category), color: "#fff" }}>
+                  <span style={{ fontSize: 10.5, padding: "2px 7px", borderRadius: 6, background: masterCategoryColor(c.category), color: "#fff" }}>
                     {c.category}
                   </span>
                   {c.domain && <div style={{ fontSize: 9.5, color: "var(--slate)", marginTop: 2 }}>{c.domain}</div>}
                 </td>
                 <td>{c.semesterNumber ?? "—"}</td>
                 <td style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setEditingCourseId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                  <button onClick={() => setEditingCourseId(c.id)} className="act act-primary">
                     Edit ({c.seedClos.length} CLOs, {c.suggestedPloNumbers.length} PLOs)
                   </button>
-                  <button onClick={() => removeCourse(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                  <button onClick={() => removeCourse(c.id)} className="act act-danger">Remove</button>
                 </td>
               </tr>
             ))}
@@ -229,8 +229,8 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
               <tr key={p.id}>
                 <td>PLO-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
                 <td style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setEditingPloId(p.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                  <button onClick={() => removePlo(p.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                  <button onClick={() => setEditingPloId(p.id)} className="act act-primary">Edit</button>
+                  <button onClick={() => removePlo(p.id)} className="act act-danger">Remove</button>
                 </td>
               </tr>
             ))}

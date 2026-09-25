@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Search } from "lucide-react";
 import SortableTable from "./SortableTable";
+import Pager from "./Pager";
 import { useRouter } from "next/navigation";
 
 type Course = {
@@ -14,6 +16,7 @@ type Batch = { id: string; degreeProgram: string; batchName: string };
 type Curriculum = { id: string; authority: string; title: string; version: string };
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
+const PAGE_SIZES = [10, 25, 50, 100];
 
 export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId }: {
   courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string;
@@ -34,6 +37,51 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   const [copySourceBatchId, setCopySourceBatchId] = useState("");
   const replaceCheckboxRef = useRef<HTMLInputElement>(null);
   const [copyResult, setCopyResult] = useState("");
+
+  // The course table can hold every course of every batch; each row carries two
+  // dropdowns (Subject Expert, and every course of its batch as a prerequisite),
+  // so only the current page is rendered. Filter/sort work on the full list.
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sort, setSort] = useState<{ col: number; asc: boolean } | null>(null);
+  const seNameById = useMemo(() => new Map(subjectExperts.map((se) => [se.id, se.name])), [subjectExperts]);
+  const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+  const coursesByBatch = useMemo(() => {
+    const m = new Map<string | null, Course[]>();
+    for (const c of courses) { const list = m.get(c.batchId) || []; list.push(c); m.set(c.batchId, list); }
+    return m;
+  }, [courses]);
+  const visibleCourses = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    let list = !needle ? courses : courses.filter((c) =>
+      [c.code, c.title, c.courseType, c.batchName || "", seNameById.get(c.subjectExpertId || "") || ""].some((v) => v.toLowerCase().includes(needle)));
+    if (sort) {
+      const key = (c: Course): string | number => {
+        switch (sort.col) {
+          case 0: return c.batchName || "";
+          case 1: return c.code;
+          case 2: return c.title;
+          case 3: return c.creditHours;
+          case 4: return c.courseType;
+          case 5: return c.semesterNumber ?? 99;
+          case 6: return c.fromHec ? "Imported" : "Manual";
+          case 7: return seNameById.get(c.subjectExpertId || "") || "";
+          case 8: return courseById.get(c.prerequisiteCourseId || "")?.code || "";
+          default: return 0;
+        }
+      };
+      list = [...list].sort((a, b) => {
+        const ka = key(a), kb = key(b);
+        const cmp = typeof ka === "number" && typeof kb === "number" ? ka - kb : String(ka).localeCompare(String(kb), undefined, { numeric: true, sensitivity: "base" });
+        return sort.asc ? cmp : -cmp;
+      });
+    }
+    return list;
+  }, [courses, query, sort, seNameById, courseById]);
+  const pageCount = Math.max(1, Math.ceil(visibleCourses.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageCourses = visibleCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
@@ -250,7 +298,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {importResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{importResult}</div>}
+      {importResult && <div style={{ background: "#E3F8EF", color: "var(--sage)", border: "1px solid #BDEBD6", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{importResult}</div>}
 
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Viewing batch</label>
@@ -267,7 +315,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           each course's CLOs, weights, and lecture schedule) — useful when a program has no official curriculum
           to import from HEC.
         </p>
-        {copyResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{copyResult}</div>}
+        {copyResult && <div style={{ background: "#E3F8EF", color: "var(--sage)", border: "1px solid #BDEBD6", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{copyResult}</div>}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div className="field" style={{ marginBottom: 0 }}>
             <label>Copy From</label>
@@ -326,11 +374,11 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
               return (
                 <>
                   {core.length > 0 && (
-                    <div style={{ border: "1px solid var(--line)", marginBottom: 6, padding: 8, background: "#FAFAF8" }}>
+                    <div style={{ border: "1px solid var(--line)", marginBottom: 6, padding: 8, background: "#F7F9FE" }}>
                       <div style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 6 }}>Core / GE / IDS ({core.length})</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {core.map((c) => (
-                          <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                          <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#EEF2FA" : "#fff" }}>
                             <input type="checkbox" checked={selectedImportIds.has(c.id)} onChange={() => toggleImportCourse(c.id)} />
                             {c.title}
                           </label>
@@ -344,7 +392,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                     const isExpanded = expandedDomains.has(domain);
                     return (
                       <div key={domain} style={{ border: "1px solid var(--line)", marginBottom: 6 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#FAFAF8", cursor: "pointer" }}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#F7F9FE", cursor: "pointer" }}
                           onClick={() => setExpandedDomains((prev) => { const next = new Set(prev); next.has(domain) ? next.delete(domain) : next.add(domain); return next; })}>
                           <span style={{ fontSize: 11.5 }}>{isExpanded ? "▾" : "▸"} {domain} ({list.length}, {selectedCount} selected)</span>
                           <span style={{ display: "flex", gap: 6 }}>
@@ -355,7 +403,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                         {isExpanded && (
                           <div style={{ padding: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                             {list.map((c) => (
-                              <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                              <label key={c.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: "2px 6px", border: "1px solid var(--line)", background: selectedImportIds.has(c.id) ? "#EEF2FA" : "#fff" }}>
                                 <input type="checkbox" checked={selectedImportIds.has(c.id)} onChange={() => toggleImportCourse(c.id)} />
                                 {c.title}
                               </label>
@@ -372,16 +420,28 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         )}
 
         <div style={{ marginTop: 12 }}>
-          <button onClick={importHec} disabled={loading} className="btn btn-brass">{loading ? "Importing…" : `Import ${selectedImportIds.size} Course(s)`}</button>
+          <button onClick={importHec} disabled={loading} className="btn btn-import">{loading ? "Importing…" : `Import ${selectedImportIds.size} Course(s)`}</button>
         </div>
       </div>
 
-      <div className="card" style={{ overflowX: "auto" }}>
-        <SortableTable>
+      <div className="card">
+        {courses.length > 8 && (
+          <div className="dt-toolbar">
+            <label className="dt-search">
+              <Search size={15} />
+              <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search code, title, type, batch or Subject Expert…" aria-label="Search courses" />
+            </label>
+            <span className="dt-count">
+              {query.trim() ? <><b>{visibleCourses.length}</b> of {courses.length} courses match</> : <><b>{courses.length}</b> courses</>}
+            </span>
+          </div>
+        )}
+        <SortableTable paginate={false} searchable={false} onSort={(col, asc) => { setSort({ col, asc }); setPage(1); }}>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
-            {courses.map((c) => editingId === c.id ? (
+            {courses.length > 0 && visibleCourses.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)", textAlign: "center" }}>No courses match “{query}”.</td></tr>}
+            {pageCourses.map((c) => editingId === c.id ? (
               <tr key={c.id}>
                 <td colSpan={10}>
                   <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
@@ -408,7 +468,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
                   {c.fromBenchmark && (
-                    <span style={{ fontSize: 10, background: "#F3E4E7", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 2, marginRight: 6 }}>
+                    <span style={{ fontSize: 10, background: "#EEF2FF", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 6, marginRight: 6 }}>
                       Pre-filled from prior batch
                     </span>
                   )}
@@ -420,20 +480,24 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>
                   <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value, e.target, c.prerequisiteCourseId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— None —</option>
-                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
+                    {(coursesByBatch.get(c.batchId) || []).filter((other) => other.id !== c.id).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
                   </select>
                 </td>
                 <td>
-                  <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
+                  <button onClick={() => setEditingId(c.id)} className="act act-primary" style={{ marginRight: 10 }}>Edit</button>
                   {c.courseType !== "Lab" && (
-                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Split into Lab</button>
+                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} className="act act-neutral" style={{ marginRight: 10 }}>Split into Lab</button>
                   )}
-                  <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>
+                  <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} className="act act-danger">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </SortableTable>
+        {visibleCourses.length > pageSize || pageSize !== 25 ? (
+          <Pager page={currentPage} pageSize={pageSize} total={visibleCourses.length} onPage={setPage}
+            onPageSize={(n) => { setPageSize(n); setPage(1); }} pageSizes={PAGE_SIZES} noun="courses" />
+        ) : null}
         {subjectExperts.length === 0 && (
           <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</div>
         )}

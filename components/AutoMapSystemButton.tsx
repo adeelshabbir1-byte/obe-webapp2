@@ -28,7 +28,7 @@ export default function AutoMapSystemButton({ batchId }: { batchId: string }) {
   }
 
   return (
-    <div className="card" style={{ background: "#FBEED2" }}>
+    <div className="card" style={{ background: "#FFF3DC" }}>
       <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map from System Suggestions (Unverified)</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         Bulk-creates course-PLO mappings from CLOs whose PLO was <em>inferred</em> by keyword matching, not
@@ -37,11 +37,11 @@ export default function AutoMapSystemButton({ batchId }: { batchId: string }) {
         anything already set.
       </p>
       {error && <div className="err">{error}</div>}
-      <button onClick={run} disabled={loading} className="btn" style={{ background: "#96650F", borderColor: "#96650F", color: "#fff" }}>
+      <button onClick={run} disabled={loading} className="btn btn-ai" style={{ background: "#8A4B00", borderColor: "#8A4B00", color: "#fff" }}>
         {loading ? "Mapping…" : "Auto-Map from System Suggestions"}
       </button>
       {result && (
-        <p style={{ fontSize: 12, marginTop: 10, color: "#96650F" }}>
+        <p style={{ fontSize: 12, marginTop: 10, color: "#8A4B00" }}>
           Created {result.created} new mapping(s) — review these. {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching PLO number in this batch), {result.skippedNoSuggestion} course(s) had no system suggestion on record.
         </p>
       )}

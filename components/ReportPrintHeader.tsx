@@ -38,7 +38,7 @@ export default function ReportPrintHeader({ title, instituteName }: { title: str
           <div style={{ fontSize: 11, color: "var(--slate)" }}>{instituteName || fetchedName || "National Computing Education Accreditation Council"}</div>
         </div>
       </div>
-      <button onClick={() => window.print()} className="btn btn-brass no-print" style={{ padding: "6px 14px", fontSize: 12.5 }}>
+      <button onClick={() => window.print()} className="btn btn-print no-print" style={{ padding: "6px 14px", fontSize: 12.5 }}>
         Print
       </button>
     </div>

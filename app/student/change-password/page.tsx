@@ -34,7 +34,7 @@ export default function StudentChangePasswordPage() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="seal">S</div>
+        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB" width={720} height={501} style={{ width: 150 }} />
         <h1 style={{ textAlign: "center", fontSize: 20, marginBottom: 4 }}>Set Your Password</h1>
         <p style={{ textAlign: "center", color: "var(--slate)", fontSize: 13, marginBottom: 24 }}>
           Choose a password only you know — you won't use your roll number to sign in again after this.
@@ -53,7 +53,7 @@ export default function StudentChangePasswordPage() {
             <label>Confirm New Password</label>
             <input name="confirmPassword" type="password" required minLength={8} />
           </div>
-          <button className="btn btn-full" type="submit" disabled={loading}>
+          <button className="btn btn-brass btn-full" type="submit" disabled={loading}>
             {loading && <span className="spinner" />}
             {loading ? "Saving…" : "Set Password"}
           </button>

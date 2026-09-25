@@ -28,7 +28,7 @@ export default function CourseDescriptionFieldsForm({ courseId, initial }: {
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 10 }}>Additional Course Information</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Feeds into the Course Description Form and Course Monitoring Form reports.</p>
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <form onSubmit={onSubmit}>
         <div className="field"><label>Catalog Description</label><textarea name="catalogDescription" defaultValue={initial.catalogDescription} rows={3} style={{ width: "100%", padding: "8px", border: "1px solid var(--line)" }} /></div>
         <div className="field"><label>Textbook</label><input name="textbook" defaultValue={initial.textbook} /></div>

@@ -78,12 +78,12 @@ export default function ImportCourseContentManager() {
         </label>
       )}
 
-      <button onClick={handleImport} disabled={!sourceId || !targetId || !confirmed || busy || target?.hasGradedMarks} className="btn btn-brass">
+      <button onClick={handleImport} disabled={!sourceId || !targetId || !confirmed || busy || target?.hasGradedMarks} className="btn btn-import">
         {busy ? "Importing…" : "Import Content"}
       </button>
 
       {result && (
-        <div style={{ marginTop: 16, fontSize: 13, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 10 }}>
+        <div style={{ marginTop: 16, fontSize: 13, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 10 }}>
           Done — copied {result.cloCount} CLO(s), {result.lectureRowCount} lecture row(s), and {result.instrumentCount} assessment instrument(s).
         </div>
       )}

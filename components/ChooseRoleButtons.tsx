@@ -17,11 +17,11 @@ export default function ChooseRoleButtons() {
   }
 
   return (
-    <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-      <button onClick={() => choose("SUBJECT_EXPERT")} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
+    <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+      <button onClick={() => choose("SUBJECT_EXPERT")} disabled={!!loading} className="btn btn-brass" style={{ flex: "1 1 180px", padding: "14px 12px" }}>
         {loading === "SUBJECT_EXPERT" ? "Loading…" : "Continue as Subject Expert"}
       </button>
-      <button onClick={() => choose("INSTRUCTOR")} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
+      <button onClick={() => choose("INSTRUCTOR")} disabled={!!loading} className="btn btn-import" style={{ flex: "1 1 180px", padding: "14px 12px" }}>
         {loading === "INSTRUCTOR" ? "Loading…" : "Continue as Instructor"}
       </button>
     </div>

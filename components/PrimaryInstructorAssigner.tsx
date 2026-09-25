@@ -65,16 +65,16 @@ export default function PrimaryInstructorAssigner() {
         handles additional sections when a course has more than one.
       </p>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <a href="/api/assigner/primary-instructors/export" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
+        <a href="/api/assigner/primary-instructors/export" className="btn btn-export" style={{ fontSize: 12, padding: "5px 10px" }}>
           Download as Excel
         </a>
-        <label className="btn" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
+        <label className="btn btn-import" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
           {importing ? "Uploading…" : "Upload edited Excel"}
           <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />
         </label>
       </div>
       {importResult && (
-        <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
+        <div style={{ fontSize: 12, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
           Applied: {importResult.updated} assignment(s) set, {importResult.cleared} cleared, {importResult.unchanged} already matched.
           {importResult.rowsSkipped > 0 && <> {importResult.rowsSkipped} row(s) skipped (didn't match a course, or the name didn't match a unique faculty member — check for hand-edited ids).</>}
           {importResult.unrecognizedNames?.length > 0 && <> Names not recognized: {importResult.unrecognizedNames.join(", ")}.</>}

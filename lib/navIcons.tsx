@@ -6,6 +6,7 @@ import {
   UserCog, ClipboardCheck, Grid3x3, Settings, Image as ImageIcon, GitMerge,
   ArrowLeftRight, Inbox, FileClock, UsersRound, CalendarClock, LineChart,
   Milestone, Table2, CalendarCheck, Network, Repeat, KeyRound, Activity,
+  LayoutDashboard, Tags, ArrowRightLeft, School, CalendarRange, FileSpreadsheet, Grid2x2Check, MailQuestion, BookOpenCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -78,6 +79,17 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Passing Criteria": Milestone,
   "Approved & Assigned": ClipboardCheck,
   "Approved, No Course Assigned": ClipboardList,
+  "Dashboard": LayoutDashboard,
+  "Back to Dashboard": LayoutDashboard,
+  "Account Requests": MailQuestion,
+  "Advisor Dashboard": GraduationCap,
+  "Course & Faculty Categories": Tags,
+  "Out-of-Batch Requests": ArrowRightLeft,
+  "Elective Instructor Report": FileSpreadsheet,
+  "Program Semester Map": CalendarRange,
+  "Curriculum Readiness Matrix": Grid2x2Check,
+  "Institute Settings": School,
+  "Instructor Review": BookOpenCheck,
 };
 
 export function getNavIcon(label: string): LucideIcon {

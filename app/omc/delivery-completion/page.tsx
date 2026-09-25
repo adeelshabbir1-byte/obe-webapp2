@@ -50,7 +50,7 @@ export default async function DeliveryCompletionPage({ searchParams }: { searchP
           <tbody>
             {rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No instructor-assigned courses yet.</td></tr>}
             {rows.map((r) => (
-              <tr key={r.course.id} style={{ background: r.pct < 30 ? "#FFE4DC" : undefined }}>
+              <tr key={r.course.id} style={{ background: r.pct < 30 ? "#FFE8ED" : undefined }}>
                 <td style={{ fontSize: 11.5 }}>{r.course.batch ? `${r.course.batch.degreeProgram} — ${r.course.batch.batchName}` : "—"}</td>
                 <td><b>{r.course.code}</b> {r.course.title}</td><td>{r.course.instructor?.name || "—"}</td>
                 <td>{r.dated} / {r.total}</td>

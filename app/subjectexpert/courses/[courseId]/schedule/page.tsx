@@ -32,7 +32,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} status={course.templateStatus} />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
-        <a href={`/api/subjectexpert/courses/${course.id}/weekly-plan-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Tentative Weekly Plan (Word)</a>
+        <a href={`/api/subjectexpert/courses/${course.id}/weekly-plan-document`} className="btn btn-export" style={{ textDecoration: "none" }}>Download Tentative Weekly Plan (Word)</a>
       </div>
 
       {course.clos.length > 0 && (
@@ -44,8 +44,8 @@ export default async function SchedulePage({ params }: { params: { courseId: str
               const ok = n >= 3;
               return (
                 <span key={c.id} style={{
-                  fontSize: 11.5, padding: "4px 10px", borderRadius: 2,
-                  background: ok ? "#CCFBF1" : "#FFE4DC", color: ok ? "var(--sage)" : "var(--rust)",
+                  fontSize: 11.5, padding: "4px 10px", borderRadius: 6,
+                  background: ok ? "#CCFBF1" : "#FFE8ED", color: ok ? "var(--sage)" : "var(--rust)",
                 }}>
                   {c.code}: {n} topic{n === 1 ? "" : "s"}{!ok ? ` (needs ${3 - n} more)` : ""}
                 </span>

@@ -20,7 +20,7 @@ export default function SubmitTemplateButton({ courseId, disabled }: { courseId:
   return (
     <div>
       {error && <div className="err">{error}</div>}
-      <button onClick={onClick} disabled={disabled || loading || submitted} className="btn" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>
+      <button onClick={onClick} disabled={disabled || loading || submitted} className="btn btn-approve" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>
         {loading ? "Submitting…" : submitted ? "Submitted" : "Submit for OMC Review"}
       </button>
     </div>

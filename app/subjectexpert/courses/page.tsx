@@ -42,7 +42,7 @@ export default async function SubjectExpertCoursesPage() {
             {courses.map((c) => (
               <tr key={c.id}>
                 <td>{c.code}</td><td>{c.title}</td><td>{statusLabel(c.templateStatus)}</td>
-                <td><Link href={`/subjectexpert/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td>
+                <td><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link></td>
               </tr>
             ))}
           </tbody>

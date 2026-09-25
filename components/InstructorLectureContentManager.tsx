@@ -104,7 +104,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
           <h3 style={{ fontSize: 14 }}>Lecture Content — Actual Delivery</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} lectures dated</span>
-            <button onClick={autoFillDates} disabled={autoFilling} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>
+            <button onClick={autoFillDates} disabled={autoFilling} className="btn btn-ai" style={{ padding: "5px 10px", fontSize: 11.5 }}>
               {autoFilling ? "Filling…" : "Auto-fill Dates"}
             </button>
           </div>
@@ -127,16 +127,16 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
               Use the ▲▼ buttons next to a lecture number to move that topic to a different week/lecture slot —
               its date stays with the slot, not the topic.
             </p>
-            <SortableTable style={{ tableLayout: "fixed" }}>
+            <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr>
                   <th style={{ width: 34 }} rowSpan={2}>Wk</th>
                   <th style={{ width: 50 }} rowSpan={2}>Lec</th>
-                  <th colSpan={1} style={{ background: "#F4EFE1", textAlign: "center" }}>Subject Expert (Planned)</th>
-                  <th colSpan={6} style={{ background: "#F3E4E7", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
+                  <th colSpan={1} style={{ background: "#F3F6FD", textAlign: "center" }}>Subject Expert (Planned)</th>
+                  <th colSpan={6} style={{ background: "#EEF2FF", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
                 </tr>
                 <tr>
-                  <th style={{ width: "16%", background: "#F4EFE1" }}>Topic</th>
+                  <th style={{ width: "16%", background: "#F3F6FD" }}>Topic</th>
                   <th style={{ width: "20%" }}>Topic</th>
                   <th style={{ width: "16%" }}>Sub Topic</th>
                   <th style={{ width: 110 }}>Actual Date</th>
@@ -164,7 +164,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                           </span>
                         </div>
                       </td>
-                      <td style={{ color: "var(--ink)", fontSize: 11.5, background: "#F4EFE1", fontWeight: 500 }}>{r.seTopic || "—"}</td>
+                      <td style={{ color: "var(--ink)", fontSize: 11.5, background: "#F3F6FD", fontWeight: 500 }}>{r.seTopic || "—"}</td>
                       <td style={{ background: colorForTopic(r.topic), padding: 0, ...(topicChanged ? CHANGED_STYLE : {}) }} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
                         <input key={`topic-${r.id}-${r.topic}`} defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Actual topic..."
                           onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, { topic: e.target.value }); }}
@@ -175,7 +175,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                           onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
                           style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
                       </td>
-                      <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FBE2DF" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
+                      <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FFE8ED" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
                         <input key={`date-${r.id}-${r.actualDate}`} type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
                           onBlur={(e) => { const prev = r.actualDate ? r.actualDate.slice(0, 10) : ""; if (e.target.value !== prev) saveField(r, { actualDate: e.target.value }, e.target, prev); }}
                           style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />
@@ -209,7 +209,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
             <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10, marginTop: -4 }}>
               The Subject Expert's full plan for this course — read-only, for reference while you log your actual delivery.
             </p>
-            <SortableTable style={{ tableLayout: "fixed" }}>
+            <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr>
                   <th style={{ width: 34 }}>Wk</th><th style={{ width: 34 }}>Lec</th>

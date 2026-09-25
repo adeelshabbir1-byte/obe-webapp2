@@ -181,14 +181,14 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
                   {coverageByTopic && (() => {
                     const cov = actualCoverageFor(it.topicText);
                     return (
-                      <td style={!cov?.covered ? { background: "#FBE2DF", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)" }}>
+                      <td style={!cov?.covered ? { background: "#FFE8ED", color: "var(--rust)", fontWeight: 700 } : { color: "var(--sage)" }}>
                         {cov ? `${cov.covered ? "Covered" : "Not Yet"} · ${cov.lectureCount} lec · ${Math.round(cov.deliveredMarksPct)}% delivered` : "No matching topic"}
                       </td>
                     );
                   })()}
                   <td style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setEditingId(it.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                    <button onClick={() => removeItem(it.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                    <button onClick={() => setEditingId(it.id)} className="act act-primary">Edit</button>
+                    <button onClick={() => removeItem(it.id)} className="act act-danger">Remove</button>
                   </td>
                 </tr>
               )

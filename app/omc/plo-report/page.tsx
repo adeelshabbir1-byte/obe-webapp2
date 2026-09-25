@@ -85,24 +85,24 @@ export default async function OmcPloReportPage() {
             {sec.rows.map((r) => {
               const typeEntries = Object.entries(r.byType);
               return (
-                <div key={r.number} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #EFEADC" }}>
+                <div key={r.number} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #EEF2FA" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600 }}>
                       PLO-{r.number}: {r.title}
                       {r.status !== "approved" && (
-                        <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 2 }}>
+                        <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EEF2FA", padding: "1px 6px", borderRadius: 6 }}>
                           {r.status.replace("-", " ")}
                         </span>
                       )}
                     </div>
                     <div style={{ fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
                       {r.count} course{r.count === 1 ? "" : "s"}
-                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE8ED", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
                     </div>
                   </div>
 
                   {/* Stacked bar: one segment per course type, width proportional to its share */}
-                  <div style={{ display: "flex", height: 18, width: "100%", background: "#EFEADC", overflow: "hidden" }}>
+                  <div style={{ display: "flex", height: 18, width: "100%", background: "#EEF2FA", overflow: "hidden" }}>
                     {typeEntries.map(([type, n]) => (
                       <div
                         key={type}
@@ -135,7 +135,7 @@ export default async function OmcPloReportPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {legendTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 2 }} />
+                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                 {t}
               </span>
             ))}

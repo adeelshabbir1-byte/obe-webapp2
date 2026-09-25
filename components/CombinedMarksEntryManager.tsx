@@ -66,7 +66,7 @@ export default function CombinedMarksEntryManager({ instruments, sections: initi
                   const key = s.id + i.id;
                   const hasMatch = !!instrumentIdBySlot[sec.courseId]?.[i.id];
                   return (
-                    <td key={i.id} style={{ textAlign: "center", background: !hasMatch ? "#F4EFE1" : undefined }}>
+                    <td key={i.id} style={{ textAlign: "center", background: !hasMatch ? "#F3F6FD" : undefined }}>
                       {hasMatch ? (
                         <input
                           type="number" min={0} max={i.maxScore} defaultValue={s.marks[i.id] ?? ""} disabled={busyCell === key}

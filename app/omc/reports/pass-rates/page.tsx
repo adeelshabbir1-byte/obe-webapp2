@@ -53,7 +53,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
           <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
           <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
         </div>
-        {selectedCourseId && <a href={`/api/omc/reports/pass-rates-document?courseId=${selectedCourseId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Report (Word)</a>}
+        {selectedCourseId && <a href={`/api/omc/reports/pass-rates-document?courseId=${selectedCourseId}`} className="btn btn-export" style={{ textDecoration: "none" }}>Download Report (Word)</a>}
       </div>
 
       {course && (

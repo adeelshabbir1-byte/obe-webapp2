@@ -39,7 +39,7 @@ export default async function InstructorReviewListPage() {
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td>
                 <td>{c.code}</td><td>{c.title}</td><td>{c.instructor?.name || "—"}</td>
-                <td><Link href={`/omc/instructor-review/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</Link></td>
+                <td><Link href={`/omc/instructor-review/${c.id}`} className="act act-primary">Review</Link></td>
               </tr>
             ))}
           </tbody>

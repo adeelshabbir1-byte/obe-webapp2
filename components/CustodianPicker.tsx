@@ -30,7 +30,7 @@ export default function CustodianPicker({ candidates, currentCustodianId }: { ca
         or rejects every submission before it's used (e.g. for surveys). Pick that person here.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5, minWidth: 260 }}>
           <option value="">— None assigned —</option>

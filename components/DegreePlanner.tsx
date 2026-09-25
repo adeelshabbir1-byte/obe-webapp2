@@ -80,7 +80,7 @@ export default function DegreePlanner() {
   return (
     <div>
       {error && <div className="err">{error}</div>}
-      {warning && <div style={{ background: "#FBEED2", color: "#96650F", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{warning}</div>}
+      {warning && <div style={{ background: "#FFF3DC", color: "#8A4B00", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{warning}</div>}
 
       <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>

@@ -141,7 +141,7 @@ export default function EquivalenceManager() {
                     </>
                   )}
                 </td>
-                <td style={{ background: rowIndex < visibleGroups.length && !visibleGroups[rowIndex].masterCourse ? "#FEE2E2" : undefined }}>
+                <td style={{ background: rowIndex < visibleGroups.length && !visibleGroups[rowIndex].masterCourse ? "#FFE8ED" : undefined }}>
                   {rowIndex < visibleGroups.length && (() => {
                     const group = visibleGroups[rowIndex];
                     const isOpen = pickerOpenForGroup === group.id;
@@ -163,7 +163,7 @@ export default function EquivalenceManager() {
                       !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
                     ).slice(0, 30);
                     return (
-                      <div style={{ background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, minWidth: 260 }}>
+                      <div style={{ background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, minWidth: 260 }}>
                         <input
                           autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                           placeholder="Search HEC course code or title…"
@@ -178,7 +178,7 @@ export default function EquivalenceManager() {
                           {filtered.map((o) => (
                             <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                               <b>{o.code}</b> — {o.title}
-                              {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                              {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FFF3DC", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
                               <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
                             </div>
                           ))}
@@ -201,7 +201,7 @@ export default function EquivalenceManager() {
                       onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
                       style={{
                         cursor: "pointer", padding: "6px 8px",
-                        background: isSelected ? "#F3E4E7" : course.groupId ? "#E2F4E8" : undefined,
+                        background: isSelected ? "#EEF2FF" : course.groupId ? "#E3F8EF" : undefined,
                         border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                       }}
                     >

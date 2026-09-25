@@ -260,7 +260,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               {rooms.map((r) => (
                 <tr key={r.id}>
                   <td>{r.name}</td><td>{r.type}</td><td>{r.capacity}</td>
-                  <td><button onClick={() => removeRoom(r.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                  <td><button onClick={() => removeRoom(r.id)} disabled={loading} className="act act-danger">Remove</button></td>
                 </tr>
               ))}
             </tbody>
@@ -312,7 +312,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
         <div className="card" style={{ overflowX: "auto" }}>
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>Schedulable Sections</h3>
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>One row per (course, instructor) pair that needs a time slot. Auto-generate from your offered courses, then adjust sessions/week, duration, or room type as needed.</p>
-          <button onClick={autoGenerateSections} disabled={loading} className="btn btn-brass" style={{ marginBottom: 12 }}>Auto-Generate from Offered Courses</button>
+          <button onClick={autoGenerateSections} disabled={loading} className="btn btn-ai" style={{ marginBottom: 12 }}>Auto-Generate from Offered Courses</button>
           <table>
             <thead><tr><th>Course</th><th>Batch</th><th>Instructor</th><th>Section</th><th>Sessions/Week</th><th>Duration (min)</th><th>Room Type</th><th></th></tr></thead>
             <tbody>
@@ -327,7 +327,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                       <option value="LECTURE">Lecture</option><option value="LAB">Lab</option>
                     </select>
                   </td>
-                  <td><button onClick={() => removeSection(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                  <td><button onClick={() => removeSection(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
                 </tr>
               ))}
             </tbody>
@@ -360,7 +360,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               limit), then upload the solution file it produces.
             </p>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <a href="/api/coordinator/timetable/download-constraints" className="btn btn-brass" style={{ textDecoration: "none" }}>1. Download Constraints (Excel)</a>
+              <a href="/api/coordinator/timetable/download-constraints" className="btn btn-export" style={{ textDecoration: "none" }}>1. Download Constraints (Excel)</a>
               <LocalSolutionUploader onUploaded={(runId) => { setRunId(runId); loadRun(runId); }} />
             </div>
           </div>
@@ -378,7 +378,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                   <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Max run time (minutes)</label>
                   <input type="number" min={1} max={30} value={maxMinutes} onChange={(e) => setMaxMinutes(parseInt(e.target.value, 10) || 30)} style={{ width: 80, padding: "6px 8px", border: "1px solid var(--line)" }} />
                 </div>
-                <button onClick={generate} className="btn btn-brass">Generate Timetable</button>
+                <button onClick={generate} className="btn btn-ai">Generate Timetable</button>
               </div>
             )}
             {generating && (
@@ -404,7 +404,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             <div className="card" style={{ overflowX: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                 <h3 style={{ fontSize: 14 }}>Timetable</h3>
-                {runId && <a href={`/api/coordinator/timetable/${runId}/export`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>}
+                {runId && <a href={`/api/coordinator/timetable/${runId}/export`} className="btn btn-export" style={{ textDecoration: "none" }}>Export to Excel</a>}
               </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <select value={viewMode} onChange={(e) => { setViewMode(e.target.value as any); setViewFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
@@ -448,8 +448,8 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                                 onDragEnd={() => setDraggedEntryId(null)}
                                 title={isClashing ? clashInfo?.reasons.join("; ") : "Drag to move"}
                                 style={{
-                                  padding: 4, borderRadius: 3, cursor: movingEntryId ? "wait" : "grab",
-                                  background: isClashing ? "#FBE2DF" : "#F0EDFB",
+                                  padding: 4, borderRadius: 6, cursor: movingEntryId ? "wait" : "grab",
+                                  background: isClashing ? "#FFE8ED" : "#F0EDFB",
                                   border: isClashing ? "1.5px solid var(--rust)" : "1px solid transparent",
                                   opacity: movingEntryId === entry.id ? 0.5 : 1,
                                 }}

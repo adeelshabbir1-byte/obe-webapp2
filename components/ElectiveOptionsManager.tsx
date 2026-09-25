@@ -186,8 +186,8 @@ export default function ElectiveOptionsManager({ batchId, electiveCourses }: { b
                   <button onClick={() => toggleRegistration(g)} disabled={busy} className="btn" style={{ fontSize: 11.5, padding: "5px 10px" }}>
                     {g.registrationOpen ? "Close Registration" : "Open Registration"}
                   </button>
-                  <button onClick={() => finalizeGroup(g)} disabled={busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "5px 10px" }}>Finalize</button>
-                  <button onClick={() => removeGroup(g)} disabled={busy} className="btn" style={{ fontSize: 11.5, padding: "5px 10px", color: "var(--rust)" }}>Delete</button>
+                  <button onClick={() => finalizeGroup(g)} disabled={busy} className="btn btn-approve" style={{ fontSize: 11.5, padding: "5px 10px" }}>Finalize</button>
+                  <button onClick={() => removeGroup(g)} disabled={busy} className="btn btn-danger" style={{ fontSize: 11.5, padding: "5px 10px", color: "var(--rust)" }}>Delete</button>
                 </div>
               )}
             </div>
@@ -206,7 +206,7 @@ export default function ElectiveOptionsManager({ batchId, electiveCourses }: { b
             </table>
 
             {result && (
-              <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginTop: 10 }}>
+              <div style={{ fontSize: 12, background: "#ECFBF4", border: "1px solid var(--sage)", padding: 8, marginTop: 10 }}>
                 Applied {result.applied} new enrollment(s).
                 {result.waitlisted.length > 0 && <> {result.waitlisted.length} couldn't be placed (their choice was full by the time it was processed): {result.waitlisted.map((w: any) => `${w.name} (${w.rollNumber}) → ${w.courseTitle}`).join(", ")}.</>}
                 {result.alreadyEnrolled.length > 0 && <> {result.alreadyEnrolled.length} were already enrolled in their chosen course.</>}

@@ -53,7 +53,7 @@ export default async function CoordinatorFacultyPage() {
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Onboarding</h1>
-        <a href="/api/coordinator/faculty/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/coordinator/faculty/export" className="btn btn-export" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create Subject Expert and Course Instructor accounts, and set each instructor's normal teaching load.

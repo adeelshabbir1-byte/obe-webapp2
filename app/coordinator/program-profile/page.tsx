@@ -103,7 +103,7 @@ export default async function ProgramProfilePage({ searchParams }: { searchParam
                 <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
                   Uses this batch's current courses and their Subject Experts' plans (CLOs, weekly content, textbooks).
                 </p>
-                <a href={`/api/coordinator/program-document?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Word Document</a>
+                <a href={`/api/coordinator/program-document?batchId=${selectedBatchId}`} className="btn btn-export" style={{ textDecoration: "none" }}>Download Word Document</a>
               </div>
             </>
           )}

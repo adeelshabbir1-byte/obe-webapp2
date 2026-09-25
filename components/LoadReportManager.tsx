@@ -72,14 +72,14 @@ export default function LoadReportManager() {
             </label>
           ))}
         </div>
-        <button onClick={generate} disabled={loading || terms.length === 0} className="btn btn-brass">{loading ? "Generating…" : "Generate Report"}</button>
+        <button onClick={generate} disabled={loading || terms.length === 0} className="btn btn-ai">{loading ? "Generating…" : "Generate Report"}</button>
       </div>
 
       {rows && (
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <h3 style={{ fontSize: 14 }}>Teacher Load Report</h3>
-            <button onClick={exportExcel} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
+            <button onClick={exportExcel} className="btn btn-export" style={{ padding: "6px 12px", fontSize: 12 }}>Export to Excel</button>
           </div>
           <SortableTable>
             <thead>
@@ -92,7 +92,7 @@ export default function LoadReportManager() {
             <tbody>
               {rows.length === 0 && <tr><td colSpan={6 + termLabels.length} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
               {rows.map((r) => (
-                <tr key={r.instructorId} style={{ background: r.over ? "#FBE2DF" : undefined }}>
+                <tr key={r.instructorId} style={{ background: r.over ? "#FFE8ED" : undefined }}>
                   <td>{r.name} {r.role === "SUBJECT_EXPERT" && <span className="badge badge-warn" style={{ fontSize: 9, marginLeft: 4 }}>SE</span>}</td>
                   {termLabels.map((label) => <td key={label}>{r.byTerm[label] ?? 0}</td>)}
                   <td>{r.assigned}</td>

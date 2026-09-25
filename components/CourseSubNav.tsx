@@ -17,18 +17,13 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           <h1 style={{ fontSize: 22 }}>{code} — {title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Template status: {status}</div>
         </div>
-        <Link href="/subjectexpert/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</Link>
+        <Link href="/subjectexpert/courses" className="btn btn-secondary btn-sm">← Back to courses</Link>
       </div>
-      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--line)" }}>
+      <nav className="tabs" aria-label="Course sections">
         {tabs.map((t) => (
-          <Link key={t.key} href={t.href} style={{
-            padding: "8px 14px", fontSize: 12.5, textDecoration: "none",
-            color: active === t.key ? "var(--ink)" : "var(--slate)",
-            borderBottom: active === t.key ? "2px solid var(--brass)" : "2px solid transparent",
-            fontWeight: active === t.key ? 600 : 400,
-          }}>{t.label}</Link>
+          <Link key={t.key} href={t.href} className="tab" aria-current={active === t.key ? "page" : undefined}>{t.label}</Link>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }

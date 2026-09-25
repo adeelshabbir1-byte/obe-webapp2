@@ -142,7 +142,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         </div>
       )}
       <div className="card">
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th><th></th></tr></thead>
           <tbody>
             {clos.length === 0 && (
@@ -181,8 +181,8 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                   <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
                   <td>{c.targetPct}%</td>
                   <td style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                    <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                    <button onClick={() => setEditingId(c.id)} className="act act-primary">Edit</button>
+                    <button onClick={() => removeClo(c.id)} className="act act-danger">Remove</button>
                   </td>
                 </tr>
               )

@@ -13,8 +13,9 @@ export default async function ChooseRolePage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}>
-      <div style={{ background: "#fff", padding: "40px 50px", maxWidth: 480, border: "1px solid var(--line)", textAlign: "center" }}>
+    <div className="login-wrap">
+      <div className="login-card" style={{ maxWidth: 480, textAlign: "center" }}>
+        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB" width={720} height={501} style={{ width: 150 }} />
         <h1 style={{ fontSize: 20, marginBottom: 6 }}>Welcome, {user.name}</h1>
         <p style={{ fontSize: 13, color: "var(--slate)", marginBottom: 28 }}>
           Your account can act as both a Subject Expert and an Instructor. Which one do you want to work as right now?

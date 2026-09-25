@@ -64,7 +64,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
             <tr>
               <td>{c.username}</td><td>{c.name}</td><td>{c.email}</td><td>{c.department || "—"}</td>
               <td style={{ fontSize: 11.5 }}>{c.instituteName || <span style={{ color: "var(--slate)" }}>Not set</span>}</td>
-              <td><button onClick={() => startEdit(c)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit Branding</button></td>
+              <td><button onClick={() => startEdit(c)} className="act act-primary">Edit Branding</button></td>
             </tr>
             {expandedId === c.id && (
               <tr>

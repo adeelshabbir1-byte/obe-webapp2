@@ -12,7 +12,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 function heatColor(value: number, max: number) {
-  if (value === 0) return "#F7F4EC";
+  if (value === 0) return "#F7F9FE";
   const intensity = Math.min(1, value / Math.max(1, max));
   const r = Math.round(247 - intensity * (247 - 75));
   const g = Math.round(244 - intensity * (244 - 122));
@@ -38,7 +38,7 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <ReportPrintHeader title="Semester-Wise PLO Progression & Balance" />
-        <a href="/api/omc/reports/progression/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/omc/reports/progression/export" className="btn btn-export no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         How outcomes scale across the 8 semesters — foundational PLOs should show up heavily in semesters 1–4, advanced ones in 5–8.
@@ -59,7 +59,7 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
             {prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No PLOs defined yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>

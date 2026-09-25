@@ -27,7 +27,7 @@ export default function AttendanceThresholdForm({ initial }: { initial: number }
         Students below this percentage are flagged in each course's Attendance Summary. Defaults to 75%.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
         <div className="field" style={{ margin: 0 }}>
           <label>Minimum %</label>

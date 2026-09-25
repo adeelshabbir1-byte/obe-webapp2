@@ -136,9 +136,9 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
-                <td><button onClick={() => setEditingId(f.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
-                <button onClick={() => resetPassword(f.id, f.name)} disabled={loading} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Reset Password</button>
-                <button onClick={() => removeFaculty(f.id, f.name)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button></td>
+                <td><button onClick={() => setEditingId(f.id)} className="act act-primary" style={{ marginRight: 10 }}>Edit</button>
+                <button onClick={() => resetPassword(f.id, f.name)} disabled={loading} className="act act-primary" style={{ marginRight: 10 }}>Reset Password</button>
+                <button onClick={() => removeFaculty(f.id, f.name)} disabled={loading} className="act act-danger">Delete</button></td>
               </tr>
             ))}
           </tbody>

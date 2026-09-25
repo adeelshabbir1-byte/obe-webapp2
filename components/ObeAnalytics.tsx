@@ -7,9 +7,9 @@ type RoadmapItem = { courseId: string; code: string; title: string; semesterNumb
 type HeatmapRow = { termLabel: string; termYear: number; plos: Record<number, number> };
 
 function cellColor(pct: number, threshold: number) {
-  if (pct < threshold) return "#FBE2DF"; // under-attained — red
-  if (pct < threshold + 10) return "#FBEED2"; // borderline — amber
-  return "#E2F4E8"; // solid — green
+  if (pct < threshold) return "#FFE8ED"; // under-attained — red
+  if (pct < threshold + 10) return "#FFF3DC"; // borderline — amber
+  return "#E3F8EF"; // solid — green
 }
 
 export default function ObeAnalytics() {
@@ -45,9 +45,9 @@ export default function ObeAnalytics() {
       </div>
 
       {laggingPlos.length > 0 && (
-        <div className="card" style={{ background: "#FBEED2" }}>
+        <div className="card" style={{ background: "#FFF3DC" }}>
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLOs Needing Attention</h3>
-          <p style={{ fontSize: 11.5, color: "#96650F" }}>
+          <p style={{ fontSize: 11.5, color: "#8A4B00" }}>
             You're currently below target on: {laggingPlos.map((p) => `PLO-${p.number}`).join(", ")}.
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function ObeAnalytics() {
                   <tr key={row.termLabel}>
                     <td style={{ padding: "4px 8px", fontWeight: 600 }}>{row.termLabel}</td>
                     {data.allPloNumbers.map((n) => (
-                      <td key={n} style={{ padding: "4px 8px", textAlign: "center", background: row.plos[n] !== undefined ? cellColor(row.plos[n], data.ploPassingThreshold) : "#F4EFEE" }}>
+                      <td key={n} style={{ padding: "4px 8px", textAlign: "center", background: row.plos[n] !== undefined ? cellColor(row.plos[n], data.ploPassingThreshold) : "#F3F6FD" }}>
                         {row.plos[n] !== undefined ? `${row.plos[n].toFixed(0)}%` : "—"}
                       </td>
                     ))}

@@ -65,7 +65,7 @@ export default function SurveyDetailManager({ surveyId, respondents: initialResp
                 </label>
               ))}
             </div>
-            <button onClick={distribute} disabled={loading} className="btn btn-brass">{loading ? "Generating…" : "Generate Links"}</button>
+            <button onClick={distribute} disabled={loading} className="btn btn-ai">{loading ? "Generating…" : "Generate Links"}</button>
           </>
         )}
       </div>

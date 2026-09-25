@@ -103,7 +103,9 @@ model User {
   passingCriteriaVersions PassingCriteria[] @relation("PassingCriteriaChairman")
   auditLogs          AuditLog[]
 
-  @@index([managedById])
+  @@index([managedById, role]) // org-chain lookups ("coordinators managed by X") are the most common query in the app
+  @@index([role])
+  @@index([customCategoryId])
 }
 
 model Session {
@@ -180,6 +182,7 @@ model Batch {
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
+  @@index([advisorId])
 }
 
 // The single "what term is it right now" setting per coordinator/program —
@@ -678,6 +681,7 @@ model SurveyQuestion {
 
   answers SurveyAnswer[]
   @@index([surveyTemplateId])
+  @@index([mappedPloId])
 }
 
 // One respondent's link into one survey — token-based, no login required.
@@ -701,6 +705,9 @@ model SurveyResponse {
   answers SurveyAnswer[]
   @@index([surveyTemplateId])
   @@index([token])
+  @@index([studentId])
+  @@index([alumniId])
+  @@index([employerId])
 }
 
 model SurveyAnswer {
@@ -712,6 +719,7 @@ model SurveyAnswer {
   ratingValue      Int            // 1-5
 
   @@unique([surveyResponseId, questionId])
+  @@index([questionId])
 }
 
 // A real student, imported by the Coordinator per batch (bulk CSV) — the
@@ -764,6 +772,7 @@ model StudentSession {
   revokedAt  DateTime?
   ipAddress  String?
   userAgent  String?
+  @@index([studentId])
 }
 
 // A student's request to enroll in a course belonging to a DIFFERENT
@@ -787,6 +796,7 @@ model OutOfBatchRequest {
 
   @@index([courseId])
   @@index([studentId])
+  @@index([reviewedById])
 }
 
 // A student's own draft plan for a future (not-yet-enrolled) course —
@@ -810,6 +820,7 @@ model DegreePlanEntry {
 
   @@unique([studentId, courseId])
   @@index([studentId])
+  @@index([courseId])
 }
 
 // A registration action (register or withdraw) that's held for an
@@ -837,6 +848,7 @@ model RegistrationApprovalRequest {
 
   @@index([studentId])
   @@index([courseId])
+  @@index([reviewedById])
 }
 
 // A named elective slot (e.g. "Elective-I") for one batch/semester,
@@ -862,6 +874,7 @@ model ElectiveSlotGroup {
   choices ElectiveChoice[]
 
   @@index([batchId])
+  @@index([coordinatorId])
 }
 
 model ElectiveSlotOption {
@@ -894,6 +907,7 @@ model ElectiveChoice {
 
   @@unique([groupId, studentId])
   @@index([optionId])
+  @@index([studentId])
 }
 
 // A student taking a specific course — decoupled from their home batch so a
@@ -930,6 +944,7 @@ model StudentMark {
   @@unique([studentId, instrumentId])
   @@index([courseId])
   @@index([studentId])
+  @@index([instrumentId])
 }
 
 // Semester-wide dates for an entire Degree Program — set once by the
@@ -1225,6 +1240,14 @@ model Course {
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
   @@index([batchId])
+  @@index([coordinatorId, isOffered, offeredTermName, offeredTermYear]) // current-semester screens
+  @@index([subjectExpertId])
+  @@index([instructorId])
+  @@index([masterCourseId])
+  @@index([benchmarkSourceId])
+  @@index([prerequisiteCourseId])
+  @@index([assignedOmcReviewerId])
+  @@index([customCategoryId])
 }
 
 // Left by an instructor at any point (typically end of semester) for whoever
@@ -1370,6 +1393,7 @@ model CLO {
 
   @@unique([courseId, source, code])
   @@index([courseId])
+  @@index([mappedPloId])
 }
 
 // Final/mid-term paper distribution — one row per question, built by SE
@@ -1392,7 +1416,9 @@ model PaperDistributionItem {
   orderIndex     Int         @default(0)
   createdAt      DateTime    @default(now())
 
-  @@index([courseId])
+  @@index([courseId, source])
+  @@index([lectureRowId])
+  @@index([cloId])
 }
 
 // The 30-lecture schedule set by the Subject Expert
@@ -1418,6 +1444,7 @@ model LectureRow {
 
   @@unique([courseId, source, lectureNumber])
   @@index([courseId])
+  @@index([cloId])
 }
 
 // A specific gradeable item (Quiz 1, Assignment 2, Midterm Q3, Final Q5...)
@@ -1439,7 +1466,7 @@ model AssessmentInstrument {
   studentMarks StudentMark[]
   evidence     InstrumentEvidence[]
 
-  @@index([courseId])
+  @@index([courseId, source])
 }
 
 // DotAI-style evidence: the rubric, exam paper, or project brief behind
@@ -1504,6 +1531,7 @@ model AccountRequest {
   createdAt       DateTime  @default(now())
 
   @@index([status])
+  @@index([reviewedById])
 }
 
 // An institution's own course/faculty classification, entirely separate
@@ -1715,6 +1743,7 @@ model AuditLog {
   metadata     Json?
   createdAt    DateTime @default(now())
 
-  @@index([actorUserId])
+  @@index([actorUserId, createdAt])
+  @@index([createdAt])
   @@index([action])
 }

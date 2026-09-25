@@ -28,7 +28,7 @@ export default function LocalSolutionUploader({ onUploaded }: { onUploaded?: (ru
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span style={{ fontSize: 12.5, color: "var(--slate)" }}>2.</span>
       <input ref={fileRef} type="file" accept=".xlsx" style={{ fontSize: 12 }} />
-      <button onClick={upload} disabled={uploading} className="btn btn-brass">{uploading ? "Uploading…" : "Upload Solution"}</button>
+      <button onClick={upload} disabled={uploading} className="btn btn-import">{uploading ? "Uploading…" : "Upload Solution"}</button>
       {ok && <span style={{ color: "var(--sage)", fontSize: 12 }}>✓ Loaded</span>}
       {error && <span style={{ color: "var(--rust)", fontSize: 12 }}>{error}</span>}
     </div>

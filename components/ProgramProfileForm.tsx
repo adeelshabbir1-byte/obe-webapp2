@@ -37,7 +37,7 @@ export default function ProgramProfileForm({ degreeProgram, initial }: { degreeP
 
   return (
     <div className="card">
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {error && <div className="err">{error}</div>}
       <form onSubmit={onSubmit}>
         <div className="field"><label>Department Introduction</label><textarea name="departmentIntro" defaultValue={initial.departmentIntro || ""} rows={4} style={{ width: "100%", padding: 8, border: "1px solid var(--line)" }} /></div>

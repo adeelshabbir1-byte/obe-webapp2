@@ -29,7 +29,7 @@ export default function OmcDecisionForm({ courseId, currentComment }: { courseId
       {error && <div className="err">{error}</div>}
       <div className="field"><label>Comment (visible to the Subject Expert)</label><textarea id="omc-comment" defaultValue={currentComment || ""} rows={3} style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)" }} /></div>
       <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={() => decide("approved")} disabled={loading} className="btn" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>Approve</button>
+        <button onClick={() => decide("approved")} disabled={loading} className="btn btn-approve" style={{ background: "var(--sage)", borderColor: "var(--sage)", color: "#fff" }}>Approve</button>
         <button onClick={() => decide("changes-requested")} disabled={loading} className="btn" style={{ background: "var(--rust)", borderColor: "var(--rust)", color: "#fff" }}>Request Changes</button>
       </div>
     </div>

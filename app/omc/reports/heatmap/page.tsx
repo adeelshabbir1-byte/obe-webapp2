@@ -12,7 +12,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 function heatColor(value: number, max: number) {
-  if (value === 0) return "#F7F4EC";
+  if (value === 0) return "#F7F9FE";
   const intensity = Math.min(1, value / Math.max(1, max));
   // interpolate from light parchment to brass
   const r = Math.round(247 - intensity * (247 - 168));
@@ -39,7 +39,7 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <ReportPrintHeader title="PLO Depth & Contribution Heatmap" />
-        <a href="/api/omc/reports/heatmap/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/omc/reports/heatmap/export" className="btn btn-export no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Mapping distribution by course type — darker cells mean more courses of that type contribute to that PLO. Checks whether core courses carry the primary weight of programmatic outcomes.
@@ -60,7 +60,7 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
             {prog.courseTypes.length === 0 || prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>Not enough data yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>

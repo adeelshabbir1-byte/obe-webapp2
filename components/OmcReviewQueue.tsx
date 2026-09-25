@@ -9,10 +9,10 @@ type OmcMember = { id: string; name: string };
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
-    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
+    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE8ED", "#EA580C"],
   };
-  const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
+  const [bg, fg] = map[status] || ["#EEF2FA", "#46507A"];
+  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
 export default function OmcReviewQueue({ myId, courses: initialCourses, omcMembers }: { myId: string; courses: Course[]; omcMembers: OmcMember[] }) {
@@ -66,7 +66,7 @@ export default function OmcReviewQueue({ myId, courses: initialCourses, omcMembe
             {omcMembers.map((m) => <option key={m.id} value={m.id}>{m.id === myId ? "Me" : m.name}</option>)}
           </select>
         </td>
-        <td><Link href={`/omc/templates/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</Link></td>
+        <td><Link href={`/omc/templates/${c.id}`} className="act act-primary">Review</Link></td>
       </tr>
     );
   }
@@ -78,7 +78,7 @@ export default function OmcReviewQueue({ myId, courses: initialCourses, omcMembe
           Anyone on OMC can review, comment on, or approve any course — this assignment is just for splitting
           up the workload so the queue doesn't fall to whoever happens to click first.
         </p>
-        <button onClick={autoBalance} disabled={balancing || unassigned.length === 0} className="btn btn-brass" style={{ fontSize: 12, whiteSpace: "nowrap", marginLeft: 12 }}>
+        <button onClick={autoBalance} disabled={balancing || unassigned.length === 0} className="btn btn-ai" style={{ fontSize: 12, whiteSpace: "nowrap", marginLeft: 12 }}>
           {balancing ? "Balancing…" : `Auto-Balance ${unassigned.length} Unassigned`}
         </button>
       </div>

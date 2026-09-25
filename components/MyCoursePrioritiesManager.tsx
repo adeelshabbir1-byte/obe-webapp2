@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 type Course = { code: string; title: string; priority: number | null };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  "1": "#C8E6C9", // green — top priority
+  "1": "#BDEBD6", // green — top priority
   "2": "#FFF9C4", // yellow — good
   "3": "#FFE0B2", // orange — neutral/50-50
   "null": "#F0F0F0", // gray — not interested / unset

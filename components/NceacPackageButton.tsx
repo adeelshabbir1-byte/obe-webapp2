@@ -29,7 +29,7 @@ export default function NceacPackageButton({ apiEndpoint, reportIds, alreadyExis
   }
 
   return (
-    <div className="card" style={{ background: "#FBEED2" }}>
+    <div className="card" style={{ background: "#FFF3DC" }}>
       <h3 style={{ fontSize: 14, marginBottom: 6 }}>NCEAC Accreditation Package</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         One click creates a bundle of {reportIds.length} reports curated from NCEAC's 2023 Accreditation
@@ -40,7 +40,7 @@ export default function NceacPackageButton({ apiEndpoint, reportIds, alreadyExis
         separately.
       </p>
       {error && <div className="err">{error}</div>}
-      <button onClick={generate} disabled={loading || alreadyExists} className="btn btn-brass" style={{ fontSize: 12.5 }}>
+      <button onClick={generate} disabled={loading || alreadyExists} className="btn btn-export" style={{ fontSize: 12.5 }}>
         {loading ? "Generating…" : alreadyExists ? "Already generated — see below" : "Generate NCEAC Package"}
       </button>
     </div>

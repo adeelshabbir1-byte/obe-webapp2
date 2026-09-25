@@ -68,8 +68,8 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
                   <td style={{ display: "flex", gap: 10 }}>
                     {c.isOffered && c.offeredTermName === "Summer" ? (
                       <>
-                        <button onClick={() => toggleOffer(c.id, false)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Stop Offering</button>
-                        <button onClick={() => setExpandedId(expandedId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>{expandedId === c.id ? "Close" : "Manage Students"}</button>
+                        <button onClick={() => toggleOffer(c.id, false)} disabled={loading} className="act act-danger">Stop Offering</button>
+                        <button onClick={() => setExpandedId(expandedId === c.id ? null : c.id)} className="act act-primary">{expandedId === c.id ? "Close" : "Manage Students"}</button>
                       </>
                     ) : (
                       <button onClick={() => toggleOffer(c.id, true)} disabled={loading} className="btn btn-brass" style={{ padding: "4px 10px", fontSize: 11.5 }}>Offer for Repeat</button>
@@ -85,7 +85,7 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
                           {c.enrolledStudents.map((s) => (
                             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
                               <span>{s.name} ({s.rollNumber}) — {s.batchLabel}</span>
-                              <button onClick={() => removeEnrollment(c.id, s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                              <button onClick={() => removeEnrollment(c.id, s.id)} disabled={loading} className="act act-danger">Remove</button>
                             </div>
                           ))}
                         </div>

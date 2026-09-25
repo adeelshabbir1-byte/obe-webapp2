@@ -12,7 +12,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 const BLOOM_COLORS: Record<string, string> = {
-  C1: "#8B8571", C2: "#5B7C99", C3: "#4B8F87", C4: "#4B7A63", C5: "#A8823C", C6: "#B1512E",
+  C1: "#8B8571", C2: "#5B7C99", C3: "#4B8F87", C4: "#4B7A63", C5: "#1537CC", C6: "#EA580C",
 };
 
 export default async function BloomReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
@@ -33,7 +33,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <ReportPrintHeader title="CLO Bloom's Taxonomy Distribution" />
-        <a href="/api/omc/reports/bloom/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <a href="/api/omc/reports/bloom/export" className="btn btn-export no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Whether higher-order thinking (Analyze / Evaluate / Create) is adequately represented as students progress through the program.
@@ -73,7 +73,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                 {BLOOM_ORDER.map((b) => (
                   <span key={b} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ width: 9, height: 9, background: BLOOM_COLORS[b], display: "inline-block", borderRadius: 2 }} />
+                    <span style={{ width: 9, height: 9, background: BLOOM_COLORS[b], display: "inline-block", borderRadius: 6 }} />
                     {b} {BLOOM_LABELS[b]}: {prog.overall[b] || 0}
                   </span>
                 ))}
@@ -83,7 +83,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
             {semesters.length > 0 && (
               <div className="card" style={{ overflowX: "auto" }}>
                 <h4 style={{ fontSize: 12.5, marginBottom: 10, color: "var(--slate)" }}>By Semester</h4>
-                <SortableTable>
+                <SortableTable paginate={false}>
                   <thead><tr><th>Semester</th>{BLOOM_ORDER.map((b) => <th key={b} style={{ textAlign: "center" }}>{b}</th>)}</tr></thead>
                   <tbody>
                     {semesters.map((s) => (

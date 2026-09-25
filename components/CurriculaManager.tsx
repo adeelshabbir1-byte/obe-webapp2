@@ -88,11 +88,11 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                 <tr>
                   <td>{c.authority}</td><td>{c.title}</td><td>{c.version}</td><td>{c.courseCount}</td><td>{c.ploCount}</td>
                   <td style={{ display: "flex", gap: 10 }}>
-                    <Link href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</Link>
-                    <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                    <Link href={`/admin/curricula/${c.id}`} className="act act-primary">Edit</Link>
+                    <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} className="act act-primary">
                       {cloningId === c.id ? "Cancel" : "Clone as New Version"}
                     </button>
-                    <button onClick={() => deleteCurriculum(c.id, c.title, c.courseCount)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                    <button onClick={() => deleteCurriculum(c.id, c.title, c.courseCount)} disabled={loading} className="act act-danger">
                       Delete
                     </button>
                   </td>
@@ -134,7 +134,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
           PDF's formatting allows, but this always needs your review afterward in the curriculum editor
           before publishing. Different institutions format these documents differently, so results vary.
         </p>
-        {uploadResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{uploadResult} Redirecting to the editor…</div>}
+        {uploadResult && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{uploadResult} Redirecting to the editor…</div>}
         <form onSubmit={uploadPdf}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 14 }}>
             <div className="field"><label>Authority</label><input name="authority" placeholder="e.g. University of the Punjab" required /></div>
@@ -142,7 +142,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
             <div className="field"><label>Version</label><input name="version" placeholder="2026" required /></div>
           </div>
           <div className="field"><label>PDF File</label><input name="file" type="file" accept="application/pdf" required /></div>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Uploading & Parsing…" : "Upload & Parse"}</button>
+          <button className="btn btn-import" type="submit" disabled={loading}>{loading ? "Uploading & Parsing…" : "Upload & Parse"}</button>
         </form>
       </div>
     </>

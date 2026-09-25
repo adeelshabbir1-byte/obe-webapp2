@@ -69,7 +69,7 @@ export default function ReportAccessManager({ reports, initialRules: initialRule
                 <td>{r.subjectType === "ROLE" ? r.subjectValue : personName(r.subjectValue)}{r.subjectType === "USER" && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Individual</span>}</td>
                 <td>{r.canView ? "✓" : "✗"}</td>
                 <td>{r.canEdit ? "✓" : "✗"}</td>
-                <td><button onClick={() => remove(r.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => remove(r.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

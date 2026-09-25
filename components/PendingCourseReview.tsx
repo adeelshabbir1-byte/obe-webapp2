@@ -79,7 +79,7 @@ export default function PendingCourseReview({ curriculumId, pendingCourses: init
           </div>
 
           {expandedId === p.id && (
-            <div style={{ marginTop: 8, padding: 8, background: "#FAFAF8", fontSize: 11.5 }}>
+            <div style={{ marginTop: 8, padding: 8, background: "#F7F9FE", fontSize: 11.5 }}>
               {p.clos.map((c) => <div key={c.id} style={{ padding: "3px 0", borderBottom: "1px solid var(--line)" }}><b>{c.bloomLevel}</b> — {c.statement}</div>)}
             </div>
           )}

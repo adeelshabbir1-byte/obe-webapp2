@@ -28,7 +28,7 @@ export default function ConfirmPrerequisitesButton({ batchId, confirmedAt: initi
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 10 }}>
             Not yet confirmed — this batch's courses can't be offered until you confirm the prerequisite setup is complete (even if a course genuinely has none).
           </p>
-          <button onClick={confirm} disabled={loading} className="btn btn-brass">{loading ? "Confirming…" : "Confirm Prerequisite Map Complete"}</button>
+          <button onClick={confirm} disabled={loading} className="btn btn-approve">{loading ? "Confirming…" : "Confirm Prerequisite Map Complete"}</button>
         </>
       )}
     </div>

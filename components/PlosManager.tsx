@@ -9,10 +9,10 @@ type HecPlo = { number: number; title: string; description: string };
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
-    draft: ["#EFECE3", "#574C50"], approved: ["#E2F4E8", "#1D8A4E"], "changes-requested": ["#FBE2DF", "#C0312B"],
+    draft: ["#EEF2FA", "#46507A"], approved: ["#E3F8EF", "#059669"], "changes-requested": ["#FFE8ED", "#E11D48"],
   };
   const [bg, fg] = map[status] || map.draft;
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
+  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
 export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatches }: {
@@ -115,7 +115,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {bulkResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
+      {bulkResult && <div style={{ background: "#E3F8EF", color: "var(--sage)", border: "1px solid #BDEBD6", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Add All PLOs at Once</h3>
@@ -162,8 +162,8 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
                 <td>PLO-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
                 <td>{statusBadge(p.status)}{p.chairmanComment ? <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 3 }}>{p.chairmanComment}</div> : null}</td>
                 <td style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setEditingId(p.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                  <button onClick={() => removePlo(p.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                  <button onClick={() => setEditingId(p.id)} className="act act-primary">Edit</button>
+                  <button onClick={() => removePlo(p.id)} className="act act-danger">Remove</button>
                 </td>
               </tr>
             ))}
@@ -180,7 +180,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
             {hecPlos.map((hp) => (
               <tr key={hp.number}>
                 <td>{hp.number}</td><td>{hp.title}</td>
-                <td><button onClick={() => copyFromHec(hp)} disabled={loading} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Copy as PLO-{nextNumber}</button></td>
+                <td><button onClick={() => copyFromHec(hp)} disabled={loading} className="act act-primary">Copy as PLO-{nextNumber}</button></td>
               </tr>
             ))}
           </tbody>

@@ -1,0 +1,12 @@
+# dependencies & build output
+node_modules/
+.next/
+out/
+
+# local environment (never commit database credentials)
+.env
+.env*.local
+
+# logs
+npm-debug.log*
+*.log

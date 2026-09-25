@@ -61,12 +61,12 @@ export default function AccountRequestsManager({ initialRequests }: { initialReq
                 <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>Requested {new Date(r.createdAt).toLocaleDateString()}</div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => approve(r.id)} disabled={busyId === r.id} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>Approve</button>
-                <button onClick={() => reject(r.id)} disabled={busyId === r.id} className="btn" style={{ fontSize: 12, padding: "5px 10px", color: "var(--rust)" }}>Reject</button>
+                <button onClick={() => approve(r.id)} disabled={busyId === r.id} className="btn btn-approve" style={{ fontSize: 12, padding: "5px 10px" }}>Approve</button>
+                <button onClick={() => reject(r.id)} disabled={busyId === r.id} className="btn btn-danger" style={{ fontSize: 12, padding: "5px 10px", color: "var(--rust)" }}>Reject</button>
               </div>
             </div>
             {creds && (
-              <div style={{ marginTop: 12, background: "#FBEED2", border: "1px solid #96650F", padding: 10, fontSize: 12.5 }}>
+              <div style={{ marginTop: 12, background: "#FFF3DC", border: "1px solid #8A4B00", padding: 10, fontSize: 12.5 }}>
                 <b>Account created</b> — {creds.clonedCurricula} curriculum(s) cloned for them. This password is shown only this once — copy it now and share it with them directly:
                 <div style={{ marginTop: 6, fontFamily: "monospace", fontSize: 13 }}>Username: {creds.username}<br />Initial password: {creds.initialPassword}</div>
                 <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>They'll be asked to set their own password the first time they sign in.</div>

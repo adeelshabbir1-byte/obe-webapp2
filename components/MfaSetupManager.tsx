@@ -67,7 +67,7 @@ export default function MfaSetupManager({ mfaEnabled: initialMfaEnabled }: { mfa
           <div style={{ fontFamily: "monospace", fontSize: 14, background: "var(--paper)", padding: "10px 14px", marginBottom: 10, letterSpacing: 2, wordBreak: "break-all" }}>{secret}</div>
           <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 14 }}>(Or if your app supports pasting a URI: {uri})</p>
           <div className="field"><label>Enter the 6-digit code your app shows</label><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" required /></div>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Confirming…" : "Confirm & Enable"}</button>
+          <button className="btn btn-approve" type="submit" disabled={loading}>{loading ? "Confirming…" : "Confirm & Enable"}</button>
         </form>
       )}
 

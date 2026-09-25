@@ -77,8 +77,8 @@ export default function AdvisorDashboard() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => approve(r.id)} disabled={busyId === r.id} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>Approve</button>
-              <button onClick={() => reject(r.id)} disabled={busyId === r.id} className="btn" style={{ fontSize: 11.5, padding: "4px 10px", color: "var(--rust)" }}>Reject</button>
+              <button onClick={() => approve(r.id)} disabled={busyId === r.id} className="btn btn-approve" style={{ fontSize: 11.5, padding: "4px 10px" }}>Approve</button>
+              <button onClick={() => reject(r.id)} disabled={busyId === r.id} className="btn btn-danger" style={{ fontSize: 11.5, padding: "4px 10px", color: "var(--rust)" }}>Reject</button>
             </div>
           </div>
         ))}

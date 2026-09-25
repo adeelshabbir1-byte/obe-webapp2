@@ -44,7 +44,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
 
   const cellStyle = (state: CellState) => ({
     textAlign: "center" as const, fontSize: 11, padding: "4px 2px", border: "1px solid var(--line)",
-    background: state === "hec" ? "#F5E27A" : state === "pu" ? "#B8E6B8" : state === "system" ? "#CFE3F5" : "#fff",
+    background: state === "hec" ? "#F5E27A" : state === "pu" ? "#BDEBD6" : state === "system" ? "#CFE3F5" : "#fff",
   });
 
   return (
@@ -54,7 +54,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version})
         </div>
-        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
+        <Link href={`/admin/curricula/${curriculum.id}`} className="btn btn-secondary btn-sm">← Back to curriculum</Link>
       </div>
 
       <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 11.5 }}>
@@ -63,7 +63,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
           HEC-sourced — the official document itself specifies this mapping
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 14, height: 14, background: "#B8E6B8", border: "1px solid var(--line)", display: "inline-block" }} />
+          <span style={{ width: 14, height: 14, background: "#BDEBD6", border: "1px solid var(--line)", display: "inline-block" }} />
           PU-sourced — Punjab University's own document specifies this mapping
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -76,9 +76,9 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
         <table style={{ borderCollapse: "collapse", fontSize: 11, minWidth: 900 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", background: "#4A4A6A", color: "#fff", position: "sticky", left: 0, zIndex: 1 }}>Course</th>
+              <th style={{ textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", background: "#14215B", color: "#fff", position: "sticky", left: 0, zIndex: 1 }}>Course</th>
               {curriculum.plos.map((p) => (
-                <th key={p.id} title={p.title} style={{ padding: "4px 4px", border: "1px solid var(--line)", background: "#4A4A6A", color: "#fff", minWidth: 30 }}>
+                <th key={p.id} title={p.title} style={{ padding: "4px 4px", border: "1px solid var(--line)", background: "#14215B", color: "#fff", minWidth: 30 }}>
                   PLO{p.number}
                 </th>
               ))}

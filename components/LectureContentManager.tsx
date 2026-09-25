@@ -58,7 +58,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
           Creates 32 rows (2 lectures per week), pre-filled from the HEC curriculum where available — all fully editable.
         </p>
         {error && <div className="err">{error}</div>}
-        <button onClick={generate} disabled={loading} className="btn btn-brass">{loading ? "Generating…" : "Generate 32-Lecture Template"}</button>
+        <button onClick={generate} disabled={loading} className="btn btn-ai">{loading ? "Generating…" : "Generate 32-Lecture Template"}</button>
       </div>
     );
   }
@@ -73,7 +73,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
           <h3 style={{ fontSize: 14 }}>Lecture Content</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} topics filled in — click any cell to edit</span>
         </div>
-        <SortableTable style={{ tableLayout: "fixed" }}>
+        <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
           <thead>
             <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
           </thead>

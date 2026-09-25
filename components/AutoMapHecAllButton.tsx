@@ -47,7 +47,7 @@ export default function AutoMapHecAllButton() {
         fills in gaps, never overwrites or removes anything already set.
       </p>
       {error && <div className="err">{error}</div>}
-      <button onClick={run} disabled={loading} className="btn btn-brass">
+      <button onClick={run} disabled={loading} className="btn btn-ai">
         {progress ? `Mapping… ${progress.done}/${progress.total} batches` : loading ? "Mapping…" : "Auto-Map from HEC — All Batches"}
       </button>
       {result && (

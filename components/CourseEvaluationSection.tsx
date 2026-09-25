@@ -35,7 +35,7 @@ export default function CourseEvaluationSection({ courseId, initialObservations 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {saved && <span style={{ color: "var(--sage)", fontSize: 12 }}>Saved.</span>}
         <button onClick={save} disabled={saving} className="btn btn-brass">{saving ? "Saving…" : "Save Observations"}</button>
-        <a href={`/api/instructor/courses/${courseId}/evaluation-form`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Evaluation Form (Word)</a>
+        <a href={`/api/instructor/courses/${courseId}/evaluation-form`} className="btn btn-export" style={{ textDecoration: "none" }}>Download Course Evaluation Form (Word)</a>
       </div>
     </div>
   );

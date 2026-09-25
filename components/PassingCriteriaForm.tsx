@@ -49,7 +49,7 @@ export default function PassingCriteriaForm() {
         from its effective term onward, without changing what already applied to earlier terms.
       </p>
       {error && <div className="err">{error}</div>}
-      {ok && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
 
       {versions.length > 0 && (
         <div style={{ marginBottom: 16 }}>

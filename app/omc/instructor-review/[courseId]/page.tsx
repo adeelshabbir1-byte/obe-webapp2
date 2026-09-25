@@ -39,7 +39,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
             Instructor: {course.instructor?.name || "—"} · {course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"}
           </div>
         </div>
-        <Link href="/omc/instructor-review" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to list</Link>
+        <Link href="/omc/instructor-review" className="btn btn-secondary btn-sm">← Back to list</Link>
       </div>
 
       <div className="card">
@@ -60,7 +60,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
           <tbody>
             {variance.topics.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No planned topics yet.</td></tr>}
             {variance.topics.map((t) => (
-              <tr key={t.topic} style={{ background: !t.covered ? "#FFE4DC" : undefined }}>
+              <tr key={t.topic} style={{ background: !t.covered ? "#FFE8ED" : undefined }}>
                 <td>{t.topic}</td><td>{t.plannedLectures}</td><td>{t.plannedWeightPct}%</td>
                 <td>{t.actualLectures}</td><td>{t.actualWeightPct}%</td>
                 <td>{t.covered ? <span style={{ color: "var(--sage)" }}>Covered</span> : <span style={{ color: "var(--rust)", fontWeight: 600 }}>Missed</span>}</td>

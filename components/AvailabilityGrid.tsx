@@ -61,9 +61,9 @@ export default function AvailabilityGrid({ facultyId, existingUnavailable }: {
             {DAYS.map((d) => (
               <th key={d} style={{ textAlign: "center" }}>
                 {d}<br />
-                <button type="button" onClick={() => toggleDay(d, true)} style={{ fontSize: 9, background: "none", border: "none", color: "var(--brass-dark)", cursor: "pointer", textDecoration: "underline" }}>all</button>
+                <button type="button" onClick={() => toggleDay(d, true)} className="act act-primary">all</button>
                 {" / "}
-                <button type="button" onClick={() => toggleDay(d, false)} style={{ fontSize: 9, background: "none", border: "none", color: "var(--rust)", cursor: "pointer", textDecoration: "underline" }}>none</button>
+                <button type="button" onClick={() => toggleDay(d, false)} className="act act-danger">none</button>
               </th>
             ))}
           </tr>
@@ -73,7 +73,7 @@ export default function AvailabilityGrid({ facultyId, existingUnavailable }: {
             <tr key={h}>
               <td style={{ fontSize: 11.5, whiteSpace: "nowrap" }}>{h}:00–{h + 1}:00</td>
               {DAYS.map((d) => (
-                <td key={d} style={{ textAlign: "center", background: available[d][h] ? undefined : "#FBE2DF" }}>
+                <td key={d} style={{ textAlign: "center", background: available[d][h] ? undefined : "#FFE8ED" }}>
                   <input type="checkbox" checked={available[d][h]} onChange={() => toggle(d, h)} />
                 </td>
               ))}

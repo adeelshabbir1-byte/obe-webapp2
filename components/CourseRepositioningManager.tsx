@@ -56,7 +56,7 @@ export default function CourseRepositioningManager({ courses }: { courses: Cours
             <select value={targetSemester} onChange={(e) => setTargetSemester(parseInt(e.target.value, 10))} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
               {Array.from({ length: 8 }, (_, i) => i + 1).map((s) => <option key={s} value={s}>Semester {s}</option>)}
             </select>
-            <button onClick={confirmMove} disabled={loading || targetSemester === selectedCourse.semesterNumber} className="btn btn-brass">{loading ? "Moving…" : "Confirm Move"}</button>
+            <button onClick={confirmMove} disabled={loading || targetSemester === selectedCourse.semesterNumber} className="btn btn-approve">{loading ? "Moving…" : "Confirm Move"}</button>
           </div>
 
           {selectedCourse.prerequisiteCode && (
