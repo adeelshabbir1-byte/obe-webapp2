@@ -21,7 +21,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   const courses = selectedBatchId
     ? await prisma.course.findMany({
         where: { batchId: selectedBatchId },
-        include: { prerequisiteCourse: true },
+        include: { prerequisiteCourse: true, masterCourse: { select: { category: true } } },
         orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       })
     : [];
@@ -72,6 +72,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
           masterCourseId: c.masterCourseId,
+          isUnfilledElectiveSlot: c.courseType === "Elective" && c.masterCourse?.category !== "Domain Elective",
         }))}
       />
     </Shell>

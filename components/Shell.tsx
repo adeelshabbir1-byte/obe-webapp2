@@ -25,6 +25,7 @@ export default function Shell({
   const [nceacLogo, setNceacLogo] = useState<string | null>(null);
   const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string } | null>(null);
   const [isAlumniCustodian, setIsAlumniCustodian] = useState(false);
+  const [currentTerm, setCurrentTerm] = useState<{ termName: string; year: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/institute-info").then((r) => r.json()).then((d) => {
@@ -32,7 +33,15 @@ export default function Shell({
       setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
     }).catch(() => {});
     fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); if (d.isAlumniCustodian) setIsAlumniCustodian(true); }).catch(() => {});
-  }, []);
+    // Shown as a standing reminder in the sidebar on every Coordinator
+    // page, not just the semester-management one — it's easy to lose
+    // track of which term is actually "current" when working across
+    // two dozen different pages, and several of them (reports, the
+    // registration window, degree planning) all implicitly depend on it.
+    if (roleLabel === "Program Coordinator") {
+      fetch("/api/coordinator/current-term").then((r) => r.json()).then((d) => setCurrentTerm(d.current)).catch(() => {});
+    }
+  }, [roleLabel]);
 
   async function switchRole() {
     if (!roleSwitch) return;
@@ -63,6 +72,11 @@ export default function Shell({
           <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#B7AE97", margin: "5px 0 20px" }}>
             {roleLabel}
           </div>
+          {currentTerm && (
+            <Link href="/coordinator/semester" style={{ display: "block", fontSize: 10.5, color: "#D8CFAE", background: "rgba(255,255,255,0.06)", borderRadius: 3, padding: "4px 8px", marginTop: -12, marginBottom: 16, textDecoration: "none" }}>
+              Current: {currentTerm.termName} {currentTerm.year}
+            </Link>
+          )}
         </div>
         {groupNavLinks(navLinks).map((section) => (
           <div key={section.title} style={{ marginBottom: 14 }}>

@@ -32,6 +32,7 @@ const NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
+  { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -59,7 +60,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
   const selectedBatchId = requestedBatchId || batchesForDegree[0]?.id || "";
 
   const courses = selectedBatchId
-    ? await prisma.course.findMany({ where: { batchId: selectedBatchId }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] })
+    ? await prisma.course.findMany({ where: { batchId: selectedBatchId }, include: { masterCourse: { select: { category: true } } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] })
     : [];
 
   const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
@@ -137,6 +138,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
           masterCourseId: c.masterCourseId,
+          isUnfilledElectiveSlot: c.courseType === "Elective" && c.masterCourse?.category !== "Domain Elective",
         }))}
       />
 

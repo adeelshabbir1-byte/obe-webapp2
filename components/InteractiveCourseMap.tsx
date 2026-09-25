@@ -6,7 +6,7 @@ import { courseTypeColor } from "../lib/courseTypeColors";
 type Course = {
   id: string; code: string; title: string; courseType: string; creditHours: number;
   semesterNumber: number | null; prerequisiteCourseId: string | null; isOffered: boolean;
-  masterCourseId: string | null;
+  masterCourseId: string | null; isUnfilledElectiveSlot: boolean;
 };
 
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
@@ -86,7 +86,13 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     // placeholder on the Prerequisite Map as it is on the Repositioning
     // page, and picking which real course it is doesn't conflict with
     // prerequisite-linking (a different, non-overlapping click target).
-    if (c.courseType === "Elective" && !c.masterCourseId) {
+    // isUnfilledElectiveSlot (computed server-side from the linked
+    // MasterCourse's own category, not just whether masterCourseId is
+    // set) is what actually distinguishes a still-generic "Elective-I"
+    // slot from an already-filled one -- importing a curriculum links
+    // masterCourseId for every course including these generic
+    // placeholders, so masterCourseId alone can't tell them apart.
+    if (c.isUnfilledElectiveSlot) {
       openElectiveModal(c.id);
       return;
     }

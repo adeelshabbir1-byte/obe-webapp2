@@ -29,6 +29,7 @@ const NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
+  { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -62,17 +63,25 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
   const availableTerms = termRows.map((r) => ({ termName: r.offeredTermName!, year: r.offeredTermYear! }))
     .sort((a, b) => (b.year - a.year) || a.termName.localeCompare(b.termName));
   function termKey(t: { termName: string; year: number }) { return `${t.termName}-${t.year}`; }
-  const selectedTermKey = searchParams.term || (availableTerms[0] ? termKey(availableTerms[0]) : "");
-  const selectedTerm = availableTerms.find((t) => termKey(t) === selectedTermKey) || null;
+  const selectedTermKey = searchParams.term ?? (availableTerms[0] ? termKey(availableTerms[0]) : "");
+  const showAllTerms = selectedTermKey === "all";
+  const selectedTerm = showAllTerms ? null : availableTerms.find((t) => termKey(t) === selectedTermKey) || null;
 
-  // Every currently-offered course, for the one selected term, across
-  // every one of this program's batches, overlaid by semester — so
-  // semester 5 shows every active batch's own semester 5 side by side,
-  // all genuinely running in that same term, not just one batch at a
-  // time and not mixing terms together.
-  const courses = batchIds.length > 0 && selectedTerm
+  // Every currently-offered course across every one of this program's
+  // batches, overlaid by semester — so semester 5 shows every active
+  // batch's own semester 5 side by side. "All Terms" shows every batch
+  // regardless of which term each one is actually running in (each
+  // course's own term is labeled on its card, since a freshman batch's
+  // Semester 1 was likely last marked offered back when it started,
+  // not in whatever term is currently selected) — picking one specific
+  // term instead narrows to only courses genuinely running in that term,
+  // for when Spring and Fall offerings need to be told apart cleanly.
+  const courses = batchIds.length > 0 && (showAllTerms || selectedTerm)
     ? await prisma.course.findMany({
-        where: { batchId: { in: batchIds }, isOffered: true, offeredTermName: selectedTerm.termName, offeredTermYear: selectedTerm.year },
+        where: {
+          batchId: { in: batchIds }, isOffered: true,
+          ...(selectedTerm ? { offeredTermName: selectedTerm.termName, offeredTermYear: selectedTerm.year } : {}),
+        },
         include: { batch: true, instructor: true },
         orderBy: [{ semesterNumber: "asc" }, { batchId: "asc" }, { code: "asc" }],
       })
@@ -89,9 +98,11 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Semester Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Every course actually offered in one specific term across all of a program's batches, one row per
-        semester, with who's teaching it and which batch it belongs to. Read-only — this is a report, not an
-        editor.
+        Every currently-offered course across all of a program's batches, one row per semester, with who's
+        teaching it and which batch it belongs to. Default is "All Terms" so every active batch shows up
+        regardless of which term it's actually in (each course's own term is labeled) — pick one specific
+        term instead to see only what's genuinely running then, useful for keeping Spring and Fall apart.
+        Read-only — this is a report, not an editor.
       </p>
 
       <div className="card">
@@ -105,7 +116,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
           <div>
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Term</label>
             <select name="term" defaultValue={selectedTermKey} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-              {availableTerms.length === 0 && <option value="">No terms offered yet</option>}
+              <option value="all">All Terms</option>
               {availableTerms.map((t) => <option key={termKey(t)} value={termKey(t)}>{t.termName} {t.year}</option>)}
             </select>
           </div>
@@ -128,6 +139,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
                 <div key={c.id} style={{ minWidth: 200, maxWidth: 240, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(c.courseType)}`, padding: "8px 10px", borderRadius: 3 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title}</div>
                   <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</div>
+                  {c.offeredTermName && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.offeredTermName} {c.offeredTermYear}</div>}
                   <div style={{ fontSize: 11, marginTop: 2 }}>
                     {c.instructor ? c.instructor.name : <span style={{ color: "var(--rust)" }}>No instructor assigned</span>}
                   </div>

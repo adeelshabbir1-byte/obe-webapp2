@@ -27,24 +27,42 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
     const newTermName = fd.get("termName") as string;
     const newYear = fd.get("year") as string;
 
-    // Changing to a genuinely different term is a real transition (results
-    // get snapshotted, new courses get offered) — confirm deliberately
-    // rather than silently overwriting whatever term was set before.
+    // Changing to a genuinely different term needs a real decision, not
+    // a single generic confirmation: is this moving forward to an
+    // actual new semester (leave everything from before as history), or
+    // fixing a mistake in what was set before (clear the offering data
+    // that was created under the wrong value, so it can be cleanly
+    // redone under the corrected one)?
+    let mode: "new" | "rewrite" = "new";
     if (currentTerm && (currentTerm.termName !== newTermName || String(currentTerm.year) !== newYear)) {
-      const proceed = confirm(
-        `You're currently on ${currentTerm.termName} ${currentTerm.year}. Setting this to ${newTermName} ${newYear} will make it your new active semester — courses will be offered based on THIS term going forward.\n\nMake sure ${currentTerm.termName} ${currentTerm.year} is fully wrapped up (marks entered, results finalized) before moving on, since re-offering a course resets its marks for the next cohort.\n\nContinue and start ${newTermName} ${newYear}?`
+      const choice = prompt(
+        `You're currently on ${currentTerm.termName} ${currentTerm.year}. Changing this to ${newTermName} ${newYear} — which do you mean?\n\n` +
+        `Type "new" to START a new semester — ${currentTerm.termName} ${currentTerm.year}'s offered courses stay as history, untouched.\n` +
+        `Type "rewrite" if ${currentTerm.termName} ${currentTerm.year} was a MISTAKE — every course currently offered under it gets un-offered, so you can cleanly redo "Offer This Semester's Courses" under the corrected value.\n\n` +
+        `Type "new" or "rewrite":`,
+        "new"
       );
-      if (!proceed) return;
+      if (choice === null) return; // cancelled
+      if (choice.trim().toLowerCase() !== "new" && choice.trim().toLowerCase() !== "rewrite") {
+        setError(`"${choice}" wasn't "new" or "rewrite" — nothing changed. Try again.`);
+        return;
+      }
+      mode = choice.trim().toLowerCase() as "new" | "rewrite";
+      if (mode === "rewrite") {
+        const confirmed = confirm(`This will un-offer every course currently offered under ${currentTerm.termName} ${currentTerm.year} across every batch. This can't be undone from here. Continue?`);
+        if (!confirmed) return;
+      }
     }
 
     setLoading(true); setError("");
     try {
       const res = await fetch("/api/coordinator/current-term", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ termName: newTermName, year: newYear }),
+        body: JSON.stringify({ termName: newTermName, year: newYear, mode }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      if (mode === "rewrite" && data.coursesReset > 0) setResult(`${data.coursesReset} course(s) un-offered from the old term value.`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -97,6 +115,11 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Current Term</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+          Changing this to a different term will ask whether you're starting a genuinely new semester
+          (keeps everything from the old term as history) or rewriting a mistake (un-offers every course
+          that was offered under the old, incorrect value).
+        </p>
         <form onSubmit={saveTerm} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
           <div>
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Term</label>
