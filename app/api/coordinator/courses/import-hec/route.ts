@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
+import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -45,11 +46,15 @@ export async function POST(req: NextRequest) {
   // the loop below — the per-course version of this was slow enough on a
   // 40+ course curriculum to time out the request.
   const [existingInBatch, benchmarkCandidates] = await Promise.all([
-    prisma.course.findMany({ where: { coordinatorId: user.id, batchId: batch.id }, select: { code: true, masterCourseId: true } }),
+    prisma.course.findMany({ where: { coordinatorId: user.id, batchId: batch.id }, select: { code: true, masterCourseId: true, courseType: true } }),
     getBenchmarkCandidates(user.id),
   ]);
   const existingCodes = new Set(existingInBatch.map((c) => c.code));
   const importedIds = new Set(existingInBatch.map((c) => c.masterCourseId).filter(Boolean));
+  // Numbering continues from however many Elective-type courses this
+  // batch already has, so importing more later doesn't restart at 1 and
+  // collide with ones already named.
+  let electiveCounter = existingInBatch.filter((c) => c.courseType === "Elective").length;
 
   const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id) && (!Array.isArray(body.courseIds) || body.courseIds.includes(mc.id)));
 
@@ -63,9 +68,15 @@ export async function POST(req: NextRequest) {
       if (existingCodes.has(code)) code = `${mc.code}-${curriculum.version}`;
       existingCodes.add(code);
 
+      // Every Elective-type course gets a uniform "<Degree> Elective <N>"
+      // title instead of whatever its master template happened to be
+      // titled — this is the same rule already applied as a one-time
+      // bulk rename to existing data, now applied automatically here too.
+      const title = mc.category === "Elective" ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : mc.title;
+
       const newCourse = await prisma.course.create({
         data: {
-          code, title: mc.title, creditHours: mc.creditHours,
+          code, title, creditHours: mc.creditHours,
           courseType: mc.category, semesterNumber: mc.semesterNumber,
           textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
           coordinatorId: user.id, batchId: batch.id, masterCourseId: mc.id,

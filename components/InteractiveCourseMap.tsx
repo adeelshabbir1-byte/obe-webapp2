@@ -81,8 +81,12 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     // whether the semester's courses have been activated, and the two
     // shouldn't be strictly ordered. The backend still blocks this once
     // a student is actually enrolled, which is the real point past which
-    // changing the course's identity would be disruptive.
-    if (mode === "reposition" && c.courseType === "Elective" && !c.masterCourseId) {
+    // changing the course's identity would be disruptive. This applies
+    // in either mode -- an unfilled elective is just as much a generic
+    // placeholder on the Prerequisite Map as it is on the Repositioning
+    // page, and picking which real course it is doesn't conflict with
+    // prerequisite-linking (a different, non-overlapping click target).
+    if (c.courseType === "Elective" && !c.masterCourseId) {
       openElectiveModal(c.id);
       return;
     }

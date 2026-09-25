@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
 import { deleteCourseCompletely } from "../../../../../lib/deleteCourseCompletely";
 import { linkAsFollowerOfSource } from "../../../../../lib/contentSync";
+import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
     prisma.course.findMany({ where: { batchId: targetBatch.id }, select: { code: true } }),
   ]);
   const existingCodes = new Set(existingInTarget.map((c) => c.code));
+  // Numbering continues from however many Elective-type courses the
+  // target batch already has, regardless of how the source batch's own
+  // electives happened to be titled.
+  const existingElectiveCount = (await prisma.course.count({ where: { batchId: targetBatch.id, courseType: "Elective" } }));
+  let electiveCounter = existingElectiveCount;
 
   let created = 0;
   let skippedAsExisting = 0;
@@ -52,9 +58,14 @@ export async function POST(req: NextRequest) {
       if (existingCodes.has(sc.code)) { skippedAsExisting++; continue; }
       existingCodes.add(sc.code);
 
+      // Every Elective-type course gets a uniform "<Degree> Elective <N>"
+      // title in the target batch — regardless of what it happened to
+      // be called in the source — the same rule import-hec applies.
+      const title = sc.courseType === "Elective" ? electiveTitleFor(targetBatch.degreeProgram, ++electiveCounter) : sc.title;
+
       const newCourse = await prisma.course.create({
         data: {
-          code: sc.code, title: sc.title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
+          code: sc.code, title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
           coordinatorId: user.id, batchId: targetBatch.id, masterCourseId: sc.masterCourseId,
         },
       });

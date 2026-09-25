@@ -100,6 +100,7 @@ model User {
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
   weightPolicies     WeightPolicy[] @relation("WeightPolicyChairman")
+  passingCriteriaVersions PassingCriteria[] @relation("PassingCriteriaChairman")
   auditLogs          AuditLog[]
 
   @@index([managedById])
@@ -329,11 +330,24 @@ model TimetableEntry {
   @@index([roomId])
 }
 
+// Versioned like GradingScale: a new row with a later effectiveFrom
+// term/year supersedes the old one going forward, without losing the
+// old value for batches/terms it still applies to — CLO/PLO passing
+// thresholds can legitimately change from one semester to the next
+// (e.g. tightening PLO attainment expectations), and reports run
+// against an older term need the criteria that were actually in force
+// then, not today's.
 model PassingCriteria {
   id            String @id @default(cuid())
-  chairmanId    String @unique
+  chairmanId    String
+  chairman      User   @relation("PassingCriteriaChairman", fields: [chairmanId], references: [id])
   cloPassingPct Int    @default(50)
   ploPassingPct Int    @default(50)
+  effectiveFromTerm String @default("Fall") // this version applies to terms on/after this point
+  effectiveFromYear Int    @default(2000) // low default so pre-existing rows keep applying to every already-created term
+
+  @@unique([chairmanId, effectiveFromTerm, effectiveFromYear])
+  @@index([chairmanId])
 }
 
 // OMC-defined min/max assessment weight ranges per course type. A Subject

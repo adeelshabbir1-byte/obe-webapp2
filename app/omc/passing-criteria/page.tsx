@@ -13,10 +13,7 @@ export default async function PassingCriteriaPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const [criteria, attendanceThreshold] = await Promise.all([
-    user.managedById ? prisma.passingCriteria.findUnique({ where: { chairmanId: user.managedById } }) : null,
-    user.managedById ? prisma.attendanceThreshold.findUnique({ where: { chairmanId: user.managedById } }) : null,
-  ]);
+  const attendanceThreshold = user.managedById ? await prisma.attendanceThreshold.findUnique({ where: { chairmanId: user.managedById } }) : null;
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
@@ -24,7 +21,7 @@ export default async function PassingCriteriaPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Set institution-wide thresholds used across reports and grading.
       </p>
-      <PassingCriteriaForm initial={{ cloPassingPct: criteria?.cloPassingPct ?? 50, ploPassingPct: criteria?.ploPassingPct ?? 50 }} />
+      <PassingCriteriaForm />
       <AttendanceThresholdForm initial={attendanceThreshold?.minPercentage ?? 75} />
     </Shell>
   );
