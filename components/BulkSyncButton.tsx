@@ -17,12 +17,17 @@ export default function BulkSyncButton() {
     let totalSkippedNoContent = 0;
     const perBatchTotals = new Map<string, number>();
     let round = 0;
+    let cursor: string | undefined;
 
     try {
       while (true) {
         round++;
         setProgress(`Working… ${totalSeeded} course(s) loaded so far (round ${round}).`);
-        const res = await fetch("/api/coordinator/bulk-sync-from-curriculum", { method: "POST" });
+        const res = await fetch("/api/coordinator/bulk-sync-from-curriculum", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cursor }),
+        });
         let data: any;
         try {
           data = await res.json();
@@ -39,7 +44,8 @@ export default function BulkSyncButton() {
         totalSkippedNoContent += data.skippedNoContent;
         for (const b of data.perBatch) perBatchTotals.set(b.batchLabel, (perBatchTotals.get(b.batchLabel) || 0) + b.seeded);
 
-        if (!data.mightHaveMore) break;
+        cursor = data.nextCursor;
+        if (!data.mightHaveMore || !cursor) break;
         if (round > 200) break; // sane upper bound so a stuck loop can't run forever
       }
 

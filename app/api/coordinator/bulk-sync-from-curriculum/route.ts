@@ -27,13 +27,30 @@ export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
+  let cursor: string | undefined;
+  try {
+    const body = await req.json();
+    if (body && typeof body.cursor === "string") cursor = body.cursor;
+  } catch {
+    // no body sent — first call, no cursor yet
+  }
+
+  // Ordered and cursored by id so every round makes guaranteed forward
+  // progress through the full candidate set, regardless of outcome. A
+  // skipped course (no template content yet, or a follower course)
+  // never gains CLOs, so it would otherwise still match this same
+  // "eligible" query forever and get re-fetched every round — this is
+  // exactly the bug that showed up as the count stalling round after
+  // round on the same handful of stuck courses.
   const candidates = await prisma.course.findMany({
     where: {
       coordinatorId: user.id,
       masterCourseId: { not: null },
       clos: { none: { source: "SE" } },
+      ...(cursor ? { id: { gt: cursor } } : {}),
     },
     select: { id: true, code: true, title: true, masterCourseId: true, batch: { select: { degreeProgram: true, batchName: true } } },
+    orderBy: { id: "asc" },
     take: CHUNK_SIZE,
   });
 
@@ -57,10 +74,7 @@ export async function POST(req: Request) {
     perBatch.set(batchLabel, entry);
   }
 
-  // A chunk landing exactly at CHUNK_SIZE candidates doesn't prove more
-  // remain (this batch might have been the last CHUNK_SIZE exactly) —
-  // but it's a cheap, safe signal to keep looping on, and the next call
-  // simply returns an empty candidate set and reports nothing left.
+  const nextCursor = candidates.length > 0 ? candidates[candidates.length - 1].id : undefined;
   const mightHaveMore = candidates.length === CHUNK_SIZE;
 
   await writeAuditLog({
@@ -69,7 +83,7 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({
-    seeded, skippedFollower, skippedNoContent, mightHaveMore,
+    seeded, skippedFollower, skippedNoContent, mightHaveMore, nextCursor,
     perBatch: Array.from(perBatch.values()).sort((a, b) => a.batchLabel.localeCompare(b.batchLabel)),
   });
 }
