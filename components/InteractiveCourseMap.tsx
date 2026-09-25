@@ -6,7 +6,10 @@ import { courseTypeColor } from "../lib/courseTypeColors";
 type Course = {
   id: string; code: string; title: string; courseType: string; creditHours: number;
   semesterNumber: number | null; prerequisiteCourseId: string | null; isOffered: boolean;
-  masterCourseId: string | null; isUnfilledElectiveSlot: boolean;
+  masterCourseId: string | null;
+  // Which restricted pool to fetch from — "Domain Elective" or "Domain
+  // IDS" — or null if this course isn't an unfilled generic slot at all.
+  unfilledSlotCategory: string | null;
 };
 
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
@@ -22,6 +25,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewSemester, setPreviewSemester] = useState<number | null>(null);
   const [electiveModalCourseId, setElectiveModalCourseId] = useState<string | null>(null);
+  const [electiveModalCategory, setElectiveModalCategory] = useState<string>("Domain Elective");
   const [electiveOptions, setElectiveOptions] = useState<{ id: string; code: string; title: string; domain: string | null }[]>([]);
   const [electiveSearch, setElectiveSearch] = useState("");
   const [loadingElectives, setLoadingElectives] = useState(false);
@@ -86,14 +90,17 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     // placeholder on the Prerequisite Map as it is on the Repositioning
     // page, and picking which real course it is doesn't conflict with
     // prerequisite-linking (a different, non-overlapping click target).
-    // isUnfilledElectiveSlot (computed server-side from the linked
-    // MasterCourse's own category, not just whether masterCourseId is
-    // set) is what actually distinguishes a still-generic "Elective-I"
+    // unfilledSlotCategory (computed server-side from the course's own
+    // type and its linked MasterCourse's category, not just whether
+    // masterCourseId is set) is what actually distinguishes a
+    // still-generic "Elective-I" or "IDS-III (institution-selected)"
     // slot from an already-filled one -- importing a curriculum links
     // masterCourseId for every course including these generic
-    // placeholders, so masterCourseId alone can't tell them apart.
-    if (c.isUnfilledElectiveSlot) {
-      openElectiveModal(c.id);
+    // placeholders, so masterCourseId alone can't tell them apart. It
+    // also picks which restricted pool the modal should offer -- an
+    // IDS slot must never be filled from the full elective catalog.
+    if (c.unfilledSlotCategory) {
+      openElectiveModal(c.id, c.unfilledSlotCategory);
       return;
     }
     if (!selectedId) { setSelectedId(c.id); return; }
@@ -104,11 +111,12 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     }
   }
 
-  function openElectiveModal(courseId: string) {
+  function openElectiveModal(courseId: string, category: string) {
     setElectiveModalCourseId(courseId);
+    setElectiveModalCategory(category);
     setElectiveSearch("");
     setLoadingElectives(true);
-    fetch("/api/omc/curriculum-electives").then((r) => r.json()).then((data) => {
+    fetch(`/api/omc/curriculum-electives?category=${encodeURIComponent(category)}`).then((r) => r.json()).then((data) => {
       setElectiveOptions(data.courses || []);
       setLoadingElectives(false);
     });
@@ -157,7 +165,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
           {mode === "prereq"
             ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
-            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. Click an unfilled elective slot to choose a real course for it from your curriculum.")}
+            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. Click an unfilled elective or IDS slot to choose a real course for it from your curriculum.")}
         </p>
       </div>
 
@@ -226,8 +234,12 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
       {electiveModalCourseId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setElectiveModalCourseId(null)}>
           <div style={{ background: "#fff", padding: 20, width: 480, maxHeight: "70vh", overflowY: "auto", border: "1px solid var(--line)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 14, marginBottom: 4 }}>Choose a course for this elective slot</h3>
-            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>From your institution's own curriculum — this will rename the course and seed its CLOs.</p>
+            <h3 style={{ fontSize: 14, marginBottom: 4 }}>Choose a course for this {electiveModalCategory === "Domain IDS" ? "IDS" : "elective"} slot</h3>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+              {electiveModalCategory === "Domain IDS"
+                ? "From your institution's restricted IDS list — this will rename the course and seed its CLOs."
+                : "From your institution's own curriculum — this will rename the course and seed its CLOs."}
+            </p>
             <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }} />
             {loadingElectives && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading…</p>}
             {!loadingElectives && electiveOptions
@@ -237,7 +249,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                   {o.title} {o.domain && <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({o.domain})</span>}
                 </button>
               ))}
-            {!loadingElectives && electiveOptions.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>No electives found in your institution's curriculum.</p>}
+            {!loadingElectives && electiveOptions.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>{electiveModalCategory === "Domain IDS" ? "No IDS options found in your institution's curriculum." : "No electives found in your institution's curriculum."}</p>}
             <button onClick={() => setElectiveModalCourseId(null)} style={{ marginTop: 10, fontSize: 11.5, background: "none", border: "1px solid var(--line)", padding: "4px 10px", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>

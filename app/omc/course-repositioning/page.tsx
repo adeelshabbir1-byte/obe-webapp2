@@ -72,7 +72,16 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
           masterCourseId: c.masterCourseId,
-          isUnfilledElectiveSlot: c.courseType === "Elective" && c.masterCourse?.category !== "Domain Elective",
+          // Which restricted pool to offer, if any — Elective slots pick
+          // from Domain Elective, IDS-III/IV "institution-selected"
+          // slots pick from the separate, smaller Domain IDS pool. The
+          // two are never interchangeable: an IDS slot must never offer
+          // the full elective catalog, so this is checked by course
+          // type first, not just by whether a MasterCourse link exists.
+          unfilledSlotCategory:
+            c.courseType === "Elective" && c.masterCourse?.category !== "Domain Elective" ? "Domain Elective"
+            : c.courseType === "IDS" && c.masterCourse?.category !== "Domain IDS" && c.masterCourse?.category !== "IDS" ? "Domain IDS"
+            : null,
         }))}
       />
     </Shell>

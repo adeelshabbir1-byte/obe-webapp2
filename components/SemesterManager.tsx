@@ -78,9 +78,9 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
           ? `${b.batchName}: hasn't started yet (its own intake term is still ahead) — nothing offered`
           : b.prerequisitesNotConfirmed
           ? `${b.batchName}: Prerequisite Map hasn't been confirmed yet — set it up first, then come back here`
-          : `${b.batchName}: Semester ${b.semesterNumber}, ${b.coursesOffered} course(s) newly offered`
+          : `${b.batchName}: Semester ${b.semesterNumber}, ${b.coursesOffered} course(s) newly offered${b.coursesUnOffered ? `, ${b.coursesUnOffered} prior-semester course(s) taken off the active list` : ""}`
       );
-      setResult(`${data.offered} course(s) offered in total.\n${lines.join("\n")}`);
+      setResult(`${data.offered} course(s) offered in total.${data.unOffered ? ` ${data.unOffered} prior-semester course(s) taken off the active list.` : ""}\n${lines.join("\n")}`);
       setLoading(false); router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
