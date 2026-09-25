@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
 import Shell from "../../../components/Shell";
+import BulkSyncButton from "../../../components/BulkSyncButton";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -78,6 +79,8 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
         Every course in a batch, its HEC category, and whether it has lectures, CLOs, and PLO mapping set up
         — a quick visual sweep for what still needs attention before a semester starts. Read-only.
       </p>
+
+      <BulkSyncButton />
 
       <div className="card">
         <form method="GET" style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>

@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
 
   const result = await seedFromMasterCourseIfAvailable(course.id, course.masterCourseId);
   if (!result) {
-    return NextResponse.json({ error: "no HEC starting content exists for this specific course yet — this is currently only available for the 14 Major compulsory courses" }, { status: 404 });
+    return NextResponse.json({ error: "no HEC starting content exists for this specific course yet" }, { status: 404 });
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "HEC_CONTENT_LOADED_RETROACTIVELY", entityType: "Course", entityId: course.id, metadata: result });
