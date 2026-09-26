@@ -10,7 +10,7 @@ import SimpleBarChart from "../../../components/SimpleBarChart";
 
 // A small, fixed palette so each compared section keeps a consistent,
 // distinguishable color across every chart on the page.
-const SERIES_COLORS = ["#1A40EA", "#7C3AED", "#059669", "#1A40EA", "#3F66A0", "#E11D48"];
+const SERIES_COLORS = ["#1F89F5", "#6C7AF0", "#14A394", "#F0A020", "#E8577A", "#17B3D9"];
 
 function sectionLabel(c: { batch: { degreeProgram: string; batchName: string } | null; instructor: { name: string } | null; isOffered: boolean }) {
   const batchLabel = c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—";

@@ -78,7 +78,7 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
       {error && <div className="err">{error}</div>}
       {ok && <div style={{ background: "#E3F8EF", color: "var(--sage)", border: "1px solid #BDEBD6", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       {pending && (
-        <div style={{ background: "#EEF2FF", color: "var(--brass-dark)", border: "1px solid #C7C2F0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: "#EDF6FF", color: "var(--brass-dark)", border: "1px solid #C7C2F0", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>
           Outside policy range — sent to the OMC for approval instead of saving directly:
           <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>{pending.map((v) => <li key={v}>{v}</li>)}</ul>
         </div>

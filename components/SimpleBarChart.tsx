@@ -1,4 +1,4 @@
-import { accentAt } from "../lib/accents";
+import { accentAt, accentText } from "../lib/accents";
 
 /** Horizontal bar chart. Bars without an explicit colour each get their own accent, so no two bars look alike. */
 export default function SimpleBarChart({ bars, maxValue, unit }: { bars: { label: string; value: number; color?: string }[]; maxValue?: number; unit?: string }) {
@@ -16,7 +16,7 @@ export default function SimpleBarChart({ bars, maxValue, unit }: { bars: { label
                 background: color, transition: "width .5s var(--ease)",
               }} />
             </div>
-            <div style={{ minWidth: 44, fontSize: 12.5, fontWeight: 800, color, fontFamily: "var(--font-display)", textAlign: "right" }}>{b.value}{unit || ""}</div>
+            <div style={{ minWidth: 44, fontSize: 12.5, fontWeight: 800, color: accentText(color), fontFamily: "var(--font-display)", textAlign: "right" }}>{b.value}{unit || ""}</div>
           </div>
         );
       })}

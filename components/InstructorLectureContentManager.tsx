@@ -133,7 +133,7 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                   <th style={{ width: 34 }} rowSpan={2}>Wk</th>
                   <th style={{ width: 50 }} rowSpan={2}>Lec</th>
                   <th colSpan={1} style={{ background: "#F3F6FD", textAlign: "center" }}>Subject Expert (Planned)</th>
-                  <th colSpan={6} style={{ background: "#EEF2FF", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
+                  <th colSpan={6} style={{ background: "#EDF6FF", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
                 </tr>
                 <tr>
                   <th style={{ width: "16%", background: "#F3F6FD" }}>Topic</th>

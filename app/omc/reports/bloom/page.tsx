@@ -12,7 +12,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 const BLOOM_COLORS: Record<string, string> = {
-  C1: "#8B8571", C2: "#5B7C99", C3: "#4B8F87", C4: "#4B7A63", C5: "#1537CC", C6: "#EA580C",
+  C1: "#8B8571", C2: "#5B7C99", C3: "#4B8F87", C4: "#4B7A63", C5: "#1570D6", C6: "#EA580C",
 };
 
 export default async function BloomReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {

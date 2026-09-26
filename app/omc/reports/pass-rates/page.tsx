@@ -90,7 +90,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
             {compareStats && (
               <div>
                 <h3 style={{ fontSize: 14, marginBottom: 12 }}>{compareSnapshot!.termName} {compareSnapshot!.termYear} ({compareStats.studentCount} students)</h3>
-                <SimpleBarChart bars={compareStats.histogram.map((b) => ({ label: b.label, value: b.count, color: "#7C3AED" }))} />
+                <SimpleBarChart bars={compareStats.histogram.map((b) => ({ label: b.label, value: b.count, color: "#6C7AF0" }))} />
               </div>
             )}
           </div>
@@ -101,7 +101,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
             {compareStats && (
               <>
                 <p style={{ fontSize: 11, color: "var(--slate)", margin: "14px 0 6px" }}>{compareSnapshot!.termName} {compareSnapshot!.termYear}:</p>
-                <SimpleBarChart bars={compareStats.cloStats.map((c) => ({ label: c.code, value: c.passCount, color: "#7C3AED" }))} unit={` / ${compareStats.studentCount}`} />
+                <SimpleBarChart bars={compareStats.cloStats.map((c) => ({ label: c.code, value: c.passCount, color: "#6C7AF0" }))} unit={` / ${compareStats.studentCount}`} />
               </>
             )}
           </div>
@@ -112,7 +112,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
             {compareStats && (
               <>
                 <p style={{ fontSize: 11, color: "var(--slate)", margin: "14px 0 6px" }}>{compareSnapshot!.termName} {compareSnapshot!.termYear}:</p>
-                <SimpleBarChart bars={compareStats.ploStats.map((p) => ({ label: p.label, value: p.passCount, color: "#7C3AED" }))} unit={` / ${compareStats.studentCount}`} />
+                <SimpleBarChart bars={compareStats.ploStats.map((p) => ({ label: p.label, value: p.passCount, color: "#6C7AF0" }))} unit={` / ${compareStats.studentCount}`} />
               </>
             )}
           </div>

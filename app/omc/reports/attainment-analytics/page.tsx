@@ -87,7 +87,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
             <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No CLOs with marks yet for this course.</p>
           ) : (
             <>
-              <SimpleBarChart bars={coData.rows.map((r) => ({ label: `${r.code} Target`, value: r.targetPct, color: "#2563EB" }))} unit="%" />
+              <SimpleBarChart bars={coData.rows.map((r) => ({ label: `${r.code} Target`, value: r.targetPct, color: "#1F89F5" }))} unit="%" />
               <div style={{ height: 10 }} />
               <SimpleBarChart bars={coData.rows.map((r) => ({ label: `${r.code} Actual`, value: r.actualPct, color: "#CA8A04" }))} unit="%" />
             </>

@@ -172,7 +172,7 @@ export default function MasterCurriculumEditor() {
           )}
 
           {showAddCourse && detail.isOwned && (
-            <div style={{ background: "#F4F0FF", border: "1px solid var(--brass)", padding: 10, marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ background: "#EFF1FF", border: "1px solid var(--brass)", padding: 10, marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Code</label><input value={newCourse.code} onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })} style={{ fontSize: 12, padding: 4, width: 100 }} /></div>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Title</label><input value={newCourse.title} onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })} style={{ fontSize: 12, padding: 4, width: 220 }} /></div>
               <div><label style={{ fontSize: 10.5, display: "block" }}>Credit Hrs</label><input type="number" value={newCourse.creditHours} onChange={(e) => setNewCourse({ ...newCourse, creditHours: e.target.value })} style={{ fontSize: 12, padding: 4, width: 60 }} /></div>

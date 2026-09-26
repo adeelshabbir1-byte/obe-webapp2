@@ -40,9 +40,9 @@ export default function SurveyResponseForm({ token, questions }: { token: string
                 onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: v }))}
                 style={{
                   width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
-                  border: answers[q.id] === v ? "2px solid #0A1540" : "1px solid #CDD6EA",
-                  background: answers[q.id] === v ? "#0A1540" : "#fff",
-                  color: answers[q.id] === v ? "#fff" : "#0A1540", fontWeight: 600, fontSize: 14,
+                  border: answers[q.id] === v ? "2px solid #1F89F5" : "1px solid #CDD6EA",
+                  background: answers[q.id] === v ? "#1F89F5" : "#fff",
+                  color: answers[q.id] === v ? "#fff" : "#0F2E57", fontWeight: 600, fontSize: 14,
                 }}
               >
                 {v}
@@ -51,7 +51,7 @@ export default function SurveyResponseForm({ token, questions }: { token: string
           </div>
         </div>
       ))}
-      <button onClick={submit} disabled={loading} style={{ padding: "10px 24px", background: "#1A40EA", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <button onClick={submit} disabled={loading} style={{ padding: "10px 24px", background: "#1F89F5", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         {loading ? "Submitting…" : "Submit"}
       </button>
     </div>

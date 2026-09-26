@@ -7,7 +7,7 @@ import { coordinatorIdsFor, chairmanIdFor, roleLabel } from "../../lib/reportSco
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
-import { accentAt } from "../../lib/accents";
+import { accentAt, accentText } from "../../lib/accents";
 import { greetingName } from "../../lib/names";
 
 export const metadata = { title: "Dashboard" };
@@ -63,12 +63,12 @@ export default async function Dashboard() {
               </span>
             </div>
             <div style={{ marginTop: 18 }}>
-              <Link href={ROLE_HOME[user.role] || "/login"} className="btn">
+              <Link href={ROLE_HOME[user.role] || "/login"} className="btn btn-brass">
                 Go to {roleLabel(user.role)} workspace <ArrowRight size={16} />
               </Link>
             </div>
           </div>
-          <img className="hero-mark" src="/brand/obehub-mark.webp" alt="" width={120} height={115} />
+          <img className="hero-mark" src="/brand/obehub-mark-v2.webp" alt="" width={120} height={100} />
         </div>
       </section>
 
@@ -93,7 +93,7 @@ export default async function Dashboard() {
                     <div className="progress-item" key={item.label}>
                       <div className="progress-head">
                         <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.label}>{item.label}</span>
-                        <span style={{ color: a.c }}>{item.value.toLocaleString()}</span>
+                        <span style={{ color: accentText(a.c) }}>{item.value.toLocaleString()}</span>
                       </div>
                       <div className="progress-track">
                         <div className="progress-fill" style={{ width: `${Math.max(2, (item.value / breakdownMax) * 100)}%`, ["--c" as string]: a.c } as React.CSSProperties} />
@@ -119,7 +119,7 @@ export default async function Dashboard() {
                   <div className="progress-item" key={p.label}>
                     <div className="progress-head">
                       <span>{p.label}</span>
-                      <span style={{ color: a.c }}>{p.total > 0 ? `${pct}%` : "—"}</span>
+                      <span style={{ color: accentText(a.c) }}>{p.total > 0 ? `${pct}%` : "—"}</span>
                     </div>
                     <div className="progress-track">
                       <div className="progress-fill" style={{ width: `${pct}%`, ["--c" as string]: a.c } as React.CSSProperties} />

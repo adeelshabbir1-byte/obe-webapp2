@@ -468,7 +468,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
                   {c.fromBenchmark && (
-                    <span style={{ fontSize: 10, background: "#EEF2FF", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 6, marginRight: 6 }}>
+                    <span style={{ fontSize: 10, background: "#EDF6FF", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 6, marginRight: 6 }}>
                       Pre-filled from prior batch
                     </span>
                   )}

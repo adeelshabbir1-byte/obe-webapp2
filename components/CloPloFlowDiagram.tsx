@@ -82,7 +82,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* Assessment boxes */}
       {assessments.map((a) => (
         <g key={a.id}>
-          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F66A0" />
+          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F86D8" />
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">{a.type} {a.label}</text>
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#D4E3F3">{a.marksPct}% of course grade</text>
         </g>
@@ -91,7 +91,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* CLO boxes */}
       {usedClos.map((c) => (
         <g key={c.id}>
-          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#5A4AA0" />
+          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#6571E6" />
           <text x={col2X + 10} y={(cPos.get(c.id) || 0) + 24} fontSize={12} fontWeight={600} fill="#fff">{c.code}</text>
         </g>
       ))}

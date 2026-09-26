@@ -487,7 +487,7 @@ export default function ContentSyncManager() {
               Show only groups not yet linked to a HEC course
             </label>
             {selectedCourseIds.size > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F4F0FF", padding: 8, border: "1px solid var(--brass)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#EFF1FF", padding: 8, border: "1px solid var(--brass)" }}>
                 <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
                 <button onClick={handleSubmitGroup} disabled={selectedCourseIds.size < 2 || busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>
                   Group Selected ({selectedCourseIds.size}) — or press S
@@ -556,7 +556,7 @@ export default function ContentSyncManager() {
                             !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
                           ).slice(0, 30);
                           return (
-                            <div style={{ background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                            <div style={{ background: "#EFF1FF", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
                               <input
                                 autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                                 placeholder="Search HEC course code or title…"
@@ -600,7 +600,7 @@ export default function ContentSyncManager() {
                                     title={`${c.code} — ${c.title}`}
                                     style={{
                                       cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                      background: isSelected ? "#EEF2FF" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      background: isSelected ? "#EDF6FF" : row.kind === "group" ? "#FEF3C7" : undefined,
                                       border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}
@@ -616,7 +616,7 @@ export default function ContentSyncManager() {
                                     </span>
                                   </div>
                                   {editingCodeCourseId === cId && (
-                                    <div style={{ fontSize: 10.5, background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
+                                    <div style={{ fontSize: 10.5, background: "#EFF1FF", border: "1px solid var(--brass)", padding: 6, marginTop: 2, marginBottom: 4 }}>
                                       <input
                                         value={editCodeValue} onChange={(e) => setEditCodeValue(e.target.value)}
                                         style={{ width: "100%", fontSize: 11, padding: 3, border: "1px solid var(--line)", marginBottom: 4 }}

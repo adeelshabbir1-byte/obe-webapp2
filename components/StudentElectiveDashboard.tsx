@@ -81,7 +81,7 @@ export default function StudentElectiveDashboard({ studentName }: { studentName:
                 style={{
                   display: "block", padding: "12px 14px", marginBottom: 8, cursor: o.full && currentSelection !== o.id ? "not-allowed" : "pointer",
                   border: currentSelection === o.id ? "2px solid var(--brass-dark)" : "1px solid var(--line)",
-                  background: o.full && currentSelection !== o.id ? "#F3F6FD" : currentSelection === o.id ? "#F4F0FF" : "#fff",
+                  background: o.full && currentSelection !== o.id ? "#F3F6FD" : currentSelection === o.id ? "#EFF1FF" : "#fff",
                   opacity: o.full && currentSelection !== o.id ? 0.6 : 1,
                 }}
               >

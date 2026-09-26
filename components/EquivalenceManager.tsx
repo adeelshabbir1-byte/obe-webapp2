@@ -163,7 +163,7 @@ export default function EquivalenceManager() {
                       !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
                     ).slice(0, 30);
                     return (
-                      <div style={{ background: "#F4F0FF", border: "1px solid var(--brass)", padding: 6, minWidth: 260 }}>
+                      <div style={{ background: "#EFF1FF", border: "1px solid var(--brass)", padding: 6, minWidth: 260 }}>
                         <input
                           autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                           placeholder="Search HEC course code or title…"
@@ -201,7 +201,7 @@ export default function EquivalenceManager() {
                       onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
                       style={{
                         cursor: "pointer", padding: "6px 8px",
-                        background: isSelected ? "#EEF2FF" : course.groupId ? "#E3F8EF" : undefined,
+                        background: isSelected ? "#EDF6FF" : course.groupId ? "#E3F8EF" : undefined,
                         border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                       }}
                     >

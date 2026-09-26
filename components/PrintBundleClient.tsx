@@ -23,7 +23,7 @@ export default function PrintBundleClient({ bundleName, reports }: { bundleName:
           @media print { .no-print { display: none !important; } .report-frame { break-after: page; } }
           .report-frame { width: 100%; height: 1100px; border: 1px solid #E3E8F3; margin-bottom: 20px; }
         `}</style>
-        <div className="no-print" style={{ padding: "14px 20px", background: "#0A1540", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="no-print" style={{ padding: "14px 20px", background: "#E1F0FF", color: "#0F2E57", borderBottom: "1px solid #C6DEF8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <b>{bundleName}</b> — Combined View ({reports.length} reports)
             <div style={{ fontSize: 11.5, opacity: 0.8, marginTop: 2 }}>
@@ -31,8 +31,8 @@ export default function PrintBundleClient({ bundleName, reports }: { bundleName:
             </div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => setMode("menu")} style={{ padding: "6px 14px", background: "transparent", color: "#fff", border: "1px solid #fff", cursor: "pointer" }}>Back</button>
-            <button onClick={() => window.print()} style={{ padding: "6px 14px", background: "#1A40EA", color: "#fff", border: "none", cursor: "pointer" }}>Print All</button>
+            <button onClick={() => setMode("menu")} className="btn btn-secondary btn-sm">Back</button>
+            <button onClick={() => window.print()} className="btn btn-brass btn-sm">Print All</button>
           </div>
         </div>
         <div style={{ padding: 20 }}>
@@ -50,7 +50,7 @@ export default function PrintBundleClient({ bundleName, reports }: { bundleName:
       <p style={{ color: "#46507A", fontSize: 13, marginBottom: 20 }}>{reports.length} report(s) in this bundle.</p>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button onClick={() => setMode("combined")} style={{ padding: "8px 16px", background: "#1A40EA", color: "#fff", border: "none", cursor: "pointer" }}>
+        <button onClick={() => setMode("combined")} style={{ padding: "8px 16px", background: "#1F89F5", color: "#fff", border: "none", cursor: "pointer" }}>
           View as One Combined Document
         </button>
       </div>
@@ -60,7 +60,7 @@ export default function PrintBundleClient({ bundleName, reports }: { bundleName:
       <ul style={{ listStyle: "none", padding: 0 }}>
         {reports.map((r) => (
           <li key={r.id} style={{ marginBottom: 8 }}>
-            <Link href={r.href} target="_blank" rel="noopener noreferrer" style={{ color: "#0A1540", textDecoration: "underline", fontSize: 13.5 }}>{r.title}</Link>
+            <Link href={r.href} target="_blank" rel="noopener noreferrer" style={{ color: "#1570D6", textDecoration: "underline", fontSize: 13.5 }}>{r.title}</Link>
           </li>
         ))}
       </ul>

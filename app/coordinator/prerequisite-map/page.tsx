@@ -132,7 +132,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
       )}
 
       <InteractiveCourseMap
-        key={selectedBatchId || "none"}
+        key={`map-${selectedBatchId || "none"}`}
         mode="prereq"
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
@@ -144,7 +144,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
 
       {selectedBatchId && (
         <BatchCoursesQuickEditTable
-          key={selectedBatchId}
+          key={`quick-edit-${selectedBatchId}`}
           initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
         />
       )}

@@ -5,7 +5,7 @@ export default function RequestAccountPage() {
   return (
     <div className="login-wrap">
       <div className="login-card" style={{ maxWidth: 440 }}>
-        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB" width={720} height={501} style={{ width: 150 }} />
+        <img className="auth-logo" src="/brand/obehub-logo-v2.webp" alt="OBEHUB" width={440} height={363} style={{ width: 150 }} />
         <h1 style={{ textAlign: "center", fontSize: 20, marginBottom: 4 }}>Request an Institution Account</h1>
         <p style={{ textAlign: "center", color: "var(--slate)", fontSize: 13, marginBottom: 24 }}>
           Tell us about your institution — a platform administrator will review this and set up your account.

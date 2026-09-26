@@ -10,7 +10,7 @@ export default async function MfaVerifyPage() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB" width={720} height={501} style={{ width: 150 }} />
+        <img className="auth-logo" src="/brand/obehub-logo-v2.webp" alt="OBEHUB" width={440} height={363} style={{ width: 150 }} />
         <h1 style={{ fontSize: 18, textAlign: "center", marginBottom: 6 }}>Two-Factor Verification</h1>
         <p style={{ fontSize: 12.5, color: "var(--slate)", textAlign: "center", marginBottom: 20 }}>
           Enter the 6-digit code from your authenticator app, {user.name}.

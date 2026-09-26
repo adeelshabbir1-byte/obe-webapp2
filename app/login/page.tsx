@@ -12,7 +12,7 @@ export default function LoginPage() {
       heroText="Curricula, CLO–PLO mapping, assessments, attainment and accreditation evidence — one governed workspace for your whole institution."
     >
       <div className="auth-card">
-        <img className="auth-logo" src="/brand/obehub-logo.webp" alt="OBEHUB — Outcome · Learn · Assess · Excel" width={720} height={501} />
+        <img className="auth-logo" src="/brand/obehub-logo-v2.webp" alt="OBEHUB — Outcome · Learn · Assess · Excel" width={440} height={363} />
         <h1>Welcome back</h1>
         <p className="auth-sub">Sign in to your institutional account.</p>
         <LoginForm />

@@ -15,12 +15,12 @@ type Policy = {
 };
 
 const COMPONENTS: { key: string; label: string; color: string }[] = [
-  { key: "assignment", label: "Assignment", color: "#3F66A0" },
-  { key: "quiz", label: "Quiz", color: "#059669" },
-  { key: "project", label: "Project", color: "#5A4AA0" },
-  { key: "lab", label: "Lab", color: "#A85D1F" },
-  { key: "midterm", label: "Midterm", color: "#8A3A5C" },
-  { key: "final", label: "Final", color: "#8A4B00" },
+  { key: "assignment", label: "Assignment", color: "#1F7FE0" },
+  { key: "quiz", label: "Quiz", color: "#0F9D6E" },
+  { key: "project", label: "Project", color: "#5F6BE0" },
+  { key: "lab", label: "Lab", color: "#D9691C" },
+  { key: "midterm", label: "Midterm", color: "#D14B72" },
+  { key: "final", label: "Final", color: "#B7791F" },
 ];
 const MIN_BG = "#E3EBF3";   // light warm blue — every Min % cell
 const MAX_BG = "#E4F0D6";   // light warm green — every Max % cell
@@ -61,11 +61,11 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       <SortableTable paginate={false} className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EEF2FF)" }}>Course Type</th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EDF6FF)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EEF2FF)" }}></th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EDF6FF)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (

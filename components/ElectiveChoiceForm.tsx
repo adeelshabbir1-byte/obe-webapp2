@@ -67,8 +67,8 @@ export default function ElectiveChoiceForm({ groupId, initialOptions, registrati
             key={o.id}
             style={{
               display: "block", padding: "12px 14px", marginBottom: 8, cursor: o.full ? "not-allowed" : "pointer",
-              border: selectedOptionId === o.id ? "2px solid #0A1540" : "1px solid #CDD6EA",
-              background: o.full ? "#F3F6FD" : selectedOptionId === o.id ? "#F4F0FF" : "#fff", opacity: o.full ? 0.6 : 1,
+              border: selectedOptionId === o.id ? "2px solid #1F89F5" : "1px solid #CDD6EA",
+              background: o.full ? "#F3F6FD" : selectedOptionId === o.id ? "#EFF1FF" : "#fff", opacity: o.full ? 0.6 : 1,
             }}
           >
             <input
@@ -87,7 +87,7 @@ export default function ElectiveChoiceForm({ groupId, initialOptions, registrati
         ))}
       </div>
 
-      <button onClick={submit} disabled={loading} style={{ padding: "10px 24px", background: "#1A40EA", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <button onClick={submit} disabled={loading} style={{ padding: "10px 24px", background: "#1F89F5", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         {loading ? "Submitting…" : "Submit My Choice"}
       </button>
     </div>
