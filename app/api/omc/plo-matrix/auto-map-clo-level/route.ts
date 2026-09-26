@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { suggestPloForClo, evenSplitContribution } from "../../../../../lib/cloPloMatching";
+import { ensureCoursePloMapping } from "../../../../../lib/coursePloSync";
 
 // Keyword-based CLO-to-PLO suggestion, at the granularity that
 // actually drives weighted attainment scoring (unlike the existing
@@ -93,6 +94,12 @@ export async function POST(req: NextRequest) {
       }))
     );
     suggested += updates.filter((u) => u.isNew).length;
+
+    // Propagate every newly-mapped CLO up into the coarser
+    // Course<->PLO Matrix, so it shows this course as contributing to
+    // that PLO there too, not just in the CLO editor.
+    const newPloIdsForCourse = new Set(updates.filter((u) => u.isNew).map((u) => u.ploId));
+    for (const ploId of newPloIdsForCourse) await ensureCoursePloMapping(course.id, ploId, user.id);
   }
 
   const nextCursor = courses.length > 0 ? courses[courses.length - 1].id : undefined;

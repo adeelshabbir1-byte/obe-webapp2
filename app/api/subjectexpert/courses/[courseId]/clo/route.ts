@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { ensureCoursePloMapping } from "../../../../../../lib/coursePloSync";
 
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   await writeAuditLog({ actorUserId: user.id, action: "CLO_ADDED", entityType: "CLO", entityId: clo.id });
   await syncCourseContentToLinkedCourses(course.id);
+  if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id);
 
   return NextResponse.json({ clo }, { status: 201 });
 }

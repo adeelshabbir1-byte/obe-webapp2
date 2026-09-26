@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -24,6 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_CLO_UPDATED", entityType: "CLO", entityId: params.cloId });
+  if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id);
   return NextResponse.json({ clo: updated });
 }
 

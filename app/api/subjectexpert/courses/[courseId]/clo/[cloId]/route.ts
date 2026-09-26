@@ -5,6 +5,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { renumberClos } from "../../../../../../../lib/cloOrdering";
+import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -40,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: params.cloId });
   await syncCourseContentToLinkedCourses(course.id);
+  if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id);
 
   return NextResponse.json({ clo: updated });
 }

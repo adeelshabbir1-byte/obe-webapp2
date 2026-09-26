@@ -10,6 +10,7 @@ import AutoMapHecButton from "../../../components/AutoMapHecButton";
 import AutoMapHecAllButton from "../../../components/AutoMapHecAllButton";
 import AutoMapSystemButton from "../../../components/AutoMapSystemButton";
 import AutoMapCloLevelButton from "../../../components/AutoMapCloLevelButton";
+import AutoMapCloLevelAllButton from "../../../components/AutoMapCloLevelAllButton";
 import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
@@ -88,6 +89,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       </div>
       <AutoMapHecAllButton />
       <AutoMapSystemAllButton />
+      <AutoMapCloLevelAllButton />
       {!hasFilter && (
         <div className="card">
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Select a program or a specific batch above to load its PLO-Course Matrix.</p>
