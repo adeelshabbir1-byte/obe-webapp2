@@ -126,6 +126,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                             <input
                               type="checkbox" checked={checked} disabled={busyKey === key}
                               onChange={(e) => toggle(c.id, p.id, e.target.checked, hecSuggests ? "HEC" : "MANUAL")}
+                              style={{ accentColor: badge === "HEC" ? "#8A6D00" : badge === "SYS" ? "#96650F" : badge === "OMC" ? "#4A6D8C" : undefined }}
                             />
                             {!checked && hecSuggests && <div style={{ fontSize: 8, color: "#8A6D00" }}>HEC</div>}
                             {badge && (
