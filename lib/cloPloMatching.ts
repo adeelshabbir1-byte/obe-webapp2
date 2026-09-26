@@ -13,6 +13,11 @@ const STOP_WORDS = new Set([
   "will", "would", "can", "could", "should", "shall", "may", "might", "must",
   "into", "onto", "than", "then", "so", "such", "not", "no", "also", "which", "who", "whom",
   "using", "use", "used", "student", "students", "course", "outcome", "outcomes",
+  // Generic enough to appear across many different PLOs without
+  // discriminating between them (e.g. both "Computing Professionalism
+  // and Society" and "Ethics" mention these) — stripped so the words
+  // that actually distinguish similar-sounding PLOs get the weight.
+  "professional", "professionalism", "practice",
 ]);
 
 function tokenize(text: string): Set<string> {
