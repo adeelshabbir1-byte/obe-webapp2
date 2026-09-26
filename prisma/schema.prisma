@@ -1358,6 +1358,13 @@ model CLO {
   bloomLevel  String   // C1..C6
   mappedPloId String?  // references the institution's own PLO (see PLO model)
   mappedPlo   PLO?     @relation(fields: [mappedPloId], references: [id])
+  ploMappingSource String? // "MANUAL" | "SYSTEM" — MANUAL: a Subject Expert or
+                           // Instructor deliberately chose this PLO. SYSTEM:
+                           // bulk-suggested by keyword matching against this
+                           // course's own PLO wording, unverified — shown
+                           // differently in the CLO editor so it's never
+                           // mistaken for a deliberate choice until reviewed.
+                           // Mirrors MasterCourseClo's own ploMappingSource.
   ploContributionPct Int? // this CLO's % contribution toward mappedPlo's attainment —
                           // when several CLOs in the same course map to the same PLO,
                           // their contributions must sum to 100 (enforced at submit time)
