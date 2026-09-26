@@ -44,7 +44,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   // merged "Assignment" heading over A1/A2/A3, instead of repeating the
   // type name on every single column) — keeps more results visible at once.
   const TYPE_COLOR: Record<string, string> = {
-    Assignment: "#1F89F5", Quiz: "#22B573", Project: "#6C7AF0", Lab: "#F07A2E", Midterm: "#E8577A", Final: "#E9A023",
+    Assignment: "#038666", Quiz: "#22B573", Project: "#6C7AF0", Lab: "#F07A2E", Midterm: "#E8577A", Final: "#E9A023",
   };
   const groupedInstrumentTypes: { type: string; instruments: any[] }[] = [];
   if (result) {

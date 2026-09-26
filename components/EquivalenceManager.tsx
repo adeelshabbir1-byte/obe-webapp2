@@ -201,7 +201,7 @@ export default function EquivalenceManager() {
                       onDoubleClick={() => !busy && handleDoubleClick(course.id, course.groupId)}
                       style={{
                         cursor: "pointer", padding: "6px 8px",
-                        background: isSelected ? "#EDF6FF" : course.groupId ? "#E3F8EF" : undefined,
+                        background: isSelected ? "#E7F5EF" : course.groupId ? "#E3F8EF" : undefined,
                         border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                       }}
                     >

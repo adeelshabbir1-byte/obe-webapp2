@@ -1,19 +1,19 @@
 // Shared across the PLO report and matrix so a course type always renders
 // with the same color, making the two views visually consistent. Every type
 // gets its own clearly different hue (no two types share a colour family),
-// kept light and airy to match the sky-blue OBEHUB theme while staying dark
-// enough for white text on top.
+// tuned to sit with the Emerald Prestige theme while staying dark enough
+// for white text on top.
 export const COURSE_TYPE_COLORS: Record<string, string> = {
-  "Core": "#1F7FE0",
-  "Fundamentals": "#1F7FE0",
-  "Major": "#1F7FE0", // legacy synonym, kept for courses created before the rename
-  "Elective": "#0F9D6E",
+  "Core": "#038666",
+  "Fundamentals": "#038666",
+  "Major": "#038666", // legacy synonym, kept for courses created before the rename
+  "Elective": "#2E7FB8",
   "Lab": "#E0701F",
   "IDS": "#D94C7A",
   "General Education": "#5F6BE0",
   "Capstone Project": "#A452C4",
-  "Field Experience": "#0F9A9A",
-  "Certification": "#B7791F",
+  "Field Experience": "#B7791F",
+  "Certification": "#6E8B2F",
 };
 export const COURSE_TYPE_FALLBACK_COLOR = "#5B7090";
 

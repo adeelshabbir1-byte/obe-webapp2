@@ -61,11 +61,11 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       <SortableTable paginate={false} className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EDF6FF)" }}>Course Type</th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E7F5EF)" }}>Course Type</th>
             {COMPONENTS.map((c) => (
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
-            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #EDF6FF)" }}></th>
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #E7F5EF)" }}></th>
           </tr>
           <tr>
             {COMPONENTS.map((c) => (

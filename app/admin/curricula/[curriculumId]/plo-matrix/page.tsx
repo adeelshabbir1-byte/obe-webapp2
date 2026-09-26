@@ -76,9 +76,9 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
         <table style={{ borderCollapse: "collapse", fontSize: 11, minWidth: 900 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", background: "#E1F0FF", color: "#0F2E57", position: "sticky", left: 0, zIndex: 1 }}>Course</th>
+              <th style={{ textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", background: "#E7F5EF", color: "#0B241A", position: "sticky", left: 0, zIndex: 1 }}>Course</th>
               {curriculum.plos.map((p) => (
-                <th key={p.id} title={p.title} style={{ padding: "4px 4px", border: "1px solid var(--line)", background: "#E1F0FF", color: "#0F2E57", minWidth: 30 }}>
+                <th key={p.id} title={p.title} style={{ padding: "4px 4px", border: "1px solid var(--line)", background: "#E7F5EF", color: "#0B241A", minWidth: 30 }}>
                   PLO{p.number}
                 </th>
               ))}

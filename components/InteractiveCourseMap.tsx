@@ -205,7 +205,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
               return (
                 <g key={c.id} style={{ cursor: loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType)} opacity={c.isOffered ? 0.5 : 0.9}
-                    stroke={isSelected ? "#0F2E57" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
+                    stroke={isSelected ? "#0B241A" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
                   <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
                   {mode === "prereq" && c.prerequisiteCourseId && (
                     <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>

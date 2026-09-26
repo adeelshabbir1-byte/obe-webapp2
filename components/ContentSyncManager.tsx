@@ -600,7 +600,7 @@ export default function ContentSyncManager() {
                                     title={`${c.code} — ${c.title}`}
                                     style={{
                                       cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                      background: isSelected ? "#EDF6FF" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      background: isSelected ? "#E7F5EF" : row.kind === "group" ? "#FEF3C7" : undefined,
                                       border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}

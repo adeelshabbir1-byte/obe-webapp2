@@ -349,7 +349,7 @@ export default function AssignmentMatrix() {
                   const nameCell = (
                     <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
                       <b>{shortLabel}</b>
-                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#EDF6FF", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>Combined</span>}
+                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#E7F5EF", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>Combined</span>}
                       {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                     </td>
                   );

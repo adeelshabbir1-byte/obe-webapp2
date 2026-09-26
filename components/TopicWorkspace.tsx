@@ -120,7 +120,7 @@ export default function TopicWorkspace({ curriculumId, courses }: { curriculumId
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns.length}, 1fr)`, gap: 12 }}>
         {columns.map((col, colIdx) => (
           <div key={col.id} style={{ border: "1px solid var(--line)", background: "#F7F9FE" }}>
-            <div style={{ padding: "8px 10px", background: "#E1F0FF", color: "#0F2E57", fontSize: 12.5, fontWeight: 600 }}>
+            <div style={{ padding: "8px 10px", background: "#E7F5EF", color: "#0B241A", fontSize: 12.5, fontWeight: 600 }}>
               {col.code} — {col.title} <span style={{ fontWeight: 400 }}>({col.topics.length})</span>
             </div>
             <div
