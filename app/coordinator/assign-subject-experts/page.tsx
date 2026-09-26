@@ -50,7 +50,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   const allCourses = await prisma.course.findMany({
     where: { coordinatorId: user.id, ...(selectedBatchId ? { batchId: selectedBatchId } : {}) },
     orderBy: [{ semesterNumber: "asc" }, { createdAt: "desc" }],
-    include: { batch: true, contentSyncMember: { include: { group: { include: { members: { include: { course: { select: { code: true } } } } } } } } },
+    include: { batch: true, customCategory: { select: { name: true } }, contentSyncMember: { include: { group: { include: { members: { include: { course: { select: { code: true } } } } } } } } },
   });
 
   // A course is assignable here if it's not tracked in a content-sync
@@ -82,6 +82,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     }
     return {
       code: first.code, title: first.title, courseType: first.courseType, semesterNumber: first.semesterNumber,
+      customCategoryName: first.customCategory?.name || null,
       linkedFollowerCodes: Array.from(followerCodes),
       sections: members.map((m) => ({
         id: m.id, subjectExpertId: m.subjectExpertId,
@@ -93,8 +94,14 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
 
   const subjectExperts = await prisma.user.findMany({
     where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    include: { customCategory: { select: { name: true } } },
     orderBy: { name: "asc" },
   });
+  // Grouped by the instructor's own category (e.g. "Maths", "Foundation")
+  // rather than name alone, so someone scanning the dropdown for a
+  // suitable instructor for a Maths course sees Maths faculty together
+  // rather than scattered alphabetically among everyone else.
+  subjectExperts.sort((a, b) => (a.customCategory?.name || "\uffff").localeCompare(b.customCategory?.name || "\uffff") || a.name.localeCompare(b.name));
 
   const batches = await prisma.batch.findMany({
     where: { coordinatorId: user.id },
@@ -105,15 +112,17 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assign Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        One row per course code — sections across different batches are grouped together, with a single
-        assignment applying to all of them at once. Courses linked as a follower of another section
+        Grouped by course category (Maths, Foundation, etc. — set on the Course & Faculty Categories page),
+        with Subject Experts in each dropdown grouped by their own category too, so a suitable instructor is
+        easy to spot. One row per course code — sections across different batches are grouped together, with
+        a single assignment applying to all of them at once. Courses linked as a follower of another section
         (inheriting their Subject Expert automatically) aren't shown.
         {followerCount > 0 && ` (${followerCount} linked follower course${followerCount === 1 ? "" : "s"} hidden.)`}
       </p>
       <AssignSubjectExpertsManager
         key={selectedBatchId || "all"}
         courseGroups={courseGroups}
-        subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
+        subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name, customCategoryName: se.customCategory?.name || null }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
         selectedBatchId={selectedBatchId}
       />

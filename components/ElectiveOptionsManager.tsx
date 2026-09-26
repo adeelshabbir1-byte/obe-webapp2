@@ -11,6 +11,7 @@ export default function ElectiveOptionsManager({ batchId, electiveCourses }: { b
   const [groups, setGroups] = useState<Group[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState("");
 
@@ -65,14 +66,19 @@ export default function ElectiveOptionsManager({ batchId, electiveCourses }: { b
   }
 
   async function toggleRegistration(group: Group) {
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setMessage("");
     try {
       const res = await fetch(`/api/coordinator/elective-groups/${group.id}/toggle-registration`, {
         method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ open: !group.registrationOpen }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      setGroups((prev) => prev.map((g) => g.id === group.id ? { ...g, registrationOpen: data.registrationOpen } : g));
+      if (data.defaultedCount > 0) {
+        setMessage(`Registration opened. ${data.defaultedCount} student(s) with no existing choice were defaulted to the first option — they can still change it while registration stays open.`);
+        await load();
+      } else {
+        setGroups((prev) => prev.map((g) => g.id === group.id ? { ...g, registrationOpen: data.registrationOpen } : g));
+      }
       setBusy(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
@@ -113,6 +119,7 @@ export default function ElectiveOptionsManager({ batchId, electiveCourses }: { b
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {message && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{message}</div>}
 
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

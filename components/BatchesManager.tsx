@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; courseCount: number; registrationOpen: boolean; advisorId: string | null };
+type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; enrolledCount: number; courseCount: number; registrationOpen: boolean; advisorId: string | null };
 type Faculty = { id: string; name: string };
 
 export default function BatchesManager({ initialBatches, faculty }: { initialBatches: Batch[]; faculty: Faculty[] }) {
@@ -156,9 +156,9 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students</th><th>Courses Imported</th><th>Registration</th><th>Advisor</th><th></th></tr></thead>
+          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Planned Intake</th><th>Enrolled</th><th>Courses Imported</th><th>Registration</th><th>Advisor</th><th></th></tr></thead>
           <tbody>
-            {batches.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
+            {batches.length === 0 && <tr><td colSpan={9} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {batches.map((b) => (
               <tr key={b.id}>
                 <td>{b.degreeProgram}</td><td>{b.batchName}</td><td>{b.startTerm} {b.startYear}</td>
@@ -175,6 +175,14 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                     </span>
                   ) : (
                     <span>{b.studentCount} <button onClick={() => setEditingCountId(b.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11, textDecoration: "underline", cursor: "pointer", marginLeft: 6 }}>Edit</button></span>
+                  )}
+                </td>
+                <td>
+                  {b.enrolledCount}
+                  {b.enrolledCount !== b.studentCount && (
+                    <div style={{ fontSize: 10, color: "var(--slate)" }}>
+                      actual roster — {b.enrolledCount > b.studentCount ? "more" : "fewer"} than the planned intake above
+                    </div>
                   )}
                 </td>
                 <td>{b.courseCount}</td>

@@ -7,9 +7,10 @@ import SortableTable from "./SortableTable";
 type Section = { id: string; subjectExpertId: string | null; batchLabel: string };
 type CourseGroup = {
   code: string; title: string; courseType: string; semesterNumber: number | null;
+  customCategoryName: string | null;
   linkedFollowerCodes: string[]; sections: Section[];
 };
-type SubjectExpert = { id: string; name: string };
+type SubjectExpert = { id: string; name: string; customCategoryName: string | null };
 type Batch = { id: string; degreeProgram: string; batchName: string };
 
 export default function AssignSubjectExpertsManager({ courseGroups: initialGroups, subjectExperts, batches, selectedBatchId }: {
@@ -68,6 +69,52 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
     setLoading(false);
   }
 
+  // Grouped so all courses sharing a category (e.g. "Maths",
+  // "Foundation") sit together under their own heading, making it
+  // faster to work through one subject area at a time rather than
+  // scanning one long list mixed by semester. Uncategorized courses
+  // (no CustomCategory set) are shown last, under their own heading.
+  const categorized = new Map<string, CourseGroup[]>();
+  for (const g of groups) {
+    const key = g.customCategoryName || "";
+    if (!categorized.has(key)) categorized.set(key, []);
+    categorized.get(key)!.push(g);
+  }
+  const categoryOrder = Array.from(categorized.keys()).sort((a, b) => {
+    if (a === "") return 1;
+    if (b === "") return -1;
+    return a.localeCompare(b);
+  });
+
+  function renderSelectOptions(currentValue: string, isMixed: boolean) {
+    const categorizedSes = new Map<string, SubjectExpert[]>();
+    for (const se of subjectExperts) {
+      const key = se.customCategoryName || "";
+      if (!categorizedSes.has(key)) categorizedSes.set(key, []);
+      categorizedSes.get(key)!.push(se);
+    }
+    const seCategoryOrder = Array.from(categorizedSes.keys()).sort((a, b) => {
+      if (a === "") return 1;
+      if (b === "") return -1;
+      return a.localeCompare(b);
+    });
+    return (
+      <>
+        {isMixed && <option value="" disabled>— Mixed, pick one to unify —</option>}
+        <option value="">— Unassigned —</option>
+        {seCategoryOrder.map((cat) => (
+          cat === "" ? (
+            categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)
+          ) : (
+            <optgroup key={cat} label={cat}>
+              {categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
+            </optgroup>
+          )
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -82,48 +129,52 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
         </div>
       )}
 
-      <div className="card" style={{ overflowX: "auto" }}>
-        <SortableTable>
-          <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Semester</th><th>Sections</th><th>Also Covers</th><th>Subject Expert</th></tr></thead>
-          <tbody>
-            {groups.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No assignable courses in this view.</td></tr>}
-            {groups.map((g) => {
-              const distinctSe = new Set(g.sections.map((s) => s.subjectExpertId || ""));
-              const isMixed = distinctSe.size > 1;
-              const currentValue = isMixed ? "" : g.sections[0]?.subjectExpertId || "";
-              return (
-                <tr key={g.code}>
-                  <td>{g.code}</td><td>{g.title}</td><td>{g.courseType}</td>
-                  <td>{g.semesterNumber ?? "—"}</td>
-                  <td style={{ fontSize: 11 }}>{g.sections.map((s) => s.batchLabel).join(", ")}</td>
-                  <td style={{ fontSize: 11 }}>
-                    {g.linkedFollowerCodes.length > 0 ? g.linkedFollowerCodes.join(", ") : <span style={{ color: "var(--slate)" }}>—</span>}
-                  </td>
-                  <td>
-                    <select
-                      value={currentValue} disabled={loading}
-                      onChange={(e) => assignSeToGroup(g.code, e.target.value, e.target, currentValue)}
-                      style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}
-                    >
-                      {isMixed && <option value="" disabled>— Mixed, pick one to unify —</option>}
-                      <option value="">— Unassigned —</option>
-                      {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
-                    </select>
-                    {g.sections.length > 1 && (
-                      <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>
-                        Applies to all {g.sections.length} sections above.
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </SortableTable>
-        {subjectExperts.length === 0 && (
-          <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</div>
-        )}
-      </div>
+      {groups.length === 0 && (
+        <div className="card"><p style={{ color: "var(--slate)" }}>No assignable courses in this view.</p></div>
+      )}
+
+      {categoryOrder.map((cat) => (
+        <div key={cat || "uncategorized"} className="card" style={{ overflowX: "auto" }}>
+          <h3 style={{ fontSize: 14, marginBottom: 8 }}>{cat || "Uncategorized"}</h3>
+          <SortableTable>
+            <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Semester</th><th>Sections</th><th>Also Covers</th><th>Subject Expert</th></tr></thead>
+            <tbody>
+              {categorized.get(cat)!.map((g) => {
+                const distinctSe = new Set(g.sections.map((s) => s.subjectExpertId || ""));
+                const isMixed = distinctSe.size > 1;
+                const currentValue = isMixed ? "" : g.sections[0]?.subjectExpertId || "";
+                return (
+                  <tr key={g.code}>
+                    <td>{g.code}</td><td>{g.title}</td><td>{g.courseType}</td>
+                    <td>{g.semesterNumber ?? "—"}</td>
+                    <td style={{ fontSize: 11 }}>{g.sections.map((s) => s.batchLabel).join(", ")}</td>
+                    <td style={{ fontSize: 11 }}>
+                      {g.linkedFollowerCodes.length > 0 ? g.linkedFollowerCodes.join(", ") : <span style={{ color: "var(--slate)" }}>—</span>}
+                    </td>
+                    <td>
+                      <select
+                        value={currentValue} disabled={loading}
+                        onChange={(e) => assignSeToGroup(g.code, e.target.value, e.target, currentValue)}
+                        style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                      >
+                        {renderSelectOptions(currentValue, isMixed)}
+                      </select>
+                      {g.sections.length > 1 && (
+                        <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>
+                          Applies to all {g.sections.length} sections above.
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </SortableTable>
+        </div>
+      ))}
+      {subjectExperts.length === 0 && (
+        <div className="card"><p style={{ fontSize: 11.5, color: "var(--slate)" }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</p></div>
+      )}
     </>
   );
 }
