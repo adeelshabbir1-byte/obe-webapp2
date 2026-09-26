@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     // Course<->PLO Matrix, so it shows this course as contributing to
     // that PLO there too, not just in the CLO editor.
     const newPloIdsForCourse = new Set(updates.filter((u) => u.isNew).map((u) => u.ploId));
-    for (const ploId of newPloIdsForCourse) await ensureCoursePloMapping(course.id, ploId, user.id);
+    for (const ploId of newPloIdsForCourse) await ensureCoursePloMapping(course.id, ploId, user.id, "SYSTEM");
   }
 
   const nextCursor = courses.length > 0 ? courses[courses.length - 1].id : undefined;

@@ -72,6 +72,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         id: c.id, code: c.code, title: c.title, courseType: c.courseType, semesterNumber: c.semesterNumber,
         mappedPloIds: c.ploMappings.map((m) => m.ploId),
         assignedByPloId: Object.fromEntries(c.ploMappings.map((m) => [m.ploId, m.assignedById ? assignerNameById.get(m.assignedById) || null : null])),
+        sourceByPloId: Object.fromEntries(c.ploMappings.map((m) => [m.ploId, m.source])),
         hecSuggestedPloNumbers: hecByCode.get(lookupCode(c)) || [],
       })),
     });

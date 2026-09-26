@@ -11,6 +11,10 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json();
   const { courseId, ploId, mapped } = body;
+  // Only trusted when the client is reporting that this checkbox was
+  // shown as an HEC suggestion at the moment it got checked — anything
+  // else (including no value at all) is a plain manual check.
+  const source = body.source === "HEC" ? "HEC" : "MANUAL";
   if (!courseId || !ploId || typeof mapped !== "boolean") {
     return NextResponse.json({ error: "courseId, ploId, mapped are required" }, { status: 400 });
   }
@@ -27,8 +31,8 @@ export async function PUT(req: NextRequest) {
   if (mapped) {
     await prisma.coursePloMapping.upsert({
       where: { courseId_ploId: { courseId, ploId } },
-      create: { courseId, ploId, assignedById: user.id },
-      update: {},
+      create: { courseId, ploId, assignedById: user.id, source },
+      update: {}, // re-checking an already-mapped cell doesn't happen (checkbox already showed checked), but if it ever does, leave its recorded source alone
     });
   } else {
     await prisma.coursePloMapping.deleteMany({ where: { courseId, ploId } });

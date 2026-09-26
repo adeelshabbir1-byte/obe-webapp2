@@ -10,10 +10,10 @@ import { prisma } from "./db";
  * justified it later gets unmapped, deleted, or changed to a
  * different PLO — another CLO in the same course might still justify
  * it, or an OMC member may have set it independently on purpose. */
-export async function ensureCoursePloMapping(courseId: string, ploId: string, assignedById: string) {
+export async function ensureCoursePloMapping(courseId: string, ploId: string, assignedById: string, source: "MANUAL" | "SYSTEM") {
   const existing = await prisma.coursePloMapping.findUnique({ where: { courseId_ploId: { courseId, ploId } } });
   if (existing) return;
-  await prisma.coursePloMapping.create({ data: { courseId, ploId, assignedById } }).catch(() => {
+  await prisma.coursePloMapping.create({ data: { courseId, ploId, assignedById, source } }).catch(() => {
     // A concurrent request created the same mapping between the check
     // and this insert — the unique constraint already protects
     // against a duplicate, so this is a harmless race to ignore.

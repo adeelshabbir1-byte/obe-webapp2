@@ -1339,7 +1339,12 @@ model CoursePloMapping {
   course       Course   @relation(fields: [courseId], references: [id])
   ploId        String
   plo          PLO      @relation(fields: [ploId], references: [id])
-  assignedById String   // the OMC member who made this assignment
+  assignedById String   // the OMC member who made this assignment (or whose action triggered it)
+  source       String?  // "HEC" | "SYSTEM" | "MANUAL" — how this mapping came to exist, kept
+                         // permanently for reference even after the checkbox is checked (HEC/SYSTEM
+                         // suggestion hints disappear from an unchecked cell once it's set, so without
+                         // this the origin would otherwise be lost the moment it's applied). null on
+                         // rows created before this field existed.
   createdAt    DateTime @default(now())
 
   @@unique([courseId, ploId])

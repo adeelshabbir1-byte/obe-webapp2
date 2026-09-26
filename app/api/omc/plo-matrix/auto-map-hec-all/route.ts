@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         if (!plo) { totalSkippedNoPlo++; continue; }
         const existing = await prisma.coursePloMapping.findUnique({ where: { courseId_ploId: { courseId: course.id, ploId: plo.id } } });
         if (existing) { totalAlreadyMapped++; continue; }
-        await prisma.coursePloMapping.create({ data: { courseId: course.id, ploId: plo.id, assignedById: user.id } });
+        await prisma.coursePloMapping.create({ data: { courseId: course.id, ploId: plo.id, assignedById: user.id, source: "HEC" } });
         totalCreated++;
       }
     }

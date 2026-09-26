@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       totalSuggested += updates.filter((u) => u.isNew).length;
 
       const newPloIdsForCourse = new Set(updates.filter((u) => u.isNew).map((u) => u.ploId));
-      for (const ploId of newPloIdsForCourse) await ensureCoursePloMapping(course.id, ploId, user.id);
+      for (const ploId of newPloIdsForCourse) await ensureCoursePloMapping(course.id, ploId, user.id, "SYSTEM");
     }
     batchesProcessed.push(`${batch.degreeProgram} — ${batch.batchName}`);
   }

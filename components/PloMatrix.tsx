@@ -5,7 +5,7 @@ import SortableTable from "./SortableTable";
 import { courseTypeColor } from "../lib/courseTypeColors";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[]; assignedByPloId?: Record<string, string | null>; hecSuggestedPloNumbers?: number[] };
+type Course = { id: string; code: string; title: string; courseType: string; semesterNumber: number | null; mappedPloIds: string[]; assignedByPloId?: Record<string, string | null>; sourceByPloId?: Record<string, string | null>; hecSuggestedPloNumbers?: number[] };
 type Program = { coordinatorId: string; coordinatorName: string; plos: Plo[]; courses: Course[] };
 
 type SortKey = "code" | "type" | "semester";
@@ -27,18 +27,19 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("semester");
 
-  async function toggle(courseId: string, ploId: string, mapped: boolean) {
+  async function toggle(courseId: string, ploId: string, mapped: boolean, source: "HEC" | "MANUAL") {
     const key = courseId + ploId;
     setBusyKey(key);
     const res = await fetch("/api/omc/plo-matrix/toggle", {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseId, ploId, mapped }),
+      body: JSON.stringify({ courseId, ploId, mapped, source }),
     });
     if (res.ok) {
       setPrograms((prev) => prev.map((prog) => ({
         ...prog,
         courses: prog.courses.map((c) => c.id !== courseId ? c : {
           ...c, mappedPloIds: mapped ? [...c.mappedPloIds, ploId] : c.mappedPloIds.filter((id) => id !== ploId),
+          sourceByPloId: { ...c.sourceByPloId, [ploId]: mapped ? source : null },
         }),
       })));
     }
@@ -58,6 +59,11 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
           <option value="type">Course Type</option>
           <option value="code">Code (A–Z)</option>
         </select>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--slate)", display: "flex", gap: 12 }}>
+          <span><b style={{ color: "#8A6D00" }}>HEC</b> = accepted HEC suggestion</span>
+          <span><b style={{ color: "#96650F" }}>SYS</b> = System keyword guess, unverified</span>
+          <span><b style={{ color: "#4A6D8C" }}>OMC</b> = set directly by an OMC member</span>
+        </span>
       </div>
 
       {programs.map((prog) => {
@@ -96,18 +102,35 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                         const checked = c.mappedPloIds.includes(p.id);
                         const key = c.id + p.id;
                         const assignedBy = c.assignedByPloId?.[p.id];
+                        const mappedSource = c.sourceByPloId?.[p.id];
                         const hecSuggests = !checked && (c.hecSuggestedPloNumbers || []).includes(p.number);
+                        // The little source badge is permanent once a cell is
+                        // checked — it's the whole point: without it, the
+                        // fact that this came from an HEC suggestion or a
+                        // System guess (rather than someone just checking the
+                        // box directly) would otherwise vanish the instant the
+                        // mapping is applied, since the pre-check hint below
+                        // only shows on an unchecked cell.
+                        const badge = checked ? (mappedSource === "HEC" ? "HEC" : mappedSource === "SYSTEM" ? "SYS" : "OMC") : null;
                         return (
                           <td
                             key={p.id}
                             style={{ textAlign: "center", background: hecSuggests ? "#FBEED2" : undefined }}
-                            title={checked && assignedBy ? `Assigned by ${assignedBy}` : hecSuggests ? "HEC suggests this mapping — not yet set" : undefined}
+                            title={
+                              checked && badge === "HEC" ? "Originally an HEC-suggested mapping, now applied"
+                              : checked && badge === "SYS" ? "Originally a System (keyword-inferred) suggestion, now applied — unverified"
+                              : checked && badge === "OMC" ? `Set directly by an OMC member${assignedBy ? ` (${assignedBy})` : ""}`
+                              : hecSuggests ? "HEC suggests this mapping — not yet set" : undefined
+                            }
                           >
                             <input
                               type="checkbox" checked={checked} disabled={busyKey === key}
-                              onChange={(e) => toggle(c.id, p.id, e.target.checked)}
+                              onChange={(e) => toggle(c.id, p.id, e.target.checked, hecSuggests ? "HEC" : "MANUAL")}
                             />
-                            {hecSuggests && <div style={{ fontSize: 8, color: "#8A6D00" }}>HEC</div>}
+                            {!checked && hecSuggests && <div style={{ fontSize: 8, color: "#8A6D00" }}>HEC</div>}
+                            {badge && (
+                              <div style={{ fontSize: 8, fontWeight: 600, color: badge === "HEC" ? "#8A6D00" : badge === "SYS" ? "#96650F" : "#4A6D8C" }}>{badge}</div>
+                            )}
                           </td>
                         );
                       })}

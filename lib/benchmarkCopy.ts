@@ -121,11 +121,11 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
   const targetPloByNumber = new Map(targetPlos.map((p) => [p.number, p]));
 
   const translatedMappings = ploMappings
-    .map((m) => targetPloByNumber.get(m.plo.number))
-    .filter((p): p is NonNullable<typeof p> => !!p);
+    .map((m) => { const targetPlo = targetPloByNumber.get(m.plo.number); return targetPlo ? { targetPlo, source: m.source } : null; })
+    .filter((x): x is { targetPlo: NonNullable<ReturnType<typeof targetPloByNumber.get>>; source: string | null } => !!x);
   if (translatedMappings.length > 0) {
     await prisma.coursePloMapping.createMany({
-      data: translatedMappings.map((p) => ({ courseId: newCourseId, ploId: p.id, assignedById: source.coordinatorId })),
+      data: translatedMappings.map((m) => ({ courseId: newCourseId, ploId: m.targetPlo.id, assignedById: source.coordinatorId, source: m.source })),
       skipDuplicates: true,
     });
   }

@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: params.cloId });
   await syncCourseContentToLinkedCourses(course.id);
-  if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id);
+  if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id, "MANUAL");
 
   return NextResponse.json({ clo: updated });
 }

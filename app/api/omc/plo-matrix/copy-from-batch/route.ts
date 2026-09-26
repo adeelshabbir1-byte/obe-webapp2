@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const targetPloByNumber = new Map(targetPlos.map((p) => [p.number, p]));
 
   let copiedCount = 0, skippedNoMatch = 0;
-  const toCreate: { courseId: string; ploId: string; assignedById: string }[] = [];
+  const toCreate: { courseId: string; ploId: string; assignedById: string; source: string | null }[] = [];
   for (const sc of sourceCourses) {
     const tc = targetCourseByCode.get(sc.code);
     if (!tc) { skippedNoMatch += sc.ploMappings.length; continue; }
@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
       if (!targetPlo) { skippedNoMatch++; continue; }
       if (existingTargetPloIds.has(targetPlo.id)) continue; // already set — don't overwrite
 
-      toCreate.push({ courseId: tc.id, ploId: targetPlo.id, assignedById: user.id });
+      // Carries the source batch's own provenance forward rather than
+      // hardcoding one value — a copied HEC-accepted mapping is still
+      // HEC-accepted, a copied System suggestion is still unverified.
+      toCreate.push({ courseId: tc.id, ploId: targetPlo.id, assignedById: user.id, source: mapping.source });
       copiedCount++;
     }
   }
