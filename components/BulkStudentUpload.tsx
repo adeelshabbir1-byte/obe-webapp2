@@ -1,28 +1,71 @@
 "use client";
 import { useState } from "react";
 
+const CHUNK_SIZE = 50;
+
+type RowError = { row: number; name: string; rollNumber: string; batchName: string; reason: string };
+type ParsedRow = { name: string; rollNumber: string; batchName: string };
+
 export default function BulkStudentUpload({ batches }: { batches: { degreeProgram: string; batchName: string }[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
-  const [result, setResult] = useState<{ imported: number; activated: number; totalRows: number; rowErrors: { row: number; name: string; rollNumber: string; batchName: string; reason: string }[] } | null>(null);
+  const [result, setResult] = useState<{ imported: number; activated: number; totalRows: number; rowErrors: RowError[] } | null>(null);
 
   async function runImport(mode: "file" | "paste") {
-    setLoading(true); setError(""); setResult(null);
+    setLoading(true); setError(""); setResult(null); setProgress("");
     try {
-      const fd = new FormData();
+      // Step 1: parse the file/text into rows — fast, no database work.
+      const parseFd = new FormData();
       if (mode === "file") {
         if (!file) { setLoading(false); return; }
-        fd.append("file", file);
+        parseFd.append("file", file);
       } else {
         if (!csvText.trim()) { setLoading(false); return; }
-        fd.append("csvText", csvText);
+        parseFd.append("csvText", csvText);
       }
-      const res = await fetch("/api/coordinator/students/import-multi-batch", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setResult(data);
+      setProgress("Reading file…");
+      const parseRes = await fetch("/api/coordinator/students/import-multi-batch/parse", { method: "POST", body: parseFd });
+      const parseData = await parseRes.json();
+      if (!parseRes.ok) { setError(parseData.error || "Something went wrong reading the file."); setLoading(false); return; }
+
+      const allRows: ParsedRow[] = parseData.rows;
+      const totalRows = allRows.length;
+
+      // Step 2: process in small chunks so no single request has to do
+      // database work for hundreds of rows and risk a serverless timeout.
+      let totalImported = 0;
+      let totalActivated = 0;
+      const allRowErrors: RowError[] = [];
+
+      for (let offset = 0; offset < allRows.length; offset += CHUNK_SIZE) {
+        const chunk = allRows.slice(offset, offset + CHUNK_SIZE);
+        setProgress(`Importing… ${offset} of ${totalRows} row(s) processed.`);
+        const res = await fetch("/api/coordinator/students/import-multi-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: chunk, rowOffset: offset }),
+        });
+        let data: any;
+        try {
+          data = await res.json();
+        } catch {
+          setError(`The server didn't return a valid response partway through (row ${offset}). ${totalImported} row(s) were imported before this happened. Everything already imported uses upsert on roll number, so it's safe to just try the import again — matching rows will simply update in place rather than duplicate.`);
+          setLoading(false);
+          setResult({ imported: totalImported, activated: totalActivated, totalRows, rowErrors: allRowErrors });
+          return;
+        }
+        if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+
+        totalImported += data.imported;
+        totalActivated += data.activated;
+        allRowErrors.push(...data.rowErrors);
+      }
+
+      setResult({ imported: totalImported, activated: totalActivated, totalRows, rowErrors: allRowErrors });
+      setProgress("");
       if (mode === "file") setFile(null); else setCsvText("");
       setLoading(false);
     } catch (err: any) {
@@ -48,6 +91,12 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
           ))}
         </div>
       </div>
+
+      {progress && (
+        <div className="card">
+          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>{progress}</p>
+        </div>
+      )}
 
       {result && (
         <div className="card">
@@ -79,6 +128,7 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Column A = Name, Column B = Roll Number, Column C = Batch Name. Students from any number of your
           batches can be mixed in the same file. A header row is fine — it's detected and skipped automatically.
+          Large files are processed in small batches automatically — leave the page open until it finishes.
         </p>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 12.5, marginBottom: 10, display: "block" }} />
         <button onClick={() => runImport("file")} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
