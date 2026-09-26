@@ -34,7 +34,7 @@ export default function StudentChangePasswordPage() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <img className="auth-logo" src="/brand/obehub-logo-v2.webp" alt="OBEHUB" width={440} height={363} style={{ width: 150 }} />
+        <img className="auth-logo" src="/brand/obehub-logo-v3.webp" alt="OBEHUB" width={440} height={352} style={{ width: 150 }} />
         <h1 style={{ textAlign: "center", fontSize: 20, marginBottom: 4 }}>Set Your Password</h1>
         <p style={{ textAlign: "center", color: "var(--slate)", fontSize: 13, marginBottom: 24 }}>
           Choose a password only you know — you won't use your roll number to sign in again after this.

@@ -34,8 +34,8 @@ export default function StudentShell({ studentName, children }: { studentName?: 
       <header className="st-top">
         <div className="st-top-inner">
           <Link href="/student/registration" className="st-brand" aria-label="OBEHUB student portal">
-            <img className="sb-mark" src="/brand/obehub-mark-v2.webp" alt="" width={36} height={30} />
-            <img className="sb-word" src="/brand/obehub-wordmark-only-v2.webp" alt="OBEHUB" width={104} height={18} />
+            <img className="sb-mark" src="/brand/obehub-mark-v3.webp" alt="" width={36} height={28} />
+            <img className="sb-word" src="/brand/obehub-wordmark-only-v3.webp" alt="OBEHUB" width={107} height={18} />
           </Link>
           <nav className="st-nav" aria-label="Student portal">
             {NAV.map((n) => (

@@ -132,9 +132,9 @@ export default function AppShell({
       <aside className="sidebar" aria-label="Main navigation">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/dashboard" className="sb-brand" aria-label="OBEHUB home">
-            <img className="sb-mark" src="/brand/obehub-mark-v2.webp" alt="" width={44} height={37} />
+            <img className="sb-mark" src="/brand/obehub-mark-v3.webp" alt="" width={44} height={35} />
             <span>
-              <img className="sb-word" src="/brand/obehub-wordmark-only-v2.webp" alt="OBEHUB" width={127} height={22} />
+              <img className="sb-word" src="/brand/obehub-wordmark-only-v3.webp" alt="OBEHUB" width={130} height={22} />
               <span className="sb-brand-tag" style={{ display: "block" }}>Outcome · Learn · Assess</span>
             </span>
           </Link>

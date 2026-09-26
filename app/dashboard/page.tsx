@@ -68,7 +68,7 @@ export default async function Dashboard() {
               </Link>
             </div>
           </div>
-          <img className="hero-mark" src="/brand/obehub-mark-v2.webp" alt="" width={120} height={100} />
+          <img className="hero-mark" src="/brand/obehub-mark-v3.webp" alt="" width={120} height={95} />
         </div>
       </section>
 

@@ -15,7 +15,7 @@ export default function AuthLayout({
     <div className="auth">
       <section className="auth-visual" aria-hidden="true">
         <div className="auth-visual-brand">
-          <img src="/brand/obehub-mark-v2.webp" alt="" width={46} height={38} />
+          <img src="/brand/obehub-mark-v3.webp" alt="" width={46} height={36} />
           OBEHUB
         </div>
         <div>

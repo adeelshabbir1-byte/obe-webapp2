@@ -12,7 +12,7 @@ export default function StudentLoginPage() {
       heroText="Register for courses, choose electives, plan every semester and see how you are progressing against your program's learning outcomes."
     >
       <div className="auth-card">
-        <img className="auth-logo" src="/brand/obehub-logo-v2.webp" alt="OBEHUB — Outcome · Learn · Assess · Excel" width={440} height={363} />
+        <img className="auth-logo" src="/brand/obehub-logo-v3.webp" alt="OBEHUB — Outcome · Learn · Assess · Excel" width={440} height={352} />
         <h1>Student Portal</h1>
         <p className="auth-sub">Sign in with your roll number.</p>
         <StudentLoginForm />
