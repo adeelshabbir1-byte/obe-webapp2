@@ -52,6 +52,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
+  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
   { href: "/coordinator/assignment-history", label: "Assignment History" },

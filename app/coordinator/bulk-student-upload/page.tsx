@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { ALL_REPORTS, NCEAC_PACKAGE_REPORT_HREFS, reportIdForHref } from "../../../lib/reportRegistry";
 import Shell from "../../../components/Shell";
-import ReportBundleManager from "../../../components/ReportBundleManager";
-import NceacPackageButton from "../../../components/NceacPackageButton";
+import BulkStudentUpload from "../../../components/BulkStudentUpload";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -40,37 +38,32 @@ const NAV = [
   { href: "/omc/reports", label: "OMC Reports" },
 ];
 
-export default async function CoordinatorReportBundlesPage() {
+export default async function BulkStudentUploadPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const [own, platform] = await Promise.all([
-    prisma.reportBundle.findMany({ where: { scope: "COORDINATOR", ownerId: user.id } }),
-    prisma.reportBundle.findMany({ where: { scope: "PLATFORM" } }),
-  ]);
+  const batches = await prisma.batch.findMany({
+    where: { coordinatorId: user.id },
+    select: { degreeProgram: true, batchName: true },
+    orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
+  });
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Report Bundles</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bulk Student Upload (Multi-Batch)</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Group reports together for one-go printing — like a full "NCEAC Visit Package."
+        Upload students for any number of your batches in a single file — each row names its own batch,
+        which is checked against your real batches before anything is saved. Logins are activated
+        automatically for every student this creates or touches.
       </p>
-      <NceacPackageButton
-        apiEndpoint="/api/coordinator/report-bundles"
-        reportIds={NCEAC_PACKAGE_REPORT_HREFS.map(reportIdForHref)}
-        alreadyExists={own.some((b) => b.name === "NCEAC Accreditation Package")}
-      />
-      <ReportBundleManager
-        apiEndpoint="/api/coordinator/report-bundles"
-        reports={ALL_REPORTS}
-        bundles={own.map((b) => ({ id: b.id, name: b.name, description: b.description, reportIds: JSON.parse(b.reportIds) }))}
-        extraBundles={platform.map((b) => ({ id: b.id, name: b.name, description: b.description, reportIds: JSON.parse(b.reportIds) }))}
-        extraLabel="Platform-Wide Bundles (from Super Admin)"
-        readOnlyExtra={true}
-      />
+      {batches.length === 0 ? (
+        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Create a batch first.</p></div>
+      ) : (
+        <BulkStudentUpload batches={batches} />
+      )}
     </Shell>
   );
 }

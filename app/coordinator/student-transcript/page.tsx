@@ -19,6 +19,7 @@ const NAV = [
   { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
+  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
   { href: "/coordinator/assignment-history", label: "Assignment History" },
