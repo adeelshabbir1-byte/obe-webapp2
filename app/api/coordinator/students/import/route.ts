@@ -41,5 +41,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "STUDENTS_IMPORTED", entityType: "Batch", entityId: batch.id, metadata: { imported, skipped } });
 
   const freshStudents = await prisma.student.findMany({ where: { batchId: batch.id }, orderBy: { rollNumber: "asc" } });
-  return NextResponse.json({ imported, skipped, errors: errors.length > 0 ? errors : undefined, students: freshStudents.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber })) });
+  return NextResponse.json({ imported, skipped, errors: errors.length > 0 ? errors : undefined, students: freshStudents.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber })) });
 }

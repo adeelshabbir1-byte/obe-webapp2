@@ -45,7 +45,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
       {course.masterCourseId && course.clos.length === 0 && <LoadHecContentButton courseId={course.id} />}
       <ClosManager
         courseId={course.id}
-        initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct, targetPct: c.targetPct }))}
+        initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploMappingSource: c.ploMappingSource, ploContributionPct: c.ploContributionPct, targetPct: c.targetPct }))}
         plos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status }))}
       />
       <CourseDescriptionFieldsForm

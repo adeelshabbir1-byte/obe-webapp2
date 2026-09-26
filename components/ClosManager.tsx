@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 
 type Plo = { id: string; number: number; title: string; status: string };
-type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null; targetPct: number };
+type Clo = { id: string; code: string; statement: string; bloomLevel: string; mappedPloId: string | null; ploMappingSource: string | null; ploContributionPct: number | null; targetPct: number };
 
 const BLOOM_OPTIONS = [
   { v: "C1", label: "C1 — Remember" }, { v: "C2", label: "C2 — Understand" }, { v: "C3", label: "C3 — Apply" },
@@ -177,7 +177,15 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                       <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
                     </div>
                   </td>
-                  <td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
+                  <td>{c.statement}</td><td>{c.bloomLevel}</td>
+                  <td>
+                    {ploLabel(plos, c.mappedPloId)}
+                    {c.mappedPloId && c.ploMappingSource === "SYSTEM" && (
+                      <span title="Suggested by keyword matching, not yet reviewed" style={{ marginLeft: 6, fontSize: 10, color: "#96650F", background: "#FBEED2", padding: "1px 5px", borderRadius: 3 }}>
+                        ⚠️ unverified
+                      </span>
+                    )}
+                  </td>
                   <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
                   <td>{c.targetPct}%</td>
                   <td style={{ display: "flex", gap: 10 }}>

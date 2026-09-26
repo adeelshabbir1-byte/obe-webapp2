@@ -9,6 +9,7 @@ import CopyPloMappingsForm from "../../../components/CopyPloMappingsForm";
 import AutoMapHecButton from "../../../components/AutoMapHecButton";
 import AutoMapHecAllButton from "../../../components/AutoMapHecAllButton";
 import AutoMapSystemButton from "../../../components/AutoMapSystemButton";
+import AutoMapCloLevelButton from "../../../components/AutoMapCloLevelButton";
 import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
@@ -94,6 +95,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       )}
       {hasFilter && searchParams.batchId && <AutoMapHecButton batchId={searchParams.batchId} />}
       {hasFilter && searchParams.batchId && <AutoMapSystemButton batchId={searchParams.batchId} />}
+      {hasFilter && searchParams.batchId && <AutoMapCloLevelButton batchId={searchParams.batchId} />}
       {hasFilter && allBatches.length > 1 && (
         <div className="card">
           <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Copy Mappings from Another Batch</h3>

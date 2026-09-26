@@ -28,6 +28,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       statement: body.statement,
       bloomLevel: body.bloomLevel,
       mappedPloId: body.mappedPloId || null,
+      // Saving from this editor is always a human decision — whether
+      // picking a PLO for the first time or re-confirming a prior
+      // system suggestion — so it's always tagged MANUAL from here,
+      // clearing the "unverified" badge either way.
+      ploMappingSource: body.mappedPloId ? "MANUAL" : null,
       ploContributionPct: body.mappedPloId ? (body.ploContributionPct ? parseInt(body.ploContributionPct, 10) : 100) : null,
       targetPct: body.targetPct ? parseInt(body.targetPct, 10) : 60,
     },

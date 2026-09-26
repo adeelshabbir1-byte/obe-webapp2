@@ -81,18 +81,39 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
       if (!proceed) return;
     }
     setLoading(true); setError(""); setCopyResult("");
+
+    let totalCreated = 0, totalDeleted = 0, totalSkipped = 0, round = 0;
+    const allErrors: string[] = [];
+    let cursor: string | undefined;
+
     try {
-      const res = await fetch("/api/coordinator/courses/copy-from-batch", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: selectedBatchId, replaceExisting }),
-      });
-      let data: any = {};
-      try { data = await res.json(); } catch { setError("No response from server — check Runtime Logs, or try again."); setLoading(false); return; }
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      const errorNote = data.errors ? ` ${data.errors.length} failed: ${data.errors.slice(0, 3).join("; ")}` : "";
-      setCopyResult(`${data.deleted ? `Deleted ${data.deleted} existing course(s), then copied` : "Copied"} ${data.created} course(s) from the source batch.${data.skippedAsExisting ? ` ${data.skippedAsExisting} already existed in the target and were left alone.` : ""}${errorNote}`);
-      if (data.courses) setCourses(data.courses);
+      while (true) {
+        round++;
+        setCopyResult(`Copying… ${totalCreated} course(s) copied so far (round ${round}).`);
+        const res = await fetch("/api/coordinator/courses/copy-from-batch", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sourceBatchId: copySourceBatchId, targetBatchId: selectedBatchId, replaceExisting, cursor }),
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch {
+          setError(`The server didn't return a valid response on round ${round} (it may have hit a time limit mid-batch). ${totalCreated} course(s) were copied before this happened — safe to just click "Copy From Batch" again to pick up where it left off, since already-copied courses are automatically skipped.`);
+          setLoading(false);
+          return;
+        }
+        if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+
+        totalCreated += data.created; totalDeleted += data.deleted || 0; totalSkipped += data.skippedAsExisting;
+        if (data.errors) allErrors.push(...data.errors);
+
+        cursor = data.nextCursor;
+        if (!data.mightHaveMore || !cursor) break;
+        if (round > 200) break; // sane upper bound so a stuck loop can't run forever
+      }
+
+      const errorNote = allErrors.length > 0 ? ` ${allErrors.length} failed: ${allErrors.slice(0, 3).join("; ")}` : "";
+      setCopyResult(`${totalDeleted ? `Deleted ${totalDeleted} existing course(s), then copied` : "Copied"} ${totalCreated} course(s) from the source batch.${totalSkipped ? ` ${totalSkipped} already existed in the target and were left alone.` : ""}${errorNote}`);
       setLoading(false);
+      router.refresh();
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

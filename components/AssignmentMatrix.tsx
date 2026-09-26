@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
+import DownloadButton from "./DownloadButton";
 
 type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; customCategoryName: string | null; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; customCategoryName: string | null; dominantType: string | null };
@@ -289,9 +290,7 @@ export default function AssignmentMatrix() {
                 </div>
               )}
             </div>
-            <a href="/api/assigner/matrix/export-grid" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
-              Download as Excel
-            </a>
+            <DownloadButton url="/api/assigner/matrix/export-grid" label="Download as Excel" className="btn" style={{ fontSize: 12, padding: "5px 10px" }} />
             <label className="btn" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
               {importing ? "Uploading…" : "Upload edited Excel"}
               <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />

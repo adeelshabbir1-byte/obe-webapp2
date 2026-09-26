@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DownloadButton from "./DownloadButton";
 
 export default function CourseEvaluationSection({ courseId, initialObservations }: { courseId: string; initialObservations: string }) {
   const [observations, setObservations] = useState(initialObservations);
@@ -35,7 +36,7 @@ export default function CourseEvaluationSection({ courseId, initialObservations 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {saved && <span style={{ color: "var(--sage)", fontSize: 12 }}>Saved.</span>}
         <button onClick={save} disabled={saving} className="btn btn-brass">{saving ? "Saving…" : "Save Observations"}</button>
-        <a href={`/api/instructor/courses/${courseId}/evaluation-form`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Evaluation Form (Word)</a>
+        <DownloadButton url={`/api/instructor/courses/${courseId}/evaluation-form`} label="Download Course Evaluation Form (Word)" className="btn btn-brass" />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import DownloadButton from "./DownloadButton";
 
 type Course = { id: string; code: string; title: string; instructorId: string | null; instructorName: string | null; batchLabel: string };
 type Faculty = { id: string; name: string };
@@ -65,9 +66,7 @@ export default function PrimaryInstructorAssigner() {
         handles additional sections when a course has more than one.
       </p>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <a href="/api/assigner/primary-instructors/export" className="btn" style={{ fontSize: 12, padding: "5px 10px" }}>
-          Download as Excel
-        </a>
+        <DownloadButton url="/api/assigner/primary-instructors/export" label="Download as Excel" className="btn" style={{ fontSize: 12, padding: "5px 10px" }} />
         <label className="btn" style={{ fontSize: 12, padding: "5px 10px", cursor: importing ? "wait" : "pointer" }}>
           {importing ? "Uploading…" : "Upload edited Excel"}
           <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />

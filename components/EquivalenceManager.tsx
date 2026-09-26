@@ -103,6 +103,7 @@ export default function EquivalenceManager() {
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {busy && <div style={{ background: "#FBEED2", color: "#96650F", padding: "6px 12px", fontSize: 12, marginBottom: 10 }}>Saving…</div>}
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 4 }}>
           Click a course, then click another in a <b>different</b> column to mark them equivalent — they'll snap

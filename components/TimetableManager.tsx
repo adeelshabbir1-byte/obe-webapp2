@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AvailabilityGrid from "./AvailabilityGrid";
+import DownloadButton from "./DownloadButton";
 import LocalSolutionUploader from "./LocalSolutionUploader";
 
 type Room = { id: string; name: string; type: string; capacity: number };
@@ -360,7 +361,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               limit), then upload the solution file it produces.
             </p>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <a href="/api/coordinator/timetable/download-constraints" className="btn btn-brass" style={{ textDecoration: "none" }}>1. Download Constraints (Excel)</a>
+              <DownloadButton url="/api/coordinator/timetable/download-constraints" label="1. Download Constraints (Excel)" className="btn btn-brass" />
               <LocalSolutionUploader onUploaded={(runId) => { setRunId(runId); loadRun(runId); }} />
             </div>
           </div>
@@ -404,7 +405,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             <div className="card" style={{ overflowX: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                 <h3 style={{ fontSize: 14 }}>Timetable</h3>
-                {runId && <a href={`/api/coordinator/timetable/${runId}/export`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>}
+                {runId && <DownloadButton url={`/api/coordinator/timetable/${runId}/export`} label="Export to Excel" className="btn btn-brass" />}
               </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <select value={viewMode} onChange={(e) => { setViewMode(e.target.value as any); setViewFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>

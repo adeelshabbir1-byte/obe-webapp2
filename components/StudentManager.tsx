@@ -4,7 +4,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
-type Student = { id: string; name: string; rollNumber: string };
+type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number };
 type Batch = { id: string; label: string };
 
 export default function StudentManager({ batches, initialBatchId, students: initialStudents }: { batches: Batch[]; initialBatchId: string; students: Student[] }) {
@@ -18,6 +18,35 @@ export default function StudentManager({ batches, initialBatchId, students: init
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [heldBack, setHeldBack] = useState<Set<string>>(new Set());
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceResult, setAdvanceResult] = useState("");
+
+  function toggleHeldBack(id: string) {
+    setHeldBack((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function advanceSemester() {
+    const advancingCount = students.length - heldBack.size;
+    if (!confirm(`Advance ${advancingCount} student(s) to their next semester? ${heldBack.size} held back at their current semester will be unaffected.`)) return;
+    setAdvancing(true); setError(""); setAdvanceResult("");
+    try {
+      const res = await fetch("/api/coordinator/students/advance-semester", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchId, heldBackStudentIds: Array.from(heldBack) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setAdvancing(false); return; }
+      setStudents((prev) => prev.map((s) => heldBack.has(s.id) ? s : { ...s, currentSemesterNumber: s.currentSemesterNumber + 1 }));
+      setAdvanceResult(`${data.advanced} student(s) advanced to their next semester. ${data.heldBack} held back at their current semester.`);
+      setHeldBack(new Set());
+      setAdvancing(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setAdvancing(false); }
+  }
 
   function switchBatch(id: string) {
     setBatchId(id);
@@ -105,13 +134,31 @@ export default function StudentManager({ batches, initialBatchId, students: init
       </div>
 
       <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 6 }}>Advance to Next Semester</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+          Once per term, advances every student in this batch by one semester — this is what actually
+          moves a student from, say, semester 3 to semester 4; nothing does this automatically. Check
+          "Hold back" for anyone repeating their current semester (a retake, a leave of absence, etc.) —
+          everyone else advances. There's no ceiling at semester 8: a student still working through a
+          retake or a GPA-improvement repeat past their batch's normal length keeps advancing in real term
+          count, they just won't get swept into batch-wide default enrollment anymore (correct — they need
+          to register for their specific earlier-semester course directly instead).
+        </p>
+        {advanceResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{advanceResult}</div>}
+        <button onClick={advanceSemester} disabled={advancing || students.length === 0} className="btn btn-brass">
+          {advancing ? "Advancing…" : `Advance ${students.length - heldBack.size} Student(s) to Next Semester`}
+        </button>
+      </div>
+
+      <div className="card">
         <SortableTable>
-          <thead><tr><th>Name</th><th>Roll Number</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Hold Back</th><th></th></tr></thead>
           <tbody>
-            {students.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
+            {students.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
             {students.map((s) => (
               <tr key={s.id}>
-                <td>{s.name}</td><td>{s.rollNumber}</td>
+                <td>{s.name}</td><td>{s.rollNumber}</td><td>{s.currentSemesterNumber}</td>
+                <td><input type="checkbox" checked={heldBack.has(s.id)} onChange={() => toggleHeldBack(s.id)} /></td>
                 <td><button onClick={() => removeStudent(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
               </tr>
             ))}

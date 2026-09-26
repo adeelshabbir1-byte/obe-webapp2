@@ -24,6 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     data: {
       courseId: course.id, source: "SE", code: `CLO-${count + 1}`, orderIndex: count, statement: body.statement, bloomLevel: body.bloomLevel,
       mappedPloId: body.mappedPloId || null,
+      ploMappingSource: body.mappedPloId ? "MANUAL" : null,
       ploContributionPct: body.mappedPloId ? (body.ploContributionPct ? parseInt(body.ploContributionPct, 10) : 100) : null,
       targetPct: body.targetPct ? parseInt(body.targetPct, 10) : 60,
     },

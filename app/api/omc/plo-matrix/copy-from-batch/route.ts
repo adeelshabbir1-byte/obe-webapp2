@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
   const targetPloByNumber = new Map(targetPlos.map((p) => [p.number, p]));
 
   let copiedCount = 0, skippedNoMatch = 0;
+  const toCreate: { courseId: string; ploId: string; assignedById: string }[] = [];
   for (const sc of sourceCourses) {
     const tc = targetCourseByCode.get(sc.code);
     if (!tc) { skippedNoMatch += sc.ploMappings.length; continue; }
@@ -48,10 +49,11 @@ export async function POST(req: NextRequest) {
       if (!targetPlo) { skippedNoMatch++; continue; }
       if (existingTargetPloIds.has(targetPlo.id)) continue; // already set — don't overwrite
 
-      await prisma.coursePloMapping.create({ data: { courseId: tc.id, ploId: targetPlo.id, assignedById: user.id } });
+      toCreate.push({ courseId: tc.id, ploId: targetPlo.id, assignedById: user.id });
       copiedCount++;
     }
   }
+  if (toCreate.length > 0) await prisma.coursePloMapping.createMany({ data: toCreate });
 
   await writeAuditLog({ actorUserId: user.id, action: "PLO_MAPPINGS_COPIED", entityType: "Batch", entityId: targetBatchId, metadata: { sourceBatchId, copiedCount, skippedNoMatch } });
 

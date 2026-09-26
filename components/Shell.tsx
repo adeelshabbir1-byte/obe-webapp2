@@ -43,8 +43,12 @@ export default function Shell({
     }
   }, [roleLabel]);
 
+  const [switching, setSwitching] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   async function switchRole() {
-    if (!roleSwitch) return;
+    if (!roleSwitch || switching) return;
+    setSwitching(true);
     const nextRole = roleSwitch.activeRole === "INSTRUCTOR" ? "SUBJECT_EXPERT" : "INSTRUCTOR";
     await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
     router.push("/dashboard");
@@ -52,6 +56,8 @@ export default function Shell({
   }
 
   async function logout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
@@ -102,8 +108,8 @@ export default function Shell({
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
           <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
           {roleSwitch && (
-            <button onClick={switchRole} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: "pointer", padding: 0, textAlign: "left" }}>
-              Switch to {roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}
+            <button onClick={switchRole} disabled={switching} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: switching ? "default" : "pointer", padding: 0, textAlign: "left", opacity: switching ? 0.6 : 1 }}>
+              {switching ? "Switching…" : `Switch to ${roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}`}
             </button>
           )}
           {isAlumniCustodian && (
@@ -116,8 +122,8 @@ export default function Shell({
               </Link>
             </>
           )}
-          <button onClick={logout} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
-            Sign out
+          <button onClick={logout} disabled={loggingOut} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: loggingOut ? "default" : "pointer", padding: 0, opacity: loggingOut ? 0.6 : 1 }}>
+            {loggingOut ? "Signing out…" : "Sign out"}
           </button>
         </div>
       </div>

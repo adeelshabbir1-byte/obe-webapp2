@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import DownloadButton from "./DownloadButton";
 
 export default function BulkStakeholderImport() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function BulkStakeholderImport() {
       </p>
       {error && <div className="err">{error}</div>}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: summary ? 14 : 0 }}>
-        <a href="/api/coordinator/stakeholders/download-template" className="btn btn-brass" style={{ textDecoration: "none" }}>Download Template</a>
+        <DownloadButton url="/api/coordinator/stakeholders/download-template" label="Download Template" className="btn btn-brass" />
         <input ref={fileRef} type="file" accept=".xlsx" style={{ fontSize: 12 }} />
         <button onClick={upload} disabled={uploading} className="btn btn-brass">{uploading ? "Uploading…" : "Upload Filled Template"}</button>
       </div>
