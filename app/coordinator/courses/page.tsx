@@ -51,7 +51,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   const courses = await prisma.course.findMany({
     where: { coordinatorId: user.id, ...(selectedBatchId ? { batchId: selectedBatchId } : {}) },
     orderBy: [{ semesterNumber: "asc" }, { createdAt: "desc" }],
-    include: { batch: true },
+    include: { batch: true, _count: { select: { studentEnrollments: true } } },
   });
 
   const subjectExperts = await prisma.user.findMany({
@@ -90,7 +90,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
           semesterNumber: c.semesterNumber, fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId,
-          fromBenchmark: !!c.benchmarkSourceId,
+          fromBenchmark: !!c.benchmarkSourceId, enrolledCount: c._count.studentEnrollments,
           prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab,
           batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}
