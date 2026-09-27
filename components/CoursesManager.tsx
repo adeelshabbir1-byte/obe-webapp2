@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
-  prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean;
+  prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean; enrolledCount: number;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -399,12 +399,12 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
 
       <div className="card" style={{ overflowX: "auto" }}>
         <SortableTable>
-          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Enrolled</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={11} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
             {courses.map((c) => editingId === c.id ? (
               <tr key={c.id}>
-                <td colSpan={10}>
+                <td colSpan={11}>
                   <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                     <input name="code" defaultValue={c.code} placeholder="Code" style={{ width: 90, padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <input name="title" defaultValue={c.title} placeholder="Title" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -426,6 +426,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{c.batchName || "—"}</td>
                 <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td><td>{c.courseType}</td>
                 <td>{c.semesterNumber ?? "—"}</td>
+                <td style={{ textAlign: "center" }}>{c.enrolledCount}</td>
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
                   {c.fromBenchmark && (

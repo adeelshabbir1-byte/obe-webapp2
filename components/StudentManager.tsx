@@ -15,6 +15,8 @@ export default function StudentManager({ batches, initialBatchId, students: init
   const [file, setFile] = useState<File | null>(null);
   const [activatingLogins, setActivatingLogins] = useState(false);
   const [loginActivationResult, setLoginActivationResult] = useState("");
+  const [activatingAll, setActivatingAll] = useState(false);
+  const [activateAllResult, setActivateAllResult] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
@@ -105,6 +107,22 @@ export default function StudentManager({ batches, initialBatchId, students: init
     } catch (err: any) { setError("Unexpected error: " + err.message); setActivatingLogins(false); }
   }
 
+  async function activateAllBatches() {
+    if (!confirm("Activate logins for every not-yet-graduated student across every batch you coordinate? Students who've already earned enough credit hours to complete their degree are skipped, as are students who already have a login.")) return;
+    setActivatingAll(true); setActivateAllResult(""); setError("");
+    try {
+      const res = await fetch("/api/coordinator/students/activate-all", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setActivatingAll(false); return; }
+      const lines = data.perBatch
+        .filter((b: any) => b.activated || b.skippedGraduated)
+        .map((b: any) => `${b.batchName}: ${b.activated} activated${b.skippedGraduated ? `, ${b.skippedGraduated} skipped (degree complete)` : ""}`);
+      setActivateAllResult(`${data.activated} student login(s) activated across all batches.${data.skippedGraduated ? ` ${data.skippedGraduated} skipped as degree-complete.` : ""}${data.skippedAlreadyActive ? ` ${data.skippedAlreadyActive} already had a login.` : ""}\n${lines.join("\n")}`);
+      setActivatingAll(false);
+      router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setActivatingAll(false); }
+  }
+
   return (
     <>
       {error && <div className="err">{error}</div>}
@@ -113,6 +131,20 @@ export default function StudentManager({ batches, initialBatchId, students: init
         <select value={batchId} onChange={(e) => switchBatch(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
           {batches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
         </select>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 6 }}>Activate All Students, Every Batch</h3>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+          One click, across every batch you coordinate — not just the one selected above. Activates a login
+          for every student who hasn't already got one, except students whose own earned credit hours (passing
+          grades on record) have already reached their batch's total credit hours — they're treated as
+          degree-complete and skipped. This never resets an existing password.
+        </p>
+        {activateAllResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10, whiteSpace: "pre-line" }}>{activateAllResult}</div>}
+        <button onClick={activateAllBatches} disabled={activatingAll} className="btn btn-brass">
+          {activatingAll ? "Activating…" : "Activate All Non-Graduated Students"}
+        </button>
       </div>
 
       <div className="card">
