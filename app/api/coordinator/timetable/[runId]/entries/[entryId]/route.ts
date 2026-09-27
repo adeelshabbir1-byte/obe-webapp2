@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   function codeFor(section: { course: { code: string } | null; group: { name: string } | null }): string {
     return section.course ? section.course.code : `${section.group!.name} (combined)`;
   }
-  function batchIdsFor(section: { course: { batch: { id: string } | null } | null; group: { members: { course: { batch: { id: string } | null } | null }[] } | null }): string[] {
+  function batchIdsFor(section: { course: { batch: { id: string } | null } | null; group: { members: { course: { batch: { id: string } | null } }[] } | null }): string[] {
     if (section.course) return section.course.batch ? [section.course.batch.id] : [];
     return (section.group?.members || []).map((m) => m.course.batch?.id).filter((id): id is string => !!id);
   }
