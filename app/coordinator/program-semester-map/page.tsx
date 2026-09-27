@@ -64,7 +64,14 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
   const availableTerms = termRows.map((r) => ({ termName: r.offeredTermName!, year: r.offeredTermYear! }))
     .sort((a, b) => (b.year - a.year) || a.termName.localeCompare(b.termName));
   function termKey(t: { termName: string; year: number }) { return `${t.termName}-${t.year}`; }
-  const selectedTermKey = searchParams.term ?? (availableTerms[0] ? termKey(availableTerms[0]) : "");
+  // Default to "All Terms", not the single most-recent labeled term. A lot
+  // of currently-offered courses were never stamped with offeredTermName
+  // (offered before that field existed, or via the manual per-course
+  // toggle) — filtering to one specific term by default silently hides
+  // every one of those, even though they're correctly marked offered.
+  // "All Terms" has no such filter, so nothing with a missing label gets
+  // dropped just because the page loaded without a ?term= in the URL.
+  const selectedTermKey = searchParams.term ?? "all";
   const showAllTerms = selectedTermKey === "all";
   const selectedTerm = showAllTerms ? null : availableTerms.find((t) => termKey(t) === selectedTermKey) || null;
 
