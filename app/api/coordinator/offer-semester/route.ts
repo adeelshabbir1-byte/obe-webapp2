@@ -70,7 +70,19 @@ export async function POST() {
     // part of this batch's normal Fall/Spring progression and must stay
     // exactly as the Coordinator set them.
     const previousSemesterCourses = await prisma.course.findMany({
-      where: { batchId: batch.id, isOffered: true, semesterNumber: { not: semesterNumber }, offeredTermName: { not: "Summer" } },
+      where: {
+        batchId: batch.id,
+        isOffered: true,
+        semesterNumber: { not: semesterNumber },
+        // offeredTermName is null for any course offered before this field
+        // existed, or offered manually via the per-course "Offer" toggle
+        // (which never sets it). A plain `{ not: "Summer" }` compiles to
+        // SQL `<> 'Summer'`, which is neither true nor false for a null
+        // column — Postgres silently drops those rows from the match, so
+        // they never got un-offered no matter how many times this ran.
+        // OR-ing in `offeredTermName: null` explicitly is what fixes it.
+        OR: [{ offeredTermName: null }, { offeredTermName: { not: "Summer" } }],
+      },
       select: { id: true },
     });
     if (previousSemesterCourses.length > 0) {
