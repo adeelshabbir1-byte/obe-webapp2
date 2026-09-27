@@ -24,7 +24,10 @@ export async function GET() {
         { header: "DayStartHour", key: "dayStartHour", width: 14 },
         { header: "DayEndHour", key: "dayEndHour", width: 14 },
       ],
-      rows: slots.map((s) => ({ ...s, allowedDays: s.allowedDays.join(",") })),
+      // batchId stays a single joined column here for continuity with this
+      // sheet's existing shape — a combined-group slot lists every member
+      // batch it covers, joined, rather than getting its own column shape.
+      rows: slots.map((s) => ({ ...s, allowedDays: s.allowedDays.join(","), batchId: s.batchIds.join(",") })),
     },
     {
       name: "Rooms",

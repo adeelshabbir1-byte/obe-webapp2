@@ -247,8 +247,16 @@ model Room {
 
 model ScheduleSection {
   id             String   @id @default(cuid())
-  courseId       String
-  course         Course   @relation(fields: [courseId], references: [id])
+  // Exactly one of courseId/groupId is set, never both — a section either
+  // belongs to one standalone course, or to a Course Equivalence Group's
+  // combined class (multiple batches' equivalent courses taught together).
+  // Both nullable rather than a discriminated union because Prisma has no
+  // native way to enforce "exactly one" at the schema level; app code is
+  // responsible for that invariant (see schedule-sections/auto-generate).
+  courseId       String?
+  course         Course?  @relation(fields: [courseId], references: [id])
+  groupId        String?
+  group          CourseEquivalenceGroup? @relation(fields: [groupId], references: [id])
   instructorId   String
   instructor     User     @relation("ScheduleSectionInstructor", fields: [instructorId], references: [id])
   sectionLabel   String   @default("Section A")
@@ -259,6 +267,7 @@ model ScheduleSection {
 
   timetableEntries TimetableEntry[]
   @@index([courseId])
+  @@index([groupId])
   @@index([instructorId])
 }
 
@@ -480,6 +489,7 @@ model CourseEquivalenceGroup {
 
   members    CourseEquivalenceMember[]
   sectionAssignments GroupSectionAssignment[]
+  scheduleSections   ScheduleSection[]
 
   @@index([chairmanId])
 }

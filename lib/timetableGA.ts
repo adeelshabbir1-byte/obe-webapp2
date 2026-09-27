@@ -9,8 +9,12 @@
 export type Slot = {
   slotIndex: number;
   scheduleSectionId: string;
-  courseId: string;
-  batchId: string;
+  courseId: string | null;
+  // A standalone course's slot has exactly one batch here. A combined
+  // Equivalence Group's slot lists every member batch — a student in ANY
+  // of them must not have another class at the same time, so the conflict
+  // check below tests for any shared batch, not equality of a single id.
+  batchIds: string[];
   instructorId: string;
   roomTypeNeeded: string;
   durationHours: number;
@@ -74,7 +78,7 @@ function fitness(chromosome: Gene[], slots: Slot[], rooms: Room[], unavailabilit
 
       if (other.instructorId === slot.instructorId) { score += HARD_PENALTY; hardViolations++; }
       if (otherGene.roomId === gene.roomId) { score += HARD_PENALTY; hardViolations++; }
-      if (other.batchId === slot.batchId) { score += HARD_PENALTY; hardViolations++; }
+      if (other.batchIds.some((b) => slot.batchIds.includes(b))) { score += HARD_PENALTY; hardViolations++; }
       if (other.scheduleSectionId === slot.scheduleSectionId && otherGene.day === gene.day) { score += HARD_PENALTY / 2; hardViolations++; }
     }
   }
@@ -82,10 +86,14 @@ function fitness(chromosome: Gene[], slots: Slot[], rooms: Room[], unavailabilit
   // Soft: penalize gaps within a batch's day (encourages compact schedules).
   const byBatchDay = new Map<string, number[]>();
   for (let i = 0; i < slots.length; i++) {
-    const key = `${slots[i].batchId}::${chromosome[i].day}`;
-    const arr = byBatchDay.get(key) || [];
-    arr.push(chromosome[i].startHour);
-    byBatchDay.set(key, arr);
+    // A combined-group slot counts toward every member batch's own day —
+    // each of those batches genuinely has a class at that time.
+    for (const batchId of slots[i].batchIds) {
+      const key = `${batchId}::${chromosome[i].day}`;
+      const arr = byBatchDay.get(key) || [];
+      arr.push(chromosome[i].startHour);
+      byBatchDay.set(key, arr);
+    }
   }
   for (const starts of byBatchDay.values()) {
     if (starts.length < 2) continue;

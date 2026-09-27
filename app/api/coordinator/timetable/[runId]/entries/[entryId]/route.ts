@@ -15,9 +15,23 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   const run = await prisma.timetableRun.findUnique({ where: { id: params.runId } });
   if (!run || run.chairmanId !== chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  const sectionInclude = { course: { include: { batch: true } }, group: { include: { members: { include: { course: { include: { batch: true } } } } } } };
+
+  // Codes/batchIds for a section either come straight from its one
+  // standalone course, or — for a combined Equivalence Group section —
+  // from every member course, since a clash against ANY of those member
+  // batches is a real conflict for that batch's own students.
+  function codeFor(section: { course: { code: string } | null; group: { name: string } | null }): string {
+    return section.course ? section.course.code : `${section.group!.name} (combined)`;
+  }
+  function batchIdsFor(section: { course: { batch: { id: string } | null } | null; group: { members: { course: { batch: { id: string } | null } | null }[] } | null }): string[] {
+    if (section.course) return section.course.batch ? [section.course.batch.id] : [];
+    return (section.group?.members || []).map((m) => m.course.batch?.id).filter((id): id is string => !!id);
+  }
+
   const entry = await prisma.timetableEntry.findUnique({
     where: { id: params.entryId },
-    include: { scheduleSection: { include: { course: { include: { batch: true } } } } },
+    include: { scheduleSection: { include: sectionInclude } },
   });
   if (!entry || entry.timetableRunId !== params.runId) return NextResponse.json({ error: "not found" }, { status: 404 });
 
@@ -35,16 +49,18 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   // or same batch, overlapping in time, on the same day.
   const allEntries = await prisma.timetableEntry.findMany({
     where: { timetableRunId: params.runId, id: { not: entry.id }, dayOfWeek: newDay },
-    include: { scheduleSection: { include: { course: { include: { batch: true } } } } },
+    include: { scheduleSection: { include: sectionInclude } },
   });
 
+  const entryBatchIds = batchIdsFor(entry.scheduleSection);
   const clashingEntryIds: string[] = [];
   const reasons: string[] = [];
   for (const other of allEntries) {
     if (!overlaps(newStartHour, newEndHour, other.startHour, other.endHour)) continue;
-    if (other.roomId === entry.roomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${other.scheduleSection.course.code}`); }
-    if (other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${other.scheduleSection.course.code}`); }
-    if (other.scheduleSection.course.batchId && other.scheduleSection.course.batchId === entry.scheduleSection.course.batchId) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${other.scheduleSection.course.code}`); }
+    const otherCode = codeFor(other.scheduleSection);
+    if (other.roomId === entry.roomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
+    if (other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
+    if (batchIdsFor(other.scheduleSection).some((id) => entryBatchIds.includes(id))) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${otherCode}`); }
   }
 
   return NextResponse.json({

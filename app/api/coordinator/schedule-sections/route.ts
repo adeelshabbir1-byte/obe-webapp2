@@ -7,17 +7,37 @@ export async function GET() {
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id } });
-  const sections = await prisma.scheduleSection.findMany({
-    where: { course: { batchId: { in: batches.map((b) => b.id) } } },
-    include: { course: { include: { batch: true } }, instructor: true },
-    orderBy: [{ course: { code: "asc" } }],
-  });
-  return NextResponse.json({
-    sections: sections.map((s) => ({
-      id: s.id, courseId: s.courseId, courseCode: s.course.code, courseTitle: s.course.title,
-      batchLabel: s.course.batch ? `${s.course.batch.degreeProgram} — ${s.course.batch.batchName}` : "—",
+  const batchIds = batches.map((b) => b.id);
+
+  const [courseSections, groupSections] = await Promise.all([
+    prisma.scheduleSection.findMany({
+      where: { course: { batchId: { in: batchIds } } },
+      include: { course: { include: { batch: true } }, instructor: true },
+      orderBy: [{ course: { code: "asc" } }],
+    }),
+    // A group's section belongs here if ANY of its member courses is one
+    // of this Coordinator's own — same scoping the timetable generator
+    // itself uses.
+    prisma.scheduleSection.findMany({
+      where: { group: { members: { some: { course: { batchId: { in: batchIds } } } } } },
+      include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } }, instructor: true },
+    }),
+  ]);
+
+  const sections = [
+    ...courseSections.map((s) => ({
+      id: s.id, courseId: s.courseId, courseCode: s.course!.code, courseTitle: s.course!.title,
+      batchLabel: s.course!.batch ? `${s.course!.batch.degreeProgram} — ${s.course!.batch.batchName}` : "—",
       instructorId: s.instructorId, instructorName: s.instructor.name, sectionLabel: s.sectionLabel,
       sessionsPerWeek: s.sessionsPerWeek, sessionDurationMinutes: s.sessionDurationMinutes, roomTypeNeeded: s.roomTypeNeeded,
     })),
-  });
+    ...groupSections.map((s) => ({
+      id: s.id, courseId: null as string | null, courseCode: s.group!.name, courseTitle: "(Combined / Equivalence Group)",
+      batchLabel: s.group!.members.map((m) => m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—").join("; "),
+      instructorId: s.instructorId, instructorName: s.instructor.name, sectionLabel: s.sectionLabel,
+      sessionsPerWeek: s.sessionsPerWeek, sessionDurationMinutes: s.sessionDurationMinutes, roomTypeNeeded: s.roomTypeNeeded,
+    })),
+  ].sort((a, b) => a.courseCode.localeCompare(b.courseCode));
+
+  return NextResponse.json({ sections });
 }

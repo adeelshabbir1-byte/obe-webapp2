@@ -15,21 +15,40 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
     where: { timetableRunId: params.runId },
     include: {
       room: true,
-      scheduleSection: { include: { instructor: true, course: { include: { batch: true } } } },
+      // A section is either tied to one standalone course, or to an
+      // Equivalence Group's combined class — never both — so both are
+      // fetched and whichever is present is used below.
+      scheduleSection: {
+        include: {
+          instructor: true,
+          course: { include: { batch: true } },
+          group: { include: { members: { include: { course: { include: { batch: true } } } } } },
+        },
+      },
     },
     orderBy: [{ dayOfWeek: "asc" }, { startHour: "asc" }],
   });
 
   return NextResponse.json({
     run: { id: run.id, hardViolations: run.hardViolations, generations: run.generations, notes: run.notes, createdAt: run.createdAt },
-    entries: entries.map((e) => ({
-      id: e.id, day: e.dayOfWeek, startHour: e.startHour, endHour: e.endHour,
-      roomName: e.room.name, roomType: e.room.type,
-      courseCode: e.scheduleSection.course.code, courseTitle: e.scheduleSection.course.title,
-      sectionLabel: e.scheduleSection.sectionLabel,
-      instructorId: e.scheduleSection.instructorId, instructorName: e.scheduleSection.instructor.name,
-      batchId: e.scheduleSection.course.batch?.id || "", batchLabel: e.scheduleSection.course.batch ? `${e.scheduleSection.course.batch.degreeProgram} — ${e.scheduleSection.course.batch.batchName}` : "—",
-      roomId: e.roomId,
-    })),
+    entries: entries.map((e) => {
+      const s = e.scheduleSection;
+      const memberBatches = s.group ? s.group.members.map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b) : [];
+      const courseCode = s.course ? s.course.code : s.group!.name;
+      const courseTitle = s.course ? s.course.title : "(Combined / Equivalence Group)";
+      const batchId = s.course ? (s.course.batch?.id || "") : (memberBatches[0]?.id || "");
+      const batchLabel = s.course
+        ? (s.course.batch ? `${s.course.batch.degreeProgram} — ${s.course.batch.batchName}` : "—")
+        : memberBatches.map((b) => `${b.degreeProgram} — ${b.batchName}`).join("; ") || "—";
+      return {
+        id: e.id, day: e.dayOfWeek, startHour: e.startHour, endHour: e.endHour,
+        roomName: e.room.name, roomType: e.room.type,
+        courseCode, courseTitle,
+        sectionLabel: s.sectionLabel,
+        instructorId: s.instructorId, instructorName: s.instructor.name,
+        batchId, batchLabel,
+        roomId: e.roomId,
+      };
+    }),
   });
 }

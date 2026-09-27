@@ -2,50 +2,114 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 
-// Creates one ScheduleSection per (course, instructor) pair that doesn't
-// already have one — the course's own instructor, plus anyone from
-// CourseSectionAssignment. Safe to re-run: never duplicates existing rows.
+// Creates ScheduleSection rows for every offered course AND every Course
+// Equivalence Group whose members include one of this Coordinator's
+// offered courses. Previously this only ever looked at individual courses
+// — a group's own combined section/instructor assignment (set on the
+// Section Assignment Matrix) was silently never turned into a real
+// timetable slot at all. It also used to create exactly one ScheduleSection
+// per instructor regardless of how many sections they were assigned —
+// sectionCount=2 produced one weekly time slot, not two — so a "2 section"
+// assignment never actually became two separate classes needing two
+// separate timetable slots. Both are fixed here: one ScheduleSection per
+// section (not per instructor), sequentially labeled Section A, B, C...
+// across every instructor assigned to that course/group.
+//
+// Safe to re-run: never duplicates a (course-or-group, instructor,
+// section-ordinal) combination that already exists. If an assignment's
+// sectionCount is reduced after sections were already generated, the
+// surplus sections are left as-is (removable by hand via the existing
+// per-section delete) rather than auto-deleted, since a section may
+// already have real timetable entries tied to it.
 export async function POST() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id } });
+  const batchIds = batches.map((b) => b.id);
+
   const courses = await prisma.course.findMany({
-    where: { batchId: { in: batches.map((b) => b.id) }, isOffered: true },
+    where: { batchId: { in: batchIds }, isOffered: true },
     include: { sectionAssignments: true },
   });
 
-  const existing = await prisma.scheduleSection.findMany({ where: { courseId: { in: courses.map((c) => c.id) } } });
-  const existingPairs = new Set(existing.map((s) => `${s.courseId}::${s.instructorId}`));
+  const groups = await prisma.courseEquivalenceGroup.findMany({
+    where: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } },
+    include: { sectionAssignments: true },
+  });
 
   let created = 0;
-  for (const c of courses) {
-    const instructorIds = new Set<string>();
-    if (c.instructorId) instructorIds.add(c.instructorId);
-    for (const a of c.sectionAssignments) instructorIds.add(a.instructorId);
 
-    let labelIndex = 0;
-    for (const instructorId of instructorIds) {
-      const key = `${c.id}::${instructorId}`;
-      if (existingPairs.has(key)) continue;
-      labelIndex++;
-      // Default room type: LAB if the course itself has a lab component,
-      // otherwise LECTURE — PC can override per section afterward.
-      // Defaults: theory = 1.5hr x 2 sessions/week, lab = 3hr x 1 session/week.
-      // roomTypeNeeded must reflect whether THIS course record is itself a
-      // Lab course (courseType === "Lab", set by "Split into Lab") — not
-      // hasLab, which only means the course HAS a lab component and would
-      // otherwise mark a theory course's own sessions as needing a lab room.
-      const roomTypeNeeded = c.courseType === "Lab" ? "LAB" : "LECTURE";
-      await prisma.scheduleSection.create({
-        data: {
-          courseId: c.id, instructorId, sectionLabel: `Section ${String.fromCharCode(64 + labelIndex)}`,
-          roomTypeNeeded,
-          sessionsPerWeek: roomTypeNeeded === "LAB" ? 1 : 2,
-          sessionDurationMinutes: roomTypeNeeded === "LAB" ? 180 : 90,
-        },
-      });
-      created++;
+  for (const c of courses) {
+    // Every distinct instructor assigned to this course, each contributing
+    // however many sections they were given (CourseSectionAssignment), plus
+    // the course's own direct instructorId as one section if it isn't
+    // already covered by an explicit assignment row.
+    const unitInstructorIds: string[] = [];
+    const assignedIds = new Set(c.sectionAssignments.map((a) => a.instructorId));
+    if (c.instructorId && !assignedIds.has(c.instructorId)) unitInstructorIds.push(c.instructorId);
+    for (const a of c.sectionAssignments) {
+      for (let i = 0; i < Math.max(1, a.sectionCount); i++) unitInstructorIds.push(a.instructorId);
+    }
+    if (unitInstructorIds.length === 0) continue;
+
+    const existing = await prisma.scheduleSection.findMany({ where: { courseId: c.id } });
+    const existingCountByInstructor = new Map<string, number>();
+    for (const e of existing) existingCountByInstructor.set(e.instructorId, (existingCountByInstructor.get(e.instructorId) || 0) + 1);
+
+    const roomTypeNeeded = c.courseType === "Lab" ? "LAB" : "LECTURE";
+    let labelIndex = existing.length;
+    // Only create the shortfall per instructor — if 2 units are wanted for
+    // an instructor and 1 already exists, create just 1 more.
+    const wantedCountByInstructor = new Map<string, number>();
+    for (const id of unitInstructorIds) wantedCountByInstructor.set(id, (wantedCountByInstructor.get(id) || 0) + 1);
+
+    for (const [instructorId, wanted] of wantedCountByInstructor) {
+      const have = existingCountByInstructor.get(instructorId) || 0;
+      for (let i = have; i < wanted; i++) {
+        labelIndex++;
+        await prisma.scheduleSection.create({
+          data: {
+            courseId: c.id, instructorId, sectionLabel: `Section ${String.fromCharCode(64 + labelIndex)}`,
+            roomTypeNeeded,
+            sessionsPerWeek: roomTypeNeeded === "LAB" ? 1 : 2,
+            sessionDurationMinutes: roomTypeNeeded === "LAB" ? 180 : 90,
+          },
+        });
+        created++;
+      }
+    }
+  }
+
+  for (const g of groups) {
+    const unitInstructorIds: string[] = [];
+    for (const a of g.sectionAssignments) {
+      for (let i = 0; i < Math.max(1, a.sectionCount); i++) unitInstructorIds.push(a.instructorId);
+    }
+    if (unitInstructorIds.length === 0) continue;
+
+    const existing = await prisma.scheduleSection.findMany({ where: { groupId: g.id } });
+    const existingCountByInstructor = new Map<string, number>();
+    for (const e of existing) existingCountByInstructor.set(e.instructorId, (existingCountByInstructor.get(e.instructorId) || 0) + 1);
+
+    let labelIndex = existing.length;
+    const wantedCountByInstructor = new Map<string, number>();
+    for (const id of unitInstructorIds) wantedCountByInstructor.set(id, (wantedCountByInstructor.get(id) || 0) + 1);
+
+    for (const [instructorId, wanted] of wantedCountByInstructor) {
+      const have = existingCountByInstructor.get(instructorId) || 0;
+      for (let i = have; i < wanted; i++) {
+        labelIndex++;
+        await prisma.scheduleSection.create({
+          data: {
+            groupId: g.id, instructorId, sectionLabel: `Section ${String.fromCharCode(64 + labelIndex)}`,
+            roomTypeNeeded: "LECTURE",
+            sessionsPerWeek: 2,
+            sessionDurationMinutes: 90,
+          },
+        });
+        created++;
+      }
     }
   }
 
