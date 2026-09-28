@@ -8,8 +8,10 @@ type Course = {
   semesterNumber: number | null; prerequisiteCourseId: string | null; isOffered: boolean;
   masterCourseId: string | null;
   // Which restricted pool to fetch from — "Domain Elective" or "Domain
-  // IDS" — or null if this course isn't an unfilled generic slot at all.
-  unfilledSlotCategory: string | null;
+  // IDS" — or null if clicking this course should set a prerequisite
+  // instead of opening the course-picker popup. Set for every
+  // Elective-type course regardless of whether it's already filled in.
+  slotCategory: string | null;
 };
 
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
@@ -90,17 +92,17 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     // placeholder on the Prerequisite Map as it is on the Repositioning
     // page, and picking which real course it is doesn't conflict with
     // prerequisite-linking (a different, non-overlapping click target).
-    // unfilledSlotCategory (computed server-side from the course's own
-    // type and its linked MasterCourse's category, not just whether
-    // masterCourseId is set) is what actually distinguishes a
-    // still-generic "Elective-I" or "IDS-III (institution-selected)"
-    // slot from an already-filled one -- importing a curriculum links
-    // masterCourseId for every course including these generic
-    // placeholders, so masterCourseId alone can't tell them apart. It
-    // also picks which restricted pool the modal should offer -- an
-    // IDS slot must never be filled from the full elective catalog.
-    if (c.unfilledSlotCategory) {
-      openElectiveModal(c.id, c.unfilledSlotCategory);
+    // slotCategory (computed server-side from the course's own type, and
+    // for IDS also its linked MasterCourse's category) picks which
+    // restricted pool the modal should offer -- an IDS slot must never
+    // be filled from the full elective catalog. Every Elective-type
+    // course gets this, not just a still-generic "Elective-I" one that
+    // was never filled: a new batch starts with whatever real course
+    // the previous batch had already chosen for that slot, and clicking
+    // is how that choice gets changed for THIS batch, not just how it
+    // gets set the first time.
+    if (c.slotCategory) {
+      openElectiveModal(c.id, c.slotCategory);
       return;
     }
     if (!selectedId) { setSelectedId(c.id); return; }

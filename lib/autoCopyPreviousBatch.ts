@@ -2,7 +2,6 @@ import { prisma } from "./db";
 import { copyCourseContent } from "./benchmarkCopy";
 import { linkAsFollowerOfSource } from "./contentSync";
 import { termIndex } from "./termLogic";
-import { electiveTitleFor, degreeAbbreviation } from "./electiveNaming";
 
 /** When a new batch is created, automatically copies courses (with their
  * CLOs/lecture plan) and PLOs from the most recent EARLIER batch of the
@@ -37,38 +36,25 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
     prisma.course.findMany({ where: { batchId: newBatch.id }, select: { code: true } }),
   ]);
   const existingCodes = new Set(existingInTarget.map((c) => c.code));
-  // Numbering continues from however many Elective-type courses the new
-  // batch already has (normally zero, since it's brand new, but this
-  // stays correct even if the function is ever re-run).
-  let electiveCounter = existingInTarget.length > 0 ? (await prisma.course.count({ where: { batchId: newBatch.id, courseType: "Elective" } })) : 0;
 
   let coursesCopied = 0;
   for (const sc of sourceCourses) {
     if (existingCodes.has(sc.code)) continue;
     try {
-      // Every Elective-type course gets a uniform "<Degree> Elective <N>"
-      // title in the new batch — the same rule import-hec applies. It also
-      // must start genuinely UNFILLED, even if the source batch's copy of
-      // this slot was already filled in with a specific specialization
-      // course — the new batch's own students haven't chosen anything yet.
-      // Carrying the source's code/masterCourseId forward used to silently
-      // pre-fill the new batch's slot with the OLD batch's choice, and
-      // because masterCourseId then pointed at an already-"Domain Elective"
-      // master course rather than the generic "Elective" placeholder, the
-      // "choose a course for this slot" popup on Prerequisite Map / Course
-      // Repositioning stopped opening for it — even though the title still
-      // read as a generic, apparently-unfilled "Elective N". That's why it
-      // only worked for whichever elective slot happened to be still
-      // unfilled in the source batch.
-      const isElective = sc.courseType === "Elective";
-      const title = isElective ? electiveTitleFor(newBatch.degreeProgram, ++electiveCounter) : sc.title;
-      const code = isElective ? `${degreeAbbreviation(newBatch.degreeProgram)}-ELEC-${electiveCounter}` : sc.code;
-      const masterCourseId = isElective ? null : sc.masterCourseId;
-
+      // Elective-type courses carry forward exactly as the previous batch
+      // had them — same code, same title, same masterCourseId (whatever
+      // specific course the previous batch had already picked for that
+      // slot, if any) — same as every other course type. The new batch
+      // starts with that as a sensible default rather than a blank slot,
+      // and can still change it: the "choose a course for this slot"
+      // popup on Prerequisite Map / Course Repositioning stays clickable
+      // even on an already-filled elective (see InteractiveCourseMap),
+      // so re-picking a different course for the new batch is always one
+      // click away — it just isn't forced to start over from scratch.
       const newCourse = await prisma.course.create({
         data: {
-          code, title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
-          coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, masterCourseId,
+          code: sc.code, title: sc.title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
+          coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, masterCourseId: sc.masterCourseId,
         },
       });
       await copyCourseContent(sc.id, newCourse.id);
