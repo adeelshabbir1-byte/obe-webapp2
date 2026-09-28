@@ -242,6 +242,19 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  async function unlinkElective(courseId: string, code: string) {
+    const proceed = confirm(`Reset ${code} back to an unfilled elective slot? This undoes any specific course it's linked to — the "choose a course for this slot" popup on Prerequisite Map / Course Repositioning will open for it again. It doesn't change its code or title here.`);
+    if (!proceed) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/courses/${courseId}/unlink-elective`, { method: "PUT" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, fromHec: false } : c));
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   async function removeCourse(courseId: string, code: string) {
     const proceed = confirm(
       `Delete ${code} completely? This also permanently deletes its CLOs, lecture plan, assessments, marks, and enrollments. This cannot be undone.`
@@ -449,6 +462,9 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                   <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
                   {c.courseType !== "Lab" && (
                     <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Split into Lab</button>
+                  )}
+                  {c.courseType === "Elective" && c.fromHec && (
+                    <button onClick={() => unlinkElective(c.id, c.code)} disabled={loading} title="If this still shows a generic 'Elective N' title but the picker popup won't open for it, this resets it back to an unfilled slot." style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Reset to Unfilled</button>
                   )}
                   <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>
                 </td>

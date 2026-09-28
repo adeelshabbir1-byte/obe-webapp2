@@ -2,7 +2,7 @@ import { prisma } from "./db";
 import { copyCourseContent } from "./benchmarkCopy";
 import { linkAsFollowerOfSource } from "./contentSync";
 import { termIndex } from "./termLogic";
-import { electiveTitleFor } from "./electiveNaming";
+import { electiveTitleFor, degreeAbbreviation } from "./electiveNaming";
 
 /** When a new batch is created, automatically copies courses (with their
  * CLOs/lecture plan) and PLOs from the most recent EARLIER batch of the
@@ -47,13 +47,28 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
     if (existingCodes.has(sc.code)) continue;
     try {
       // Every Elective-type course gets a uniform "<Degree> Elective <N>"
-      // title in the new batch — the same rule import-hec applies.
-      const title = sc.courseType === "Elective" ? electiveTitleFor(newBatch.degreeProgram, ++electiveCounter) : sc.title;
+      // title in the new batch — the same rule import-hec applies. It also
+      // must start genuinely UNFILLED, even if the source batch's copy of
+      // this slot was already filled in with a specific specialization
+      // course — the new batch's own students haven't chosen anything yet.
+      // Carrying the source's code/masterCourseId forward used to silently
+      // pre-fill the new batch's slot with the OLD batch's choice, and
+      // because masterCourseId then pointed at an already-"Domain Elective"
+      // master course rather than the generic "Elective" placeholder, the
+      // "choose a course for this slot" popup on Prerequisite Map / Course
+      // Repositioning stopped opening for it — even though the title still
+      // read as a generic, apparently-unfilled "Elective N". That's why it
+      // only worked for whichever elective slot happened to be still
+      // unfilled in the source batch.
+      const isElective = sc.courseType === "Elective";
+      const title = isElective ? electiveTitleFor(newBatch.degreeProgram, ++electiveCounter) : sc.title;
+      const code = isElective ? `${degreeAbbreviation(newBatch.degreeProgram)}-ELEC-${electiveCounter}` : sc.code;
+      const masterCourseId = isElective ? null : sc.masterCourseId;
 
       const newCourse = await prisma.course.create({
         data: {
-          code: sc.code, title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
-          coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, masterCourseId: sc.masterCourseId,
+          code, title, creditHours: sc.creditHours, courseType: sc.courseType, semesterNumber: sc.semesterNumber,
+          coordinatorId: newBatch.coordinatorId, batchId: newBatch.id, masterCourseId,
         },
       });
       await copyCourseContent(sc.id, newCourse.id);
