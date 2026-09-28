@@ -78,8 +78,13 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           // two are never interchangeable: an IDS slot must never offer
           // the full elective catalog, so this is checked by course
           // type first, not just by whether a MasterCourse link exists.
-          unfilledSlotCategory:
-            c.courseType === "Elective" && c.masterCourse?.category !== "Domain Elective" ? "Domain Elective"
+          // Every Elective-type course stays clickable to re-pick, even
+          // one that's already filled in — a batch inherits whatever the
+          // previous batch had chosen by default, and this is how that
+          // default gets changed for the new batch without starting the
+          // slot over from scratch.
+          slotCategory:
+            c.courseType === "Elective" ? "Domain Elective"
             : c.courseType === "IDS" && c.masterCourse?.category !== "Domain IDS" && c.masterCourse?.category !== "IDS" ? "Domain IDS"
             : null,
         }))}
