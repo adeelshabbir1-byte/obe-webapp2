@@ -25,6 +25,12 @@ export default function MasterCurriculumEditor() {
   const [notice, setNotice] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourse, setNewCourse] = useState({ code: "", title: "", creditHours: "3", category: "Major", semesterNumber: "" });
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkDegreeProgram, setBulkDegreeProgram] = useState("");
+  const [bulkAuthority, setBulkAuthority] = useState("Institution");
+  const [bulkVersion, setBulkVersion] = useState("");
+  const [bulkText, setBulkText] = useState("");
+  const [bulkResult, setBulkResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     fetch("/api/omc/master-curriculum").then((r) => r.json()).then((d) => { if (d.curricula) setCurricula(d.curricula); });
@@ -111,6 +117,43 @@ export default function MasterCurriculumEditor() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  // Parses pasted rows — one course per line, tab-separated (pastes
+  // straight out of Excel/Sheets, or type it by hand with real Tab
+  // presses): code, title, creditHours, category, domain, semesterNumber.
+  // domain and semesterNumber may be left blank. Blank lines are ignored.
+  function parseBulkRows(text: string) {
+    return text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split("\t").map((p) => p.trim());
+        const [code, title, creditHours, category, domain, semesterNumber] = parts;
+        return { code, title, creditHours: creditHours ? Number(creditHours) : NaN, category, domain: domain || null, semesterNumber: semesterNumber || null };
+      });
+  }
+
+  async function runBulkImport() {
+    if (!bulkDegreeProgram.trim()) { setError("Degree Program is required (e.g. \"BS Computer Science\")."); return; }
+    const rows = parseBulkRows(bulkText);
+    if (rows.length === 0) { setError("Paste at least one course row first."); return; }
+    setBusy(true); setError(""); setNotice(""); setBulkResult(null);
+    try {
+      const res = await fetch("/api/omc/master-curriculum/bulk-import", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ degreeProgram: bulkDegreeProgram.trim(), authority: bulkAuthority, version: bulkVersion, rows }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
+      setBulkResult({ created: data.created, updated: data.updated, errors: data.errors || [] });
+      setNotice(`"${bulkDegreeProgram}" — ${data.created} course(s) added, ${data.updated} updated.`);
+      setBusy(false);
+      const refreshed = await fetch("/api/omc/master-curriculum").then((r) => r.json());
+      if (refreshed.curricula) setCurricula(refreshed.curricula);
+      await loadDetail(data.curriculum.id);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
+  }
+
   async function cloneCurriculum() {
     if (!selectedId) return;
     setBusy(true); setError(""); setNotice("");
@@ -141,6 +184,54 @@ export default function MasterCurriculumEditor() {
             <option key={c.id} value={c.id}>{c.title} ({c.authority} {c.version}) — {c._count.courses} courses {c.isOwned ? "— your copy" : ""}</option>
           ))}
         </select>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ fontSize: 14 }}>Bulk Import Courses</h3>
+          <button onClick={() => setShowBulkImport(!showBulkImport)} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
+            {showBulkImport ? "Cancel" : "+ Paste an Official Course List"}
+          </button>
+        </div>
+        {showBulkImport && (
+          <div style={{ marginTop: 10 }}>
+            <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+              Loads (or updates) a whole program's official course list in one go — for a brand-new program this
+              creates your own curriculum for it automatically; for one you already have, matching course codes
+              are updated in place and new ones are added, so pasting a corrected sheet again is always safe.
+              One course per line, fields separated by a real Tab (paste straight out of Excel/Sheets, or type it
+              by hand): <code>code, title, creditHours, category, domain, semesterNumber</code>. Category is one
+              of General Education / Major / IDS / Certification / Capstone Project / Field Experience / Domain
+              Elective / Domain IDS. Domain and semesterNumber can be left blank.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+              <div>
+                <label style={{ fontSize: 10.5, display: "block" }}>Degree Program</label>
+                <input value={bulkDegreeProgram} onChange={(e) => setBulkDegreeProgram(e.target.value)} placeholder="BS Computer Science" style={{ fontSize: 12, padding: 4, width: 220 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 10.5, display: "block" }}>Authority</label>
+                <input value={bulkAuthority} onChange={(e) => setBulkAuthority(e.target.value)} style={{ fontSize: 12, padding: 4, width: 140 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 10.5, display: "block" }}>Version</label>
+                <input value={bulkVersion} onChange={(e) => setBulkVersion(e.target.value)} placeholder="e.g. Fall 2024" style={{ fontSize: 12, padding: 4, width: 140 }} />
+              </div>
+            </div>
+            <textarea
+              value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={10} placeholder="CS1101\tProgramming Fundamentals\t4\tMajor\t\t1"
+              style={{ width: "100%", fontSize: 11.5, fontFamily: "monospace", padding: 6, border: "1px solid var(--line)" }}
+            />
+            <button onClick={runBulkImport} disabled={busy} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 12px", marginTop: 8 }}>
+              Import
+            </button>
+            {bulkResult && bulkResult.errors.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 11, color: "var(--rust)" }}>
+                {bulkResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <div className="err">{error}</div>}
