@@ -47,6 +47,20 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  async function resetAllPasswords() {
+    const proceed = confirm(`Reset EVERY faculty member's password to "12345678"? All ${faculty.length} of them will be required to set their own new password on next login. This cannot be targeted to just some — it applies to everyone in this list.`);
+    if (!proceed) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/coordinator/faculty/reset-all-passwords", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setFaculty((prev) => prev.map((f) => ({ ...f, mustChangePassword: true })));
+      alert(`Reset ${data.reset} faculty account(s) to the temporary password "12345678". Each one will be asked to set their own password on next login.`);
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
+
   async function removeFaculty(userId: string, name: string) {
     const proceed = confirm(`Delete ${name}'s account permanently? This cannot be undone.`);
     if (!proceed) return;
@@ -86,6 +100,16 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {faculty.length > 0 && (
+        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "var(--slate)" }}>
+            No memorable password from an earlier faculty list? Reset everyone at once to a known temporary one.
+          </div>
+          <button onClick={resetAllPasswords} disabled={loading} className="btn" style={{ fontSize: 12, padding: "6px 12px" }}>
+            Reset All {faculty.length} Faculty Passwords to "12345678"
+          </button>
+        </div>
+      )}
       <div className="card">
         <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Specialization</th><th>Load (Normal / External)</th><th></th></tr></thead>
