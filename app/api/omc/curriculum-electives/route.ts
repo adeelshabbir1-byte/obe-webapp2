@@ -13,7 +13,11 @@ const ALLOWED_CATEGORIES = ["Domain Elective", "Domain IDS"];
 // small, restricted IDS list, never the full elective catalog.
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // Shared by the OMC-facing Course Repositioning page and the
+  // Coordinator-facing Prerequisite Map page — both use the same
+  // "choose a course for this elective slot" popup, so both roles need
+  // to be able to fetch the list of options here.
+  if (!user || (user.role !== "OMC" && user.role !== "PROGRAM_COORDINATOR")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const requestedCategory = req.nextUrl.searchParams.get("category") || "Domain Elective";
   const category = ALLOWED_CATEGORIES.includes(requestedCategory) ? requestedCategory : "Domain Elective";

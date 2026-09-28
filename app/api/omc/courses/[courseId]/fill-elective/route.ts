@@ -14,13 +14,19 @@ import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculu
 // "equate" instead for an already-named, already-taught course.
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // The Prerequisite Map page (Coordinator-facing) uses this same
+  // "choose a course for this slot" popup as Course Repositioning
+  // (OMC-facing) — both need to reach this endpoint. An OMC member can
+  // fill any course across their institution; a Coordinator is
+  // restricted to their own courses below.
+  if (!user || (user.role !== "OMC" && user.role !== "PROGRAM_COORDINATOR")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   if (!body.masterCourseId) return NextResponse.json({ error: "masterCourseId is required" }, { status: 400 });
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course) return NextResponse.json({ error: "course not found" }, { status: 404 });
+  if (user.role === "PROGRAM_COORDINATOR" && course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Being "offered" for the current term isn't itself a reason to block
   // this — an OMC often offers a semester's courses first and decides
