@@ -167,7 +167,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
           {mode === "prereq"
             ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
-            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. Click an unfilled elective or IDS slot to choose a real course for it from your curriculum.")}
+            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. An elective or IDS slot has two separate click targets: click the box itself to choose which real course it is, or click the small ⇅ handle in its top-left corner to select it for moving to a different semester instead.")}
         </p>
       </div>
 
@@ -217,6 +217,24 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType)} opacity={c.isOffered ? 0.5 : 0.9}
                     stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
                   <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
+                  {mode === "reposition" && c.slotCategory && (
+                    // Elective/IDS boxes already use a plain click to open
+                    // the "choose which real course this is" popup
+                    // (onCourseClick returns early for any slotCategory
+                    // course), so there'd otherwise be no way left to
+                    // select one of these for a semester move. This
+                    // separate handle is that other click target: it goes
+                    // straight to select-for-move, bypassing the popup,
+                    // the same way the body click bypasses it for a
+                    // regular course.
+                    <g
+                      onClick={(e) => { e.stopPropagation(); if (loading) return; setSelectedId(isSelected ? null : c.id); }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <circle cx={pos.x + 10} cy={pos.y + 10} r={8} fill={isSelected ? "#241A1D" : "#3B6E52"} />
+                      <text x={pos.x + 10} y={pos.y + 13.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">⇅</text>
+                    </g>
+                  )}
                   {mode === "prereq" && c.prerequisiteCourseId && (
                     <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>
                       <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#C0312B" />
