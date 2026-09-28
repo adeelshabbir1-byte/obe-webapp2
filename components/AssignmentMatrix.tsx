@@ -344,12 +344,19 @@ export default function AssignmentMatrix() {
                   const shortOrOver = assignedTotal !== r.sectionsNeeded;
                   const settled = isRowSettled(r);
                   const newBoundary = rowIdx > 0 && isRowSettled(sortedRows[rowIdx - 1]) !== settled;
-                  const shortLabel = (r.code && shortNames[r.code]) || (r.code ? r.code.slice(0, 3) : r.label.slice(0, 3));
+                  // Only abbreviate when a short name was deliberately set on the
+                  // Course Short Names page — otherwise show the full code, not
+                  // an arbitrary 3-letter chop that's meaningless on its own.
+                  // The full course title is still always in the tooltip.
+                  const shortLabel = (r.code && shortNames[r.code]) || r.code || r.label;
                   const nameCell = (
-                    <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 60 }}>
+                    <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 220 }}>
                       <b>{shortLabel}</b>
                       {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F3E4E7", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
                       {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
+                      {r.title && r.title !== shortLabel && (
+                        <div style={{ fontSize: 10, color: "var(--slate)", maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis" }}>{r.title}</div>
+                      )}
                     </td>
                   );
                   return (
