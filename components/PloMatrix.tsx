@@ -93,7 +93,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                       <td style={{ whiteSpace: "nowrap" }}><b>{c.code}</b><br /><span style={{ color: "var(--slate)", fontSize: 11 }}>{c.title}</span></td>
                       <td style={{ fontSize: 11.5 }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: 1, background: courseTypeColor(c.courseType), display: "inline-block" }} />
+                          <span style={{ width: 8, height: 8, borderRadius: 1, background: courseTypeColor(c.courseType, c.code), display: "inline-block" }} />
                           {c.courseType}
                         </span>
                       </td>

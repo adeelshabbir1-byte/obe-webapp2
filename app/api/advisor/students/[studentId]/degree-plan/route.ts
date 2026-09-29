@@ -1,47 +1,45 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedStudent } from "../../../../lib/studentSession";
-import { prisma } from "../../../../lib/db";
-import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
+import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { prisma } from "../../../../../../lib/db";
+import { getGradingScaleForBatch } from "../../../../../../lib/gradingScaleLookup";
 
 const DEFAULT_MIN_CREDITS = 12;
 const DEFAULT_MAX_CREDITS = 18;
 
-export async function GET() {
-  const student = await getAuthenticatedStudent();
-  if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
+// Advisor-facing counterpart to /api/student/degree-plan — same shape,
+// plus the student's live current-semester enrollments (so the advisor
+// can drop one directly), for exactly the "student is on probation,
+// needs to drop something this semester and get a future-semester plan
+// for retaking it" workflow. Read-only lookup here; the move and
+// drop-enrollment endpoints do the actual changes.
+export async function GET(req: Request, { params }: { params: { studentId: string } }) {
+  const user = await getAuthenticatedUser();
+  if (!user || !["INSTRUCTOR", "SUBJECT_EXPERT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const batch = await prisma.batch.findUnique({ where: { id: student.batchId } });
-  if (!batch) return NextResponse.json({ error: "batch not found" }, { status: 404 });
+  const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: true } });
+  if (!student || !student.batch || student.batch.advisorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const [transcriptRecords, gradingScale, coordinator, degreePlanEntries, enrolledCourseIds] = await Promise.all([
+  const batch = student.batch;
+
+  const [transcriptRecords, gradingScale, coordinator, degreePlanEntries, enrollments] = await Promise.all([
     prisma.studentTranscriptRecord.findMany({ where: { studentId: student.id }, orderBy: [{ termYear: "asc" }, { termName: "asc" }] }),
     getGradingScaleForBatch(batch.coordinatorId, batch),
     prisma.user.findUnique({ where: { id: batch.coordinatorId }, select: { minCreditsPerSemester: true, maxCreditsPerSemester: true } }),
     prisma.degreePlanEntry.findMany({ where: { studentId: student.id }, include: { course: true } }),
-    prisma.studentEnrollment.findMany({ where: { studentId: student.id }, select: { courseId: true } }),
+    prisma.studentEnrollment.findMany({ where: { studentId: student.id }, include: { course: true } }),
   ]);
 
   const takenCourseCodes = new Set(transcriptRecords.map((t) => t.courseCode));
-  const enrolledIds = new Set(enrolledCourseIds.map((e) => e.courseId));
+  const enrolledIds = new Set(enrollments.map((e) => e.courseId));
   const planByCourseId = new Map(degreePlanEntries.map((e) => [e.courseId, e]));
 
-  // Every course in the student's own batch curriculum they haven't
-  // already completed — batches get their full curriculum imported up
-  // front, so future semesters' courses already exist as real rows,
-  // just not "offered" yet until that term actually arrives.
   const allBatchCourses = await prisma.course.findMany({
     where: { batchId: batch.id, code: { notIn: Array.from(takenCourseCodes) } },
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });
 
-  // "Critical chain" — a course whose prerequisite chain has zero slack
-  // left before the final semester of the program, i.e. failing it (and
-  // so retaking it a semester later) would push the whole chain of
-  // courses that require it past graduation. Computed as: how many more
-  // semesters does the longest remaining prerequisite chain STARTING at
-  // this course need (including itself), versus how many semesters are
-  // actually left until the program's final semester from where this
-  // course is currently planned. Zero (or negative) slack = critical.
+  // Same critical-chain computation as the student's own degree plan —
+  // an advisor replanning around a dropped course needs to see this too.
   const maxProgramSemester = allBatchCourses.reduce((max, c) => Math.max(max, c.semesterNumber || 0), 0);
   const postrequisitesOf = new Map<string, string[]>();
   for (const c of allBatchCourses) {
@@ -51,7 +49,7 @@ export async function GET() {
   const chainDepthCache = new Map<string, number>();
   function chainDepth(courseId: string, visiting: Set<string> = new Set()): number {
     if (chainDepthCache.has(courseId)) return chainDepthCache.get(courseId)!;
-    if (visiting.has(courseId)) return 1; // guard against a bad/cyclic prerequisite link — never loop forever
+    if (visiting.has(courseId)) return 1;
     visiting.add(courseId);
     const posts = postrequisitesOf.get(courseId) || [];
     const depth = 1 + posts.reduce((max, postId) => Math.max(max, chainDepth(postId, visiting)), 0);
@@ -76,6 +74,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    studentName: student.name, rollNumber: student.rollNumber,
     currentSemesterNumber: student.currentSemesterNumber,
     minCreditsPerSemester: coordinator?.minCreditsPerSemester ?? DEFAULT_MIN_CREDITS,
     maxCreditsPerSemester: coordinator?.maxCreditsPerSemester ?? DEFAULT_MAX_CREDITS,
@@ -84,6 +83,7 @@ export async function GET() {
       courseCode: t.courseCode, courseTitle: t.courseTitle, creditHours: t.creditHours, termName: t.termName, termYear: t.termYear,
       grade: t.grade, gpaPoints: t.gpaPoints,
     })),
+    currentEnrollments: enrollments.map((e) => ({ courseId: e.courseId, code: e.course.code, title: e.course.title, creditHours: e.course.creditHours })),
     planned,
   });
 }

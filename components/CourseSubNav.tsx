@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery"; code: string; title: string; status: string;
 }) {
@@ -28,6 +29,9 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
             fontWeight: active === t.key ? 600 : 400,
           }}>{t.label}</Link>
         ))}
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <ContentSyncStatusBanner courseId={courseId} />
       </div>
     </div>
   );
