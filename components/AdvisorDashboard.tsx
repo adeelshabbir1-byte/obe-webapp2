@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AdvisorStudentPlanner from "./AdvisorStudentPlanner";
 
 type StudentRow = {
   id: string; name: string; rollNumber: string; batchLabel: string; currentSemesterNumber: number;
@@ -18,6 +19,7 @@ export default function AdvisorDashboard() {
   const [data, setData] = useState<{ advisedBatches: { id: string; label: string }[]; students: StudentRow[]; pendingRequests: PendingRequest[] } | null>(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -96,11 +98,18 @@ export default function AdvisorDashboard() {
                 <span style={{ fontSize: 12 }}>CGPA: {s.cgpa !== null ? s.cgpa.toFixed(2) : "—"}</span>
                 <span className={`badge ${STANDING_LABEL[s.standing].tone}`}>{STANDING_LABEL[s.standing].label}</span>
                 {s.modifiedPlanCount > 0 && <span className="badge badge-warn">Modified Plan ({s.modifiedPlanCount})</span>}
+                <button
+                  onClick={() => setExpandedStudentId(expandedStudentId === s.id ? null : s.id)}
+                  className="btn btn-brass" style={{ fontSize: 11, padding: "3px 9px" }}
+                >
+                  {expandedStudentId === s.id ? "Close" : "Manage Plan"}
+                </button>
               </div>
             </div>
             <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 4 }}>
               Currently: {s.currentCourses.length > 0 ? s.currentCourses.join(", ") : "not enrolled in anything this semester"}
             </div>
+            {expandedStudentId === s.id && <AdvisorStudentPlanner studentId={s.id} />}
           </div>
         ))}
       </div>
