@@ -34,14 +34,44 @@ export async function GET() {
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });
 
+  // "Critical chain" — a course whose prerequisite chain has zero slack
+  // left before the final semester of the program, i.e. failing it (and
+  // so retaking it a semester later) would push the whole chain of
+  // courses that require it past graduation. Computed as: how many more
+  // semesters does the longest remaining prerequisite chain STARTING at
+  // this course need (including itself), versus how many semesters are
+  // actually left until the program's final semester from where this
+  // course is currently planned. Zero (or negative) slack = critical.
+  const maxProgramSemester = allBatchCourses.reduce((max, c) => Math.max(max, c.semesterNumber || 0), 0);
+  const postrequisitesOf = new Map<string, string[]>();
+  for (const c of allBatchCourses) {
+    if (!c.prerequisiteCourseId) continue;
+    postrequisitesOf.set(c.prerequisiteCourseId, [...(postrequisitesOf.get(c.prerequisiteCourseId) || []), c.id]);
+  }
+  const chainDepthCache = new Map<string, number>();
+  function chainDepth(courseId: string, visiting: Set<string> = new Set()): number {
+    if (chainDepthCache.has(courseId)) return chainDepthCache.get(courseId)!;
+    if (visiting.has(courseId)) return 1; // guard against a bad/cyclic prerequisite link — never loop forever
+    visiting.add(courseId);
+    const posts = postrequisitesOf.get(courseId) || [];
+    const depth = 1 + posts.reduce((max, postId) => Math.max(max, chainDepth(postId, visiting)), 0);
+    chainDepthCache.set(courseId, depth);
+    return depth;
+  }
+
   const planned = allBatchCourses.map((c) => {
     const entry = planByCourseId.get(c.id);
+    const plannedSemesterNumber = entry?.plannedSemesterNumber ?? c.semesterNumber ?? 1;
+    const semestersRemaining = maxProgramSemester - plannedSemesterNumber + 1;
+    const depth = chainDepth(c.id);
     return {
       courseId: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
       nativeSemesterNumber: c.semesterNumber,
-      plannedSemesterNumber: entry?.plannedSemesterNumber ?? c.semesterNumber,
+      plannedSemesterNumber,
       hypotheticalGrade: entry?.hypotheticalGrade ?? null,
       currentlyEnrolled: enrolledIds.has(c.id),
+      isCriticalChain: depth >= semestersRemaining,
+      chainDepth: depth,
     };
   });
 

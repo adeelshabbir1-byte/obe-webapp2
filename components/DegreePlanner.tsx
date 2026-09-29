@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 type Planned = {
   courseId: string; code: string; title: string; creditHours: number; courseType: string;
   nativeSemesterNumber: number; plannedSemesterNumber: number; hypotheticalGrade: string | null; currentlyEnrolled: boolean;
+  isCriticalChain: boolean; chainDepth: number;
 };
 type Transcript = { courseCode: string; courseTitle: string; creditHours: number; termName: string; termYear: number; grade: string; gpaPoints: number | null };
 
@@ -90,6 +91,17 @@ export default function DegreePlanner() {
         <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--brass-dark)" }}>{cgpa ?? "—"}</div>
       </div>
 
+      {data.planned.some((p) => p.isCriticalChain) && (
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FBEAEA" }}>
+          <h3 style={{ fontSize: 13, color: "var(--rust)" }}>⚠ Critical Chain Courses</h3>
+          <p style={{ fontSize: 12, color: "var(--slate)", marginTop: 4 }}>
+            Courses marked ⚠ below have no room left to slip — failing one (and retaking it the next time it's
+            offered) would push every course that requires it back a semester too, delaying your graduation.
+            Every other course still has some slack: failing it wouldn't, by itself, push your graduation date.
+          </p>
+        </div>
+      )}
+
       {transcriptByTerm.size > 0 && (
         <div className="card">
           <h3 style={{ fontSize: 14, marginBottom: 10 }}>Completed</h3>
@@ -130,6 +142,7 @@ export default function DegreePlanner() {
             {coursesHere.map((c) => (
               <div key={c.courseId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--line)", gap: 10, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 12.5 }}>
+                  {c.isCriticalChain && <span title="Critical chain — no room to slip without delaying graduation" style={{ color: "var(--rust)", marginRight: 4 }}>⚠</span>}
                   {c.code} — {c.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({c.creditHours} cr, {c.courseType})</span>
                   {c.currentlyEnrolled && <span className="badge badge-ok" style={{ marginLeft: 6, fontSize: 9.5 }}>Enrolled</span>}
                 </span>

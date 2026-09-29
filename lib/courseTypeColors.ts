@@ -20,7 +20,25 @@ export const COURSE_TYPE_COLORS: Record<string, string> = {
 };
 export const COURSE_TYPE_FALLBACK_COLOR = "#574C50";
 
-export function courseTypeColor(type: string): string {
+// Math courses (Linear Algebra, Calculus, Probability & Statistics, etc.)
+// don't have a course type of their own in this schema — different
+// curricula file them under "Core"/"Major" or "IDS" depending on how
+// that particular program's HEC document phrased it (some literally
+// label "Calculus" as an IDS slot). That means two math courses can end
+// up sharing a color with completely unrelated courses just because
+// they were typed differently. Detecting by code prefix instead (MT —
+// this codebase's convention for Math, see hec-bscs-2025.ts) sidesteps
+// that inconsistency and gives every math course the same, distinct
+// color regardless of which type it happened to be saved under.
+const MATH_CODE_PREFIX = /^MT\d/i;
+export const MATH_COURSE_COLOR = "#0F6E5E";
+
+// `code` is optional so every existing call site with just a type string
+// (e.g. a type-only legend swatch, where there's no one course to check)
+// keeps working unchanged — only call sites rendering an actual course
+// need to pass its code to get the Math override.
+export function courseTypeColor(type: string, code?: string): string {
+  if (code && MATH_CODE_PREFIX.test(code.trim())) return MATH_COURSE_COLOR;
   return COURSE_TYPE_COLORS[type] || COURSE_TYPE_FALLBACK_COLOR;
 }
 
