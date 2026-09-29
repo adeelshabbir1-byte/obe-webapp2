@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 type Planned = {
   courseId: string; code: string; title: string; creditHours: number; courseType: string;
@@ -12,7 +12,7 @@ type Transcript = { courseCode: string; courseTitle: string; creditHours: number
 
 export default function AdvisorStudentPlanner({ studentId }: { studentId: string }) {
   const [data, setData] = useState<{
-    studentName: string; rollNumber: string; currentSemesterNumber: number;
+    currentSemesterNumber: number; gradingScale: { letter: string; gpaValue: number }[];
     transcriptRecords: Transcript[]; currentEnrollments: CurrentEnrollment[]; planned: Planned[];
   } | null>(null);
   const [error, setError] = useState("");
@@ -55,14 +55,51 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }
 
+  async function setHypotheticalGrade(courseId: string, grade: string) {
+    setBusyId(courseId); setError("");
+    try {
+      const res = await fetch(`/api/advisor/students/${studentId}/degree-plan/hypothetical-grade`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, grade: grade || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error || "Something went wrong."); setBusyId(null); return; }
+      await load(); setBusyId(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
+  }
+
+  const cgpa = useMemo(() => {
+    if (!data) return null;
+    let totalPoints = 0, totalCredits = 0;
+    for (const t of data.transcriptRecords) {
+      if (t.gpaPoints === null) continue;
+      totalPoints += t.gpaPoints * t.creditHours; totalCredits += t.creditHours;
+    }
+    for (const p of data.planned) {
+      if (!p.hypotheticalGrade) continue;
+      const scaleEntry = data.gradingScale.find((g) => g.letter === p.hypotheticalGrade);
+      if (!scaleEntry) continue;
+      totalPoints += scaleEntry.gpaValue * p.creditHours; totalCredits += p.creditHours;
+    }
+    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : null;
+  }, [data]);
+
   if (!data) return <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p>;
 
   const semesterNumbers = Array.from(new Set(data.planned.map((p) => p.plannedSemesterNumber))).sort((a, b) => a - b);
+  const takenCodes = new Set(data.transcriptRecords.map((t) => t.courseCode));
 
   return (
     <div style={{ marginTop: 10, padding: 12, background: "#FAFAF8", border: "1px solid var(--line)" }}>
       {error && <div className="err">{error}</div>}
       {warning && <div style={{ background: "#FBEED2", color: "#96650F", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{warning}</div>}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "8px 10px", background: "#fff", border: "1px solid var(--line)" }}>
+        <div>
+          <b style={{ fontSize: 12.5 }}>Projected CGPA</b>
+          <p style={{ fontSize: 11, color: "var(--slate)" }}>Real transcript grades, plus any hypothetical retake grades set below.</p>
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--brass-dark)" }}>{cgpa ?? "—"}</div>
+      </div>
 
       {data.currentEnrollments.length > 0 && (
         <div style={{ marginBottom: 14 }}>
@@ -78,15 +115,20 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
       )}
 
-      {data.transcriptRecords.some((t) => t.gpaPoints !== null && t.gpaPoints < 2) && (
+      {data.transcriptRecords.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <h4 style={{ fontSize: 12.5, marginBottom: 6 }}>Past courses eligible for improvement</h4>
-          <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 6 }}>Low grades from the transcript — pick a future semester below in the plan to schedule a retake.</p>
-          {data.transcriptRecords.filter((t) => t.gpaPoints !== null && t.gpaPoints < 2).map((t) => (
-            <div key={t.courseCode} style={{ fontSize: 12, padding: "3px 0" }}>
-              {t.courseCode} — {t.courseTitle} <b style={{ color: "var(--rust)" }}>{t.grade}</b> <span style={{ color: "var(--slate)", fontSize: 11 }}>({t.termName} {t.termYear})</span>
+          <h4 style={{ fontSize: 12.5, marginBottom: 6 }}>Transcript (completed courses)</h4>
+          {data.transcriptRecords.map((t, i) => (
+            <div key={`${t.courseCode}-${i}`} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--line)" }}>
+              <span>{t.courseCode} — {t.courseTitle} <span style={{ color: "var(--slate)", fontSize: 11 }}>({t.creditHours} cr, {t.termName} {t.termYear})</span></span>
+              <b style={{ color: t.gpaPoints !== null && t.gpaPoints < 2 ? "var(--rust)" : "inherit" }}>{t.grade}</b>
             </div>
           ))}
+          <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 6 }}>
+            To improve a low grade: find that same course code in the Future Plan below (add it if it isn't
+            already there by moving it to a future semester), then set a hypothetical grade on it to see the
+            projected effect on CGPA.
+          </p>
         </div>
       )}
 
@@ -102,16 +144,27 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
                   {c.isCriticalChain && <span title="Critical chain — no room to slip without delaying graduation" style={{ color: "var(--rust)", marginRight: 4 }}>⚠</span>}
                   {c.code} — {c.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({c.creditHours} cr, {c.courseType})</span>
                   {c.currentlyEnrolled && <span className="badge badge-ok" style={{ marginLeft: 6, fontSize: 9.5 }}>Enrolled</span>}
+                  {takenCodes.has(c.code) && <span className="badge badge-warn" style={{ marginLeft: 6, fontSize: 9.5 }}>Retake/Improvement</span>}
                 </span>
-                <select
-                  value={c.plannedSemesterNumber} disabled={busyId === c.courseId || c.currentlyEnrolled}
-                  onChange={(e) => moveCourse(c.courseId, parseInt(e.target.value, 10))}
-                  style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--line)" }}
-                >
-                  {Array.from({ length: 8 }, (_, i) => i + 1).filter((n) => n >= data.currentSemesterNumber).map((n) => (
-                    <option key={n} value={n}>Sem {n}</option>
-                  ))}
-                </select>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    value={c.plannedSemesterNumber} disabled={busyId === c.courseId || c.currentlyEnrolled}
+                    onChange={(e) => moveCourse(c.courseId, parseInt(e.target.value, 10))}
+                    style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--line)" }}
+                  >
+                    {Array.from({ length: 8 }, (_, i) => i + 1).filter((n) => n >= data.currentSemesterNumber).map((n) => (
+                      <option key={n} value={n}>Sem {n}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={c.hypotheticalGrade || ""} disabled={busyId === c.courseId}
+                    onChange={(e) => setHypotheticalGrade(c.courseId, e.target.value)}
+                    style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--line)" }}
+                  >
+                    <option value="">Grade?</option>
+                    {data.gradingScale.map((g) => <option key={g.letter} value={g.letter}>{g.letter}</option>)}
+                  </select>
+                </div>
               </div>
             ))}
           </div>
