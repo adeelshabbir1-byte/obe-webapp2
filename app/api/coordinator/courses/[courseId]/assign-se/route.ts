@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { blockedAsNonBaseCourse } from "../../../../../../lib/contentSync";
+import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -33,6 +33,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId } });
+
+  // A course linked in a content-sync group only shows the BASE on the
+  // Assign Subject Experts page (followers are hidden — "inherits
+  // automatically"), so that claim has to actually be true: push this
+  // assignment onto every same-term-or-later follower too, not just the
+  // one row on screen.
+  await syncSubjectExpertToLinkedCourses(course.id, subjectExpertId);
 
   await writeAuditLog({
     actorUserId: user.id, action: "SUBJECT_EXPERT_ASSIGNED", entityType: "Course", entityId: course.id,
