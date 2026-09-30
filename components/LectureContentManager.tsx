@@ -20,6 +20,20 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
   const [loading, setLoading] = useState(false);
   const [busyRow, setBusyRow] = useState<string | null>(null);
 
+  async function moveLecture(lectureId: string, direction: "up" | "down") {
+    setBusyRow(lectureId); setError("");
+    try {
+      const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${lectureId}/move`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ direction }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
+      const byId: Map<string, Row> = new Map((data.rows as Row[]).map((r) => [r.id, r]));
+      setRows((prev) => prev.map((r) => (byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r)));
+      setBusyRow(null);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
+  }
+
   async function generate() {
     setLoading(true); setError("");
     try {
@@ -75,13 +89,21 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
         </div>
         <SortableTable style={{ tableLayout: "fixed" }}>
           <thead>
-            <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
+            <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: 46 }}></th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.map((r, idx) => (
               <tr key={r.id}>
                 <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.week}</td>
                 <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.lectureNumber}</td>
+                <td style={{ padding: 0 }}>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <button onClick={() => moveLecture(r.id, "up")} disabled={busyRow === r.id || idx === 0} title="Move this topic up a slot"
+                      style={{ background: "none", border: "1px solid var(--line)", cursor: idx === 0 ? "default" : "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▲</button>
+                    <button onClick={() => moveLecture(r.id, "down")} disabled={busyRow === r.id || idx === rows.length - 1} title="Move this topic down a slot"
+                      style={{ background: "none", border: "1px solid var(--line)", cursor: idx === rows.length - 1 ? "default" : "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▼</button>
+                  </div>
+                </td>
                 <td style={{ background: colorForTopic(r.topic), padding: 0 }}>
                   <input
                     defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Topic..."
@@ -122,7 +144,9 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
         </SortableTable>
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           Same-colored topics repeat across rows — a quick visual check that related lectures are grouped together.
-          Set which quizzes/assignments/exam questions test each topic on the Assessments tab (Weight column fills in from there).
+          Use the ▲▼ buttons to move a topic to a different week/lecture slot — it swaps places with whichever topic
+          is currently there. Set which quizzes/assignments/exam questions test each topic on the Assessments tab
+          (Weight column fills in from there).
         </p>
       </div>
     </>
