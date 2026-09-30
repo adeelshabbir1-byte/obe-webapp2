@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
-import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
+import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/lectureWeights";
 
 // Instructor counterpart to the SE lecture-mapping batch-save route —
 // same "apply everything, recompute once" shape, for the same reason
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const safeQuestions = questions.filter((q) => validRowIds.has(q.lectureRowId) && (q.type === "Midterm" || q.type === "Final"));
 
   const touchedInstrumentIds = new Set<string>(safeToggles.map((t) => t.instrumentId));
+  const touchedRowIds = new Set<string>([...safeToggles.map((t) => t.lectureRowId), ...safeQuestions.map((q) => q.lectureRowId)]);
 
   for (const t of safeToggles) {
     if (t.linked) {
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   }
 
   await recomputeAffectedRows(Array.from(touchedInstrumentIds));
+  await recomputeRows(Array.from(touchedRowIds));
 
   const allRows = await prisma.lectureRow.findMany({
     where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" },

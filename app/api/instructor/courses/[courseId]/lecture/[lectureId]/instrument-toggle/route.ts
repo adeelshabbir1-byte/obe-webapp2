@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../../lib/instructorGuard";
-import { recomputeAffectedRows } from "../../../../../../../../lib/lectureWeights";
+import { recomputeAffectedRows, recomputeRows } from "../../../../../../../../lib/lectureWeights";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -29,6 +29,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   await recomputeAffectedRows([instrumentId]);
+  await recomputeRows([row.id]);
   const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
   return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
 }
