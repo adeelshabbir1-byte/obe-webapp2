@@ -1193,6 +1193,11 @@ model Course {
   labPct              Int      @default(0)
   midtermPct          Int      @default(25)
   finalPct            Int      @default(40)
+  // Set when the SE's weights are saved within the OMC's policy range (or
+  // an out-of-range exception is approved) — gates the Assessments &
+  // Submit tab, which can't be used until this is set. Null means the
+  // weightage step hasn't been explicitly confirmed yet.
+  weightsConfirmedAt  DateTime?
   omcComment          String?  @db.Text // latest OMC review comment on this template
   templateReviewedById String? // which OMC member last reviewed/approved/rejected this template
 
@@ -1212,6 +1217,8 @@ model Course {
   instructorLabPct        Int?
   instructorMidtermPct    Int?
   instructorFinalPct      Int?
+  // Same idea as weightsConfirmedAt above, for the Instructor's own copy.
+  instructorWeightsConfirmedAt DateTime?
 
   clos                CLO[]
   lectureRows         LectureRow[]

@@ -5,8 +5,8 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
 }) {
   const tabs = [
     { key: "clos", label: "1. CLOs & PLO Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
-    { key: "weights", label: "2. Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
-    { key: "schedule", label: "3. Lecture Content", href: `/subjectexpert/courses/${courseId}/schedule` },
+    { key: "schedule", label: "2. Lecture Content", href: `/subjectexpert/courses/${courseId}/schedule` },
+    { key: "weights", label: "3. Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
     { key: "instruments", label: "4. Assessments & Submit", href: `/subjectexpert/courses/${courseId}/instruments` },
     { key: "paper-distribution", label: "5. Paper Distribution", href: `/subjectexpert/courses/${courseId}/paper-distribution` },
     { key: "delivery", label: "6. Delivery Feedback", href: `/subjectexpert/courses/${courseId}/delivery` },

@@ -55,6 +55,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     data: {
       instructorAssignmentPct: vals.assignmentPct, instructorQuizPct: vals.quizPct, instructorProjectPct: vals.projectPct,
       instructorLabPct: vals.labPct, instructorMidtermPct: vals.midtermPct, instructorFinalPct: vals.finalPct,
+      instructorWeightsConfirmedAt: new Date(),
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
