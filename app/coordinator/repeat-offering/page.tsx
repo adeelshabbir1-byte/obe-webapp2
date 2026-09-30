@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import RepeatOfferingManager from "../../../components/RepeatOfferingManager";
+import { computeRepeatOfferingSuggestions } from "../../../lib/repeatOfferingSuggestions";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -45,13 +46,14 @@ export default async function RepeatOfferingPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
-  const [courses, students] = await Promise.all([
+  const [courses, students, suggestions] = await Promise.all([
     prisma.course.findMany({
       where: { coordinatorId: user.id },
       include: { batch: true, studentEnrollments: { where: { isRepeat: true }, include: { student: { include: { batch: true } } } } },
       orderBy: { code: "asc" },
     }),
     prisma.student.findMany({ where: { batch: { coordinatorId: user.id } }, include: { batch: true }, orderBy: { name: "asc" } }),
+    computeRepeatOfferingSuggestions(user.id),
   ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function RepeatOfferingPage() {
         and enroll the specific students who'll retake it.
       </p>
       <RepeatOfferingManager
+        suggestions={suggestions}
         initialCourses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title,
           batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",

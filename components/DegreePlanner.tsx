@@ -72,6 +72,12 @@ export default function DegreePlanner() {
   if (!data) return <p style={{ fontSize: 13, color: "var(--slate)" }}>Loading…</p>;
 
   const semesterNumbers = Array.from(new Set(data.planned.map((p) => p.plannedSemesterNumber))).sort((a, b) => a - b);
+  // What to register for, and when — every course that's due now or
+  // already overdue and isn't already enrolled, ranked so the courses
+  // with zero slack (or that are already behind) surface first.
+  const registerNow = data.planned
+    .filter((p) => !p.currentlyEnrolled && p.plannedSemesterNumber <= data.currentSemesterNumber)
+    .sort((a, b) => (Number(b.isCriticalChain) - Number(a.isCriticalChain)) || (a.plannedSemesterNumber - b.plannedSemesterNumber) || (b.chainDepth - a.chainDepth));
   const transcriptByTerm = new Map<string, Transcript[]>();
   for (const t of data.transcriptRecords) {
     const key = `${t.termName} ${t.termYear}`;
@@ -99,6 +105,27 @@ export default function DegreePlanner() {
             offered) would push every course that requires it back a semester too, delaying your graduation.
             Every other course still has some slack: failing it wouldn't, by itself, push your graduation date.
           </p>
+        </div>
+      )}
+
+      {registerNow.length > 0 && (
+        <div className="card">
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>Recommended: Register For These Now</h3>
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
+            Courses due this semester or already overdue that you're not yet enrolled in, ranked by urgency.
+          </p>
+          {registerNow.map((c) => (
+            <div key={c.courseId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
+              <span>{c.code} — {c.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({c.creditHours} cr)</span></span>
+              {c.plannedSemesterNumber < data.currentSemesterNumber ? (
+                <span className="badge" style={{ fontSize: 10, background: "#FBEAEA", color: "var(--rust)" }}>Overdue — register as soon as it's offered</span>
+              ) : c.isCriticalChain ? (
+                <span className="badge" style={{ fontSize: 10, background: "#FBEAEA", color: "var(--rust)" }}>⚠ Critical — register this semester</span>
+              ) : (
+                <span className="badge badge-neutral" style={{ fontSize: 10 }}>Register this semester</span>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

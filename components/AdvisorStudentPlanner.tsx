@@ -87,6 +87,9 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
 
   const semesterNumbers = Array.from(new Set(data.planned.map((p) => p.plannedSemesterNumber))).sort((a, b) => a - b);
   const takenCodes = new Set(data.transcriptRecords.map((t) => t.courseCode));
+  const registerNow = data.planned
+    .filter((p) => !p.currentlyEnrolled && p.plannedSemesterNumber <= data.currentSemesterNumber)
+    .sort((a, b) => (Number(b.isCriticalChain) - Number(a.isCriticalChain)) || (a.plannedSemesterNumber - b.plannedSemesterNumber) || (b.chainDepth - a.chainDepth));
 
   return (
     <div style={{ marginTop: 10, padding: 12, background: "#FAFAF8", border: "1px solid var(--line)" }}>
@@ -100,6 +103,28 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
         <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--brass-dark)" }}>{cgpa ?? "—"}</div>
       </div>
+
+      {registerNow.length > 0 && (
+        <div style={{ marginBottom: 14, padding: "8px 10px", background: "#fff", border: "1px solid var(--line)" }}>
+          <h4 style={{ fontSize: 12.5, marginBottom: 2 }}>Recommended: Register For These Now</h4>
+          <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 6 }}>
+            Due this semester or already overdue, and not yet enrolled — advise on these when this semester's
+            registration opens.
+          </p>
+          {registerNow.map((c) => (
+            <div key={c.courseId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--line)" }}>
+              <span>{c.code} — {c.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({c.creditHours} cr)</span></span>
+              {c.plannedSemesterNumber < data.currentSemesterNumber ? (
+                <span className="badge" style={{ fontSize: 9.5, background: "#FBEAEA", color: "var(--rust)" }}>Overdue</span>
+              ) : c.isCriticalChain ? (
+                <span className="badge" style={{ fontSize: 9.5, background: "#FBEAEA", color: "var(--rust)" }}>⚠ Critical</span>
+              ) : (
+                <span className="badge badge-neutral" style={{ fontSize: 9.5 }}>This semester</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {data.currentEnrollments.length > 0 && (
         <div style={{ marginBottom: 14 }}>
