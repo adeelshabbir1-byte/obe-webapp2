@@ -262,6 +262,14 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
 
+  // CLOs should each carry roughly the same share of the total marks — one
+  // CLO barely tested while another dominates the paper is a red flag for
+  // OMC review. A small spread is normal (marks don't divide perfectly
+  // evenly across CLOs); only flag it once the spread gets large.
+  const CLO_BALANCE_TOLERANCE = 7;
+  const cloSpread = cloTotals.length > 1 ? Math.max(...cloTotals) - Math.min(...cloTotals) : 0;
+  const cloImbalanced = cloTotals.length > 1 && cloSpread > CLO_BALANCE_TOLERANCE;
+
   // The mapping grid below groups lecture rows by their (effective)
   // subtopic — if the same subtopic was taught across several lectures,
   // it shows once, with a lecture count, instead of once per lecture. A
@@ -400,12 +408,19 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
 
       <div className="card" style={{ overflowX: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-          <h3 style={{ fontSize: 14 }}>Which Lectures Does Each Instrument Test?</h3>
+          <h3 style={{ fontSize: 14 }}>Which Topic Does Each Instrument Test?</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {mappingDirty && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes</span>}
             <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} data-save-shortcut="true" className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
           </div>
         </div>
+        {cloImbalanced && (
+          <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 10, fontWeight: 600 }}>
+            ⚠ CLOs are not equally distributed — {cloSpread}% spread between the highest and lowest CLO total
+            (a {CLO_BALANCE_TOLERANCE}% spread is the most that's normally allowed). Consider mapping more topics to the
+            under-weighted CLO(s) so each CLO carries a similar share of the marks.
+          </p>
+        )}
         {filledRows.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Fill in some lecture topics on the Lecture Content tab first.</p>
         ) : instruments.length === 0 ? (
@@ -418,12 +433,12 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 {checkboxInstruments.map((i) => (
                   <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}>{i.type} {i.label}</th>
                 ))}
-                {hasMidterm && <th style={{ fontSize: 11, verticalAlign: "bottom" }}>Midterm Q#</th>}
-                {hasFinal && <th style={{ fontSize: 11, verticalAlign: "bottom" }}>Final Q#</th>}
+                {hasMidterm && <th style={verticalHeaderStyle} title="Midterm Q#">Midterm Q#</th>}
+                {hasFinal && <th style={verticalHeaderStyle} title="Final Q#">Final Q#</th>}
                 <th style={{ verticalAlign: "bottom" }}>Weight</th>
                 {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}>{c.code}</th>)}
               </tr>
-              {cloList.length > 0 && (
+              {(cloList.length > 0 || hasMidterm || hasFinal) && (
                 // <td> (not <th>) deliberately — SortableTable binds
                 // click-to-sort to every <th> inside <thead>, and this
                 // is a summary row, not another set of column headers;
@@ -432,8 +447,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <tr style={{ background: "#FAFAF8", fontWeight: 600 }}>
                   <td style={{ fontSize: 12 }}>Total</td>
                   {checkboxInstruments.map((i) => <td key={i.id}></td>)}
-                  {hasMidterm && <td></td>}
-                  {hasFinal && <td></td>}
+                  {hasMidterm && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
+                  {hasFinal && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
                   <td style={{ fontSize: 12 }}>{grandTotal}%</td>
                   {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{t}%</td>)}
                 </tr>
@@ -458,14 +473,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td><input value={first.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
-                      style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
+                    <td style={{ background: first.midtermQuestions.trim() ? "#FFF3D6" : undefined }}>
+                      <input value={first.midtermQuestions} disabled={saving}
+                        onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
+                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.midtermQuestions.trim() ? "#FFF3D6" : undefined }} />
+                    </td>
                   )}
                   {hasFinal && (
-                    <td><input value={first.finalQuestions} placeholder="e.g. 2" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
-                      style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
+                    <td style={{ background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }}>
+                      <input value={first.finalQuestions} disabled={saving}
+                        onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
+                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }} />
+                    </td>
                   )}
                   <td style={{ fontWeight: 600 }}>{groupWeight}%</td>
                   {cloList.map((c) => {
@@ -489,6 +508,9 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           lecture in that group at once. If a quiz, assignment, or question is linked to more than one lecture, its
           marks are split evenly across them. Ticking boxes and typing question numbers here only changes this
           screen — nothing is saved (and the Weight column won't update) until you click "Save Mapping Changes" above.
+          A Midterm/Final Q# box is shaded once a question number is entered in it, so filled-in cells are easy to
+          spot at a glance. Click a column header to sort by it — click again to reverse, and a third click returns
+          the table to its original week/lecture order.
         </p>
       </div>
     </>

@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
         data: {
           instructorAssignmentPct: request.assignmentPct, instructorQuizPct: request.quizPct, instructorProjectPct: request.projectPct,
           instructorLabPct: request.labPct, instructorMidtermPct: request.midtermPct, instructorFinalPct: request.finalPct,
+          instructorWeightsConfirmedAt: new Date(),
         },
       });
     } else {
@@ -35,6 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
         data: {
           assignmentPct: request.assignmentPct, quizPct: request.quizPct, projectPct: request.projectPct,
           labPct: request.labPct, midtermPct: request.midtermPct, finalPct: request.finalPct,
+          weightsConfirmedAt: new Date(),
         },
       });
     }

@@ -55,7 +55,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }, { status: 202 });
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: vals });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { ...vals, weightsConfirmedAt: new Date() } });
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
   await syncCourseContentToLinkedCourses(course.id);
 

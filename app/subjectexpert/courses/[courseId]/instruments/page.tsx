@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
@@ -39,6 +40,19 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
     where: { chairmanId_courseType: { chairmanId: course.coordinator.managedById || "", courseType: course.courseType } },
   });
 
+  // Step 3 (Assessment Weights) has to be completed — category %'s
+  // totalling 100% and saved within the OMC's policy range — before quiz/
+  // assignment/exam question selection (step 4, below) makes sense: the
+  // per-instrument Marks % targets shown on this page come straight from
+  // those category %'s, so mapping questions against an unconfirmed or
+  // still-pending weight split just produces numbers that have to be
+  // redone anyway. weightsConfirmedAt is only set once weights are saved
+  // successfully inside the policy range (see the weights route).
+  const weightsComplete = !!course.weightsConfirmedAt;
+  const pendingException = weightsComplete ? null : await prisma.weightExceptionRequest.findUnique({
+    where: { courseId_source: { courseId: course.id, source: "SE" } },
+  });
+
   const cloHitCounts: Record<string, number> = {};
   for (const c of course.clos) cloHitCounts[c.id] = 0;
   for (const r of course.lectureRows) if (r.cloId) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
@@ -50,13 +64,31 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   }
   const badPloCount = Object.values(byPlo).filter((total) => total !== 100).length;
 
-  const canSubmit = course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0;
+  const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0;
 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
 
-      <AssessmentsManager
+      {!weightsComplete && (
+        <div className="card" style={{ borderColor: "var(--rust)" }}>
+          <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--rust)" }}>Complete Step 3 First</h3>
+          {pendingException && pendingException.status === "pending" ? (
+            <p style={{ fontSize: 12.5 }}>
+              Your Assessment Weights are outside the OMC's policy range and are waiting on OMC approval — quiz/assignment/exam
+              question selection below stays locked until they're approved (or you adjust the weights to fit the policy range).
+            </p>
+          ) : (
+            <p style={{ fontSize: 12.5 }}>
+              Before you can select which quizzes, assignments, or exam questions test which topics, finish setting the
+              Assessment Weights (category %'s totalling 100%, within the OMC's allowed range) on the previous tab.
+            </p>
+          )}
+          <Link href={`/subjectexpert/courses/${course.id}/weights`} style={{ fontSize: 12.5, color: "var(--brass-dark)", fontWeight: 600 }}>→ Go to Assessment Weights</Link>
+        </div>
+      )}
+
+      {weightsComplete && <AssessmentsManager
         courseId={course.id}
         initialInstruments={course.assessmentInstruments.map((i) => ({ id: i.id, type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore, evidence: i.evidence.map((e) => ({ id: e.id, fileName: e.fileName, fileUrl: e.fileUrl, status: e.status, method: e.method, reasoning: e.reasoning })) }))}
         targets={{
@@ -87,7 +119,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
         })}
         clos={course.clos.map((c) => ({ id: c.id, code: c.code }))}
         apiBase="/api/subjectexpert"
-      />
+      />}
 
       {course.templateStatus === "changes-requested" && course.omcComment && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
@@ -107,6 +139,11 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 12 }}>
           {course.clos.length} CLO(s), {course.lectureRows.length} lecture row(s). Once submitted, the OMC will review this template.
         </p>
+        {!weightsComplete && (
+          <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
+            Not ready yet — Assessment Weights (step 3) aren't confirmed yet.
+          </p>
+        )}
         {underCovered.length > 0 && (
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
             Not ready yet — these CLOs need at least 3 lecture topics each: {underCovered.map((c) => c.code).join(", ")}
