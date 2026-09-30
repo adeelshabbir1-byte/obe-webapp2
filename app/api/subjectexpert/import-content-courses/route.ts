@@ -1,34 +1,35 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
-import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
+import { requireOwnedCourse } from "../../../../lib/subjectExpertGuard";
 
 // Lists candidate SOURCE courses for a Subject Expert's "Import from
-// another course" action — every course within this SE's own
-// institution (same chairman, walked up generically so it works
-// regardless of exactly who manages this SE), not just the ones this
-// particular SE happens to own. A course someone else already built out
-// — a past offering, a twin section, a closely related elective — is
-// exactly the kind of starting point this exists for.
-export async function GET() {
+// another course" action on a specific target course — restricted to
+// courses OMC has actually marked as equivalent to it (the same real
+// class, offered again or run in parallel), via the Course Equivalence
+// Matrix. This used to list every course in the institution with any
+// CLOs at all, which made it easy to pull in content from an unrelated
+// course by mistake; equivalence is the institution's own, deliberate
+// statement that two courses really are the same thing, so it's the
+// right (and only) scope for this.
+export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUBJECT_EXPERT") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const chairmanId = await findOwningChairmanId(user.id);
-  if (!chairmanId) return NextResponse.json({ courses: [] });
+  const courseId = req.nextUrl.searchParams.get("courseId");
+  if (!courseId) return NextResponse.json({ error: "courseId is required" }, { status: 400 });
+  const target = await requireOwnedCourse(user, courseId);
+  if (!target) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId }, select: { id: true } });
-  const coordinatorIds = coordinators.map((c) => c.id);
-
-  const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds } },
-    include: { batch: true, _count: { select: { clos: true } } },
-    orderBy: [{ code: "asc" }],
+  const membership = await prisma.courseEquivalenceMember.findUnique({
+    where: { courseId },
+    include: { group: { include: { members: { include: { course: { include: { batch: true, _count: { select: { clos: true } } } } } } } } },
   });
+  if (!membership) return NextResponse.json({ courses: [], noEquivalenceGroup: true });
 
-  return NextResponse.json({
-    courses: courses
-      .filter((c) => c._count.clos > 0) // no point listing an empty course as a source
-      .map((c) => ({ id: c.id, code: c.code, title: c.title, degreeProgram: c.batch?.degreeProgram || "", batchName: c.batch?.batchName || "" })),
-  });
+  const courses = membership.group.members
+    .filter((m) => m.courseId !== courseId && m.course._count.clos > 0) // no point listing an empty course, or the course itself
+    .map((m) => ({ id: m.course.id, code: m.course.code, title: m.course.title, degreeProgram: m.course.batch?.degreeProgram || "", batchName: m.course.batch?.batchName || "" }));
+
+  return NextResponse.json({ courses, noEquivalenceGroup: false });
 }
