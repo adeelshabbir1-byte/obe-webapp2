@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-type Member = { courseId: string; isBase: boolean; isSelf: boolean; code: string; title: string; degreeProgram: string; batchName: string; termOrder: number };
+type Member = { courseId: string; isBase: boolean; isSelf: boolean; isHistorical: boolean; code: string; title: string; degreeProgram: string; batchName: string; termOrder: number };
 
 export default function ContentSyncStatusBanner({ courseId }: { courseId: string }) {
   const [data, setData] = useState<{ inGroup: boolean; isBase?: boolean; base?: Member | null; members?: Member[] } | null>(null);
@@ -45,7 +45,7 @@ export default function ContentSyncStatusBanner({ courseId }: { courseId: string
               <tr key={m.courseId} style={{ borderTop: "1px solid rgba(0,0,0,0.08)", fontWeight: m.isSelf ? 700 : 400 }}>
                 <td style={{ padding: "3px 6px" }}>{m.code} — {m.title}</td>
                 <td style={{ padding: "3px 6px" }}>{m.degreeProgram}, {m.batchName}</td>
-                <td style={{ padding: "3px 6px" }}>{m.isBase ? "★ has the data" : "inherits"}{m.isSelf ? " (this course)" : ""}</td>
+                <td style={{ padding: "3px 6px" }}>{m.isBase ? "★ has the data" : m.isHistorical ? "already taught (historical)" : "inherits"}{m.isSelf ? " (this course)" : ""}</td>
               </tr>
             ))}
           </tbody>
