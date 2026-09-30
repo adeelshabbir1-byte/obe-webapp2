@@ -301,3 +301,50 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
 
   return { synced, skippedGraded, skippedOlderBatch };
 }
+
+/**
+ * Propagates one course-level PLO-Course Matrix decision (OMC checking
+ * or unchecking one PLO for one course) out to the rest of that course's
+ * Content Sync group — the same "same course, other batches" grouping
+ * CLOs/lecture plan/instruments already sync through. Only fires from
+ * the group's BASE (a follower's own mapping was never authoritative to
+ * begin with), and only reaches same-term-or-later members — an older,
+ * already-taught batch is a historical record and is left untouched,
+ * same rule as every other content-sync propagation.
+ *
+ * PLOs are batch-scoped (each batch has its own PLO rows), so the same
+ * PLO in a different batch is matched by NUMBER, not by id — the same
+ * convention "Copy PLO Mappings" and the HEC/System auto-map tools use.
+ * A target batch that hasn't defined that PLO number yet is silently
+ * skipped rather than erroring — OMC may not have finished setting up
+ * that batch's own PLOs.
+ */
+export async function syncCoursePloMappingToLinkedCourses(sourceCourseId: string, ploNumber: number, mapped: boolean, assignedById: string) {
+  const membership = await prisma.courseContentSyncMember.findUnique({
+    where: { courseId: sourceCourseId },
+    include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
+  });
+  if (!membership || !membership.isBase) return;
+
+  const sourceCourse = membership.group.members.find((m) => m.courseId === sourceCourseId)?.course;
+  const sourceTermIndex = termIndex(sourceCourse?.batch?.startTerm, sourceCourse?.batch?.startYear);
+  const others = membership.group.members.filter(
+    (m) => m.courseId !== sourceCourseId && termIndex(m.course.batch?.startTerm, m.course.batch?.startYear) >= sourceTermIndex
+  );
+
+  for (const m of others) {
+    if (!m.course.batchId) continue;
+    const targetPlo = await prisma.pLO.findUnique({ where: { batchId_number: { batchId: m.course.batchId, number: ploNumber } } });
+    if (!targetPlo) continue;
+
+    if (mapped) {
+      await prisma.coursePloMapping.upsert({
+        where: { courseId_ploId: { courseId: m.courseId, ploId: targetPlo.id } },
+        create: { courseId: m.courseId, ploId: targetPlo.id, assignedById, source: "SYSTEM" },
+        update: {},
+      });
+    } else {
+      await prisma.coursePloMapping.deleteMany({ where: { courseId: m.courseId, ploId: targetPlo.id } });
+    }
+  }
+}

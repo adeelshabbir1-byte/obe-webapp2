@@ -10,6 +10,7 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
   const [open, setOpen] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [noEquivalenceGroup, setNoEquivalenceGroup] = useState(false);
   const [sourceId, setSourceId] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,9 +19,13 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
 
   useEffect(() => {
     if (!open || loaded) return;
-    fetch("/api/subjectexpert/import-content-courses")
+    fetch(`/api/subjectexpert/import-content-courses?courseId=${courseId}`)
       .then((res) => res.json())
-      .then((data) => { setCourses((data.courses || []).filter((c: Course) => c.id !== courseId)); setLoaded(true); })
+      .then((data) => {
+        setCourses((data.courses || []).filter((c: Course) => c.id !== courseId));
+        setNoEquivalenceGroup(!!data.noEquivalenceGroup);
+        setLoaded(true);
+      })
       .catch((err) => setError("Failed to load courses: " + err.message));
   }, [open, loaded, courseId]);
 
@@ -49,9 +54,9 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
       </div>
       {!open && (
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 6 }}>
-          Pull in CLOs, PLO mappings, the weekly lecture plan, and assessment instruments from another course in
-          your institution — a past offering of this same course, a twin section, or a closely related one —
-          instead of starting from scratch.
+          Pull in CLOs, PLO mappings, the weekly lecture plan, and assessment instruments from a course OMC has
+          marked as equivalent to this one — a twin section of the same real class — instead of starting from
+          scratch.
         </p>
       )}
       {open && (
@@ -59,6 +64,15 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
           {error && <div className="err">{error}</div>}
           {!loaded ? (
             <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p>
+          ) : noEquivalenceGroup ? (
+            <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
+              This course hasn't been marked equivalent to any other course yet — OMC sets that up on the Course
+              Equivalence Matrix. Once it is, its equivalent course(s) will be available to copy from here.
+            </p>
+          ) : courses.length === 0 ? (
+            <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
+              This course's equivalent course(s) don't have any content yet — there's nothing to copy from.
+            </p>
           ) : (
             <>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Copy FROM</label>

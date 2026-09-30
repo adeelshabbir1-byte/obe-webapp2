@@ -36,7 +36,7 @@ function contributionWarnings(clos: Clo[], plos: Plo[]) {
 // Every action here updates local state directly from its own request,
 // instead of router.refresh() re-fetching this whole course's data
 // (CLOs, PLOs, everything) on every single small edit.
-export default function ClosManager({ courseId, initialClos, plos }: { courseId: string; initialClos: Clo[]; plos: Plo[] }) {
+export default function ClosManager({ courseId, initialClos, plos, readOnly = false }: { courseId: string; initialClos: Clo[]; plos: Plo[]; readOnly?: boolean }) {
   const [clos, setClos] = useState<Clo[]>(initialClos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -125,7 +125,7 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
   return (
     <>
       {error && <div className="err">{error}</div>}
-      {plos.length === 0 && (
+      {!readOnly && plos.length === 0 && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
             The OMC hasn't assigned any PLOs to this course yet (via the PLO–Course Matrix) — CLOs can
@@ -143,13 +143,13 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
           <tbody>
             {clos.length === 0 && (
-              <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
+              <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
             {clos.map((c, i) => (
-              editingId === c.id ? (
+              !readOnly && editingId === c.id ? (
                 <tr key={c.id}>
                   <td colSpan={7}>
                     <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
@@ -172,10 +172,12 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                 <tr key={c.id}>
                   <td>
                     {c.code}
-                    <div style={{ display: "inline-flex", gap: 2, marginLeft: 6 }}>
-                      <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
-                      <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
-                    </div>
+                    {!readOnly && (
+                      <div style={{ display: "inline-flex", gap: 2, marginLeft: 6 }}>
+                        <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+                        <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
+                      </div>
+                    )}
                   </td>
                   <td>{c.statement}</td><td>{c.bloomLevel}</td>
                   <td>
@@ -188,10 +190,12 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
                   </td>
                   <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
                   <td>{c.targetPct}%</td>
-                  <td style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                    <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
-                  </td>
+                  {!readOnly && (
+                    <td style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
+                      <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                    </td>
+                  )}
                 </tr>
               )
             ))}
@@ -199,34 +203,36 @@ export default function ClosManager({ courseId, initialClos, plos }: { courseId:
         </SortableTable>
       </div>
 
-      <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add CLO</h3>
-        <form onSubmit={addClo}>
-          <div className="field">
-            <label>Bloom's Level</label>
-            <select name="bloomLevel" required>{BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.label}</option>)}</select>
-          </div>
-          <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 14 }}>
+      {!readOnly && (
+        <div className="card">
+          <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add CLO</h3>
+          <form onSubmit={addClo}>
             <div className="field">
-              <label>Mapped PLO (defined by your Program Coordinator)</label>
-              <select name="mappedPloId">{ploSelectOptions}</select>
+              <label>Bloom's Level</label>
+              <select name="bloomLevel" required>{BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.label}</option>)}</select>
             </div>
-            <div className="field">
-              <label>Contribution %</label>
-              <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={100} placeholder="100" />
+            <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
+            <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 14 }}>
+              <div className="field">
+                <label>Mapped PLO (defined by your Program Coordinator)</label>
+                <select name="mappedPloId">{ploSelectOptions}</select>
+              </div>
+              <div className="field">
+                <label>Contribution %</label>
+                <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={100} placeholder="100" />
+              </div>
+              <div className="field">
+                <label title="Expected % of students who should attain this CO">Target % (attainment)</label>
+                <input name="targetPct" type="number" min={1} max={100} defaultValue={60} placeholder="60" />
+              </div>
             </div>
-            <div className="field">
-              <label title="Expected % of students who should attain this CO">Target % (attainment)</label>
-              <input name="targetPct" type="number" min={1} max={100} defaultValue={60} placeholder="60" />
-            </div>
-          </div>
-          <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>
-            If more than one CLO in this course maps to the same PLO, their contribution percentages must add up to 100%.
-          </p>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
-        </form>
-      </div>
+            <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>
+              If more than one CLO in this course maps to the same PLO, their contribution percentages must add up to 100%.
+            </p>
+            <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
+          </form>
+        </div>
+      )}
     </>
   );
 }

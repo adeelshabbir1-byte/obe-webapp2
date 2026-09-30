@@ -4,6 +4,7 @@ const REPORTS = [
   { key: "progression", label: "3. Semester Progression", href: "/omc/reports/progression" },
   { key: "audit", label: "4. Course Audit / Orphans", href: "/omc/reports/audit" },
   { key: "bloom", label: "5. Bloom's Distribution", href: "/omc/reports/bloom" },
+  { key: "omc-activity-log", label: "6. OMC Activity Log", href: "/omc/reports/omc-activity-log" },
 ];
 
 export default function ReportsSubNav({ active }: { active: string }) {

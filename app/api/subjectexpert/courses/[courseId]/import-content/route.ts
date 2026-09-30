@@ -8,14 +8,15 @@ import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculu
 import { writeAuditLog } from "../../../../../../lib/audit";
 
 // Lets a Subject Expert pull CLOs/PLO mappings/lecture plan/assessment
-// instruments in from another course they can see (same institution) —
-// e.g. a past offering, a twin section someone else already built,
-// or a closely related course — instead of starting from scratch every
-// time. This is the SE-facing counterpart to /api/omc/courses/import-content
-// (OMC/Chairman's version), scoped down to: target must be a course this
-// SE actually owns, source must be from the same institution, and a
-// course that inherits its content via Content Sync can't be overwritten
-// directly (same guard every other SE content-mutation endpoint uses).
+// instruments in from another course OMC has marked as equivalent to
+// this one — the same real class, run again or run in parallel —
+// instead of starting from scratch every time. This is the SE-facing
+// counterpart to /api/omc/courses/import-content (OMC/Chairman's
+// version), scoped down to: target must be a course this SE actually
+// owns, source must be equivalent to it (same institution is implied by
+// that), and a course that inherits its content via Content Sync can't
+// be overwritten directly (same guard every other SE content-mutation
+// endpoint uses).
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
@@ -41,6 +42,18 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   ]);
   if (!myChairmanId || myChairmanId !== sourceChairmanId) {
     return NextResponse.json({ error: "that course doesn't belong to your institution" }, { status: 403 });
+  }
+
+  // Source must actually be equivalent to the target — OMC's own
+  // statement that these are the same real class — not just any course
+  // in the institution. Matches the scope the "Copy FROM" list itself
+  // is restricted to.
+  const targetMembership = await prisma.courseEquivalenceMember.findUnique({ where: { courseId: course.id } });
+  const sourceInSameGroup = targetMembership
+    ? await prisma.courseEquivalenceMember.findFirst({ where: { courseId: sourceCourseId, groupId: targetMembership.groupId } })
+    : null;
+  if (!sourceInSameGroup) {
+    return NextResponse.json({ error: "That course isn't marked equivalent to this one — only equivalent courses (set up by OMC on the Course Equivalence Matrix) can be imported from." }, { status: 403 });
   }
 
   // Same protection the OMC version has: never silently wipe out real,

@@ -84,6 +84,8 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
         of the same degree can have different PLOs. Cells shaded <span style={{ background: "#FFF9C4", padding: "1px 5px" }}>yellow</span> with a small "HEC" label are HEC's own suggested mapping for that course — a hint only, not automatically applied; check the box yourself to actually set it.
+        If a course is the base of a Content Sync group, checking or unchecking a box here also applies to that
+        same course's not-yet-taught future batches automatically.
       </p>
       <div className="card no-print">
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />

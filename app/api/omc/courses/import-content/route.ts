@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
+import { writeAuditLog } from "../../../../../lib/audit";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -35,6 +36,11 @@ export async function POST(req: NextRequest) {
 
   const result = await copyCourseContent(sourceCourseId, targetCourseId);
   if (!result) return NextResponse.json({ error: "Source course not found." }, { status: 404 });
+
+  await writeAuditLog({
+    actorUserId: user.id, action: "COURSE_CONTENT_IMPORTED", entityType: "Course", entityId: targetCourseId,
+    metadata: { sourceCourseId, targetCourseCode: targetCourse.code },
+  });
 
   return NextResponse.json({ ok: true, ...result });
 }
