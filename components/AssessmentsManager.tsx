@@ -9,7 +9,15 @@ type Instrument = { id: string; type: string; label: string; marksPct: number; m
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type PolicyMinCount = { assignmentMinCount?: number; quizMinCount?: number; midtermMinCount?: number; finalMinCount?: number; projectMinCount?: number; labMinCount?: number };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number; cloId: string | null };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number; cloId: string | null };
+
+// A blank subtopic defaults to the topic itself — so "Introduction to
+// Computing" taught across 2 lectures with no subtopic typed in still
+// groups as one thing below, instead of the grouping silently falling
+// apart because half the rows have a subtopic and half don't.
+function effectiveSubtopic(r: { topic: string; subtopic: string | null }) {
+  return (r.subtopic && r.subtopic.trim()) || r.topic;
+}
 type Clo = { id: string; code: string };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
@@ -62,7 +70,6 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [busyCell, setBusyCell] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
 
@@ -92,17 +99,36 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function editInstrument(id: string, patch: { marksPct?: number; maxScore?: number; label?: string }) {
-    setBusyCell(id); setError("");
+  // Label/Marks%/Out-Of edits are kept local (updating "instruments" so the
+  // per-category totals above update live) and only sent to the server in
+  // one batch when "Save Instrument Changes" is pressed (or Ctrl+S) —
+  // typing through several quizzes' marks one after another used to fire a
+  // separate save (and a full content-sync) per field blur, which is what
+  // made it feel slow.
+  const [dirtyInstrumentIds, setDirtyInstrumentIds] = useState<Set<string>>(new Set());
+  const pendingEditsRef = useRef<Record<string, { marksPct?: number; maxScore?: number; label?: string }>>({});
+
+  function editInstrumentLocal(id: string, patch: { marksPct?: number; maxScore?: number; label?: string }) {
+    setInstruments((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
+    pendingEditsRef.current[id] = { ...pendingEditsRef.current[id], ...patch };
+    setDirtyInstrumentIds((prev) => new Set(prev).add(id));
+  }
+
+  async function saveInstrumentChanges() {
+    const edits = Object.keys(pendingEditsRef.current).map((instrumentId) => ({ instrumentId, ...pendingEditsRef.current[instrumentId] }));
+    if (edits.length === 0) return;
+    setSaving(true); setError("");
     try {
-      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/batch-save`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ edits }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
-      setInstruments((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
-      setBusyCell(null);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      setInstruments(data.instruments);
+      pendingEditsRef.current = {};
+      setDirtyInstrumentIds(new Set());
+      setSaving(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 
   async function removeInstrument(id: string) {
@@ -141,15 +167,23 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   }
 
   // These three just update the local working copy — nothing is sent to
-  // the server until "Save Mapping Changes" is pressed below.
-  function toggleInstrumentLocal(rowId: string, instrumentId: string, linked: boolean) {
-    setRows((prev) => prev.map((r) => r.id === rowId
+  // the server until "Save Mapping Changes" is pressed below. The grid
+  // groups lecture rows that share the same (effective) subtopic into one
+  // line, so a toggle or a typed Q# here applies to every real lecture row
+  // in that group at once — ticking "Introduction to Computing — 2 lec"
+  // links the instrument to BOTH underlying lectures, not just one, so the
+  // weight split and the "linked to a quiz/exam" progress check come out
+  // right for every row that topic actually spans.
+  function toggleInstrumentLocal(rowIds: string[], instrumentId: string, linked: boolean) {
+    const idSet = new Set(rowIds);
+    setRows((prev) => prev.map((r) => idSet.has(r.id)
       ? { ...r, linkedInstrumentIds: linked ? [...r.linkedInstrumentIds, instrumentId] : r.linkedInstrumentIds.filter((id) => id !== instrumentId) }
       : r));
   }
 
-  function setQuestionsLocal(rowId: string, type: "Midterm" | "Final", value: string) {
-    setRows((prev) => prev.map((r) => r.id === rowId
+  function setQuestionsLocal(rowIds: string[], type: "Midterm" | "Final", value: string) {
+    const idSet = new Set(rowIds);
+    setRows((prev) => prev.map((r) => idSet.has(r.id)
       ? { ...r, [type === "Midterm" ? "midtermQuestions" : "finalQuestions"]: value }
       : r));
   }
@@ -161,14 +195,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       || r.midtermQuestions !== saved.midtermQuestions || r.finalQuestions !== saved.finalQuestions;
   });
 
-  // Warn before leaving the page with unsaved mapping changes, since they
-  // now only live in local state until the Save button is clicked. A ref
-  // keeps the beforeunload handler (registered once) seeing the LATEST
-  // dirty flag rather than whatever it was when the effect first ran.
+  // Warn before leaving the page with unsaved mapping OR instrument-field
+  // changes, since both now only live in local state until their Save
+  // button (or Ctrl+S) is used. Refs keep the beforeunload handler
+  // (registered once) seeing the LATEST dirty flags rather than whatever
+  // they were when the effect first ran.
   const mappingDirtyRef = useRef(mappingDirty);
   mappingDirtyRef.current = mappingDirty;
+  const instrumentsDirtyRef = useRef(false);
+  instrumentsDirtyRef.current = dirtyInstrumentIds.size > 0;
   useEffect(() => {
-    function handler(e: BeforeUnloadEvent) { if (mappingDirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }
+    function handler(e: BeforeUnloadEvent) { if (mappingDirtyRef.current || instrumentsDirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
@@ -225,9 +262,33 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
 
+  // The mapping grid below groups lecture rows by their (effective)
+  // subtopic — if the same subtopic was taught across several lectures,
+  // it shows once, with a lecture count, instead of once per lecture. A
+  // row's own CLO/checkbox/Q# state is assumed consistent across every
+  // lecture in its group (Save always writes it that way), so the first
+  // row's values represent the whole group for display purposes.
+  type Group = { key: string; rows: Row[] };
+  const groups: Group[] = [];
+  const groupByKey = new Map<string, Group>();
+  for (const r of filledRows) {
+    const key = effectiveSubtopic(r);
+    let g = groupByKey.get(key);
+    if (!g) { g = { key, rows: [] }; groupByKey.set(key, g); groups.push(g); }
+    g.rows.push(r);
+  }
+  for (const g of groups) g.rows.sort((a, b) => a.lectureNumber - b.lectureNumber);
+
   return (
     <>
       {error && <div className="err">{error}</div>}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginBottom: -4 }}>
+        {dirtyInstrumentIds.size > 0 && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes to {dirtyInstrumentIds.size} item(s) below</span>}
+        <button onClick={saveInstrumentChanges} disabled={dirtyInstrumentIds.size === 0 || saving} data-save-shortcut="true" className="btn btn-brass">
+          {saving ? "Saving…" : "Save Instrument Changes"}
+        </button>
+      </div>
 
       {TYPES.map((type) => {
         const items = instruments.filter((i) => i.type === type);
@@ -277,24 +338,24 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     <td>
                       {isNumbered ? `Q${i.label}` : (
                         <input
-                          type="text" defaultValue={i.label} disabled={busyCell === i.id}
-                          onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== i.label) editInstrument(i.id, { label: e.target.value.trim() }); }}
-                          style={{ width: 90, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                          type="text" defaultValue={i.label}
+                          onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== i.label) editInstrumentLocal(i.id, { label: e.target.value.trim() }); }}
+                          style={{ width: 90, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                         />
                       )}
                     </td>
                     <td>
                       <input
-                        type="number" min={0} max={100} defaultValue={i.marksPct} disabled={busyCell === i.id}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrument(i.id, { marksPct: n }); }}
-                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                        type="number" min={0} max={100} defaultValue={i.marksPct}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrumentLocal(i.id, { marksPct: n }); }}
+                        style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />%
                     </td>
                     <td>
                       / <input
-                        type="number" min={1} defaultValue={i.maxScore} disabled={busyCell === i.id}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= 1 && n !== i.maxScore) editInstrument(i.id, { maxScore: n }); }}
-                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                        type="number" min={1} defaultValue={i.maxScore}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= 1 && n !== i.maxScore) editInstrumentLocal(i.id, { maxScore: n }); }}
+                        style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />
                     </td>
                     <td>
@@ -379,29 +440,41 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
               )}
             </thead>
             <tbody>
-              {filledRows.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ fontSize: 12 }}>Wk{r.week}·L{r.lectureNumber} — {r.topic}</td>
+              {groups.map((g) => {
+                const rowIds = g.rows.map((r) => r.id);
+                const first = g.rows[0];
+                const lectureLabel = g.rows.length === 1
+                  ? `Wk${first.week}·L${first.lectureNumber}`
+                  : `L${g.rows.map((r) => r.lectureNumber).join(",")}`;
+                const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
+                return (
+                <tr key={g.key}>
+                  <td style={{ fontSize: 12 }}>
+                    {lectureLabel} — {g.key}
+                    {g.rows.length > 1 && <span style={{ color: "var(--slate)" }}> ({g.rows.length} lec)</span>}
+                  </td>
                   {checkboxInstruments.map((i) => {
-                    const checked = r.linkedInstrumentIds.includes(i.id);
-                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(r.id, i.id, e.target.checked)} /></td>;
+                    const checked = g.rows.every((r) => r.linkedInstrumentIds.includes(i.id));
+                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td><input value={r.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(r.id, "Midterm", e.target.value)}
+                    <td><input value={first.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
                   {hasFinal && (
-                    <td><input value={r.finalQuestions} placeholder="e.g. 2" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(r.id, "Final", e.target.value)}
+                    <td><input value={first.finalQuestions} placeholder="e.g. 2" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
-                  <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
-                  {cloList.map((c) => (
-                    <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{r.cloId === c.id ? `${r.weightPct}%` : ""}</td>
-                  ))}
+                  <td style={{ fontWeight: 600 }}>{groupWeight}%</td>
+                  {cloList.map((c) => {
+                    const t = g.rows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0);
+                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{t > 0 ? `${t}%` : ""}</td>;
+                  })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </SortableTable>
         )}
@@ -411,9 +484,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           </p>
         )}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-          If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them.
-          Ticking boxes and typing question numbers here only changes this screen — nothing is saved (and the Weight
-          column won't update) until you click "Save Mapping Changes" above.
+          Rows here are grouped by subtopic — if the same subtopic was taught across several lectures, it's shown
+          once with the lecture count in brackets, and ticking or typing a question number for it applies to every
+          lecture in that group at once. If a quiz, assignment, or question is linked to more than one lecture, its
+          marks are split evenly across them. Ticking boxes and typing question numbers here only changes this
+          screen — nothing is saved (and the Weight column won't update) until you click "Save Mapping Changes" above.
         </p>
       </div>
     </>

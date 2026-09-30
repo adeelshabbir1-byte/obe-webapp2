@@ -5,6 +5,7 @@ import Shell from "../../../components/Shell";
 import ChairmanPlosManager from "../../../components/ChairmanPlosManager";
 
 const NAV = [
+  { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },

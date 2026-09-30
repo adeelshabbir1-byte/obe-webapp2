@@ -70,6 +70,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },

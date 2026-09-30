@@ -5,6 +5,8 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
+import { buildSeProgress, ProgressStep } from "../../../lib/courseProgress";
+import ProgressBar from "../../../components/ProgressBar";
 
 
 function statusLabel(status: string) {
@@ -12,46 +14,6 @@ function statusLabel(status: string) {
     draft: "Draft", submitted: "Submitted", approved: "Approved", "changes-requested": "Changes Requested",
   };
   return map[status] || status;
-}
-
-// Five build steps + the OMC submission itself. Each is worth 1/6 of the
-// bar. Kept simple on purpose — this is a "how far along am I" indicator,
-// not a strict gate (the actual submit button below still enforces the
-// real CLO-coverage/PLO-total rules on its own).
-type ProgressStep = { label: string; done: boolean };
-
-function buildProgress(opts: {
-  cloCount: number;
-  lectureCount: number; lectureMappedCount: number;
-  instrumentTypes: Set<string>;
-  instrumentsWithNoLink: number; instrumentCount: number;
-  midtermPaperCount: number; finalPaperCount: number;
-  templateStatus: string;
-}): ProgressStep[] {
-  return [
-    { label: "CLOs defined", done: opts.cloCount > 0 },
-    { label: "Lecture plan set & mapped to CLOs", done: opts.lectureCount > 0 && opts.lectureMappedCount === opts.lectureCount },
-    { label: "Quizzes/Assignments/Exams set up", done: opts.instrumentCount > 0 },
-    { label: "Lectures linked to quizzes/exams", done: opts.instrumentCount > 0 && opts.instrumentsWithNoLink === 0 },
-    { label: "Midterm & Final paper distribution set", done: opts.midtermPaperCount > 0 && opts.finalPaperCount > 0 },
-    { label: "Submitted to OMC", done: opts.templateStatus !== "draft" && opts.templateStatus !== "changes-requested" },
-  ];
-}
-
-function ProgressBar({ steps }: { steps: ProgressStep[] }) {
-  const doneCount = steps.filter((s) => s.done).length;
-  const pct = Math.round((doneCount / steps.length) * 100);
-  const pending = steps.filter((s) => !s.done).map((s) => s.label);
-  return (
-    <div title={pending.length > 0 ? `Still pending: ${pending.join(", ")}` : "All steps complete"}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--slate)", marginBottom: 2 }}>
-        <span>{doneCount}/{steps.length} steps</span><span>{pct}%</span>
-      </div>
-      <div style={{ width: 110, height: 7, background: "#EEE", borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "var(--sage)" : "var(--brass)" }} />
-      </div>
-    </div>
-  );
 }
 
 export default async function SubjectExpertCoursesPage() {
@@ -94,11 +56,10 @@ export default async function SubjectExpertCoursesPage() {
     const cInstruments = instruments.filter((x) => x.courseId === c.id);
     const instrumentsWithNoLink = cInstruments.filter((i) => !linkedInstrumentIds.has(i.id)).length;
     const cPaperItems = paperItems.filter((x) => x.courseId === c.id);
-    progressByCourse.set(c.id, buildProgress({
+    progressByCourse.set(c.id, buildSeProgress({
       cloCount: cClos.length,
       lectureCount: cLectures.length,
       lectureMappedCount: cLectures.filter((r) => !!r.cloId).length,
-      instrumentTypes: new Set(cInstruments.map((i) => i.type)),
       instrumentCount: cInstruments.length,
       instrumentsWithNoLink,
       midtermPaperCount: cPaperItems.filter((p) => p.examType === "Midterm").length,

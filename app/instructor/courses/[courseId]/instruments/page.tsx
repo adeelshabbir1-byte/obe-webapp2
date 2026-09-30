@@ -74,7 +74,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
             .map((l) => updated.assessmentInstruments.find((i) => i.id === l.instrumentId))
             .filter((i): i is (typeof updated.assessmentInstruments)[number] => !!i);
           return {
-            id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic,
+            id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
             linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId),
             midtermQuestions: linkedInstruments.filter((i) => i.type === "Midterm").map((i) => i.label).join(", "),
             finalQuestions: linkedInstruments.filter((i) => i.type === "Final").map((i) => i.label).join(", "),

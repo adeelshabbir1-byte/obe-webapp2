@@ -36,6 +36,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
 
   return (
     <Shell roleLabel="Chairman" userName={user.name} navLinks={[
+      { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
       { href: "/chairman/coordinators", label: "Program Coordinators" },
       { href: "/chairman/plos", label: "Program Learning Outcomes" },
       { href: "/chairman/omc", label: "OMC Members" },

@@ -113,7 +113,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
                 </td>
                 <td style={{ padding: 0 }}>
                   <input
-                    defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder="Sub topic..."
+                    defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder={r.topic ? `${r.topic} (defaults to topic if left blank)` : "Sub topic..."}
                     onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, "subtopic", e.target.value); }}
                     style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }}
                   />
