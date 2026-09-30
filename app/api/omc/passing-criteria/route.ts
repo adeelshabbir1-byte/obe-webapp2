@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { writeAuditLog } from "../../../../lib/audit";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -32,6 +33,11 @@ export async function PUT(req: NextRequest) {
     where: { chairmanId_effectiveFromTerm_effectiveFromYear: { chairmanId: user.managedById, effectiveFromTerm, effectiveFromYear } },
     create: { chairmanId: user.managedById, cloPassingPct, ploPassingPct, effectiveFromTerm, effectiveFromYear },
     update: { cloPassingPct, ploPassingPct },
+  });
+
+  await writeAuditLog({
+    actorUserId: user.id, action: "PASSING_CRITERIA_SET", entityType: "PassingCriteria", entityId: criteria.id,
+    metadata: { cloPassingPct, ploPassingPct, effectiveFromTerm, effectiveFromYear },
   });
 
   return NextResponse.json({ criteria });

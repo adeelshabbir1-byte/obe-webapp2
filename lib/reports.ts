@@ -1,8 +1,10 @@
 import { prisma } from "./db";
-import { coordinatorIdsFor } from "./reportScope";
+import { coordinatorIdsFor, chairmanIdFor } from "./reportScope";
+import { resolveEntityLabels } from "./auditLabels";
 
 type ReportUser = { id: string; role: string; managedById: string | null };
 export type ReportFilter = { degree?: string; batchId?: string };
+export type ActivityLogFilter = { omcId?: string; from?: string; to?: string; page?: number };
 
 async function getBatchesFor(user: ReportUser, filter?: ReportFilter) {
   const coordinatorIds = await coordinatorIdsFor(user);
@@ -179,4 +181,48 @@ export async function getAuditReport(user: ReportUser, filter?: ReportFilter) {
     });
   }
   return programs;
+}
+
+// The "minutes of meeting" activity log: every AuditLog row whose actor is
+// an OMC member of this institution, in plain language, newest first.
+// Scoped to the calling user's own institution (via chairmanIdFor) so one
+// chairman's log never leaks into another's, regardless of who's viewing.
+export async function getOmcActivityLog(user: ReportUser, filter?: ActivityLogFilter) {
+  const pageSize = 50;
+  const page = filter?.page && filter.page > 0 ? filter.page : 1;
+
+  const chairmanId = await chairmanIdFor(user);
+  if (!chairmanId) return { rows: [], total: 0, pageSize };
+
+  const omcMembers = await prisma.user.findMany({ where: { role: "OMC", managedById: chairmanId }, select: { id: true, name: true } });
+  const omcIds = omcMembers.map((m) => m.id);
+  if (omcIds.length === 0) return { rows: [], total: 0, pageSize };
+
+  const nameById = new Map(omcMembers.map((m) => [m.id, m.name]));
+  const actorUserId = filter?.omcId ? { in: [filter.omcId] } : { in: omcIds };
+
+  const createdAt: { gte?: Date; lte?: Date } = {};
+  if (filter?.from) createdAt.gte = new Date(`${filter.from}T00:00:00`);
+  if (filter?.to) createdAt.lte = new Date(`${filter.to}T23:59:59`);
+
+  const where = { actorUserId, ...(createdAt.gte || createdAt.lte ? { createdAt } : {}) };
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  const entityLabels = await resolveEntityLabels(logs.map((l) => ({ entityType: l.entityType, entityId: l.entityId })));
+
+  const rows = logs.map((l) => ({
+    id: l.id,
+    createdAt: l.createdAt,
+    actorName: (l.actorUserId && nameById.get(l.actorUserId)) || "Unknown",
+    action: l.action,
+    entityLabel: (l.entityType && l.entityId && entityLabels.get(`${l.entityType}:${l.entityId}`))
+      || (l.entityType ? `${l.entityType}${l.entityId ? ` (${l.entityId.slice(0, 8)}…)` : ""}` : "—"),
+    metadata: l.metadata,
+  }));
+
+  return { rows, total, pageSize };
 }

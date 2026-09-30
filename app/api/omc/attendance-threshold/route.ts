@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { writeAuditLog } from "../../../../lib/audit";
 
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -15,6 +16,11 @@ export async function PUT(req: NextRequest) {
     where: { chairmanId: user.managedById },
     create: { chairmanId: user.managedById, minPercentage },
     update: { minPercentage },
+  });
+
+  await writeAuditLog({
+    actorUserId: user.id, action: "ATTENDANCE_THRESHOLD_SET", entityType: "AttendanceThreshold", entityId: threshold.id,
+    metadata: { minPercentage },
   });
 
   return NextResponse.json({ threshold });

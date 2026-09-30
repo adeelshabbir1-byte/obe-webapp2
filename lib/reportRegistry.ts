@@ -54,6 +54,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
     cards: [
       { href: "/omc/reports/course-description", title: "Course Description Form", desc: "The full formal course description — weights, CLOs, weekly topics, textbook, and more." },
       { href: "/omc/reports/course-monitoring", title: "Course Monitoring Form", desc: "Weightage, PLO assignment, and plan adherence — with a signature block for printing." },
+      { href: "/omc/reports/omc-activity-log", title: "OMC Activity Log — Minutes of Meeting", desc: "Every recorded action an OMC member took — reviews, approvals, PLO/CLO mapping, policy changes — in plain language, filterable by member and date." },
     ],
   },
   {
