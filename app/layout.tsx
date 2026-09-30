@@ -1,4 +1,5 @@
 import "./globals.css";
+import SaveShortcut from "../components/SaveShortcut";
 
 export const metadata = {
   title: "OBE Curriculum Governance",
@@ -7,7 +8,10 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SaveShortcut />
+        {children}
+      </body>
     </html>
   );
 }

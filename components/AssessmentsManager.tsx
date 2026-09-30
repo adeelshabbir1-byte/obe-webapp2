@@ -342,7 +342,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <h3 style={{ fontSize: 14 }}>Which Lectures Does Each Instrument Test?</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {mappingDirty && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes</span>}
-            <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
+            <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} data-save-shortcut="true" className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
           </div>
         </div>
         {filledRows.length === 0 ? (
