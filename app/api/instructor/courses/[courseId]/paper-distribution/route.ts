@@ -22,12 +22,13 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (!body.topicText || body.marks === undefined || body.marks === null) {
     return NextResponse.json({ error: "topicText and marks are required" }, { status: 400 });
   }
+  const examType = body.examType === "Midterm" || body.examType === "Final" ? body.examType : null;
 
-  const count = await prisma.paperDistributionItem.count({ where: { courseId: course.id, source: "INSTRUCTOR" } });
+  const count = await prisma.paperDistributionItem.count({ where: { courseId: course.id, source: "INSTRUCTOR", examType } });
 
   const item = await prisma.paperDistributionItem.create({
     data: {
-      courseId: course.id, source: "INSTRUCTOR", questionNo: count + 1, orderIndex: count,
+      courseId: course.id, source: "INSTRUCTOR", examType, questionNo: count + 1, orderIndex: count,
       lectureRowId: body.lectureRowId || null, topicText: body.topicText,
       cloId: body.cloId || null, cognitiveLevel: body.cognitiveLevel || null,
       marks: parseFloat(body.marks),

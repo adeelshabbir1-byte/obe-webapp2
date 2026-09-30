@@ -27,15 +27,18 @@ export default async function SePaperDistributionPage({ params }: { params: { co
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="paper-distribution" code={course.code} title={course.title} status={course.templateStatus} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Plan the final/mid-term paper's question distribution — pick a topic from your lecture plan to auto-fill
-        its CLO and cognitive level, or type a custom one. This is your plan; the Instructor keeps their own copy
-        for the actual exam.
+        Plan the Midterm and Final papers' question distribution. Already set the question numbers against topics
+        on the Assessments &amp; Submit tab? Use "Generate from Assessments Tab" below to pull the topic, CLO and
+        cognitive level straight from that mapping instead of typing it again — you can still change the cognitive
+        level (or anything else) afterwards. Or pick a topic from your lecture plan to auto-fill it, or type a
+        custom one by hand. This is your plan; the Instructor keeps their own copy for the actual exam.
       </p>
       <PaperDistributionManager
         apiBase={`/api/subjectexpert/courses/${course.id}/paper-distribution`}
-        items={items.map((i) => ({ id: i.id, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
+        items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
         lectureRows={lectureRows.map((r) => ({ id: r.id, topic: r.topic, cloId: r.cloId, bloomLevel: r.bloomLevel }))}
         clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement }))}
+        canGenerate
       />
     </Shell>
   );
