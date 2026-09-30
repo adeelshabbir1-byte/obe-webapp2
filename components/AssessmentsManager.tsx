@@ -9,7 +9,15 @@ type Instrument = { id: string; type: string; label: string; marksPct: number; m
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type PolicyMinCount = { assignmentMinCount?: number; quizMinCount?: number; midtermMinCount?: number; finalMinCount?: number; projectMinCount?: number; labMinCount?: number };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number; cloId: string | null };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number; cloId: string | null };
+
+// A blank subtopic defaults to the topic itself — so "Introduction to
+// Computing" taught across 2 lectures with no subtopic typed in still
+// groups as one thing below, instead of the grouping silently falling
+// apart because half the rows have a subtopic and half don't.
+function effectiveSubtopic(r: { topic: string; subtopic: string | null }) {
+  return (r.subtopic && r.subtopic.trim()) || r.topic;
+}
 type Clo = { id: string; code: string };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
@@ -159,15 +167,23 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   }
 
   // These three just update the local working copy — nothing is sent to
-  // the server until "Save Mapping Changes" is pressed below.
-  function toggleInstrumentLocal(rowId: string, instrumentId: string, linked: boolean) {
-    setRows((prev) => prev.map((r) => r.id === rowId
+  // the server until "Save Mapping Changes" is pressed below. The grid
+  // groups lecture rows that share the same (effective) subtopic into one
+  // line, so a toggle or a typed Q# here applies to every real lecture row
+  // in that group at once — ticking "Introduction to Computing — 2 lec"
+  // links the instrument to BOTH underlying lectures, not just one, so the
+  // weight split and the "linked to a quiz/exam" progress check come out
+  // right for every row that topic actually spans.
+  function toggleInstrumentLocal(rowIds: string[], instrumentId: string, linked: boolean) {
+    const idSet = new Set(rowIds);
+    setRows((prev) => prev.map((r) => idSet.has(r.id)
       ? { ...r, linkedInstrumentIds: linked ? [...r.linkedInstrumentIds, instrumentId] : r.linkedInstrumentIds.filter((id) => id !== instrumentId) }
       : r));
   }
 
-  function setQuestionsLocal(rowId: string, type: "Midterm" | "Final", value: string) {
-    setRows((prev) => prev.map((r) => r.id === rowId
+  function setQuestionsLocal(rowIds: string[], type: "Midterm" | "Final", value: string) {
+    const idSet = new Set(rowIds);
+    setRows((prev) => prev.map((r) => idSet.has(r.id)
       ? { ...r, [type === "Midterm" ? "midtermQuestions" : "finalQuestions"]: value }
       : r));
   }
@@ -245,6 +261,23 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const cloList = clos || [];
   const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
+
+  // The mapping grid below groups lecture rows by their (effective)
+  // subtopic — if the same subtopic was taught across several lectures,
+  // it shows once, with a lecture count, instead of once per lecture. A
+  // row's own CLO/checkbox/Q# state is assumed consistent across every
+  // lecture in its group (Save always writes it that way), so the first
+  // row's values represent the whole group for display purposes.
+  type Group = { key: string; rows: Row[] };
+  const groups: Group[] = [];
+  const groupByKey = new Map<string, Group>();
+  for (const r of filledRows) {
+    const key = effectiveSubtopic(r);
+    let g = groupByKey.get(key);
+    if (!g) { g = { key, rows: [] }; groupByKey.set(key, g); groups.push(g); }
+    g.rows.push(r);
+  }
+  for (const g of groups) g.rows.sort((a, b) => a.lectureNumber - b.lectureNumber);
 
   return (
     <>
@@ -407,29 +440,41 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
               )}
             </thead>
             <tbody>
-              {filledRows.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ fontSize: 12 }}>Wk{r.week}·L{r.lectureNumber} — {r.topic}</td>
+              {groups.map((g) => {
+                const rowIds = g.rows.map((r) => r.id);
+                const first = g.rows[0];
+                const lectureLabel = g.rows.length === 1
+                  ? `Wk${first.week}·L${first.lectureNumber}`
+                  : `L${g.rows.map((r) => r.lectureNumber).join(",")}`;
+                const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
+                return (
+                <tr key={g.key}>
+                  <td style={{ fontSize: 12 }}>
+                    {lectureLabel} — {g.key}
+                    {g.rows.length > 1 && <span style={{ color: "var(--slate)" }}> ({g.rows.length} lec)</span>}
+                  </td>
                   {checkboxInstruments.map((i) => {
-                    const checked = r.linkedInstrumentIds.includes(i.id);
-                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(r.id, i.id, e.target.checked)} /></td>;
+                    const checked = g.rows.every((r) => r.linkedInstrumentIds.includes(i.id));
+                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td><input value={r.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(r.id, "Midterm", e.target.value)}
+                    <td><input value={first.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
                   {hasFinal && (
-                    <td><input value={r.finalQuestions} placeholder="e.g. 2" disabled={saving}
-                      onChange={(e) => setQuestionsLocal(r.id, "Final", e.target.value)}
+                    <td><input value={first.finalQuestions} placeholder="e.g. 2" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
-                  <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
-                  {cloList.map((c) => (
-                    <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{r.cloId === c.id ? `${r.weightPct}%` : ""}</td>
-                  ))}
+                  <td style={{ fontWeight: 600 }}>{groupWeight}%</td>
+                  {cloList.map((c) => {
+                    const t = g.rows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0);
+                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{t > 0 ? `${t}%` : ""}</td>;
+                  })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </SortableTable>
         )}
@@ -439,9 +484,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           </p>
         )}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-          If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them.
-          Ticking boxes and typing question numbers here only changes this screen — nothing is saved (and the Weight
-          column won't update) until you click "Save Mapping Changes" above.
+          Rows here are grouped by subtopic — if the same subtopic was taught across several lectures, it's shown
+          once with the lecture count in brackets, and ticking or typing a question number for it applies to every
+          lecture in that group at once. If a quiz, assignment, or question is linked to more than one lecture, its
+          marks are split evenly across them. Ticking boxes and typing question numbers here only changes this
+          screen — nothing is saved (and the Weight column won't update) until you click "Save Mapping Changes" above.
         </p>
       </div>
     </>
