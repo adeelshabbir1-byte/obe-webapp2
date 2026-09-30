@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
+import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/lectureWeights";
 
 // Batched version of instrument-toggle + set-questions. The per-click
 // versions of those two routes each finish by re-syncing this course's
@@ -49,6 +49,11 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const safeQuestions = questions.filter((q) => validRowIds.has(q.lectureRowId) && (q.type === "Midterm" || q.type === "Final"));
 
   const touchedInstrumentIds = new Set<string>(safeToggles.map((t) => t.instrumentId));
+  // Every row a toggle or a question-number edit actually touches — used
+  // below to force a weight recompute on each one directly, so a row that
+  // just got UNCHECKED (or had its Q# cleared) is recomputed down to 0
+  // instead of keeping its old weight (see recomputeRows' doc comment).
+  const touchedRowIds = new Set<string>([...safeToggles.map((t) => t.lectureRowId), ...safeQuestions.map((q) => q.lectureRowId)]);
 
   // Apply every toggle first.
   for (const t of safeToggles) {
@@ -97,6 +102,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   }
 
   await recomputeAffectedRows(Array.from(touchedInstrumentIds));
+  await recomputeRows(Array.from(touchedRowIds));
   await writeAuditLog({
     actorUserId: user.id, action: "LECTURE_MAPPING_SAVED", entityType: "Course", entityId: course.id,
     metadata: { toggleCount: safeToggles.length, questionRowCount: safeQuestions.length },

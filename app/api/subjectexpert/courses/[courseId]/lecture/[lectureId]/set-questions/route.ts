@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
-import { recomputeAffectedRows } from "../../../../../../../../lib/lectureWeights";
+import { recomputeAffectedRows, recomputeRows } from "../../../../../../../../lib/lectureWeights";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -52,6 +52,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // the split changes for all of them whenever the linked-row count changes.
   const addedInstrumentIds = numbers.map((n: string) => byLabel.get(n)!.id);
   await recomputeAffectedRows([...new Set([...removedInstrumentIds, ...addedInstrumentIds])]);
+  // Clearing/changing this row's own Q# (e.g. removing all numbers) takes
+  // it out of every one of those instruments' "current links" — without
+  // this direct call it would keep its old weight instead of dropping to 0.
+  await recomputeRows([row.id]);
   await syncCourseContentToLinkedCourses(course.id);
 
   // Same reasoning as instrument-toggle: return every row so the client
