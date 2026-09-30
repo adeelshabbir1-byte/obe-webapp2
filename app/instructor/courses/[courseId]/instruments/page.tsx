@@ -10,6 +10,7 @@ import ReweightingSuggestions from "../../../../../components/ReweightingSuggest
 import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
 import { navForRole } from "../../../../../components/reportNav";
+import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
 
 
 export default async function InstructorInstrumentsPage({ params }: { params: { courseId: string } }) {
@@ -27,6 +28,12 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
   });
 
   await ensureInstructorCopy(course.id);
+
+  // Self-heal: recompute every row's weight before reading it, so a row
+  // left with a stale number from before a weight-logic fix corrects
+  // itself the moment the page is opened, with no manual step by anyone.
+  await recomputeCourseRows(course.id, "INSTRUCTOR");
+
   const updated = await prisma.course.findUnique({
     where: { id: course.id },
     include: {

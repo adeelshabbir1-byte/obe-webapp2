@@ -76,6 +76,21 @@ export async function recomputeRows(lectureRowIds: string[]) {
   }
 }
 
+/**
+ * Recomputes every lecture row in one course (one source side — SE or
+ * INSTRUCTOR) with the current logic. Called automatically whenever that
+ * course's Assessments/Instruments tab is opened, so stale weight numbers
+ * left over from an older, buggy version of this logic heal themselves
+ * the moment someone looks at the page — nobody has to notice, ask an
+ * admin, or run a manual fix for it.
+ */
+export async function recomputeCourseRows(courseId: string, source: "SE" | "INSTRUCTOR") {
+  const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } });
+  for (const row of rows) {
+    await recomputeRowWeight(row.id);
+  }
+}
+
 export async function recomputeRowWeight(lectureRowId: string) {
   const links = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId } });
   let total = 0;
