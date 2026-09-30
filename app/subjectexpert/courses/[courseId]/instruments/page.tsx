@@ -62,6 +62,10 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
           assignmentMax: policy.assignmentMax, quizMax: policy.quizMax, midtermMax: policy.midtermMax,
           finalMax: policy.finalMax, projectMax: policy.projectMax, labMax: policy.labMax,
         } : undefined}
+        policyMinCount={policy ? {
+          assignmentMinCount: policy.assignmentMinCount, quizMinCount: policy.quizMinCount, midtermMinCount: policy.midtermMinCount,
+          finalMinCount: policy.finalMinCount, projectMinCount: policy.projectMinCount, labMinCount: policy.labMinCount,
+        } : undefined}
         rows={course.lectureRows.map((r) => {
           const linkedInstruments = r.instrumentLinks
             .map((l) => course.assessmentInstruments.find((i) => i.id === l.instrumentId))

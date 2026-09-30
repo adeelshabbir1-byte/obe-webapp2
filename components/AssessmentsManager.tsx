@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
@@ -8,6 +8,7 @@ type Evidence = { id: string; fileName: string; fileUrl: string; status: string;
 type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number; evidence: Evidence[] };
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
+type PolicyMinCount = { assignmentMinCount?: number; quizMinCount?: number; midtermMinCount?: number; finalMinCount?: number; projectMinCount?: number; labMinCount?: number };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
@@ -16,6 +17,9 @@ const TARGET_KEY: Record<string, keyof Targets> = {
 };
 const POLICY_MAX_KEY: Record<string, keyof PolicyMax> = {
   Quiz: "quizMax", Assignment: "assignmentMax", Midterm: "midtermMax", Final: "finalMax", Project: "projectMax", Lab: "labMax",
+};
+const POLICY_MIN_COUNT_KEY: Record<string, keyof PolicyMinCount> = {
+  Quiz: "quizMinCount", Assignment: "assignmentMinCount", Midterm: "midtermMinCount", Final: "finalMinCount", Project: "projectMinCount", Lab: "labMinCount",
 };
 
 function statusBadge(status: string) {
@@ -33,13 +37,20 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, rows: initialRows, apiBase }: {
-  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; rows: Row[]; apiBase: string;
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, apiBase }: {
+  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; apiBase: string;
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
+  // "rows" is the working copy the checkboxes/question-number boxes edit
+  // locally, with no network call per click — a course with many lecture
+  // rows × many quizzes was firing one PUT request per single tick, which
+  // is what made ticking boxes feel slow. "savedRows" is what the server
+  // actually has; the two only get reconciled when Save is pressed.
   const [rows, setRows] = useState<Row[]>(initialRows);
+  const [savedRows, setSavedRows] = useState<Row[]>(initialRows);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [busyCell, setBusyCell] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
@@ -90,35 +101,109 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     setLoading(false);
   }
 
-  async function toggleInstrument(rowId: string, instrumentId: string, linked: boolean) {
-    const key = rowId + instrumentId;
-    setBusyCell(key);
-    const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${rowId}/instrument-toggle`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked }),
-    });
-    const data = await res.json().catch(() => null);
-    if (data?.rows) {
-      const byId: Map<string, any> = new Map(data.rows.map((r: any) => [r.id, r]));
-      setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, linkedInstrumentIds: (byId.get(r.id) as any).linkedInstrumentIds } : r));
-    }
-    setBusyCell(null);
+  // Creates however many rows are still missing to reach the OMC's
+  // required minimum count for this type, splitting that type's target
+  // % evenly across ALL of them (existing + new) so the numbers land
+  // close to right without SE having to do the math — still fully
+  // editable afterward, same as any instrument row.
+  async function fillToMinimum(type: string, minCount: number) {
+    const existing = instruments.filter((i) => i.type === type);
+    const missing = minCount - existing.length;
+    if (missing <= 0) return;
+    setLoading(true); setError("");
+    const isNumbered = type === "Midterm" || type === "Final";
+    const target = targets[TARGET_KEY[type]] || 0;
+    const perItem = Math.round(target / minCount) || 0;
+    try {
+      for (let n = existing.length + 1; n <= minCount; n++) {
+        const label = isNumbered ? String(n) : `${type} ${n}`;
+        const res = await fetch(`${apiBase}/courses/${courseId}/instruments`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, label, marksPct: perItem, maxScore: "10" }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || "Something went wrong."); break; }
+        setInstruments((prev) => [...prev, { ...data.instrument, evidence: [] }]);
+      }
+    } catch (err: any) { setError("Unexpected error: " + err.message); }
+    setLoading(false);
   }
 
-  async function saveQuestions(rowId: string, type: "Midterm" | "Final", value: string) {
-    const key = rowId + type;
-    setBusyCell(key); setError("");
+  // These three just update the local working copy — nothing is sent to
+  // the server until "Save Mapping Changes" is pressed below.
+  function toggleInstrumentLocal(rowId: string, instrumentId: string, linked: boolean) {
+    setRows((prev) => prev.map((r) => r.id === rowId
+      ? { ...r, linkedInstrumentIds: linked ? [...r.linkedInstrumentIds, instrumentId] : r.linkedInstrumentIds.filter((id) => id !== instrumentId) }
+      : r));
+  }
+
+  function setQuestionsLocal(rowId: string, type: "Midterm" | "Final", value: string) {
+    setRows((prev) => prev.map((r) => r.id === rowId
+      ? { ...r, [type === "Midterm" ? "midtermQuestions" : "finalQuestions"]: value }
+      : r));
+  }
+
+  const mappingDirty = rows.some((r) => {
+    const saved = savedRows.find((s) => s.id === r.id);
+    if (!saved) return false;
+    return JSON.stringify([...r.linkedInstrumentIds].sort()) !== JSON.stringify([...saved.linkedInstrumentIds].sort())
+      || r.midtermQuestions !== saved.midtermQuestions || r.finalQuestions !== saved.finalQuestions;
+  });
+
+  // Warn before leaving the page with unsaved mapping changes, since they
+  // now only live in local state until the Save button is clicked. A ref
+  // keeps the beforeunload handler (registered once) seeing the LATEST
+  // dirty flag rather than whatever it was when the effect first ran.
+  const mappingDirtyRef = useRef(mappingDirty);
+  mappingDirtyRef.current = mappingDirty;
+  useEffect(() => {
+    function handler(e: BeforeUnloadEvent) { if (mappingDirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  async function saveMappingChanges() {
+    setSaving(true); setError("");
     try {
-      const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${rowId}/set-questions`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, numbers: value }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
-      if (data.rows) {
-        const byId: Map<string, any> = new Map(data.rows.map((r: any) => [r.id, r]));
-        setRows((prev) => prev.map((r) => byId.has(r.id) ? { ...r, weightPct: (byId.get(r.id) as any).weightPct, midtermQuestions: (byId.get(r.id) as any).midtermQuestions, finalQuestions: (byId.get(r.id) as any).finalQuestions } : r));
+      const calls: Promise<Response>[] = [];
+      for (const r of rows) {
+        const saved = savedRows.find((s) => s.id === r.id);
+        if (!saved) continue;
+        const added = r.linkedInstrumentIds.filter((id) => !saved.linkedInstrumentIds.includes(id));
+        const removed = saved.linkedInstrumentIds.filter((id) => !r.linkedInstrumentIds.includes(id));
+        for (const instrumentId of added) {
+          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/instrument-toggle`, {
+            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked: true }),
+          }));
+        }
+        for (const instrumentId of removed) {
+          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/instrument-toggle`, {
+            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked: false }),
+          }));
+        }
+        if (r.midtermQuestions !== saved.midtermQuestions) {
+          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/set-questions`, {
+            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "Midterm", numbers: r.midtermQuestions }),
+          }));
+        }
+        if (r.finalQuestions !== saved.finalQuestions) {
+          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/set-questions`, {
+            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "Final", numbers: r.finalQuestions }),
+          }));
+        }
       }
-      setBusyCell(null);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
+      if (calls.length === 0) { setSaving(false); return; }
+
+      const results = await Promise.all(calls.map((p) => p.then((res) => res.json().catch(() => null))));
+      const merged: Map<string, any> = new Map();
+      for (const data of results) {
+        if (data?.rows) for (const rr of data.rows) merged.set(rr.id, rr);
+      }
+      const reconciled = rows.map((r) => merged.has(r.id) ? { ...r, ...merged.get(r.id) } : r);
+      setRows(reconciled);
+      setSavedRows(reconciled);
+      setSaving(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 
   const checkboxInstruments = instruments.filter((i) => i.type === "Quiz" || i.type === "Assignment");
@@ -139,14 +224,25 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         const overPolicy = items.length > 0 && max !== undefined && sum > max;
         const isNumbered = type === "Midterm" || type === "Final";
         const nextLabel = isNumbered ? String(items.length + 1) : `${type} ${items.length + 1}`;
+        const minCount = policyMinCount?.[POLICY_MIN_COUNT_KEY[type]] || 0;
+        const underMinCount = minCount > 0 && items.length < minCount;
         return (
           <div className="card" key={type}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ fontSize: 14 }}>{type}</h3>
               <span style={{ fontSize: 11.5, color: overPolicy ? "var(--rust)" : overTarget ? "var(--brass-dark)" : "var(--slate)" }}>
                 {sum}% defined {target ? `(your target: ${target}%${max !== undefined ? `, OMC max: ${max}%` : ""})` : ""}
+                {minCount > 0 ? ` — OMC minimum: ${minCount} ${isNumbered ? "question(s)" : ""}` : ""}
               </span>
             </div>
+            {underMinCount && (
+              <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <span>⚠ OMC requires at least {minCount} {isNumbered ? "question(s)" : `${type.toLowerCase()}(s)`} — you have {items.length}.</span>
+                <button onClick={() => fillToMinimum(type, minCount)} disabled={loading} className="btn btn-brass" style={{ fontSize: 11.5, padding: "3px 10px" }}>
+                  {loading ? "Adding…" : `Add ${minCount - items.length} to Reach Minimum`}
+                </button>
+              </p>
+            )}
             {overPolicy && (
               <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 8, fontWeight: 600 }}>
                 ⚠ Exceeds the OMC's policy maximum of {max}% for this course type.
@@ -228,7 +324,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       })}
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Which Lectures Does Each Instrument Test?</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+          <h3 style={{ fontSize: 14 }}>Which Lectures Does Each Instrument Test?</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {mappingDirty && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes</span>}
+            <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
+          </div>
+        </div>
         {filledRows.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Fill in some lecture topics on the Lecture Content tab first.</p>
         ) : instruments.length === 0 ? (
@@ -250,17 +352,16 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   <td style={{ fontSize: 12 }}>Wk{r.week}·L{r.lectureNumber} — {r.topic}</td>
                   {checkboxInstruments.map((i) => {
                     const checked = r.linkedInstrumentIds.includes(i.id);
-                    const key = r.id + i.id;
-                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={busyCell === key} onChange={(e) => toggleInstrument(r.id, i.id, e.target.checked)} /></td>;
+                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(r.id, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td><input defaultValue={r.midtermQuestions} placeholder="e.g. 1,3" disabled={busyCell === r.id + "Midterm"}
-                      onBlur={(e) => { if (e.target.value !== r.midtermQuestions) saveQuestions(r.id, "Midterm", e.target.value); }}
+                    <td><input value={r.midtermQuestions} placeholder="e.g. 1,3" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(r.id, "Midterm", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
                   {hasFinal && (
-                    <td><input defaultValue={r.finalQuestions} placeholder="e.g. 2" disabled={busyCell === r.id + "Final"}
-                      onBlur={(e) => { if (e.target.value !== r.finalQuestions) saveQuestions(r.id, "Final", e.target.value); }}
+                    <td><input value={r.finalQuestions} placeholder="e.g. 2" disabled={saving}
+                      onChange={(e) => setQuestionsLocal(r.id, "Final", e.target.value)}
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
                   <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
@@ -271,6 +372,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         )}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them.
+          Ticking boxes and typing question numbers here only changes this screen — nothing is saved (and the Weight
+          column won't update) until you click "Save Mapping Changes" above.
         </p>
       </div>
     </>
