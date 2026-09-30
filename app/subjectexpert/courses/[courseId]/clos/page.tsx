@@ -64,7 +64,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
           </p>
         </div>
       )}
-      {!isFollower && course.masterCourseId && <LoadHecContentButton courseId={course.id} hasExistingClos={course.clos.length > 0} />}
+      {!isFollower && course.masterCourseId && course.clos.length === 0 && <LoadHecContentButton courseId={course.id} />}
       {!isFollower && <ImportContentFromCourseButton courseId={course.id} />}
       <ClosManager
         courseId={course.id}
