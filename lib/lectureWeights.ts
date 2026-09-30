@@ -1,12 +1,50 @@
 import { prisma } from "./db";
 
 /**
- * An instrument's marksPct is split evenly across however many lecture rows
- * are linked to it — e.g. Midterm Q1 worth 10%, linked to 2 lecture topics
- * (as if the question has two sub-parts), gives each topic 5%, not 10% each.
+ * An instrument's marksPct is split across however many lecture rows are
+ * linked to it — e.g. Midterm Q1 worth 10%, linked to 3 lecture topics,
+ * should give those 3 topics a combined 10%. It almost never divides
+ * evenly (10 / 3 = 3.33 each): rounding each row's share independently —
+ * the old approach — loses or gains a point or two on every split that
+ * isn't exact, and that loss/gain compounds across every instrument in
+ * the course. That is what was pushing totals to 96%, 141%, or anywhere
+ * but 100%, and why two lecture rows carrying what should be an identical
+ * share could end up showing different numbers.
+ *
+ * Fix (instrumentShares, below): every row linked to an instrument gets
+ * floor(marksPct / linkedRowCount), and the leftover whole-point
+ * remainder is handed out one point at a time (ordered by lecture number,
+ * so it's deterministic) until it's gone. The shares always add back up
+ * to exactly marksPct, and a row's weightPct is just the sum of its
+ * already-whole-number shares across every instrument it's linked to —
+ * no further rounding anywhere.
+ */
+async function instrumentShares(instrumentId: string): Promise<Map<string, number>> {
+  const [instrument, links] = await Promise.all([
+    prisma.assessmentInstrument.findUnique({ where: { id: instrumentId } }),
+    prisma.lectureRowInstrument.findMany({
+      where: { instrumentId },
+      include: { lectureRow: { select: { id: true, lectureNumber: true } } },
+    }),
+  ]);
+  const shares = new Map<string, number>();
+  if (!instrument || links.length === 0) return shares;
+
+  const n = links.length;
+  const base = Math.floor(instrument.marksPct / n);
+  const remainder = instrument.marksPct - base * n; // whole points left to hand out, one each
+
+  const ordered = [...links].sort((a, b) => a.lectureRow.lectureNumber - b.lectureRow.lectureNumber);
+  ordered.forEach((l, idx) => {
+    shares.set(l.lectureRowId, base + (idx < remainder ? 1 : 0));
+  });
+  return shares;
+}
+
+/**
  * Recomputes weightPct for every row CURRENTLY linked to any of the given
- * instruments, since changing one row's links can change the denominator
- * for the others.
+ * instruments, since changing one row's links can change the split for
+ * all the others.
  *
  * IMPORTANT: this only finds rows the instrument is still linked to right
  * now — a row whose link was just REMOVED (unchecked, or a question number
@@ -39,11 +77,11 @@ export async function recomputeRows(lectureRowIds: string[]) {
 }
 
 export async function recomputeRowWeight(lectureRowId: string) {
-  const links = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId }, include: { instrument: true } });
+  const links = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId } });
   let total = 0;
   for (const link of links) {
-    const count = await prisma.lectureRowInstrument.count({ where: { instrumentId: link.instrumentId } });
-    total += count > 0 ? link.instrument.marksPct / count : 0;
+    const shares = await instrumentShares(link.instrumentId);
+    total += shares.get(lectureRowId) || 0;
   }
-  await prisma.lectureRow.update({ where: { id: lectureRowId }, data: { weightPct: Math.round(total) } });
+  await prisma.lectureRow.update({ where: { id: lectureRowId }, data: { weightPct: total } });
 }
