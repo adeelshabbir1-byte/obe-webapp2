@@ -46,7 +46,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   if (!item || item.courseId !== course.id || item.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
   await prisma.paperDistributionItem.delete({ where: { id: params.itemId } });
-  await renumberPaperDistribution(course.id, "SE");
+  await renumberPaperDistribution(course.id, "SE", item.examType);
   await writeAuditLog({ actorUserId: user.id, action: "PAPER_DISTRIBUTION_ITEM_DELETED", entityType: "PaperDistributionItem", entityId: params.itemId });
   await syncCourseContentToLinkedCourses(course.id);
 

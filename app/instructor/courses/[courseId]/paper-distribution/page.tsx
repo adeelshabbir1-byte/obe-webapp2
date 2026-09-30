@@ -42,16 +42,20 @@ export default async function InstructorPaperDistributionPage({ params }: { para
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="paper-distribution" code={course.code} title={course.title} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Build the actual exam's question distribution — pick a topic from your delivered lecture content to
-        auto-fill its CLO and cognitive level, or type a custom one. Each question is checked against what was
-        actually covered in class.
+        Build the actual Midterm and Final papers' question distribution. Already set the question numbers against
+        topics on your Assessments &amp; Submit tab? Use "Generate from Assessments Tab" below to pull the topic,
+        CLO and cognitive level straight from that mapping instead of typing it again — you can still change the
+        cognitive level (or anything else) afterwards. Or pick a topic from your delivered lecture content to
+        auto-fill it, or type a custom one by hand. Each question is checked against what was actually covered in
+        class.
       </p>
       <PaperDistributionManager
         apiBase={`/api/instructor/courses/${course.id}/paper-distribution`}
-        items={items.map((i) => ({ id: i.id, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
+        items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
         lectureRows={lectureRows.map((r) => ({ id: r.id, topic: r.topic, cloId: r.cloId, bloomLevel: r.bloomLevel }))}
         clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement }))}
         coverageByTopic={Object.fromEntries(coverageByTopic.entries())}
+        canGenerate
       />
     </Shell>
   );

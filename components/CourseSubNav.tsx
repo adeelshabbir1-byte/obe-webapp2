@@ -30,9 +30,11 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           }}>{t.label}</Link>
         ))}
       </div>
-      <div style={{ marginTop: 14 }}>
-        <ContentSyncStatusBanner courseId={courseId} />
-      </div>
+      {active === "clos" && (
+        <div style={{ marginTop: 14 }}>
+          <ContentSyncStatusBanner courseId={courseId} />
+        </div>
+      )}
     </div>
   );
 }

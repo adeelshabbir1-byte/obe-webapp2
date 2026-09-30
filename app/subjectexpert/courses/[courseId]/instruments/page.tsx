@@ -76,8 +76,10 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
             midtermQuestions: linkedInstruments.filter((i) => i.type === "Midterm").map((i) => i.label).join(", "),
             finalQuestions: linkedInstruments.filter((i) => i.type === "Final").map((i) => i.label).join(", "),
             weightPct: r.weightPct,
+            cloId: r.cloId,
           };
         })}
+        clos={course.clos.map((c) => ({ id: c.id, code: c.code }))}
         apiBase="/api/subjectexpert"
       />
 

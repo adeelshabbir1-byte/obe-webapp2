@@ -32,6 +32,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
     include: {
       assessmentInstruments: { where: { source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }], include: { evidence: { orderBy: { createdAt: "desc" } } } },
       lectureRows: { where: { source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" }, include: { instrumentLinks: true } },
+      clos: { where: { source: "INSTRUCTOR" } },
     },
   });
   if (!updated) notFound();
@@ -78,8 +79,10 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
             midtermQuestions: linkedInstruments.filter((i) => i.type === "Midterm").map((i) => i.label).join(", "),
             finalQuestions: linkedInstruments.filter((i) => i.type === "Final").map((i) => i.label).join(", "),
             weightPct: r.weightPct,
+            cloId: r.cloId,
           };
         })}
+        clos={updated.clos.map((c) => ({ id: c.id, code: c.code }))}
         apiBase="/api/instructor"
       />
 

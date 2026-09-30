@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const direction = body.direction;
   if (!["up", "down"].includes(direction)) return NextResponse.json({ error: "direction must be up or down" }, { status: 400 });
 
-  const all = await prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { orderIndex: "asc" } });
+  const all = await prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "INSTRUCTOR", examType: item.examType }, orderBy: { orderIndex: "asc" } });
   const idx = all.findIndex((c) => c.id === item.id);
   const swapWith = direction === "up" ? idx - 1 : idx + 1;
   if (swapWith < 0 || swapWith >= all.length) return NextResponse.json({ error: "already at that end" }, { status: 400 });
@@ -25,6 +25,6 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await prisma.paperDistributionItem.update({ where: { id: a.id }, data: { orderIndex: b.orderIndex } });
   await prisma.paperDistributionItem.update({ where: { id: b.id }, data: { orderIndex: a.orderIndex } });
 
-  await renumberPaperDistribution(course.id, "INSTRUCTOR");
+  await renumberPaperDistribution(course.id, "INSTRUCTOR", item.examType);
   return NextResponse.json({ ok: true });
 }

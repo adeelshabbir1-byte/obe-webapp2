@@ -9,7 +9,8 @@ type Instrument = { id: string; type: string; label: string; marksPct: number; m
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type PolicyMinCount = { assignmentMinCount?: number; quizMinCount?: number; midtermMinCount?: number; finalMinCount?: number; projectMinCount?: number; labMinCount?: number };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; linkedInstrumentIds: string[]; midtermQuestions: string; finalQuestions: string; weightPct: number; cloId: string | null };
+type Clo = { id: string; code: string };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
 const TARGET_KEY: Record<string, keyof Targets> = {
@@ -21,6 +22,16 @@ const POLICY_MAX_KEY: Record<string, keyof PolicyMax> = {
 const POLICY_MIN_COUNT_KEY: Record<string, keyof PolicyMinCount> = {
   Quiz: "quizMinCount", Assignment: "assignmentMinCount", Midterm: "midtermMinCount", Final: "finalMinCount", Project: "projectMinCount", Lab: "labMinCount",
 };
+
+// Column headers read top-to-bottom instead of left-to-right, so a
+// course with many quizzes/assignments/CLOs stays a reasonable width
+// instead of stretching the table wider with every one added — only
+// used on the columns that actually multiply (instruments, CLOs); the
+// fixed ones (Topic, Weight, Q#) stay normal horizontal headers.
+const verticalHeaderStyle = {
+  writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap",
+  fontSize: 11, padding: "6px 2px", verticalAlign: "bottom", maxHeight: 140,
+} as const;
 
 function statusBadge(status: string) {
   const styles: Record<string, { bg: string; label: string }> = {
@@ -37,8 +48,8 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, apiBase }: {
-  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; apiBase: string;
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase }: {
+  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string;
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
   // "rows" is the working copy the checkboxes/question-number boxes edit
@@ -162,44 +173,38 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
+  // One request carrying every change in the batch, rather than one
+  // request per tick/edit — each individual save used to also trigger a
+  // full re-sync of this course's content out to every linked batch in
+  // its Content Sync group, so firing many of those in parallel (one
+  // per checkbox) was both slow and, since they could race each other,
+  // the likely cause of weights coming out wrong. The backend now
+  // applies the whole batch, recomputes weight once, and syncs once.
   async function saveMappingChanges() {
     setSaving(true); setError("");
     try {
-      const calls: Promise<Response>[] = [];
+      const toggles: { lectureRowId: string; instrumentId: string; linked: boolean }[] = [];
+      const questions: { lectureRowId: string; type: "Midterm" | "Final"; numbers: string }[] = [];
       for (const r of rows) {
         const saved = savedRows.find((s) => s.id === r.id);
         if (!saved) continue;
         const added = r.linkedInstrumentIds.filter((id) => !saved.linkedInstrumentIds.includes(id));
         const removed = saved.linkedInstrumentIds.filter((id) => !r.linkedInstrumentIds.includes(id));
-        for (const instrumentId of added) {
-          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/instrument-toggle`, {
-            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked: true }),
-          }));
-        }
-        for (const instrumentId of removed) {
-          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/instrument-toggle`, {
-            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instrumentId, linked: false }),
-          }));
-        }
-        if (r.midtermQuestions !== saved.midtermQuestions) {
-          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/set-questions`, {
-            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "Midterm", numbers: r.midtermQuestions }),
-          }));
-        }
-        if (r.finalQuestions !== saved.finalQuestions) {
-          calls.push(fetch(`${apiBase}/courses/${courseId}/lecture/${r.id}/set-questions`, {
-            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "Final", numbers: r.finalQuestions }),
-          }));
-        }
+        for (const instrumentId of added) toggles.push({ lectureRowId: r.id, instrumentId, linked: true });
+        for (const instrumentId of removed) toggles.push({ lectureRowId: r.id, instrumentId, linked: false });
+        if (r.midtermQuestions !== saved.midtermQuestions) questions.push({ lectureRowId: r.id, type: "Midterm", numbers: r.midtermQuestions });
+        if (r.finalQuestions !== saved.finalQuestions) questions.push({ lectureRowId: r.id, type: "Final", numbers: r.finalQuestions });
       }
-      if (calls.length === 0) { setSaving(false); return; }
+      if (toggles.length === 0 && questions.length === 0) { setSaving(false); return; }
 
-      const results = await Promise.all(calls.map((p) => p.then((res) => res.json().catch(() => null))));
-      const merged: Map<string, any> = new Map();
-      for (const data of results) {
-        if (data?.rows) for (const rr of data.rows) merged.set(rr.id, rr);
-      }
-      const reconciled = rows.map((r) => merged.has(r.id) ? { ...r, ...merged.get(r.id) } : r);
+      const res = await fetch(`${apiBase}/courses/${courseId}/lecture-mapping/save`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toggles, questions }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+
+      const byId: Map<string, any> = new Map((data.rows || []).map((rr: any) => [rr.id, rr]));
+      const reconciled = rows.map((r) => byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r);
       setRows(reconciled);
       setSavedRows(reconciled);
       setSaving(false);
@@ -210,6 +215,15 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const hasMidterm = instruments.some((i) => i.type === "Midterm");
   const hasFinal = instruments.some((i) => i.type === "Final");
   const filledRows = rows.filter((r) => r.topic.trim().length > 0);
+
+  // Per-CLO weight matrix (same shape as the "CLO Assessment Matrix"
+  // sheet in the original Excel template): one column per CLO, showing
+  // each topic's Weight under its OWN CLO's column and blank under every
+  // other — a topic maps to exactly one CLO here — plus a Total row
+  // summing each CLO's column across every topic, and a grand total.
+  const cloList = clos || [];
+  const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
+  const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
 
   return (
     <>
@@ -328,7 +342,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <h3 style={{ fontSize: 14 }}>Which Lectures Does Each Instrument Test?</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {mappingDirty && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes</span>}
-            <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
+            <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} data-save-shortcut="true" className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
           </div>
         </div>
         {filledRows.length === 0 ? (
@@ -339,12 +353,30 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <SortableTable>
             <thead>
               <tr>
-                <th>Topic</th>
-                {checkboxInstruments.map((i) => <th key={i.id} style={{ textAlign: "center", fontSize: 11 }}>{i.type} {i.label}</th>)}
-                {hasMidterm && <th style={{ fontSize: 11 }}>Midterm Q#</th>}
-                {hasFinal && <th style={{ fontSize: 11 }}>Final Q#</th>}
-                <th>Weight</th>
+                <th style={{ verticalAlign: "bottom" }}>Topic</th>
+                {checkboxInstruments.map((i) => (
+                  <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}>{i.type} {i.label}</th>
+                ))}
+                {hasMidterm && <th style={{ fontSize: 11, verticalAlign: "bottom" }}>Midterm Q#</th>}
+                {hasFinal && <th style={{ fontSize: 11, verticalAlign: "bottom" }}>Final Q#</th>}
+                <th style={{ verticalAlign: "bottom" }}>Weight</th>
+                {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}>{c.code}</th>)}
               </tr>
+              {cloList.length > 0 && (
+                // <td> (not <th>) deliberately — SortableTable binds
+                // click-to-sort to every <th> inside <thead>, and this
+                // is a summary row, not another set of column headers;
+                // using <th> here would double up the header count and
+                // throw off the column index the real sort logic uses.
+                <tr style={{ background: "#FAFAF8", fontWeight: 600 }}>
+                  <td style={{ fontSize: 12 }}>Total</td>
+                  {checkboxInstruments.map((i) => <td key={i.id}></td>)}
+                  {hasMidterm && <td></td>}
+                  {hasFinal && <td></td>}
+                  <td style={{ fontSize: 12 }}>{grandTotal}%</td>
+                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{t}%</td>)}
+                </tr>
+              )}
             </thead>
             <tbody>
               {filledRows.map((r) => (
@@ -365,10 +397,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                       style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                   )}
                   <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
+                  {cloList.map((c) => (
+                    <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{r.cloId === c.id ? `${r.weightPct}%` : ""}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </SortableTable>
+        )}
+        {filledRows.length > 0 && instruments.length > 0 && cloList.length === 0 && (
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 8 }}>
+            Per-CLO weight columns will appear here once topics are mapped to a CLO on the Lecture Content tab.
+          </p>
         )}
         <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
           If a quiz, assignment, or question is linked to more than one lecture, its marks are split evenly across them.

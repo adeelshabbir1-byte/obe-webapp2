@@ -1403,7 +1403,10 @@ model PaperDistributionItem {
   courseId       String
   course         Course      @relation(fields: [courseId], references: [id])
   source         String      @default("SE") // "SE" | "INSTRUCTOR"
-  questionNo     Int         // auto-numbered in display order, never manually typed
+  examType       String?     // "Midterm" | "Final" — which paper this question belongs to. Nullable only
+                              // for rows created before this field existed; every new item sets it, and
+                              // question numbering (questionNo) restarts at 1 within each examType.
+  questionNo     Int         // auto-numbered in display order (within its examType), never manually typed
   lectureRowId   String?     // optional link to the topic/lecture this question is drawn from
   lectureRow     LectureRow? @relation(fields: [lectureRowId], references: [id])
   topicText      String      // pre-filled from the linked lecture row's topic, but editable

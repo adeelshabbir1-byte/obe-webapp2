@@ -187,7 +187,7 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
   if (paperItems.length > 0) {
     await prisma.paperDistributionItem.createMany({
       data: paperItems.map((p) => ({
-        courseId: newCourseId, source: "SE", questionNo: p.questionNo, topicText: p.topicText,
+        courseId: newCourseId, source: "SE", examType: p.examType, questionNo: p.questionNo, topicText: p.topicText,
         cognitiveLevel: p.cognitiveLevel, marks: p.marks, orderIndex: p.orderIndex,
         lectureRowId: p.lectureRowId ? lectureRowIdMap[p.lectureRowId] || null : null,
         cloId: p.cloId ? cloIdMap[p.cloId] || null : null,
