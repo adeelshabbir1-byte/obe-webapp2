@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { syncCoursePloMappingToLinkedCourses } from "../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -37,6 +38,12 @@ export async function PUT(req: NextRequest) {
   } else {
     await prisma.coursePloMapping.deleteMany({ where: { courseId, ploId } });
   }
+
+  // If this course is the base of a Content Sync group, carry the same
+  // decision out to that group's other, not-yet-taught batches of this
+  // same course — otherwise every future batch would need this set up
+  // by hand all over again.
+  await syncCoursePloMappingToLinkedCourses(courseId, plo.number, mapped, user.id);
 
   await writeAuditLog({
     actorUserId: user.id, action: mapped ? "COURSE_PLO_MAPPED" : "COURSE_PLO_UNMAPPED",
