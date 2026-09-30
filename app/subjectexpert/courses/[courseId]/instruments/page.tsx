@@ -6,6 +6,7 @@ import CourseSubNav from "../../../../../components/CourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
 import { navForRole } from "../../../../../components/reportNav";
+import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
 
 
 export default async function InstrumentsPage({ params }: { params: { courseId: string } }) {
@@ -14,6 +15,11 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
+
+  // Self-heal: recompute every row's weight before reading it, so a row
+  // left with a stale number from before a weight-logic fix corrects
+  // itself the moment the page is opened, with no manual step by anyone.
+  await recomputeCourseRows(params.courseId, "SE");
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },

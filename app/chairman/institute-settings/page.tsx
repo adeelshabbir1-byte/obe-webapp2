@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import InstituteSettingsForm from "../../../components/InstituteSettingsForm";
+import RecomputeWeightsButton from "../../../components/RecomputeWeightsButton";
 
 export default async function InstituteSettingsPage() {
   const user = await getAuthenticatedUser();
@@ -28,6 +29,7 @@ export default async function InstituteSettingsPage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Institute Settings</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Shown across every page for your institution.</p>
       <InstituteSettingsForm initialName={fullUser?.instituteName || ""} />
+      <RecomputeWeightsButton />
     </Shell>
   );
 }
