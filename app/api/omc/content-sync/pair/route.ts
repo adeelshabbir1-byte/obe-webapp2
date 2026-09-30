@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { determineBaseCourseId, reconsiderGroupBase } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     // New group: the base is decided by the fixed seniority/degree-
     // program rule, not by which course happens to have content.
     const baseCourseId = await determineBaseCourseId(courseIdA, courseIdB);
+    const loserCourse = baseCourseId === courseIdA ? courseB : courseA;
     const group = await prisma.courseContentSyncGroup.create({
       data: { chairmanId: user.managedById, createdById: user.id, name: `${courseA.code} / ${courseB.code}`, needsSync: true },
     });
@@ -74,21 +75,35 @@ export async function POST(req: NextRequest) {
         { groupId, courseId: courseIdB, isBase: baseCourseId === courseIdB },
       ],
     });
+    // If the course that just lost base status already had its own SE
+    // (from before it was ever linked), carry that assignment onto the
+    // new base rather than just dropping it — same carry-over rule as
+    // every other base-change path.
+    if (loserCourse.subjectExpertId) {
+      const baseCourse = await prisma.course.findUnique({ where: { id: baseCourseId }, select: { coordinatorId: true } });
+      const se = await prisma.user.findUnique({ where: { id: loserCourse.subjectExpertId }, select: { managedById: true } });
+      await prisma.course.update({ where: { id: loserCourse.id }, data: { subjectExpertId: null } });
+      if (baseCourse && se?.managedById === baseCourse.coordinatorId) {
+        await prisma.course.update({ where: { id: baseCourseId }, data: { subjectExpertId: loserCourse.subjectExpertId } });
+      }
+    }
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_PAIRED", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIdA, courseIdB } });
 
   const groupBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId, isBase: true }, include: { course: true } });
 
-  // Any SE previously assigned to a course that's now non-base is
-  // cleared — it's read-only going forward, so it shouldn't still show
-  // someone assigned to edit it. This is a plain field update, not a
-  // content copy, so it still happens immediately.
-  if (groupBase) {
-    await prisma.course.updateMany({
-      where: { contentSyncMember: { groupId, isBase: false } },
-      data: { subjectExpertId: null },
-    });
+  // Every base-change branch above (reconsiderGroupBase, or the new-
+  // group carry-over just above) already clears the SE off whichever
+  // course actually just lost base status and carries it onto the new
+  // base — there used to be a blanket "clear SE on every non-base course
+  // in the group" step here too, which was wiping out that carry-over
+  // (and every other follower's inherited assignment) on every single
+  // link/merge action. Removed; push the base's SE out to the rest of
+  // the group instead, so followers actually end up assigned like the
+  // Assign Subject Experts page promises.
+  if (groupBase?.course.subjectExpertId) {
+    await syncSubjectExpertToLinkedCourses(groupBase.courseId, groupBase.course.subjectExpertId);
   }
 
   // If these two are also actually offered in the same term, they're
