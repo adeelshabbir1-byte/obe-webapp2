@@ -15,10 +15,13 @@ import { useEffect } from "react";
 //   3. Then, in order: submit the nearest <form> the focused element
 //      belongs to (covers every "Save"/"Save Draft"/"Save Weights"-style
 //      button in the app, since those are real form submits); if there's
-//      no form in play, click the first visible, enabled button marked
+//      no form in play, click EVERY visible, enabled button marked
 //      data-save-shortcut="true" instead — for the handful of screens
-//      (like the Assessments mapping grid's batch "Save Mapping
-//      Changes") whose save isn't a form submit at all.
+//      (like the Assessments tab, which has both a "Save Instrument
+//      Changes" button and a separate "Save Mapping Changes" button)
+//      whose save isn't a form submit at all. Clicking all of them
+//      (not just the first) means Ctrl+S saves everything dirty on
+//      the page in one press, not just whichever batch happens first.
 export default function SaveShortcut() {
   useEffect(() => {
     function handler(e: KeyboardEvent) {
@@ -38,8 +41,7 @@ export default function SaveShortcut() {
       window.setTimeout(() => {
         if (ownerForm) { ownerForm.requestSubmit(); return; }
         const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-save-shortcut="true"]'));
-        const target = buttons.find((b) => !b.disabled && b.offsetParent !== null);
-        target?.click();
+        for (const b of buttons) { if (!b.disabled && b.offsetParent !== null) b.click(); }
       }, 50);
     }
     window.addEventListener("keydown", handler);

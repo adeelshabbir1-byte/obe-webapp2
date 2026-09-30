@@ -62,7 +62,6 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [busyCell, setBusyCell] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
 
@@ -92,17 +91,36 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function editInstrument(id: string, patch: { marksPct?: number; maxScore?: number; label?: string }) {
-    setBusyCell(id); setError("");
+  // Label/Marks%/Out-Of edits are kept local (updating "instruments" so the
+  // per-category totals above update live) and only sent to the server in
+  // one batch when "Save Instrument Changes" is pressed (or Ctrl+S) —
+  // typing through several quizzes' marks one after another used to fire a
+  // separate save (and a full content-sync) per field blur, which is what
+  // made it feel slow.
+  const [dirtyInstrumentIds, setDirtyInstrumentIds] = useState<Set<string>>(new Set());
+  const pendingEditsRef = useRef<Record<string, { marksPct?: number; maxScore?: number; label?: string }>>({});
+
+  function editInstrumentLocal(id: string, patch: { marksPct?: number; maxScore?: number; label?: string }) {
+    setInstruments((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
+    pendingEditsRef.current[id] = { ...pendingEditsRef.current[id], ...patch };
+    setDirtyInstrumentIds((prev) => new Set(prev).add(id));
+  }
+
+  async function saveInstrumentChanges() {
+    const edits = Object.keys(pendingEditsRef.current).map((instrumentId) => ({ instrumentId, ...pendingEditsRef.current[instrumentId] }));
+    if (edits.length === 0) return;
+    setSaving(true); setError("");
     try {
-      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/batch-save`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ edits }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyCell(null); return; }
-      setInstruments((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
-      setBusyCell(null);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyCell(null); }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      setInstruments(data.instruments);
+      pendingEditsRef.current = {};
+      setDirtyInstrumentIds(new Set());
+      setSaving(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 
   async function removeInstrument(id: string) {
@@ -161,14 +179,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       || r.midtermQuestions !== saved.midtermQuestions || r.finalQuestions !== saved.finalQuestions;
   });
 
-  // Warn before leaving the page with unsaved mapping changes, since they
-  // now only live in local state until the Save button is clicked. A ref
-  // keeps the beforeunload handler (registered once) seeing the LATEST
-  // dirty flag rather than whatever it was when the effect first ran.
+  // Warn before leaving the page with unsaved mapping OR instrument-field
+  // changes, since both now only live in local state until their Save
+  // button (or Ctrl+S) is used. Refs keep the beforeunload handler
+  // (registered once) seeing the LATEST dirty flags rather than whatever
+  // they were when the effect first ran.
   const mappingDirtyRef = useRef(mappingDirty);
   mappingDirtyRef.current = mappingDirty;
+  const instrumentsDirtyRef = useRef(false);
+  instrumentsDirtyRef.current = dirtyInstrumentIds.size > 0;
   useEffect(() => {
-    function handler(e: BeforeUnloadEvent) { if (mappingDirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }
+    function handler(e: BeforeUnloadEvent) { if (mappingDirtyRef.current || instrumentsDirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
@@ -229,6 +250,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     <>
       {error && <div className="err">{error}</div>}
 
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginBottom: -4 }}>
+        {dirtyInstrumentIds.size > 0 && <span style={{ fontSize: 11.5, color: "var(--brass-dark)" }}>Unsaved changes to {dirtyInstrumentIds.size} item(s) below</span>}
+        <button onClick={saveInstrumentChanges} disabled={dirtyInstrumentIds.size === 0 || saving} data-save-shortcut="true" className="btn btn-brass">
+          {saving ? "Saving…" : "Save Instrument Changes"}
+        </button>
+      </div>
+
       {TYPES.map((type) => {
         const items = instruments.filter((i) => i.type === type);
         const sum = items.reduce((s, i) => s + i.marksPct, 0);
@@ -277,24 +305,24 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     <td>
                       {isNumbered ? `Q${i.label}` : (
                         <input
-                          type="text" defaultValue={i.label} disabled={busyCell === i.id}
-                          onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== i.label) editInstrument(i.id, { label: e.target.value.trim() }); }}
-                          style={{ width: 90, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                          type="text" defaultValue={i.label}
+                          onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== i.label) editInstrumentLocal(i.id, { label: e.target.value.trim() }); }}
+                          style={{ width: 90, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                         />
                       )}
                     </td>
                     <td>
                       <input
-                        type="number" min={0} max={100} defaultValue={i.marksPct} disabled={busyCell === i.id}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrument(i.id, { marksPct: n }); }}
-                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                        type="number" min={0} max={100} defaultValue={i.marksPct}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrumentLocal(i.id, { marksPct: n }); }}
+                        style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />%
                     </td>
                     <td>
                       / <input
-                        type="number" min={1} defaultValue={i.maxScore} disabled={busyCell === i.id}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= 1 && n !== i.maxScore) editInstrument(i.id, { maxScore: n }); }}
-                        style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12.5 }}
+                        type="number" min={1} defaultValue={i.maxScore}
+                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= 1 && n !== i.maxScore) editInstrumentLocal(i.id, { maxScore: n }); }}
+                        style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />
                     </td>
                     <td>
