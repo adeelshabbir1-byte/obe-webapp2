@@ -5,13 +5,19 @@ import SortableTable from "./SortableTable";
 
 type Course = { id: string; code: string; title: string; batchLabel: string; isOffered: boolean; offeredTermName: string | null; offeredTermYear: number | null; enrolledStudents: { id: string; name: string; rollNumber: string; batchLabel: string }[] };
 type Student = { id: string; name: string; rollNumber: string; batchLabel: string };
+type Suggestion = {
+  code: string; title: string; creditHours: number; studentCount: number; overdueCount: number;
+  students: { id: string; name: string; rollNumber: string; batchLabel: string; overdue: boolean }[];
+  suggestedCourseId: string; suggestedBatchLabel: string;
+};
 
-export default function RepeatOfferingManager({ initialCourses, allStudents }: { initialCourses: Course[]; allStudents: Student[] }) {
+export default function RepeatOfferingManager({ initialCourses, allStudents, suggestions = [] }: { initialCourses: Course[]; allStudents: Student[]; suggestions?: Suggestion[] }) {
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [dismissedCodes, setDismissedCodes] = useState<string[]>([]);
 
   async function toggleOffer(courseId: string, offer: boolean) {
     setLoading(true); setError("");
@@ -45,11 +51,71 @@ export default function RepeatOfferingManager({ initialCourses, allStudents }: {
     setLoading(false);
   }
 
+  async function offerAndEnrollAll(s: Suggestion) {
+    setLoading(true); setError("");
+    try {
+      const offerRes = await fetch(`/api/coordinator/courses/${s.suggestedCourseId}/repeat-offer`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offer: true, year: new Date().getFullYear() }),
+      });
+      const offerData = await offerRes.json();
+      if (!offerRes.ok) { setError(offerData.error || "Something went wrong."); setLoading(false); return; }
+      let updatedCourse = offerData.course;
+      const enrolled: Student[] = [];
+      for (const stu of s.students) {
+        const res = await fetch(`/api/coordinator/courses/${s.suggestedCourseId}/enroll`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId: stu.id }),
+        });
+        if (res.ok) {
+          const match = allStudents.find((a) => a.id === stu.id);
+          if (match) enrolled.push(match);
+        }
+      }
+      setCourses((prev) => prev.map((c) => c.id === s.suggestedCourseId
+        ? { ...c, isOffered: updatedCourse.isOffered, offeredTermName: updatedCourse.offeredTermName, offeredTermYear: updatedCourse.offeredTermYear, enrolledStudents: [...c.enrolledStudents, ...enrolled] }
+        : c));
+      setDismissedCodes((prev) => [...prev, s.code]);
+      setExpandedId(s.suggestedCourseId);
+    } catch (err: any) { setError("Unexpected error: " + err.message); }
+    setLoading(false);
+  }
+
+  const visibleSuggestions = suggestions.filter((s) => !dismissedCodes.includes(s.code));
   const filtered = courses.filter((c) => !search || c.code.toLowerCase().includes(search.toLowerCase()) || c.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
       {error && <div className="err">{error}</div>}
+
+      {visibleSuggestions.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--brass-dark)", background: "#FBF6EA" }}>
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>Suggested Extra Offerings</h3>
+          <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 10 }}>
+            These courses have no section offered anywhere right now, but students already need them to stay on
+            track for graduation. Ranked by how many students are stuck without them ("Overdue" means the course
+            is already behind their planned semester, not just due this term).
+          </p>
+          {visibleSuggestions.map((s) => (
+            <div key={s.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "8px 0", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+              <div style={{ fontSize: 12.5 }}>
+                <b>{s.code}</b> — {s.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({s.creditHours} cr, would open on {s.suggestedBatchLabel}'s copy)</span>
+                <div style={{ marginTop: 3 }}>
+                  <span className="badge badge-warn" style={{ fontSize: 10 }}>{s.studentCount} student{s.studentCount === 1 ? "" : "s"} need it</span>
+                  {s.overdueCount > 0 && <span className="badge" style={{ fontSize: 10, marginLeft: 6, background: "#FBEAEA", color: "var(--rust)" }}>{s.overdueCount} overdue</span>}
+                </div>
+                <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>
+                  {s.students.slice(0, 6).map((stu) => `${stu.name} (${stu.rollNumber})`).join(", ")}
+                  {s.students.length > 6 ? `, +${s.students.length - 6} more` : ""}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button onClick={() => offerAndEnrollAll(s)} disabled={loading} className="btn btn-brass" style={{ padding: "4px 10px", fontSize: 11.5 }}>Offer &amp; Enroll All</button>
+                <button onClick={() => setDismissedCodes((prev) => [...prev, s.code])} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Dismiss</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="card">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search courses..." style={{ padding: "7px 10px", border: "1px solid var(--line)", width: 280, fontSize: 12.5 }} />
       </div>

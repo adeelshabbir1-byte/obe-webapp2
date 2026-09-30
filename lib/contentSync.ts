@@ -66,10 +66,66 @@ export async function reconsiderGroupBase(groupId: string, newlyJoinedCourseId: 
   // constraint rejects immediately (not deferred to commit).
   await prisma.courseContentSyncMember.update({ where: { id: currentBase.id }, data: { isBase: false } });
   await prisma.courseContentSyncMember.updateMany({ where: { groupId, courseId: newlyJoinedCourseId }, data: { isBase: true } });
-  // The demoted former base may have had an SE assigned while it was
-  // still the base — it's read-only now, so that assignment is cleared,
-  // same as everywhere else a course loses base status.
+
+  // The demoted former base is read-only now, so its own SE assignment
+  // no longer applies there — but it should carry FORWARD onto the new
+  // base rather than simply vanish. Before this, every single new batch
+  // (which always becomes the new base — "most recent wins") started
+  // with no Subject Expert at all even when the course it was copied
+  // from had one, silently piling up as "still unassigned" batch after
+  // batch. Only carried over when the SE actually reports to the new
+  // course's own coordinator — a content-sync group can span more than
+  // one coordinator's courses (e.g. the same course code in two
+  // different degree programs), and an SE who doesn't report to this
+  // course's coordinator could never have been assigned to it directly
+  // anyway, so silently reassigning across that boundary would be new,
+  // unreviewed exposure rather than a safe carry-over.
+  const [oldBaseCourse, newBaseCourse] = await Promise.all([
+    prisma.course.findUnique({ where: { id: currentBase.courseId }, select: { subjectExpertId: true } }),
+    prisma.course.findUnique({ where: { id: newlyJoinedCourseId }, select: { coordinatorId: true } }),
+  ]);
   await prisma.course.update({ where: { id: currentBase.courseId }, data: { subjectExpertId: null } });
+
+  if (oldBaseCourse?.subjectExpertId && newBaseCourse) {
+    const se = await prisma.user.findUnique({ where: { id: oldBaseCourse.subjectExpertId }, select: { managedById: true } });
+    if (se?.managedById === newBaseCourse.coordinatorId) {
+      await prisma.course.update({ where: { id: newlyJoinedCourseId }, data: { subjectExpertId: oldBaseCourse.subjectExpertId } });
+    }
+  }
+}
+
+/**
+ * Pushes a base course's Subject Expert assignment onto every OTHER
+ * member of its content-sync group that's from the same term or later —
+ * the same scope rule syncCourseContentToLinkedCourses uses for content
+ * itself. Call this right after assign-se updates a base course, so a
+ * group's followers don't sit permanently unassigned just because the
+ * page that assigns them only shows the base. Silently does nothing for
+ * a course that isn't in a group, or for a follower whose own SE
+ * doesn't report to that follower's coordinator (same cross-coordinator
+ * guard as the base-promotion carry-over above).
+ */
+export async function syncSubjectExpertToLinkedCourses(sourceCourseId: string, subjectExpertId: string | null) {
+  const membership = await prisma.courseContentSyncMember.findUnique({
+    where: { courseId: sourceCourseId },
+    include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
+  });
+  if (!membership) return;
+
+  const sourceCourse = membership.group.members.find((m) => m.courseId === sourceCourseId)?.course;
+  const sourceTermIndex = termIndex(sourceCourse?.batch?.startTerm, sourceCourse?.batch?.startYear);
+  const others = membership.group.members.filter(
+    (m) => m.courseId !== sourceCourseId && termIndex(m.course.batch?.startTerm, m.course.batch?.startYear) >= sourceTermIndex
+  );
+  if (others.length === 0) return;
+
+  const se = subjectExpertId ? await prisma.user.findUnique({ where: { id: subjectExpertId }, select: { managedById: true } }) : null;
+
+  for (const m of others) {
+    const value = !subjectExpertId ? null : se?.managedById === m.course.coordinatorId ? subjectExpertId : undefined;
+    if (value === undefined) continue; // SE doesn't report to this follower's coordinator — leave it as-is
+    await prisma.course.update({ where: { id: m.courseId }, data: { subjectExpertId: value } });
+  }
 }
 
 /**

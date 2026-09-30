@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
-import { determineBaseCourseId } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, syncSubjectExpertToLinkedCourses } from "../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../lib/audit";
 
 // One-time correction for groups formed before base re-evaluation
@@ -36,8 +36,8 @@ export async function POST() {
     if (correctBaseCourseId === currentBase.courseId) continue; // already correct
 
     const [oldBaseCourse, newBaseCourse] = await Promise.all([
-      prisma.course.findUnique({ where: { id: currentBase.courseId }, select: { code: true } }),
-      prisma.course.findUnique({ where: { id: correctBaseCourseId }, select: { code: true } }),
+      prisma.course.findUnique({ where: { id: currentBase.courseId }, select: { code: true, subjectExpertId: true } }),
+      prisma.course.findUnique({ where: { id: correctBaseCourseId }, select: { code: true, coordinatorId: true } }),
     ]);
 
     // Old base cleared FIRST — otherwise both rows are briefly
@@ -46,6 +46,20 @@ export async function POST() {
     await prisma.courseContentSyncMember.update({ where: { id: currentBase.id }, data: { isBase: false } });
     await prisma.courseContentSyncMember.updateMany({ where: { groupId: group.id, courseId: correctBaseCourseId }, data: { isBase: true } });
     await prisma.course.update({ where: { id: currentBase.courseId }, data: { subjectExpertId: null } });
+
+    // Carry the old base's Subject Expert forward onto the new base
+    // (same root-cause fix as v171's reconsiderGroupBase) — otherwise
+    // this bulk correction tool wipes out every affected group's SE
+    // assignment exactly the way the automatic per-batch promotion used
+    // to, only for every group at once.
+    if (oldBaseCourse?.subjectExpertId && newBaseCourse) {
+      const se = await prisma.user.findUnique({ where: { id: oldBaseCourse.subjectExpertId }, select: { managedById: true } });
+      if (se?.managedById === newBaseCourse.coordinatorId) {
+        await prisma.course.update({ where: { id: correctBaseCourseId }, data: { subjectExpertId: oldBaseCourse.subjectExpertId } });
+        await syncSubjectExpertToLinkedCourses(correctBaseCourseId, oldBaseCourse.subjectExpertId);
+      }
+    }
+
     // The corrected base's content should now propagate out for real.
     await prisma.courseContentSyncGroup.update({ where: { id: group.id }, data: { needsSync: true } });
 
