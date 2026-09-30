@@ -63,7 +63,21 @@ async function statsForRole(user: { id: string; role: string; managedById: strin
 async function coordinatorStats(coordinatorId: string): Promise<Stat[]> {
   const [totalCourses, unassignedSe, batches, unconfirmedPrereqs, totalStudents] = await Promise.all([
     prisma.course.count({ where: { coordinatorId } }),
-    prisma.course.count({ where: { coordinatorId, subjectExpertId: null } }),
+    // A course linked as a non-base follower in a content-sync group never
+    // carries its own subjectExpertId directly — it inherits its base's
+    // assignment (the Assign Subject Experts page hides these rows for
+    // exactly that reason). Counting them here as "unassigned" was
+    // reporting hundreds of courses as missing an SE that were actually
+    // fully covered by their base's assignment; only count a course that
+    // could actually take a direct assignment (standalone, or the base
+    // of its group) and doesn't have one.
+    prisma.course.count({
+      where: {
+        coordinatorId,
+        subjectExpertId: null,
+        OR: [{ contentSyncMember: null }, { contentSyncMember: { isBase: true } }],
+      },
+    }),
     prisma.batch.findMany({ where: { coordinatorId } }),
     prisma.batch.count({ where: { coordinatorId, prerequisitesConfirmedAt: null } }),
     prisma.student.count({ where: { batch: { coordinatorId } } }),

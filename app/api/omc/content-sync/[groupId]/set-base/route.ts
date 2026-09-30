@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { groupId: string } }) {
   const user = await getAuthenticatedUser();
@@ -18,10 +19,17 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
   if (!member) return NextResponse.json({ error: "that course isn't in this group" }, { status: 404 });
   if (member.isBase) return NextResponse.json({ ok: true }); // already the base
 
-  // Any existing SE assignment on the course losing base status is
-  // cleared — it's about to become read-only, so it shouldn't still
-  // show an SE assigned to edit it.
+  // The course losing base status is about to become read-only, so its
+  // own SE assignment is cleared. But that assignment shouldn't just
+  // vanish — carry it forward onto the new base (and out to the rest of
+  // the group) the same way every other base-change path does, so
+  // switching the base manually here doesn't silently strand a course
+  // without a Subject Expert.
   const previousBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId: params.groupId, isBase: true } });
+  const previousBaseCourse = previousBase
+    ? await prisma.course.findUnique({ where: { id: previousBase.courseId }, select: { subjectExpertId: true } })
+    : null;
+  const newBaseCourse = await prisma.course.findUnique({ where: { id: courseId }, select: { coordinatorId: true } });
 
   await prisma.$transaction([
     prisma.courseContentSyncMember.updateMany({ where: { groupId: params.groupId }, data: { isBase: false } }),
@@ -34,6 +42,13 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
   ]);
   if (previousBase) {
     await prisma.course.update({ where: { id: previousBase.courseId }, data: { subjectExpertId: null } });
+  }
+  if (previousBaseCourse?.subjectExpertId && newBaseCourse) {
+    const se = await prisma.user.findUnique({ where: { id: previousBaseCourse.subjectExpertId }, select: { managedById: true } });
+    if (se?.managedById === newBaseCourse.coordinatorId) {
+      await prisma.course.update({ where: { id: courseId }, data: { subjectExpertId: previousBaseCourse.subjectExpertId } });
+      await syncSubjectExpertToLinkedCourses(courseId, previousBaseCourse.subjectExpertId);
+    }
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_BASE_CHANGED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { newBaseCourseId: courseId } });
