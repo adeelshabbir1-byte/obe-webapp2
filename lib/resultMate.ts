@@ -2,7 +2,7 @@ import { prisma } from "./db";
 
 export async function computeResultMate(courseId: string) {
   const [enrollments, instruments, clos, course] = await Promise.all([
-    prisma.studentEnrollment.findMany({ where: { courseId }, include: { student: true } }),
+    prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, include: { student: true } }),
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
     prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
     prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),

@@ -75,6 +75,24 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
     batch: course.batch ? { startTerm: course.batch.startTerm, startYear: course.batch.startYear } : null,
   }, criteria);
 
+  // Students the Advisor dropped mid-semester don't go through
+  // computeResultMate (excluded there so a drop takes effect immediately),
+  // so they need their own transcript entry here: a "W" grade, no GPA
+  // points (never affects CGPA), so the course surfaces on "Courses
+  // Remaining" as dropped rather than just vanishing with no record.
+  const withdrawn = await prisma.studentEnrollment.findMany({ where: { courseId, status: "WITHDRAWN" } });
+  if (withdrawn.length > 0) {
+    await prisma.studentTranscriptRecord.createMany({
+      data: withdrawn.map((w) => ({
+        studentId: w.studentId, coordinatorId: course.coordinatorId,
+        courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
+        termName: course.offeredTermName!, termYear: course.offeredTermYear!,
+        totalPct: 0, grade: "W", gpaPoints: null,
+        cloAttainmentJson: "[]", ploAttainmentJson: "[]",
+      })),
+    });
+  }
+
   // Clear marks and enrollment so the new term's students start fresh —
   // otherwise auto-enrollment would add new students on top of the old
   // ones, mixing two semesters' marks together in one Result Mate view.

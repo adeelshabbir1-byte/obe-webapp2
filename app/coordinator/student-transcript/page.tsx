@@ -5,6 +5,7 @@ import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptRe
 import Shell from "../../../components/Shell";
 import ReportPrintHeader from "../../../components/ReportPrintHeader";
 import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
+import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/coordinator/program-profile", label: "Program Document" },
   { href: "/coordinator/required-books", label: "Required Textbooks" },
   { href: "/coordinator/student-transcript", label: "Student Transcript" },
+  { href: "/coordinator/historical-grades-upload", label: "Historical Grades Upload" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
@@ -63,6 +65,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   const cloAgg = report?.cloAgg || new Map<string, { attempted: number; passed: number }>();
   const ploAgg = report?.ploAgg || new Map<string, { attempted: number; passed: number }>();
   const remediation = report?.remediation || [];
+  const remaining = report?.remaining || [];
   const cgpa = report?.cgpa ?? null;
   const totalCredits = report?.totalCredits || 0;
 
@@ -165,11 +168,14 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
       )}
 
       {student && belongsToCoordinator && (
+        <AddHistoricalGradeForm studentId={student.id} />
+      )}
+      {student && belongsToCoordinator && (
         <StudentTranscriptReport
           studentName={student.name} rollNumber={student.rollNumber}
           batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
           courseRows={courseRows} cgpa={cgpa} totalCredits={totalCredits}
-          cloAgg={cloAgg} ploAgg={ploAgg} remediation={remediation}
+          cloAgg={cloAgg} ploAgg={ploAgg} remediation={remediation} remaining={remaining}
         />
       )}
     </Shell>

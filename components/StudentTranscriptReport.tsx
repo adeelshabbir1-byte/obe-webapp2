@@ -1,4 +1,4 @@
-import type { TranscriptCourseRow, AttainmentAgg, RemediationEntry } from "../lib/studentTranscriptReport";
+import type { TranscriptCourseRow, AttainmentAgg, RemediationEntry, RemainingCourseEntry } from "../lib/studentTranscriptReport";
 
 // Deliberately rendered as two separate, clearly-labeled reports rather
 // than one merged table — a registrar/advisor cares about Transcript 1
@@ -6,10 +6,11 @@ import type { TranscriptCourseRow, AttainmentAgg, RemediationEntry } from "../li
 // Transcript 2 (which CLOs/PLOs this student actually met). Keeping them
 // visually apart means either one can be screenshotted/printed on its own
 // without the other's columns in the way.
-export default function StudentTranscriptReport({ studentName, rollNumber, batchLabel, courseRows, cgpa, totalCredits, cloAgg, ploAgg, remediation }: {
+export default function StudentTranscriptReport({ studentName, rollNumber, batchLabel, courseRows, cgpa, totalCredits, cloAgg, ploAgg, remediation, remaining }: {
   studentName: string; rollNumber: string; batchLabel: string;
   courseRows: TranscriptCourseRow[]; cgpa: number | null; totalCredits: number;
   cloAgg: Map<string, AttainmentAgg>; ploAgg: Map<string, AttainmentAgg>; remediation: RemediationEntry[];
+  remaining: RemainingCourseEntry[];
 }) {
   return (
     <>
@@ -35,6 +36,28 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
           </tbody>
         </table>
       </div>
+
+      {remaining.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0" }}>
+          <h3 style={{ fontSize: 14, marginBottom: 4, color: "var(--rust)" }}>Courses Remaining</h3>
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
+            Courses from this student's batch curriculum they're lacking — failed or dropped, with no later
+            passing attempt. These still need to be cleared to graduate.
+          </p>
+          <table>
+            <thead><tr><th>Code</th><th>Title</th><th>Cr. Hrs.</th><th>Status</th><th>Last Attempt</th></tr></thead>
+            <tbody>
+              {remaining.map((r) => (
+                <tr key={r.code} style={{ background: r.reason === "WITHDRAWN" ? "#FFF3D6" : "#FFE0D6" }}>
+                  <td>{r.code}</td><td>{r.title}</td><td>{r.creditHours}</td>
+                  <td style={{ fontWeight: 600, color: "var(--rust)" }}>{r.reason === "WITHDRAWN" ? "Dropped" : "Failed"}</td>
+                  <td>{r.lastGrade} — {r.lastTermName} {r.lastTermYear}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Transcript 2 — CLO/PLO Attainment</h3>

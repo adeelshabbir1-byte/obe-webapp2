@@ -18,10 +18,14 @@ export async function GET() {
     getGradingScaleForBatch(batch.coordinatorId, batch),
     prisma.user.findUnique({ where: { id: batch.coordinatorId }, select: { minCreditsPerSemester: true, maxCreditsPerSemester: true } }),
     prisma.degreePlanEntry.findMany({ where: { studentId: student.id }, include: { course: true } }),
-    prisma.studentEnrollment.findMany({ where: { studentId: student.id }, select: { courseId: true } }),
+    prisma.studentEnrollment.findMany({ where: { studentId: student.id, status: { not: "WITHDRAWN" } }, select: { courseId: true } }),
   ]);
 
-  const takenCourseCodes = new Set(transcriptRecords.map((t) => t.courseCode));
+  // A course only counts as "completed" if it was actually PASSED — a
+  // failed (grade F, gpaPoints 0) or withdrawn (grade W, gpaPoints null)
+  // attempt must stay in the planner so the student gets re-queued to
+  // retake it, not silently dropped off the plan.
+  const takenCourseCodes = new Set(transcriptRecords.filter((t) => t.gpaPoints !== null && t.gpaPoints > 0).map((t) => t.courseCode));
   const enrolledIds = new Set(enrolledCourseIds.map((e) => e.courseId));
   const planByCourseId = new Map(degreePlanEntries.map((e) => [e.courseId, e]));
 

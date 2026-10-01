@@ -8,6 +8,11 @@ export type TranscriptCourseRow = {
 };
 export type AttainmentAgg = { attempted: number; passed: number };
 export type RemediationEntry = { ploLabel: string; courses: { code: string; title: string }[] };
+export type RemainingCourseEntry = {
+  code: string; title: string; creditHours: number;
+  reason: "FAILED" | "WITHDRAWN";
+  lastGrade: string; lastTermName: string; lastTermYear: number;
+};
 
 export type StudentTranscriptReport = {
   courseRows: TranscriptCourseRow[];
@@ -16,6 +21,7 @@ export type StudentTranscriptReport = {
   cloAgg: Map<string, AttainmentAgg>;
   ploAgg: Map<string, AttainmentAgg>;
   remediation: RemediationEntry[];
+  remaining: RemainingCourseEntry[];
 };
 
 /**
@@ -52,8 +58,26 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
     }
   }
 
+  // Track, per course code, whether the student has ever actually passed it
+  // — used below to build the "Courses Remaining" list (failed or withdrawn,
+  // with no later passing attempt). Built from the same historical loop
+  // above so a later pass always overrides an earlier fail/withdraw.
+  const outcomeByCode = new Map<string, { code: string; title: string; creditHours: number; passed: boolean; lastGrade: string; lastTermName: string; lastTermYear: number }>();
+  for (const r of historical) {
+    const passed = r.gpaPoints !== null && r.gpaPoints > 0;
+    const existing = outcomeByCode.get(r.courseCode);
+    if (passed) {
+      outcomeByCode.set(r.courseCode, { code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, passed: true, lastGrade: r.grade, lastTermName: r.termName, lastTermYear: r.termYear });
+    } else if (!existing || !existing.passed) {
+      outcomeByCode.set(r.courseCode, { code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, passed: false, lastGrade: r.grade, lastTermName: r.termName, lastTermYear: r.termYear });
+    }
+  }
+
   // Currently-active enrollments (not yet reset by a re-offering) — live-computed.
-  const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId }, include: { course: { include: { batch: true } } } });
+  // Withdrawn enrollments are excluded here — they're no longer "in
+  // progress"; they surface instead in the Courses Remaining list below
+  // once the course offering closes out and snapshots a "W" record.
+  const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId, status: { not: "WITHDRAWN" } }, include: { course: { include: { batch: true } } } });
   for (const e of currentEnrollments) {
     const result = await computeResultMate(e.courseId);
     const row = result.rows.find((r) => r.studentId === studentId);
@@ -71,6 +95,18 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
       cloAgg.set(code, entry);
     }
   }
+
+  // Courses Remaining: failed or withdrawn, with no later passing attempt,
+  // and not currently being retaken this term (that's just "in progress",
+  // already shown in courseRows with isCurrent: true).
+  const activeRetakeCodes = new Set(currentEnrollments.map((e) => e.course.code));
+  const remaining: RemainingCourseEntry[] = Array.from(outcomeByCode.values())
+    .filter((o) => !o.passed && !activeRetakeCodes.has(o.code))
+    .map((o) => ({
+      code: o.code, title: o.title, creditHours: o.creditHours,
+      reason: o.lastGrade === "W" ? "WITHDRAWN" as const : "FAILED" as const,
+      lastGrade: o.lastGrade, lastTermName: o.lastTermName, lastTermYear: o.lastTermYear,
+    }));
 
   // PLO remediation: for every PLO with at least one recorded failure,
   // find courses in this student's own batch curriculum that map to it
@@ -96,5 +132,5 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
 
   const cgpa = totalCredits > 0 ? Math.round((totalGradePoints / totalCredits) * 100) / 100 : null;
 
-  return { courseRows, cgpa, totalCredits, cloAgg, ploAgg, remediation };
+  return { courseRows, cgpa, totalCredits, cloAgg, ploAgg, remediation, remaining };
 }

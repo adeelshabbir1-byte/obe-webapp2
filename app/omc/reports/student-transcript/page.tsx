@@ -59,7 +59,7 @@ export default async function OmcStudentTranscriptPage({ searchParams }: { searc
           studentName={student.name} rollNumber={student.rollNumber}
           batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
           courseRows={report.courseRows} cgpa={report.cgpa} totalCredits={report.totalCredits}
-          cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation}
+          cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation} remaining={report.remaining}
         />
       )}
     </Shell>

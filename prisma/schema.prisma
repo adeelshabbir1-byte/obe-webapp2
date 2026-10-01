@@ -915,6 +915,10 @@ model StudentEnrollment {
   courseId   String
   course     Course   @relation(fields: [courseId], references: [id])
   isRepeat   Boolean  @default(false)
+  status     String   @default("ACTIVE") // ACTIVE | WITHDRAWN — set by Advisor mid-semester
+  withdrawnAt    DateTime?
+  withdrawnById  String?
+  withdrawnReason String?
   createdAt  DateTime @default(now())
 
   @@unique([studentId, courseId])

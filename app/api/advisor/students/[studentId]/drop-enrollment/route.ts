@@ -24,9 +24,20 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
   if (!enrollment) return NextResponse.json({ error: "student isn't enrolled in that course" }, { status: 400 });
 
   const course = await prisma.course.findUnique({ where: { id: courseId } });
+  const reason = typeof body.reason === "string" ? body.reason.slice(0, 500) : null;
 
+  // Marks are meaningless once withdrawn — clear them so no stale score
+  // lingers if the advisor later changes their mind and reactivates.
   await prisma.studentMark.deleteMany({ where: { studentId: student.id, courseId } });
-  await prisma.studentEnrollment.delete({ where: { id: enrollment.id } });
+
+  // Marked WITHDRAWN rather than deleted — excludes the student from this
+  // term's ResultMate/grading immediately, but keeps the record so it turns
+  // into a "W" transcript entry (Courses Remaining) once the course offering
+  // closes out, instead of the drop silently vanishing with no history.
+  await prisma.studentEnrollment.update({
+    where: { id: enrollment.id },
+    data: { status: "WITHDRAWN", withdrawnAt: new Date(), withdrawnById: user.id, withdrawnReason: reason },
+  });
 
   await writeAuditLog({
     actorUserId: user.id, action: "ADVISOR_DROPPED_ENROLLMENT", entityType: "Student", entityId: student.id,
