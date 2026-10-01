@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { computeResultMate } from "../../../lib/resultMate";
-import { getGradingScaleForBatch } from "../../../lib/gradingScaleLookup";
+import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptReport";
 import Shell from "../../../components/Shell";
 import ReportPrintHeader from "../../../components/ReportPrintHeader";
+import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -58,69 +58,13 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   const student = searchParams.studentId ? await prisma.student.findUnique({ where: { id: searchParams.studentId }, include: { batch: true } }) : null;
   const belongsToCoordinator = student && batchIds.includes(student.batchId);
 
-  let courseRows: { code: string; title: string; creditHours: number; grade: string; gpaPoints: number | null; totalPct: number; termName: string; termYear: number; isCurrent: boolean }[] = [];
-  let cloAgg = new Map<string, { attempted: number; passed: number }>();
-  let ploAgg = new Map<string, { attempted: number; passed: number }>();
-  let totalCredits = 0, totalGradePoints = 0;
-  let remediation: { ploLabel: string; courses: { code: string; title: string }[] }[] = [];
-
-  if (student && belongsToCoordinator) {
-    const historical = await prisma.studentTranscriptRecord.findMany({ where: { studentId: student.id }, orderBy: [{ termYear: "asc" }] });
-    for (const r of historical) {
-      courseRows.push({ code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, grade: r.grade, gpaPoints: r.gpaPoints, totalPct: r.totalPct, termName: r.termName, termYear: r.termYear, isCurrent: false });
-      if (r.gpaPoints !== null) { totalCredits += r.creditHours; totalGradePoints += r.gpaPoints * r.creditHours; }
-      for (const c of JSON.parse(r.cloAttainmentJson) as { code: string; passed: boolean }[]) {
-        const e = cloAgg.get(c.code) || { attempted: 0, passed: 0 };
-        e.attempted++; if (c.passed) e.passed++;
-        cloAgg.set(c.code, e);
-      }
-      for (const p of JSON.parse(r.ploAttainmentJson) as { label: string; passed: boolean }[]) {
-        const e = ploAgg.get(p.label) || { attempted: 0, passed: 0 };
-        e.attempted++; if (p.passed) e.passed++;
-        ploAgg.set(p.label, e);
-      }
-    }
-
-    // Currently-active enrollments (not yet reset by a re-offering) — live-computed.
-    const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId: student.id }, include: { course: { include: { batch: true } } } });
-    for (const e of currentEnrollments) {
-      const result = await computeResultMate(e.courseId);
-      const row = result.rows.find((r) => r.studentId === student.id);
-      if (!row) continue;
-      const gradingScale = e.course.batch ? await getGradingScaleForBatch(e.course.coordinatorId, e.course.batch) : [];
-      const gpaPoints = gradingScale.find((g) => g.letter === row.grade)?.gpaValue ?? null;
-      courseRows.push({
-        code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: row.grade, gpaPoints,
-        totalPct: row.totalPct, termName: e.course.offeredTermName || "Current", termYear: e.course.offeredTermYear || new Date().getFullYear(), isCurrent: true,
-      });
-      if (gpaPoints !== null) { totalCredits += e.course.creditHours; totalGradePoints += gpaPoints * e.course.creditHours; }
-      for (const code of result.cloCodes) {
-        const entry = cloAgg.get(code) || { attempted: 0, passed: 0 };
-        entry.attempted++; // approximate: counted as attempted whenever the CLO exists on a current course
-        cloAgg.set(code, entry);
-      }
-    }
-
-    // PLO remediation: for every PLO with at least one recorded failure,
-    // find courses in this student's own batch curriculum that map to it
-    // and aren't already in their transcript — a concrete path to still
-    // attain it.
-    const failedPloLabels = Array.from(ploAgg.entries()).filter(([, v]) => v.passed < v.attempted).map(([label]) => label);
-    if (failedPloLabels.length > 0) {
-      const takenCodes = new Set(courseRows.map((r) => r.code));
-      const batchCourses = await prisma.course.findMany({
-        where: { batchId: student.batchId },
-        include: { ploMappings: { include: { plo: true } } },
-      });
-      remediation = failedPloLabels.map((label) => {
-        const ploNumber = parseInt(label.replace("PLO-", ""), 10);
-        const eligible = batchCourses.filter((c) => !takenCodes.has(c.code) && c.ploMappings.some((m) => m.plo.number === ploNumber));
-        return { ploLabel: label, courses: eligible.map((c) => ({ code: c.code, title: c.title })) };
-      }).filter((r) => r.courses.length > 0 || true); // keep even zero-course entries — that's important info too
-    }
-  }
-
-  const cgpa = totalCredits > 0 ? Math.round((totalGradePoints / totalCredits) * 100) / 100 : null;
+  const report = student && belongsToCoordinator ? await computeStudentTranscriptReport(student.id) : null;
+  const courseRows = report?.courseRows || [];
+  const cloAgg = report?.cloAgg || new Map<string, { attempted: number; passed: number }>();
+  const ploAgg = report?.ploAgg || new Map<string, { attempted: number; passed: number }>();
+  const remediation = report?.remediation || [];
+  const cgpa = report?.cgpa ?? null;
+  const totalCredits = report?.totalCredits || 0;
 
   // Batch-level aggregate view (no specific student selected, but a batch is).
   const selectedBatchId = searchParams.batchId || "";
@@ -221,77 +165,12 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
       )}
 
       {student && belongsToCoordinator && (
-        <>
-          <div className="card">
-            <p style={{ fontSize: 13 }}><b>{student.name}</b> — Roll No. {student.rollNumber} — {student.batch.degreeProgram} ({student.batch.batchName})</p>
-            {cgpa !== null && <p style={{ fontSize: 13, marginTop: 6 }}><b>Cumulative GPA:</b> {cgpa.toFixed(2)} ({totalCredits} credit hours)</p>}
-          </div>
-
-          <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Course-Wise Record</h3>
-            <table>
-              <thead><tr><th>Term</th><th>Code</th><th>Title</th><th>Cr. Hrs.</th><th>Score</th><th>Grade</th><th>GPA Pts</th></tr></thead>
-              <tbody>
-                {courseRows.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No courses on record yet.</td></tr>}
-                {courseRows.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.termName} {r.termYear}{r.isCurrent && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>In Progress</span>}</td>
-                    <td>{r.code}</td><td>{r.title}</td><td>{r.creditHours}</td>
-                    <td>{r.totalPct.toFixed(1)}%</td><td style={{ fontWeight: 600 }}>{r.grade}</td><td>{r.gpaPoints?.toFixed(1) ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>CLO-Wise Attainment (Cumulative)</h3>
-            <table>
-              <thead><tr><th>CLO</th><th>Attempted</th><th>Passed</th></tr></thead>
-              <tbody>
-                {cloAgg.size === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No data yet.</td></tr>}
-                {Array.from(cloAgg.entries()).map(([code, v]) => (
-                  <tr key={code}><td>{code}</td><td>{v.attempted}</td><td style={{ color: "var(--sage)", fontWeight: 600 }}>{v.passed}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO-Wise Attainment (Cumulative, Historical Courses)</h3>
-            <table>
-              <thead><tr><th>PLO</th><th>Attempted</th><th>Passed</th></tr></thead>
-              <tbody>
-                {ploAgg.size === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No data yet.</td></tr>}
-                {Array.from(ploAgg.entries()).map(([label, v]) => (
-                  <tr key={label}><td>{label}</td><td>{v.attempted}</td><td style={{ color: "var(--sage)", fontWeight: 600 }}>{v.passed}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {remediation.length > 0 && (
-            <div className="card" style={{ borderColor: "var(--rust)" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 4, color: "var(--rust)" }}>PLO Remediation Path</h3>
-              <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
-                For each PLO with at least one recorded failure, here are the courses in this student's curriculum
-                that still contribute to it and haven't been taken yet.
-              </p>
-              {remediation.map((r) => (
-                <div key={r.ploLabel} style={{ marginBottom: 12 }}>
-                  <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{r.ploLabel}</p>
-                  {r.courses.length === 0 ? (
-                    <p style={{ fontSize: 12, color: "var(--rust)" }}>No remaining courses in this curriculum contribute to this PLO — this needs a curriculum review.</p>
-                  ) : (
-                    <ul style={{ margin: 0, paddingLeft: 20 }}>
-                      {r.courses.map((c) => <li key={c.code} style={{ fontSize: 12.5 }}>{c.code} — {c.title}</li>)}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+        <StudentTranscriptReport
+          studentName={student.name} rollNumber={student.rollNumber}
+          batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
+          courseRows={courseRows} cgpa={cgpa} totalCredits={totalCredits}
+          cloAgg={cloAgg} ploAgg={ploAgg} remediation={remediation}
+        />
       )}
     </Shell>
   );

@@ -47,12 +47,22 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     counts[field] = Math.max(raw, min);
   }
 
+  // "Best of N" (Quiz/Assignment only) — clamp to [1, that category's item
+  // count] so it's never meaningless (0) or impossible (more than exist).
+  const bestOf: Record<string, number | null> = {};
+  for (const [field, countField] of [["quizBestOf", "quizCount"], ["assignmentBestOf", "assignmentCount"]] as const) {
+    const raw = body[field];
+    if (raw === undefined || raw === null || raw === "") { bestOf[field] = null; continue; }
+    const n = parseInt(raw, 10);
+    bestOf[field] = isNaN(n) ? null : Math.max(1, Math.min(n, counts[countField] || n));
+  }
+
   if (violations.length > 0) {
     // Counts aren't subject to the %-range policy (only MinCount applies,
     // already enforced above), so save them regardless of whether the
     // %'s themselves need OMC approval — no reason to make the SE re-type
     // their item counts once the exception is approved.
-    await prisma.course.update({ where: { id: course.id }, data: counts });
+    await prisma.course.update({ where: { id: course.id }, data: { ...counts, ...bestOf } });
 
     // Out of policy range — don't apply directly. Create/update a pending
     // exception request for the OMC to approve instead.
@@ -80,7 +90,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }, { status: 202 });
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { ...vals, ...counts, weightsConfirmedAt: new Date() } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { ...vals, ...counts, ...bestOf, weightsConfirmedAt: new Date() } });
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
 
   // Pre-create instruments up to each category's chosen count, splitting

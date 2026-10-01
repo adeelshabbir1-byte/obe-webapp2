@@ -1206,6 +1206,14 @@ model Course {
   labCount            Int?
   midtermCount        Int?
   finalCount          Int?
+  // "Best of N" — count only the N best-scoring Quizzes/Assignments toward
+  // the final grade (drop the lowest-scoring ones), e.g. best 3 of 5
+  // quizzes. Null or >= the item count means "count all, drop nothing".
+  // Only affects the GPA/CGPA grade total — CLO/PLO attainment always
+  // uses every instrument, since dropping a quiz there would misrepresent
+  // whether the CLO it tests was actually met.
+  quizBestOf          Int?
+  assignmentBestOf    Int?
   // Set when the SE's weights are saved within the OMC's policy range (or
   // an out-of-range exception is approved) — gates the Assessments &
   // Submit tab, which can't be used until this is set. Null means the

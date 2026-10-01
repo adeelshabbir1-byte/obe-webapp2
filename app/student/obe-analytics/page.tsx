@@ -12,7 +12,10 @@ export default async function ObeAnalyticsPage() {
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
           <h1 style={{ fontSize: 22 }}>My OBE Progress</h1>
-          <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Degree Plan</a>
+          <div style={{ display: "flex", gap: 14 }}>
+            <a href="/student/transcript" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Transcript</a>
+            <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Degree Plan</a>
+          </div>
         </div>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 20 }}>
           How your actual coursework has mapped to your program's learning outcomes so far, and what's ahead.

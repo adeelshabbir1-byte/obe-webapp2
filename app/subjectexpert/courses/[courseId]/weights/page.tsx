@@ -59,6 +59,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
           assignmentCount: course.assignmentCount, quizCount: course.quizCount, projectCount: course.projectCount,
           labCount: course.labCount, midtermCount: course.midtermCount, finalCount: course.finalCount,
         }}
+        currentBestOf={{ quizBestOf: course.quizBestOf, assignmentBestOf: course.assignmentBestOf }}
         hasLab={course.hasLab}
         policy={policy ? {
           assignmentMin: policy.assignmentMin, assignmentMax: policy.assignmentMax,
