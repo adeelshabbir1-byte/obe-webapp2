@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { getAuthenticatedUser } from "../../../../../lib/session";
 
 // Same split as the student bulk-upload: pure file/text parsing here, no
 // database work — the slow part (matching roll numbers, looking up the
