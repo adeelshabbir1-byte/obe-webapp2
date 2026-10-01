@@ -133,19 +133,39 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   }
   useEffect(() => { if (runId) loadRun(runId); }, []);
 
-  async function moveEntry(entryId: string, day: string, startHour: number) {
+  async function moveEntry(entryId: string, day: string, startHour: number, roomId?: string) {
     if (!runId) return;
     setMovingEntryId(entryId); setError(""); setClashInfo(null);
     try {
       const res = await fetch(`/api/coordinator/timetable/${runId}/entries/${entryId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ day, startHour }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ day, startHour, roomId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setMovingEntryId(null); return; }
       if (data.clashes) setClashInfo({ entryIds: [...data.clashes.entryIds, entryId], reasons: data.clashes.reasons });
       await loadRun(runId);
       setMovingEntryId(null);
+      setSuggestEntryId(null); setSuggestions(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setMovingEntryId(null); }
+  }
+
+  // Reschedule helper — for one class that needs to move, lists candidate
+  // (day, time, room) slots where the instructor, every batch it affects,
+  // and some room are all simultaneously free, instead of trial-and-error
+  // dragging around the grid.
+  const [suggestEntryId, setSuggestEntryId] = useState<string | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ duration: number; candidates: { dayOfWeek: string; startHour: number; endHour: number; roomIds: string[]; roomNames: string[] }[] } | null>(null);
+
+  async function findAvailableSlots(entryId: string) {
+    if (!runId) return;
+    setSuggestEntryId(entryId); setSuggestions(null); setSuggestLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/coordinator/timetable/${runId}/entries/${entryId}/suggest-slots`);
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSuggestLoading(false); return; }
+      setSuggestions(data); setSuggestLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSuggestLoading(false); }
   }
 
   async function pollLoop(id: string) {
@@ -459,6 +479,12 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                                 {formatHour(entry.startHour)}–{formatHour(entry.endHour)}<br />
                                 {entry.instructorName}<br />{entry.roomName} · {entry.batchLabel}
                                 {isClashing && <div style={{ color: "var(--rust)", fontWeight: 700, marginTop: 2 }}>⚠ CLASH</div>}
+                                <button
+                                  onClick={(ev) => { ev.stopPropagation(); findAvailableSlots(entry.id); }}
+                                  style={{ marginTop: 4, fontSize: 9.5, padding: "1px 5px", background: "#fff", border: "1px solid var(--line)", cursor: "pointer" }}
+                                >
+                                  Find Slot
+                                </button>
                               </div>
                             </td>
                           );
@@ -492,6 +518,41 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               {clashInfo && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "var(--rust)" }}>
                   <b>This move created a clash:</b> {clashInfo.reasons.join("; ")}
+                </div>
+              )}
+
+              {suggestEntryId && (
+                <div style={{ marginTop: 14, padding: 12, background: "#FAFAF8", border: "1px solid var(--line)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <h4 style={{ fontSize: 12.5 }}>Available Slots</h4>
+                    <button onClick={() => { setSuggestEntryId(null); setSuggestions(null); }} className="btn" style={{ fontSize: 11, padding: "3px 9px" }}>Close</button>
+                  </div>
+                  {suggestLoading && <p style={{ fontSize: 12, color: "var(--slate)" }}>Checking instructor, batch, and room availability…</p>}
+                  {!suggestLoading && suggestions && suggestions.candidates.length === 0 && (
+                    <p style={{ fontSize: 12, color: "var(--rust)" }}>No slot found where the instructor, every batch this affects, and a room are all free at once — the room or batch windows may be too tight.</p>
+                  )}
+                  {!suggestLoading && suggestions && suggestions.candidates.length > 0 && (
+                    <table>
+                      <thead><tr><th>Day</th><th>Time</th><th>Room</th><th></th></tr></thead>
+                      <tbody>
+                        {suggestions.candidates.map((c, i) => (
+                          <tr key={i}>
+                            <td>{c.dayOfWeek}</td>
+                            <td>{formatHour(c.startHour)}–{formatHour(c.endHour)}</td>
+                            <td style={{ fontSize: 11.5 }}>{c.roomNames.join(" or ")}</td>
+                            <td>
+                              <button
+                                onClick={() => moveEntry(suggestEntryId, c.dayOfWeek, c.startHour, c.roomIds[0])}
+                                disabled={!!movingEntryId} className="btn btn-brass" style={{ fontSize: 11, padding: "3px 9px" }}
+                              >
+                                Move Here
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </div>

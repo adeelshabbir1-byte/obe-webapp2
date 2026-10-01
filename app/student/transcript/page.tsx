@@ -19,6 +19,7 @@ export default async function StudentTranscriptPage() {
           <h1 style={{ fontSize: 22 }}>My Transcript</h1>
           <div style={{ display: "flex", gap: 14 }}>
             <a href="/student/obe-analytics" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My OBE Progress</a>
+            <a href="/student/timetable" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Timetable</a>
             <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan</a>
           </div>
         </div>

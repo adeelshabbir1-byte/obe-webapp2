@@ -38,12 +38,19 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   const body = await req.json();
   const newDay: string = body.day;
   const newStartHour: number = parseFloat(body.startHour);
+  // Optional — lets the "suggest available slots" picker apply a room
+  // change in the same move when the current room isn't free at the new
+  // time. A plain drag-move (no roomId in the body) keeps the same room.
+  const newRoomId: string | null = typeof body.roomId === "string" && body.roomId ? body.roomId : null;
   if (!newDay || isNaN(newStartHour)) return NextResponse.json({ error: "day and startHour are required" }, { status: 400 });
 
   const duration = entry.endHour - entry.startHour;
   const newEndHour = newStartHour + duration;
 
-  await prisma.timetableEntry.update({ where: { id: entry.id }, data: { dayOfWeek: newDay, startHour: newStartHour, endHour: newEndHour } });
+  await prisma.timetableEntry.update({
+    where: { id: entry.id },
+    data: { dayOfWeek: newDay, startHour: newStartHour, endHour: newEndHour, ...(newRoomId ? { roomId: newRoomId } : {}) },
+  });
 
   // Check what this move now clashes with — same room, same instructor,
   // or same batch, overlapping in time, on the same day.
@@ -52,13 +59,14 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
     include: { scheduleSection: { include: sectionInclude } },
   });
 
+  const effectiveRoomId = newRoomId || entry.roomId;
   const entryBatchIds = batchIdsFor(entry.scheduleSection);
   const clashingEntryIds: string[] = [];
   const reasons: string[] = [];
   for (const other of allEntries) {
     if (!overlaps(newStartHour, newEndHour, other.startHour, other.endHour)) continue;
     const otherCode = codeFor(other.scheduleSection);
-    if (other.roomId === entry.roomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
+    if (other.roomId === effectiveRoomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
     if (other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
     if (batchIdsFor(other.scheduleSection).some((id) => entryBatchIds.includes(id))) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${otherCode}`); }
   }

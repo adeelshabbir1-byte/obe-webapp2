@@ -72,6 +72,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
     desc: "Faculty load and section-sharing efficiency.",
     cards: [
       { href: "/omc/section-utilization", title: "Combined-Section Utilization", desc: "How many sections Course Equivalence groups are saving vs. teaching separately." },
+      { href: "/omc/reports/timetable", title: "Institution Timetable", desc: "The full generated timetable across the institution, filterable by Room, Batch, Instructor, or Program/Department." },
     ],
   },
 ];
