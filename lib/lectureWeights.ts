@@ -83,12 +83,61 @@ export async function recomputeRows(lectureRowIds: string[]) {
  * left over from an older, buggy version of this logic heal themselves
  * the moment someone looks at the page — nobody has to notice, ask an
  * admin, or run a manual fix for it.
+ *
+ * Runs as a handful of batched queries instead of one query per row per
+ * linked instrument (recomputeRowWeight/instrumentShares, called one row
+ * at a time, is fine for a single row touched by an edit — but awaited
+ * sequentially across every row in a course on every single page load, it
+ * turns into hundreds of individually-awaited round trips and the page
+ * just hangs for a course with any real number of lecture rows).
  */
 export async function recomputeCourseRows(courseId: string, source: "SE" | "INSTRUCTOR") {
   const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } });
-  for (const row of rows) {
-    await recomputeRowWeight(row.id);
+  if (rows.length === 0) return;
+  const rowIds = rows.map((r) => r.id);
+
+  const links = await prisma.lectureRowInstrument.findMany({
+    where: { lectureRowId: { in: rowIds } },
+    include: { lectureRow: { select: { id: true, lectureNumber: true } } },
+  });
+  if (links.length === 0) {
+    // No instrument links at all — every row's weight should read 0.
+    await prisma.$transaction(rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: 0 } })));
+    return;
   }
+
+  const instrumentIds = Array.from(new Set(links.map((l) => l.instrumentId)));
+  const instruments = await prisma.assessmentInstrument.findMany({ where: { id: { in: instrumentIds } } });
+  const marksPctById = new Map(instruments.map((i) => [i.id, i.marksPct]));
+
+  const linksByInstrument = new Map<string, typeof links>();
+  for (const l of links) {
+    const arr = linksByInstrument.get(l.instrumentId) || [];
+    arr.push(l);
+    linksByInstrument.set(l.instrumentId, arr);
+  }
+
+  // Same floor + leftover-remainder split as instrumentShares(), computed
+  // in memory for every instrument at once instead of one DB round trip
+  // per instrument per row.
+  const totalByRow = new Map<string, number>();
+  for (const id of rowIds) totalByRow.set(id, 0);
+  for (const [instrumentId, instrumentLinks] of linksByInstrument) {
+    const marksPct = marksPctById.get(instrumentId);
+    if (marksPct == null) continue;
+    const n = instrumentLinks.length;
+    const base = Math.floor(marksPct / n);
+    const remainder = marksPct - base * n;
+    const ordered = [...instrumentLinks].sort((a, b) => a.lectureRow.lectureNumber - b.lectureRow.lectureNumber);
+    ordered.forEach((l, idx) => {
+      const share = base + (idx < remainder ? 1 : 0);
+      totalByRow.set(l.lectureRowId, (totalByRow.get(l.lectureRowId) || 0) + share);
+    });
+  }
+
+  await prisma.$transaction(
+    rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: totalByRow.get(id) || 0 } }))
+  );
 }
 
 export async function recomputeRowWeight(lectureRowId: string) {
