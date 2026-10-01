@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { ensureAllInstrumentCounts } from "../../../../../lib/instrumentAutoFill";
 
 export async function PATCH(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
         },
       });
     } else {
-      await prisma.course.update({
+      const updatedCourse = await prisma.course.update({
         where: { id: request.courseId },
         data: {
           assignmentPct: request.assignmentPct, quizPct: request.quizPct, projectPct: request.projectPct,
@@ -39,6 +40,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
           weightsConfirmedAt: new Date(),
         },
       });
+      // Same as a normal in-policy weights save — now that the % split is
+      // final, top up instruments to the SE's saved item counts.
+      await ensureAllInstrumentCounts(request.courseId, "SE", updatedCourse);
     }
   }
 

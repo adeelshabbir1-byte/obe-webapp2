@@ -55,6 +55,10 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
           assignmentPct: course.assignmentPct, quizPct: course.quizPct, projectPct: course.projectPct,
           labPct: course.labPct, midtermPct: course.midtermPct, finalPct: course.finalPct,
         }}
+        currentCounts={{
+          assignmentCount: course.assignmentCount, quizCount: course.quizCount, projectCount: course.projectCount,
+          labCount: course.labCount, midtermCount: course.midtermCount, finalCount: course.finalCount,
+        }}
         hasLab={course.hasLab}
         policy={policy ? {
           assignmentMin: policy.assignmentMin, assignmentMax: policy.assignmentMax,
@@ -63,6 +67,11 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
           labMin: policy.labMin, labMax: policy.labMax,
           midtermMin: policy.midtermMin, midtermMax: policy.midtermMax,
           finalMin: policy.finalMin, finalMax: policy.finalMax,
+        } : null}
+        policyMinCount={policy ? {
+          assignmentMinCount: policy.assignmentMinCount, quizMinCount: policy.quizMinCount,
+          projectMinCount: policy.projectMinCount, labMinCount: policy.labMinCount,
+          midtermMinCount: policy.midtermMinCount, finalMinCount: policy.finalMinCount,
         } : null}
       />
     </Shell>

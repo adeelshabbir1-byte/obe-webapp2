@@ -5,6 +5,16 @@ import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { getPolicyForCourse, checkPolicyCompliance } from "../../../../../../lib/weightPolicy";
+import { ensureAllInstrumentCounts } from "../../../../../../lib/instrumentAutoFill";
+
+const COUNT_FIELDS: { field: string; policyMinKey: string }[] = [
+  { field: "assignmentCount", policyMinKey: "assignmentMinCount" },
+  { field: "quizCount", policyMinKey: "quizMinCount" },
+  { field: "projectCount", policyMinKey: "projectMinCount" },
+  { field: "labCount", policyMinKey: "labMinCount" },
+  { field: "midtermCount", policyMinKey: "midtermMinCount" },
+  { field: "finalCount", policyMinKey: "finalMinCount" },
+];
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -28,7 +38,22 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const policy = await getPolicyForCourse(courseWithCoordinator?.coordinator.managedById || null, course.courseType);
   const violations = checkPolicyCompliance(vals as any, policy, course.hasLab);
 
+  // Number of items per category — pre-filled from the OMC's minimum on
+  // the form, the SE can raise it. Can't be saved below that minimum.
+  const counts: Record<string, number> = {};
+  for (const { field, policyMinKey } of COUNT_FIELDS) {
+    const raw = parseInt(body[field] ?? 0, 10) || 0;
+    const min = policy ? (policy as any)[policyMinKey] || 0 : 0;
+    counts[field] = Math.max(raw, min);
+  }
+
   if (violations.length > 0) {
+    // Counts aren't subject to the %-range policy (only MinCount applies,
+    // already enforced above), so save them regardless of whether the
+    // %'s themselves need OMC approval — no reason to make the SE re-type
+    // their item counts once the exception is approved.
+    await prisma.course.update({ where: { id: course.id }, data: counts });
+
     // Out of policy range — don't apply directly. Create/update a pending
     // exception request for the OMC to approve instead.
     await prisma.weightExceptionRequest.upsert({
@@ -55,8 +80,14 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }, { status: 202 });
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { ...vals, weightsConfirmedAt: new Date() } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { ...vals, ...counts, weightsConfirmedAt: new Date() } });
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
+
+  // Pre-create instruments up to each category's chosen count, splitting
+  // the % evenly across them, so the Assessments & Submit tab already has
+  // the right number of Quiz/Assignment/exam-question rows waiting.
+  await ensureAllInstrumentCounts(course.id, "SE", updated);
+
   await syncCourseContentToLinkedCourses(course.id);
 
   return NextResponse.json({ course: updated, pendingApproval: false });

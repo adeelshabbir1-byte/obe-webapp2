@@ -1193,6 +1193,19 @@ model Course {
   labPct              Int      @default(0)
   midtermPct          Int      @default(25)
   finalPct            Int      @default(40)
+  // How many separate items (quizzes, assignments, exam questions...) the
+  // SE wants for each category — shown on the Assessment Weights tab,
+  // pre-filled from the OMC's policy minimum count and raisable by the SE.
+  // Saving weights auto-creates instruments on the Assessments tab up to
+  // this count (splitting the category % evenly across them) so the SE
+  // doesn't have to add each one by hand. Null means not set yet; the
+  // OMC's minimum (or 1) is used as the default shown in the form.
+  assignmentCount     Int?
+  quizCount           Int?
+  projectCount        Int?
+  labCount            Int?
+  midtermCount        Int?
+  finalCount          Int?
   // Set when the SE's weights are saved within the OMC's policy range (or
   // an out-of-range exception is approved) — gates the Assessments &
   // Submit tab, which can't be used until this is set. Null means the
