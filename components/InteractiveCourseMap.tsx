@@ -30,6 +30,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   const [electiveModalCategory, setElectiveModalCategory] = useState<string>("Domain Elective");
   const [electiveOptions, setElectiveOptions] = useState<{ id: string; code: string; title: string; domain: string | null }[]>([]);
   const [electiveSearch, setElectiveSearch] = useState("");
+  const [electiveDomainFilter, setElectiveDomainFilter] = useState("");
   const [loadingElectives, setLoadingElectives] = useState(false);
 
   const maxSemester = initialCourses.length > 0 ? Math.max(8, ...initialCourses.map((c) => c.semesterNumber || 1)) : 8;
@@ -117,6 +118,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     setElectiveModalCourseId(courseId);
     setElectiveModalCategory(category);
     setElectiveSearch("");
+    setElectiveDomainFilter("");
     setLoadingElectives(true);
     fetch(`/api/omc/curriculum-electives?category=${encodeURIComponent(category)}`).then((r) => r.json()).then((data) => {
       setElectiveOptions(data.courses || []);
@@ -260,16 +262,33 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                 ? "From your institution's restricted IDS list — this will rename the course and seed its CLOs."
                 : "From your institution's own curriculum — this will rename the course and seed its CLOs."}
             </p>
-            <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }} />
+            <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 8, border: "1px solid var(--line)" }} />
+            {!loadingElectives && electiveOptions.length > 0 && (() => {
+              const domains = Array.from(new Set(electiveOptions.map((o) => o.domain || "(no domain set)"))).sort();
+              return domains.length > 1 ? (
+                <select value={electiveDomainFilter} onChange={(e) => setElectiveDomainFilter(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }}>
+                  <option value="">All domains</option>
+                  {domains.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              ) : null;
+            })()}
             {loadingElectives && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading…</p>}
-            {!loadingElectives && electiveOptions
-              .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
-              .map((o) => (
+            {!loadingElectives && (() => {
+              const filtered = electiveOptions
+                .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
+                .filter((o) => !electiveDomainFilter || (o.domain || "(no domain set)") === electiveDomainFilter);
+              return filtered.map((o) => (
                 <button key={o.id} onClick={() => fillElective(o.id)} disabled={loading} style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 8px", border: "1px solid var(--line)", background: "#fff", marginBottom: 4, fontSize: 12, cursor: "pointer" }}>
                   {o.title} {o.domain && <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({o.domain})</span>}
                 </button>
-              ))}
+              ));
+            })()}
             {!loadingElectives && electiveOptions.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>{electiveModalCategory === "Domain IDS" ? "No IDS options found in your institution's curriculum." : "No electives found in your institution's curriculum."}</p>}
+            {!loadingElectives && electiveOptions.length > 0 && electiveOptions
+              .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
+              .filter((o) => !electiveDomainFilter || (o.domain || "(no domain set)") === electiveDomainFilter).length === 0 && (
+              <p style={{ fontSize: 12, color: "var(--slate)" }}>No electives match that search/domain — try clearing the filter above.</p>
+            )}
             <button onClick={() => setElectiveModalCourseId(null)} style={{ marginTop: 10, fontSize: 11.5, background: "none", border: "1px solid var(--line)", padding: "4px 10px", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
