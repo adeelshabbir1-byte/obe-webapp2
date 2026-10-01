@@ -39,7 +39,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
     include: {
       assessmentInstruments: { where: { source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }], include: { evidence: { orderBy: { createdAt: "desc" } } } },
       lectureRows: { where: { source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" }, include: { instrumentLinks: true } },
-      clos: { where: { source: "INSTRUCTOR" } },
+      clos: { where: { source: "INSTRUCTOR" }, orderBy: { orderIndex: "asc" } },
     },
   });
   if (!updated) notFound();

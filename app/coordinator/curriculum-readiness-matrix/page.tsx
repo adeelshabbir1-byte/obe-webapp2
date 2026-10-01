@@ -59,7 +59,7 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
     selectedBatchId
       ? prisma.course.findMany({
           where: { batchId: selectedBatchId },
-          include: { lectureRows: { where: { source: "SE" } }, clos: { where: { source: "SE" } } },
+          include: { lectureRows: { where: { source: "SE" } }, clos: { where: { source: "SE" }, orderBy: { orderIndex: "asc" } } },
           orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
         })
       : [],

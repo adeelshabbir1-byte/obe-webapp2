@@ -16,7 +16,7 @@ function levelFor(actualPct: number, targetPct: number): number {
 export async function computeCoAttainment(courseId: string, criteria?: { cloPct: number; ploPct: number }): Promise<{ rows: CoAttainmentRow[]; poRows: PoAttainmentRow[] }> {
   const passCriteria = criteria || { cloPct: 50, ploPct: 50 };
   const result = await computeResultMate(courseId);
-  const clos = await prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } });
+  const clos = await prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } });
 
   const instruments = await prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } });
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId, source: "INSTRUCTOR" } }, include: { lectureRow: true } });

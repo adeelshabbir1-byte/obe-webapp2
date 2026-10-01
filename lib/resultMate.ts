@@ -4,7 +4,7 @@ export async function computeResultMate(courseId: string) {
   const [enrollments, instruments, clos, course] = await Promise.all([
     prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, include: { student: true } }),
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
-    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
+    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
     prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
   ]);
   // "Best of N" — drop the lowest-scoring Quiz/Assignment items from the
@@ -149,7 +149,7 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
 
   const [instruments, clos] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } }),
-    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
+    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
   ]);
   const links = await prisma.lectureRowInstrument.findMany({
     where: { instrument: { courseId, source: "INSTRUCTOR" } },
@@ -210,7 +210,7 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
 export async function suggestClOReweighting(courseId: string) {
   const [instruments, clos, marks] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } }),
-    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" } }),
+    prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, orderBy: { orderIndex: "asc" } }),
     prisma.studentMark.findMany({ where: { courseId } }),
   ]);
   const links = await prisma.lectureRowInstrument.findMany({
