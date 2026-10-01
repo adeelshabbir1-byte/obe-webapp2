@@ -1,11 +1,20 @@
 import { prisma } from "./db";
 
 export async function computeResultMate(courseId: string) {
-  const [enrollments, instruments, clos] = await Promise.all([
-    prisma.studentEnrollment.findMany({ where: { courseId }, include: { student: true } }),
+  const [enrollments, instruments, clos, course] = await Promise.all([
+    prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, include: { student: true } }),
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
     prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
   ]);
+  // "Best of N" — drop the lowest-scoring Quiz/Assignment items from the
+  // GRADE total only (see schema comment on Course.quizBestOf). CLO/PLO
+  // attainment below is computed from the full instrument set regardless.
+  const bestOfByType: Record<string, number | null> = { Quiz: course?.quizBestOf ?? null, Assignment: course?.assignmentBestOf ?? null };
+  function topKSum(values: number[], k: number | null | undefined): number {
+    if (k === null || k === undefined || k <= 0 || k >= values.length) return values.reduce((s, v) => s + v, 0);
+    return [...values].sort((a, b) => b - a).slice(0, k).reduce((s, v) => s + v, 0);
+  }
 
   const marks = await prisma.studentMark.findMany({ where: { courseId } });
   const marksByStudentInstrument = new Map<string, number>();
@@ -25,15 +34,18 @@ export async function computeResultMate(courseId: string) {
   const ploLabels = Array.from(new Set(clos.filter((c) => c.mappedPlo).map((c) => `PLO-${c.mappedPlo!.number}`)));
 
   const rows = enrollments.map((e) => {
-    let totalPct = 0;
     const byClo: Record<string, number> = Object.fromEntries(cloCodes.map((c) => [c, 0]));
     const byPlo: Record<string, number> = Object.fromEntries(ploLabels.map((p) => [p, 0]));
+    // Weighted value of each marked instrument, bucketed by type — Quiz and
+    // Assignment buckets get "best of N" applied below; everything else
+    // (Midterm, Final, Project, Lab) always counts in full.
+    const weightedByType: Record<string, number[]> = {};
 
     for (const inst of instruments) {
       const raw = marksByStudentInstrument.get(`${e.studentId}:${inst.id}`);
       if (raw === undefined) continue;
       const weighted = (raw / inst.maxScore) * inst.marksPct;
-      totalPct += weighted;
+      (weightedByType[inst.type] ||= []).push(weighted);
 
       const cloId = instrumentToClo.get(inst.id);
       const clo = clos.find((c) => c.id === cloId);
@@ -44,6 +56,11 @@ export async function computeResultMate(courseId: string) {
           byPlo[ploKey] = (byPlo[ploKey] || 0) + (weighted * clo.ploContributionPct) / 100;
         }
       }
+    }
+
+    let totalPct = 0;
+    for (const type of Object.keys(weightedByType)) {
+      totalPct += topKSum(weightedByType[type], bestOfByType[type]);
     }
 
     const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -120,6 +137,7 @@ export async function computeResultMate(courseId: string) {
     ploMaxWeight: Object.fromEntries(Object.entries(ploMaxWeight).map(([k, v]) => [k, round1For(v)])),
     stats: { mean: Math.round(mean * 10) / 10, sd: Math.round(sd * 10) / 10, count: totals.length },
     cutoffsAreSet, savedCutoffs: savedCutoffs.map((c) => ({ letter: c.letter, minPercent: c.minPercent })),
+    bestOf: { quiz: bestOfByType.Quiz, assignment: bestOfByType.Assignment },
   };
 }
 

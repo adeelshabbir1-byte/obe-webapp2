@@ -63,6 +63,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
     cards: [
       { href: "/omc/reports/result-mate", title: "Result Mate", desc: "Per-student marks, CLO/PLO attainment, and relative grading for the class.", hasEditActions: true },
       { href: "/omc/reports/pass-rates", title: "CLO / PLO Pass Rates", desc: "Pass/fail counts per CLO and PLO, plus a histogram of the class's overall score distribution." },
+      { href: "/omc/reports/student-transcript", title: "Student Transcript", desc: "Two separate views per student: Transcript 1 (course grades, GPA, CGPA) and Transcript 2 (CLO/PLO attainment, pass/fail per outcome)." },
       { href: "/omc/reports/course-offering-map", title: "Course Offering Map", desc: "Which courses are offered, who's teaching them, and how many students are enrolled — visually, by semester." },
     ],
   },
@@ -71,6 +72,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
     desc: "Faculty load and section-sharing efficiency.",
     cards: [
       { href: "/omc/section-utilization", title: "Combined-Section Utilization", desc: "How many sections Course Equivalence groups are saving vs. teaching separately." },
+      { href: "/omc/reports/timetable", title: "Institution Timetable", desc: "The full generated timetable across the institution, filterable by Room, Batch, Instructor, or Program/Department." },
     ],
   },
 ];

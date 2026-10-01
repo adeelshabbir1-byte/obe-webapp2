@@ -3,31 +3,73 @@
 import { useState } from "react";
 
 type Weights = { assignmentPct: number; quizPct: number; projectPct: number; labPct: number; midtermPct: number; finalPct: number };
+type Counts = { assignmentCount: number | null; quizCount: number | null; projectCount: number | null; labCount: number | null; midtermCount: number | null; finalCount: number | null };
+type BestOf = { quizBestOf: number | null; assignmentBestOf: number | null };
 type Policy = {
   assignmentMin: number; assignmentMax: number; quizMin: number; quizMax: number;
   projectMin: number; projectMax: number; labMin: number; labMax: number;
   midtermMin: number; midtermMax: number; finalMin: number; finalMax: number;
 } | null;
+type PolicyMinCount = {
+  assignmentMinCount: number; quizMinCount: number; projectMinCount: number;
+  labMinCount: number; midtermMinCount: number; finalMinCount: number;
+} | null;
 
-const ROWS: { key: keyof Weights; label: string; minKey: string; maxKey: string }[] = [
-  { key: "assignmentPct", label: "Assignment", minKey: "assignmentMin", maxKey: "assignmentMax" },
-  { key: "quizPct", label: "Quiz", minKey: "quizMin", maxKey: "quizMax" },
-  { key: "projectPct", label: "Project", minKey: "projectMin", maxKey: "projectMax" },
-  { key: "labPct", label: "Lab", minKey: "labMin", maxKey: "labMax" },
-  { key: "midtermPct", label: "Midterm", minKey: "midtermMin", maxKey: "midtermMax" },
-  { key: "finalPct", label: "Final", minKey: "finalMin", maxKey: "finalMax" },
+const ROWS: { key: keyof Weights; countKey: keyof Counts; bestOfKey?: keyof BestOf; label: string; minKey: string; maxKey: string; minCountKey: string; itemNoun: string }[] = [
+  { key: "assignmentPct", countKey: "assignmentCount", bestOfKey: "assignmentBestOf", label: "Assignment", minKey: "assignmentMin", maxKey: "assignmentMax", minCountKey: "assignmentMinCount", itemNoun: "assignment(s)" },
+  { key: "quizPct", countKey: "quizCount", bestOfKey: "quizBestOf", label: "Quiz", minKey: "quizMin", maxKey: "quizMax", minCountKey: "quizMinCount", itemNoun: "quiz(zes)" },
+  { key: "projectPct", countKey: "projectCount", label: "Project", minKey: "projectMin", maxKey: "projectMax", minCountKey: "projectMinCount", itemNoun: "project(s)" },
+  { key: "labPct", countKey: "labCount", label: "Lab", minKey: "labMin", maxKey: "labMax", minCountKey: "labMinCount", itemNoun: "lab task(s)" },
+  { key: "midtermPct", countKey: "midtermCount", label: "Midterm", minKey: "midtermMin", maxKey: "midtermMax", minCountKey: "midtermMinCount", itemNoun: "question(s)" },
+  { key: "finalPct", countKey: "finalCount", label: "Final", minKey: "finalMin", maxKey: "finalMax", minCountKey: "finalMinCount", itemNoun: "question(s)" },
 ];
 
-export default function WeightsForm({ courseId, current, policy, hasLab }: { courseId: string; current: Weights; policy: Policy; hasLab: boolean }) {
+export default function WeightsForm({ courseId, current, currentCounts, currentBestOf, policy, policyMinCount, hasLab }: {
+  courseId: string; current: Weights; currentCounts?: Counts; currentBestOf?: BestOf; policy: Policy; policyMinCount?: PolicyMinCount; hasLab: boolean;
+}) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
   const [pending, setPending] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [confirming, setConfirming] = useState<{ values: Weights; violations: string[] } | null>(null);
+  const [confirming, setConfirming] = useState<{ values: Weights; counts: Counts; bestOf: BestOf; violations: string[] } | null>(null);
   const [values, setValues] = useState<Weights>(current);
+
+  // Best-of starts equal to the item count (count all, drop nothing) —
+  // the SE only has to lower it for categories where some should be
+  // dropped (e.g. best 3 of 5 quizzes).
+  const [bestOf, setBestOfState] = useState<BestOf>(() => ({
+    quizBestOf: currentBestOf?.quizBestOf ?? (currentCounts?.quizCount ?? null),
+    assignmentBestOf: currentBestOf?.assignmentBestOf ?? (currentCounts?.assignmentCount ?? null),
+  }));
+
+  // Each count defaults to the OMC's minimum (or 1 if there's no policy)
+  // the first time this form is opened — the SE only has to raise it for
+  // categories that need more than the minimum.
+  const [counts, setCounts] = useState<Counts>(() => {
+    const result: any = {};
+    for (const r of ROWS) {
+      const saved = currentCounts?.[r.countKey];
+      const min = policyMinCount ? (policyMinCount as any)[r.minCountKey] : null;
+      result[r.countKey] = saved ?? (min !== null && min !== undefined ? min : 1);
+    }
+    return result;
+  });
 
   function setField(key: keyof Weights, raw: string) {
     setValues((prev) => ({ ...prev, [key]: raw === "" ? 0 : Number(raw) }));
+  }
+
+  function setCount(key: keyof Counts, raw: string, min: number) {
+    const n = raw === "" ? min : Math.max(min, Number(raw) || 0);
+    setCounts((prev) => ({ ...prev, [key]: n }));
+    // Keep best-of from silently exceeding a lowered count.
+    const bestOfKey = key === "quizCount" ? "quizBestOf" : key === "assignmentCount" ? "assignmentBestOf" : null;
+    if (bestOfKey) setBestOfState((prev) => ({ ...prev, [bestOfKey]: Math.min(prev[bestOfKey] ?? n, n) }));
+  }
+
+  function setBestOf(key: keyof BestOf, raw: string, count: number) {
+    const n = raw === "" ? count : Math.max(1, Math.min(count, Number(raw) || 1));
+    setBestOfState((prev) => ({ ...prev, [key]: n }));
   }
 
   function checkViolations(vals: Weights): string[] {
@@ -42,12 +84,12 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
     return violations;
   }
 
-  async function submitValues(vals: Weights) {
+  async function submitValues(vals: Weights, cts: Counts, bo: BestOf) {
     setLoading(true); setError(""); setOk(false); setPending(null); setConfirming(null);
     try {
       const res = await fetch(`/api/subjectexpert/courses/${courseId}/weights`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(vals),
+        body: JSON.stringify({ ...vals, ...cts, ...bo }),
       });
       const data = await res.json();
       if (res.status === 202 && data.pendingApproval) {
@@ -63,10 +105,10 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
     setError(""); setOk(false); setPending(null);
     const violations = checkViolations(values);
     if (violations.length > 0) {
-      setConfirming({ values, violations });
+      setConfirming({ values, counts, bestOf, violations });
       return;
     }
-    submitValues(values);
+    submitValues(values, counts, bestOf);
   }
 
   const total = ROWS.reduce((s, r) => s + (values[r.key] ?? 0), 0);
@@ -90,7 +132,7 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
           <ul style={{ margin: "6px 0 10px", paddingLeft: 18 }}>{confirming.violations.map((v) => <li key={v}>{v}</li>)}</ul>
           <p style={{ marginBottom: 10 }}>Do you want to send this for OMC approval, or go back and adjust the values to stay within range?</p>
           <div style={{ display: "flex", gap: 10 }}>
-            <button type="button" onClick={() => submitValues(confirming.values)} disabled={loading} className="btn btn-brass">
+            <button type="button" onClick={() => submitValues(confirming.values, confirming.counts, confirming.bestOf)} disabled={loading} className="btn btn-brass">
               {loading ? "Sending…" : "Send for OMC Approval"}
             </button>
             <button type="button" onClick={() => setConfirming(null)} style={{ background: "none", border: "1px solid var(--line)", padding: "6px 12px", cursor: "pointer" }}>
@@ -108,13 +150,17 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
               <th>OMC Min %</th>
               <th>OMC Max %</th>
               <th>Your %</th>
+              <th># of Items</th>
+              <th>Best Of</th>
             </tr>
           </thead>
           <tbody>
             {ROWS.map((r) => {
               const min = policy ? (policy as any)[r.minKey] : null;
               const max = policy ? (policy as any)[r.maxKey] : null;
+              const minCount = policyMinCount ? (policyMinCount as any)[r.minCountKey] : 0;
               const isLabLocked = r.key === "labPct" && !hasLab;
+              const count = counts[r.countKey] ?? minCount ?? 1;
               return (
                 <tr key={r.key} style={isLabLocked ? { opacity: 0.55 } : undefined}>
                   <td style={{ fontWeight: 600 }}>{r.label}{isLabLocked && <span style={{ fontWeight: 400, fontSize: 10.5, color: "var(--slate)" }}> (no lab component)</span>}</td>
@@ -128,12 +174,34 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
                       style={{ width: 70, padding: "5px 6px", border: "1px solid var(--line)", background: isLabLocked ? "var(--paper)" : undefined }}
                     />
                   </td>
+                  <td>
+                    <input
+                      name={r.countKey} type="number" min={minCount || 0} value={isLabLocked ? 0 : count}
+                      disabled={isLabLocked} readOnly={isLabLocked}
+                      onChange={(e) => setCount(r.countKey, e.target.value, minCount || 0)}
+                      title={minCount ? `OMC minimum: ${minCount} ${r.itemNoun}` : undefined}
+                      style={{ width: 60, padding: "5px 6px", border: "1px solid var(--line)", background: isLabLocked ? "var(--paper)" : undefined }}
+                    />
+                    {!isLabLocked && minCount > 0 && <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>min {minCount}</div>}
+                  </td>
+                  <td>
+                    {r.bestOfKey ? (
+                      <input
+                        name={r.bestOfKey} type="number" min={1} max={count} value={bestOf[r.bestOfKey] ?? count}
+                        onChange={(e) => setBestOf(r.bestOfKey!, e.target.value, count)}
+                        title={`Count only the best ${bestOf[r.bestOfKey] ?? count} of ${count} toward the grade`}
+                        style={{ width: 60, padding: "5px 6px", border: "1px solid var(--line)" }}
+                      />
+                    ) : <span style={{ color: "var(--slate)" }}>—</span>}
+                  </td>
                 </tr>
               );
             })}
             <tr style={{ fontWeight: 700, borderTop: "2px solid var(--line)" }}>
               <td colSpan={3}></td>
               <td style={{ color: total === 100 ? "var(--sage)" : "var(--rust)" }}>{total}%</td>
+              <td></td>
+              <td></td>
             </tr>
           </tbody>
         </table>
@@ -141,6 +209,14 @@ export default function WeightsForm({ courseId, current, policy, hasLab }: { cou
         <div style={{ fontSize: 11, color: total === 100 ? "var(--slate)" : "var(--rust)", marginTop: 6 }}>
           {total === 100 ? "Must total exactly 100%." : `Currently totals ${total}% — must be exactly 100% to save.`}
         </div>
+        <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>
+          "# of Items" is how many separate quizzes/assignments/exam questions you want for that category — pre-filled from
+          the OMC's minimum, raise it if you want more. Saving creates them on the Assessments & Submit tab automatically,
+          splitting that category's % evenly across them, so you won't need to add each one by hand. "Best Of" (Quiz and
+          Assignment only) drops the lowest-scoring item(s) from each student's final grade — e.g. best 3 of 5 quizzes
+          counts their top 3 and drops the other 2. This only affects the grade/GPA; CLO/PLO attainment always uses every
+          quiz and assignment, since dropping one there would misrepresent whether that CLO was actually met.
+        </p>
       </form>
     </div>
   );

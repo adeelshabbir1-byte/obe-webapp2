@@ -915,6 +915,10 @@ model StudentEnrollment {
   courseId   String
   course     Course   @relation(fields: [courseId], references: [id])
   isRepeat   Boolean  @default(false)
+  status     String   @default("ACTIVE") // ACTIVE | WITHDRAWN — set by Advisor mid-semester
+  withdrawnAt    DateTime?
+  withdrawnById  String?
+  withdrawnReason String?
   createdAt  DateTime @default(now())
 
   @@unique([studentId, courseId])
@@ -1193,6 +1197,27 @@ model Course {
   labPct              Int      @default(0)
   midtermPct          Int      @default(25)
   finalPct            Int      @default(40)
+  // How many separate items (quizzes, assignments, exam questions...) the
+  // SE wants for each category — shown on the Assessment Weights tab,
+  // pre-filled from the OMC's policy minimum count and raisable by the SE.
+  // Saving weights auto-creates instruments on the Assessments tab up to
+  // this count (splitting the category % evenly across them) so the SE
+  // doesn't have to add each one by hand. Null means not set yet; the
+  // OMC's minimum (or 1) is used as the default shown in the form.
+  assignmentCount     Int?
+  quizCount           Int?
+  projectCount        Int?
+  labCount            Int?
+  midtermCount        Int?
+  finalCount          Int?
+  // "Best of N" — count only the N best-scoring Quizzes/Assignments toward
+  // the final grade (drop the lowest-scoring ones), e.g. best 3 of 5
+  // quizzes. Null or >= the item count means "count all, drop nothing".
+  // Only affects the GPA/CGPA grade total — CLO/PLO attainment always
+  // uses every instrument, since dropping a quiz there would misrepresent
+  // whether the CLO it tests was actually met.
+  quizBestOf          Int?
+  assignmentBestOf    Int?
   // Set when the SE's weights are saved within the OMC's policy range (or
   // an out-of-range exception is approved) — gates the Assessments &
   // Submit tab, which can't be used until this is set. Null means the

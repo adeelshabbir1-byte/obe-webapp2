@@ -14,6 +14,8 @@ export default async function DegreePlanPage() {
           <h1 style={{ fontSize: 22 }}>Degree Plan</h1>
           <div style={{ display: "flex", gap: 14 }}>
             <a href="/student/registration" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Course Registration</a>
+            <a href="/student/transcript" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Transcript</a>
+            <a href="/student/timetable" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Timetable</a>
             <a href="/student/obe-analytics" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My OBE Progress →</a>
           </div>
         </div>
