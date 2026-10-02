@@ -123,11 +123,19 @@ export async function GET() {
   const terms = Array.from(new Set(batches.map((b) => b.batchName))).sort();
   const programTermMatrix = {
     programs, terms,
+    // Rooms needed is a rough estimate, not an exact minimum: hours needed
+    // divided by how many hours a single room can offer per week (same
+    // per-room week used for the institution-wide availableHoursPerWeek
+    // figures above), rounded up. It assumes perfect back-to-back packing
+    // with no clashes between this program's own sections, which a real
+    // timetable rarely achieves — treat it as a floor, not a guarantee.
     cells: batches.map((b) => {
       const h = hoursByBatch.get(b.id) || { theory: 0, lab: 0 };
       return {
         program: b.degreeProgram, term: b.batchName,
         theoryHours: Math.round(h.theory * 10) / 10, labHours: Math.round(h.lab * 10) / 10,
+        theoryRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.theory / hoursPerWeek) : 0,
+        labRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.lab / hoursPerWeek) : 0,
       };
     }),
   };

@@ -138,7 +138,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     theory: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     lab: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     offeredCoursesCount: number; offeredGroupsCount: number;
-    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number }[] };
+    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number; theoryRoomsNeeded: number; labRoomsNeeded: number }[] };
   };
   const [capacity, setCapacity] = useState<CapacitySummary | null>(null);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
@@ -463,7 +463,10 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                 </p>
 
                 <h4 style={{ fontSize: 12.5, margin: "16px 0 6px" }}>Contact Hours by Program &amp; Term</h4>
-                <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 8 }}>Theory / Lab hours needed per week, this semester — one cell per program's batch in that term.</p>
+                <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 8 }}>
+                  Per cell: hours needed per week, and an estimated minimum room count (hours ÷ hours one room offers per week, rounded up —
+                  assumes perfect back-to-back packing, so treat it as a floor, not a guarantee).
+                </p>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ fontSize: 11.5 }}>
                     <thead>
@@ -480,7 +483,14 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                             const cell = capacity.programTermMatrix.cells.find((c) => c.program === p && c.term === t);
                             return (
                               <td key={t} style={{ textAlign: "center" }}>
-                                {cell ? <>{cell.theoryHours}<span style={{ color: "var(--slate)" }}> th</span> / {cell.labHours}<span style={{ color: "var(--slate)" }}> lab</span></> : <span style={{ color: "var(--line)" }}>—</span>}
+                                {cell ? (
+                                  <>
+                                    <div>{cell.theoryHours}<span style={{ color: "var(--slate)" }}> th-hrs</span> / {cell.labHours}<span style={{ color: "var(--slate)" }}> lab-hrs</span></div>
+                                    <div style={{ color: "var(--brass-dark)", fontSize: 10.5 }}>
+                                      {cell.theoryRoomsNeeded} lecture room{cell.theoryRoomsNeeded === 1 ? "" : "s"} · {cell.labRoomsNeeded} lab{cell.labRoomsNeeded === 1 ? "" : "s"} needed
+                                    </div>
+                                  </>
+                                ) : <span style={{ color: "var(--line)" }}>—</span>}
                               </td>
                             );
                           })}
