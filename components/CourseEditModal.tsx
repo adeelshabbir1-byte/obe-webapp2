@@ -6,7 +6,10 @@ type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: numb
 type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; domain: string | null; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
-const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
+// Keep this in sync with CurriculumDetailManager.tsx's own copy — see the
+// comment there on why "Domain Elective" / "Domain IDS" (not plain
+// "Elective" / "IDS") are what the elective-picking popup actually needs.
+const CATEGORIES = ["General Education", "Core", "Elective", "Domain Elective", "IDS", "Domain IDS", "Certification", "Capstone Project", "Field Experience"];
 const BLOOM_LEVELS = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
 // Every field here — including CLO→PLO mappings and the PLO-suggestion
@@ -24,6 +27,7 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
   const [title, setTitle] = useState(course.title);
   const [creditHours, setCreditHours] = useState(course.creditHours);
   const [category, setCategory] = useState(course.category);
+  const [domain, setDomain] = useState(course.domain ?? "");
   const [semesterNumber, setSemesterNumber] = useState(course.semesterNumber?.toString() ?? "");
   const [prerequisiteCourseId, setPrerequisiteCourseId] = useState(course.prerequisiteCourseId ?? "");
   const [textbook, setTextbook] = useState(course.textbook ?? "");
@@ -77,7 +81,7 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
     try {
       // 1. Main course fields
       const payload = {
-        code, title, creditHours: Number(creditHours), category,
+        code, title, creditHours: Number(creditHours), category, domain: domain || null,
         semesterNumber: semesterNumber ? Number(semesterNumber) : null,
         textbook: textbook || null, catalogDescription: catalogDescription || null, referenceMaterial: referenceMaterial || null,
         prerequisiteCourseId: prerequisiteCourseId || null,
@@ -144,6 +148,10 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
             <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
               {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
             </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Domain</label>
+            <input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. AI" style={{ width: 110, padding: "6px 8px", border: "1px solid var(--line)" }} />
           </div>
           <div>
             <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Semester</label>
