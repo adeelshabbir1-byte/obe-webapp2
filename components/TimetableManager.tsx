@@ -138,6 +138,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     theory: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     lab: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     offeredCoursesCount: number; offeredGroupsCount: number;
+    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number }[] };
   };
   const [capacity, setCapacity] = useState<CapacitySummary | null>(null);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
@@ -460,6 +461,37 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                 <p style={{ fontSize: 10, color: "var(--slate)", marginTop: 10, marginBottom: 0 }}>
                   Room-hour availability is approximate (based on your batches' configured working days/hours) — treat it as a guide, not an exact prediction of the generator's result.
                 </p>
+
+                <h4 style={{ fontSize: 12.5, margin: "16px 0 6px" }}>Contact Hours by Program &amp; Term</h4>
+                <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 8 }}>Theory / Lab hours needed per week, this semester — one cell per program's batch in that term.</p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ fontSize: 11.5 }}>
+                    <thead>
+                      <tr>
+                        <th>Program</th>
+                        {capacity.programTermMatrix.terms.map((t) => <th key={t}>{t}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {capacity.programTermMatrix.programs.map((p) => (
+                        <tr key={p}>
+                          <td style={{ fontWeight: 600 }}>{p}</td>
+                          {capacity.programTermMatrix.terms.map((t) => {
+                            const cell = capacity.programTermMatrix.cells.find((c) => c.program === p && c.term === t);
+                            return (
+                              <td key={t} style={{ textAlign: "center" }}>
+                                {cell ? <>{cell.theoryHours}<span style={{ color: "var(--slate)" }}> th</span> / {cell.labHours}<span style={{ color: "var(--slate)" }}> lab</span></> : <span style={{ color: "var(--line)" }}>—</span>}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                      {capacity.programTermMatrix.programs.length === 0 && (
+                        <tr><td colSpan={capacity.programTermMatrix.terms.length + 1} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </div>
