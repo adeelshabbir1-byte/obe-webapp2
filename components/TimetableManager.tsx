@@ -128,6 +128,29 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   const [runStatus, setRunStatus] = useState<"IDLE" | "RUNNING" | "COMPLETED" | "STOPPED">("IDLE");
   const pollingRef = { current: false } as { current: boolean };
 
+  // Capacity summary — a pre/post-generation health check: how many
+  // courses still need an instructor before they can be scheduled, how
+  // many theory/lab sessions need a slot, how many are combined/clubbed
+  // classes, and whether there's enough room capacity for the demand.
+  type CapacitySummary = {
+    needsAdjustment: { code: string; title: string; reason: string }[];
+    clubbed: { offered: number; withSectionsGenerated: number };
+    theory: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
+    lab: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
+    offeredCoursesCount: number; offeredGroupsCount: number;
+  };
+  const [capacity, setCapacity] = useState<CapacitySummary | null>(null);
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
+  async function loadCapacitySummary() {
+    setLoadingCapacity(true);
+    try {
+      const res = await fetch("/api/coordinator/timetable/capacity-summary");
+      const data = await res.json();
+      if (res.ok) setCapacity(data);
+    } finally { setLoadingCapacity(false); }
+  }
+  useEffect(() => { if (tab === "Generate & View") loadCapacitySummary(); }, [tab]);
+
   async function loadRun(id: string) {
     const res = await fetch(`/api/coordinator/timetable/${id}`);
     const data = await res.json();
@@ -201,7 +224,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       setRunInfo({ hardViolations: data.hardViolations, generations: data.generations, notes: "" });
       setProgressPct(data.percentTimeUsed ?? 0);
       if (data.status === "COMPLETED" || data.status === "STOPPED") {
-        setRunStatus(data.status); setGenerating(false); await loadRun(id); break;
+        setRunStatus(data.status); setGenerating(false); await loadRun(id); await loadCapacitySummary(); break;
       }
       await new Promise((r) => setTimeout(r, 400));
     }
@@ -384,6 +407,63 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
 
       {tab === "Generate & View" && (
         <>
+          <div className="card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ fontSize: 14, margin: 0 }}>Readiness Summary</h3>
+              <button onClick={loadCapacitySummary} disabled={loadingCapacity} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                {loadingCapacity ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+            {!capacity && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading…</p>}
+            {capacity && (
+              <>
+                {capacity.needsAdjustment.length > 0 && (
+                  <div style={{ background: "#FBE2DF", border: "1px solid var(--rust)", borderRadius: 4, padding: "8px 12px", marginBottom: 10, fontSize: 12 }}>
+                    <b>{capacity.needsAdjustment.length} offered course{capacity.needsAdjustment.length > 1 ? "s" : ""} need adjustment</b> before they can be scheduled — no instructor assigned yet.
+                    <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                      {capacity.needsAdjustment.map((c, i) => <li key={i}>{c.code} — {c.title}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>THEORY SESSIONS/WEEK</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{capacity.theory.sessionsPerWeekTotal}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{capacity.theory.sectionsCount} section(s)</div>
+                  </div>
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>LAB SESSIONS/WEEK</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{capacity.lab.sessionsPerWeekTotal}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{capacity.lab.sectionsCount} section(s)</div>
+                  </div>
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>CLUBBED / COMBINED CLASSES</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{capacity.clubbed.withSectionsGenerated}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of {capacity.clubbed.offered} offered</div>
+                  </div>
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "8px 10px", background: capacity.theory.requiredHoursPerWeek > capacity.theory.availableHoursPerWeek ? "#FBE2DF" : undefined }}>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>LECTURE ROOM HOURS</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{capacity.theory.requiredHoursPerWeek} / {capacity.theory.availableHoursPerWeek}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>needed / available ({capacity.theory.roomCount} room{capacity.theory.roomCount === 1 ? "" : "s"})</div>
+                  </div>
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "8px 10px", background: capacity.lab.requiredHoursPerWeek > capacity.lab.availableHoursPerWeek ? "#FBE2DF" : undefined }}>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>LAB ROOM HOURS</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{capacity.lab.requiredHoursPerWeek} / {capacity.lab.availableHoursPerWeek}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--slate)" }}>needed / available ({capacity.lab.roomCount} room{capacity.lab.roomCount === 1 ? "" : "s"})</div>
+                  </div>
+                </div>
+                {(capacity.theory.requiredHoursPerWeek > capacity.theory.availableHoursPerWeek || capacity.lab.requiredHoursPerWeek > capacity.lab.availableHoursPerWeek) && (
+                  <p style={{ fontSize: 11.5, color: "var(--rust)", marginTop: 10, marginBottom: 0 }}>
+                    ⚠ Demand exceeds available room-hours for {capacity.theory.requiredHoursPerWeek > capacity.theory.availableHoursPerWeek && capacity.lab.requiredHoursPerWeek > capacity.lab.availableHoursPerWeek ? "both lecture and lab rooms" : capacity.theory.requiredHoursPerWeek > capacity.theory.availableHoursPerWeek ? "lecture rooms" : "lab rooms"} — expect a high clash count until you add rooms, extend working hours, or reduce sessions.
+                  </p>
+                )}
+                <p style={{ fontSize: 10, color: "var(--slate)", marginTop: 10, marginBottom: 0 }}>
+                  Room-hour availability is approximate (based on your batches' configured working days/hours) — treat it as a guide, not an exact prediction of the generator's result.
+                </p>
+              </>
+            )}
+          </div>
+
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option A: Generate Locally on Your PC (recommended for larger institutions)</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
