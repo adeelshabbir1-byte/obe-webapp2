@@ -5,6 +5,8 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { copyBenchmarkIfAvailable, seedFromMasterCourseIfAvailable } from "../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
 
+const VALID_COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
+
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
@@ -59,6 +61,11 @@ export async function POST(req: NextRequest) {
       code: body.code,
       title: body.title,
       creditHours: parseInt(body.creditHours, 10),
+      // Manually-added courses had no way to be marked as anything other
+      // than the schema default ("Core") before this — a course meant to
+      // be an Elective/Lab/IDS/etc. needs this set explicitly here, since
+      // nothing else corrects it afterward except an explicit Quick Edit.
+      courseType: VALID_COURSE_TYPES.includes(body.courseType) ? body.courseType : "Core",
       coordinatorId: batch.coordinatorId,
       batchId: body.batchId,
       masterCourseId: body.masterCourseId || null,

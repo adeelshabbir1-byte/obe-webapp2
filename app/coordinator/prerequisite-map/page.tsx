@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { courseTypeColor } from "../../../lib/courseTypeColors";
+import { courseLegendEntry } from "../../../lib/courseTypeColors";
 import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
@@ -39,7 +39,12 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
     ? await prisma.course.findMany({ where: { batchId: selectedBatchId }, include: { masterCourse: { select: { category: true } } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] })
     : [];
 
-  const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
+  // Keyed by label (not raw courseType) so an MG-coded "Elective" course
+  // gets its own "University Elective" swatch instead of collapsing into
+  // the same legend entry as a plain domain elective of the same type.
+  const legendEntries = Array.from(
+    new Map(courses.map((c) => courseLegendEntry(c.courseType, c.code)).map((entry) => [entry.label, entry])).values()
+  );
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -94,13 +99,13 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         />
       )}
 
-      {usedTypes.length > 0 && (
+      {legendEntries.length > 0 && (
         <div className="card">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-            {usedTypes.map((t) => (
-              <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
-                {t}
+            {legendEntries.map((entry) => (
+              <span key={entry.label} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 3 }} />
+                {entry.label}
               </span>
             ))}
           </div>

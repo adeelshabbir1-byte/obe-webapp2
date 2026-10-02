@@ -33,13 +33,36 @@ export const COURSE_TYPE_FALLBACK_COLOR = "#574C50";
 const MATH_CODE_PREFIX = /^MT\d/i;
 export const MATH_COURSE_COLOR = "#0F6E5E";
 
+// University Electives (general, non-domain electives — e.g. a Management
+// Science course open to any program) share the same courseType "Elective"
+// as a domain-specific one (AI, Cyber Security, ...) in this schema, so
+// there's nothing on the Course/MasterCourse record itself to tell them
+// apart by type or category — only this institution's own code prefix
+// convention does (MG-###, same idea as the MT-### Math override above).
+const UNIV_ELECTIVE_CODE_PREFIX = /^MG\d/i;
+export const UNIV_ELECTIVE_COURSE_COLOR = "#8C3C26";
+
 // `code` is optional so every existing call site with just a type string
 // (e.g. a type-only legend swatch, where there's no one course to check)
 // keeps working unchanged — only call sites rendering an actual course
-// need to pass its code to get the Math override.
+// need to pass its code to get the Math/University-Elective overrides.
 export function courseTypeColor(type: string, code?: string): string {
-  if (code && MATH_CODE_PREFIX.test(code.trim())) return MATH_COURSE_COLOR;
+  const trimmed = code?.trim();
+  if (trimmed && MATH_CODE_PREFIX.test(trimmed)) return MATH_COURSE_COLOR;
+  if (trimmed && UNIV_ELECTIVE_CODE_PREFIX.test(trimmed)) return UNIV_ELECTIVE_COURSE_COLOR;
   return COURSE_TYPE_COLORS[type] || COURSE_TYPE_FALLBACK_COLOR;
+}
+
+// For a legend/key that lists each distinct color actually in use (rather
+// than one swatch per raw courseType) — so a batch with MG-coded
+// University Electives gets its own labeled swatch instead of silently
+// sharing the plain "Elective" one. Keyed by label so the caller can
+// de-duplicate across many courses.
+export function courseLegendEntry(type: string, code?: string): { label: string; color: string } {
+  const trimmed = code?.trim();
+  if (trimmed && MATH_CODE_PREFIX.test(trimmed)) return { label: "Math", color: MATH_COURSE_COLOR };
+  if (trimmed && UNIV_ELECTIVE_CODE_PREFIX.test(trimmed)) return { label: "University Elective", color: UNIV_ELECTIVE_COURSE_COLOR };
+  return { label: type, color: COURSE_TYPE_COLORS[type] || COURSE_TYPE_FALLBACK_COLOR };
 }
 
 // "Core", "Fundamentals", and the legacy "Major" all mean the same thing —
