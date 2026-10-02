@@ -2,53 +2,28 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
+import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import ConfirmPrerequisitesButton from "../../../components/ConfirmPrerequisitesButton";
 import BatchCoursesQuickEditTable from "../../../components/BatchCoursesQuickEditTable";
 
-const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
-  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
-  { href: "/coordinator/courses", label: "Courses" },
-  { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
-  { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
-  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
-  { href: "/coordinator/plos", label: "Program Learning Outcomes" },
-  { href: "/coordinator/semester", label: "Current Semester" },
-  { href: "/coordinator/timetable", label: "Timetable" },
-  { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
-  { href: "/coordinator/students", label: "Students" },
-  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
-  { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/grading-scale", label: "Grading Scale" },
-  { href: "/coordinator/assignment-history", label: "Assignment History" },
-  { href: "/coordinator/report-bundles", label: "Report Bundles" },
-  { href: "/coordinator/program-profile", label: "Program Document" },
-  { href: "/coordinator/required-books", label: "Required Textbooks" },
-  { href: "/coordinator/student-transcript", label: "Student Transcript" },
-  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
-  { href: "/coordinator/surveys", label: "Feedback Surveys" },
-  { href: "/coordinator/load-report", label: "Teacher Load Report" },
-  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
-  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
-  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
-  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
-  { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
-  { href: "/omc/reports", label: "OMC Reports" },
-];
 
 export default async function PrerequisiteMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
+  // Prerequisite-setting itself is still Program Coordinator-only (see the
+  // /prerequisite API route) — everyone else here is viewing, not editing,
+  // so they can see how a batch's courses sequence without being able to
+  // change it out from under the Coordinator who owns it.
+  if (!["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "OMC", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
+  const canEdit = user.role === "PROGRAM_COORDINATOR";
 
-  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const selectedDegree = searchParams.degree || degrees[0] || "";
   const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);
@@ -67,7 +42,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
   const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Prerequisite Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         One row per semester, boxes color-coded by course type. Click two courses to set a prerequisite link.
@@ -112,7 +87,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         );
       })()}
 
-      {selectedBatchId && (
+      {canEdit && selectedBatchId && (
         <ConfirmPrerequisitesButton
           batchId={selectedBatchId}
           confirmedAt={batchesForDegree.find((b) => b.id === selectedBatchId)?.prerequisitesConfirmedAt?.toISOString() || null}
@@ -135,6 +110,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
       <InteractiveCourseMap
         key={selectedBatchId || "none"}
         mode="prereq"
+        readOnly={!canEdit}
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
@@ -157,7 +133,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         }))}
       />
 
-      {selectedBatchId && (
+      {canEdit && selectedBatchId && (
         <BatchCoursesQuickEditTable
           key={selectedBatchId}
           initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}

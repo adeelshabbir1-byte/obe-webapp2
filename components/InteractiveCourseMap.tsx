@@ -20,7 +20,7 @@ function contactHoursFor(c: Course) {
   return c.courseType === "Lab" ? c.creditHours * 3 : c.creditHours;
 }
 
-export default function InteractiveCourseMap({ courses: initialCoursesProp, mode }: { courses: Course[]; mode: "prereq" | "reposition" }) {
+export default function InteractiveCourseMap({ courses: initialCoursesProp, mode, readOnly }: { courses: Course[]; mode: "prereq" | "reposition"; readOnly?: boolean }) {
   const [initialCourses, setCourses] = useState<Course[]>(initialCoursesProp);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,6 +83,11 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
 
   function onCourseClick(c: Course) {
     if (loading) return;
+    // Visible-but-not-this-role's-to-edit (e.g. a Subject Expert or
+    // Chairman looking at a Coordinator's/OMC's map): still fully
+    // readable, just not clickable — avoids a click silently 403'ing
+    // against an API that only the owning role may call.
+    if (readOnly) return;
     // Being offered for the current term doesn't block choosing which
     // elective this slot actually is -- that's a separate decision from
     // whether the semester's courses have been activated, and the two
@@ -141,7 +146,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   }
 
   function onRowClick(semesterNumber: number) {
-    if (mode !== "reposition" || !selectedId || loading) return;
+    if (readOnly || mode !== "reposition" || !selectedId || loading) return;
     const course = initialCourses.find((c) => c.id === selectedId);
     if (course?.isOffered) { setError("That course is already offered — can't be repositioned."); return; }
     moveToSemester(selectedId, semesterNumber);
@@ -167,7 +172,9 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
       {error && <div className="err">{error}</div>}
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
-          {mode === "prereq"
+          {readOnly
+            ? "View only — this map belongs to a different role. You can see the full layout, prerequisites, and elective slots here, but changing them needs to be done by the role that owns this page."
+            : mode === "prereq"
             ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
             : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. An elective or IDS slot has two separate click targets: click the box itself to choose which real course it is, or click the small ⇅ handle in its top-left corner to select it for moving to a different semester instead.")}
         </p>
@@ -215,11 +222,11 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
               if (!pos) return null;
               const isSelected = selectedId === c.id;
               return (
-                <g key={c.id} style={{ cursor: loading ? "wait" : "pointer" }}>
+                <g key={c.id} style={{ cursor: readOnly ? "default" : loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType, c.code)} opacity={c.isOffered ? 0.5 : 0.9}
                     stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
                   <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
-                  {mode === "reposition" && c.slotCategory && (
+                  {!readOnly && mode === "reposition" && c.slotCategory && (
                     // Elective/IDS boxes already use a plain click to open
                     // the "choose which real course this is" popup
                     // (onCourseClick returns early for any slotCategory
@@ -237,7 +244,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                       <text x={pos.x + 10} y={pos.y + 13.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">⇅</text>
                     </g>
                   )}
-                  {mode === "prereq" && c.prerequisiteCourseId && (
+                  {!readOnly && mode === "prereq" && c.prerequisiteCourseId && (
                     <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>
                       <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#C0312B" />
                       <text x={pos.x + BOX_W - 10} y={pos.y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">×</text>
