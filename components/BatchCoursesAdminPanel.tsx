@@ -138,7 +138,24 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
       </p>
       {error && <div className="err">{error}</div>}
       <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
+        {/*
+          table-layout: fixed + explicit <col> widths, so Code/Credits/Sem/Type
+          stay compact (sized to what they actually hold) and only Title takes
+          the stretchy remaining space — without this, auto layout let the Type
+          dropdown's widest option ("General Education") blow out its column
+          and push Credits/Sem out of view even though the Code/Credits inputs
+          themselves were narrow.
+        */}
+        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: 70 }} />
+            <col />
+            <col style={{ width: 54 }} />
+            <col style={{ width: 46 }} />
+            <col style={{ width: 118 }} />
+            <col style={{ width: 48 }} />
+            <col style={{ width: 48 }} />
+          </colgroup>
           <thead>
             <tr style={{ textAlign: "left" }}>
               <th style={{ padding: "4px 6px" }}>Code</th>
@@ -154,28 +171,28 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
             {courses.map((c) => (
               <tr key={c.id} style={{ borderTop: "1px solid var(--line)" }}>
                 <td style={{ padding: "3px 6px" }}>
-                  <input value={c.code} onChange={(e) => updateLocal(c.id, { code: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: 90, padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  <input value={c.code} onChange={(e) => updateLocal(c.id, { code: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <input value={c.title} onChange={(e) => updateLocal(c.id, { title: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", minWidth: 220, padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  <input value={c.title} onChange={(e) => updateLocal(c.id, { title: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <input type="number" value={c.creditHours} onChange={(e) => updateLocal(c.id, { creditHours: Number(e.target.value) })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: 55, padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  <input type="number" value={c.creditHours} onChange={(e) => updateLocal(c.id, { creditHours: Number(e.target.value) })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <input type="number" min={1} max={8} value={c.semesterNumber ?? ""} onChange={(e) => updateLocal(c.id, { semesterNumber: e.target.value ? Number(e.target.value) : null })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: 50, padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  <input type="number" min={1} max={8} value={c.semesterNumber ?? ""} onChange={(e) => updateLocal(c.id, { semesterNumber: e.target.value ? Number(e.target.value) : null })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <select value={c.courseType} onChange={(e) => { updateLocal(c.id, { courseType: e.target.value }); saveRow({ ...c, courseType: e.target.value }); }} style={{ padding: "4px 6px", border: "1px solid var(--line)" }}>
+                  <select value={c.courseType} onChange={(e) => { updateLocal(c.id, { courseType: e.target.value }); saveRow({ ...c, courseType: e.target.value }); }} style={{ width: "100%", boxSizing: "border-box", padding: "4px 4px", border: "1px solid var(--line)", fontSize: 11 }}>
                     {COURSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </td>
-                <td style={{ padding: "3px 6px", fontSize: 10.5, color: "var(--sage)", minWidth: 50 }}>
-                  {savingId === c.id ? "Saving…" : savedId === c.id ? "Saved ✓" : ""}
+                <td style={{ padding: "3px 6px", fontSize: 10, color: "var(--sage)" }}>
+                  {savingId === c.id ? "Saving…" : savedId === c.id ? "Saved" : ""}
                 </td>
                 <td style={{ padding: "3px 6px" }}>
                   <button type="button" onClick={() => deleteCourse(c)} disabled={deletingId === c.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
-                    {deletingId === c.id ? "Deleting…" : "Delete"}
+                    {deletingId === c.id ? "…" : "Delete"}
                   </button>
                 </td>
               </tr>
