@@ -68,6 +68,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
 
   // Schedule sections
   const [sections, setSections] = useState<Section[]>([]);
+  const [skippedNoInstructor, setSkippedNoInstructor] = useState<{ code: string; title: string }[]>([]);
   async function loadSections() {
     const res = await fetch("/api/coordinator/schedule-sections");
     const data = await res.json();
@@ -81,6 +82,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       const res = await fetch("/api/coordinator/schedule-sections/auto-generate", { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setSkippedNoInstructor(data.skippedNoInstructor || []);
       await loadSections(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -334,6 +336,14 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>Schedulable Sections</h3>
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>One row per (course, instructor) pair that needs a time slot. Auto-generate from your offered courses, then adjust sessions/week, duration, or room type as needed.</p>
           <button onClick={autoGenerateSections} disabled={loading} className="btn btn-brass" style={{ marginBottom: 12 }}>Auto-Generate from Offered Courses</button>
+          {skippedNoInstructor.length > 0 && (
+            <div style={{ background: "#FBE2DF", border: "1px solid var(--rust)", borderRadius: 4, padding: "8px 12px", marginBottom: 12, fontSize: 12 }}>
+              <b>{skippedNoInstructor.length} offered course{skippedNoInstructor.length > 1 ? "s" : ""} skipped</b> — no instructor is assigned yet, so {skippedNoInstructor.length > 1 ? "they" : "it"} cannot appear anywhere on the generated timetable. Assign an instructor on the Primary Instructor Assignment page, then click Auto-Generate again.
+              <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                {skippedNoInstructor.map((s, i) => <li key={i}>{s.code} — {s.title}</li>)}
+              </ul>
+            </div>
+          )}
           <table>
             <thead><tr><th>Course</th><th>Batch</th><th>Instructor</th><th>Section</th><th>Sessions/Week</th><th>Duration (min)</th><th>Room Type</th><th></th></tr></thead>
             <tbody>
@@ -476,6 +486,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                                 }}
                               >
                                 <b>{entry.courseCode}</b> ({entry.sectionLabel})<br />
+                                {entry.courseTitle}<br />
                                 {formatHour(entry.startHour)}–{formatHour(entry.endHour)}<br />
                                 {entry.instructorName}<br />{entry.roomName} · {entry.batchLabel}
                                 {isClashing && <div style={{ color: "var(--rust)", fontWeight: 700, marginTop: 2 }}>⚠ CLASH</div>}

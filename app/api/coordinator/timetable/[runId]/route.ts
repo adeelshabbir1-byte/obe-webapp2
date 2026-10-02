@@ -34,8 +34,9 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
     entries: entries.map((e) => {
       const s = e.scheduleSection;
       const memberBatches = s.group ? s.group.members.map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b) : [];
-      const courseCode = s.course ? s.course.code : s.group!.name;
-      const courseTitle = s.course ? s.course.title : "(Combined / Equivalence Group)";
+      const firstMemberCourse = s.group?.members?.[0]?.course;
+      const courseCode = s.course ? s.course.code : (firstMemberCourse ? firstMemberCourse.code : s.group!.name);
+      const courseTitle = s.course ? s.course.title : (firstMemberCourse ? `${firstMemberCourse.title} (combined)` : "(Combined / Equivalence Group)");
       const batchId = s.course ? (s.course.batch?.id || "") : (memberBatches[0]?.id || "");
       const batchLabel = s.course
         ? (s.course.batch ? `${s.course.batch.degreeProgram} — ${s.course.batch.batchName}` : "—")
