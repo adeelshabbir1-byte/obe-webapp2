@@ -159,7 +159,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     try {
       const res = await fetch("/api/coordinator/courses", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"), batchId: addBatchId }),
+        body: JSON.stringify({ code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"), courseType: fd.get("courseType"), batchId: addBatchId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -480,10 +480,16 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add a Course Manually</h3>
         <form onSubmit={addCourse}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr", gap: 14 }}>
             <div className="field"><label>Course Code</label><input name="code" placeholder="MT 1103" required /></div>
             <div className="field"><label>Course Title</label><input name="title" placeholder="Discrete Structures" required /></div>
             <div className="field"><label>Credit Hours</label><input name="creditHours" type="number" placeholder="3" required /></div>
+            <div className="field">
+              <label>Course Type</label>
+              <select name="courseType" defaultValue="Core">
+                {COURSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
             <div className="field">
               <label>Batch</label>
               <select value={addBatchId} onChange={(e) => setAddBatchId(e.target.value)}>

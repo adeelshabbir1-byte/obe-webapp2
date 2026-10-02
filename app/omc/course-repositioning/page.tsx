@@ -7,7 +7,7 @@ import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import BatchCoursesAdminPanel from "../../../components/BatchCoursesAdminPanel";
-import { courseTypeColor } from "../../../lib/courseTypeColors";
+import { courseLegendEntry } from "../../../lib/courseTypeColors";
 
 export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -39,7 +39,12 @@ export default async function CourseRepositioningPage({ searchParams }: { search
       })
     : [];
 
-  const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
+  // Keyed by label (not raw courseType) so an MG-coded "Elective" course
+  // gets its own "University Elective" swatch instead of collapsing into
+  // the same legend entry as a plain domain elective of the same type.
+  const legendEntries = Array.from(
+    new Map(courses.map((c) => courseLegendEntry(c.courseType, c.code)).map((entry) => [entry.label, entry])).values()
+  );
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -65,13 +70,13 @@ export default async function CourseRepositioningPage({ searchParams }: { search
         </form>
       </div>
 
-      {usedTypes.length > 0 && (
+      {legendEntries.length > 0 && (
         <div className="card">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-            {usedTypes.map((t) => (
-              <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
-                {t}
+            {legendEntries.map((entry) => (
+              <span key={entry.label} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 3 }} />
+                {entry.label}
               </span>
             ))}
           </div>
@@ -109,7 +114,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           key={selectedBatchId}
           batchId={selectedBatchId}
           curriculumId={curriculum?.id || null}
-          initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
+          initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber, courseType: c.courseType }))}
         />
       )}
     </Shell>

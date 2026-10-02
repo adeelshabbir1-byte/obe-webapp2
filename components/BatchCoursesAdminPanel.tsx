@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Course = { id: string; code: string; title: string; creditHours: number; semesterNumber: number | null };
+type Course = { id: string; code: string; title: string; creditHours: number; semesterNumber: number | null; courseType: string };
 type MasterCourse = { id: string; code: string; title: string; category: string; domain: string | null };
+
+const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
 
 // Course Repositioning's own "edit the batch's course list" panel — a
 // trimmed-down version of what the Coordinator's Courses page already
@@ -44,7 +46,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
     try {
       const res = await fetch(`/api/coordinator/courses/${course.id}/edit`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: course.code, title: course.title, creditHours: course.creditHours, semesterNumber: course.semesterNumber }),
+        body: JSON.stringify({ code: course.code, title: course.title, creditHours: course.creditHours, semesterNumber: course.semesterNumber, courseType: course.courseType }),
       });
       const data = await res.json();
       if (!res.ok) { setError(`${course.code || "(row)"}: ${data.error || "Something went wrong."}`); setSavingId(null); return; }
@@ -111,7 +113,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
     try {
       const res = await fetch("/api/coordinator/courses", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"), batchId }),
+        body: JSON.stringify({ code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"), courseType: fd.get("courseType"), batchId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setAdding(false); return; }
@@ -143,6 +145,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
               <th style={{ padding: "4px 6px" }}>Title</th>
               <th style={{ padding: "4px 6px" }}>Credits</th>
               <th style={{ padding: "4px 6px" }}>Sem</th>
+              <th style={{ padding: "4px 6px" }}>Type</th>
               <th style={{ padding: "4px 6px" }}></th>
               <th style={{ padding: "4px 6px" }}></th>
             </tr>
@@ -162,6 +165,11 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
                 <td style={{ padding: "3px 6px" }}>
                   <input type="number" min={1} max={8} value={c.semesterNumber ?? ""} onChange={(e) => updateLocal(c.id, { semesterNumber: e.target.value ? Number(e.target.value) : null })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: 50, padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
+                <td style={{ padding: "3px 6px" }}>
+                  <select value={c.courseType} onChange={(e) => { updateLocal(c.id, { courseType: e.target.value }); saveRow({ ...c, courseType: e.target.value }); }} style={{ padding: "4px 6px", border: "1px solid var(--line)" }}>
+                    {COURSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </td>
                 <td style={{ padding: "3px 6px", fontSize: 10.5, color: "var(--sage)", minWidth: 50 }}>
                   {savingId === c.id ? "Saving…" : savedId === c.id ? "Saved ✓" : ""}
                 </td>
@@ -172,7 +180,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
                 </td>
               </tr>
             ))}
-            {courses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)", padding: "6px" }}>No courses in this batch yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)", padding: "6px" }}>No courses in this batch yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -195,6 +203,12 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
           <div>
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Credit Hours</label>
             <input name="creditHours" type="number" required style={{ width: 70, padding: "4px 6px", border: "1px solid var(--line)" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Course Type</label>
+            <select name="courseType" defaultValue="Core" style={{ padding: "4px 6px", border: "1px solid var(--line)" }}>
+              {COURSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
           <button type="submit" className="btn btn-brass" disabled={adding}>{adding ? "Adding…" : "Add"}</button>
         </form>
