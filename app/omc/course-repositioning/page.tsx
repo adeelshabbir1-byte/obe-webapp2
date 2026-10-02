@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
+import { findOwnInstitutionCurriculum } from "../../../lib/institutionCurriculum";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
+import BatchCoursesAdminPanel from "../../../components/BatchCoursesAdminPanel";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
 
 export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -18,10 +20,16 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   // drag a course into a new row.
   if (!["OMC", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
   const canEdit = user.role === "OMC";
+  // Adding, deleting, and quick-editing a batch's courses (below the map)
+  // is OMC-or-Coordinator — same institution-wide scope the underlying
+  // API routes now accept — but not Subject Expert or Chairman, who are
+  // here to view the sequencing, not change the batch's course list.
+  const canManageCourses = user.role === "OMC" || user.role === "PROGRAM_COORDINATOR";
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const selectedBatchId = searchParams.batchId || batches[0]?.id || "";
+  const curriculum = canManageCourses ? await findOwnInstitutionCurriculum(user.id) : null;
 
   const courses = selectedBatchId
     ? await prisma.course.findMany({
@@ -95,6 +103,15 @@ export default async function CourseRepositioningPage({ searchParams }: { search
             : null,
         }))}
       />
+
+      {canManageCourses && selectedBatchId && (
+        <BatchCoursesAdminPanel
+          key={selectedBatchId}
+          batchId={selectedBatchId}
+          curriculumId={curriculum?.id || null}
+          initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
+        />
+      )}
     </Shell>
   );
 }

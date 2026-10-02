@@ -8,7 +8,13 @@ import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") {
+  // Owning Coordinator imports into their own batch directly; OMC can
+  // import into any batch belonging to a Coordinator under their own
+  // Chairman — same institution-wide scope OMC already has elsewhere on
+  // the Course Repositioning page. Every imported course is still
+  // attributed to that batch's own Coordinator (coordinatorId below),
+  // never to the OMC member performing the import.
+  if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -19,10 +25,11 @@ export async function POST(req: NextRequest) {
   if (!body.curriculumId) {
     return NextResponse.json({ error: "curriculumId is required — select which master curriculum to import" }, { status: 400 });
   }
-  const batch = await prisma.batch.findUnique({ where: { id: body.batchId } });
-  if (!batch || batch.coordinatorId !== user.id) {
-    return NextResponse.json({ error: "invalid batch" }, { status: 400 });
-  }
+  const batch = await prisma.batch.findUnique({ where: { id: body.batchId }, include: { coordinator: true } });
+  if (!batch) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  if (user.role === "PROGRAM_COORDINATOR" && batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  if (user.role === "OMC" && batch.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  const ownerId = batch.coordinatorId; // whoever this batch's actual Coordinator is — courses stay attributed to them regardless of who's acting
 
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: body.curriculumId },
@@ -30,13 +37,15 @@ export async function POST(req: NextRequest) {
   });
   if (!curriculum) return NextResponse.json({ error: "curriculum not found" }, { status: 404 });
 
-  // Defense in depth: the frontend only ever offers this coordinator's
-  // own institution's curriculum (via findOwnInstitutionCurriculum), but
-  // this endpoint shouldn't simply trust whatever curriculumId it's
-  // handed — a stale client, a direct API call, or a future UI bug could
-  // otherwise import courses linked to a DIFFERENT institution's clone,
-  // which is exactly how courses ended up mis-linked historically.
-  const owningChairmanId = await findOwningChairmanId(user.id);
+  // Defense in depth: the frontend only ever offers this institution's
+  // own curriculum (via findOwnInstitutionCurriculum), but this endpoint
+  // shouldn't simply trust whatever curriculumId it's handed — a stale
+  // client, a direct API call, or a future UI bug could otherwise import
+  // courses linked to a DIFFERENT institution's clone, which is exactly
+  // how courses ended up mis-linked historically. Scoped to the batch's
+  // own Coordinator's institution, not the acting user's, so this check
+  // means the same thing whether a Coordinator or OMC triggers it.
+  const owningChairmanId = await findOwningChairmanId(ownerId);
   const curriculumBelongsHere = curriculum.chairmanId === null || curriculum.chairmanId === owningChairmanId;
   if (!curriculumBelongsHere) {
     return NextResponse.json({ error: "that curriculum doesn't belong to your institution" }, { status: 403 });
@@ -46,8 +55,8 @@ export async function POST(req: NextRequest) {
   // the loop below — the per-course version of this was slow enough on a
   // 40+ course curriculum to time out the request.
   const [existingInBatch, benchmarkCandidates] = await Promise.all([
-    prisma.course.findMany({ where: { coordinatorId: user.id, batchId: batch.id }, select: { code: true, masterCourseId: true, courseType: true } }),
-    getBenchmarkCandidates(user.id),
+    prisma.course.findMany({ where: { coordinatorId: ownerId, batchId: batch.id }, select: { code: true, masterCourseId: true, courseType: true } }),
+    getBenchmarkCandidates(ownerId),
   ]);
   const existingCodes = new Set(existingInBatch.map((c) => c.code));
   const importedIds = new Set(existingInBatch.map((c) => c.masterCourseId).filter(Boolean));
@@ -79,12 +88,12 @@ export async function POST(req: NextRequest) {
           code, title, creditHours: mc.creditHours,
           courseType: mc.category, semesterNumber: mc.semesterNumber,
           textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
-          coordinatorId: user.id, batchId: batch.id, masterCourseId: mc.id,
+          coordinatorId: ownerId, batchId: batch.id, masterCourseId: mc.id,
         },
       });
       created++;
 
-      const benchmark = await copyBenchmarkIfAvailable(newCourse.id, user.id, mc.id, code, benchmarkCandidates);
+      const benchmark = await copyBenchmarkIfAvailable(newCourse.id, ownerId, mc.id, code, benchmarkCandidates);
       if (benchmark) benchmarksCopied++;
       else await seedFromMasterCourseIfAvailable(newCourse.id, mc.id);
     } catch (err: any) {

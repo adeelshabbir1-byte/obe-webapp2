@@ -6,7 +6,7 @@ import { prisma } from "../../../../../../lib/db";
 // courses to import" checklist — grouped client-side by category/domain.
 export async function GET(req: Request, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const courses = await prisma.masterCourse.findMany({
     where: { masterCurriculumId: params.curriculumId },

@@ -5,11 +5,17 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") {
+  // Owning Coordinator edits their own course directly; OMC can edit any
+  // course in a batch belonging to a Coordinator under their own
+  // Chairman — same institution-wide scope OMC already has for
+  // repositioning and filling elective slots on this same page.
+  if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const course = await prisma.course.findUnique({ where: { id: params.courseId } });
-  if (!course || course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { coordinator: true } });
+  if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (user.role === "PROGRAM_COORDINATOR" && course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (user.role === "OMC" && course.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
   if (!body.code || !body.title || !body.creditHours) {
@@ -17,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   }
 
   if (body.code !== course.code) {
-    const clash = await prisma.course.findFirst({ where: { coordinatorId: user.id, batchId: course.batchId, code: body.code, NOT: { id: course.id } } });
+    const clash = await prisma.course.findFirst({ where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: body.code, NOT: { id: course.id } } });
     if (clash) return NextResponse.json({ error: "another course in this batch already uses this code" }, { status: 409 });
   }
 
