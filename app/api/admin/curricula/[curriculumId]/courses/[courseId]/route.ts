@@ -22,7 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
     where: { id: params.courseId },
     data: {
       code: body.code, title: body.title, creditHours: parseInt(body.creditHours, 10),
-      category: body.category, semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
+      category: body.category, domain: body.domain !== undefined ? (body.domain || null) : course.domain,
+      semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
       textbook: body.textbook !== undefined ? (body.textbook || null) : course.textbook,
       catalogDescription: body.catalogDescription !== undefined ? (body.catalogDescription || null) : course.catalogDescription,
       referenceMaterial: body.referenceMaterial !== undefined ? (body.referenceMaterial || null) : course.referenceMaterial,
