@@ -2,50 +2,20 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
+import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 
-const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
-  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
-  { href: "/coordinator/courses", label: "Courses" },
-  { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
-  { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
-  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
-  { href: "/coordinator/plos", label: "Program Learning Outcomes" },
-  { href: "/coordinator/semester", label: "Current Semester" },
-  { href: "/coordinator/timetable", label: "Timetable" },
-  { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
-  { href: "/coordinator/students", label: "Students" },
-  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
-  { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/grading-scale", label: "Grading Scale" },
-  { href: "/coordinator/assignment-history", label: "Assignment History" },
-  { href: "/coordinator/report-bundles", label: "Report Bundles" },
-  { href: "/coordinator/program-profile", label: "Program Document" },
-  { href: "/coordinator/required-books", label: "Required Textbooks" },
-  { href: "/coordinator/student-transcript", label: "Student Transcript" },
-  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
-  { href: "/coordinator/surveys", label: "Feedback Surveys" },
-  { href: "/coordinator/load-report", label: "Teacher Load Report" },
-  { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
-  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
-  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
-  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
-  { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
-  { href: "/omc/reports", label: "OMC Reports" },
-];
 
 export default async function ProgramSemesterMapPage({ searchParams }: { searchParams: { degree?: string; term?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
+  if (!["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "OMC", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
 
-  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const coordinatorIds = await coordinatorIdsFor(user);
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const selectedDegree = searchParams.degree || degrees[0] || "";
   const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);
@@ -103,7 +73,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
   }
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Semester Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every currently-offered course across all of a program's batches, one row per semester, with who's

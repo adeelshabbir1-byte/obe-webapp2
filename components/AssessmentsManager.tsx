@@ -429,6 +429,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <SortableTable>
             <thead>
               <tr>
+                <th style={{ verticalAlign: "bottom" }}>Sr#</th>
                 <th style={{ verticalAlign: "bottom" }}>Topic</th>
                 {checkboxInstruments.map((i) => (
                   <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}>{i.type} {i.label}</th>
@@ -445,6 +446,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 // using <th> here would double up the header count and
                 // throw off the column index the real sort logic uses.
                 <tr style={{ background: "#FAFAF8", fontWeight: 600 }}>
+                  <td></td>
                   <td style={{ fontSize: 12 }}>Total</td>
                   {checkboxInstruments.map((i) => <td key={i.id}></td>)}
                   {hasMidterm && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
@@ -455,7 +457,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
               )}
             </thead>
             <tbody>
-              {groups.map((g) => {
+              {groups.map((g, idx) => {
                 const rowIds = g.rows.map((r) => r.id);
                 const first = g.rows[0];
                 const lectureLabel = g.rows.length === 1
@@ -464,6 +466,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
                 return (
                 <tr key={g.key}>
+                  <td style={{ fontSize: 12, color: "var(--slate)" }}>{idx + 1}</td>
                   <td style={{ fontSize: 12 }}>
                     {lectureLabel} — {g.key}
                     {g.rows.length > 1 && <span style={{ color: "var(--slate)" }}> ({g.rows.length} lec)</span>}
@@ -510,7 +513,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           screen — nothing is saved (and the Weight column won't update) until you click "Save Mapping Changes" above.
           A Midterm/Final Q# box is shaded once a question number is entered in it, so filled-in cells are easy to
           spot at a glance. Click a column header to sort by it — click again to reverse, and a third click returns
-          the table to its original week/lecture order.
+          the table to its original week/lecture order. The "Sr#" column always keeps each row's original position —
+          click its header once to jump straight back to that order after sorting by anything else.
         </p>
       </div>
     </>

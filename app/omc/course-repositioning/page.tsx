@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { coordinatorIdsFor } from "../../../lib/reportScope";
-import { OMC_ACTION_NAV } from "../../../components/reportNav";
+import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
+import { findOwnInstitutionCurriculum } from "../../../lib/institutionCurriculum";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
+import BatchCoursesAdminPanel from "../../../components/BatchCoursesAdminPanel";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
 
 export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -12,11 +14,22 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "OMC") redirect("/dashboard");
+  // Actually moving a course to a different semester is still OMC-only
+  // (see the /reposition API route) — Coordinators, Subject Experts, and
+  // the Chairman can see the same map here, just without being able to
+  // drag a course into a new row.
+  if (!["OMC", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
+  const canEdit = user.role === "OMC";
+  // Adding, deleting, and quick-editing a batch's courses (below the map)
+  // is OMC-or-Coordinator — same institution-wide scope the underlying
+  // API routes now accept — but not Subject Expert or Chairman, who are
+  // here to view the sequencing, not change the batch's course list.
+  const canManageCourses = user.role === "OMC" || user.role === "PROGRAM_COORDINATOR";
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const selectedBatchId = searchParams.batchId || batches[0]?.id || "";
+  const curriculum = canManageCourses ? await findOwnInstitutionCurriculum(user.id) : null;
 
   const courses = selectedBatchId
     ? await prisma.course.findMany({
@@ -29,7 +42,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   const usedTypes = Array.from(new Set(courses.map((c) => c.courseType)));
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Repositioning</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Move an HEC-approved course to a different semester before it's offered — click a course, then a
@@ -68,6 +81,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
       <InteractiveCourseMap
         key={selectedBatchId || "none"}
         mode="reposition"
+        readOnly={!canEdit}
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
@@ -89,6 +103,15 @@ export default async function CourseRepositioningPage({ searchParams }: { search
             : null,
         }))}
       />
+
+      {canManageCourses && selectedBatchId && (
+        <BatchCoursesAdminPanel
+          key={selectedBatchId}
+          batchId={selectedBatchId}
+          curriculumId={curriculum?.id || null}
+          initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
+        />
+      )}
     </Shell>
   );
 }

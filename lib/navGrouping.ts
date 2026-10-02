@@ -5,14 +5,20 @@ type Section = { title: string; links: Link[] };
 // lets Shell group any flat nav array without every page needing to change
 // how it passes navLinks.
 const RULES: { match: (href: string) => boolean; section: string }[] = [
+  // Shared across every role that can reach them (PC, SE, OMC, Chairman) —
+  // matched first, before any role-specific rule below, so these three
+  // always land together in one section no matter which role's nav list
+  // they're coming from or which URL prefix they happen to live under.
+  { match: (h) => /\/coordinator\/prerequisite-map$/.test(h) || /\/omc\/course-repositioning$/.test(h) || /\/coordinator\/program-semester-map$/.test(h), section: "Program & Course Mapping" },
+
   // Coordinator
-  { match: (h) => /\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale|prerequisite-map)$/.test(h), section: "Setup" },
+  { match: (h) => /\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale)$/.test(h), section: "Setup" },
   { match: (h) => /\/coordinator\/(semester|repeat-offering)$/.test(h), section: "Semester Operations" },
   { match: (h) => /\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest)$/.test(h), section: "Reports & Analytics" },
 
   // OMC
   { match: (h) => /\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h), section: "Review & Approval" },
-  { match: (h) => /\/omc\/(plo-matrix|weight-policy|equivalence|course-repositioning)$/.test(h), section: "Curriculum Governance" },
+  { match: (h) => /\/omc\/(plo-matrix|weight-policy|equivalence)$/.test(h), section: "Curriculum Governance" },
 
   // Chairman
   { match: (h) => /\/chairman\/(coordinators|omc|assigners)$/.test(h), section: "Accounts" },

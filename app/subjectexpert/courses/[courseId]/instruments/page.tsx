@@ -27,7 +27,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
     include: {
       assessmentInstruments: { where: { source: "SE" }, orderBy: [{ type: "asc" }, { label: "asc" }], include: { evidence: { orderBy: { createdAt: "desc" } } } },
       lectureRows: { where: { source: "SE" }, orderBy: { lectureNumber: "asc" }, include: { instrumentLinks: true } },
-      clos: { where: { source: "SE" } },
+      clos: { where: { source: "SE" }, orderBy: { orderIndex: "asc" } },
       coordinator: true,
     },
   });

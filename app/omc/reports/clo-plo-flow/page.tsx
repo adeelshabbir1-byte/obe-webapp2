@@ -26,7 +26,7 @@ export default async function CloPloFlowPage({ searchParams }: { searchParams: {
 
   const [instruments, clos, links] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId: selectedCourseId, source: "SE" } }),
-    prisma.cLO.findMany({ where: { courseId: selectedCourseId, source: "SE" }, include: { mappedPlo: true } }),
+    prisma.cLO.findMany({ where: { courseId: selectedCourseId, source: "SE" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
     prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId: selectedCourseId, source: "SE" } }, include: { lectureRow: true } }),
   ]);
   const instrumentToClo = new Map<string, string>();

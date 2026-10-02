@@ -15,7 +15,9 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/content-sync", label: "Content Sync" },
   { href: "/omc/prerequisite-correlation", label: "Prerequisite Correlation" },
   { href: "/omc/master-curriculum", label: "Master Curriculum" },
+  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/omc/section-comparison", label: "Section Comparison" },
   { href: "/omc/passing-criteria", label: "Passing Criteria" },
   { href: "/chairman/cqi", label: "CQI Records" },
@@ -35,6 +37,9 @@ export const INSTRUCTOR_NAV = [
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },
   { href: "/instructor/timetable", label: "My Timetable" },
+  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/omc/course-repositioning", label: "Course Repositioning" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/advisor/dashboard", label: "Advisor Dashboard" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/faculty/my-availability", label: "My Availability" },
@@ -67,6 +72,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
 ];
@@ -79,6 +85,9 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/assigners", label: "Course Assigners" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" },
+  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/omc/course-repositioning", label: "Course Repositioning" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/omc/reports", label: "Reports" },
 ];

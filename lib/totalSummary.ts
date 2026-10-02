@@ -3,7 +3,7 @@ import { prisma } from "./db";
 export async function computeTotalSummary(courseId: string) {
   const [lectureRows, clos, instrumentLinks] = await Promise.all([
     prisma.lectureRow.findMany({ where: { courseId, source: "SE" }, orderBy: { lectureNumber: "asc" }, include: { clo: { include: { mappedPlo: true } } } }),
-    prisma.cLO.findMany({ where: { courseId, source: "SE" }, include: { mappedPlo: true } }),
+    prisma.cLO.findMany({ where: { courseId, source: "SE" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
     prisma.lectureRowInstrument.findMany({ where: { lectureRow: { courseId, source: "SE" } }, include: { instrument: true, lectureRow: true } }),
   ]);
 

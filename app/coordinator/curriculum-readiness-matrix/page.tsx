@@ -35,6 +35,7 @@ const NAV = [
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
 ];
@@ -59,7 +60,7 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
     selectedBatchId
       ? prisma.course.findMany({
           where: { batchId: selectedBatchId },
-          include: { lectureRows: { where: { source: "SE" } }, clos: { where: { source: "SE" } } },
+          include: { lectureRows: { where: { source: "SE" } }, clos: { where: { source: "SE" }, orderBy: { orderIndex: "asc" } } },
           orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
         })
       : [],

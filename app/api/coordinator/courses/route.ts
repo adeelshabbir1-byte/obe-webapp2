@@ -25,7 +25,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") {
+  // Owning Coordinator adds to their own batch directly; OMC can add to
+  // any batch belonging to a Coordinator under their own Chairman — same
+  // institution-wide scope OMC already has elsewhere on this page. The
+  // new course is still attributed to that batch's own Coordinator
+  // (coordinatorId below), never to the OMC member performing the add.
+  if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -33,10 +38,10 @@ export async function POST(req: NextRequest) {
   if (!body.code || !body.title || !body.creditHours || !body.batchId) {
     return NextResponse.json({ error: "code, title, creditHours, batchId are required" }, { status: 400 });
   }
-  const batch = await prisma.batch.findUnique({ where: { id: body.batchId } });
-  if (!batch || batch.coordinatorId !== user.id) {
-    return NextResponse.json({ error: "invalid batch" }, { status: 400 });
-  }
+  const batch = await prisma.batch.findUnique({ where: { id: body.batchId }, include: { coordinator: true } });
+  if (!batch) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  if (user.role === "PROGRAM_COORDINATOR" && batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
+  if (user.role === "OMC" && batch.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
 
   // Same defense-in-depth check as import-hec and fill-elective: an
   // optional masterCourseId here must actually belong to this
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
   if (body.masterCourseId) {
     const masterCourse = await prisma.masterCourse.findUnique({ where: { id: body.masterCourseId }, include: { masterCurriculum: { select: { chairmanId: true } } } });
     if (!masterCourse) return NextResponse.json({ error: "that curriculum course wasn't found" }, { status: 404 });
-    const owningChairmanId = await findOwningChairmanId(user.id);
+    const owningChairmanId = await findOwningChairmanId(batch.coordinatorId);
     const belongsHere = masterCourse.masterCurriculum.chairmanId === null || masterCourse.masterCurriculum.chairmanId === owningChairmanId;
     if (!belongsHere) return NextResponse.json({ error: "that course doesn't belong to your institution's curriculum" }, { status: 403 });
   }
@@ -54,7 +59,7 @@ export async function POST(req: NextRequest) {
       code: body.code,
       title: body.title,
       creditHours: parseInt(body.creditHours, 10),
-      coordinatorId: user.id,
+      coordinatorId: batch.coordinatorId,
       batchId: body.batchId,
       masterCourseId: body.masterCourseId || null,
     },

@@ -20,7 +20,7 @@ function contactHoursFor(c: Course) {
   return c.courseType === "Lab" ? c.creditHours * 3 : c.creditHours;
 }
 
-export default function InteractiveCourseMap({ courses: initialCoursesProp, mode }: { courses: Course[]; mode: "prereq" | "reposition" }) {
+export default function InteractiveCourseMap({ courses: initialCoursesProp, mode, readOnly }: { courses: Course[]; mode: "prereq" | "reposition"; readOnly?: boolean }) {
   const [initialCourses, setCourses] = useState<Course[]>(initialCoursesProp);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   const [electiveModalCategory, setElectiveModalCategory] = useState<string>("Domain Elective");
   const [electiveOptions, setElectiveOptions] = useState<{ id: string; code: string; title: string; domain: string | null }[]>([]);
   const [electiveSearch, setElectiveSearch] = useState("");
+  const [electiveDomainFilter, setElectiveDomainFilter] = useState("");
   const [loadingElectives, setLoadingElectives] = useState(false);
 
   const maxSemester = initialCourses.length > 0 ? Math.max(8, ...initialCourses.map((c) => c.semesterNumber || 1)) : 8;
@@ -82,6 +83,11 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
 
   function onCourseClick(c: Course) {
     if (loading) return;
+    // Visible-but-not-this-role's-to-edit (e.g. a Subject Expert or
+    // Chairman looking at a Coordinator's/OMC's map): still fully
+    // readable, just not clickable — avoids a click silently 403'ing
+    // against an API that only the owning role may call.
+    if (readOnly) return;
     // Being offered for the current term doesn't block choosing which
     // elective this slot actually is -- that's a separate decision from
     // whether the semester's courses have been activated, and the two
@@ -117,6 +123,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     setElectiveModalCourseId(courseId);
     setElectiveModalCategory(category);
     setElectiveSearch("");
+    setElectiveDomainFilter("");
     setLoadingElectives(true);
     fetch(`/api/omc/curriculum-electives?category=${encodeURIComponent(category)}`).then((r) => r.json()).then((data) => {
       setElectiveOptions(data.courses || []);
@@ -139,7 +146,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   }
 
   function onRowClick(semesterNumber: number) {
-    if (mode !== "reposition" || !selectedId || loading) return;
+    if (readOnly || mode !== "reposition" || !selectedId || loading) return;
     const course = initialCourses.find((c) => c.id === selectedId);
     if (course?.isOffered) { setError("That course is already offered — can't be repositioned."); return; }
     moveToSemester(selectedId, semesterNumber);
@@ -165,7 +172,9 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
       {error && <div className="err">{error}</div>}
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
-          {mode === "prereq"
+          {readOnly
+            ? "View only — this map belongs to a different role. You can see the full layout, prerequisites, and elective slots here, but changing them needs to be done by the role that owns this page."
+            : mode === "prereq"
             ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
             : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. An elective or IDS slot has two separate click targets: click the box itself to choose which real course it is, or click the small ⇅ handle in its top-left corner to select it for moving to a different semester instead.")}
         </p>
@@ -213,11 +222,11 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
               if (!pos) return null;
               const isSelected = selectedId === c.id;
               return (
-                <g key={c.id} style={{ cursor: loading ? "wait" : "pointer" }}>
+                <g key={c.id} style={{ cursor: readOnly ? "default" : loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType, c.code)} opacity={c.isOffered ? 0.5 : 0.9}
                     stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
                   <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
-                  {mode === "reposition" && c.slotCategory && (
+                  {!readOnly && mode === "reposition" && c.slotCategory && (
                     // Elective/IDS boxes already use a plain click to open
                     // the "choose which real course this is" popup
                     // (onCourseClick returns early for any slotCategory
@@ -235,7 +244,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                       <text x={pos.x + 10} y={pos.y + 13.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">⇅</text>
                     </g>
                   )}
-                  {mode === "prereq" && c.prerequisiteCourseId && (
+                  {!readOnly && mode === "prereq" && c.prerequisiteCourseId && (
                     <g onClick={(e) => { e.stopPropagation(); setPrerequisite(c.id, null); }} style={{ cursor: "pointer" }}>
                       <circle cx={pos.x + BOX_W - 10} cy={pos.y + 10} r={8} fill="#C0312B" />
                       <text x={pos.x + BOX_W - 10} y={pos.y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">×</text>
@@ -260,16 +269,33 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                 ? "From your institution's restricted IDS list — this will rename the course and seed its CLOs."
                 : "From your institution's own curriculum — this will rename the course and seed its CLOs."}
             </p>
-            <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }} />
+            <input placeholder="Search…" value={electiveSearch} onChange={(e) => setElectiveSearch(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 8, border: "1px solid var(--line)" }} />
+            {!loadingElectives && electiveOptions.length > 0 && (() => {
+              const domains = Array.from(new Set(electiveOptions.map((o) => o.domain || "(no domain set)"))).sort();
+              return domains.length > 1 ? (
+                <select value={electiveDomainFilter} onChange={(e) => setElectiveDomainFilter(e.target.value)} style={{ width: "100%", padding: 6, fontSize: 12.5, marginBottom: 10, border: "1px solid var(--line)" }}>
+                  <option value="">All domains</option>
+                  {domains.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              ) : null;
+            })()}
             {loadingElectives && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading…</p>}
-            {!loadingElectives && electiveOptions
-              .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
-              .map((o) => (
+            {!loadingElectives && (() => {
+              const filtered = electiveOptions
+                .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
+                .filter((o) => !electiveDomainFilter || (o.domain || "(no domain set)") === electiveDomainFilter);
+              return filtered.map((o) => (
                 <button key={o.id} onClick={() => fillElective(o.id)} disabled={loading} style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 8px", border: "1px solid var(--line)", background: "#fff", marginBottom: 4, fontSize: 12, cursor: "pointer" }}>
                   {o.title} {o.domain && <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({o.domain})</span>}
                 </button>
-              ))}
+              ));
+            })()}
             {!loadingElectives && electiveOptions.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>{electiveModalCategory === "Domain IDS" ? "No IDS options found in your institution's curriculum." : "No electives found in your institution's curriculum."}</p>}
+            {!loadingElectives && electiveOptions.length > 0 && electiveOptions
+              .filter((o) => !electiveSearch || o.title.toLowerCase().includes(electiveSearch.toLowerCase()))
+              .filter((o) => !electiveDomainFilter || (o.domain || "(no domain set)") === electiveDomainFilter).length === 0 && (
+              <p style={{ fontSize: 12, color: "var(--slate)" }}>No electives match that search/domain — try clearing the filter above.</p>
+            )}
             <button onClick={() => setElectiveModalCourseId(null)} style={{ marginTop: 10, fontSize: 11.5, background: "none", border: "1px solid var(--line)", padding: "4px 10px", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
