@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
+import DownloadButton from "./DownloadButton";
 
 type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; secondaryRole: string | null };
 
@@ -10,6 +11,36 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResult, setBulkResult] = useState<any>(null);
+
+  async function reloadFaculty() {
+    try {
+      const res = await fetch("/api/coordinator/faculty");
+      const data = await res.json();
+      if (res.ok) setFaculty(data.faculty);
+    } catch { /* bulkResult still shows what happened even if the refresh fails */ }
+  }
+
+  async function handleBulkImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkImporting(true); setBulkResult(null); setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/coordinator/faculty/bulk/import", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Import failed."); setBulkImporting(false); return; }
+      setBulkResult(data);
+      await reloadFaculty();
+    } catch (err: any) {
+      setError("Unexpected error: " + err.message);
+    } finally {
+      setBulkImporting(false);
+      e.target.value = "";
+    }
+  }
 
   async function onboard(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -100,6 +131,46 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
   return (
     <>
       {error && <div className="err">{error}</div>}
+
+      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 12, color: "var(--slate)", maxWidth: 440 }}>
+          Download the current faculty list, add new names at the bottom (Login ID + Faculty Name required,
+          Specialization optional, Role defaults to Course Instructor), then upload it back to create their
+          logins — existing faculty rows are left untouched.
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <DownloadButton url="/api/coordinator/faculty/bulk/export" label="Download as Excel" className="btn" style={{ fontSize: 12, padding: "6px 12px" }} />
+          <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", cursor: bulkImporting ? "wait" : "pointer" }}>
+            {bulkImporting ? "Uploading…" : "Upload edited Excel"}
+            <input type="file" accept=".xlsx" onChange={handleBulkImport} disabled={bulkImporting} style={{ display: "none" }} />
+          </label>
+        </div>
+      </div>
+      {bulkResult && (
+        <div className="card" style={{ fontSize: 12, background: bulkResult.created > 0 ? "#F0FBF4" : undefined, border: bulkResult.created > 0 ? "1px solid var(--sage)" : undefined }}>
+          <div><b>{bulkResult.created}</b> new login{bulkResult.created === 1 ? "" : "s"} created{bulkResult.created > 0 ? ` with temporary password "${bulkResult.tempPassword}"` : ""}.</div>
+          {bulkResult.created > 0 && (
+            <div style={{ marginTop: 6 }}>
+              Give each new faculty member their Login ID and this temporary password directly — it's required to
+              change on first login and isn't stored anywhere retrievable:
+              <ul style={{ margin: "4px 0 0 18px" }}>
+                {bulkResult.createdLogins.map((c: any, i: number) => (
+                  <li key={i}>{c.name} — login <b>{c.username}</b> ({c.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"})</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {bulkResult.skippedRows?.length > 0 && (
+            <div style={{ marginTop: 8, color: "var(--rust)" }}>
+              {bulkResult.skippedRows.length} row(s) skipped:
+              <ul style={{ margin: "4px 0 0 18px" }}>
+                {bulkResult.skippedRows.map((s: any, i: number) => <li key={i}>Row {s.row}: {s.reason}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       {faculty.length > 0 && (
         <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontSize: 12, color: "var(--slate)" }}>
