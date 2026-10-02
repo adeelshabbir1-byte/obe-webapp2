@@ -35,10 +35,17 @@ export async function POST() {
 
   const groups = await prisma.courseEquivalenceGroup.findMany({
     where: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } },
-    include: { sectionAssignments: true },
+    include: { sectionAssignments: true, members: { include: { course: true } } },
   });
 
   let created = 0;
+  // Offered courses/groups that have NO instructor assigned at all (no
+  // direct instructorId, no CourseSectionAssignment rows) never get a
+  // ScheduleSection and therefore can never appear anywhere in the
+  // generated timetable — not even as "unassigned". Reported back so the
+  // coordinator can see which courses to go assign an instructor to,
+  // instead of a course silently vanishing from the grid.
+  const skippedNoInstructor: { code: string; title: string }[] = [];
 
   for (const c of courses) {
     // Every distinct instructor assigned to this course, each contributing
@@ -51,7 +58,7 @@ export async function POST() {
     for (const a of c.sectionAssignments) {
       for (let i = 0; i < Math.max(1, a.sectionCount); i++) unitInstructorIds.push(a.instructorId);
     }
-    if (unitInstructorIds.length === 0) continue;
+    if (unitInstructorIds.length === 0) { skippedNoInstructor.push({ code: c.code, title: c.title }); continue; }
 
     const existing = await prisma.scheduleSection.findMany({ where: { courseId: c.id } });
     const existingCountByInstructor = new Map<string, number>();
@@ -86,7 +93,11 @@ export async function POST() {
     for (const a of g.sectionAssignments) {
       for (let i = 0; i < Math.max(1, a.sectionCount); i++) unitInstructorIds.push(a.instructorId);
     }
-    if (unitInstructorIds.length === 0) continue;
+    if (unitInstructorIds.length === 0) {
+      const first = g.members[0]?.course;
+      skippedNoInstructor.push({ code: first ? first.code : g.name, title: `${g.name} (combined)` });
+      continue;
+    }
 
     const existing = await prisma.scheduleSection.findMany({ where: { groupId: g.id } });
     const existingCountByInstructor = new Map<string, number>();
@@ -113,5 +124,5 @@ export async function POST() {
     }
   }
 
-  return NextResponse.json({ created });
+  return NextResponse.json({ created, skippedNoInstructor });
 }
