@@ -30,6 +30,14 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
         coordinatorId: course.coordinatorId, batchId: course.batchId, code: labCode, title: `${course.title} Lab`,
         creditHours: labCredit, courseType: "Lab", semesterNumber: course.semesterNumber,
         masterCourseId: course.masterCourseId,
+        // isOffered defaults to false on a brand-new Course row — carry over
+        // the parent's own offered/term status instead, otherwise a split
+        // off an already-offered course produces a Lab half that's invisible
+        // everywhere that only lists offered courses (Primary Instructor
+        // Assignment, Section Count Matrix, Program Semester Map, ...), even
+        // though it was created specifically to be taught this semester.
+        isOffered: course.isOffered,
+        offeredTermName: course.offeredTermName,
       },
     }),
   ]);

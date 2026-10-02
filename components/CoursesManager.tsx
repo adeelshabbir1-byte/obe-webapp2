@@ -36,6 +36,8 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   const [copyResult, setCopyResult] = useState("");
   const [bulkSplitting, setBulkSplitting] = useState(false);
   const [bulkSplitResult, setBulkSplitResult] = useState("");
+  const [fixingLabOffering, setFixingLabOffering] = useState(false);
+  const [fixLabOfferingResult, setFixLabOfferingResult] = useState("");
 
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
@@ -263,6 +265,28 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     router.refresh();
   }
 
+  // One-time repair for Lab courses created by an earlier version of
+  // split-lab, which didn't carry over isOffered from the theory course it
+  // split off of — leaving the Lab half offered=false and invisible in
+  // Primary Instructor Assignment, the Section Count Matrix, Program
+  // Semester Map, etc. Safe to click more than once; it only fixes Lab
+  // courses whose own theory sibling is actually offered.
+  async function fixLabOffering() {
+    setFixingLabOffering(true); setFixLabOfferingResult(""); setError("");
+    try {
+      const res = await fetch("/api/coordinator/courses/fix-lab-offering", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setFixingLabOffering(false); return; }
+      setFixLabOfferingResult(
+        data.fixed === 0
+          ? "No Lab courses needed fixing — everything already lined up."
+          : `Fixed ${data.fixed} Lab course(s), now offered alongside their theory course: ${data.fixedCodes.join(", ")}.`
+      );
+      setFixingLabOffering(false);
+      router.refresh();
+    } catch (err: any) { setError("Unexpected error: " + err.message); setFixingLabOffering(false); }
+  }
+
   async function splitIntoLab(courseId: string, currentCredit: number) {
     const input = prompt(`How many of the ${currentCredit} credit hours are the Lab component? (The rest stay as the theory course.)`, "1");
     if (input === null) return;
@@ -458,6 +482,18 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           3-credit theory course plus a new 1-credit "-L" Lab course.
         </span>
         {bulkSplitResult && <p style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 8 }}>{bulkSplitResult}</p>}
+
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+          <button type="button" onClick={fixLabOffering} disabled={fixingLabOffering} className="btn" style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>
+            {fixingLabOffering ? "Fixing…" : "Fix Offered Status for Already-Split Lab Courses"}
+          </button>
+          <span style={{ fontSize: 11, color: "var(--slate)", marginLeft: 10 }}>
+            A Lab course split off earlier wasn't marked as offered, so it didn't show up for instructor
+            assignment or in the section matrix. Click this once to bring any already-created Lab courses in
+            line with their theory course's offered status.
+          </span>
+          {fixLabOfferingResult && <p style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 8 }}>{fixLabOfferingResult}</p>}
+        </div>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
