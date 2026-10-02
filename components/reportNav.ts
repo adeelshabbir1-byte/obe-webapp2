@@ -59,6 +59,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
   { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
