@@ -43,6 +43,8 @@ export async function GET() {
         title: c.title,
         courseType: normalizeCourseType(c.courseType),
         batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
+        semesterNumbers: [c.semesterNumber],
+        degreePrograms: c.batch ? [c.batch.degreeProgram] : [],
         customCategoryName: c.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
@@ -59,6 +61,13 @@ export async function GET() {
         title: g.name,
         courseType: "Combined",
         batchLabel: g.members.map((m) => m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—").join("; "),
+        // A combined group can span several batches at once — recorded as
+        // every distinct semester/program among its members (not just the
+        // first) so the new Semester/Program filters below still surface a
+        // combined row when ANY of its member batches matches, rather than
+        // silently hiding it because only one member's values were kept.
+        semesterNumbers: Array.from(new Set(g.members.map((m) => m.course.semesterNumber))),
+        degreePrograms: Array.from(new Set(g.members.map((m) => m.course.batch?.degreeProgram).filter((d): d is string => !!d))),
         customCategoryName: g.members[0]?.course.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
