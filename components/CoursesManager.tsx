@@ -34,6 +34,8 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   const [copySourceBatchId, setCopySourceBatchId] = useState("");
   const replaceCheckboxRef = useRef<HTMLInputElement>(null);
   const [copyResult, setCopyResult] = useState("");
+  const [bulkSplitting, setBulkSplitting] = useState(false);
+  const [bulkSplitResult, setBulkSplitResult] = useState("");
 
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
@@ -224,6 +226,43 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
+  // Applies the same per-course split-lab action to every 4-credit course
+  // currently in view (all courses if no batch is selected, just that
+  // batch's otherwise), fixed at 3 theory + 1 lab — one request at a time
+  // rather than in parallel, since each one creates a new "<code>-L" course
+  // and two at once racing on the same coordinator could hit unrelated
+  // transient errors.
+  async function bulkSplit4CreditToLab() {
+    const targets = courses.filter((c) => c.creditHours === 4 && c.courseType !== "Lab");
+    if (targets.length === 0) { setBulkSplitResult("No 4-credit-hour courses found to split (in the current view)."); return; }
+    const proceed = confirm(`Split ${targets.length} course(s) with 4 credit hours into 3 (theory) + 1 (Lab)? Each one gets a new "<code>-L" Lab course created alongside it. This can't be undone automatically.`);
+    if (!proceed) return;
+
+    setBulkSplitting(true); setBulkSplitResult(""); setError("");
+    let succeeded = 0;
+    const failures: string[] = [];
+    for (const c of targets) {
+      try {
+        const res = await fetch(`/api/coordinator/courses/${c.id}/split-lab`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ labCreditHours: 1 }),
+        });
+        const data = await res.json();
+        if (!res.ok) { failures.push(`${c.code}: ${data.error || "failed"}`); continue; }
+        setCourses((prev) => [...prev.map((x) => x.id === c.id ? { ...x, ...data.theoryCourse } : x), data.labCourse]);
+        succeeded++;
+      } catch (err: any) {
+        failures.push(`${c.code}: ${err.message}`);
+      }
+    }
+    setBulkSplitting(false);
+    setBulkSplitResult(
+      `Split ${succeeded} of ${targets.length} course(s).` +
+      (failures.length > 0 ? ` ${failures.length} failed: ${failures.join("; ")}` : "")
+    );
+    router.refresh();
+  }
+
   async function splitIntoLab(courseId: string, currentCredit: number) {
     const input = prompt(`How many of the ${currentCredit} credit hours are the Lab component? (The rest stay as the theory course.)`, "1");
     if (input === null) return;
@@ -408,6 +447,17 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         <div style={{ marginTop: 12 }}>
           <button onClick={importHec} disabled={loading} className="btn btn-brass">{loading ? "Importing…" : `Import ${selectedImportIds.size} Course(s)`}</button>
         </div>
+      </div>
+
+      <div className="card">
+        <button type="button" onClick={bulkSplit4CreditToLab} disabled={bulkSplitting} className="btn" style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>
+          {bulkSplitting ? "Splitting…" : "Split all 4-credit courses into 3 + 1 Lab"}
+        </button>
+        <span style={{ fontSize: 11, color: "var(--slate)", marginLeft: 10 }}>
+          Applies to every 4-credit-hour course currently shown below (not already a Lab course) — each becomes a
+          3-credit theory course plus a new 1-credit "-L" Lab course.
+        </span>
+        {bulkSplitResult && <p style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 8 }}>{bulkSplitResult}</p>}
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>

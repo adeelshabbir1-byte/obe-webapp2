@@ -17,6 +17,11 @@ export const COURSE_TYPE_COLORS: Record<string, string> = {
   "Capstone Project": "#8C2C87",
   "Field Experience": "#2C8C78",
   "Certification": "#6F8C2C",
+  // Not a real courseType stored on any Course — used only by the
+  // Semester Section Map / Assigner Matrix for a clubbed class (a
+  // CourseEquivalenceGroup), so it needs its own color rather than
+  // falling through to the generic "unknown type" fallback.
+  "Combined": "#1F6F8B",
 };
 export const COURSE_TYPE_FALLBACK_COLOR = "#574C50";
 
