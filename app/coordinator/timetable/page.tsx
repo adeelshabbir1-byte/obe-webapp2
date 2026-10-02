@@ -1,21 +1,9 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import TimetableManager from "../../../components/TimetableManager";
-
-const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
-  { href: "/coordinator/batches", label: "Degree Programs & Batches" },
-  { href: "/coordinator/courses", label: "Courses" },
-  { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
-  { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
-  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
-  { href: "/coordinator/semester", label: "Current Semester" },
-  { href: "/coordinator/timetable", label: "Timetable" },
-  { href: "/omc/reports", label: "OMC Reports" },
-];
 
 export default async function TimetablePage() {
   const user = await getAuthenticatedUser();
@@ -32,7 +20,7 @@ export default async function TimetablePage() {
   ]);
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Timetable</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Set up rooms, per-batch scheduling windows, and faculty availability, then generate a conflict-checked
