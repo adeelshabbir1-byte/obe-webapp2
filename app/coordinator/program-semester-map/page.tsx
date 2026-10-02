@@ -5,6 +5,7 @@ import { courseTypeColor } from "../../../lib/courseTypeColors";
 import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import InstructorAssignCell from "../../../components/InstructorAssignCell";
 
 
 export default async function ProgramSemesterMapPage({ searchParams }: { searchParams: { degree?: string; term?: string } }) {
@@ -65,6 +66,12 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
       })
     : [];
 
+  // Chairman/Coordinator/OMC can assign an instructor right from this map
+  // — Subject Expert still only views it, same as the assign-instructor
+  // API route itself only accepts those three roles (plus Course Assigner,
+  // who doesn't view this page at all).
+  const canAssign = ["PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"].includes(user.role);
+
   const maxSemester = courses.length > 0 ? Math.max(8, ...courses.map((c) => c.semesterNumber || 1)) : 8;
   const bySemester: Record<number, typeof courses> = {};
   for (const c of courses) {
@@ -80,7 +87,9 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
         teaching it and which batch it belongs to. Default is "All Terms" so every active batch shows up
         regardless of which term it's actually in (each course's own term is labeled) — pick one specific
         term instead to see only what's genuinely running then, useful for keeping Spring and Fall apart.
-        Read-only — this is a report, not an editor.
+        {canAssign
+          ? " Click a course's instructor line to assign or change who's teaching it."
+          : " Read-only — this is a report, not an editor."}
       </p>
 
       <div className="card">
@@ -118,9 +127,12 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
                   <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title}</div>
                   <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</div>
                   {c.offeredTermName && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.offeredTermName} {c.offeredTermYear}</div>}
-                  <div style={{ fontSize: 11, marginTop: 2 }}>
-                    {c.instructor ? c.instructor.name : <span style={{ color: "var(--rust)" }}>No instructor assigned</span>}
-                  </div>
+                  <InstructorAssignCell
+                    courseId={c.id}
+                    initialInstructorId={c.instructorId}
+                    initialInstructorName={c.instructor?.name ?? null}
+                    canAssign={canAssign}
+                  />
                 </div>
               ))}
             </div>
