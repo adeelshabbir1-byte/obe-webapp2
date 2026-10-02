@@ -20,7 +20,13 @@ type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: numb
 type MCourse = { id: string; code: string; title: string; creditHours: number; category: string; domain: string | null; semesterNumber: number | null; textbook: string | null; catalogDescription: string | null; referenceMaterial: string | null; prerequisiteCourseId: string | null; prerequisiteCourseTitle: string | null; seedClos: Clo[]; suggestedPloNumbers: number[] };
 type MPlo = { id: string; number: number; title: string; description: string };
 
-const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience"];
+// "Domain Elective" and "Domain IDS" are what the elective-picking popup
+// (on Course Repositioning / Prerequisite Map, see
+// app/api/omc/curriculum-electives/route.ts's ALLOWED_CATEGORIES) actually
+// filters on — a course saved as plain "Elective" here never shows up
+// there, which is exactly why a course could be added to the curriculum
+// and still never appear as something a slot can be filled with.
+const CATEGORIES = ["General Education", "Core", "Elective", "Domain Elective", "IDS", "Domain IDS", "Certification", "Capstone Project", "Field Experience"];
 const BLOOM_LEVELS = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
 // Everything below updates its own local state directly from each
@@ -53,7 +59,7 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
-          category: fd.get("category"), semesterNumber: fd.get("semesterNumber") || null,
+          category: fd.get("category"), domain: fd.get("domain") || null, semesterNumber: fd.get("semesterNumber") || null,
           textbook: fd.get("textbook") || null, catalogDescription: fd.get("catalogDescription") || null, referenceMaterial: fd.get("referenceMaterial") || null,
           prerequisiteCourseId: fd.get("prerequisiteCourseId") || null,
         }),
@@ -185,11 +191,15 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add Course</h3>
         <form onSubmit={addCourse}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr 1fr", gap: 12 }}>
             <div className="field"><label>Code</label><input name="code" required /></div>
             <div className="field"><label>Title</label><input name="title" required /></div>
             <div className="field"><label>Credits</label><input name="creditHours" type="number" required /></div>
             <div className="field"><label>Category</label><select name="category" required>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+            {/* Only meaningful for Domain Elective / Domain IDS — this is
+               how the elective-picking popup groups and labels its choices
+               (e.g. "AI", "Cyber Security"); leave blank for Core/GE/etc. */}
+            <div className="field"><label>Domain (for electives)</label><input name="domain" placeholder="e.g. AI" /></div>
             <div className="field"><label>Semester</label><input name="semesterNumber" type="number" min={1} max={8} /></div>
             <div className="field"><label>Prerequisite</label>
               <select name="prerequisiteCourseId" defaultValue="">

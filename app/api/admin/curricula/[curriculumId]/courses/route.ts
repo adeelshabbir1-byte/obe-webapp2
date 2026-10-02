@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
   const course = await prisma.masterCourse.create({
     data: {
       masterCurriculumId: curriculum.id, code: body.code, title: body.title,
-      creditHours: parseInt(body.creditHours, 10), category: body.category,
+      creditHours: parseInt(body.creditHours, 10), category: body.category, domain: body.domain || null,
       semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
       textbook: body.textbook || null, catalogDescription: body.catalogDescription || null, referenceMaterial: body.referenceMaterial || null,
       prerequisiteCourseId: body.prerequisiteCourseId || null,
