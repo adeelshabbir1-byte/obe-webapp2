@@ -13,8 +13,19 @@ export async function deleteBatchCompletely(batchId: string) {
   }
 
   const studentIds = (await prisma.student.findMany({ where: { batchId }, select: { id: true } })).map((s) => s.id);
+  // Elective Slot Groups (the batch's "Elective Options" — e.g. "Elective-I")
+  // have a required, non-cascading FK to Batch, and their Options/Choices
+  // in turn reference this batch's own Students. Without deleting these
+  // first, prisma.batch.delete() (and even the Student delete above it)
+  // throws a foreign-key constraint error that silently rolls back the
+  // ENTIRE transaction — the batch looked like it was "not deleting" with
+  // no visible reason, because nothing in this list actually ran.
+  const electiveGroupIds = (await prisma.electiveSlotGroup.findMany({ where: { batchId }, select: { id: true } })).map((g) => g.id);
 
   await prisma.$transaction([
+    prisma.electiveChoice.deleteMany({ where: { groupId: { in: electiveGroupIds } } }),
+    prisma.electiveSlotOption.deleteMany({ where: { groupId: { in: electiveGroupIds } } }),
+    prisma.electiveSlotGroup.deleteMany({ where: { batchId } }),
     prisma.surveyResponse.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.studentTranscriptRecord.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.student.deleteMany({ where: { batchId } }),
