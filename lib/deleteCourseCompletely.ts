@@ -36,6 +36,14 @@ export async function deleteCourseCompletely(courseId: string) {
 
   await prisma.$transaction([
     // Leaf-level records referencing lecture rows / sections / instruments
+    // A course can also be one option in an Elective Slot Group (e.g. one
+    // choice under "Elective-I") — ElectiveSlotOption.courseId is a
+    // required, unique, non-cascading FK, so any student choices for it
+    // and the option row itself have to go before the course can be
+    // deleted, or this fails on a foreign key violation the moment the
+    // course is used as an elective option.
+    prisma.electiveChoice.deleteMany({ where: { option: { courseId } } }),
+    prisma.electiveSlotOption.deleteMany({ where: { courseId } }),
     prisma.attendanceRecord.deleteMany({ where: { courseId } }),
     prisma.paperDistributionItem.deleteMany({ where: { courseId } }),
     prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: lectureRowIds } } }),
