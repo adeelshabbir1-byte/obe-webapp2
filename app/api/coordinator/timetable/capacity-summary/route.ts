@@ -43,6 +43,10 @@ export async function GET() {
           { group: { members: { some: { course: { batchId: { in: batchIds } } } } } },
         ],
       },
+      include: {
+        course: { select: { batchId: true } },
+        group: { include: { members: { select: { course: { select: { batchId: true } } } } } },
+      },
     }),
   ]);
 
@@ -92,6 +96,50 @@ export async function GET() {
   const theory = summarizeType("LECTURE");
   const lab = summarizeType("LAB");
 
+  // Contact-hours-by-program-and-term matrix: rows are degree programs,
+  // columns are terms (each batch's own batchName, e.g. "Fall 2025"),
+  // cells are that batch's own theory/lab hours needed this semester. A
+  // combined/clubbed section's hours count toward EVERY member batch that
+  // belongs to this Coordinator — each of those batches genuinely needs
+  // that many hours on ITS OWN timetable, same attribution the GA itself
+  // uses (see timetableSlotBuilder.ts).
+  const hoursByBatch = new Map<string, { theory: number; lab: number }>();
+  function addHours(batchId: string, type: string, hours: number) {
+    const cur = hoursByBatch.get(batchId) || { theory: 0, lab: 0 };
+    if (type === "LAB") cur.lab += hours; else cur.theory += hours;
+    hoursByBatch.set(batchId, cur);
+  }
+  for (const s of sections) {
+    const hours = (s.sessionsPerWeek * s.sessionDurationMinutes) / 60;
+    if (s.course) {
+      if (s.course.batchId && batchIds.includes(s.course.batchId)) addHours(s.course.batchId, s.roomTypeNeeded, hours);
+    } else if (s.group) {
+      for (const m of s.group.members) {
+        if (m.course.batchId && batchIds.includes(m.course.batchId)) addHours(m.course.batchId, s.roomTypeNeeded, hours);
+      }
+    }
+  }
+  const programs = Array.from(new Set(batches.map((b) => b.degreeProgram))).sort();
+  const terms = Array.from(new Set(batches.map((b) => b.batchName))).sort();
+  const programTermMatrix = {
+    programs, terms,
+    // Rooms needed is a rough estimate, not an exact minimum: hours needed
+    // divided by how many hours a single room can offer per week (same
+    // per-room week used for the institution-wide availableHoursPerWeek
+    // figures above), rounded up. It assumes perfect back-to-back packing
+    // with no clashes between this program's own sections, which a real
+    // timetable rarely achieves — treat it as a floor, not a guarantee.
+    cells: batches.map((b) => {
+      const h = hoursByBatch.get(b.id) || { theory: 0, lab: 0 };
+      return {
+        program: b.degreeProgram, term: b.batchName,
+        theoryHours: Math.round(h.theory * 10) / 10, labHours: Math.round(h.lab * 10) / 10,
+        theoryRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.theory / hoursPerWeek) : 0,
+        labRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.lab / hoursPerWeek) : 0,
+      };
+    }),
+  };
+
   return NextResponse.json({
     needsAdjustment,
     clubbed: { offered: clubbedOfferedCount, withSectionsGenerated: clubbedWithSectionsCount },
@@ -99,6 +147,7 @@ export async function GET() {
     lab: { ...lab, availableHoursPerWeek: Math.round(lab.roomCount * hoursPerWeek * 10) / 10 },
     offeredCoursesCount: courses.length,
     offeredGroupsCount: groups.length,
+    programTermMatrix,
     note: "Room-hour availability is an approximation based on the union of your batches' working-day windows; it assumes any room can be used at any of those hours.",
   });
 }
