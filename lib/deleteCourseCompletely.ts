@@ -44,6 +44,13 @@ export async function deleteCourseCompletely(courseId: string) {
     // course is used as an elective option.
     prisma.electiveChoice.deleteMany({ where: { option: { courseId } } }),
     prisma.electiveSlotOption.deleteMany({ where: { courseId } }),
+    // Three more required, non-cascading FKs to Course that weren't
+    // covered before — any row left behind in these on a course a
+    // student has requested/registered against blocks the delete just
+    // like the elective ones above.
+    prisma.outOfBatchRequest.deleteMany({ where: { courseId } }),
+    prisma.degreePlanEntry.deleteMany({ where: { courseId } }),
+    prisma.registrationApprovalRequest.deleteMany({ where: { courseId } }),
     prisma.attendanceRecord.deleteMany({ where: { courseId } }),
     prisma.paperDistributionItem.deleteMany({ where: { courseId } }),
     prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: lectureRowIds } } }),

@@ -28,6 +28,22 @@ export async function deleteBatchCompletely(batchId: string) {
     prisma.electiveSlotGroup.deleteMany({ where: { batchId } }),
     prisma.surveyResponse.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.studentTranscriptRecord.deleteMany({ where: { studentId: { in: studentIds } } }),
+    // Safety net, scoped by STUDENT rather than by course: a student can
+    // have attendance/marks/enrollment/requests/sessions tied to a course
+    // OUTSIDE this batch too (the "Out-of-Batch" enrollment feature lets
+    // a student take a course belonging to a different batch), so the
+    // per-course cleanup above — which only looks at this batch's own
+    // courses — can't reach those rows. StudentSession in particular
+    // blocks almost every real student (anyone who ever logged in has
+    // one), which is the most likely reason a delete kept failing even
+    // after the Elective Options fix.
+    prisma.studentSession.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.attendanceRecord.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.studentMark.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.studentEnrollment.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.outOfBatchRequest.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.degreePlanEntry.deleteMany({ where: { studentId: { in: studentIds } } }),
+    prisma.registrationApprovalRequest.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.student.deleteMany({ where: { batchId } }),
     prisma.pLO.deleteMany({ where: { batchId } }),
     prisma.cqiRecord.updateMany({ where: { batchId }, data: { batchId: null } }),
