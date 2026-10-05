@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { parseCurriculumText } from "../../../../../lib/curriculumPdfParser";
+import { extractPdfText } from "../../../../../lib/pdfText";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -18,14 +19,16 @@ export async function POST(req: NextRequest) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  let text = "";
-  try {
-    const pdfParse = (await import("pdf-parse")).default;
-    const parsed = await pdfParse(buffer);
-    text = parsed.text;
-  } catch (err: any) {
-    return NextResponse.json({ error: "couldn't read that PDF — make sure it's a valid, non-scanned file" }, { status: 400 });
+  const extracted = await extractPdfText(buffer);
+  if (!extracted.ok) {
+    console.error("curriculum PDF read failed:", extracted.detail);
+    return NextResponse.json({
+      error: extracted.reason === "no-text"
+        ? "This PDF has no selectable text — it looks like a scan (a picture of pages). Export it from Word/Excel as a PDF, or run OCR on it first, then upload again."
+        : `Couldn't read that PDF (${extracted.detail.slice(0, 200)}). Try re-saving it with "Print to PDF" and upload that copy.`,
+    }, { status: 400 });
   }
+  const text = extracted.text;
 
   const parsedCourses = parseCurriculumText(text);
 
