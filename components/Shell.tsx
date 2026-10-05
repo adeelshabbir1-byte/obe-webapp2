@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
+import BusyBanner from "./BusyBanner";
 
 export default function Shell({
   roleLabel,
@@ -127,6 +128,7 @@ export default function Shell({
           </button>
         </div>
       </div>
+      <BusyBanner />
       <div className="main">
         {children}
         <div style={{ marginTop: 40, paddingTop: 14, borderTop: "1px solid var(--line)", fontSize: 10.5, color: "var(--slate)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

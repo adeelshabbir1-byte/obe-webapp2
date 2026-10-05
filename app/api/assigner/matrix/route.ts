@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { normalizeCourseType } from "../../../../lib/courseTypeColors";
+import { seniorMember } from "../../../../lib/seniorMember";
 
 // Puts course types in a sensible teaching-clustered order — General
 // Education and IDS instructors are usually a distinct pool from Core/
@@ -43,6 +44,8 @@ export async function GET() {
         title: c.title,
         courseType: normalizeCourseType(c.courseType),
         batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
+        batchLabels: [c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"],
+        interestCodes: [c.code],
         semesterNumbers: [c.semesterNumber],
         degreePrograms: c.batch ? [c.batch.degreeProgram] : [],
         customCategoryName: c.customCategory?.name || null,
@@ -53,22 +56,35 @@ export async function GET() {
     }),
     ...groups.map((g) => {
       const studentCount = g.members.reduce((sum, m) => sum + (m.course.batch?.studentCount || 0), 0);
+      // A combined class reads as its SENIOR member's course (code + title),
+      // not the internal group name — the same short name the Assigner set
+      // for that code then applies to the combined row too.
+      const senior = seniorMember(g.members);
+      const seniorCode = senior?.course.code || null;
+      const seniorTitle = senior?.course.title || g.name;
+      const batchLabels = g.members.map((m) => m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—");
       return {
         kind: "group" as const,
         id: g.id,
-        code: null as string | null,
-        label: g.name,
-        title: g.name,
+        code: seniorCode,
+        label: seniorCode ? `${seniorCode} — ${seniorTitle}` : g.name,
+        title: seniorTitle,
         courseType: "Combined",
-        batchLabel: g.members.map((m) => m.course.batch ? `${m.course.batch.degreeProgram} — ${m.course.batch.batchName}` : "—").join("; "),
+        batchLabel: batchLabels.join("; "),
+        // Every member batch, separately, so choosing ANY one of them in the
+        // Batch filter still shows this combined class (it used to match
+        // only the joined "A; B" text, so a combined class vanished from
+        // every single-batch filter).
+        batchLabels,
+        // Every member's course code — used to look up faculty interest.
+        interestCodes: Array.from(new Set(g.members.map((m) => m.course.code))),
         // A combined group can span several batches at once — recorded as
         // every distinct semester/program among its members (not just the
-        // first) so the new Semester/Program filters below still surface a
-        // combined row when ANY of its member batches matches, rather than
-        // silently hiding it because only one member's values were kept.
+        // first) so the Semester/Program filters still surface a combined
+        // row when ANY of its member batches matches.
         semesterNumbers: Array.from(new Set(g.members.map((m) => m.course.semesterNumber))),
         degreePrograms: Array.from(new Set(g.members.map((m) => m.course.batch?.degreeProgram).filter((d): d is string => !!d))),
-        customCategoryName: g.members[0]?.course.customCategory?.name || null,
+        customCategoryName: senior?.course.customCategory?.name || g.members[0]?.course.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
         assignments: Object.fromEntries(g.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
@@ -86,7 +102,7 @@ export async function GET() {
   // Every faculty member's own stated priority for the course codes
   // actually in this matrix — the color-coded hint, and the basis for
   // nudging high-affinity instructor/course pairs closer together below.
-  const codesInMatrix = Array.from(new Set(rows.map((r) => r.code).filter((c): c is string => !!c)));
+  const codesInMatrix = Array.from(new Set(rows.flatMap((r) => r.interestCodes)));
   const priorityRecords = await prisma.facultyCoursePreference.findMany({
     where: { facultyId: { in: instructors.map((i) => i.id) }, courseCode: { in: codesInMatrix } },
   });

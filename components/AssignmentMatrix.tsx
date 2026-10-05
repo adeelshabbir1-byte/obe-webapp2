@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import SortableTable from "./SortableTable";
 import DownloadButton from "./DownloadButton";
+import { withProgress } from "../lib/busy";
 
-type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; semesterNumbers: number[]; degreePrograms: string[]; customCategoryName: string | null; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
+type Row = { kind: "course" | "group"; id: string; code: string | null; label: string; title: string; courseType: string; batchLabel: string; batchLabels: string[]; interestCodes: string[]; semesterNumbers: number[]; degreePrograms: string[]; customCategoryName: string | null; studentCount: number; sectionsNeeded: number; assignments: Record<string, number> };
 type Instructor = { id: string; name: string; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; customCategoryName: string | null; dominantType: string | null };
 
 const PRIORITY_COLORS: Record<number, string> = { 1: "#C8E6C9", 2: "#FBEED2", 3: "#FFE0B2" };
@@ -20,6 +21,17 @@ function availabilityLevel(i: Instructor, assignedSoFar: number): { label: strin
   if (remaining > 0) return { label: `Available for ${remaining} more section${remaining === 1 ? "" : "s"}`, color: "#E2F4E8", fg: "var(--sage)", remaining };
   if (remaining === 0) return { label: "At full load (0 sections remaining)", color: "#FBEED2", fg: "#96650F", remaining };
   return { label: `Overloaded by ${-remaining} section${-remaining === 1 ? "" : "s"}`, color: "#FBE2DF", fg: "var(--rust)", remaining };
+}
+
+// A combined class has several member course codes — use the faculty
+// member's strongest (lowest-numbered) stated priority across them.
+function priorityFor(row: Row, instructorId: string, priorities: Record<string, Record<string, number>>): number | undefined {
+  let best: number | undefined;
+  for (const code of row.interestCodes) {
+    const p = priorities[code]?.[instructorId];
+    if (p !== undefined && (best === undefined || p < best)) best = p;
+  }
+  return best;
 }
 
 function specializationMatches(row: Row, instructor: Instructor): boolean {
@@ -60,6 +72,12 @@ export default function AssignmentMatrix() {
   const [specializationFilter, setSpecializationFilter] = useState("");
   const [instructorCategoryFilter, setInstructorCategoryFilter] = useState("");
   const [hiddenInstructorIds, setHiddenInstructorIds] = useState<Set<string>>(new Set());
+  // Two-way "interest" view, driven by what faculty said on their Course
+  // Preferences page: start from a COURSE and see who wants it, or start
+  // from a FACULTY member and see which courses they asked for.
+  const [interestMode, setInterestMode] = useState<"off" | "course" | "faculty">("off");
+  const [interestCourseKey, setInterestCourseKey] = useState("");
+  const [interestFacultyId, setInterestFacultyId] = useState("");
 
   async function load() {
     try {
@@ -82,7 +100,7 @@ export default function AssignmentMatrix() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/assigner/matrix/import-grid", { method: "POST", body: formData });
+      const res = await withProgress("Applying uploaded Excel…", () => fetch("/api/assigner/matrix/import-grid", { method: "POST", body: formData }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Import failed."); setImporting(false); return; }
       setImportResult(data);
@@ -137,13 +155,13 @@ export default function AssignmentMatrix() {
   // ("settled") rows sink toward the bottom — pending ones stay near the
   // top, closest to the course-name column, where attention is needed.
   const courseTypes = Array.from(new Set(rows.map((r) => r.courseType))).sort();
-  const batchLabels = Array.from(new Set(rows.map((r) => r.batchLabel))).sort();
+  const batchLabels = Array.from(new Set(rows.flatMap((r) => r.batchLabels))).sort();
   const semesterNumbers = Array.from(new Set(rows.flatMap((r) => r.semesterNumbers))).sort((a, b) => a - b);
   const degreePrograms = Array.from(new Set(rows.flatMap((r) => r.degreePrograms))).sort();
   const courseCategories = Array.from(new Set(rows.map((r) => r.customCategoryName).filter((c): c is string => !!c))).sort();
   const filteredRows = rows.filter((r) => {
     if (typeFilter && r.courseType !== typeFilter) return false;
-    if (batchFilter && r.batchLabel !== batchFilter) return false;
+    if (batchFilter && !r.batchLabels.includes(batchFilter)) return false;
     // A combined row carries every member batch's semester/program, so it
     // matches (and stays visible) as long as ANY one of its members does —
     // same "don't lose a clubbed class when filtering" rule used elsewhere
@@ -155,8 +173,14 @@ export default function AssignmentMatrix() {
     const q = courseFilter.trim().toLowerCase();
     return r.label.toLowerCase().includes(q) || r.title.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q);
   });
+  const rowKey = (r: Row) => r.kind + r.id;
+  const interestedRows = interestMode === "faculty" && interestFacultyId
+    ? filteredRows.filter((r) => priorityFor(r, interestFacultyId, priorities) !== undefined)
+    : null;
+  const interestSelectedRow = interestMode === "course" && interestCourseKey ? rows.find((r) => rowKey(r) === interestCourseKey) : undefined;
+  const shownRows = interestSelectedRow ? [interestSelectedRow] : interestedRows ?? filteredRows;
   const isRowSettled = (r: Row) => Object.values(r.assignments).reduce((a, b) => a + b, 0) >= r.sectionsNeeded;
-  const sortedRows = [...filteredRows].sort((a, b) => {
+  const sortedRows = [...shownRows].sort((a, b) => {
     const as = isRowSettled(a), bs = isRowSettled(b);
     if (as !== bs) return as ? 1 : -1;
     return 0; // stable sort — preserves existing type-grouping within each partition
@@ -171,14 +195,32 @@ export default function AssignmentMatrix() {
     if (hiddenInstructorIds.has(i.id)) return false;
     if (specializationFilter && i.specialization !== specializationFilter) return false;
     if (instructorCategoryFilter && i.customCategoryName !== instructorCategoryFilter) return false;
+    if (interestSelectedRow && priorityFor(interestSelectedRow, i.id, priorities) === undefined) return false;
+    if (interestMode === "faculty" && interestFacultyId && i.id !== interestFacultyId) return false;
     return true;
   });
   const isInstructorSettled = (i: Instructor) => totalFor(i.id) + i.externalLoadCount >= i.normalLoad;
   const sortedInstructors = [...visibleInstructors].sort((a, b) => {
+    // In "By course" view the faculty who want it most come first.
+    if (interestSelectedRow) {
+      const pa = priorityFor(interestSelectedRow, a.id, priorities) ?? 99, pb = priorityFor(interestSelectedRow, b.id, priorities) ?? 99;
+      if (pa !== pb) return pa - pb;
+    }
     const as = isInstructorSettled(a), bs = isInstructorSettled(b);
     if (as !== bs) return as ? 1 : -1;
     return 0;
   });
+  const interestSummary = interestSelectedRow
+    ? (() => {
+        const interested = instructors.filter((i) => priorityFor(interestSelectedRow, i.id, priorities) !== undefined)
+          .sort((a, b) => (priorityFor(interestSelectedRow, a.id, priorities) ?? 99) - (priorityFor(interestSelectedRow, b.id, priorities) ?? 99));
+        return interested.length === 0
+          ? `Nobody has expressed interest in ${interestSelectedRow.label}.`
+          : `${interested.length} faculty interested in ${interestSelectedRow.label}: ` + interested.map((i) => `${i.name} (${PRIORITY_LABELS[priorityFor(interestSelectedRow, i.id, priorities)!]})`).join(", ");
+      })()
+    : interestMode === "faculty" && interestFacultyId
+      ? `${instructors.find((i) => i.id === interestFacultyId)?.name || "This faculty member"} asked for ${interestedRows?.length ?? 0} course(s)${(interestedRows?.length ?? 0) === 0 ? " — nothing matches the current filters" : ""}.`
+      : "";
 
   return (
     <>
@@ -315,6 +357,27 @@ export default function AssignmentMatrix() {
             </label>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10, padding: "6px 8px", background: "#F4F2FB", border: "1px solid var(--line)" }}>
+          <b style={{ fontSize: 12 }}>Faculty interest view:</b>
+          {(["off", "course", "faculty"] as const).map((m) => (
+            <button key={m} onClick={() => setInterestMode(m)} className="btn" style={{ fontSize: 12, padding: "4px 10px", fontWeight: interestMode === m ? 700 : 500, outline: interestMode === m ? "2px solid var(--brass)" : undefined }}>
+              {m === "off" ? "Off" : m === "course" ? "Course → who wants it" : "Faculty → what they want"}
+            </button>
+          ))}
+          {interestMode === "course" && (
+            <select value={interestCourseKey} onChange={(e) => setInterestCourseKey(e.target.value)} style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5, maxWidth: 320 }}>
+              <option value="">Choose a course…</option>
+              {rows.map((r) => <option key={rowKey(r)} value={rowKey(r)}>{(r.code && shortNames[r.code]) ? `${shortNames[r.code]} — ` : ""}{r.label}{r.kind === "group" ? " (Combined)" : ""}</option>)}
+            </select>
+          )}
+          {interestMode === "faculty" && (
+            <select value={interestFacultyId} onChange={(e) => setInterestFacultyId(e.target.value)} style={{ padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+              <option value="">Choose a faculty member…</option>
+              {instructors.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          )}
+          {interestSummary && <span style={{ fontSize: 12, color: "var(--slate)", flexBasis: "100%" }}>{interestSummary}</span>}
+        </div>
         {importResult && (
           <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
             Applied: {importResult.coursesUpdated} course row(s), {importResult.groupsUpdated} combined-group row(s).
@@ -393,7 +456,7 @@ export default function AssignmentMatrix() {
                         const key = r.id + i.id;
                         const over = totalFor(i.id) + i.externalLoadCount > i.normalLoad;
                         const matches = specializationMatches(r, i);
-                        const priority = r.code ? priorities[r.code]?.[i.id] : undefined;
+                        const priority = priorityFor(r, i.id, priorities);
                         const avail = availabilityLevel(i, totalFor(i.id));
                         const needsAllocation = !settled && value === 0;
                         const title = [

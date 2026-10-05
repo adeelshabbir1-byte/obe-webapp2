@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { seniorMember } from "../../../../../lib/seniorMember";
 
 const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification", "Combined"];
 function typeRank(t: string): number {
@@ -35,13 +36,16 @@ export async function GET() {
       courseType: c.courseType, semesterNumber: c.semesterNumber ?? "",
       assignments: Object.fromEntries(c.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
     })),
-    ...groups.map((g) => ({
-      id: `group:${g.id}`, label: `${g.name} (Combined)`,
+    ...groups.map((g) => {
+      const senior = seniorMember(g.members);
+      return {
+      id: `group:${g.id}`, label: `${senior ? `${senior.course.code} — ${senior.course.title}` : g.name} (Combined)`,
       degreeProgram: g.members.map((m) => m.course.batch?.degreeProgram).filter(Boolean).join("; "),
       batchName: g.members.map((m) => m.course.batch?.batchName).filter(Boolean).join("; "),
       courseType: "Combined", semesterNumber: "",
       assignments: Object.fromEntries(g.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
-    })),
+      };
+    }),
   ];
   rows = rows.sort((a, b) => typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label));
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { withProgress } from "../lib/busy";
+
 import { useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AvailabilityGrid from "./AvailabilityGrid";
@@ -79,7 +81,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   async function autoGenerateSections() {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/coordinator/schedule-sections/auto-generate", { method: "POST" });
+      const res = await withProgress("Creating sections for all offered courses…", () => fetch("/api/coordinator/schedule-sections/auto-generate", { method: "POST" }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setSkippedNoInstructor(data.skippedNoInstructor || []);

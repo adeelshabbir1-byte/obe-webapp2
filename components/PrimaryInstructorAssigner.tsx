@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import DownloadButton from "./DownloadButton";
+import { withProgress } from "../lib/busy";
 
-type Course = { id: string; code: string; title: string; instructorId: string | null; instructorName: string | null; batchLabel: string };
+type Course = { id: string; code: string; title: string; instructorId: string | null; instructorName: string | null; batchLabel: string; degreeProgram: string; semesterNumber: number | null };
 type Faculty = { id: string; name: string };
 
 export default function PrimaryInstructorAssigner() {
@@ -14,6 +15,10 @@ export default function PrimaryInstructorAssigner() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [semesterFilter, setSemesterFilter] = useState("");
+  const [programFilter, setProgramFilter] = useState("");
+  const [batchFilter, setBatchFilter] = useState("");
 
   async function load() {
     try {
@@ -45,7 +50,7 @@ export default function PrimaryInstructorAssigner() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/assigner/primary-instructors/import", { method: "POST", body: formData });
+      const res = await withProgress("Applying uploaded Excel…", () => fetch("/api/assigner/primary-instructors/import", { method: "POST", body: formData }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Import failed."); setImporting(false); return; }
       setImportResult(data);
@@ -57,6 +62,23 @@ export default function PrimaryInstructorAssigner() {
       e.target.value = "";
     }
   }
+
+  const semesterOptions = Array.from(new Set(courses.map((c) => c.semesterNumber).filter((n): n is number => n !== null))).sort((a, b) => a - b);
+  const programOptions = Array.from(new Set(courses.map((c) => c.degreeProgram).filter(Boolean))).sort();
+  const batchOptions = Array.from(new Set(courses.map((c) => c.batchLabel))).sort();
+  const unassignedCount = courses.filter((c) => !c.instructorId).length;
+  // Unassigned courses float to the top so the work left is always in view;
+  // within each group the server's code order is kept.
+  const shown = courses
+    .filter((c) => {
+      if (unassignedOnly && c.instructorId) return false;
+      if (semesterFilter && String(c.semesterNumber) !== semesterFilter) return false;
+      if (programFilter && c.degreeProgram !== programFilter) return false;
+      if (batchFilter && c.batchLabel !== batchFilter) return false;
+      return true;
+    })
+    .sort((a, b) => Number(!!a.instructorId) - Number(!!b.instructorId));
+  const selStyle = { padding: "5px 8px", border: "1px solid var(--line)", fontSize: 12.5 } as const;
 
   return (
     <div className="card" style={{ overflowX: "auto" }}>
@@ -71,6 +93,25 @@ export default function PrimaryInstructorAssigner() {
           {importing ? "Uploading…" : "Upload edited Excel"}
           <input type="file" accept=".xlsx" onChange={handleImport} disabled={importing} style={{ display: "none" }} />
         </label>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <label style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 4 }}>
+          <input type="checkbox" checked={unassignedOnly} onChange={(e) => setUnassignedOnly(e.target.checked)} />
+          Unassigned only ({unassignedCount})
+        </label>
+        <select value={semesterFilter} onChange={(e) => setSemesterFilter(e.target.value)} style={selStyle}>
+          <option value="">All semesters</option>
+          {semesterOptions.map((n) => <option key={n} value={n}>Semester {n}</option>)}
+        </select>
+        <select value={programFilter} onChange={(e) => setProgramFilter(e.target.value)} style={selStyle}>
+          <option value="">All programs</option>
+          {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)} style={selStyle}>
+          <option value="">All batches</option>
+          {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <span style={{ fontSize: 11.5, color: "var(--slate)" }}>Showing {shown.length} of {courses.length}</span>
       </div>
       {importResult && (
         <div style={{ fontSize: 12, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>
@@ -90,7 +131,8 @@ export default function PrimaryInstructorAssigner() {
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Instructor</th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
-            {courses.map((c) => (
+            {courses.length > 0 && shown.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>Nothing matches these filters.</td></tr>}
+            {shown.map((c) => (
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.batchLabel}>{c.batchLabel}</td>
                 <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.code}</td>
