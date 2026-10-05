@@ -1,5 +1,7 @@
 "use client";
 
+import { withProgress } from "../lib/busy";
+
 import { useState } from "react";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
@@ -47,7 +49,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
     if (!confirm(`Enroll every student in ${batch.batchName} into their own current semester's Core/IDS/GE/Lab courses (never Electives, and never touching anyone already enrolled)?`)) return;
     setBusyId(batch.id); setError("");
     try {
-      const res = await fetch(`/api/coordinator/batches/${batch.id}/run-default-enrollment`, { method: "POST" });
+      const res = await withProgress(`Enrolling students in ${batch.batchName}…`, () => fetch(`/api/coordinator/batches/${batch.id}/run-default-enrollment`, { method: "POST" }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
       setEnrollResultMsg((prev) => ({ ...prev, [batch.id]: `${data.totalEnrolled} new enrollment(s) across ${data.studentsAffected} of ${data.totalStudents} student(s).` }));
@@ -127,7 +129,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
     if (typed !== batchName) { if (typed !== null) alert("Name didn't match — nothing was deleted."); return; }
     setBusyId(batchId); setError("");
     try {
-      const res = await fetch(`/api/coordinator/batches/${batchId}`, { method: "DELETE" });
+      const res = await withProgress(`Deleting batch ${batchName} and all its data…`, () => fetch(`/api/coordinator/batches/${batchId}`, { method: "DELETE" }));
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
       setBatches((prev) => prev.filter((b) => b.id !== batchId));

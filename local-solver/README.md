@@ -1,4 +1,5 @@
 # Local Timetable Solver
+> New to this? Follow **STEP_BY_STEP.md** — plain-language steps with screenshots-free instructions.
 
 A program that runs **on your own computer** (not the web portal) and builds the
 timetable properly, using Google's OR-Tools constraint solver. There is no web

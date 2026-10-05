@@ -30,6 +30,9 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
         coordinatorId: course.coordinatorId, batchId: course.batchId, code: labCode, title: `${course.title} Lab`,
         creditHours: labCredit, courseType: "Lab", semesterNumber: course.semesterNumber,
         masterCourseId: course.masterCourseId,
+        // The Lab is taught by the same Subject Expert as its theory course —
+        // splitting later must not leave the new Lab unassigned.
+        subjectExpertId: course.subjectExpertId,
         // isOffered defaults to false on a brand-new Course row — carry over
         // the parent's own offered/term status instead, otherwise a split
         // off an already-offered course produces a Lab half that's invisible

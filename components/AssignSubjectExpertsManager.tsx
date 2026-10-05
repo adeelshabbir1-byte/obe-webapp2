@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SortableTable from "./SortableTable";
+import { withProgress } from "../lib/busy";
 
 type Section = { id: string; subjectExpertId: string | null; batchLabel: string };
 type CourseGroup = {
@@ -19,7 +20,25 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
   const router = useRouter();
   const [groups, setGroups] = useState<CourseGroup[]>(initialGroups);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [syncing, setSyncing] = useState(false);
+  async function syncLabs() {
+    setSyncing(true); setError(""); setNotice("");
+    try {
+      const res = await withProgress("Matching labs to their theory courses…", () => fetch("/api/coordinator/courses/sync-lab-experts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apply: true }) }));
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); return; }
+      setNotice(
+        `${data.filled.length} lab(s) were given their theory course's Subject Expert.` +
+        (data.differing.length ? ` ${data.differing.length} lab(s) already have a different expert and were left alone: ${data.differing.join("; ")}.` : "") +
+        (data.blocked.length ? ` ${data.blocked.length} lab(s) inherit from another course and were skipped: ${data.blocked.join(", ")}.` : "") +
+        (data.filled.length ? " Reloading…" : ""),
+      );
+      if (data.filled.length) setTimeout(() => window.location.reload(), 900);
+    } catch (err: any) { setError("Unexpected error: " + err.message); } finally { setSyncing(false); }
+  }
 
   function switchBatch(batchId: string) {
     router.push(batchId ? `/coordinator/assign-subject-experts?batchId=${batchId}` : "/coordinator/assign-subject-experts");
@@ -34,29 +53,51 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
   async function assignSeToGroup(code: string, subjectExpertId: string, revertEl: HTMLSelectElement, revertValue: string) {
     const group = groups.find((g) => g.code === code);
     if (!group) return;
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setNotice("");
 
-    const outcomes = await Promise.all(group.sections.map(async (s) => {
+    const outcomes = await withProgress(`Assigning Subject Expert to ${group.sections.length} section(s)…`, () => Promise.all(group.sections.map(async (s) => {
       try {
         const res = await fetch(`/api/coordinator/courses/${s.id}/assign-se`, {
           method: "PUT", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
         });
         const data = await res.json().catch(() => ({}));
-        return { sectionId: s.id, ok: res.ok, error: data.error as string | undefined };
+        return { sectionId: s.id, ok: res.ok, error: data.error as string | undefined, labSibling: data.labSibling as { id: string; code: string; status: string; subjectExpertId: string | null; keptName?: string } | null | undefined };
       } catch (err: any) {
-        return { sectionId: s.id, ok: false, error: err?.message };
+        return { sectionId: s.id, ok: false, error: err?.message, labSibling: undefined };
       }
-    }));
+    })));
 
     const failures = outcomes.filter((o) => !o.ok);
-    setGroups((prev) => prev.map((g) => g.code !== code ? g : {
+    // The server also moves each section's Lab (<CODE>-L) along with it —
+    // mirror that into the Lab's own row so the page doesn't show a stale
+    // value until the next reload.
+    const labChanges = new Map<string, string | null>();
+    const labNotes: string[] = [];
+    for (const o of outcomes) {
+      const l = o.labSibling;
+      if (!o.ok || !l) continue;
+      if (l.status === "assigned" || l.status === "cleared") labChanges.set(l.id, l.subjectExpertId);
+      else if (l.status === "kept") labNotes.push(`${l.code} was left with ${l.keptName || "its own expert"} (set separately)`);
+      else if (l.status === "blocked") labNotes.push(`${l.code} inherits from another course, so it was not changed`);
+    }
+    setGroups((prev) => prev.map((g) => ({
       ...g,
       sections: g.sections.map((s) => {
-        const outcome = outcomes.find((o) => o.sectionId === s.id);
-        return outcome?.ok ? { ...s, subjectExpertId: subjectExpertId || null } : s;
+        if (g.code === code) {
+          const outcome = outcomes.find((o) => o.sectionId === s.id);
+          if (outcome?.ok) return { ...s, subjectExpertId: subjectExpertId || null };
+        }
+        return labChanges.has(s.id) ? { ...s, subjectExpertId: labChanges.get(s.id) ?? null } : s;
       }),
-    }));
+    })));
+    const followed = Array.from(new Set(outcomes.filter((o) => o.ok && (o.labSibling?.status === "assigned" || o.labSibling?.status === "cleared")).map((o) => o.labSibling!.code)));
+    if (followed.length > 0 || labNotes.length > 0) {
+      setNotice([
+        followed.length > 0 ? `Lab ${followed.join(", ")} now follows this course's Subject Expert.` : "",
+        ...labNotes.map((n) => n + "."),
+      ].filter(Boolean).join(" "));
+    }
 
     if (failures.length > 0) {
       revertEl.value = revertValue;
@@ -118,6 +159,7 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {notice && <div style={{ fontSize: 12.5, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>{notice}</div>}
 
       {batches.length > 0 && (
         <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -126,6 +168,9 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
             <option value="">All batches</option>
             {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}
           </select>
+          <button className="btn" onClick={syncLabs} disabled={syncing} style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px" }} title="Gives every Lab that has no Subject Expert the expert of its theory course. Labs with a different expert are left alone.">
+            {syncing ? "Working…" : "Match labs to their theory course"}
+          </button>
         </div>
       )}
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { withProgress } from "../lib/busy";
+
 import { useState, useRef, useEffect } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
@@ -126,10 +128,10 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     if (selectedImportIds.size === 0) { setError("Select at least one course to import."); return; }
     setLoading(true); setError(""); setImportResult("");
     try {
-      const res = await fetch("/api/coordinator/courses/import-hec", {
+      const res = await withProgress("Importing courses from the curriculum…", () => fetch("/api/coordinator/courses/import-hec", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ batchId: importBatchId, curriculumId: importCurriculumId, courseIds: Array.from(selectedImportIds) }),
-      });
+      }));
       let data: any = {};
       try { data = await res.json(); }
       catch {
@@ -325,7 +327,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
     if (!proceed) return;
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/coordinator/courses/${courseId}`, { method: "DELETE" });
+      const res = await withProgress("Deleting course and its data…", () => fetch(`/api/coordinator/courses/${courseId}`, { method: "DELETE" }));
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setCourses((prev) => prev.filter((c) => c.id !== courseId));
