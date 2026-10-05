@@ -509,8 +509,10 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option A: Generate Locally on Your PC (recommended for larger institutions)</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
-              Download your current setup as an Excel file, run the desktop tool on your own computer (no time
-              limit), then upload the solution file it produces.
+              Download your current setup as an Excel file, open the Local Timetable Solver program on your own
+              computer (no time limit — it is much stronger than the web option below), choose that file, then
+              upload the solution file it produces. The program lives in the <code>local-solver</code> folder of the
+              project.
             </p>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <DownloadButton url="/api/coordinator/timetable/download-constraints" label="1. Download Constraints (Excel)" className="btn btn-brass" />
