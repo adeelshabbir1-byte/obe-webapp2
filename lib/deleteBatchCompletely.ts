@@ -1,42 +1,93 @@
 import { prisma } from "./db";
-import { deleteCourseCompletely } from "./deleteCourseCompletely";
 
-/** Deletes a batch and everything under it — every course (with all of
- * ITS dependents, via deleteCourseCompletely), every student (and their
- * survey responses / transcript records), every PLO, and the batch's own
- * schedule config — so a Coordinator can genuinely start over rather than
- * accumulate orphaned data. */
+/** Deletes a batch and everything under it — every course (and all of
+ * ITS dependents), every student (and their dependents), every PLO, and
+ * the batch's own schedule config — so a Coordinator can genuinely start
+ * over rather than accumulate orphaned data.
+ *
+ * This does NOT call deleteCourseCompletely() in a per-course loop. That
+ * used to run a full ~20-query transaction for EVERY course in the batch
+ * one at a time — fine for deleting a single course, but for a whole
+ * batch it meant dozens of sequential round trips, which on a serverless
+ * function (Vercel's actual cap is often 10s even when this route
+ * declares a 60s maxDuration, depending on plan) could get killed
+ * partway through. Each course transaction commits on its own, so a
+ * killed request left SOME courses deleted and others not — "the number
+ * of courses keeps going down every time I click Delete, but the batch
+ * never actually goes away" is exactly that: a timeout, not a leftover
+ * foreign key, repeatedly making partial, non-atomic progress.
+ *
+ * Instead, every dependent table is cleaned up with ONE bulk deleteMany
+ * across ALL of this batch's course/student ids at once, so the total
+ * round-trip count stays roughly constant regardless of how many courses
+ * or students the batch has, and the whole thing runs as a single
+ * transaction — it either fully succeeds or fully rolls back, so a
+ * failure can never again leave the batch half-deleted. */
 export async function deleteBatchCompletely(batchId: string) {
   const courseIds = (await prisma.course.findMany({ where: { batchId }, select: { id: true } })).map((c) => c.id);
-  for (const courseId of courseIds) {
-    await deleteCourseCompletely(courseId);
-  }
-
   const studentIds = (await prisma.student.findMany({ where: { batchId }, select: { id: true } })).map((s) => s.id);
-  // Elective Slot Groups (the batch's "Elective Options" — e.g. "Elective-I")
-  // have a required, non-cascading FK to Batch, and their Options/Choices
-  // in turn reference this batch's own Students. Without deleting these
-  // first, prisma.batch.delete() (and even the Student delete above it)
-  // throws a foreign-key constraint error that silently rolls back the
-  // ENTIRE transaction — the batch looked like it was "not deleting" with
-  // no visible reason, because nothing in this list actually ran.
+  const lectureRowIds = (await prisma.lectureRow.findMany({ where: { courseId: { in: courseIds } }, select: { id: true } })).map((r) => r.id);
+  const scheduleSectionIds = (await prisma.scheduleSection.findMany({ where: { courseId: { in: courseIds } }, select: { id: true } })).map((s) => s.id);
   const electiveGroupIds = (await prisma.electiveSlotGroup.findMany({ where: { batchId }, select: { id: true } })).map((g) => g.id);
 
+  // Content Sync bases: a course being deleted that's the BASE of its
+  // sync group needs another member promoted (or the group cleaned up if
+  // it was the last one) — same as the single-course path. Only courses
+  // that are actually a base need this, which is normally a small subset,
+  // so this stays a short loop rather than one per course in the batch.
+  const baseMemberships = await prisma.courseContentSyncMember.findMany({ where: { courseId: { in: courseIds }, isBase: true } });
+  for (const membership of baseMemberships) {
+    const otherMembers = await prisma.courseContentSyncMember.findMany({
+      where: { groupId: membership.groupId, courseId: { notIn: courseIds } }, orderBy: { id: "asc" },
+    });
+    await prisma.courseContentSyncMember.delete({ where: { courseId: membership.courseId } });
+    if (otherMembers.length > 0) {
+      await prisma.courseContentSyncMember.update({ where: { id: otherMembers[0].id }, data: { isBase: true } });
+    } else {
+      await prisma.courseContentSyncGroup.delete({ where: { id: membership.groupId } }).catch(() => {});
+    }
+  }
+
   await prisma.$transaction([
+    // --- Course-scoped dependents (bulk, by courseId IN courseIds) ---
+    prisma.electiveChoice.deleteMany({ where: { option: { courseId: { in: courseIds } } } }),
+    prisma.electiveSlotOption.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.outOfBatchRequest.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.degreePlanEntry.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.registrationApprovalRequest.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.attendanceRecord.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.paperDistributionItem.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: lectureRowIds } } }),
+    prisma.timetableEntry.deleteMany({ where: { scheduleSectionId: { in: scheduleSectionIds } } }),
+    prisma.studentMark.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.feedForwardNote.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.instructorGuidanceComment.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.courseGradeCutoff.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.coursePloMapping.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.weightExceptionRequest.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.courseSectionAssignment.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.studentEnrollment.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.courseEquivalenceMember.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.courseContentSyncMember.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.cqiRecord.updateMany({ where: { courseId: { in: courseIds } }, data: { courseId: null } }),
+    prisma.course.updateMany({ where: { benchmarkSourceId: { in: courseIds } }, data: { benchmarkSourceId: null } }),
+    prisma.course.updateMany({ where: { prerequisiteCourseId: { in: courseIds } }, data: { prerequisiteCourseId: null } }),
+    prisma.scheduleSection.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.lectureRow.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.assessmentInstrument.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.cLO.deleteMany({ where: { courseId: { in: courseIds } } }),
+
+    // --- Elective Options (the batch's "Elective-I" etc.) ---
     prisma.electiveChoice.deleteMany({ where: { groupId: { in: electiveGroupIds } } }),
     prisma.electiveSlotOption.deleteMany({ where: { groupId: { in: electiveGroupIds } } }),
     prisma.electiveSlotGroup.deleteMany({ where: { batchId } }),
+
+    // --- Student-scoped dependents (bulk, by studentId IN studentIds) ---
+    // Scoped by student rather than by course too, since a student can
+    // have records tied to a course OUTSIDE this batch (the Out-of-Batch
+    // enrollment feature) that the course-scoped deletes above can't see.
     prisma.surveyResponse.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.studentTranscriptRecord.deleteMany({ where: { studentId: { in: studentIds } } }),
-    // Safety net, scoped by STUDENT rather than by course: a student can
-    // have attendance/marks/enrollment/requests/sessions tied to a course
-    // OUTSIDE this batch too (the "Out-of-Batch" enrollment feature lets
-    // a student take a course belonging to a different batch), so the
-    // per-course cleanup above — which only looks at this batch's own
-    // courses — can't reach those rows. StudentSession in particular
-    // blocks almost every real student (anyone who ever logged in has
-    // one), which is the most likely reason a delete kept failing even
-    // after the Elective Options fix.
     prisma.studentSession.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.attendanceRecord.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.studentMark.deleteMany({ where: { studentId: { in: studentIds } } }),
@@ -44,6 +95,9 @@ export async function deleteBatchCompletely(batchId: string) {
     prisma.outOfBatchRequest.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.degreePlanEntry.deleteMany({ where: { studentId: { in: studentIds } } }),
     prisma.registrationApprovalRequest.deleteMany({ where: { studentId: { in: studentIds } } }),
+
+    // --- The courses, students, and finally the batch itself ---
+    prisma.course.deleteMany({ where: { batchId } }),
     prisma.student.deleteMany({ where: { batchId } }),
     prisma.pLO.deleteMany({ where: { batchId } }),
     prisma.cqiRecord.updateMany({ where: { batchId }, data: { batchId: null } }),
