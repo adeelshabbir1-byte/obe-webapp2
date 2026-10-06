@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { courseAppliesToTrack } from "../../../../../../lib/tracks";
 
 // Enrolls every student in this batch into every offered, non-elective
 // course (Core/IDS/General Education/Lab — never Elective, since a
@@ -21,9 +22,12 @@ export async function POST(req: NextRequest, { params }: { params: { batchId: st
   const perStudent: { studentId: string; name: string; enrolled: number }[] = [];
 
   for (const student of students) {
-    const defaultCourses = await prisma.course.findMany({
+    const semesterCourses = await prisma.course.findMany({
       where: { batchId: batch.id, isOffered: true, semesterNumber: student.currentSemesterNumber, courseType: { not: "Elective" } },
     });
+    // Track-aware: a Pre-Medical student gets the shared courses plus the
+    // Pre-Medical-only ones (e.g. Maths-I deficiency), never the Non-Medical-only ones.
+    const defaultCourses = semesterCourses.filter((c) => courseAppliesToTrack(c.trackName, student.track));
     let enrolledForThisStudent = 0;
     for (const course of defaultCourses) {
       const existing = await prisma.studentEnrollment.findUnique({ where: { studentId_courseId: { studentId: student.id, courseId: course.id } } });

@@ -15,7 +15,10 @@ function colorForWeight(pct: number, max: number) {
   return `rgb(${Math.max(r, 150)}, ${Math.max(g, 60)}, ${Math.max(b, 40)})`;
 }
 
-export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessments: Assessment[]; clos: Clo[]; plos: Plo[] }) {
+export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: { assessments: Assessment[]; clos: Clo[]; plos: Plo[]; changed?: string[] }) {
+  // ids ("a:<id>" assessment, "c:<id>" CLO) that differ from the other plan — outlined in amber
+  const hi = new Set(changed || []);
+  const outline = (key: string) => hi.has(key) ? { stroke: "#F5A300", strokeWidth: 3.5 } : {};
   // CLOs that feed the SAME PLO are placed next to each other (PLOs ordered by
   // their first CLO, CLOs inside a PLO in their own order), so the lines into a
   // PLO come from neighbouring boxes and never cross over each other. CLOs with
@@ -164,7 +167,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* Assessment boxes */}
       {assessments.map((a) => (
         <g key={a.id}>
-          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F66A0" />
+          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F66A0" {...outline("a:" + a.id)} />
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">{a.label.toLowerCase().startsWith(a.type.toLowerCase()) ? a.label : `${a.type} ${a.label}`}</text>
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#D4E3F3">{a.marksPct}% of course grade</text>
         </g>
@@ -173,7 +176,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos }: { assessm
       {/* CLO boxes */}
       {usedClos.map((c) => (
         <g key={c.id}>
-          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#5A4AA0" />
+          <rect x={col2X} y={cPos.get(c.id)} width={COL_W} height={BOX_H} rx={5} fill="#5A4AA0" {...outline("c:" + c.id)} />
           <text x={col2X + 10} y={(cPos.get(c.id) || 0) + 17} fontSize={12} fontWeight={600} fill="#fff">{c.code}</text>
           <text x={col2X + 10} y={(cPos.get(c.id) || 0) + 31} fontSize={9.5} fill="#DAD5F3">
             {cloTotals.get(c.id)!.count} assessment(s) · {cloTotals.get(c.id)!.pct}% of course grade

@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { computeResultMate } from "./resultMate";
 import { getGradingScaleForBatch } from "./gradingScaleLookup";
+import { getPassingCriteria } from "./passingCriteria";
 
 export type TranscriptCourseRow = {
   code: string; title: string; creditHours: number; grade: string; gpaPoints: number | null;
@@ -64,7 +65,8 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
   // above so a later pass always overrides an earlier fail/withdraw.
   const outcomeByCode = new Map<string, { code: string; title: string; creditHours: number; passed: boolean; lastGrade: string; lastTermName: string; lastTermYear: number }>();
   for (const r of historical) {
-    const passed = r.gpaPoints !== null && r.gpaPoints > 0;
+    // Non-credit deficiency courses record "P"/"F" with no GPA points.
+    const passed = r.grade === "P" || (r.gpaPoints !== null && r.gpaPoints > 0);
     const existing = outcomeByCode.get(r.courseCode);
     if (passed) {
       outcomeByCode.set(r.courseCode, { code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, passed: true, lastGrade: r.grade, lastTermName: r.termName, lastTermYear: r.termYear });
@@ -77,15 +79,21 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
   // Withdrawn enrollments are excluded here — they're no longer "in
   // progress"; they surface instead in the Courses Remaining list below
   // once the course offering closes out and snapshots a "W" record.
+  let deficiencyPct: number | null = null; // looked up lazily, only if a non-credit course shows up
   const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId, status: { not: "WITHDRAWN" } }, include: { course: { include: { batch: true } } } });
   for (const e of currentEnrollments) {
     const result = await computeResultMate(e.courseId);
     const row = result.rows.find((r) => r.studentId === studentId);
     if (!row) continue;
     const gradingScale = e.course.batch ? await getGradingScaleForBatch(e.course.coordinatorId, e.course.batch) : [];
-    const gpaPoints = gradingScale.find((g) => g.letter === row.grade)?.gpaValue ?? null;
+    const isDeficiency = e.course.creditHours === 0;
+    if (isDeficiency && deficiencyPct === null) {
+      const coordinator = await prisma.user.findUnique({ where: { id: e.course.coordinatorId } });
+      deficiencyPct = (await getPassingCriteria(coordinator?.managedById)).deficiencyPct;
+    }
+    const gpaPoints = isDeficiency ? null : gradingScale.find((g) => g.letter === row.grade)?.gpaValue ?? null;
     courseRows.push({
-      code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: row.grade, gpaPoints,
+      code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: isDeficiency ? (row.totalPct >= (deficiencyPct ?? 40) ? "P" : "F") : row.grade, gpaPoints,
       totalPct: row.totalPct, termName: e.course.offeredTermName || "Current", termYear: e.course.offeredTermYear || new Date().getFullYear(), isCurrent: true,
     });
     if (gpaPoints !== null) { totalCredits += e.course.creditHours; totalGradePoints += gpaPoints * e.course.creditHours; }

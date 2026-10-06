@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { normalizeTrack } from "../../../../../lib/tracks";
 
 // Processes one chunk of already-parsed rows (see the sibling /parse
 // endpoint, which does the file reading up front) — the database work
@@ -61,8 +62,9 @@ export async function POST(req: NextRequest) {
     try {
       const student = await prisma.student.upsert({
         where: { batchId_rollNumber: { batchId: batch.id, rollNumber: r.rollNumber } },
-        create: { batchId: batch.id, name: r.name, rollNumber: r.rollNumber },
-        update: { name: r.name },
+        create: { batchId: batch.id, name: r.name, rollNumber: r.rollNumber, track: normalizeTrack(r.track) },
+        // Only change an existing student's track when the file actually states one.
+        update: { name: r.name, ...(r.track ? { track: normalizeTrack(r.track) } : {}) },
       });
       imported++;
       touchedStudentIds.push(student.id);

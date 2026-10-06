@@ -1,9 +1,9 @@
 import { prisma } from "./db";
 import { termIndex } from "./termLogic";
 
-export type PassingCriteria = { cloPct: number; ploPct: number };
+export type PassingCriteria = { cloPct: number; ploPct: number; deficiencyPct: number };
 
-const DEFAULT_CRITERIA: PassingCriteria = { cloPct: 50, ploPct: 50 };
+const DEFAULT_CRITERIA: PassingCriteria = { cloPct: 50, ploPct: 50, deficiencyPct: 40 };
 
 // Versioned the same way getGradingScaleForBatch is: a new version with
 // a later effectiveFrom term/year applies going forward without
@@ -21,7 +21,7 @@ export async function getPassingCriteria(chairmanId: string | null | undefined, 
   if (!term) {
     // No specific term given — use whichever version is most recent.
     const latest = allVersions.reduce((best, v) => termIndex(v.effectiveFromTerm, v.effectiveFromYear) > termIndex(best.effectiveFromTerm, best.effectiveFromYear) ? v : best);
-    return { cloPct: latest.cloPassingPct, ploPct: latest.ploPassingPct };
+    return { cloPct: latest.cloPassingPct, ploPct: latest.ploPassingPct, deficiencyPct: latest.deficiencyPassingPct };
   }
 
   const targetIndex = termIndex(term.termName, term.year);
@@ -35,5 +35,5 @@ export async function getPassingCriteria(chairmanId: string | null | undefined, 
   if (!best) {
     best = allVersions.reduce((earliest, v) => termIndex(v.effectiveFromTerm, v.effectiveFromYear) < termIndex(earliest.effectiveFromTerm, earliest.effectiveFromYear) ? v : earliest);
   }
-  return { cloPct: best.cloPassingPct, ploPct: best.ploPassingPct };
+  return { cloPct: best.cloPassingPct, ploPct: best.ploPassingPct, deficiencyPct: best.deficiencyPassingPct };
 }

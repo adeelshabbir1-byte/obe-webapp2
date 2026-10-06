@@ -104,7 +104,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
  * attainment for this course offering — called right before the reset
  * above wipes their marks, so a student's transcript survives across every
  * semester rather than just the current one. */
-async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number; batch: { startTerm: string; startYear: number } | null }, criteria: { cloPct: number; ploPct: number }) {
+async function snapshotStudentTranscripts(courseId: string, course: { coordinatorId: string; code: string; title: string; creditHours: number; courseType: string; offeredTermName: string; offeredTermYear: number; batch: { startTerm: string; startYear: number } | null }, criteria: { cloPct: number; ploPct: number; deficiencyPct?: number }) {
   const { computeResultMate } = await import("./resultMate");
   const { getGradingScaleForBatch } = await import("./gradingScaleLookup");
   const result = await computeResultMate(courseId);
@@ -136,12 +136,20 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
   }
   const gpaByLetter = new Map(gradingScale.map((g) => [g.letter, g.gpaValue]));
 
+  // A non-credit deficiency course (creditHours 0, e.g. Maths-I) is just
+  // Pass/Fail against its own pass mark: no letter grade, no GPA points,
+  // and (0 credits) it can never move the CGPA.
+  const isDeficiency = course.creditHours === 0;
+  const deficiencyPct = criteria.deficiencyPct ?? 40;
+
   await prisma.studentTranscriptRecord.createMany({
     data: result.rows.map((r) => ({
       studentId: r.studentId, coordinatorId: course.coordinatorId,
       courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
       termName: course.offeredTermName, termYear: course.offeredTermYear,
-      totalPct: r.totalPct, grade: r.grade, gpaPoints: gpaByLetter.get(r.grade) ?? null,
+      totalPct: r.totalPct,
+      grade: isDeficiency ? (r.totalPct >= deficiencyPct ? "P" : "F") : r.grade,
+      gpaPoints: isDeficiency ? null : gpaByLetter.get(r.grade) ?? null,
       cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: r.byClo[code] || 0, passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * (criteria.cloPct / 100) }))),
       ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: r.byPlo[label] || 0, passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * (criteria.ploPct / 100) }))),
     })),

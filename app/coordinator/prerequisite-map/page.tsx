@@ -120,6 +120,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           id: c.id, code: c.code, title: c.title, courseType: c.courseType, creditHours: c.creditHours,
           semesterNumber: c.semesterNumber, prerequisiteCourseId: c.prerequisiteCourseId, isOffered: c.isOffered,
           masterCourseId: c.masterCourseId,
+          trackName: c.trackName, isNonCredit: c.isNonCredit, contactHours: c.contactHours,
           // Which restricted pool to offer, if any — Elective slots pick
           // from Domain Elective, IDS-III/IV "institution-selected"
           // slots pick from the separate, smaller Domain IDS pool. The

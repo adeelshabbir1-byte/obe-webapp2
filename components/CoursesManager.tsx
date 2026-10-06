@@ -4,12 +4,14 @@ import { withProgress } from "../lib/busy";
 
 import { useState, useRef, useEffect } from "react";
 import SortableTable from "./SortableTable";
+import { TRACKS } from "../lib/tracks";
 import { useRouter } from "next/navigation";
 
 type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
   prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean; enrolledCount: number;
+  trackName: string | null; isNonCredit: boolean; contactHours: number | null;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -185,6 +187,9 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           code: fd.get("code"), title: fd.get("title"), creditHours: fd.get("creditHours"),
           courseType: fd.get("courseType"), semesterNumber: fd.get("semesterNumber") || null,
           hasLab: fd.get("hasLab") === "on",
+          isNonCredit: fd.get("isNonCredit") === "on",
+          contactHours: fd.get("contactHours") || null,
+          trackName: fd.get("trackName") || null,
         }),
       });
       const data = await res.json();
@@ -500,12 +505,12 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
 
       <div className="card" style={{ overflowX: "auto" }}>
         <SortableTable>
-          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Semester</th><th>Enrolled</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
+          <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Track</th><th>Semester</th><th>Enrolled</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
-            {courses.length === 0 && <tr><td colSpan={11} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={12} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
             {courses.map((c) => editingId === c.id ? (
               <tr key={c.id}>
-                <td colSpan={11}>
+                <td colSpan={12}>
                   <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                     <input name="code" defaultValue={c.code} placeholder="Code" style={{ width: 90, padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <input name="title" defaultValue={c.title} placeholder="Title" style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -517,6 +522,14 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                     <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
                       <input type="checkbox" name="hasLab" defaultChecked={c.hasLab} /> Has Lab Component
                     </label>
+                    <select name="trackName" defaultValue={c.trackName || ""} title="Which students take this course" style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+                      <option value="">All tracks</option>
+                      {TRACKS.map((t) => <option key={t} value={t}>{t} only</option>)}
+                    </select>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }} title="Deficiency course: no credit hours, not in CGPA, just has to be passed">
+                      <input type="checkbox" name="isNonCredit" defaultChecked={c.isNonCredit} /> Non-credit (deficiency)
+                    </label>
+                    <input name="contactHours" type="number" min={1} max={20} defaultValue={c.contactHours ?? ""} placeholder="Contact h/wk" title="Weekly contact hours — required for a non-credit course" style={{ width: 100, padding: "6px 8px", border: "1px solid var(--line)" }} />
                     <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
                     <button type="button" onClick={() => setEditingId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
                   </form>
@@ -525,7 +538,10 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
             ) : (
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{c.batchName || "—"}</td>
-                <td>{c.code}</td><td>{c.title}</td><td>{c.creditHours}</td><td>{c.courseType}</td>
+                <td>{c.code}</td><td>{c.title}</td>
+                <td>{c.isNonCredit ? <span title="Non-credit deficiency course">0 <span style={{ fontSize: 9.5, background: "#FBEED2", color: "#96650F", padding: "1px 5px", borderRadius: 2 }}>NON-CREDIT{c.contactHours ? ` · ${c.contactHours}h/wk` : ""}</span></span> : c.creditHours}</td>
+                <td>{c.courseType}</td>
+                <td style={{ fontSize: 11.5 }}>{c.trackName ? <b>{c.trackName}</b> : <span style={{ color: "var(--slate)" }}>All</span>}</td>
                 <td>{c.semesterNumber ?? "—"}</td>
                 <td style={{ textAlign: "center" }}>{c.enrolledCount}</td>
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
+import { TRACKS } from "../lib/tracks";
 
-type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number };
+type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number; track?: string };
 type Batch = { id: string; label: string };
 
 export default function StudentManager({ batches, initialBatchId, students: initialStudents }: { batches: Batch[]; initialBatchId: string; students: Student[] }) {
@@ -48,6 +49,12 @@ export default function StudentManager({ batches, initialBatchId, students: init
       setHeldBack(new Set());
       setAdvancing(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setAdvancing(false); }
+  }
+
+  async function changeTrack(id: string, track: string) {
+    const res = await fetch(`/api/coordinator/students/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ track }) });
+    if (!res.ok) { setError("Couldn't change that student's track."); return; }
+    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, track } : s));
   }
 
   function switchBatch(id: string) {
@@ -184,12 +191,13 @@ export default function StudentManager({ batches, initialBatchId, students: init
 
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Hold Back</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Track</th><th>Hold Back</th><th></th></tr></thead>
           <tbody>
-            {students.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
+            {students.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
             {students.map((s) => (
               <tr key={s.id}>
                 <td>{s.name}</td><td>{s.rollNumber}</td><td>{s.currentSemesterNumber}</td>
+                <td><select value={s.track || "Non-Medical"} onChange={(e) => changeTrack(s.id, e.target.value)} style={{ padding: "3px 6px", border: "1px solid var(--line)", fontSize: 12 }}>{TRACKS.map((t) => <option key={t} value={t}>{t}</option>)}</select></td>
                 <td><input type="checkbox" checked={heldBack.has(s.id)} onChange={() => toggleHeldBack(s.id)} /></td>
                 <td><button onClick={() => removeStudent(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
               </tr>

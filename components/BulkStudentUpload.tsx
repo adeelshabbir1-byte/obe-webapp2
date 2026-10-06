@@ -4,7 +4,7 @@ import { useState } from "react";
 const CHUNK_SIZE = 50;
 
 type RowError = { row: number; name: string; rollNumber: string; batchName: string; reason: string };
-type ParsedRow = { name: string; rollNumber: string; batchName: string };
+type ParsedRow = { name: string; rollNumber: string; batchName: string; track?: string };
 
 export default function BulkStudentUpload({ batches }: { batches: { degreeProgram: string; batchName: string }[] }) {
   const [file, setFile] = useState<File | null>(null);
@@ -126,7 +126,7 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
-          Column A = Name, Column B = Roll Number, Column C = Batch Name. Students from any number of your
+          Column A = Name, Column B = Roll Number, Column C = Batch Name, optional Column D = Track (Non-Medical or Pre-Medical; left blank = unchanged / Non-Medical). Students from any number of your
           batches can be mixed in the same file. A header row is fine — it's detected and skipped automatically.
           Large files are processed in small batches automatically — leave the page open until it finishes.
         </p>
@@ -136,10 +136,10 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Or Paste Student Data Directly</h3>
-        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>One student per line, as "Name, Roll Number, Batch Name" (comma or tab separated).</p>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>One student per line, as "Name, Roll Number, Batch Name, Track" (comma or tab separated; Track is optional).</p>
         <textarea
           value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8}
-          placeholder={"Ali Khan, 2026-CS-001, BSCS Fall 2026\nSara Ahmed, 2026-AI-014, BSAI Fall 2026"}
+          placeholder={"Ali Khan, 2026-CS-001, BSCS Fall 2026\nSara Ahmed, 2026-AI-014, BSAI Fall 2026, Pre-Medical"}
           style={{ width: "100%", padding: 8, border: "1px solid var(--line)", fontFamily: "monospace", fontSize: 12.5 }}
         />
         <button onClick={() => runImport("paste")} disabled={loading || !csvText.trim()} className="btn btn-brass" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Pasted Text"}</button>

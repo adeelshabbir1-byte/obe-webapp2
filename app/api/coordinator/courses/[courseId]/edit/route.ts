@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { TRACKS } from "../../../../../../lib/tracks";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -18,8 +19,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (user.role === "OMC" && course.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
-  if (!body.code || !body.title || !body.creditHours) {
+  const isNonCredit = body.isNonCredit !== undefined ? !!body.isNonCredit : course.isNonCredit;
+  const creditMissing = body.creditHours === undefined || body.creditHours === null || body.creditHours === "";
+  if (!body.code || !body.title || creditMissing) {
     return NextResponse.json({ error: "code, title, creditHours are required" }, { status: 400 });
+  }
+  const creditHours = isNonCredit ? 0 : parseInt(body.creditHours, 10);
+  if (!isNonCredit && (isNaN(creditHours) || creditHours < 1)) {
+    return NextResponse.json({ error: "credit hours must be at least 1 (tick \"Non-credit\" for a deficiency course)" }, { status: 400 });
+  }
+  let contactHours: number | null | undefined = undefined; // undefined = leave as is
+  if (body.contactHours !== undefined) {
+    contactHours = body.contactHours === null || body.contactHours === "" ? null : parseInt(body.contactHours, 10);
+    if (contactHours !== null && (isNaN(contactHours) || contactHours < 1 || contactHours > 20)) {
+      return NextResponse.json({ error: "contact hours per week must be a number from 1 to 20" }, { status: 400 });
+    }
+  }
+  if (isNonCredit && (contactHours === null || (contactHours === undefined && !course.contactHours))) {
+    return NextResponse.json({ error: "a non-credit course needs its weekly contact hours (e.g. 3) so it can be timetabled" }, { status: 400 });
+  }
+  let trackName: string | null | undefined = undefined;
+  if (body.trackName !== undefined) {
+    trackName = body.trackName ? String(body.trackName).trim() : null;
+    if (trackName && !(TRACKS as readonly string[]).includes(trackName)) {
+      return NextResponse.json({ error: "unknown track" }, { status: 400 });
+    }
   }
 
   if (body.code !== course.code) {
@@ -33,7 +57,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   const updated = await prisma.course.update({
     where: { id: course.id },
     data: {
-      code: body.code, title: body.title, creditHours: parseInt(body.creditHours, 10),
+      code: body.code, title: body.title, creditHours,
+      isNonCredit,
+      ...(contactHours !== undefined ? { contactHours } : {}),
+      ...(trackName !== undefined ? { trackName } : {}),
       courseType: body.courseType || course.courseType,
       semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
       hasLab,

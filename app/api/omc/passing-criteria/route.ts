@@ -23,21 +23,23 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const cloPassingPct = parseInt(body.cloPassingPct, 10);
   const ploPassingPct = parseInt(body.ploPassingPct, 10);
+  const deficiencyPassingPct = body.deficiencyPassingPct === undefined || body.deficiencyPassingPct === "" ? 40 : parseInt(body.deficiencyPassingPct, 10);
   const effectiveFromTerm = body.effectiveFromTerm === "Spring" ? "Spring" : "Fall";
   const effectiveFromYear = parseInt(body.effectiveFromYear, 10);
   if (isNaN(cloPassingPct) || cloPassingPct < 1 || cloPassingPct > 100) return NextResponse.json({ error: "CLO passing % must be between 1 and 100" }, { status: 400 });
   if (isNaN(ploPassingPct) || ploPassingPct < 1 || ploPassingPct > 100) return NextResponse.json({ error: "PLO passing % must be between 1 and 100" }, { status: 400 });
+  if (isNaN(deficiencyPassingPct) || deficiencyPassingPct < 1 || deficiencyPassingPct > 100) return NextResponse.json({ error: "Deficiency-course pass mark must be between 1 and 100" }, { status: 400 });
   if (isNaN(effectiveFromYear)) return NextResponse.json({ error: "a valid effective-from year is required" }, { status: 400 });
 
   const criteria = await prisma.passingCriteria.upsert({
     where: { chairmanId_effectiveFromTerm_effectiveFromYear: { chairmanId: user.managedById, effectiveFromTerm, effectiveFromYear } },
-    create: { chairmanId: user.managedById, cloPassingPct, ploPassingPct, effectiveFromTerm, effectiveFromYear },
-    update: { cloPassingPct, ploPassingPct },
+    create: { chairmanId: user.managedById, cloPassingPct, ploPassingPct, deficiencyPassingPct, effectiveFromTerm, effectiveFromYear },
+    update: { cloPassingPct, ploPassingPct, deficiencyPassingPct },
   });
 
   await writeAuditLog({
     actorUserId: user.id, action: "PASSING_CRITERIA_SET", entityType: "PassingCriteria", entityId: criteria.id,
-    metadata: { cloPassingPct, ploPassingPct, effectiveFromTerm, effectiveFromYear },
+    metadata: { cloPassingPct, ploPassingPct, deficiencyPassingPct, effectiveFromTerm, effectiveFromYear },
   });
 
   return NextResponse.json({ criteria });

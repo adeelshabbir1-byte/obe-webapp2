@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 
-type Version = { id: string; cloPassingPct: number; ploPassingPct: number; effectiveFromTerm: string; effectiveFromYear: number };
+type Version = { id: string; cloPassingPct: number; ploPassingPct: number; deficiencyPassingPct?: number; effectiveFromTerm: string; effectiveFromYear: number };
 
 export default function PassingCriteriaForm() {
   const [versions, setVersions] = useState<Version[]>([]);
   const [cloPct, setCloPct] = useState("50");
   const [ploPct, setPloPct] = useState("50");
+  const [defPct, setDefPct] = useState("40");
   const [effectiveFromTerm, setEffectiveFromTerm] = useState("Fall");
   const [effectiveFromYear, setEffectiveFromYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export default function PassingCriteriaForm() {
     try {
       const res = await fetch("/api/omc/passing-criteria", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cloPassingPct: cloPct, ploPassingPct: ploPct, effectiveFromTerm, effectiveFromYear }),
+        body: JSON.stringify({ cloPassingPct: cloPct, ploPassingPct: ploPct, deficiencyPassingPct: defPct, effectiveFromTerm, effectiveFromYear }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -57,7 +58,7 @@ export default function PassingCriteriaForm() {
           {versions.map((v) => (
             <div key={v.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
               <span>Effective from {v.effectiveFromTerm} {v.effectiveFromYear}</span>
-              <span>CLO {v.cloPassingPct}% / PLO {v.ploPassingPct}%</span>
+              <span>CLO {v.cloPassingPct}% / PLO {v.ploPassingPct}% / Deficiency pass {v.deficiencyPassingPct ?? 40}%</span>
             </div>
           ))}
         </div>
@@ -72,6 +73,10 @@ export default function PassingCriteriaForm() {
         <div className="field" style={{ margin: 0 }}>
           <label>PLO Passing %</label>
           <input type="number" min={1} max={100} value={ploPct} onChange={(e) => setPloPct(e.target.value)} style={{ width: 90 }} />
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label>Deficiency Course Pass %</label>
+          <input type="number" min={1} max={100} value={defPct} onChange={(e) => setDefPct(e.target.value)} style={{ width: 90 }} />
         </div>
         <div className="field" style={{ margin: 0 }}>
           <label>Effective From Term</label>

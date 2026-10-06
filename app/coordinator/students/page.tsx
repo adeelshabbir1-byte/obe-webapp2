@@ -25,6 +25,7 @@ const NAV = [
   { href: "/coordinator/program-profile", label: "Program Document" },
   { href: "/coordinator/required-books", label: "Required Textbooks" },
   { href: "/coordinator/student-transcript", label: "Student Transcript" },
+  { href: "/coordinator/deficiency-status", label: "Deficiency Courses Status" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
@@ -60,7 +61,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
         <StudentManager
           batches={batches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))}
           initialBatchId={batchId}
-          students={students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber }))}
+          students={students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber, track: s.track }))}
         />
       )}
     </Shell>
