@@ -1,10 +1,12 @@
 "use client";
 
-export default function AutoSubmitSelect({ name, defaultValue, options }: {
+export default function AutoSubmitSelect({ name, defaultValue, options, hidden }: {
   name: string; defaultValue: string; options: { value: string; label: string }[];
+  hidden?: Record<string, string>; // extra query params to keep when the form submits
 }) {
   return (
     <form method="GET" style={{ display: "inline" }}>
+      {hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <select
         name={name}
         defaultValue={defaultValue}
