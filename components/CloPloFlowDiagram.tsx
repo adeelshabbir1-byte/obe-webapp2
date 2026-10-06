@@ -4,6 +4,14 @@ type Assessment = { id: string; label: string; type: string; marksPct: number; c
 type Clo = { id: string; code: string; mappedPloId: string | null; contributionPct: number | null };
 type Plo = { id: string; number: number; title: string };
 
+// One colour per assessment type, so all the quizzes look alike, all the
+// assignments look alike, and so on — easy to pick out at a glance.
+const TYPE_COLORS: Record<string, string> = {
+  quiz: "#2F6FB0", assignment: "#2E7D5B", midterm: "#9A7B0A", final: "#A63D40", lab: "#0F7C8A", project: "#7A5C2E",
+};
+const OTHER_COLOR = "#4A5568";
+const typeColor = (t: string) => TYPE_COLORS[t.trim().toLowerCase()] || OTHER_COLOR;
+
 const COL_W = 210, BOX_H = 40, V_GAP = 14, TOP = 30;
 
 function colorForWeight(pct: number, max: number) {
@@ -125,6 +133,15 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
           How to read it: a label on an assessment line is that assessment's own % of the whole course grade (so each CLO's box shows the total of its assessments). A label on a CLO line is that CLO's share of the PLO it feeds; the CLOs feeding one PLO should add to 100%.
         </div>
       </div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, marginBottom: 8, alignItems: "center" }}>
+        <span style={{ color: "var(--slate)" }}>Assessment colours:</span>
+        {Array.from(new Set(assessments.map((a) => a.type.trim().toLowerCase()))).sort((x, y) => typeRank(x) - typeRank(y)).map((t) => (
+          <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, background: typeColor(t), display: "inline-block", borderRadius: 2 }} />
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </span>
+        ))}
+      </div>
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minHeight: 300, fontFamily: "inherit" }}>
       <text x={col1X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">ASSESSMENTS</text>
       <text x={col2X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">CLOs</text>
@@ -167,9 +184,9 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
       {/* Assessment boxes */}
       {assessments.map((a) => (
         <g key={a.id}>
-          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill="#3F66A0" {...outline("a:" + a.id)} />
+          <rect x={col1X} y={aPos.get(a.id)} width={COL_W} height={BOX_H} rx={5} fill={typeColor(a.type)} {...outline("a:" + a.id)} />
           <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">{a.label.toLowerCase().startsWith(a.type.toLowerCase()) ? a.label : `${a.type} ${a.label}`}</text>
-          <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#D4E3F3">{a.marksPct}% of course grade</text>
+          <text x={col1X + 10} y={(aPos.get(a.id) || 0) + 31} fontSize={9.5} fill="#fff" fillOpacity={0.85}>{a.marksPct}% of course grade</text>
         </g>
       ))}
 
