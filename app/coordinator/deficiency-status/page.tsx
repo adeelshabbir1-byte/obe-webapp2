@@ -80,7 +80,7 @@ export default async function DeficiencyStatusPage({ searchParams }: { searchPar
       if (passed) status = "PASSED";
       else if (enrolled) status = "IN_PROGRESS";
       else if (recs.length > 0) status = "FAILED";
-      else if (c.semesterNumber > s.currentSemesterNumber) status = "NOT_YET_DUE";
+      else if ((c.semesterNumber ?? 0) > s.currentSemesterNumber) status = "NOT_YET_DUE";
       else status = "NOT_TAKEN";
       return { code: c.code, title: c.title, status };
     });
