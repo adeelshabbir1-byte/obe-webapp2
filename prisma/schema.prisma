@@ -96,6 +96,10 @@ model User {
   courseShortNames   CourseShortName[] @relation("CourseShortNameChairman")
   contentSyncGroups  CourseContentSyncGroup[] @relation("ContentSyncChairman")
   ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
+  organization       String?  // for a guest / industry Subject Expert: the company or institute they come from (shown beside their public courses)
+  isPlatformExpert   Boolean  @default(false) // a Subject Expert created by the platform admin, attached to no institute, who designs Master Curriculum courses for everyone
+  publicCourses      PublicCourse[] @relation("PublicCourseAuthor")
+  designedMasterCourses MasterCourse[] @relation("MasterCourseDesigner")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -1646,6 +1650,8 @@ model MasterCourse {
   catalogDescription  String?  @db.Text
   referenceMaterial    String?
 
+  designerId          String?  // the platform Subject Expert responsible for designing this course's content
+  designer            User?    @relation("MasterCourseDesigner", fields: [designerId], references: [id])
   adoptedInto         Course[]
   seedClos            MasterCourseClo[]
   seedTopics          MasterCourseTopic[]
@@ -1779,4 +1785,49 @@ model AuditLog {
 
   @@index([actorUserId])
   @@index([action])
+}
+
+// A course shared in the public library: a frozen snapshot of the author's
+// plan (CLOs, lecture plan, assessments, weights, paper distribution) that
+// teachers at ANY institute can search and import into one of their own
+// courses. Importing always makes an independent editable copy.
+model PublicCourse {
+  id                String   @id @default(cuid())
+  authorId          String
+  author            User     @relation("PublicCourseAuthor", fields: [authorId], references: [id])
+  sourceCourseId    String?  // the author's own course it was published from (informational only)
+  plan              String   @default("SE") // "SE" | "INSTRUCTOR" — whose version of the plan this snapshot holds
+  instituteName     String?  // author's institute at publish time
+  authorOrganization String? // industry / other organisation, if any
+  code              String
+  title             String
+  creditHours       Int
+  courseType        String   @default("Core")
+  summary           String?  @db.Text
+  searchText        String   @db.Text // lower-cased code, title, summary, author, institute and CLO text — what search matches against
+  snapshotJson      String   @db.Text
+  status            String   @default("PENDING") // PENDING | PUBLIC | REJECTED | WITHDRAWN
+  reviewedById      String?
+  reviewedAt        DateTime?
+  reviewComment     String?  @db.Text
+  version           Int      @default(1)
+  importCount       Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  imports           PublicCourseImport[]
+
+  @@index([status])
+  @@index([authorId])
+}
+
+model PublicCourseImport {
+  id                  String   @id @default(cuid())
+  publicCourseId      String
+  publicCourse        PublicCourse @relation(fields: [publicCourseId], references: [id])
+  importedById        String
+  importedIntoCourseId String
+  createdAt           DateTime @default(now())
+
+  @@index([publicCourseId])
 }

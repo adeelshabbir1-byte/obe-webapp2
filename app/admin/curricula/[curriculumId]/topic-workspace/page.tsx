@@ -6,7 +6,7 @@ import TopicWorkspace from "../../../../../components/TopicWorkspace";
 import Link from "next/link";
 
 const NAV = [
-  { href: "/admin/curricula", label: "Master Curricula" },
+  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
   { href: "/admin/curriculum-migration", label: "Curriculum Migration" },
 ];
 

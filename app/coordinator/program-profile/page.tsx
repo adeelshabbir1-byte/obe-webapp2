@@ -27,6 +27,7 @@ const NAV = [
   { href: "/coordinator/required-books", label: "Required Textbooks" },
   { href: "/coordinator/student-transcript", label: "Student Transcript" },
   { href: "/coordinator/deficiency-status", label: "Deficiency Courses Status" },
+  { href: "/public-library", label: "Public Course Library" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
