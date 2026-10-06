@@ -65,7 +65,21 @@ export async function POST(req: NextRequest) {
   // collide with ones already named.
   let electiveCounter = existingInBatch.filter((c) => c.courseType === "Elective").length;
 
-  const toImport = curriculum.courses.filter((mc) => !importedIds.has(mc.id) && (!Array.isArray(body.courseIds) || body.courseIds.includes(mc.id)));
+  // Never import the same course twice: skip an identical (code + title) entry
+  // already in this batch, and collapse identical entries inside the master
+  // curriculum itself. Without this a duplicated master course was imported
+  // again under a "-<version>" code, giving duplicate Fehm-e-Quran rows.
+  const norm = (code: string, title: string) => `${code.trim().toLowerCase()}|${title.trim().toLowerCase()}`;
+  const existingKeys = new Set((await prisma.course.findMany({ where: { coordinatorId: ownerId, batchId: batch.id }, select: { code: true, title: true } })).map((c) => norm(c.code, c.title)));
+  const seenInThisImport = new Set<string>();
+  let duplicatesSkipped = 0;
+  const toImport = curriculum.courses.filter((mc) => {
+    if (importedIds.has(mc.id) || (Array.isArray(body.courseIds) && !body.courseIds.includes(mc.id))) return false;
+    const key = norm(mc.code, mc.title);
+    if (mc.category !== "Domain Elective" && (existingKeys.has(key) || seenInThisImport.has(key))) { duplicatesSkipped++; return false; }
+    seenInThisImport.add(key);
+    return true;
+  });
 
   let created = 0;
   let benchmarksCopied = 0;
@@ -116,7 +130,7 @@ export async function POST(req: NextRequest) {
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });
   return NextResponse.json({
-    created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, benchmarksCopied,
+    created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, duplicatesSkipped, benchmarksCopied,
     errors: errors.length > 0 ? errors : undefined,
     courses: freshCourses.map((c) => ({
       id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType, semesterNumber: c.semesterNumber,

@@ -14,5 +14,16 @@ export async function GET(req: Request, { params }: { params: { curriculumId: st
     orderBy: [{ category: "asc" }, { domain: "asc" }, { title: "asc" }],
   });
 
-  return NextResponse.json({ courses });
+  // A master curriculum can hold the same course more than once (it was seeded,
+  // cloned or bulk-imported repeatedly), which showed up as several identical
+  // "Fehm-e-Quran – I" boxes to tick. Show each distinct course once.
+  const seen = new Set<string>();
+  const unique = courses.filter((c) => {
+    const key = `${c.code.trim().toLowerCase()}|${c.title.trim().toLowerCase()}|${(c.domain || "").trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return NextResponse.json({ courses: unique, duplicatesHidden: courses.length - unique.length });
 }

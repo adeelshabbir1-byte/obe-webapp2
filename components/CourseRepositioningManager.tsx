@@ -43,7 +43,7 @@ export default function CourseRepositioningManager({ courses }: { courses: Cours
         <select
           value={selectedCourseId}
           onChange={(e) => { setSelectedCourseId(e.target.value); const c = courses.find((x) => x.id === e.target.value); setTargetSemester(c?.semesterNumber || 1); }}
-          style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5, width: "100%" }}
+          style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5, width: "50%", minWidth: 300, maxWidth: "100%" }}
         >
           {courses.map((c) => <option key={c.id} value={c.id} disabled={c.isOffered}>{c.code} — {c.title} (currently Sem {c.semesterNumber ?? "—"}){c.isOffered ? " — already offered" : ""}</option>)}
         </select>
