@@ -26,6 +26,7 @@ const NAV = [
   { href: "/coordinator/program-profile", label: "Program Document" },
   { href: "/coordinator/required-books", label: "Required Textbooks" },
   { href: "/coordinator/student-transcript", label: "Student Transcript" },
+  { href: "/coordinator/deficiency-status", label: "Deficiency Courses Status" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
@@ -91,7 +92,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
         courses={courses.map((c) => ({
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
           semesterNumber: c.semesterNumber, fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId,
-          fromBenchmark: !!c.benchmarkSourceId, enrolledCount: c._count.studentEnrollments,
+          fromBenchmark: !!c.benchmarkSourceId, trackName: c.trackName, isNonCredit: c.isNonCredit, contactHours: c.contactHours, enrolledCount: c._count.studentEnrollments,
           prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab,
           batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}

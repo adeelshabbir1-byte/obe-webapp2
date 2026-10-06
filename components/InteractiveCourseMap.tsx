@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { courseTypeColor } from "../lib/courseTypeColors";
+import { TRACKS } from "../lib/tracks";
 
 type Course = {
   id: string; code: string; title: string; courseType: string; creditHours: number;
   semesterNumber: number | null; prerequisiteCourseId: string | null; isOffered: boolean;
   masterCourseId: string | null;
+  trackName?: string | null; isNonCredit?: boolean; contactHours?: number | null;
   // Which restricted pool to fetch from — "Domain Elective" or "Domain
   // IDS" — or null if clicking this course should set a prerequisite
   // instead of opening the course-picker popup. Set for every
@@ -17,11 +19,17 @@ type Course = {
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
 
 function contactHoursFor(c: Course) {
+  if (c.contactHours) return c.contactHours; // explicit weekly hours (e.g. a non-credit deficiency course)
   return c.courseType === "Lab" ? c.creditHours * 3 : c.creditHours;
 }
 
 export default function InteractiveCourseMap({ courses: initialCoursesProp, mode, readOnly }: { courses: Course[]; mode: "prereq" | "reposition"; readOnly?: boolean }) {
   const [initialCourses, setCourses] = useState<Course[]>(initialCoursesProp);
+  // "" = show every course; otherwise show that track's own semester plan:
+  // courses for everyone + courses that belong only to that track.
+  const [viewTrack, setViewTrack] = useState("");
+  const hasTracks = initialCourses.some((c) => !!c.trackName);
+  const shown = viewTrack ? initialCourses.filter((c) => !c.trackName || c.trackName === viewTrack) : initialCourses;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -33,9 +41,9 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   const [electiveDomainFilter, setElectiveDomainFilter] = useState("");
   const [loadingElectives, setLoadingElectives] = useState(false);
 
-  const maxSemester = initialCourses.length > 0 ? Math.max(8, ...initialCourses.map((c) => c.semesterNumber || 1)) : 8;
+  const maxSemester = shown.length > 0 ? Math.max(8, ...shown.map((c) => c.semesterNumber || 1)) : 8;
   const byRow: Record<number, Course[]> = {};
-  for (const c of initialCourses) {
+  for (const c of shown) {
     const sem = c.semesterNumber || 1;
     byRow[sem] = [...(byRow[sem] || []), c];
   }
@@ -48,7 +56,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   const svgWidth = LEFT_MARGIN + maxPerRow * (BOX_W + H_GAP) + 40;
   const svgHeight = TOP_MARGIN + maxSemester * (BOX_H + V_GAP) + 20;
 
-  const lines = initialCourses
+  const lines = shown
     .filter((c) => c.prerequisiteCourseId && positions.has(c.prerequisiteCourseId) && positions.has(c.id))
     .map((c) => {
       const from = positions.get(c.prerequisiteCourseId!)!, to = positions.get(c.id)!;
@@ -160,8 +168,8 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
     const all = includeCourse ? [...rowCourses, includeCourse] : rowCourses;
     const labCourses = all.filter((c) => c.courseType === "Lab");
     return {
-      credit: all.reduce((s, c) => s + c.creditHours, 0),
-      labCredit: labCourses.reduce((s, c) => s + c.creditHours, 0),
+      credit: all.filter((c) => !c.isNonCredit).reduce((s, c) => s + c.creditHours, 0), // non-credit deficiency courses never count toward credit load
+      labCredit: labCourses.filter((c) => !c.isNonCredit).reduce((s, c) => s + c.creditHours, 0),
       contact: all.reduce((s, c) => s + contactHoursFor(c), 0),
       count: all.length,
     };
@@ -170,6 +178,18 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   return (
     <>
       {error && <div className="err">{error}</div>}
+      {hasTracks && (
+        <div className="card" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Semester plan for</label>
+          <select value={viewTrack} onChange={(e) => { setViewTrack(e.target.value); setSelectedId(null); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+            <option value="">All courses (every track)</option>
+            {TRACKS.map((t) => <option key={t} value={t}>{t} students</option>)}
+          </select>
+          <span style={{ fontSize: 11.5, color: "var(--slate)" }}>
+            {viewTrack ? `Showing what ${viewTrack} students take: shared courses plus ${viewTrack}-only courses. Credit and contact totals below are for this plan; non-credit deficiency courses add contact hours but no credit.` : "Pick a track to see its own semester plan and totals."}
+          </span>
+        </div>
+      )}
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
           {readOnly
@@ -181,7 +201,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        {initialCourses.length === 0 ? (
+        {shown.length === 0 ? (
           <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No courses in this batch yet.</p>
         ) : (
           <svg width={svgWidth} height={svgHeight} style={{ display: "block", minWidth: svgWidth }}>
@@ -217,7 +237,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
               </marker>
             </defs>
 
-            {initialCourses.map((c) => {
+            {shown.map((c) => {
               const pos = positions.get(c.id);
               if (!pos) return null;
               const isSelected = selectedId === c.id;

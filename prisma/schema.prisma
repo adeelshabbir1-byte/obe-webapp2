@@ -352,6 +352,7 @@ model PassingCriteria {
   chairman      User   @relation("PassingCriteriaChairman", fields: [chairmanId], references: [id])
   cloPassingPct Int    @default(50)
   ploPassingPct Int    @default(50)
+  deficiencyPassingPct Int @default(40) // pass mark for non-credit deficiency courses (e.g. Maths-I/II for pre-medical entrants)
   effectiveFromTerm String @default("Fall") // this version applies to terms on/after this point
   effectiveFromYear Int    @default(2000) // low default so pre-existing rows keep applying to every already-created term
 
@@ -742,6 +743,7 @@ model Student {
   // pick their own on first login.
   passwordHash       String?
   mustChangePassword Boolean  @default(true)
+  track      String   @default("Non-Medical") // which curriculum track this student follows — drives which track-specific courses (and deficiency courses) they are enrolled in
   currentSemesterNumber Int   @default(1) // the Coordinator advances this each term; drives which semester's courses are this student's own default enrollment
   sessions           StudentSession[]
 
@@ -1151,6 +1153,9 @@ model Course {
   creditHours         Int
   courseType          String   @default("Core") // Core | Elective | Lab | IDS | General Education | Capstone Project | Field Experience
   hasLab              Boolean  @default(true) // whether this course has a lab component — when false, Lab % is locked to 0 in weight-setting
+  trackName           String?  // null = part of EVERY track's plan; otherwise ONLY students on this track take it (e.g. "Pre-Medical"). A track's semester plan = courses with no trackName + courses with that trackName.
+  isNonCredit         Boolean  @default(false) // deficiency / remedial course: no credit hours, never counted in semester credit totals or CGPA — must simply be passed (see PassingCriteria.deficiencyPassingPct)
+  contactHours        Int?     // weekly contact hours when it can't be derived from creditHours (a non-credit course still meets, e.g. 3 h/week). null = derive from credit hours as before.
   semesterNumber      Int?     // 1..8, which semester this is offered in
   coordinatorId       String
   coordinator         User     @relation("CourseCoordinator", fields: [coordinatorId], references: [id])

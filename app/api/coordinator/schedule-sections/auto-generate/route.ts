@@ -65,6 +65,11 @@ export async function POST() {
     for (const e of existing) existingCountByInstructor.set(e.instructorId, (existingCountByInstructor.get(e.instructorId) || 0) + 1);
 
     const roomTypeNeeded = c.courseType === "Lab" ? "LAB" : "LECTURE";
+    // A non-credit deficiency course (e.g. Maths-I, 3 h/week, 0 credits) is
+    // scheduled from its own weekly contact hours: 3 h -> 2 x 90 min.
+    const nonCreditHours = c.isNonCredit && c.contactHours ? c.contactHours : 0;
+    const sessionsPerWeek = nonCreditHours ? (nonCreditHours <= 1 ? 1 : 2) : roomTypeNeeded === "LAB" ? 1 : 2;
+    const sessionDurationMinutes = nonCreditHours ? Math.round((nonCreditHours * 60) / sessionsPerWeek) : roomTypeNeeded === "LAB" ? 180 : 90;
     let labelIndex = existing.length;
     // Only create the shortfall per instructor — if 2 units are wanted for
     // an instructor and 1 already exists, create just 1 more.
@@ -79,8 +84,8 @@ export async function POST() {
           data: {
             courseId: c.id, instructorId, sectionLabel: `Section ${String.fromCharCode(64 + labelIndex)}`,
             roomTypeNeeded,
-            sessionsPerWeek: roomTypeNeeded === "LAB" ? 1 : 2,
-            sessionDurationMinutes: roomTypeNeeded === "LAB" ? 180 : 90,
+            sessionsPerWeek,
+            sessionDurationMinutes,
           },
         });
         created++;

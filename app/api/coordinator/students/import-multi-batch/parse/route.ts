@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { normalizeTrack } from "../../../../../../lib/tracks";
 
 // Pure file/text parsing, no database writes at all — this is the fast
 // part (reading file structure into rows) split out from the slow part
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const csvText = formData.get("csvText") as string | null;
   if (!file && !csvText) return NextResponse.json({ error: "a file or pasted text is required" }, { status: 400 });
 
-  type Row = { name: string; rollNumber: string; batchName: string };
+  type Row = { name: string; rollNumber: string; batchName: string; track: string };
   const rows: Row[] = [];
 
   try {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       if (file.name.toLowerCase().endsWith(".csv")) {
         for (const line of buffer.toString("utf-8").split(/\r?\n/)) {
           const parts = line.split(",").map((p) => p.trim());
-          if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) rows.push({ name: parts[0], rollNumber: parts[1], batchName: parts[2] });
+          if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) rows.push({ name: parts[0], rollNumber: parts[1], batchName: parts[2], track: parts[3] ? normalizeTrack(parts[3]) : "" });
         }
       } else {
         const workbook = new ExcelJS.Workbook();
@@ -39,13 +40,14 @@ export async function POST(req: NextRequest) {
           const a = row.getCell(1).text?.trim();
           const b = row.getCell(2).text?.trim();
           const c = row.getCell(3).text?.trim();
-          if (a && b && c) rows.push({ name: a, rollNumber: b, batchName: c });
+          const d = row.getCell(4).text?.trim();
+          if (a && b && c) rows.push({ name: a, rollNumber: b, batchName: c, track: d ? normalizeTrack(d) : "" });
         });
       }
     } else if (csvText) {
       for (const line of csvText.split(/\r?\n/)) {
         const parts = line.split(/[,\t]/).map((p) => p.trim());
-        if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) rows.push({ name: parts[0], rollNumber: parts[1], batchName: parts[2] });
+        if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) rows.push({ name: parts[0], rollNumber: parts[1], batchName: parts[2], track: parts[3] ? normalizeTrack(parts[3]) : "" });
       }
     }
   } catch {

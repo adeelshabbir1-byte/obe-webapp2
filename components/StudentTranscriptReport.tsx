@@ -21,6 +21,11 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Transcript 1 — Grades &amp; GPA</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>Course-by-course grades and the cumulative GPA (CGPA) used for academic standing.</p>
+        {remaining.some((r) => r.creditHours === 0) && (
+          <p style={{ fontSize: 12.5, marginBottom: 10, color: "var(--rust)", fontWeight: 600 }}>
+            Not cleared for graduation — deficiency course(s) not yet passed: {remaining.filter((r) => r.creditHours === 0).map((r) => r.code).join(", ")}.
+          </p>
+        )}
         {cgpa !== null && <p style={{ fontSize: 13, marginBottom: 10 }}><b>Cumulative GPA:</b> {cgpa.toFixed(2)} ({totalCredits} credit hours)</p>}
         <table>
           <thead><tr><th>Term</th><th>Code</th><th>Title</th><th>Cr. Hrs.</th><th>Score</th><th>Grade</th><th>GPA Pts</th></tr></thead>
