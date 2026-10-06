@@ -33,6 +33,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/public-library", label: "Public Course Library" },
 ];
 
 export const SUBJECT_EXPERT_NAV = [
@@ -47,6 +48,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/public-library", label: "Public Course Library" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -79,6 +81,7 @@ export const COORDINATOR_NAV = [
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
+  { href: "/public-library", label: "Public Course Library" },
 ];
 
 export const CHAIRMAN_NAV = [

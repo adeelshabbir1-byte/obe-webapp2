@@ -53,6 +53,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
           name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"),
           role: fd.get("role"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
           secondaryRole: fd.get("alsoInstructor") === "on" ? "INSTRUCTOR" : null,
+          organization: fd.get("organization"),
         }),
       });
       const data = await res.json();
@@ -265,6 +266,10 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
             <div className="field">
               <label>Specialization (optional)</label>
               <input name="specialization" placeholder="e.g. Software Engineering, AI, Networks" />
+            </div>
+            <div className="field">
+              <label>Organization (optional — for an industry or guest expert)</label>
+              <input name="organization" placeholder="e.g. a company, or another university" />
             </div>
           </div>
           <div className="small-note" style={{ marginBottom: 10 }}>This user will be required to set a new password on first login.</div>

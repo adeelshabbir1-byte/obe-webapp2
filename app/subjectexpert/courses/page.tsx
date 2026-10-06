@@ -22,6 +22,7 @@ export default async function SubjectExpertCoursesPage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
+  if (user.isPlatformExpert) redirect("/master-design");
 
   const allAssigned = await prisma.course.findMany({
     where: { subjectExpertId: user.id },
