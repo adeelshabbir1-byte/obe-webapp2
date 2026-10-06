@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const dataRows: { name: string; rollNumber: string; batchName: string }[] = Array.isArray(body?.rows) ? body.rows : [];
+  const dataRows: { name: string; rollNumber: string; batchName: string; track?: string }[] = Array.isArray(body?.rows) ? body.rows : [];
   const rowOffset: number = typeof body?.rowOffset === "number" ? body.rowOffset : 0;
   if (dataRows.length === 0) return NextResponse.json({ error: "no rows to process" }, { status: 400 });
 
