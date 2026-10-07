@@ -13,7 +13,7 @@ export const REQUEST_ROLES: Record<LoanKind, string[]> = {
 };
 
 // People a department can lend. For a Subject Expert request only real Subject Experts qualify (they need the SE screens);
-// for a teaching request any faculty member does, including a Head of Department who also teaches.
+// for a teaching request any faculty member does, including a Chairman who also teaches.
 export function lendableWhere(chairmanId: string, kind: LoanKind, departmentId?: string) {
   const dept = departmentId ? { departmentId } : { departmentId: { not: null } };
   if (kind === "SUBJECT_EXPERT") return { ...dept, isVisitingPlaceholder: false, role: "SUBJECT_EXPERT" as const, managedBy: { managedById: chairmanId } };
@@ -27,6 +27,7 @@ export function lendableWhere(chairmanId: string, kind: LoanKind, departmentId?:
 export async function assignFromLoan(loanId: string, instructorId: string, actorUserId: string): Promise<string | null> {
   const loan = await prisma.teacherLoanRequest.findUnique({ where: { id: loanId }, include: { allowed: true } });
   if (!loan || loan.status !== "APPROVED") return "this request has not been approved";
+  if (loan.requesterDeanStatus === "PENDING" || loan.lenderDeanStatus === "PENDING") return "this request is still waiting for the Dean";
   if (!loan.allowed.some((a) => a.instructorId === instructorId)) return "that person is not on the allowed list for this request";
 
   if (loan.kind === "SUBJECT_EXPERT") {

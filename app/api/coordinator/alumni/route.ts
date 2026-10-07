@@ -6,7 +6,7 @@ import { chairmanIdFor } from "../../../../lib/reportScope";
 const ALLOWED_ROLES = ["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR"];
 
 /** Any faculty member can add/view alumni & employer records, but they all
- * share the same institution's pool (resolved via the Chairman, since
+ * share the same institution's pool (resolved via the Institute Head, since
  * faculty may be spread across several Coordinators under one institution).
  * New records start PENDING until the chairman-designated custodian
  * (User.isAlumniCustodian) approves or rejects them. */

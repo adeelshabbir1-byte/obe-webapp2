@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "./db";
 
 // Clones every grand (official, chairmanId = null) curriculum for a
-// newly-created Chairman — same logic as the earlier manual
+// newly-created Institute Head — same logic as the earlier manual
 // generate_institute_clones.sql, now a real function so approving an
 // account request can do this automatically in one step instead of a
 // human running SQL by hand afterward. Copies MasterCurriculum ->

@@ -4,7 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { lendableWhere, LoanKind } from "../../../../lib/loans";
 import { writeAuditLog } from "../../../../lib/audit";
 
-// The lending Head of Department decides: allow some of their people for this course (the requester then picks one), or decline.
+// The lending Chairman decides: allow some of their people for this course (the requester then picks one), or decline.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "HEAD_OF_DEPARTMENT") return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (decision === "REJECT" && !note) return NextResponse.json({ error: "please give a short reason for declining" }, { status: 400 });
 
   const chairmanId = user.managedById || "";
-  const loan = await prisma.teacherLoanRequest.findFirst({ where: { id: body.loanId, status: "PENDING", lendingDepartmentId: user.departmentId || "none", chairmanId } });
+  const loan = await prisma.teacherLoanRequest.findFirst({ where: { id: body.loanId, status: "PENDING", lendingDepartmentId: user.departmentId || "none", chairmanId, requesterDeanStatus: { not: "PENDING" }, lenderDeanStatus: { not: "PENDING" } } });
   if (!loan) return NextResponse.json({ error: "request not found" }, { status: 404 });
 
   if (decision === "APPROVE") {

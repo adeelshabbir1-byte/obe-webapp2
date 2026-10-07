@@ -59,7 +59,7 @@ export default function PlatformSettingsForm({ initial }: { initial: { ownerLogo
         <LogoField label="Lets Innovate Pvt Ltd Logo (for copyright)" value={ownerLogo} onChange={(e) => handleFile(e, setOwnerLogo)} />
         <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 12 }}>
           These two are truly platform-wide — the same across every tenant institution on this deployment.
-          Each institution's own name and logo is set per-Chairman on the Manage Chairmen page instead.
+          Each institution's own name and logo is set per-Institute Head on the Manage Institute Heads page instead.
         </p>
         <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Saving…" : "Save"}</button>
       </form>

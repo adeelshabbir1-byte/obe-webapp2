@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   const user = await getAuthenticatedUser();
   // Owning Coordinator edits their own course directly; OMC can edit any
   // course in a batch belonging to a Coordinator under their own
-  // Chairman — same institution-wide scope OMC already has for
+  // Institute Head — same institution-wide scope OMC already has for
   // repositioning and filling elective slots on this same page.
   if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });

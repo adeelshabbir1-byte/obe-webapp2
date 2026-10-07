@@ -10,7 +10,7 @@ type Person = { id: string; name: string; role: string; departmentId: string | n
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
+  HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
@@ -180,7 +180,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Add a Head of Department</h3>
+        <h3 style={{ marginTop: 0 }}>Add a Chairman</h3>
         <label style={{ fontSize: 13 }}>Department: {" "}
           <select value={headDept} onChange={(e) => setHeadDept(e.target.value)}>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -208,7 +208,7 @@ function HeadForm({ departmentId }: { departmentId: string }) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Could not create"); return; }
-    setOk("Head of Department created. They must change the password on first login.");
+    setOk("Chairman created. They must change the password on first login.");
     form.reset();
     router.refresh();
   }
@@ -221,7 +221,7 @@ function HeadForm({ departmentId }: { departmentId: string }) {
       <label style={{ fontSize: 13 }}><input type="checkbox" name="alsoFaculty" /> Also teaches as a faculty member</label>
       {error && <div style={{ color: "#b3261e" }}>{error}</div>}
       {ok && <div style={{ color: "var(--sage)" }}>{ok}</div>}
-      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Head of Department</button>
+      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Chairman</button>
     </form>
   );
 }

@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 
 // Divides a department's faculty into programs: a faculty member belongs to the coordinator / Program Lead
-// who looks after their program. The Chairman can move anyone; a Head of Department only within their own department.
+// who looks after their program. The Institute Head can move anyone; a Chairman only within their own department.
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });

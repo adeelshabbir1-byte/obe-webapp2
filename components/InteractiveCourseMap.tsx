@@ -92,7 +92,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   function onCourseClick(c: Course) {
     if (loading) return;
     // Visible-but-not-this-role's-to-edit (e.g. a Subject Expert or
-    // Chairman looking at a Coordinator's/OMC's map): still fully
+    // Institute Head looking at a Coordinator's/OMC's map): still fully
     // readable, just not clickable — avoids a click silently 403'ing
     // against an API that only the owning role may call.
     if (readOnly) return;

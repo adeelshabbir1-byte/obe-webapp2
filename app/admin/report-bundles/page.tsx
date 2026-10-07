@@ -6,7 +6,7 @@ import Shell from "../../../components/Shell";
 import ReportBundleManager from "../../../components/ReportBundleManager";
 
 const NAV = [
-  { href: "/admin/users", label: "Chairman Accounts" },
+  { href: "/admin/users", label: "Institute Head Accounts" },
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },

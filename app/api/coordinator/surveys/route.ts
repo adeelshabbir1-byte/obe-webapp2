@@ -4,7 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 
 /** Surveys are visible/manageable institution-wide (chairman-scoped), by
- * either a Program Coordinator or the Chairman-designated alumni/employer
+ * either a Program Coordinator or the Institute Head-designated alumni/employer
  * data custodian (who may hold any role) — since the alumni/employer pool
  * these surveys target is itself institution-wide. */
 async function canManageSurveys(user: { role: string; isAlumniCustodian: boolean }) {

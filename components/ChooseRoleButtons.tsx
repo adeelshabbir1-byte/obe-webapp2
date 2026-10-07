@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ChooseRoleButtons({ primaryRole = "SUBJECT_EXPERT" }: { primaryRole?: string }) {
-  const primaryLabel = primaryRole === "HEAD_OF_DEPARTMENT" ? "Head of Department" : "Subject Expert";
+  const primaryLabel = primaryRole === "HEAD_OF_DEPARTMENT" ? "Chairman" : "Subject Expert";
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 

@@ -5,7 +5,7 @@ type Section = { title: string; links: Link[] };
 // lets Shell group any flat nav array without every page needing to change
 // how it passes navLinks.
 const RULES: { match: (href: string) => boolean; section: string }[] = [
-  // Shared across every role that can reach them (PC, SE, OMC, Chairman) —
+  // Shared across every role that can reach them (PC, SE, OMC, Institute Head) —
   // matched first, before any role-specific rule below, so these three
   // always land together in one section no matter which role's nav list
   // they're coming from or which URL prefix they happen to live under.
@@ -20,7 +20,7 @@ const RULES: { match: (href: string) => boolean; section: string }[] = [
   { match: (h) => /\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h), section: "Review & Approval" },
   { match: (h) => /\/omc\/(plo-matrix|weight-policy|equivalence)$/.test(h), section: "Curriculum Governance" },
 
-  // Chairman
+  // Institute Head
   { match: (h) => /\/chairman\/(coordinators|omc|assigners)$/.test(h), section: "Accounts" },
   { match: (h) => /\/chairman\/(plos|cqi|audit-log)$/.test(h), section: "Governance" },
 

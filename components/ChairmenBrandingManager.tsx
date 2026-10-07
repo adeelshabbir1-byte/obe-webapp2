@@ -12,10 +12,10 @@ function fileToDataUri(file: File): Promise<string> {
   });
 }
 
-type Chairman = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
+type Institute Head = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
 
-export default function ChairmenBrandingManager({ chairmen: initialChairmen }: { chairmen: Chairman[] }) {
-  const [chairmen, setChairmen] = useState<Chairman[]>(initialChairmen);
+export default function ChairmenBrandingManager({ chairmen: initialChairmen }: { chairmen: Institute Head[] }) {
+  const [chairmen, setChairmen] = useState<Institute Head[]>(initialChairmen);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [instituteName, setInstituteName] = useState("");
@@ -24,7 +24,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function startEdit(c: Chairman) {
+  function startEdit(c: Institute Head) {
     setExpandedId(c.id); setName(c.name); setInstituteName(c.instituteName || ""); setInstituteLogo(c.instituteLogo);
     setMaxDegreePrograms(c.maxDegreePrograms === null || c.maxDegreePrograms === undefined ? "" : String(c.maxDegreePrograms));
     setError("");
@@ -57,7 +57,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
       <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Department</th><th>Institute Branding</th><th></th></tr></thead>
       <tbody>
         {chairmen.length === 0 && (
-          <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No Chairman accounts yet.</td></tr>
+          <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No Institute Head accounts yet.</td></tr>
         )}
         {chairmen.map((c) => (
           <Fragment key={c.id}>
@@ -73,7 +73,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
                     {error && <div className="err">{error}</div>}
                     <div className="field">
                       <label>Name</label>
-                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Chairman's name" />
+                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Institute Head's name" />
                     </div>
                     <div className="field">
                       <label>Institute Name (for {c.name}'s institution)</label>

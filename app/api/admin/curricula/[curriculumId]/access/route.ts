@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { cloneGrandCurriculumForChairman } from "../../../../../../lib/cloneCurriculum";
 
-// Super User: which institutes (Chairmen) an official master curriculum is assigned to.
+// Super User: which institutes (Institute Heads) an official master curriculum is assigned to.
 export async function GET(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });

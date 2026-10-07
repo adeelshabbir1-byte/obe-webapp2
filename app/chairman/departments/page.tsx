@@ -35,7 +35,7 @@ export default async function ChairmanDepartmentsPage() {
   const allPrograms = Array.from(new Set<string>([...batches.map((b) => b.degreeProgram), ...deptPrograms.map((d) => d.degreeProgram)])).sort();
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Split your institute into departments. Each department has its own programs, heads, coordinators, course assigners and faculty.

@@ -12,7 +12,7 @@ export default async function OmcFacultyRequestsPage() {
   if (user.role !== "OMC") redirect("/dashboard");
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty from Other Departments</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Teachers from Other Departments</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Ask another department for a Subject Expert for one of your courses. Their head allows some people, you pick one, and that person accepts or declines.
       </p>

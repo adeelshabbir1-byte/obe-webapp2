@@ -6,7 +6,7 @@ type Course = { id: string; code: string; title: string; currentTeacher: string 
 type Dept = { id: string; name: string };
 type Teacher = { id: string; name: string; role: string; departmentId: string | null };
 type Req = {
-  id: string; kind: string; status: string; course: string; asked: string | null; from: string; for: string; note: string | null; decisionNote: string | null;
+  id: string; kind: string; status: string; deanWaiting?: boolean; course: string; asked: string | null; from: string; for: string; note: string | null; decisionNote: string | null;
   allowed: { id: string; name: string }[]; assignedTo: string | null; response: string; responseNote: string | null;
 };
 
@@ -107,10 +107,10 @@ export default function BorrowTeacher() {
                 <td>{r.course}</td>
                 <td>{KIND_LABEL[r.kind] || r.kind}{r.asked ? ` — ${r.asked}` : " — any suitable"}</td>
                 <td>{r.from}</td>
-                <td style={{ color: STATUS_COLOR[r.status] }}><b>{r.status === "APPROVED" ? "ALLOWED" : r.status}</b>{r.decisionNote ? ` — ${r.decisionNote}` : ""}</td>
+                <td style={{ color: STATUS_COLOR[r.status] }}><b>{r.deanWaiting ? "WAITING FOR DEAN" : r.status === "APPROVED" ? "ALLOWED" : r.status}</b>{r.decisionNote ? ` — ${r.decisionNote}` : ""}</td>
                 <td>
                   {r.status === "PENDING" && <button className="btn" onClick={() => cancel(r.id)}>Withdraw</button>}
-                  {r.status === "APPROVED" && (
+                  {r.status === "APPROVED" && !r.deanWaiting && (
                     r.assignedTo && r.response !== "DECLINED" ? (
                       <span>
                         Assigned to <b>{r.assignedTo}</b> —{" "}

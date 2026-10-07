@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
   if (existing) return NextResponse.json({ error: "this degree program + batch already exists" }, { status: 409 });
 
   // Licensing check: an institution is only allowed as many DISTINCT degree
-  // programs as its Chairman has been licensed for. Scoped across every
-  // Coordinator under the same Chairman, since the license is per-institution.
+  // programs as its Institute Head has been licensed for. Scoped across every
+  // Coordinator under the same Institute Head, since the license is per-institution.
   if (user.managedById) {
     const chairman = await prisma.user.findUnique({ where: { id: user.managedById } });
     if (chairman?.maxDegreePrograms !== null && chairman?.maxDegreePrograms !== undefined) {

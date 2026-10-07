@@ -6,8 +6,8 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
   const dualCapable = (user.rawRole === "SUBJECT_EXPERT" || user.rawRole === "HEAD_OF_DEPARTMENT") && user.secondaryRole === "INSTRUCTOR";
-  // The other role this person can switch to right now (a Head of Department who also teaches, or a dual-capable Subject Expert).
+  // The other role this person can switch to right now (a Chairman who also teaches, or a dual-capable Subject Expert).
   const otherRole = dualCapable ? (user.role === "INSTRUCTOR" ? user.rawRole : "INSTRUCTOR") : null;
-  const LABELS: Record<string, string> = { INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", HEAD_OF_DEPARTMENT: "Head of Department" };
+  const LABELS: Record<string, string> = { INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", HEAD_OF_DEPARTMENT: "Chairman" };
   return NextResponse.json({ dualCapable, otherRole, otherRoleLabel: otherRole ? LABELS[otherRole] : null, activeRole: user.role, isAlumniCustodian: !!user.isAlumniCustodian });
 }

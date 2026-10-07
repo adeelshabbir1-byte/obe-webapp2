@@ -11,7 +11,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // instruments in from another course OMC has marked as equivalent to
 // this one — the same real class, run again or run in parallel —
 // instead of starting from scratch every time. This is the SE-facing
-// counterpart to /api/omc/courses/import-content (OMC/Chairman's
+// counterpart to /api/omc/courses/import-content (OMC/Institute Head's
 // version), scoped down to: target must be a course this SE actually
 // owns, source must be equivalent to it (same institution is implied by
 // that), and a course that inherits its content via Content Sync can't

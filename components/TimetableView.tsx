@@ -13,7 +13,7 @@ export type TimetableRow = {
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Read-only — used by every role's timetable view. `showFilters` turns on
-// the Room/Batch/Instructor/Program dropdowns (Coordinator/Chairman/OMC's
+// the Room/Batch/Instructor/Program dropdowns (Coordinator/Institute Head/OMC's
 // institution-wide view); Student and Instructor views pass it off since
 // their data is already scoped to just their own batch/teaching load.
 export default function TimetableView({ entries, showFilters = false }: { entries: TimetableRow[]; showFilters?: boolean }) {

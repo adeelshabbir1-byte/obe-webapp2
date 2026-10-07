@@ -5,7 +5,7 @@ import Shell from "../../../components/Shell";
 import AccountRequestsManager from "../../../components/AccountRequestsManager";
 
 const NAV = [
-  { href: "/admin/users", label: "Manage Chairmen" },
+  { href: "/admin/users", label: "Manage Institute Heads" },
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
@@ -30,7 +30,7 @@ export default async function AccountRequestsPage() {
     <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Account Requests</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Requests submitted publicly at <code>/request-account</code>. Approving one creates the Chairman
+        Requests submitted publicly at <code>/request-account</code>. Approving one creates the Institute Head
         account and clones the master curriculum for them automatically — nothing further to run by hand.
       </p>
       <AccountRequestsManager

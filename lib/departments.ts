@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "./db";
 import { hashPassword } from "./auth";
 
-// A Head of Department who also teaches (secondaryRole INSTRUCTOR) is offered wherever faculty are listed.
+// A Chairman who also teaches (secondaryRole INSTRUCTOR) is offered wherever faculty are listed.
 // They are managed directly by the chairman, not by a coordinator, so the normal "managed by one of the coordinators" test misses them.
 export function headFacultyWhere(chairmanId: string) {
   return { role: "HEAD_OF_DEPARTMENT" as const, secondaryRole: "INSTRUCTOR", managedById: chairmanId };

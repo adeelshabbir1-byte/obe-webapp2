@@ -14,7 +14,7 @@ async function getRule(chairmanId: string, reportId: string, userId: string, rol
   return rules.find((r) => r.subjectType === "USER") || rules.find((r) => r.subjectType === "ROLE") || null;
 }
 
-/** Chairman and Super User always have full access — they're the ones who
+/** Institute Head and Super User always have full access — they're the ones who
  * set these rules, and shouldn't be able to lock themselves out. */
 function isExempt(role: string) {
   return role === "CHAIRMAN" || role === "SUPER_USER";

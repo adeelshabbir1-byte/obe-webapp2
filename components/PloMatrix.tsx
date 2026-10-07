@@ -141,7 +141,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
               </SortableTable>
             )}
             {prog.plos.some((p) => p.status !== "approved") && (
-              <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>* PLO not yet approved by Chairman</div>
+              <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>* PLO not yet approved by Institute Head</div>
             )}
           </div>
         );

@@ -6,12 +6,12 @@ import PlosManager from "../../../components/PlosManager";
 import AutoSubmitSelect from "../../../components/AutoSubmitSelect";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" }, { href: "/coordinator/faculty-requests", label: "Faculty from Other Departments" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/custom-categories", label: "Course & Teacher Categories" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
@@ -69,7 +69,7 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         PLOs are defined separately per batch/cohort — even two intakes of the same degree can have different
         outcomes if the curriculum was revised between them. Copy a starting point from the HEC curriculum or
-        write your own; the Chairman reviews and approves them before Subject Experts map CLOs to them.
+        write your own; the Institute Head reviews and approves them before Subject Experts map CLOs to them.
       </p>
 
       {batches.length === 0 ? (

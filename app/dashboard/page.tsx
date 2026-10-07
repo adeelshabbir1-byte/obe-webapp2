@@ -13,6 +13,7 @@ const ROLE_HOME: Record<string, string> = {
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
+  DEAN: "/dean/overview",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
@@ -63,9 +64,10 @@ export default async function Dashboard() {
   );
 }
 
-async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
+async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null }) {
   switch (user.role) {
     case "PROGRAM_COORDINATOR": return coordinatorStats(user.id);
+    case "DEAN": return deanStats(user);
     case "HEAD_OF_DEPARTMENT": return hodStats(user);
     case "OMC": return omcStats(user);
     case "SUBJECT_EXPERT": return subjectExpertStats(user.id);
@@ -188,14 +190,31 @@ async function superUserStats(): Promise<Stat[]> {
   ]);
   return [
     { label: "Pending account requests", value: pendingRequests, href: "/admin/account-requests", tone: pendingRequests > 0 ? "warn" : "ok" },
-    { label: "Institutions (Chairmen)", value: chairmen, href: "/admin/users", tone: "neutral" },
+    { label: "Institutions (Institute Heads)", value: chairmen, href: "/admin/users", tone: "neutral" },
+  ];
+}
+
+async function deanStats(user: { managedById: string | null; facultyId?: string | null }): Promise<Stat[]> {
+  const facultyId = user.facultyId || "none";
+  const chairmanId = user.managedById || "";
+  const [departments, waiting, noTeacher, staff] = await Promise.all([
+    prisma.department.count({ where: { facultyId } }),
+    prisma.teacherLoanRequest.count({ where: { OR: [{ requesterDeanStatus: "PENDING", requestingDepartment: { facultyId } }, { lenderDeanStatus: "PENDING", lendingDepartment: { facultyId } }] } }),
+    prisma.course.count({ where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, department_: { facultyId } } } }),
+    prisma.user.count({ where: { department_: { facultyId }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
+  ]);
+  return [
+    { label: "Teacher requests waiting for you", value: waiting, href: "/dean/approvals", tone: waiting > 0 ? "warn" : "ok" },
+    { label: "Departments in your faculty", value: departments, href: "/dean/overview", tone: "neutral" },
+    { label: "Teachers in your faculty", value: staff, href: "/dean/overview", tone: "neutral" },
+    { label: "Offered courses with no teacher yet", value: noTeacher, href: "/dean/overview", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }
 
 async function hodStats(user: { managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
   const departmentId = user.departmentId || "none";
   const [loanRequests, pendingApprovals, programs, staff, noTeacher] = await Promise.all([
-    prisma.teacherLoanRequest.count({ where: { lendingDepartmentId: departmentId, status: "PENDING" } }),
+    prisma.teacherLoanRequest.count({ where: { lendingDepartmentId: departmentId, status: "PENDING", requesterDeanStatus: { not: "PENDING" }, lenderDeanStatus: { not: "PENDING" } } }),
     prisma.course.count({ where: { instructorApproval: "PENDING", coordinator: { managedById: user.managedById || "", departmentId } } }),
     prisma.departmentProgram.count({ where: { departmentId } }),
     prisma.user.count({ where: { departmentId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
@@ -205,7 +224,7 @@ async function hodStats(user: { managedById: string | null; departmentId?: strin
     { label: "Teacher loan requests to answer", value: loanRequests, href: "/hod/department", tone: loanRequests > 0 ? "warn" : "ok" },
     { label: "Teacher assignments awaiting your approval", value: pendingApprovals, href: "/hod/department", tone: pendingApprovals > 0 ? "warn" : "ok" },
     { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
-    { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },
+    { label: "Teachers in your department", value: staff, href: "/hod/department", tone: "neutral" },
     { label: "Offered courses with no teacher yet", value: noTeacher, href: "/hod/department", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }

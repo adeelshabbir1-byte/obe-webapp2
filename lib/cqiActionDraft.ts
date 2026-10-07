@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 
-// Resolves which API key/model to use for this institution's Chairman:
+// Resolves which API key/model to use for this institution's Institute Head:
 // their own AiConfig if set up and enabled, otherwise the platform-wide
 // ANTHROPIC_API_KEY env var. Returns null if neither is available.
 // Same resolution order as lib/evidenceValidation.ts, but keyed directly
@@ -15,7 +15,7 @@ async function resolveAiCredentials(chairmanId: string): Promise<{ apiKey: strin
 }
 
 // Drafts a suggested "action taken" for a CQI finding — a starting
-// point the Chairman/OMC reviews and edits before saving, never saved
+// point the Institute Head/OMC reviews and edits before saving, never saved
 // automatically. Returns null (rather than throwing) if no AI model is
 // configured or the call fails, so the caller can show a clear message
 // instead of a broken button.
@@ -39,7 +39,7 @@ export async function draftCqiAction(chairmanId: string, context: {
 
 ${contextLines ? contextLines + "\n\n" : ""}Finding: ${context.finding}
 
-Write ONE short paragraph (2-4 sentences) describing a concrete, plausible corrective or improvement action a Chairman or Quality Committee might take in response to this finding — specific enough to be useful (e.g. naming what would change in teaching, assessment, or curriculum), not generic filler like "we will monitor the situation." This is a DRAFT the person reviewing it will edit before saving, not a final decision, so do not claim the action has already been completed or verified effective.
+Write ONE short paragraph (2-4 sentences) describing a concrete, plausible corrective or improvement action a Institute Head or Quality Committee might take in response to this finding — specific enough to be useful (e.g. naming what would change in teaching, assessment, or curriculum), not generic filler like "we will monitor the situation." This is a DRAFT the person reviewing it will edit before saving, not a final decision, so do not claim the action has already been completed or verified effective.
 
 Respond with ONLY the action statement text, no preamble, no quotation marks, no markdown.`;
 

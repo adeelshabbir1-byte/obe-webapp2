@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  // Scope: courses whose coordinator reports to the same Chairman who onboarded this OMC member.
+  // Scope: courses whose coordinator reports to the same Institute Head who onboarded this OMC member.
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 

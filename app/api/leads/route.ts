@@ -6,7 +6,7 @@ import { writeAuditLog } from "../../../lib/audit";
 
 // A Program Lead is the Program Coordinator who is responsible for one program of a department. They get every
 // coordinator tool (batches, courses, faculty, Subject Experts, timetable...) for the people and data they own.
-// The Chairman manages leads in any department; a Head of Department only in their own.
+// The Institute Head manages leads in any department; a Chairman only in their own.
 
 async function actor() {
   const user = await getAuthenticatedUser();

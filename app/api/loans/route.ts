@@ -59,7 +59,7 @@ export async function GET() {
       const isSe = r.kind === "SUBJECT_EXPERT";
       const currentId: string | null = isSe ? r.course.subjectExpertId : r.course.instructorId;
       return {
-        id: r.id, kind: r.kind, status: r.status, course: `${r.course.code} — ${r.course.title}`, asked: r.instructor?.name || null,
+        id: r.id, kind: r.kind, status: r.status, deanWaiting: r.status !== "CANCELLED" && r.status !== "REJECTED" && (r.requesterDeanStatus === "PENDING" || r.lenderDeanStatus === "PENDING"), course: `${r.course.code} — ${r.course.title}`, asked: r.instructor?.name || null,
         from: r.lendingDepartment.name, for: r.requestingDepartment.name, note: r.note, decisionNote: r.decisionNote, createdAt: r.createdAt,
         allowed: r.allowed.map((a: any) => ({ id: a.instructorId, name: a.instructor.name })),
         assignedTo: r.allowed.find((a: any) => a.instructorId === currentId)?.name || null,
@@ -102,8 +102,13 @@ export async function POST(req: NextRequest) {
   if (dup) return NextResponse.json({ error: "this request already exists" }, { status: 409 });
 
   const heads = await prisma.user.count({ where: { role: "HEAD_OF_DEPARTMENT", departmentId: lending.id } });
+  // A Dean decides first: the requesting faculty's Dean always, and the lending faculty's Dean too when it is another faculty.
+  const requesting = await prisma.department.findUnique({ where: { id: requestingDepartmentId }, select: { facultyId: true } });
+  const hasDean = async (facultyId: string | null | undefined) => !!facultyId && (await prisma.user.count({ where: { role: "DEAN", facultyId } })) > 0;
+  const requesterDeanStatus = (await hasDean(requesting?.facultyId)) ? "PENDING" : "NONE";
+  const lenderDeanStatus = lending.facultyId && lending.facultyId !== requesting?.facultyId && (await hasDean(lending.facultyId)) ? "PENDING" : "NONE";
   const loan = await prisma.teacherLoanRequest.create({
-    data: { chairmanId, courseId: course.id, kind, instructorId, requestingDepartmentId, lendingDepartmentId: lending.id, requestedById: user.id, note, status: heads === 0 ? "APPROVED" : "PENDING", ...(heads === 0 ? { decidedAt: new Date(), decisionNote: "That department has no head - everyone suitable was allowed automatically" } : {}) },
+    data: { chairmanId, courseId: course.id, kind, instructorId, requestingDepartmentId, lendingDepartmentId: lending.id, requestedById: user.id, note, status: heads === 0 ? "APPROVED" : "PENDING", requesterDeanStatus, lenderDeanStatus, ...(heads === 0 ? { decidedAt: new Date(), decisionNote: "That department has no head - everyone suitable was allowed automatically" } : {}) },
   });
   if (heads === 0) {
     const people = instructorId ? [{ id: instructorId }] : await prisma.user.findMany({ where: lendableWhere(chairmanId, kind, lending.id), select: { id: true } });

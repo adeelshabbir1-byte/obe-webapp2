@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Creates a Program Lead for one of the department's programs. `departmentId` is only sent by the Chairman;
-// a Head of Department's own department is taken from their account.
+// Creates a Program Lead for one of the department's programs. `departmentId` is only sent by the Institute Head;
+// a Chairman's own department is taken from their account.
 export default function LeadForm({ program, departmentId }: { program: string; departmentId?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");

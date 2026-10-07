@@ -1,5 +1,5 @@
 // Single source of truth for every report in the system — the Reports Hub,
-// the Chairman's ACL manager, Super Admin's bundles, and Coordinator's print
+// the Institute Head's ACL manager, Super Admin's bundles, and Coordinator's print
 // groups all read from this list instead of duplicating it.
 
 export type ReportDef = { id: string; href: string; title: string; desc: string; hasEditActions?: boolean };

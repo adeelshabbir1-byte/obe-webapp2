@@ -16,13 +16,13 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   if (user.mustChangePassword) redirect("/change-password");
   // Actually moving a course to a different semester is still OMC-only
   // (see the /reposition API route) — Coordinators, Subject Experts, and
-  // the Chairman can see the same map here, just without being able to
+  // the Institute Head can see the same map here, just without being able to
   // drag a course into a new row.
   if (!["OMC", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
   const canEdit = user.role === "OMC";
   // Adding, deleting, and quick-editing a batch's courses (below the map)
   // is OMC-or-Coordinator — same institution-wide scope the underlying
-  // API routes now accept — but not Subject Expert or Chairman, who are
+  // API routes now accept — but not Subject Expert or Institute Head, who are
   // here to view the sequencing, not change the batch's course list.
   const canManageCourses = user.role === "OMC" || user.role === "PROGRAM_COORDINATOR";
 

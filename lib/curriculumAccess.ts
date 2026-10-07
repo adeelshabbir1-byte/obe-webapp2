@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 
-// Which master curricula an institute (Chairman) may see:
+// Which master curricula an institute (Institute Head) may see:
 //   * its own copies (chairmanId = that chairman) - always, and
 //   * official shared curricula (chairmanId = null) the Super User has assigned to it.
 // Nothing else - other institutes' copies and unassigned official curricula stay hidden.

@@ -4,7 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 
-// Creates a Head of Department account. A department can have more than one head.
+// Creates a Chairman account. A department can have more than one head.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });

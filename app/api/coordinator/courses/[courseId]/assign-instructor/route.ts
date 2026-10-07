@@ -6,7 +6,7 @@ import { isHeadFaculty } from "../../../../../../lib/departments";
 import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 
-// Originally Course Assigner-only. Chairman, Program Coordinator, and OMC
+// Originally Course Assigner-only. Institute Head, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
 // Semester Map's click-to-assign picker — same institution-wide scope
 // those roles already get everywhere else via courseScopeFor.
@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // validManagerIds: the managedById value(s) an instructor/Subject Expert
   // must have to be a legal pick for this course. Course Assigner's scope
   // is deliberately wider (unchanged from before) — any Coordinator under
-  // their own Chairman, not just this one course's Coordinator — since an
+  // their own Institute Head, not just this one course's Coordinator — since an
   // Assigner's whole job spans every Coordinator at once.
   let course;
   let validManagerIds: string[];

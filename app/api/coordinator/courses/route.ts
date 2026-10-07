@@ -28,7 +28,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   // Owning Coordinator adds to their own batch directly; OMC can add to
-  // any batch belonging to a Coordinator under their own Chairman — same
+  // any batch belonging to a Coordinator under their own Institute Head — same
   // institution-wide scope OMC already has elsewhere on this page. The
   // new course is still attributed to that batch's own Coordinator
   // (coordinatorId below), never to the OMC member performing the add.

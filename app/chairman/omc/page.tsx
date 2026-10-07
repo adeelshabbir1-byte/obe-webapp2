@@ -6,11 +6,11 @@ import Shell from "../../../components/Shell";
 import CreateUserForm from "../../../components/CreateUserForm";
 
 const NAV = [
-  { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
+  { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },
-  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
+  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/chairman/report-access", label: "Report Access Control" },
@@ -28,7 +28,7 @@ export default async function ChairmanOmcPage() {
   const omcMembers = await prisma.user.findMany({ where: { role: "OMC", managedById: user.id }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>OMC Members</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         The Outcome Management Committee reviews and approves Subject Expert course templates.

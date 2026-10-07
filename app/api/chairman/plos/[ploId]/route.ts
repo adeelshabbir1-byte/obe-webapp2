@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { ploId: str
   if (!plo) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json();
-  // Chairman can edit the text directly, and/or set a decision.
+  // Institute Head can edit the text directly, and/or set a decision.
   const data: any = {};
   if (body.title) data.title = body.title;
   if (body.description) data.description = body.description;

@@ -1,5 +1,5 @@
 // Shared "how far along is this course" logic — used by the SE's own
-// course list (app/subjectexpert/courses/page.tsx) and the Chairman's
+// course list (app/subjectexpert/courses/page.tsx) and the Institute Head's
 // faculty-workload dashboard (app/chairman/faculty-workload/page.tsx), so
 // the two views agree on what "done" means for a given step.
 

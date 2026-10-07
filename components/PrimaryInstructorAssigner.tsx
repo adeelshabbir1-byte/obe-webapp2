@@ -144,7 +144,7 @@ export default function PrimaryInstructorAssigner() {
                   </select>
                   {c.response === "PENDING" && <div style={{ fontSize: 11.5, color: "#96650F", marginTop: 3 }}>Waiting for them to accept</div>}
                   {c.response === "DECLINED" && !c.instructorId && <div style={{ fontSize: 11.5, color: "#b3261e", marginTop: 3 }}>Declined{c.responseNote ? `: ${c.responseNote}` : ""} — choose someone else</div>}
-                  {c.approval === "PENDING" && <div style={{ fontSize: 11.5, color: "#96650F", marginTop: 3 }}>Waiting for Head of Department approval</div>}
+                  {c.approval === "PENDING" && <div style={{ fontSize: 11.5, color: "#96650F", marginTop: 3 }}>Waiting for Chairman approval</div>}
                   {c.approval === "REJECTED" && <div style={{ fontSize: 11.5, color: "#b3261e", marginTop: 3 }}>Rejected by Head{c.approvalNote ? `: ${c.approvalNote}` : ""} — choose another teacher</div>}
                   {c.approval === "APPROVED" && c.instructorId && <div style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 3 }}>Approved</div>}
                 </td>

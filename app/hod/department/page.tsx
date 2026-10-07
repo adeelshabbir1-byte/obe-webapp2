@@ -19,7 +19,7 @@ export default async function HodDepartmentPage() {
   const chairmanId = user.managedById || "";
   const [incomingLoans, pending, department, programs, members, noTeacher, visiting] = await Promise.all([
     prisma.teacherLoanRequest.findMany({
-      where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId },
+      where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId, requesterDeanStatus: { not: "PENDING" }, lenderDeanStatus: { not: "PENDING" } },
       include: { course: { select: { code: true, title: true } }, instructor: { select: { name: true } }, requestingDepartment: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
@@ -42,13 +42,13 @@ export default async function HodDepartmentPage() {
 
   const coordinators = members.filter((m) => m.role === "PROGRAM_COORDINATOR");
   const coordOptions = coordinators.map((c) => ({ id: c.id, label: c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name }));
-  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
+  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
   const courseRow = (c: { id: string; code: string; title: string; batch: { degreeProgram: string; batchName: string } | null }) => (
     <tr key={c.id}><td>{c.code}</td><td>{c.title}</td><td>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td></tr>
   );
 
   return (
-    <Shell roleLabel="Head of Department" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>{department?.name || "My Department"}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Your programs, your people, and the courses still waiting for a teacher. Teacher assignments wait here for your approval.
@@ -76,7 +76,7 @@ export default async function HodDepartmentPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Programs</h3>
-        {programs.length === 0 ? <p style={{ color: "var(--slate)" }}>No programs assigned to this department yet — ask the Chairman.</p> : <ul>{programs.map((p) => <li key={p.id}>{p.degreeProgram}</li>)}</ul>}
+        {programs.length === 0 ? <p style={{ color: "var(--slate)" }}>No programs assigned to this department yet — ask the Institute Head.</p> : <ul>{programs.map((p) => <li key={p.id}>{p.degreeProgram}</li>)}</ul>}
       </div>
 
       <div className="card">

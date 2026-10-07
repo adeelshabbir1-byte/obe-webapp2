@@ -7,7 +7,7 @@ type Instructor = { id: string; name: string; role: string };
 // Click-to-assign instructor cell for the Program Semester Map. Anyone
 // without assign rights (e.g. Subject Expert, who can view this page but
 // isn't in the assign-instructor API's allowed roles) gets the old plain
-// text back — only Chairman/Coordinator/OMC get the clickable picker.
+// text back — only Institute Head/Coordinator/OMC get the clickable picker.
 export default function InstructorAssignCell({ courseId, initialInstructorId, initialInstructorName, canAssign }: {
   courseId: string; initialInstructorId: string | null; initialInstructorName: string | null; canAssign: boolean;
 }) {

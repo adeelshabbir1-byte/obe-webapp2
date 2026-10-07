@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 
-// Traces a course up to its owning Chairman: Course -> Batch ->
-// Coordinator -> managedBy -> Chairman. Used to look up that
+// Traces a course up to its owning Institute Head: Course -> Batch ->
+// Coordinator -> managedBy -> Institute Head. Used to look up that
 // institution's own AI configuration rather than the platform default.
 async function findChairmanIdForCourse(courseId: string): Promise<string | null> {
   const course = await prisma.course.findUnique({

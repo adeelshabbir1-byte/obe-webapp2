@@ -22,6 +22,7 @@ enum UserRole {
   COURSE_ASSIGNER
   HEAD_OF_DEPARTMENT
   PROGRAM_LEAD
+  DEAN
 }
 
 model User {
@@ -100,6 +101,8 @@ model User {
   ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
   departmentId       String?  // home department (see Department) - coordinators, course assigners, heads and faculty each belong to one
   department_        Department? @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  facultyId          String?  // DEAN only: the faculty (group of departments) this person leads
+  faculty_           Faculty? @relation("FacultyDean", fields: [facultyId], references: [id])
   leadProgram        String?  // PROGRAM_LEAD only: the one degree program (e.g. "BS Computer Science") this person is responsible for
   isVisitingPlaceholder Boolean @default(false) // the built-in "Visiting Faculty (to be decided)" stand-in - not a real person, never logs in
   preferredDays      String?  // comma list e.g. "Mon,Wed" — instructor's preferred teaching days (soft preference for the timetable)
@@ -109,6 +112,7 @@ model User {
   designedMasterCourses MasterCourse[] @relation("MasterCourseDesigner")
   curriculumAssignments CurriculumAssignment[] @relation("CurriculumAssignmentChairman")
   departmentsOwned      Department[] @relation("DepartmentChairman")
+  facultiesOwned        Faculty[]    @relation("FacultyInstitute")
   teacherLoans          TeacherLoanRequest[] @relation("LoanInstructor")
   loanAllowances        TeacherLoanAllowed[] @relation("LoanAllowedInstructor")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
@@ -1668,6 +1672,8 @@ model Department {
   chairman   User     @relation("DepartmentChairman", fields: [chairmanId], references: [id], onDelete: Cascade)
   name       String
   createdAt  DateTime @default(now())
+  facultyId  String?  // the faculty (led by a Dean) this department belongs to
+  faculty    Faculty? @relation("FacultyDepartments", fields: [facultyId], references: [id], onDelete: SetNull)
 
   members    User[]              @relation("DepartmentMembers")
   programs   DepartmentProgram[]
@@ -1922,6 +1928,8 @@ model TeacherLoanRequest {
   lendingDepartment      Department @relation("LoanLending", fields: [lendingDepartmentId], references: [id], onDelete: Cascade)
   requestedById          String
   status                 String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  requesterDeanStatus    String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED - the requesting faculty's Dean
+  lenderDeanStatus       String   @default("NONE") // same, for the lending faculty's Dean when it is a different faculty
   note                   String?
   decisionNote           String?
   decidedById            String?
@@ -1944,4 +1952,34 @@ model TeacherLoanAllowed {
 
   @@unique([loanId, instructorId])
   @@index([instructorId])
+}
+
+// A faculty groups several departments under one Dean (e.g. "Faculty of Computing" -> CS, SE, IT).
+model Faculty {
+  id          String   @id @default(cuid())
+  chairmanId  String   // the institute head who owns it
+  chairman    User     @relation("FacultyInstitute", fields: [chairmanId], references: [id], onDelete: Cascade)
+  name        String
+  createdAt   DateTime @default(now())
+  departments Department[] @relation("FacultyDepartments")
+  deans       User[]   @relation("FacultyDean")
+  curriculumApprovals CurriculumDeanApproval[]
+
+  @@unique([chairmanId, name])
+  @@index([chairmanId])
+}
+
+// A Dean's sign-off on one of the institute's curricula for their faculty.
+model CurriculumDeanApproval {
+  id           String   @id @default(cuid())
+  facultyId    String
+  faculty      Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  curriculumId String
+  status       String   @default("APPROVED") // APPROVED | RETURNED
+  note         String?
+  decidedById  String
+  decidedAt    DateTime @default(now())
+
+  @@unique([facultyId, curriculumId])
+  @@index([curriculumId])
 }

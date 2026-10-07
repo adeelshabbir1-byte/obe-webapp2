@@ -2,7 +2,7 @@ import { prisma } from "./db";
 
 // What approval state a course's teacher assignment should get when it changes.
 // No teacher, or the "Visiting Faculty (to be decided)" stand-in -> nothing to approve.
-// A department with no Head of Department yet -> approved automatically (nobody to ask).
+// A department with no Chairman yet -> approved automatically (nobody to ask).
 // Otherwise the head has to approve it.
 export async function approvalFieldsFor(courseId: string, instructorId: string | null) {
   const cleared = { instructorApprovalNote: null, instructorApprovedById: null, instructorApprovedAt: null };
