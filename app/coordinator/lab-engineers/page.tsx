@@ -31,7 +31,7 @@ export default async function LabEngineersPage() {
           <table>
             <thead><tr><th>Lab</th><th>Batch</th><th>Lab lead</th><th>Lab Engineer</th></tr></thead>
             <tbody>{labs.map((l: any) => (
-              <tr key={l.id}><td><b>{l.code}</b> — {l.title}</td><td style={{ fontSize: 12 }}>{l.batch.degreeProgram} {l.batch.batchName}</td><td>{leadOf(l)}</td>
+              <tr key={l.id}><td><b>{l.code}</b> — {l.title}</td><td style={{ fontSize: 12 }}>{l.batch ? `${l.batch.degreeProgram} ${l.batch.batchName}` : "—"}</td><td>{leadOf(l)}</td>
                 <td><LabEngineerAssign courseId={l.id} current={l.labEngineer?.id || null} engineers={engineers} /></td></tr>
             ))}</tbody>
           </table>

@@ -22,7 +22,7 @@ export default async function LabsPage() {
           <table>
             <thead><tr><th>Lab</th><th>Batch</th><th></th></tr></thead>
             <tbody>{labs.map((l: any) => (
-              <tr key={l.id}><td><b>{l.code}</b> — {l.title}</td><td style={{ fontSize: 12 }}>{l.batch.degreeProgram} {l.batch.batchName}</td>
+              <tr key={l.id}><td><b>{l.code}</b> — {l.title}</td><td style={{ fontSize: 12 }}>{l.batch ? `${l.batch.degreeProgram} ${l.batch.batchName}` : "—"}</td>
                 <td><Link href={`/instructor/labs/${l.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td></tr>
             ))}</tbody>
           </table>
