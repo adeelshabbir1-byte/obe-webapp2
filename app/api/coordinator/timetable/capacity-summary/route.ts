@@ -45,8 +45,8 @@ export async function GET() {
         ],
       },
       include: {
-        course: { select: { batchId: true, code: true, title: true, semesterNumber: true } },
-        group: { include: { members: { select: { course: { select: { batchId: true, isOffered: true, code: true, title: true, semesterNumber: true } } } } } },
+        course: { select: { batchId: true } },
+        group: { include: { members: { select: { course: { select: { batchId: true, isOffered: true } } } } } },
       },
     }),
   ]);
@@ -105,23 +105,18 @@ export async function GET() {
   // that many hours on ITS OWN timetable, same attribution the GA itself
   // uses (see timetableSlotBuilder.ts).
   const hoursByBatch = new Map<string, { theory: number; lab: number }>();
-  // Exactly which sections make up each batch's hours, so a surprising total can be traced to its cause.
-  const detailsByBatch = new Map<string, { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean }[]>();
-  function addHours(batchId: string, type: string, hours: number, detail: { code: string; title: string; semester: number | null; section: string; combined: boolean }) {
+  function addHours(batchId: string, type: string, hours: number) {
     const cur = hoursByBatch.get(batchId) || { theory: 0, lab: 0 };
     if (type === "LAB") cur.lab += hours; else cur.theory += hours;
     hoursByBatch.set(batchId, cur);
-    const list = detailsByBatch.get(batchId) || [];
-    list.push({ ...detail, type, hours });
-    detailsByBatch.set(batchId, list);
   }
   for (const s of sections) {
     const hours = (s.sessionsPerWeek * s.sessionDurationMinutes) / 60;
     if (s.course) {
-      if (s.course.batchId && batchIds.includes(s.course.batchId)) addHours(s.course.batchId, s.roomTypeNeeded, hours, { code: s.course.code, title: s.course.title, semester: s.course.semesterNumber, section: s.sectionLabel, combined: false });
+      if (s.course.batchId && batchIds.includes(s.course.batchId)) addHours(s.course.batchId, s.roomTypeNeeded, hours);
     } else if (s.group) {
       for (const m of s.group.members) {
-        if (m.course.isOffered && m.course.batchId && batchIds.includes(m.course.batchId)) addHours(m.course.batchId, s.roomTypeNeeded, hours, { code: m.course.code, title: m.course.title, semester: m.course.semesterNumber, section: s.sectionLabel, combined: true });
+        if (m.course.isOffered && m.course.batchId && batchIds.includes(m.course.batchId)) addHours(m.course.batchId, s.roomTypeNeeded, hours);
       }
     }
   }
@@ -142,7 +137,6 @@ export async function GET() {
         theoryHours: Math.round(h.theory * 10) / 10, labHours: Math.round(h.lab * 10) / 10,
         theoryRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.theory / hoursPerWeek) : 0,
         labRoomsNeeded: hoursPerWeek > 0 ? Math.ceil(h.lab / hoursPerWeek) : 0,
-        details: (detailsByBatch.get(b.id) || []).sort((x, y) => (x.semester ?? 0) - (y.semester ?? 0) || x.code.localeCompare(y.code)),
       };
     }),
   };
