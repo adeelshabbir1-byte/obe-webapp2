@@ -1176,6 +1176,10 @@ model Course {
   subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
   instructorId        String?
   instructor          User?    @relation("CourseInstructor", fields: [instructorId], references: [id])
+  instructorApproval      String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED - the department head signs off a teacher assignment
+  instructorApprovalNote  String?
+  instructorApprovedById  String?
+  instructorApprovedAt    DateTime?
   subjectHomeDepartmentId String? // optional: the department whose subject expertise this course draws on (e.g. a CS program's Management course -> Management Science)
   subjectHomeDepartment   Department? @relation("CourseSubjectHome", fields: [subjectHomeDepartmentId], references: [id])
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering

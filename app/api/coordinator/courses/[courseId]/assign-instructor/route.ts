@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 
 // Originally Course Assigner-only. Chairman, Program Coordinator, and OMC
@@ -51,7 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { instructorId } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { instructorId, ...(instructorId !== course.instructorId ? await approvalFieldsFor(course.id, instructorId) : {}) } });
 
   await writeAuditLog({
     actorUserId: user.id, action: "INSTRUCTOR_ASSIGNED", entityType: "Course", entityId: course.id,

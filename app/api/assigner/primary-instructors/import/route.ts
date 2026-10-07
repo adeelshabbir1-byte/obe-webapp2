@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { approvalFieldsFor } from "../../../../../lib/approvals";
 import { writeAuditLog } from "../../../../../lib/audit";
 
 export async function POST(req: NextRequest) {
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     const currentInstructorId = validCourseIds.get(id) || null;
     if (newInstructorId === currentInstructorId) { unchanged++; continue; }
 
-    await prisma.course.update({ where: { id }, data: { instructorId: newInstructorId } });
+    await prisma.course.update({ where: { id }, data: { instructorId: newInstructorId, ...(await approvalFieldsFor(id, newInstructorId)) } });
     await writeAuditLog({
       actorUserId: user.id, action: "INSTRUCTOR_ASSIGNED", entityType: "Course", entityId: id,
       metadata: { instructorId: newInstructorId || "none", via: "excel_import" },
