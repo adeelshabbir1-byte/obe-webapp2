@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import ProgramLeads from "./ProgramLeads";
+import GiveRole, { TakeRoleBack } from "./GiveRole";
 import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
@@ -13,8 +14,8 @@ const ROLE_NAME: Record<string, string> = {
   HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert",
 };
 
-export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
-  departments: Dept[]; rooms: RoomRow[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[];
+export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [] }: {
+  departments: Dept[]; rooms: RoomRow[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[]; faculties?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
@@ -149,6 +150,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                       </select>
                     </label>
                   )}
+                  {p.alsoFaculty && (p.role === "HEAD_OF_DEPARTMENT" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} />}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -180,7 +182,22 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
       </div>
 
       <div className="card">
+        <h3 style={{ marginTop: 0 }}>Give a role to one of your teachers</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
+          Deans, Chairmen and Program Leads are usually teachers. Pick the teacher and the role. They keep their teacher login and choose which role to work as each time they sign in.
+          (A Subject Expert can't be chosen, because the new role would replace their Subject Expert screens.)
+        </p>
+        <GiveRole
+          roles={["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_LEAD"]}
+          teachers={people.filter((p) => p.role === "INSTRUCTOR").map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
+          faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+          programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}
+        />
+      </div>
+
+      <div className="card">
         <h3 style={{ marginTop: 0 }}>Add a Chairman</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>For someone who is not already one of your teachers. Otherwise use the box above.</p>
         <label style={{ fontSize: 13 }}>Department: {" "}
           <select value={headDept} onChange={(e) => setHeadDept(e.target.value)}>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

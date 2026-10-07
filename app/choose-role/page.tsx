@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isDualCapable, DUAL_ROLE_LABEL } from "../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../lib/session";
 import ChooseRoleButtons from "../../components/ChooseRoleButtons";
 
@@ -8,7 +9,7 @@ export default async function ChooseRolePage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
 
-  if (!((user.rawRole === "SUBJECT_EXPERT" || user.rawRole === "HEAD_OF_DEPARTMENT") && user.secondaryRole === "INSTRUCTOR")) {
+  if (!isDualCapable(user.rawRole, user.secondaryRole)) {
     redirect("/dashboard");
   }
 
@@ -17,7 +18,7 @@ export default async function ChooseRolePage() {
       <div style={{ background: "#fff", padding: "40px 50px", maxWidth: 480, border: "1px solid var(--line)", textAlign: "center" }}>
         <h1 style={{ fontSize: 20, marginBottom: 6 }}>Welcome, {user.name}</h1>
         <p style={{ fontSize: 13, color: "var(--slate)", marginBottom: 28 }}>
-          Your account can act as both {user.rawRole === "HEAD_OF_DEPARTMENT" ? "Chairman" : "Subject Expert"} and Instructor. Which one do you want to work as right now?
+          Your account can act as both {DUAL_ROLE_LABEL[user.rawRole] || user.rawRole} and Instructor. Which one do you want to work as right now?
         </p>
         <ChooseRoleButtons primaryRole={user.rawRole} />
       </div>

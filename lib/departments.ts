@@ -2,13 +2,13 @@ import { randomBytes } from "crypto";
 import { prisma } from "./db";
 import { hashPassword } from "./auth";
 
-// A Chairman who also teaches (secondaryRole INSTRUCTOR) is offered wherever faculty are listed.
+// A Chairman, Dean or Program Lead who also teaches (secondaryRole INSTRUCTOR) is offered wherever faculty are listed.
 // They are managed directly by the chairman, not by a coordinator, so the normal "managed by one of the coordinators" test misses them.
 export function headFacultyWhere(chairmanId: string) {
-  return { role: "HEAD_OF_DEPARTMENT" as const, secondaryRole: "INSTRUCTOR", managedById: chairmanId };
+  return { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR"] as ("HEAD_OF_DEPARTMENT" | "DEAN" | "PROGRAM_COORDINATOR")[] }, secondaryRole: "INSTRUCTOR", managedById: chairmanId };
 }
 export function isHeadFaculty(u: { role: string; secondaryRole?: string | null; managedById: string | null }, chairmanId: string) {
-  return u.role === "HEAD_OF_DEPARTMENT" && u.secondaryRole === "INSTRUCTOR" && u.managedById === chairmanId;
+  return ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR"].includes(u.role) && u.secondaryRole === "INSTRUCTOR" && u.managedById === chairmanId;
 }
 
 export const VISITING_NAME = "Visiting Faculty (to be decided)";

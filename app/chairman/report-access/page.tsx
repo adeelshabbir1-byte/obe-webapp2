@@ -14,7 +14,7 @@ export default async function ReportAccessPage() {
 
   const [rules, coordinators] = await Promise.all([
     prisma.reportAccessRule.findMany({ where: { chairmanId: user.id } }),
-    prisma.user.findMany({ where: { managedById: user.id } }),
+    prisma.user.findMany({ where: { managedById: user.id, isVisitingPlaceholder: false } }),
   ]);
   const coordinatorIds = coordinators.filter((c) => c.role === "PROGRAM_COORDINATOR").map((c) => c.id);
   const faculty = await prisma.user.findMany({ where: { managedById: { in: coordinatorIds } } });
@@ -26,7 +26,7 @@ export default async function ReportAccessPage() {
       { href: "/chairman/coordinators", label: "Program Coordinators" },
       { href: "/chairman/plos", label: "Program Learning Outcomes" },
       { href: "/chairman/omc", label: "OMC Members" },
-      { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
+      { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
       { href: "/chairman/cqi", label: "CQI Records" },
       { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
       { href: "/chairman/report-access", label: "Report Access Control" },

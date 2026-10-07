@@ -113,6 +113,7 @@ model User {
   curriculumAssignments CurriculumAssignment[] @relation("CurriculumAssignmentChairman")
   departmentsOwned      Department[] @relation("DepartmentChairman")
   facultiesOwned        Faculty[]    @relation("FacultyInstitute")
+  courseLeadOf          CourseLead[] @relation("CourseLeadUser")
   teacherLoans          TeacherLoanRequest[] @relation("LoanInstructor")
   loanAllowances        TeacherLoanAllowed[] @relation("LoanAllowedInstructor")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
@@ -1982,4 +1983,50 @@ model CurriculumDeanApproval {
 
   @@unique([facultyId, curriculumId])
   @@index([curriculumId])
+}
+
+// Several sections/batches of the same (or equivalent) course in one term form a "course team".
+// One teacher of the team is its Course Lead: they finalise the exam paper, the others approve it.
+// teamKey identifies the team: "g:<equivalence group id>|<term>" or "c:<course code>|<term>".
+model CourseLead {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  teamKey      String
+  leadId       String
+  lead         User     @relation("CourseLeadUser", fields: [leadId], references: [id], onDelete: Cascade)
+  assignedById String
+  createdAt    DateTime @default(now())
+
+  @@unique([chairmanId, teamKey])
+  @@index([leadId])
+}
+
+// The Course Lead's paper (midterm or final question distribution) sent to the team for approval.
+// Sending it again after changes raises `version` and clears earlier approvals.
+model PaperSubmission {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  teamKey      String
+  examType     String   // Midterm | Final
+  leadCourseId String   // the lead's own course row whose paper this is
+  leadId       String
+  version      Int      @default(1)
+  status       String   @default("SUBMITTED") // SUBMITTED | CHANGES_REQUESTED | APPROVED
+  submittedAt  DateTime @default(now())
+  approvedAt   DateTime?
+  approvals    PaperApproval[]
+
+  @@unique([chairmanId, teamKey, examType])
+}
+
+model PaperApproval {
+  id           String   @id @default(cuid())
+  submissionId String
+  submission   PaperSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  userId       String
+  status       String   // APPROVED | CHANGES_REQUESTED
+  note         String?
+  decidedAt    DateTime @default(now())
+
+  @@unique([submissionId, userId])
 }

@@ -62,6 +62,7 @@ export default async function InstructorCoursesPage() {
         Courses currently offered and assigned to you. Click "Open" to record your actual delivery — starts as
         an editable copy of the Subject Expert's plan.
       </p>
+      <p style={{ fontSize: 12.5, margin: "0 0 10px" }}>Teaching a course that someone else also teaches? <Link href="/instructor/peers" style={{ color: "var(--brass-dark)" }}>See your colleagues’ plans</Link>.</p>
       <div className="card">
         <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Semester</th><th>Sections</th><th>Subject Expert</th><th></th></tr></thead>
