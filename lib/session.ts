@@ -77,7 +77,7 @@ export async function getAuthenticatedUser() {
       const target = await prisma.user.findFirst({ where: { id: session.actingForId, role: "PROGRAM_COORDINATOR", departmentId: safeUser.departmentId, managedById: safeUser.managedById } });
       if (target) {
         const { passwordHash: _ph, ...t } = target;
-        return { ...t, mustChangePassword: safeUser.mustChangePassword, role: "PROGRAM_COORDINATOR" as typeof effectiveRole, rawRole: safeUser.role, roleChosen: true, mfaVerified: session.mfaVerified, actingForId: session.actingForId, actingAsLead: true, realUserId: safeUser.id };
+        return { ...t, mustChangePassword: safeUser.mustChangePassword, role: "PROGRAM_COORDINATOR" as typeof effectiveRole, rawRole: safeUser.role, roleChosen: true, mfaVerified: session.mfaVerified, actingForId: session.actingForId, actingAsLead: true, realUserId: safeUser.id, assignerHat };
       }
     }
   }
