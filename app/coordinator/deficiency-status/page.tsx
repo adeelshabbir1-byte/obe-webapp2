@@ -93,7 +93,7 @@ export default async function DeficiencyStatusPage({ searchParams }: { searchPar
   const base = searchParams.batchId ? `?batchId=${searchParams.batchId}&` : "?";
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Deficiency Courses Status" />
       <h1 style={{ fontSize: 22, marginBottom: 6 }}>Deficiency Courses Status</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>

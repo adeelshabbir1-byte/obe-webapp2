@@ -61,7 +61,7 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Learning Outcomes</h1>
         <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

@@ -107,7 +107,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   }
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Student Transcript" />
       <div className="card no-print">
         <form method="GET" style={{ display: "flex", gap: 10, marginBottom: 14 }}>

@@ -56,7 +56,7 @@ export default async function CoordinatorReportBundlesPage() {
   ]);
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Report Bundles</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Group reports together for one-go printing — like a full "NCEAC Visit Package."

@@ -52,7 +52,7 @@ export default async function GradingScalePage() {
   const scale = await prisma.gradingScale.findMany({ where: { coordinatorId: user.id }, orderBy: { orderIndex: "asc" } });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Grading Scale</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Which letter grades exist and their GPA value — applies to every course in your program. Instructors

@@ -54,7 +54,7 @@ export default async function FeedForwardDigestPage() {
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Feed-Forward Notes Digest</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every note instructors have left for whoever teaches a course next — a rolled-up "lessons learned" view.

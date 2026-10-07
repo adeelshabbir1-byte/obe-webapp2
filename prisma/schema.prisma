@@ -23,6 +23,7 @@ enum UserRole {
   HEAD_OF_DEPARTMENT
   PROGRAM_LEAD
   DEAN
+  DEPARTMENT_COORDINATOR
 }
 
 model User {
@@ -138,6 +139,7 @@ model Session {
   ipAddress  String?
   userAgent  String?
   mfaVerified Boolean @default(true) // false only while an MFA-enabled user's login is pending code entry
+  actingForId String? // DEPARTMENT_COORDINATOR only: which program lead's data they are working on right now
   activeRole  String? // which role a dual-capable person (Subject Expert who can also Instruct) chose for this session
 
   @@index([userId])

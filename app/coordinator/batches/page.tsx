@@ -58,7 +58,7 @@ export default async function BatchesPage() {
   const faculty = await prisma.user.findMany({ where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Degree Programs & Batches</h1>
         <a href="/api/coordinator/batches/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

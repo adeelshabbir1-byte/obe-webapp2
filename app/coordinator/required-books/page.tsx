@@ -56,7 +56,7 @@ export default async function RequiredBooksPage() {
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Required Textbooks — This Semester" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Textbook and reference material for every course offered this semester, as set by each course's Subject Expert.

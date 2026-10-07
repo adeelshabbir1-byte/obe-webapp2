@@ -65,7 +65,7 @@ export default async function BatchComparisonPage() {
   }));
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Batch Comparison</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Side-by-side comparison of every batch — useful for spotting drift between cohorts of the same degree. "Students on Roll" is the number of students actually uploaded into the batch; "Intake Size" is the number typed in when the batch was created, and is flagged when the two differ.

@@ -43,7 +43,7 @@ export default async function HodDepartmentPage() {
 
   const coordinators = members.filter((m) => m.role === "PROGRAM_COORDINATOR");
   const coordOptions = coordinators.map((c) => ({ id: c.id, label: c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name }));
-  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
+  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
   const courseRow = (c: { id: string; code: string; title: string; batch: { degreeProgram: string; batchName: string } | null }) => (
     <tr key={c.id}><td>{c.code}</td><td>{c.title}</td><td>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td></tr>
   );

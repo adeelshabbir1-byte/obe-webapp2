@@ -59,7 +59,7 @@ export default async function ElectiveOptionsPage({ searchParams }: { searchPara
     : [];
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Elective Options</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Offer more than one real course for the same elective slot, and let students pick between them through

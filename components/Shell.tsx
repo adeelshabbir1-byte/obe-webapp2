@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { groupNavLinks } from "../lib/navGrouping";
@@ -25,6 +26,7 @@ export default function Shell({
   const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
   const [nceacLogo, setNceacLogo] = useState<string | null>(null);
   const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string; otherRole: string | null; otherRoleLabel: string | null; otherRoles?: { role: string; label: string }[] } | null>(null);
+  const [deptCoordinator, setDeptCoordinator] = useState<{ actingForId: string | null; programs: { id: string; label: string }[] } | null>(null);
   const [isAlumniCustodian, setIsAlumniCustodian] = useState(false);
   const [currentTerm, setCurrentTerm] = useState<{ termName: string; year: number } | null>(null);
 
@@ -33,13 +35,13 @@ export default function Shell({
       setInstituteName(d.instituteName); setInstituteLogo(d.instituteLogo);
       setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
     }).catch(() => {});
-    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); if (d.isAlumniCustodian) setIsAlumniCustodian(true); }).catch(() => {});
+    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); if (d.deptCoordinator) setDeptCoordinator(d.deptCoordinator); if (d.isAlumniCustodian) setIsAlumniCustodian(true); }).catch(() => {});
     // Shown as a standing reminder in the sidebar on every Coordinator
     // page, not just the semester-management one — it's easy to lose
     // track of which term is actually "current" when working across
     // two dozen different pages, and several of them (reports, the
     // registration window, degree planning) all implicitly depend on it.
-    if (roleLabel === "Program Coordinator") {
+    if (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") {
       fetch("/api/coordinator/current-term").then((r) => r.json()).then((d) => setCurrentTerm(d.current)).catch(() => {});
     }
   }, [roleLabel]);
@@ -52,6 +54,12 @@ export default function Shell({
     setSwitching(true);
     await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
     router.push("/dashboard");
+    router.refresh();
+  }
+
+  async function pickProgram(coordinatorId: string) {
+    await fetch("/api/auth/acting-for", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coordinatorId }) });
+    setDeptCoordinator((d) => (d ? { ...d, actingForId: coordinatorId } : d));
     router.refresh();
   }
 
@@ -84,7 +92,7 @@ export default function Shell({
             </Link>
           )}
         </div>
-        {groupNavLinks(navLinks).map((section) => (
+        {groupNavLinks(deptCoordinator ? navLinks.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : navLinks).map((section) => (
           <div key={section.title} style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 9.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#8A8266", margin: "0 0 4px", paddingLeft: 2 }}>
               {section.title}
@@ -106,6 +114,15 @@ export default function Shell({
         ))}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
+          {deptCoordinator && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10.5, color: "#CFC9B6", opacity: 0.8, marginBottom: 3 }}>Working on program</div>
+              <select value={deptCoordinator.actingForId || ""} onChange={(e) => e.target.value && pickProgram(e.target.value)} style={{ width: "100%", fontSize: 11.5 }}>
+                {!deptCoordinator.actingForId && <option value="">— choose a program —</option>}
+                {deptCoordinator.programs.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+          )}
           <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
           {roleSwitch && (roleSwitch.otherRoles && roleSwitch.otherRoles.length > 0 ? roleSwitch.otherRoles : [{ role: roleSwitch.otherRole || "INSTRUCTOR", label: roleSwitch.otherRoleLabel || "Instructor" }]).map((o) => (
             <button key={o.role} onClick={() => switchRole(o.role)} disabled={switching} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: switching ? "default" : "pointer", padding: 0, textAlign: "left", opacity: switching ? 0.6 : 1 }}>

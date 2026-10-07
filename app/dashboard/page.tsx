@@ -15,6 +15,7 @@ const ROLE_HOME: Record<string, string> = {
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
   DEAN: "/dean/overview",
+  DEPARTMENT_COORDINATOR: "/dept-coordinator/home",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",

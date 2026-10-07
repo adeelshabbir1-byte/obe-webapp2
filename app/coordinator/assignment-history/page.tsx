@@ -95,7 +95,7 @@ export default async function AssignmentHistoryPage({ searchParams }: { searchPa
   }
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assignment History</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Every past semester's course assignments — the current one live, previous ones from an automatic

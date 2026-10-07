@@ -75,7 +75,7 @@ export default async function SemesterHealthPage() {
   const pendingExceptions = await prisma.weightExceptionRequest.count({ where: { status: "pending", course: { coordinatorId: user.id } } });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Semester Health</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         A one-page check on whether this semester is on track.

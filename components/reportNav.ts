@@ -111,6 +111,21 @@ export const DEAN_NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
+export const DEPT_COORDINATOR_NAV = [
+  { href: "/dept-coordinator/home", label: "My Programs" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" },
+  { href: "/coordinator/students", label: "Students" },
+  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
+  { href: "/coordinator/semester", label: "Current Semester" },
+  { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
+  { href: "/coordinator/timetable", label: "Timetable" },
+  { href: "/coordinator/load-report", label: "Teacher Load Report" },
+  { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
+  { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
+  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/omc/reports", label: "Reports" },
+];
+
 export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
@@ -119,6 +134,7 @@ export const HOD_NAV = [
 
 export function navForRole(role: string) {
   switch (role) {
+    case "DEPARTMENT_COORDINATOR": return DEPT_COORDINATOR_NAV;
     case "DEAN": return DEAN_NAV;
     case "HEAD_OF_DEPARTMENT": return HOD_NAV;
     case "OMC": return OMC_ACTION_NAV;

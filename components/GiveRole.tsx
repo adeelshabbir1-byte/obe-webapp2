@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Teacher = { id: string; name: string; departmentName?: string | null };
-type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "PROGRAM_LEAD";
-const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", PROGRAM_LEAD: "Program Lead of a program" };
+type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD";
+const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program" };
 
 // Pick a teacher and give them an extra role. They keep teaching and choose which hat to wear at sign-in.
 export default function GiveRole({ teachers, roles, faculties = [], departments = [], programs = [] }: {
@@ -43,7 +43,7 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
         </select>
       )}
       {role === "DEAN" && <select name="facultyId" required defaultValue=""><option value="" disabled>Which faculty?</option>{faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>}
-      {role === "HEAD_OF_DEPARTMENT" && <select name="departmentId" required defaultValue=""><option value="" disabled>Which department?</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>}
+      {(role === "HEAD_OF_DEPARTMENT" || role === "DEPARTMENT_COORDINATOR") && <select name="departmentId" required defaultValue=""><option value="" disabled>Which department?</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>}
       {role === "PROGRAM_LEAD" && <select name="program" required defaultValue=""><option value="" disabled>Which program?</option>{programs.map((p) => <option key={p.name} value={p.name}>{p.name}{p.department ? ` (${p.department})` : ""}</option>)}</select>}
       <button className="btn btn-brass" type="submit">Give this role</button>
       {msg && <div style={{ color: ok ? "var(--sage)" : "#b3261e", fontSize: 13 }}>{msg}</div>}

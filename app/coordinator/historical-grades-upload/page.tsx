@@ -56,7 +56,7 @@ export default async function HistoricalGradesUploadPage() {
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Historical Grades Upload</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         For a batch whose earlier semesters happened before this system was in use — load their course grades

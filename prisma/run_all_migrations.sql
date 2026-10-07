@@ -4515,3 +4515,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS "PaperApproval_submissionId_userId_key" ON "Pa
 
 -- A third role ("hat") for people who lead, teach and are Subject Experts
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tertiaryRole" TEXT;
+
+-- Department-wide Program Coordinator (assistant to the Program Leads)
+-- Run the ALTER TYPE line on its own first, then the rest.
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'DEPARTMENT_COORDINATOR';
+
+-- Part 2: run after migration_department_coordinator.sql
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "actingForId" TEXT;
