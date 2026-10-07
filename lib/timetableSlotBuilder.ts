@@ -46,7 +46,30 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   const slots: Slot[] = [];
   let slotIndex = 0;
 
-  for (const s of courseSections) {
+  // A batch attends ONE section of a course. Stale/duplicate/parallel sections (a course's own section left over after it was combined,
+  // or several sections of one combined group) would otherwise each demand their own time for the same batch and make a clash-free
+  // timetable impossible. So: one section per group+type, and a course covered by a group isn't also scheduled on its own.
+  const ty = (t: string) => (t === "LAB" ? "LAB" : "TH");
+  const byLabel = (a: { sectionLabel: string; id: string }, b: { sectionLabel: string; id: string }) => a.sectionLabel.localeCompare(b.sectionLabel) || a.id.localeCompare(b.id);
+  const seenGroup = new Set<string>();
+  const keptGroupSections = [...groupSections].sort(byLabel).filter((s) => {
+    if (!s.groupId) return false;
+    const k = `${s.groupId}|${ty(s.roomTypeNeeded)}`;
+    if (seenGroup.has(k)) return false;
+    seenGroup.add(k);
+    return true;
+  });
+  const covered = new Set<string>();
+  for (const s of keptGroupSections) for (const m of s.group?.members || []) covered.add(`${m.courseId}|${ty(s.roomTypeNeeded)}`);
+  const seenCourse = new Set<string>();
+  const keptCourseSections = [...courseSections].sort(byLabel).filter((s) => {
+    const k = `${s.courseId}|${ty(s.roomTypeNeeded)}`;
+    if (covered.has(k) || seenCourse.has(k)) return false;
+    seenCourse.add(k);
+    return true;
+  });
+
+  for (const s of keptCourseSections) {
     if (!s.course?.batch) continue;
     const { allowedDays, dayStartHour, dayEndHour } = resolveWindow([s.course.batch.id]);
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
@@ -70,14 +93,13 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     sectionsPerGroup.set(s.groupId, (sectionsPerGroup.get(s.groupId) || 0) + 1);
   }
 
-  for (const s of groupSections) {
+  for (const s of keptGroupSections) {
     if (!s.groupId || !s.group) continue;
     const memberBatches = s.group.members.filter((m) => m.course.isOffered).map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b);
     const memberBatchIdsInScope = memberBatches.map((b) => b.id).filter((id) => batchIds.includes(id));
     if (memberBatchIdsInScope.length === 0) continue; // none of this group's member batches belong to this coordinator
     const combinedTotal = memberBatches.reduce((sum, b) => sum + b.studentCount, 0);
-    const sectionCount = sectionsPerGroup.get(s.groupId) || 1;
-    const studentCount = Math.ceil(combinedTotal / sectionCount);
+    const studentCount = combinedTotal; // one scheduled section per group, so it holds the whole combined class
     const { allowedDays, dayStartHour, dayEndHour } = resolveWindow(memberBatches.map((b) => b.id));
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
