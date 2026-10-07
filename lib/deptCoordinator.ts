@@ -6,10 +6,10 @@
 export const DEPT_COORDINATOR_PAGES = [
   "/coordinator/faculty", "/coordinator/students", "/coordinator/bulk-student-upload", "/coordinator/semester", "/coordinator/calendar",
   "/coordinator/timetable", "/coordinator/load-report", "/coordinator/out-of-batch-requests", "/coordinator/repeat-offering",
-  "/coordinator/semester-health", "/coordinator/historical-grades-upload", "/coordinator/student-transcript", "/coordinator/faculty-requests",
+  "/coordinator/semester-health", "/coordinator/historical-grades-upload", "/coordinator/student-transcript", "/coordinator/faculty-requests", "/coordinator/lab-engineers",
 ];
 export const DEPT_COORDINATOR_APIS = [
-  "/api/coordinator/faculty", "/api/coordinator/faculty-preferred-days", "/api/coordinator/faculty-unavailability", "/api/coordinator/students",
+  "/api/coordinator/faculty", "/api/coordinator/lab-engineers", "/api/coordinator/faculty-preferred-days", "/api/coordinator/faculty-unavailability", "/api/coordinator/students",
   "/api/coordinator/current-term", "/api/coordinator/holidays", "/api/coordinator/semester-dates", "/api/coordinator/schedule-sections",
   "/api/coordinator/timetable", "/api/coordinator/rooms", "/api/coordinator/class-day-modes", "/api/coordinator/load-report",
   "/api/coordinator/out-of-batch-requests", "/api/coordinator/historical-grades", "/api/coordinator/new-intake", "/api/coordinator/batch-schedule-config",

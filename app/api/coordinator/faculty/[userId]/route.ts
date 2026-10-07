@@ -13,15 +13,17 @@ export async function DELETE(req: Request, { params }: { params: { userId: strin
   // Never silently unassign — surface exactly what needs reassigning first,
   // since deleting the person out from under active courses would be a
   // surprising, hard-to-reverse side effect.
-  const [asInstructor, asSubjectExpert, sectionAssignments] = await Promise.all([
+  const [asInstructor, asSubjectExpert, sectionAssignments, asLabEngineer] = await Promise.all([
     prisma.course.findMany({ where: { instructorId: params.userId }, select: { code: true } }),
     prisma.course.findMany({ where: { subjectExpertId: params.userId }, select: { code: true } }),
     prisma.courseSectionAssignment.findMany({ where: { instructorId: params.userId }, include: { course: true } }),
+    prisma.course.findMany({ where: { labEngineerId: params.userId }, select: { code: true } }),
   ]);
 
   const blockers = [
     ...asInstructor.map((c) => `${c.code} (as Instructor)`),
     ...asSubjectExpert.map((c) => `${c.code} (as Subject Expert)`),
+    ...asLabEngineer.map((c) => `${c.code} (as Lab Engineer)`),
     ...sectionAssignments.map((s) => `${s.course.code} (additional section)`),
   ];
   if (blockers.length > 0) {

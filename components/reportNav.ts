@@ -26,10 +26,16 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
+export const LAB_ENGINEER_NAV = [
+  { href: "/lab-engineer/labs", label: "My Labs" },
+  { href: "/faculty/my-availability", label: "My Availability" },
+];
+
 export const INSTRUCTOR_NAV = [
   { href: "/instructor/courses", label: "My Semester Courses" },
   { href: "/instructor/timetable", label: "My Timetable" },
   { href: "/instructor/course-team", label: "Course Teams" },
+  { href: "/instructor/labs", label: "My Labs" },
   { href: "/instructor/peers", label: "Colleagues’ Plans" },
   { href: "/advisor/dashboard", label: "Advisor Dashboard" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
@@ -55,7 +61,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -139,6 +145,7 @@ export function navForRole(role: string) {
     case "HEAD_OF_DEPARTMENT": return HOD_NAV;
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;
+    case "LAB_ENGINEER": return LAB_ENGINEER_NAV;
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;
     case "CHAIRMAN": return CHAIRMAN_NAV;

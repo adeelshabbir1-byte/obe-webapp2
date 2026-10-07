@@ -156,7 +156,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               change on first login and isn't stored anywhere retrievable:
               <ul style={{ margin: "4px 0 0 18px" }}>
                 {bulkResult.createdLogins.map((c: any, i: number) => (
-                  <li key={i}>{c.name} — login <b>{c.username}</b> ({c.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"})</li>
+                  <li key={i}>{c.name} — login <b>{c.username}</b> ({c.role === "SUBJECT_EXPERT" ? "Subject Expert" : c.role === "LAB_ENGINEER" ? "Lab Engineer" : "Course Instructor"})</li>
                 ))}
               </ul>
             </div>
@@ -197,6 +197,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                       <select name="role" defaultValue={f.role} style={{ padding: "5px 6px", border: "1px solid var(--line)" }}>
                         <option value="SUBJECT_EXPERT">Subject Expert</option>
                         <option value="INSTRUCTOR">Course Instructor</option>
+                        <option value="LAB_ENGINEER">Lab Engineer</option>
                       </select>
                     </div>
                     <div>
@@ -228,7 +229,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
             ) : (
               <tr key={f.id}>
                 <td>{f.username}</td><td>{f.name}</td>
-                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}</td>
+                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : f.role === "LAB_ENGINEER" ? "Lab Engineer" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}</td>
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
@@ -254,6 +255,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               <select name="role" required>
                 <option value="SUBJECT_EXPERT">Subject Expert</option>
                 <option value="INSTRUCTOR">Course Instructor</option>
+                <option value="LAB_ENGINEER">Lab Engineer</option>
               </select>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 400, marginTop: 6 }}>
                 <input type="checkbox" name="alsoInstructor" /> If Subject Expert: can also be assigned as Instructor

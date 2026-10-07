@@ -19,6 +19,7 @@ const ROLE_HOME: Record<string, string> = {
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
+  LAB_ENGINEER: "/lab-engineer/labs",
   COURSE_ASSIGNER: "/assigner/matrix",
 };
 
