@@ -16,9 +16,14 @@ export async function POST(req: NextRequest) {
   if (!faculty) return NextResponse.json({ error: "faculty not found" }, { status: 404 });
   const existing = await prisma.user.findFirst({ where: { OR: [{ username: body.username }, { email: body.email }] } });
   if (existing) return NextResponse.json({ error: "username or email already in use" }, { status: 409 });
-  const created = await prisma.user.create({
+  let created;
+  try {
+    created = await prisma.user.create({
     data: { email: body.email, username: body.username, passwordHash: await hashPassword(body.password), name: body.name, role: "DEAN", managedById: user.id, facultyId: faculty.id, mustChangePassword: true },
   });
+  } catch (err: any) {
+    return NextResponse.json({ error: "Could not create the Dean: " + String(err?.message || err).split("\n").slice(-3).join(" ").slice(0, 300) }, { status: 500 });
+  }
   await writeAuditLog({ actorUserId: user.id, action: "DEAN_CREATED", entityType: "User", entityId: created.id, metadata: { facultyId: faculty.id } });
   const { passwordHash: _omit, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });
