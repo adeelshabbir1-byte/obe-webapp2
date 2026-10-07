@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../lib/reportScope";
+import { busyElsewhere } from "../../../../../../../lib/timetableScope";
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
@@ -70,6 +71,14 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
     if (other.roomId === effectiveRoomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
     if (!entryTeacher?.isVisitingPlaceholder && other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
     if (batchIdsFor(other.scheduleSection).some((id) => entryBatchIds.includes(id))) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${otherCode}`); }
+  }
+
+  // The same teacher may already be teaching in another department's own timetable at that time.
+  if (!entryTeacher?.isVisitingPlaceholder) {
+    const elsewhere = await busyElsewhere(chairmanId, run.scopeKey || "SHARED", [entry.scheduleSection.instructorId]);
+    if (elsewhere.some((b) => b.dayOfWeek === newDay && overlaps(newStartHour, newEndHour, b.startHour, b.endHour))) {
+      reasons.push("Teacher is already teaching at this time in another department's timetable");
+    }
   }
 
   return NextResponse.json({
