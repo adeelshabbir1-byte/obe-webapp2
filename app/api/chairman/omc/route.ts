@@ -1,3 +1,4 @@
+import { ensureDefaultDepartment } from "../../../../lib/departments";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   const created = await prisma.user.create({
     data: {
       email: body.email, username: body.username, passwordHash, name: body.name,
-      role: "OMC", managedById: user.id, mustChangePassword: true,
+      role: "OMC", managedById: user.id, departmentId: (await ensureDefaultDepartment(user.id)).id, mustChangePassword: true,
     },
   });
 

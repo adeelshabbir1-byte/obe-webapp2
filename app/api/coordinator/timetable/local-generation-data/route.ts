@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
   const generations: number = body.generations ?? 0;
   const score: number = body.score ?? 0;
 
-  const { slots } = await buildSlots(user);
+  const { slots, scope } = await buildSlots(user);
   if (chromosome.length !== slots.length) {
     return NextResponse.json({ error: "the fetched data has changed since this chromosome was generated — fetch fresh data and try again" }, { status: 400 });
   }
 
   const run = await prisma.timetableRun.create({
     data: {
-      chairmanId, generatedById: user.id, status: "COMPLETED", fitnessScore: score, hardViolations, generations,
+      chairmanId, generatedById: user.id, scopeKey: scope.key, status: "COMPLETED", fitnessScore: score, hardViolations, generations,
       notes: `Generated locally via the desktop script. ${hardViolations > 0 ? `${hardViolations} hard constraint violation(s) remain.` : "No constraint violations."}`,
     },
   });

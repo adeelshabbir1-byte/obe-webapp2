@@ -1,3 +1,4 @@
+import { ensureDefaultDepartment } from "../../../../lib/departments";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       role: "PROGRAM_COORDINATOR",
       department: body.department || null,
       managedById: user.id,
+      departmentId: (await ensureDefaultDepartment(user.id)).id,
       mustChangePassword: true,
     },
   });

@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
+import { timetableScopeFor } from "../../../../lib/timetableScope";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
-  const rooms = await prisma.room.findMany({ where: { chairmanId }, orderBy: { name: "asc" } });
+  const scope = await timetableScopeFor(user);
+  const rooms = await prisma.room.findMany({ where: scope.roomWhere, orderBy: { name: "asc" } });
   return NextResponse.json({ rooms });
 }
 
@@ -24,6 +26,8 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.room.findUnique({ where: { chairmanId_name: { chairmanId, name: body.name } } });
   if (existing) return NextResponse.json({ error: `a room named "${body.name}" already exists` }, { status: 409 });
 
-  const room = await prisma.room.create({ data: { chairmanId, name: body.name, type: body.type, capacity: parseInt(body.capacity, 10) } });
+  // A department with its own timetable owns the rooms it adds; everyone else adds common rooms.
+  const scope = await timetableScopeFor(user);
+  const room = await prisma.room.create({ data: { chairmanId, name: body.name, type: body.type, capacity: parseInt(body.capacity, 10), departmentId: scope.mode === "SEPARATE" ? scope.key : null } });
   return NextResponse.json({ room }, { status: 201 });
 }

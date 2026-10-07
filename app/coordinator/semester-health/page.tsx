@@ -63,6 +63,7 @@ export default async function SemesterHealthPage() {
   const changesRequested = offeredCourses.filter((c) => c.templateStatus === "changes-requested").length;
   const draft = offeredCourses.filter((c) => c.templateStatus === "draft").length;
   const noInstructor = offeredCourses.filter((c) => !c.instructorId).length;
+  const visitingPending = offeredCourses.filter((c) => c.instructor?.isVisitingPlaceholder).length;
   const noSE = offeredCourses.filter((c) => !c.subjectExpertId).length;
 
   const faculty = await prisma.user.findMany({ where: { role: "INSTRUCTOR", managedById: user.id } });
@@ -96,6 +97,7 @@ export default async function SemesterHealthPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           <StatCard label="Courses with no Subject Expert" value={noSE} warn={noSE > 0} />
           <StatCard label="Courses with no Instructor" value={noInstructor} warn={noInstructor > 0} />
+          <StatCard label="Waiting for a visiting teacher to be decided" value={visitingPending} warn={visitingPending > 0} />
           <StatCard label="Faculty Over Their Load Limit" value={overLoaded} warn={overLoaded > 0} />
         </div>
       </div>

@@ -32,7 +32,7 @@ export default async function CqiPage() {
         { href: "/chairman/coordinators", label: "Program Coordinators" },
         { href: "/chairman/plos", label: "Program Learning Outcomes" },
         { href: "/chairman/omc", label: "OMC Members" },
-        { href: "/chairman/assigners", label: "Course Assigners" },
+        { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
         { href: "/chairman/cqi", label: "CQI Records" },
         { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
         { href: "/chairman/report-access", label: "Report Access Control" },

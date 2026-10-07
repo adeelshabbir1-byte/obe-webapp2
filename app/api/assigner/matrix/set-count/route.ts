@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest) {
 
   if (kind === "course") {
     const course = await prisma.course.findUnique({ where: { id }, include: { coordinator: true } });
-    if (!course || course.coordinator.managedById !== user.managedById || instructor.managedById !== course.coordinatorId) {
+    if (!course || course.coordinator.managedById !== user.managedById || (!(instructor.isVisitingPlaceholder && instructor.managedById === user.managedById) && instructor.managedById !== course.coordinatorId)) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
     if (count <= 0) {
@@ -38,7 +38,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
     const instructorCoordinator = instructor.managedById ? await prisma.user.findUnique({ where: { id: instructor.managedById } }) : null;
-    if (!instructorCoordinator || instructorCoordinator.managedById !== user.managedById) {
+    const isVisitingOk = instructor.isVisitingPlaceholder && instructor.managedById === user.managedById;
+    if (!isVisitingOk && (!instructorCoordinator || instructorCoordinator.managedById !== user.managedById)) {
       return NextResponse.json({ error: "invalid instructor" }, { status: 400 });
     }
     if (count <= 0) {

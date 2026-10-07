@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { normalizeCourseType } from "../../../../lib/courseTypeColors";
 import { seniorMember } from "../../../../lib/seniorMember";
+import { getOrCreateVisitingFaculty } from "../../../../lib/departments";
 
 // Puts course types in a sensible teaching-clustered order — General
 // Education and IDS instructors are usually a distinct pool from Core/
@@ -98,6 +99,8 @@ export async function GET() {
     where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
     include: { customCategory: true },
   });
+  const visitingUser = await getOrCreateVisitingFaculty(user.managedById || "");
+  instructors.unshift({ ...visitingUser, customCategory: null } as (typeof instructors)[number]);
 
   // Every faculty member's own stated priority for the course codes
   // actually in this matrix — the color-coded hint, and the basis for
@@ -163,8 +166,10 @@ export async function GET() {
       externalLoadNote: i.externalLoadNote, specialization: i.specialization,
       customCategoryName: i.customCategory?.name || null,
       dominantType: dominantTypeFor(i.id),
+      isVisiting: i.isVisitingPlaceholder,
     }))
     .sort((a, b) => {
+      if (a.isVisiting !== b.isVisiting) return a.isVisiting ? -1 : 1; // visiting option always first
       const ra = a.dominantType ? typeRank(a.dominantType) : TYPE_ORDER.length + 1;
       const rb = b.dominantType ? typeRank(b.dominantType) : TYPE_ORDER.length + 1;
       return ra - rb || avgPriorityFor(a.id) - avgPriorityFor(b.id) || a.name.localeCompare(b.name);

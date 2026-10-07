@@ -1,18 +1,17 @@
 import { prisma } from "./db";
 import { Slot } from "./timetableGA";
+import { timetableScopeFor, busyElsewhere } from "./timetableScope";
 
-// Timetable generation stays siloed per Coordinator, same as everywhere
-// else in this system (their own batches, their own faculty pool, their
-// own rooms via the shared chairman). A Course Equivalence Group whose
-// members span batches under DIFFERENT coordinators is a known boundary
-// this doesn't solve — each coordinator would generate their own slot for
-// their own member batches only, with no cross-coordinator conflict check.
+// One run covers one "scope" (see timetableScope.ts): every department on the shared timetable together, or a single
+// department that keeps its own timetable and rooms. Teachers lent across scopes are kept free at the times they already
+// teach in another scope's current timetable.
 // Friday prayer break — no classes in this window (set here if the time ever changes).
 export const JUMMAH_BREAK = { day: "Fri", startHour: 13, endHour: 14 };
 
 export async function buildSlots(user: { id: string; managedById: string | null }) {
   const chairmanId = user.managedById;
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, include: { scheduleConfig: true } });
+  const scope = await timetableScopeFor(user);
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: scope.coordinatorIds } }, include: { scheduleConfig: true } });
   const batchIds = batches.map((b) => b.id);
   const configByBatch = new Map(batches.map((b) => [b.id, b.scheduleConfig]));
 
@@ -33,7 +32,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     return { allowedDays: allowedDays && allowedDays.length > 0 ? allowedDays : ["Mon", "Tue", "Wed", "Thu", "Fri"], dayStartHour, dayEndHour };
   }
 
-  const [courseSections, groupSections, rooms, faculty] = await Promise.all([
+  const [courseSections, groupSections, rooms] = await Promise.all([
     // Only sections of courses that are offered NOW — a course that is no longer offered (an earlier semester of a batch that has moved on)
     // can leave its old sections behind, and those must not take up room hours or be scheduled again.
     prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds }, isOffered: true } }, include: { course: { include: { batch: true } } } }),
@@ -41,10 +40,13 @@ export async function buildSlots(user: { id: string; managedById: string | null 
       where: { group: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } } },
       include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
     }),
-    prisma.room.findMany({ where: { chairmanId: chairmanId || "" } }),
-    prisma.user.findMany({ where: { managedById: user.id }, select: { id: true, preferredDays: true } }),
+    prisma.room.findMany({ where: scope.roomWhere }),
   ]);
-  const unavailabilityRaw = await prisma.facultyUnavailability.findMany({ where: { facultyId: { in: faculty.map((f) => f.id) } } });
+
+  // "Visiting Faculty (to be decided)" is a placeholder, not one person: give every visiting section its own
+  // virtual teacher so two visiting courses can never be flagged as the same teacher clashing.
+  const visitingIds = new Set<string>((await prisma.user.findMany({ where: { isVisitingPlaceholder: true, managedById: chairmanId || "" }, select: { id: true } })).map((u) => u.id));
+  const teacherOf = (sectionId: string, instructorId: string) => (visitingIds.has(instructorId) ? `visiting:${sectionId}` : instructorId);
 
   const slots: Slot[] = [];
   let slotIndex = 0;
@@ -78,7 +80,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
         slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: s.courseId, batchIds: [s.course.batch.id],
-        instructorId: s.instructorId, roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
+        instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
         studentCount: s.course.batch.studentCount, allowedDays, dayStartHour, dayEndHour,
       });
     }
@@ -107,24 +109,30 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
         slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: null, batchIds: memberBatchIdsInScope,
-        instructorId: s.instructorId, roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
+        instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
         studentCount, allowedDays, dayStartHour, dayEndHour,
       });
     }
   }
 
+  // Everyone who actually teaches in this run - including a teacher borrowed from another department.
+  const teacherIds = Array.from(new Set(slots.map((sl) => sl.instructorId).filter((id) => id && !id.startsWith("visiting:"))));
+  const faculty = await prisma.user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, preferredDays: true } });
+  const unavailabilityRaw = await prisma.facultyUnavailability.findMany({ where: { facultyId: { in: teacherIds } } });
   const prefByFaculty = new Map<string, string[]>(faculty.map((f): [string, string[]] => [f.id, (f.preferredDays || "").split(",").filter(Boolean)]));
   for (const sl of slots) {
     const pref = prefByFaculty.get(sl.instructorId);
     if (pref && pref.length > 0) sl.preferredDays = pref;
   }
 
-  const unavailability = unavailabilityRaw.map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
+  // Already teaching in another department's own timetable -> not free here.
+  const elsewhere = await busyElsewhere(chairmanId || "", scope.key, teacherIds);
+  const unavailability = [...unavailabilityRaw, ...elsewhere].map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
   // Jummah break: nobody is scheduled to teach during it, so no class (of any batch) can fall in that hour.
   for (const instructorId of new Set(slots.map((sl) => sl.instructorId).filter(Boolean))) {
     unavailability.push({ facultyId: instructorId, dayOfWeek: JUMMAH_BREAK.day, startHour: JUMMAH_BREAK.startHour, endHour: JUMMAH_BREAK.endHour });
   }
   const roomsForGA = rooms.map((r) => ({ id: r.id, type: r.type, capacity: r.capacity }));
 
-  return { slots, rooms: roomsForGA, unavailability };
+  return { slots, rooms: roomsForGA, unavailability, scope };
 }

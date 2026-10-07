@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     score = Number(summarySheet.getCell("B3").value) || 0;
   }
 
-  const { slots } = await buildSlots(user);
+  const { slots, scope } = await buildSlots(user);
   if (solutionBySlotIndex.size !== slots.length) {
     return NextResponse.json({
       error: `this solution has ${solutionBySlotIndex.size} entries, but your current setup needs ${slots.length} — your rooms/sections may have changed since you downloaded the constraints file. Download a fresh copy and regenerate.`,
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const run = await prisma.timetableRun.create({
     data: {
-      chairmanId, generatedById: user.id, status: "COMPLETED", fitnessScore: score, hardViolations, generations,
+      chairmanId, generatedById: user.id, scopeKey: scope.key, status: "COMPLETED", fitnessScore: score, hardViolations, generations,
       notes: `Generated locally via the desktop tool. ${hardViolations > 0 ? `${hardViolations} hard constraint violation(s) remain.` : "No constraint violations."}`,
     },
   });
