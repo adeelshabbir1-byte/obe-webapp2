@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 
-export async function labWorkspaceData(lab: { id: string; batchId: string }, theory: { id: string; code: string } | null, as: "ENGINEER" | "LEAD", userId: string) {
+export async function labWorkspaceData(lab: { id: string }, theory: { id: string; code: string } | null, as: "ENGINEER" | "LEAD", userId: string) {
   const [manualsRaw, enrollments, marks, instruments] = await Promise.all([
     prisma.labManual.findMany({ where: { courseId: lab.id }, orderBy: { labNumber: "asc" }, include: { versions: { orderBy: { version: "desc" } } } }),
     prisma.studentEnrollment.findMany({ where: { courseId: lab.id, status: "ACTIVE" }, include: { student: true } }),
