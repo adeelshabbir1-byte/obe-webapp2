@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { normalizeCourseType } from "../../../../lib/courseTypeColors";
 import { seniorMember } from "../../../../lib/seniorMember";
-import { getOrCreateVisitingFaculty } from "../../../../lib/departments";
+import { getOrCreateVisitingFaculty, headFacultyWhere } from "../../../../lib/departments";
 
 // Puts course types in a sensible teaching-clustered order — General
 // Education and IDS instructors are usually a distinct pool from Core/
@@ -96,7 +96,7 @@ export async function GET() {
   rows = rows.sort((a, b) => typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label));
 
   const instructors = await prisma.user.findMany({
-    where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+    where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, headFacultyWhere(user.managedById || "")] },
     include: { customCategory: true },
   });
   const visitingUser = await getOrCreateVisitingFaculty(user.managedById || "");

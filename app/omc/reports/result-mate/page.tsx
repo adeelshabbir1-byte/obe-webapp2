@@ -212,7 +212,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                       <div className="no-print" style={{ marginTop: 4 }}>
                         <LogCqiActionButton
                           courseId={course?.id} sourceType="CLO" sourceReference={c}
-                          defaultFinding={`${c} in ${course?.code}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.cloPct}% pass threshold.`}
+                          defaultFinding={`${c} in ${course?.code} ${course?.title}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.cloPct}% pass threshold.`}
                           metricBefore={Math.round(((result.rows.length - failCount) / result.rows.length) * 1000) / 10}
                         />
                       </div>
@@ -256,7 +256,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                         <div className="no-print" style={{ marginTop: 4 }}>
                           <LogCqiActionButton
                             courseId={course?.id} sourceType="PLO" sourceReference={p}
-                            defaultFinding={`${p} in ${course?.code}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.ploPct}% pass threshold.`}
+                            defaultFinding={`${p} in ${course?.code} ${course?.title}: ${failCount} of ${result.rows.length} students fell below the ${passCriteria.ploPct}% pass threshold.`}
                             metricBefore={Math.round(((result.rows.length - failCount) / result.rows.length) * 1000) / 10}
                           />
                         </div>

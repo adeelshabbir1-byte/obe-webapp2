@@ -5,11 +5,11 @@ import Shell from "../../../components/Shell";
 import CustodianPicker from "../../../components/CustodianPicker";
 
 const NAV = [
-  { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
+  { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },
-  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
+  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/chairman/report-access", label: "Report Access Control" },
@@ -33,7 +33,7 @@ export default async function AlumniCustodianPage() {
   const current = all.find((u) => u.isAlumniCustodian);
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Alumni Data Custodian</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Assign who reviews alumni and employer data submitted by your faculty.

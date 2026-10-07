@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CurriculaManager from "../../../components/CurriculaManager";
+import AssignByInstitute from "../../../components/AssignByInstitute";
 import { degreeSortKey, degreeGroupLabel } from "../../../lib/degreeGroup";
 
 const NAV = [
@@ -35,6 +36,7 @@ export default async function AdminCurriculaPage() {
         Manage the official curricula and choose which institutes each one is assigned to — institutes only see the curricula you assign to them. Grouped by degree, so every BSCS curriculum sits together. Clone a curriculum as a
         new version when it's updated — the original stays intact for batches that already imported it.
       </p>
+      <AssignByInstitute />
       <CurriculaManager
         initialCurricula={curricula.map((c) => ({ id: c.id, authority: c.authority, title: c.title, version: c.version, courseCount: c._count.courses, ploCount: c._count.plos, degreeGroup: degreeGroupLabel(c), assignedCount: c._count.assignments }))}
       />

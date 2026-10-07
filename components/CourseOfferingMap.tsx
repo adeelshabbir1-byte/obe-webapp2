@@ -35,6 +35,7 @@ export default function CourseOfferingMap({ courses }: { courses: Course[] }) {
         const y = TOP_MARGIN + (sem - 1) * (BOX_H + V_GAP);
         return (
           <g key={c.id}>
+            <title>{c.code} — {c.title}</title>
             <rect x={x} y={y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType, c.code)} opacity={c.isOffered ? 0.95 : 0.3} />
             <text x={x + BOX_W / 2} y={y + 18} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">{c.code}</text>
             <text x={x + BOX_W / 2} y={y + 33} textAnchor="middle" fontSize={9.5} fill="#fff">
@@ -46,7 +47,7 @@ export default function CourseOfferingMap({ courses }: { courses: Course[] }) {
               </text>
             )}
             <text x={x + BOX_W / 2} y={y + 62} textAnchor="middle" fontSize={8.5} fill="#fff" opacity={0.85}>
-              {c.isOffered ? "Offered" : ""}
+              {c.title.length > 24 ? c.title.slice(0, 22) + "…" : c.title}
             </text>
           </g>
         );

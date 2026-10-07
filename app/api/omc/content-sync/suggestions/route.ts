@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { deptScope } from "../../../../../lib/omcScope";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   try {
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById }, select: { id: true } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById, ...deptScope(user) }, select: { id: true } });
     const coordinatorIds = coordinators.map((c) => c.id);
 
     // Same reasoning as the main course list: scanning every batch from

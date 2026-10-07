@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { deptScope } from "../../../../lib/omcScope";
 
 // Round-robins every currently-unassigned, non-draft course evenly
 // across every OMC member in this institution — a one-click way to
@@ -14,7 +15,7 @@ export async function POST() {
   const omcMembers = await prisma.user.findMany({ where: { role: "OMC", managedById: user.managedById || "" }, orderBy: { name: "asc" } });
   if (omcMembers.length === 0) return NextResponse.json({ error: "no OMC members found" }, { status: 400 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const unassigned = await prisma.course.findMany({

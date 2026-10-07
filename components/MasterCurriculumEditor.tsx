@@ -359,7 +359,7 @@ function CourseEditPanel({ course, plos, busy, isOwned, onSaveField, onTogglePlo
         <input value={textbook} onChange={(e) => setTextbook(e.target.value)} onBlur={() => onSaveField(course.id, "textbook", textbook)} disabled={!isOwned} style={{ fontSize: 12, padding: 4, width: "100%", marginBottom: 10 }} />
 
         {isOwned && (
-          <button onClick={() => { if (confirm(`Delete "${course.code}" from the master curriculum? This can't be undone.`)) onDeleteCourse(course.id); }} disabled={busy} style={{ fontSize: 11, padding: "3px 8px", border: "1px solid var(--rust)", background: "#fff", color: "var(--rust)" }}>
+          <button onClick={() => { if (confirm(`Delete "${course.code} — ${course.title}" from the master curriculum? This can't be undone.`)) onDeleteCourse(course.id); }} disabled={busy} style={{ fontSize: 11, padding: "3px 8px", border: "1px solid var(--rust)", background: "#fff", color: "var(--rust)" }}>
             Delete this course
           </button>
         )}

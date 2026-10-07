@@ -24,18 +24,18 @@ export default async function ChairmanDepartmentsPage() {
     prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { degreeProgram: true }, distinct: ["degreeProgram"] }),
     prisma.user.findMany({
       where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT"] } },
-      select: { id: true, name: true, role: true, departmentId: true }, orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
     prisma.user.findMany({
       where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
-      select: { id: true, name: true, role: true, departmentId: true }, orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true, departmentId: true, managedById: true }, orderBy: { name: "asc" },
     }),
   ]);
 
   const allPrograms = Array.from(new Set<string>([...batches.map((b) => b.degreeProgram), ...deptPrograms.map((d) => d.degreeProgram)])).sort();
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Split your institute into departments. Each department has its own programs, heads, coordinators, course assigners and faculty.
@@ -46,7 +46,7 @@ export default async function ChairmanDepartmentsPage() {
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
-        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId }))}
+        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR", leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
       />
     </Shell>
   );

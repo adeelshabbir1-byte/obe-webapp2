@@ -15,11 +15,11 @@ export default async function AdminUsersPage() {
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Chairmen" },
+    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Institute Heads" },
   { href: "/admin/account-requests", label: "Account Requests" }, { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" }, { href: "/admin/curriculum-migration", label: "Version Migration" }, { href: "/admin/platform-settings", label: "Platform Settings" }, { href: "/admin/report-bundles", label: "Report Bundles" }, { href: "/admin/landing-page", label: "Landing Page" }, { href: "/public-library", label: "Public Course Library" }]}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Chairmen</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Institute Heads</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Create the Chairman account(s) who each run a department's accreditation pipeline. Each is its own
+        Create the Institute Head account(s) who each run a department's accreditation pipeline. Each is its own
         paying tenant — set their institute name and logo here; they can't change it themselves.
       </p>
 
@@ -32,7 +32,7 @@ export default async function AdminUsersPage() {
         />
       </div>
 
-      <CreateUserForm endpoint="/api/admin/users" buttonLabel="Create Chairman" />
+      <CreateUserForm endpoint="/api/admin/users" buttonLabel="Create Institute Head" />
     </Shell>
   );
 }

@@ -97,7 +97,7 @@ export default async function SectionComparisonPage({ searchParams }: { searchPa
           <div className="card" style={{ display: "grid", gridTemplateColumns: gridCols, gap: 20 }}>
             {statsBySection.map(({ course, stats }, i) => (
               <div key={course.id}>
-                <h3 style={{ fontSize: 13.5, marginBottom: 4 }}>{course.code} — {sectionLabel(course)}</h3>
+                <h3 style={{ fontSize: 13.5, marginBottom: 4 }}>{course.code} {course.title} — {sectionLabel(course)}</h3>
                 <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>{stats.studentCount} students</p>
                 <SimpleBarChart bars={stats.histogram.map((b) => ({ label: b.label, value: b.count, color: SERIES_COLORS[i % SERIES_COLORS.length] }))} />
               </div>

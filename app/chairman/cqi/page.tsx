@@ -28,11 +28,11 @@ export default async function CqiPage() {
 
   const nav = user.role === "CHAIRMAN"
     ? [
-        { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
+        { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
         { href: "/chairman/coordinators", label: "Program Coordinators" },
         { href: "/chairman/plos", label: "Program Learning Outcomes" },
         { href: "/chairman/omc", label: "OMC Members" },
-        { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
+        { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
         { href: "/chairman/cqi", label: "CQI Records" },
         { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
         { href: "/chairman/report-access", label: "Report Access Control" },
@@ -51,7 +51,7 @@ export default async function CqiPage() {
       ];
 
   return (
-    <Shell roleLabel={user.role === "CHAIRMAN" ? "Chairman" : "OMC Member"} userName={user.name} navLinks={nav}>
+    <Shell roleLabel={user.role === "CHAIRMAN" ? "Institute Head" : "OMC Member"} userName={user.name} navLinks={nav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Continuous Quality Improvement</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Log findings from reports or audits, track the action taken, and close the loop.

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
 
-// Fully public — no login. A prospective Chairman submits this once;
-// a Super User reviews it under Manage Chairmen / Account Requests.
+// Fully public — no login. A prospective Institute Head submits this once;
+// a Super User reviews it under Manage Institute Heads / Account Requests.
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const name = String(body.name || "").trim();

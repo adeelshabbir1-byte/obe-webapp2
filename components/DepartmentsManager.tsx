@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import ProgramLeads from "./ProgramLeads";
 import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
-type Person = { id: string; name: string; role: string; departmentId: string | null };
+type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null; managerId?: string | null };
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
+  HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
@@ -19,6 +20,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const [newName, setNewName] = useState("");
   const [msg, setMsg] = useState("");
   const [headDept, setHeadDept] = useState(departments[0]?.id || "");
+  const [leadDept, setLeadDept] = useState(departments[0]?.id || "");
   const [roleFilter, setRoleFilter] = useState("ALL");
 
   async function call(url: string, method: string, body?: unknown) {
@@ -38,7 +40,14 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
 
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
-  const shown = people.filter((p) => roleFilter === "ALL" || p.role === roleFilter);
+  // Sorted by department (people with no department first, so nobody is missed), then role, then name.
+  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
+  const shown = people
+    .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
+    .sort((a, b) =>
+      (a.departmentId ? deptName(a.departmentId) : "").localeCompare(b.departmentId ? deptName(b.departmentId) : "") ||
+      ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.name.localeCompare(b.name));
+  const noDeptCount = people.filter((p) => !p.departmentId).length;
 
   return (
     <>
@@ -108,7 +117,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>People and their department</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13 }}>Choose the department for each coordinator, course assigner, head and faculty member.</p>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>Choose the department for each person. The list is grouped by department, with anyone still without one at the top.{noDeptCount > 0 ? ` ${noDeptCount} still need a department.` : " Everyone has a department."}</p>
         <label style={{ fontSize: 13 }}>Show: {" "}
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="ALL">Everyone</option>
@@ -118,24 +127,60 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         <table style={{ marginTop: 8 }}>
           <thead><tr><th>Name</th><th>Role</th><th>Department</th></tr></thead>
           <tbody>
-            {shown.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}</td>
+            {shown.map((p, idx) => (
+              <Fragment key={p.id}>
+                {(idx === 0 || shown[idx - 1].departmentId !== p.departmentId) && (
+                  <tr><td colSpan={3} style={{ background: p.departmentId ? "#F4EFEE" : "#FBEED2", fontWeight: 700, fontSize: 12.5 }}>
+                    {p.departmentId ? `${deptName(p.departmentId)} (${people.filter((x) => x.departmentId === p.departmentId).length})` : `No department yet (${noDeptCount}) — please choose one`}
+                  </td></tr>
+                )}
+              <tr>
+                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
                 <td>
                   <select value={p.departmentId || ""} onChange={(e) => e.target.value && call("/api/chairman/department-members", "PUT", { userId: p.id, departmentId: e.target.value })}>
                     {!p.departmentId && <option value="">— none —</option>}
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                   <span style={{ display: "none" }}>{deptName(p.departmentId)}</span>
+                  {(p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT") && p.departmentId && (
+                    <label style={{ marginLeft: 12, fontSize: 12 }}>Program:{" "}
+                      <select value={p.managerId || ""} onChange={(e) => e.target.value && call("/api/faculty-program", "PUT", { userId: p.id, coordinatorId: e.target.value })}>
+                        {people.filter((c) => c.role === "PROGRAM_COORDINATOR" && c.departmentId === p.departmentId).map((c) => <option key={c.id} value={c.id}>{c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {p.role === "HEAD_OF_DEPARTMENT" && (
+                    <label style={{ marginLeft: 12, fontSize: 12 }}>
+                      <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
+                    </label>
+                  )}
                 </td>
               </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Add a Head of Department</h3>
+        <h3 style={{ marginTop: 0 }}>Program Leads</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
+          A Program Lead is the Program Coordinator responsible for one program of a department, under its Head. They can do everything for their program:
+          batches, courses, faculty, Subject Experts, timetable. Choose one of the department's coordinators for each program, or create a new one.
+        </p>
+        <label style={{ fontSize: 13 }}>Department: {" "}
+          <select value={leadDept} onChange={(e) => setLeadDept(e.target.value)}>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
+        <div style={{ marginTop: 10 }}>
+          <ProgramLeads key={leadDept} departmentId={leadDept} programs={programsByDept[leadDept] || []}
+            coordinators={people.filter((p) => p.role === "PROGRAM_COORDINATOR" && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name, leadProgram: p.leadProgram || null }))} />
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Add a Chairman</h3>
         <label style={{ fontSize: 13 }}>Department: {" "}
           <select value={headDept} onChange={(e) => setHeadDept(e.target.value)}>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -159,11 +204,11 @@ function HeadForm({ departmentId }: { departmentId: string }) {
     const fd = new FormData(form);
     const res = await fetch("/api/chairman/heads", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId }),
+      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId, alsoFaculty: fd.get("alsoFaculty") === "on" }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Could not create"); return; }
-    setOk("Head of Department created. They must change the password on first login.");
+    setOk("Chairman created. They must change the password on first login.");
     form.reset();
     router.refresh();
   }
@@ -173,9 +218,10 @@ function HeadForm({ departmentId }: { departmentId: string }) {
       <input name="email" type="email" placeholder="Email" required />
       <input name="username" placeholder="Username" required />
       <input name="password" type="password" placeholder="Temporary password" required />
+      <label style={{ fontSize: 13 }}><input type="checkbox" name="alsoFaculty" /> Also teaches as a faculty member</label>
       {error && <div style={{ color: "#b3261e" }}>{error}</div>}
       {ok && <div style={{ color: "var(--sage)" }}>{ok}</div>}
-      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Head of Department</button>
+      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Chairman</button>
     </form>
   );
 }

@@ -6,6 +6,7 @@ export const REPORT_VIEWER_NAV = [
 
 export const OMC_ACTION_NAV = [
   { href: "/omc/queue", label: "Review Queue" },
+  { href: "/omc/faculty-requests", label: "Teachers from Other Departments" },
   { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
@@ -52,12 +53,12 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/custom-categories", label: "Course & Teacher Categories" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
@@ -85,11 +86,11 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
-  { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
+  { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
   { href: "/chairman/coordinators", label: "Program Coordinators" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" },
-  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
+  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/chairman/audit-log", label: "Audit Log" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -100,17 +101,22 @@ export const CHAIRMAN_NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
+export const DEAN_NAV = [
+  { href: "/dean/overview", label: "My Faculty" },
+  { href: "/dean/approvals", label: "Approvals" },
+  { href: "/dean/curricula", label: "Curricula" },
+  { href: "/omc/reports", label: "Reports" },
+];
+
 export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
-  { href: "/hod/borrow-teacher", label: "Borrow a Teacher" },
-  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
-  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
+  { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
 export function navForRole(role: string) {
   switch (role) {
+    case "DEAN": return DEAN_NAV;
     case "HEAD_OF_DEPARTMENT": return HOD_NAV;
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;

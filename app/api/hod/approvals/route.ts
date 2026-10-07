@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 
-// Head of Department approves or rejects a teacher assignment for a course in their own department.
+// Chairman approves or rejects a teacher assignment for a course in their own department.
 // Rejecting removes the teacher again so the Course Assigner has to choose someone else.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();

@@ -19,8 +19,8 @@ type Curriculum = { id: string; authority: string; title: string; version: strin
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
-export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId, departments = [] }: {
-  courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string; departments?: { id: string; name: string }[];
+export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId, departments = [], homeExperts = [] }: {
+  courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string; departments?: { id: string; name: string }[]; homeExperts?: { id: string; name: string; departmentId: string }[];
 }) {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>(initialCourses);
@@ -258,11 +258,11 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           body: JSON.stringify({ labCreditHours: 1 }),
         });
         const data = await res.json();
-        if (!res.ok) { failures.push(`${c.code}: ${data.error || "failed"}`); continue; }
+        if (!res.ok) { failures.push(`${c.code} ${c.title}: ${data.error || "failed"}`); continue; }
         setCourses((prev) => [...prev.map((x) => x.id === c.id ? { ...x, ...data.theoryCourse } : x), data.labCourse]);
         succeeded++;
       } catch (err: any) {
-        failures.push(`${c.code}: ${err.message}`);
+        failures.push(`${c.code} ${c.title}: ${err.message}`);
       }
     }
     setBulkSplitting(false);
@@ -560,13 +560,18 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                   )}
                   <select defaultValue={c.subjectExpertId || ""} onChange={(e) => assignSe(c.id, e.target.value, e.target, c.subjectExpertId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— Unassigned —</option>
+                    {c.subjectHomeDepartmentId && homeExperts.filter((h) => h.departmentId === c.subjectHomeDepartmentId).length > 0 && (
+                      <optgroup label="Subject home department">
+                        {homeExperts.filter((h) => h.departmentId === c.subjectHomeDepartmentId).map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                      </optgroup>
+                    )}
                     {subjectExperts.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
                   </select>
                 </td>
                 <td>
                   <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value, e.target, c.prerequisiteCourseId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— None —</option>
-                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
+                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code} — {other.title}</option>)}
                   </select>
                 </td>
                 <td>

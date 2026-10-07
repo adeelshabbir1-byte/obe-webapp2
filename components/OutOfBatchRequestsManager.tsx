@@ -70,7 +70,7 @@ export default function OutOfBatchRequestsManager({ initialRequests }: { initial
           <h3 style={{ fontSize: 13.5, marginBottom: 10 }}>Reviewed</h3>
           {reviewed.map((r) => (
             <div key={r.id} style={{ fontSize: 12.5, padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
-              <b>{r.studentName}</b> — {r.courseCode} ({r.courseBatchLabel}) —{" "}
+              <b>{r.studentName}</b> — {r.courseCode} — {r.courseTitle} ({r.courseBatchLabel}) —{" "}
               <span className={r.status === "APPROVED" ? "badge badge-ok" : "badge badge-no"}>{r.status}</span>
               {r.reviewNote && <div style={{ fontSize: 11, color: "var(--slate)" }}>{r.reviewNote}</div>}
             </div>

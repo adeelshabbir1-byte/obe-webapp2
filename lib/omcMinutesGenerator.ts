@@ -132,7 +132,7 @@ export async function generateOmcMinutes(
 
   body.push(
     new Paragraph({ text: "", spacing: { before: 400 } }),
-    new Paragraph({ children: [new TextRun({ text: "Prepared by: ______________________        Reviewed by (Chairman): ______________________", size: 20 })], spacing: { before: 300 } }),
+    new Paragraph({ children: [new TextRun({ text: "Prepared by: ______________________        Reviewed by (Institute Head): ______________________", size: 20 })], spacing: { before: 300 } }),
   );
 
   return new Document({

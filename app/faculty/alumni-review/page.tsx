@@ -32,7 +32,7 @@ export default async function AlumniReviewPage() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Review Alumni & Employer Data</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        You've been designated by your Chairman to review data submitted by any faculty member.
+        You've been designated by your Institute Head to review data submitted by any faculty member.
       </p>
       <AlumniReviewManager
         alumni={alumni.map((a) => ({ id: a.id, name: a.name, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, submitterName: a.addedById ? nameById.get(a.addedById) || "—" : "—" }))}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { deptScope } from "../../../../../lib/omcScope";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -8,7 +9,7 @@ export async function GET() {
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   try {
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById, ...deptScope(user) } });
     const coordinatorIds = coordinators.map((c) => c.id);
 
     const [courses, existingMembers] = await Promise.all([

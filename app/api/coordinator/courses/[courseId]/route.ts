@@ -8,7 +8,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const user = await getAuthenticatedUser();
   // Same institution-wide scope as edit/reposition: the owning
   // Coordinator can always delete their own course; OMC can delete any
-  // course belonging to a Coordinator under their own Chairman.
+  // course belonging to a Coordinator under their own Institute Head.
   if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { batch: true, coordinator: true } });

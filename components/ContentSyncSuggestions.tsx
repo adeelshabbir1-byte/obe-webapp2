@@ -108,7 +108,7 @@ export default function ContentSyncSuggestions({ batchIds, onLinked }: { batchId
             <div style={{ flex: 1, fontSize: 12 }}>
               <b>{s.courses[0].title}</b>
               <div style={{ color: "var(--slate)", fontSize: 11, marginTop: 2 }}>
-                {s.courses.map((c) => `${c.code} [${c.batchLabel}, Sem ${c.semesterNumber ?? "?"}]`).join("  •  ")}
+                {s.courses.map((c) => `${c.code} ${c.title !== s.courses[0].title ? c.title + " " : ""}[${c.batchLabel}, Sem ${c.semesterNumber ?? "?"}]`).join("  •  ")}
               </div>
             </div>
             <button onClick={() => linkThese(s)} disabled={busyKey === key || acceptingAll} className="btn btn-brass" style={{ fontSize: 11, padding: "4px 10px", whiteSpace: "nowrap" }}>

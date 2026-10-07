@@ -14,7 +14,7 @@ export default function AccountRequestsManager({ initialRequests }: { initialReq
   const [approvedCredentials, setApprovedCredentials] = useState<Record<string, { username: string; initialPassword: string; clonedCurricula: number }>>({});
 
   async function approve(id: string) {
-    if (!confirm("Approve this request? This creates the Chairman account and clones the master curriculum for them right away.")) return;
+    if (!confirm("Approve this request? This creates the Institute Head account and clones the master curriculum for them right away.")) return;
     setBusyId(id); setError("");
     try {
       const res = await fetch(`/api/admin/account-requests/${id}/approve`, { method: "POST" });

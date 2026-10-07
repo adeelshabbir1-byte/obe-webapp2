@@ -5,7 +5,7 @@ import { chairmanIdFor } from "../../../../../../lib/reportScope";
 import { draftCqiAction } from "../../../../../../lib/cqiActionDraft";
 
 // AI-drafts a starting "action taken" for an existing CQI finding — a
-// suggestion the Chairman/OMC reviews and edits before saving, never
+// suggestion the Institute Head/OMC reviews and edits before saving, never
 // written to the record directly by this endpoint.
 export async function POST(req: NextRequest, { params }: { params: { cqiId: string } }) {
   const user = await getAuthenticatedUser();

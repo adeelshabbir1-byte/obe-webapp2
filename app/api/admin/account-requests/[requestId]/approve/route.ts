@@ -10,7 +10,7 @@ function slugifyUsername(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "chairman";
 }
 
-// Creates the Chairman account and clones the grand curriculum for
+// Creates the Institute Head account and clones the grand curriculum for
 // them in one step — the two things a Super User previously had to do
 // separately (create the account by hand, then run a SQL script) now
 // happen together automatically on approval.
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
 
   // The only place this initial password is ever visible — there's no
   // email-sending set up in this app, so the Super User has to relay it
-  // to the new Chairman directly (same as any other manually-created
+  // to the new Institute Head directly (same as any other manually-created
   // account); it's never stored or shown again after this response.
   return NextResponse.json({
     chairman: { id: chairman.id, name: chairman.name, username, initialPassword },

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const maxMinutes = Math.min(30, Math.max(1, parseInt(body.maxMinutes, 10) || 30));
 
   const { slots, rooms, scope } = await buildSlots(user);
-  if (rooms.length === 0) return NextResponse.json({ error: scope.mode === "SEPARATE" ? "this department has its own timetable but no rooms assigned to it - ask the Chairman to assign rooms on the Departments page" : "add at least one room before generating a timetable" }, { status: 400 });
+  if (rooms.length === 0) return NextResponse.json({ error: scope.mode === "SEPARATE" ? "this department has its own timetable but no rooms assigned to it - ask the Institute Head to assign rooms on the Departments page" : "add at least one room before generating a timetable" }, { status: 400 });
   if (slots.length === 0) return NextResponse.json({ error: "no schedule sections found — auto-generate them from your offered courses first" }, { status: 400 });
 
   const targetEndTime = new Date(Date.now() + maxMinutes * 60 * 1000);

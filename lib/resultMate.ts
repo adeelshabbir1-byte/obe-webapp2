@@ -90,7 +90,7 @@ export async function computeResultMate(courseId: string) {
     return "F";
   }
 
-  // If the Instructor (or Chairman override) has saved actual cutoffs for
+  // If the Instructor (or Institute Head override) has saved actual cutoffs for
   // this course, those take priority over the live-computed suggestion.
   const savedCutoffs = await prisma.courseGradeCutoff.findMany({ where: { courseId }, orderBy: { minPercent: "desc" } });
   const cutoffsAreSet = savedCutoffs.length > 0;

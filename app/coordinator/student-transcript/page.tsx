@@ -8,12 +8,12 @@ import StudentTranscriptReport from "../../../components/StudentTranscriptReport
 import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/custom-categories", label: "Course & Teacher Categories" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },

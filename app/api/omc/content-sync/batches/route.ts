@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { deptScope } from "../../../../../lib/omcScope";
 
 // Lightweight, fast list of batches (no course data at all) — used to
 // render the checkbox picker before the potentially large course list
@@ -11,7 +12,7 @@ export async function GET() {
     const user = await getAuthenticatedUser();
     if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" }, select: { id: true } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
     const coordinatorIds = coordinators.map((c) => c.id);
 
     // Only the last 4 admission years are shown — a batch older than

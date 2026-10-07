@@ -6,12 +6,14 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
 import Link from "next/link";
+import AssignmentResponses from "../../components/AssignmentResponses";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
+  DEAN: "/dean/overview",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
@@ -27,11 +29,22 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if (user.rawRole === "SUBJECT_EXPERT" && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
+  if ((user.rawRole === "SUBJECT_EXPERT" || user.rawRole === "HEAD_OF_DEPARTMENT") && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
     redirect("/choose-role");
   }
 
   const stats = await statsForRole(user);
+
+  // Courses another department has given this person, waiting for their yes/no.
+  let offered: { courseId: string; as: "INSTRUCTOR" | "SUBJECT_EXPERT"; course: string; batch: string; from: string }[] = [];
+  if (user.role === "INSTRUCTOR" || user.role === "SUBJECT_EXPERT") {
+    const asSe = user.role === "SUBJECT_EXPERT";
+    const rows = await prisma.course.findMany({
+      where: asSe ? { subjectExpertId: user.id, seResponse: "PENDING" } : { instructorId: user.id, instructorResponse: "PENDING" },
+      select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { department_: { select: { name: true } } } } },
+    });
+    offered = rows.map((c) => ({ courseId: c.id, as: asSe ? "SUBJECT_EXPERT" : "INSTRUCTOR", course: `${c.code} — ${c.title}`, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", from: c.coordinator.department_?.name || "—" }));
+  }
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -40,6 +53,7 @@ export default async function Dashboard() {
         A quick summary of what's done and what still needs your attention. Click any number to go straight
         to it.
       </p>
+      <AssignmentResponses items={offered} />
       <OverviewStatGrid stats={stats} />
       <div className="card">
         <Link href={ROLE_HOME[user.role] || "/login"} className="btn btn-brass" style={{ textDecoration: "none" }}>
@@ -50,9 +64,10 @@ export default async function Dashboard() {
   );
 }
 
-async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
+async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null }) {
   switch (user.role) {
     case "PROGRAM_COORDINATOR": return coordinatorStats(user.id);
+    case "DEAN": return deanStats(user);
     case "HEAD_OF_DEPARTMENT": return hodStats(user);
     case "OMC": return omcStats(user);
     case "SUBJECT_EXPERT": return subjectExpertStats(user.id);
@@ -95,7 +110,7 @@ async function coordinatorStats(coordinatorId: string): Promise<Stat[]> {
   ];
 }
 
-async function omcStats(user: { id: string; role: string; managedById: string | null }): Promise<Stat[]> {
+async function omcStats(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
   const coordinatorIds = await coordinatorIdsFor(user);
   const [pendingReview, coursesWithoutPlo, pendingWeightExceptions, totalCourses] = await Promise.all([
     prisma.pendingMasterCourse.count({ where: { masterCurriculum: { chairmanId: await chairmanIdFor(user) } } }),
@@ -175,14 +190,31 @@ async function superUserStats(): Promise<Stat[]> {
   ]);
   return [
     { label: "Pending account requests", value: pendingRequests, href: "/admin/account-requests", tone: pendingRequests > 0 ? "warn" : "ok" },
-    { label: "Institutions (Chairmen)", value: chairmen, href: "/admin/users", tone: "neutral" },
+    { label: "Institutions (Institute Heads)", value: chairmen, href: "/admin/users", tone: "neutral" },
+  ];
+}
+
+async function deanStats(user: { managedById: string | null; facultyId?: string | null }): Promise<Stat[]> {
+  const facultyId = user.facultyId || "none";
+  const chairmanId = user.managedById || "";
+  const [departments, waiting, noTeacher, staff] = await Promise.all([
+    prisma.department.count({ where: { facultyId } }),
+    prisma.teacherLoanRequest.count({ where: { OR: [{ requesterDeanStatus: "PENDING", requestingDepartment: { facultyId } }, { lenderDeanStatus: "PENDING", lendingDepartment: { facultyId } }] } }),
+    prisma.course.count({ where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, department_: { facultyId } } } }),
+    prisma.user.count({ where: { department_: { facultyId }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
+  ]);
+  return [
+    { label: "Teacher requests waiting for you", value: waiting, href: "/dean/approvals", tone: waiting > 0 ? "warn" : "ok" },
+    { label: "Departments in your faculty", value: departments, href: "/dean/overview", tone: "neutral" },
+    { label: "Teachers in your faculty", value: staff, href: "/dean/overview", tone: "neutral" },
+    { label: "Offered courses with no teacher yet", value: noTeacher, href: "/dean/overview", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }
 
 async function hodStats(user: { managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
   const departmentId = user.departmentId || "none";
   const [loanRequests, pendingApprovals, programs, staff, noTeacher] = await Promise.all([
-    prisma.teacherLoanRequest.count({ where: { lendingDepartmentId: departmentId, status: "PENDING" } }),
+    prisma.teacherLoanRequest.count({ where: { lendingDepartmentId: departmentId, status: "PENDING", requesterDeanStatus: { not: "PENDING" }, lenderDeanStatus: { not: "PENDING" } } }),
     prisma.course.count({ where: { instructorApproval: "PENDING", coordinator: { managedById: user.managedById || "", departmentId } } }),
     prisma.departmentProgram.count({ where: { departmentId } }),
     prisma.user.count({ where: { departmentId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
@@ -192,7 +224,7 @@ async function hodStats(user: { managedById: string | null; departmentId?: strin
     { label: "Teacher loan requests to answer", value: loanRequests, href: "/hod/department", tone: loanRequests > 0 ? "warn" : "ok" },
     { label: "Teacher assignments awaiting your approval", value: pendingApprovals, href: "/hod/department", tone: pendingApprovals > 0 ? "warn" : "ok" },
     { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
-    { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },
+    { label: "Teachers in your department", value: staff, href: "/hod/department", tone: "neutral" },
     { label: "Offered courses with no teacher yet", value: noTeacher, href: "/hod/department", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }

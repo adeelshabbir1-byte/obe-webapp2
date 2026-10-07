@@ -22,8 +22,8 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   // standalone course, or — for a combined Equivalence Group section —
   // from every member course, since a clash against ANY of those member
   // batches is a real conflict for that batch's own students.
-  function codeFor(section: { course: { code: string } | null; group: { name: string } | null }): string {
-    return section.course ? section.course.code : `${section.group!.name} (combined)`;
+  function codeFor(section: { course: { code: string; title: string } | null; group: { name: string } | null }): string {
+    return section.course ? `${section.course.code} — ${section.course.title}` : `${section.group!.name} (combined)`;
   }
   function batchIdsFor(section: { course: { batch: { id: string } | null } | null; group: { members: { course: { batch: { id: string } | null } }[] } | null }): string[] {
     if (section.course) return section.course.batch ? [section.course.batch.id] : [];

@@ -11,8 +11,8 @@ export default async function HodBorrowTeacherPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "HEAD_OF_DEPARTMENT") redirect("/dashboard");
   return (
-    <Shell roleLabel="Head of Department" userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Borrow a Teacher</h1>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={navForRole(user.role)}>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Teachers from Other Departments</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Ask another department to lend a teacher for one of your courses.</p>
       <BorrowTeacher />
     </Shell>

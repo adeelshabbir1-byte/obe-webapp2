@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
-import { getOrCreateVisitingFaculty } from "../../../../../../lib/departments";
+import { getOrCreateVisitingFaculty, headFacultyWhere } from "../../../../../../lib/departments";
 
 // Candidate list for the Program Semester Map's click-to-assign instructor
 // picker. Scoping mirrors assign-instructor/route.ts's PUT exactly (kept as
@@ -30,14 +30,14 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
     validManagerIds = [course.coordinatorId];
   }
 
+  const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
   const instructors = await prisma.user.findMany({
-    where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: { in: validManagerIds } },
+    where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: { in: validManagerIds } }, headFacultyWhere(chairmanId)] },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },
   });
 
   // Built-in "Visiting Faculty (to be decided)" option, always offered first.
-  const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
   const visiting = chairmanId ? await getOrCreateVisitingFaculty(chairmanId) : null;
   const list = visiting ? [{ id: visiting.id, name: visiting.name, role: "INSTRUCTOR" }, ...instructors] : instructors;
 

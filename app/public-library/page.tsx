@@ -5,7 +5,7 @@ import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import PublicCourseLibrary from "../../components/PublicCourseLibrary";
 
-const ROLE_LABEL: Record<string, string> = { SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", PROGRAM_COORDINATOR: "Program Coordinator", OMC: "OMC", CHAIRMAN: "Chairman", SUPER_USER: "Super User" };
+const ROLE_LABEL: Record<string, string> = { SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", PROGRAM_COORDINATOR: "Program Coordinator", OMC: "OMC", CHAIRMAN: "Institute Head", SUPER_USER: "Super User" };
 
 export default async function PublicLibraryPage() {
   const user = await getAuthenticatedUser();
@@ -16,7 +16,7 @@ export default async function PublicLibraryPage() {
 
   const myCourses = await eligibleCourses(user);
   const nav = user.role === "SUPER_USER"
-    ? [{ href: "/admin/users", label: "Manage Chairmen" }, { href: "/public-library", label: "Public Course Library" }]
+    ? [{ href: "/admin/users", label: "Manage Institute Heads" }, { href: "/public-library", label: "Public Course Library" }]
     : navForRole(user.role);
 
   return (

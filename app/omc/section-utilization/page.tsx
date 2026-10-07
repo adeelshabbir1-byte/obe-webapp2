@@ -72,7 +72,7 @@ export default async function SectionUtilizationPage({ searchParams }: { searchP
             {groupRows.map((r) => (
               <tr key={r.group.id}>
                 <td>{r.group.name}</td>
-                <td style={{ fontSize: 11.5 }}>{r.group.members.map((m) => `${m.course.code} (${m.course.batch?.batchName || "—"})`).join(", ")}</td>
+                <td style={{ fontSize: 11.5 }}>{r.group.members.map((m) => `${m.course.code} ${m.course.title} (${m.course.batch?.batchName || "—"})`).join(", ")}</td>
                 <td>{r.totalStudents}</td><td>{r.combinedSections}</td><td>{r.separateSections}</td>
                 <td style={{ fontWeight: 600, color: r.saved > 0 ? "var(--sage)" : "var(--slate)" }}>{r.saved > 0 ? r.saved : "—"}</td>
               </tr>

@@ -1,3 +1,4 @@
+import { homeExpertsFor } from "../../../lib/homeExperts";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -5,12 +6,12 @@ import Shell from "../../../components/Shell";
 import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpertsManager";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },
-  { href: "/coordinator/custom-categories", label: "Course & Faculty Categories" },
+  { href: "/coordinator/custom-categories", label: "Course & Teacher Categories" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/plos", label: "Program Learning Outcomes" },
   { href: "/coordinator/semester", label: "Current Semester" },
@@ -75,6 +76,8 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     if (!groupsByCode.has(c.code)) groupsByCode.set(c.code, []);
     groupsByCode.get(c.code)!.push(c);
   }
+  const deptList = await prisma.department.findMany({ where: { chairmanId: user.managedById || "none" }, select: { id: true, name: true } });
+  const deptName = new Map<string, string>(deptList.map((d) => [d.id, d.name]));
   const courseGroups = Array.from(groupsByCode.values()).map((members) => {
     const first = members[0];
     const followerCodes = new Set<string>();
@@ -86,6 +89,8 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     return {
       code: first.code, title: first.title, courseType: first.courseType, semesterNumber: first.semesterNumber,
       customCategoryName: first.customCategory?.name || null,
+      homeDepartmentId: first.subjectHomeDepartmentId || null,
+      homeDepartmentName: first.subjectHomeDepartmentId ? deptName.get(first.subjectHomeDepartmentId) || null : null,
       linkedFollowerCodes: Array.from(followerCodes),
       sections: members.map((m) => ({
         id: m.id, subjectExpertId: m.subjectExpertId,
@@ -106,6 +111,8 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   // rather than scattered alphabetically among everyone else.
   subjectExperts.sort((a, b) => (a.customCategory?.name || "\uffff").localeCompare(b.customCategory?.name || "\uffff") || a.name.localeCompare(b.name));
 
+  const homeExperts = await homeExpertsFor(user.managedById || "", user.id, courseGroups.map((g) => g.homeDepartmentId || ""));
+
   const batches = await prisma.batch.findMany({
     where: { coordinatorId: user.id },
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
@@ -125,6 +132,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
       <AssignSubjectExpertsManager
         key={selectedBatchId || "all"}
         courseGroups={courseGroups}
+        homeExperts={homeExperts}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name, customCategoryName: se.customCategory?.name || null }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
         selectedBatchId={selectedBatchId}

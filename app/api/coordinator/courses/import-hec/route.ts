@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   // Owning Coordinator imports into their own batch directly; OMC can
   // import into any batch belonging to a Coordinator under their own
-  // Chairman — same institution-wide scope OMC already has elsewhere on
+  // Institute Head — same institution-wide scope OMC already has elsewhere on
   // the Course Repositioning page. Every imported course is still
   // attributed to that batch's own Coordinator (coordinatorId below),
   // never to the OMC member performing the import.

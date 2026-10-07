@@ -5,6 +5,8 @@ import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import HodApprovals from "../../../components/HodApprovals";
 import HodLoanRequests from "../../../components/HodLoanRequests";
+import ProgramLeads from "../../../components/ProgramLeads";
+import MemberProgramSelect from "../../../components/MemberProgramSelect";
 
 export default async function HodDepartmentPage() {
   const user = await getAuthenticatedUser();
@@ -17,7 +19,7 @@ export default async function HodDepartmentPage() {
   const chairmanId = user.managedById || "";
   const [incomingLoans, pending, department, programs, members, noTeacher, visiting] = await Promise.all([
     prisma.teacherLoanRequest.findMany({
-      where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId },
+      where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId, requesterDeanStatus: { not: "PENDING" }, lenderDeanStatus: { not: "PENDING" } },
       include: { course: { select: { code: true, title: true } }, instructor: { select: { name: true } }, requestingDepartment: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
@@ -27,7 +29,7 @@ export default async function HodDepartmentPage() {
     }),
     prisma.department.findUnique({ where: { id: departmentId } }),
     prisma.departmentProgram.findMany({ where: { departmentId }, orderBy: { degreeProgram: "asc" } }),
-    prisma.user.findMany({ where: { departmentId, isVisitingPlaceholder: false }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true } }),
+    prisma.user.findMany({ where: { departmentId, isVisitingPlaceholder: false }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true, managedById: true, leadProgram: true } }),
     prisma.course.findMany({
       where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, departmentId } },
       select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
@@ -38,22 +40,24 @@ export default async function HodDepartmentPage() {
     }),
   ]);
 
-  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
+  const coordinators = members.filter((m) => m.role === "PROGRAM_COORDINATOR");
+  const coordOptions = coordinators.map((c) => ({ id: c.id, label: c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name }));
+  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
   const courseRow = (c: { id: string; code: string; title: string; batch: { degreeProgram: string; batchName: string } | null }) => (
     <tr key={c.id}><td>{c.code}</td><td>{c.title}</td><td>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td></tr>
   );
 
   return (
-    <Shell roleLabel="Head of Department" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Chairman" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>{department?.name || "My Department"}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Your programs, your people, and the courses still waiting for a teacher. Teacher assignments wait here for your approval.
       </p>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Teacher loan requests to you ({incomingLoans.length})</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking to borrow one of your teachers.</p>
-        <HodLoanRequests items={incomingLoans.map((l) => ({ id: l.id, teacher: l.instructor.name, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
+        <h3 style={{ marginTop: 0 }}>Requests for your people ({incomingLoans.length})</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking for a teacher or Subject Expert from your department. Tick the people you allow; the requester then picks one.</p>
+        <HodLoanRequests people={members.map((m) => ({ ...m, alsoFaculty: m.secondaryRole === "INSTRUCTOR" })).filter((m) => ["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) || (m.role === "HEAD_OF_DEPARTMENT" && m.alsoFaculty)).map((m) => ({ id: m.id, name: m.name, role: m.role }))} items={incomingLoans.map((l) => ({ id: l.id, kind: l.kind, askedId: l.instructorId, asked: l.instructor?.name || null, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
       </div>
 
       <div className="card">
@@ -62,8 +66,17 @@ export default async function HodDepartmentPage() {
       </div>
 
       <div className="card">
+        <h3 style={{ marginTop: 0 }}>Program Leads</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
+          A Program Lead is the Program Coordinator responsible for one program of your department. They can do everything for their program: batches, courses, faculty, Subject Experts, timetable.
+          Choose a coordinator for each program, or create a new one.
+        </p>
+        <ProgramLeads departmentId={departmentId} programs={programs.map((p) => p.degreeProgram)} coordinators={coordinators.map((c) => ({ id: c.id, name: c.name, leadProgram: c.leadProgram || null }))} />
+      </div>
+
+      <div className="card">
         <h3 style={{ marginTop: 0 }}>Programs</h3>
-        {programs.length === 0 ? <p style={{ color: "var(--slate)" }}>No programs assigned to this department yet — ask the Chairman.</p> : <ul>{programs.map((p) => <li key={p.id}>{p.degreeProgram}</li>)}</ul>}
+        {programs.length === 0 ? <p style={{ color: "var(--slate)" }}>No programs assigned to this department yet — ask the Institute Head.</p> : <ul>{programs.map((p) => <li key={p.id}>{p.degreeProgram}</li>)}</ul>}
       </div>
 
       <div className="card">
@@ -81,8 +94,11 @@ export default async function HodDepartmentPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>People in this department ({members.length})</h3>
-        <table><thead><tr><th>Name</th><th>Role</th></tr></thead>
-          <tbody>{members.map((m) => <tr key={m.id}><td>{m.name}</td><td>{roleName[m.role] || m.role}</td></tr>)}</tbody></table>
+        <table><thead><tr><th>Name</th><th>Role</th><th>Program (who looks after them)</th></tr></thead>
+          <tbody>{members.map((m) => (
+            <tr key={m.id}><td>{m.name}</td><td>{roleName[m.role] || m.role}{m.role === "PROGRAM_COORDINATOR" && m.leadProgram ? ` — Lead of ${m.leadProgram}` : ""}</td>
+              <td>{["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) && coordOptions.length > 0 ? <MemberProgramSelect userId={m.id} current={m.managedById} coordinators={coordOptions} /> : "—"}</td></tr>
+          ))}</tbody></table>
       </div>
     </Shell>
   );

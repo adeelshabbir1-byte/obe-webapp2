@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
+import { deptScope } from "../../../lib/omcScope";
 
 
 
@@ -24,7 +25,7 @@ export default async function OmcPloReportPage() {
   if (user.role !== "OMC") redirect("/dashboard");
 
   const coordinators = await prisma.user.findMany({
-    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" },
+    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) },
     orderBy: { name: "asc" },
   });
 

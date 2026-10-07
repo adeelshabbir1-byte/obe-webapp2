@@ -92,7 +92,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
   function onCourseClick(c: Course) {
     if (loading) return;
     // Visible-but-not-this-role's-to-edit (e.g. a Subject Expert or
-    // Chairman looking at a Coordinator's/OMC's map): still fully
+    // Institute Head looking at a Coordinator's/OMC's map): still fully
     // readable, just not clickable — avoids a click silently 403'ing
     // against an API that only the owning role may call.
     if (readOnly) return;
@@ -195,8 +195,8 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
           {readOnly
             ? "View only — this map belongs to a different role. You can see the full layout, prerequisites, and elective slots here, but changing them needs to be done by the role that owns this page."
             : mode === "prereq"
-            ? (selectedId ? `Click the course that "${selectedCourse?.code}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
-            : (selectedId ? `Click a semester row to move "${selectedCourse?.code}" there.` : "Click a course, then click a semester row label to move it there. An elective or IDS slot has two separate click targets: click the box itself to choose which real course it is, or click the small ⇅ handle in its top-left corner to select it for moving to a different semester instead.")}
+            ? (selectedId ? `Click the course that "${selectedCourse?.code} — ${selectedCourse?.title}" should require as a prerequisite.` : "Click a course, then click the one it should require as a prerequisite. A course with a prerequisite shows a small × in its corner — click that to remove the link.")
+            : (selectedId ? `Click a semester row to move "${selectedCourse?.code} — ${selectedCourse?.title}" there.` : "Click a course, then click a semester row label to move it there. An elective or IDS slot has two separate click targets: click the box itself to choose which real course it is, or click the small ⇅ handle in its top-left corner to select it for moving to a different semester instead.")}
         </p>
       </div>
 
@@ -245,7 +245,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                 <g key={c.id} style={{ cursor: readOnly ? "default" : loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType, c.code)} opacity={c.isOffered ? 0.5 : 0.9}
                     stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
-                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}</text>
+                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}<title>{c.code} — {c.title}</title></text>
                   {!readOnly && mode === "reposition" && c.slotCategory && (
                     // Elective/IDS boxes already use a plain click to open
                     // the "choose which real course this is" popup

@@ -15,7 +15,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
   const pageNum = parseInt(searchParams.page || "1", 10);
   const pageSize = 50;
 
-  // Everyone this Chairman ultimately manages, directly or indirectly.
+  // Everyone this Institute Head ultimately manages, directly or indirectly.
   const directReports = await prisma.user.findMany({ where: { managedById: user.id } });
   const coordinators = directReports.filter((u) => u.role === "PROGRAM_COORDINATOR");
   const indirect = await prisma.user.findMany({ where: { managedById: { in: coordinators.map((c) => c.id) } } });
@@ -35,12 +35,12 @@ export default async function AuditLogPage({ searchParams }: { searchParams: { p
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <Shell roleLabel="Chairman" userName={user.name} navLinks={[
-      { href: "/chairman/faculty-workload", label: "Faculty Work Progress" },
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={[
+      { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
       { href: "/chairman/coordinators", label: "Program Coordinators" },
       { href: "/chairman/plos", label: "Program Learning Outcomes" },
       { href: "/chairman/omc", label: "OMC Members" },
-      { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/departments", label: "Departments" },
+      { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/chairman/departments", label: "Departments" },
       { href: "/chairman/cqi", label: "CQI Records" },
       { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
       { href: "/chairman/report-access", label: "Report Access Control" },

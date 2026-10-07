@@ -66,7 +66,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
       })
     : [];
 
-  // Chairman/Coordinator/OMC can assign an instructor right from this map
+  // Institute Head/Coordinator/OMC can assign an instructor right from this map
   // — Subject Expert still only views it, same as the assign-instructor
   // API route itself only accepts those three roles (plus Course Assigner,
   // who doesn't view this page at all).

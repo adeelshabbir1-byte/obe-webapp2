@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { deptScope } from "../../../../../lib/omcScope";
 
 // Same as auto-map-hec, but for every batch across the whole
 // institution at once, a handful at a time per call — with 40+ batches,
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   const offset = Math.max(Number(body.offset) || 0, 0);
   const pageSize = Math.min(Math.max(Number(body.pageSize) || 5, 1), 20);
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" }, select: { id: true } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: { id: "asc" } });

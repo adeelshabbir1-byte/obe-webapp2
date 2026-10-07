@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       { header: "Title", key: "title", width: 30 },
       { header: "Description", key: "description", width: 50 },
       { header: "Status", key: "status", width: 16 },
-      { header: "Chairman Comment", key: "chairmanComment", width: 30 },
+      { header: "Institute Head Comment", key: "chairmanComment", width: 30 },
     ],
     rows: plos.map((p) => ({
       batch: p.batch ? `${p.batch.degreeProgram} — ${p.batch.batchName}` : "", number: p.number, title: p.title,
