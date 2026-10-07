@@ -63,6 +63,7 @@ export async function chairmanIdFor(user: { id: string; role: string; managedByI
   // SE/Instructor: one more hop up (their manager is a Coordinator, whose manager is the Chairman).
   if (!user.managedById) return "";
   const coordinator = await prisma.user.findUnique({ where: { id: user.managedById } });
+  if (coordinator?.role === "CHAIRMAN") return coordinator.id; // a Head of Department acting as an Instructor is managed by the chairman directly
   return coordinator?.managedById || "";
 }
 

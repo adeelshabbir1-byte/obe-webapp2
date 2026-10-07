@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
+import { isHeadFaculty } from "../../../lib/departments";
 import { applyLoan } from "../../../lib/loans";
 import { writeAuditLog } from "../../../lib/audit";
 
@@ -29,7 +30,7 @@ export async function GET() {
     }),
     prisma.department.findMany({ where: { chairmanId }, orderBy: { name: "asc" } }),
     prisma.user.findMany({
-      where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false, departmentId: { not: null }, managedBy: { managedById: chairmanId } },
+      where: { isVisitingPlaceholder: false, departmentId: { not: null }, OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedBy: { managedById: chairmanId } }, { role: "HEAD_OF_DEPARTMENT", secondaryRole: "INSTRUCTOR", managedById: chairmanId }] },
       select: { id: true, name: true, departmentId: true }, orderBy: { name: "asc" },
     }),
     prisma.teacherLoanRequest.findMany({
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (user.role === "HEAD_OF_DEPARTMENT" && user.departmentId !== requestingDepartmentId) return NextResponse.json({ error: "course not found" }, { status: 404 });
 
   const teacher = await prisma.user.findUnique({ where: { id: body.instructorId }, include: { managedBy: true } });
-  if (!teacher || teacher.isVisitingPlaceholder || !["INSTRUCTOR", "SUBJECT_EXPERT"].includes(teacher.role) || teacher.managedBy?.managedById !== chairmanId) {
+  if (!teacher || teacher.isVisitingPlaceholder || !(isHeadFaculty(teacher, chairmanId) || (["INSTRUCTOR", "SUBJECT_EXPERT"].includes(teacher.role) && teacher.managedBy?.managedById === chairmanId))) {
     return NextResponse.json({ error: "teacher not found" }, { status: 404 });
   }
   const lendingDepartmentId = teacher.departmentId;

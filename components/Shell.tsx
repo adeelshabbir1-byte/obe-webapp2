@@ -24,7 +24,7 @@ export default function Shell({
   const [instituteLogo, setInstituteLogo] = useState<string | null>(null);
   const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
   const [nceacLogo, setNceacLogo] = useState<string | null>(null);
-  const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string } | null>(null);
+  const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string; otherRole: string | null; otherRoleLabel: string | null } | null>(null);
   const [isAlumniCustodian, setIsAlumniCustodian] = useState(false);
   const [currentTerm, setCurrentTerm] = useState<{ termName: string; year: number } | null>(null);
 
@@ -50,7 +50,7 @@ export default function Shell({
   async function switchRole() {
     if (!roleSwitch || switching) return;
     setSwitching(true);
-    const nextRole = roleSwitch.activeRole === "INSTRUCTOR" ? "SUBJECT_EXPERT" : "INSTRUCTOR";
+    const nextRole = roleSwitch.otherRole || (roleSwitch.activeRole === "INSTRUCTOR" ? "SUBJECT_EXPERT" : "INSTRUCTOR");
     await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
     router.push("/dashboard");
     router.refresh();
@@ -110,7 +110,7 @@ export default function Shell({
           <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
           {roleSwitch && (
             <button onClick={switchRole} disabled={switching} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: switching ? "default" : "pointer", padding: 0, textAlign: "left", opacity: switching ? 0.6 : 1 }}>
-              {switching ? "Switching…" : `Switch to ${roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor"}`}
+              {switching ? "Switching…" : `Switch to ${roleSwitch.otherRoleLabel || (roleSwitch.activeRole === "INSTRUCTOR" ? "Subject Expert" : "Instructor")}`}
             </button>
           )}
           {isAlumniCustodian && (

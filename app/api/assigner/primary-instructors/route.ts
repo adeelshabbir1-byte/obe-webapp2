@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
-import { getOrCreateVisitingFaculty } from "../../../../lib/departments";
+import { getOrCreateVisitingFaculty, headFacultyWhere } from "../../../../lib/departments";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -16,7 +16,7 @@ export async function GET() {
       include: { batch: true, instructor: true },
       orderBy: [{ code: "asc" }],
     }),
-    prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, headFacultyWhere(user.managedById || "")] }, orderBy: { name: "asc" } }),
   ]);
 
   const visiting = await getOrCreateVisitingFaculty(user.managedById || "");

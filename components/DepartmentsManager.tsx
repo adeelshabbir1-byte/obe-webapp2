@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
-type Person = { id: string; name: string; role: string; departmentId: string | null };
+type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean };
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
@@ -127,6 +127,11 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                   <span style={{ display: "none" }}>{deptName(p.departmentId)}</span>
+                  {p.role === "HEAD_OF_DEPARTMENT" && (
+                    <label style={{ marginLeft: 12, fontSize: 12 }}>
+                      <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
+                    </label>
+                  )}
                 </td>
               </tr>
             ))}
@@ -159,7 +164,7 @@ function HeadForm({ departmentId }: { departmentId: string }) {
     const fd = new FormData(form);
     const res = await fetch("/api/chairman/heads", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId }),
+      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId, alsoFaculty: fd.get("alsoFaculty") === "on" }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Could not create"); return; }
@@ -173,6 +178,7 @@ function HeadForm({ departmentId }: { departmentId: string }) {
       <input name="email" type="email" placeholder="Email" required />
       <input name="username" placeholder="Username" required />
       <input name="password" type="password" placeholder="Temporary password" required />
+      <label style={{ fontSize: 13 }}><input type="checkbox" name="alsoFaculty" /> Also teaches as a faculty member</label>
       {error && <div style={{ color: "#b3261e" }}>{error}</div>}
       {ok && <div style={{ color: "var(--sage)" }}>{ok}</div>}
       <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Head of Department</button>

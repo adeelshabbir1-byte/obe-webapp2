@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { isHeadFaculty } from "../../../../../../lib/departments";
 import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 
@@ -46,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
     const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
     const isVisiting = !!instructor && instructor.isVisitingPlaceholder && instructor.managedById === chairmanId;
-    const isValidInstructor = isVisiting || instructor && validManagerIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
+    const isValidInstructor = isVisiting || (!!instructor && isHeadFaculty(instructor, chairmanId)) || instructor && validManagerIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
     if (isValidInstructor && !isVisiting && instructor && instructor.id !== course.instructorId) {
       // A teacher from a different department can only come through an approved "Borrow a Teacher" request.
       const courseDept = (await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { departmentId: true } }))?.departmentId;

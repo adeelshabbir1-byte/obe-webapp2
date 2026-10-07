@@ -19,9 +19,22 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await hashPassword(body.password);
   const created = await prisma.user.create({
-    data: { email: body.email, username: body.username, passwordHash, name: body.name, role: "HEAD_OF_DEPARTMENT", managedById: user.id, departmentId: dept.id, mustChangePassword: true },
+    data: { email: body.email, username: body.username, passwordHash, name: body.name, role: "HEAD_OF_DEPARTMENT", managedById: user.id, departmentId: dept.id, mustChangePassword: true, secondaryRole: body.alsoFaculty ? "INSTRUCTOR" : null },
   });
   await writeAuditLog({ actorUserId: user.id, action: "HEAD_OF_DEPARTMENT_CREATED", entityType: "User", entityId: created.id, metadata: { departmentId: dept.id } });
   const { passwordHash: _omit, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });
+}
+
+// Turns "this head also teaches as faculty" on or off.
+export async function PATCH(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const body = await req.json().catch(() => ({}));
+  if (!body.userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  const head = await prisma.user.findFirst({ where: { id: body.userId, role: "HEAD_OF_DEPARTMENT", managedById: user.id } });
+  if (!head) return NextResponse.json({ error: "head not found" }, { status: 404 });
+  await prisma.user.update({ where: { id: head.id }, data: { secondaryRole: body.alsoFaculty ? "INSTRUCTOR" : null } });
+  await writeAuditLog({ actorUserId: user.id, action: "HEAD_FACULTY_TOGGLED", entityType: "User", entityId: head.id, metadata: { alsoFaculty: !!body.alsoFaculty } });
+  return NextResponse.json({ ok: true });
 }

@@ -6,7 +6,6 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
 import Link from "next/link";
-import { deptScope } from "../../lib/omcScope";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
@@ -28,7 +27,7 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if (user.rawRole === "SUBJECT_EXPERT" && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
+  if ((user.rawRole === "SUBJECT_EXPERT" || user.rawRole === "HEAD_OF_DEPARTMENT") && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
     redirect("/choose-role");
   }
 
@@ -96,7 +95,7 @@ async function coordinatorStats(coordinatorId: string): Promise<Stat[]> {
   ];
 }
 
-async function omcStats(user: { id: string; role: string; managedById: string | null }): Promise<Stat[]> {
+async function omcStats(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
   const coordinatorIds = await coordinatorIdsFor(user);
   const [pendingReview, coursesWithoutPlo, pendingWeightExceptions, totalCourses] = await Promise.all([
     prisma.pendingMasterCourse.count({ where: { masterCurriculum: { chairmanId: await chairmanIdFor(user) } } }),
@@ -157,7 +156,7 @@ async function chairmanStats(chairmanId: string): Promise<Stat[]> {
 }
 
 async function courseAssignerStats(user: { id: string; managedById: string | null }): Promise<Stat[]> {
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
   const coordinatorIds = coordinators.map((c) => c.id);
   const [unassigned, totalOffered] = await Promise.all([
     prisma.course.count({ where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: null } }),

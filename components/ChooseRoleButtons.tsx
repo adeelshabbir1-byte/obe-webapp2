@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ChooseRoleButtons() {
+export default function ChooseRoleButtons({ primaryRole = "SUBJECT_EXPERT" }: { primaryRole?: string }) {
+  const primaryLabel = primaryRole === "HEAD_OF_DEPARTMENT" ? "Head of Department" : "Subject Expert";
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -18,8 +19,8 @@ export default function ChooseRoleButtons() {
 
   return (
     <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-      <button onClick={() => choose("SUBJECT_EXPERT")} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
-        {loading === "SUBJECT_EXPERT" ? "Loading…" : "Continue as Subject Expert"}
+      <button onClick={() => choose(primaryRole)} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
+        {loading === primaryRole ? "Loading…" : `Continue as ${primaryLabel}`}
       </button>
       <button onClick={() => choose("INSTRUCTOR")} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
         {loading === "INSTRUCTOR" ? "Loading…" : "Continue as Instructor"}
