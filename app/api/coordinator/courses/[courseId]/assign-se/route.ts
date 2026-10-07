@@ -27,7 +27,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   if (subjectExpertId) {
     const se = await prisma.user.findUnique({ where: { id: subjectExpertId } });
-    if (!se || se.role !== "SUBJECT_EXPERT" || se.managedById !== user.id) {
+    let ok = !!se && se.role === "SUBJECT_EXPERT" && se.managedById === user.id;
+    if (!ok && se && se.role === "SUBJECT_EXPERT" && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId && se.managedById) {
+      // An expert from the course's subject-home department (another coordinator's, same institute).
+      const theirCoordinator = await prisma.user.findUnique({ where: { id: se.managedById }, select: { managedById: true } });
+      ok = !!theirCoordinator && theirCoordinator.managedById === user.managedById;
+    }
+    if (!ok) {
       return NextResponse.json({ error: "invalid subject expert" }, { status: 400 });
     }
   }

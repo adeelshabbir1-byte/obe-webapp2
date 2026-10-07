@@ -9,13 +9,14 @@ type Section = { id: string; subjectExpertId: string | null; batchLabel: string 
 type CourseGroup = {
   code: string; title: string; courseType: string; semesterNumber: number | null;
   customCategoryName: string | null;
+  homeDepartmentId: string | null; homeDepartmentName: string | null;
   linkedFollowerCodes: string[]; sections: Section[];
 };
 type SubjectExpert = { id: string; name: string; customCategoryName: string | null };
 type Batch = { id: string; degreeProgram: string; batchName: string };
 
-export default function AssignSubjectExpertsManager({ courseGroups: initialGroups, subjectExperts, batches, selectedBatchId }: {
-  courseGroups: CourseGroup[]; subjectExperts: SubjectExpert[]; batches: Batch[]; selectedBatchId: string;
+export default function AssignSubjectExpertsManager({ courseGroups: initialGroups, homeExperts = [], subjectExperts, batches, selectedBatchId }: {
+  courseGroups: CourseGroup[]; homeExperts?: { id: string; name: string; departmentId: string }[]; subjectExperts: SubjectExpert[]; batches: Batch[]; selectedBatchId: string;
 }) {
   const router = useRouter();
   const [groups, setGroups] = useState<CourseGroup[]>(initialGroups);
@@ -127,7 +128,8 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
     return a.localeCompare(b);
   });
 
-  function renderSelectOptions(currentValue: string, isMixed: boolean) {
+  function renderSelectOptions(currentValue: string, isMixed: boolean, g: CourseGroup) {
+    const fromHome = g.homeDepartmentId ? homeExperts.filter((h) => h.departmentId === g.homeDepartmentId) : [];
     const categorizedSes = new Map<string, SubjectExpert[]>();
     for (const se of subjectExperts) {
       const key = se.customCategoryName || "";
@@ -143,6 +145,11 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
       <>
         {isMixed && <option value="" disabled>— Mixed, pick one to unify —</option>}
         <option value="">— Unassigned —</option>
+        {fromHome.length > 0 && (
+          <optgroup label={`Subject home: ${g.homeDepartmentName || "other department"}`}>
+            {fromHome.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+          </optgroup>
+        )}
         {seCategoryOrder.map((cat) => (
           cat === "" ? (
             categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)
@@ -202,7 +209,7 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
                         onChange={(e) => assignSeToGroup(g.code, e.target.value, e.target, currentValue)}
                         style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}
                       >
-                        {renderSelectOptions(currentValue, isMixed)}
+                        {renderSelectOptions(currentValue, isMixed, g)}
                       </select>
                       {g.sections.length > 1 && (
                         <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>

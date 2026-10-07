@@ -1,0 +1,14 @@
+import { prisma } from "./db";
+
+// Subject Experts a course can borrow from its "subject home" department: for example a CS program's Management course
+// takes its Subject Expert from Management Sciences. Only experts of OTHER coordinators in the same institute are listed
+// (the coordinator's own experts are always available anyway).
+export async function homeExpertsFor(chairmanId: string, ownCoordinatorId: string, departmentIds: string[]) {
+  const ids = Array.from(new Set(departmentIds.filter(Boolean)));
+  if (ids.length === 0) return [];
+  const experts = await prisma.user.findMany({
+    where: { role: "SUBJECT_EXPERT", departmentId: { in: ids }, managedById: { not: ownCoordinatorId }, managedBy: { managedById: chairmanId } },
+    select: { id: true, name: true, departmentId: true }, orderBy: { name: "asc" },
+  });
+  return experts.map((e) => ({ id: e.id, name: e.name, departmentId: e.departmentId as string }));
+}

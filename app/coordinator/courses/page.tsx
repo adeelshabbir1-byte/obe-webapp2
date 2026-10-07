@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { homeExpertsFor } from "../../../lib/homeExperts";
 import CoursesManager from "../../../components/CoursesManager";
 import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
 import { curriculaVisibleTo, degreeSortKey } from "../../../lib/curriculumAccess";
@@ -107,6 +108,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
           prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab, subjectHomeDepartmentId: c.subjectHomeDepartmentId,
           batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}
+        homeExperts={await homeExpertsFor(owningChairmanId || "", user.id, courses.map((c) => c.subjectHomeDepartmentId || ""))}
         departments={departmentList.map((d) => ({ id: d.id, name: d.name }))}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
