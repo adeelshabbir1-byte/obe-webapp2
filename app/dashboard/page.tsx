@@ -6,6 +6,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
 import Link from "next/link";
+import { deptScope } from "../../lib/omcScope";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
@@ -156,7 +157,7 @@ async function chairmanStats(chairmanId: string): Promise<Stat[]> {
 }
 
 async function courseAssignerStats(user: { id: string; managedById: string | null }): Promise<Stat[]> {
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
   const [unassigned, totalOffered] = await Promise.all([
     prisma.course.count({ where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: null } }),

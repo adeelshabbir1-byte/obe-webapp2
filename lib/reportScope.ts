@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
+import { deptScope } from "./omcScope";
 
 const REPORT_ROLES = ["HEAD_OF_DEPARTMENT", "OMC", "CHAIRMAN", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "SUPER_USER"];
 
@@ -13,7 +14,7 @@ export function courseScopeFor(user: { id: string; role: string; managedById: st
     case "SUPER_USER":
       return {}; // platform-wide — no institution restriction
     case "OMC":
-      return { coordinator: { managedById: user.managedById || "" } };
+      return { coordinator: { managedById: user.managedById || "", ...deptScope(user) } };
     case "HEAD_OF_DEPARTMENT":
       return { coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } };
     case "CHAIRMAN":
@@ -42,7 +43,7 @@ export async function coordinatorIdsFor(user: { id: string; role: string; manage
   }
   if (user.role === "OMC" || user.role === "CHAIRMAN") {
     const chairmanId = user.role === "OMC" ? user.managedById || "" : user.id;
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, ...deptScope(user) } });
     return coordinators.map((c) => c.id);
   }
   // SE/Instructor: whichever coordinator(s) own the courses they're attached to.

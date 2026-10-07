@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { suggestPloForClo, evenSplitContribution } from "../../../../../lib/cloPloMatching";
 import { ensureCoursePloMapping } from "../../../../../lib/coursePloSync";
+import { deptScope } from "../../../../../lib/omcScope";
 
 // All-batches counterpart to auto-map-clo-level, same offset/pageSize
 // pattern as auto-map-system-all. A smaller default pageSize than that
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const offset = Math.max(Number(body.offset) || 0, 0);
   const pageSize = Math.min(Math.max(Number(body.pageSize) || 2, 1), 10);
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" }, select: { id: true } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: { id: "asc" } });

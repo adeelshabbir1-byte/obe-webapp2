@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { deptScope } from "../../../../lib/omcScope";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -9,7 +10,7 @@ export async function GET() {
   }
 
   const coordinators = await prisma.user.findMany({
-    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" },
+    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) },
     orderBy: { name: "asc" },
   });
 

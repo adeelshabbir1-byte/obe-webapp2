@@ -12,6 +12,7 @@ import AutoMapSystemButton from "../../../components/AutoMapSystemButton";
 import AutoMapCloLevelButton from "../../../components/AutoMapCloLevelButton";
 import AutoMapCloLevelAllButton from "../../../components/AutoMapCloLevelAllButton";
 import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
+import { deptScope } from "../../../lib/omcScope";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -21,7 +22,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
   if (user.role !== "OMC") redirect("/dashboard");
 
   const coordinators = await prisma.user.findMany({
-    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" },
+    where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) },
     orderBy: { name: "asc" },
   });
   const coordinatorIds = coordinators.map((c) => c.id);

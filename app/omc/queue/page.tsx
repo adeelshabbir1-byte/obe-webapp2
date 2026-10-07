@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import OmcReviewQueue from "../../../components/OmcReviewQueue";
+import { deptScope } from "../../../lib/omcScope";
 
 export default async function OmcQueuePage() {
   const user = await getAuthenticatedUser();
@@ -12,7 +13,7 @@ export default async function OmcQueuePage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const [courses, omcMembers] = await Promise.all([
