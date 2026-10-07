@@ -7,6 +7,9 @@ import { Slot } from "./timetableGA";
 // members span batches under DIFFERENT coordinators is a known boundary
 // this doesn't solve — each coordinator would generate their own slot for
 // their own member batches only, with no cross-coordinator conflict check.
+// Friday prayer break — no classes in this window (set here if the time ever changes).
+export const JUMMAH_BREAK = { day: "Fri", startHour: 13, endHour: 14 };
+
 export async function buildSlots(user: { id: string; managedById: string | null }) {
   const chairmanId = user.managedById;
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, include: { scheduleConfig: true } });
@@ -39,7 +42,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
       include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
     }),
     prisma.room.findMany({ where: { chairmanId: chairmanId || "" } }),
-    prisma.user.findMany({ where: { managedById: user.id }, select: { id: true } }),
+    prisma.user.findMany({ where: { managedById: user.id }, select: { id: true, preferredDays: true } }),
   ]);
   const unavailabilityRaw = await prisma.facultyUnavailability.findMany({ where: { facultyId: { in: faculty.map((f) => f.id) } } });
 
@@ -110,7 +113,17 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     }
   }
 
+  const prefByFaculty = new Map<string, string[]>(faculty.map((f): [string, string[]] => [f.id, (f.preferredDays || "").split(",").filter(Boolean)]));
+  for (const sl of slots) {
+    const pref = prefByFaculty.get(sl.instructorId);
+    if (pref && pref.length > 0) sl.preferredDays = pref;
+  }
+
   const unavailability = unavailabilityRaw.map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
+  // Jummah break: nobody is scheduled to teach during it, so no class (of any batch) can fall in that hour.
+  for (const instructorId of new Set(slots.map((sl) => sl.instructorId).filter(Boolean))) {
+    unavailability.push({ facultyId: instructorId, dayOfWeek: JUMMAH_BREAK.day, startHour: JUMMAH_BREAK.startHour, endHour: JUMMAH_BREAK.endHour });
+  }
   const roomsForGA = rooms.map((r) => ({ id: r.id, type: r.type, capacity: r.capacity }));
 
   return { slots, rooms: roomsForGA, unavailability };

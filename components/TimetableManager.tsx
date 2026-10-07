@@ -107,7 +107,21 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   const [facultyUnavailable, setFacultyUnavailable] = useState<{ dayOfWeek: string; startHour: number; endHour: number }[]>([]);
   const [loadingGrid, setLoadingGrid] = useState(false);
 
+  // Preferred teaching days — a soft preference (the generator tries, but will move a class if it must to avoid a clash)
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  async function loadPreferredDays(facultyId: string) {
+    const res = await fetch(`/api/coordinator/faculty-preferred-days?facultyId=${facultyId}`);
+    const data = await res.json();
+    setPreferredDays(data.days || []);
+  }
+  async function togglePreferredDay(day: string) {
+    const next = preferredDays.includes(day) ? preferredDays.filter((d) => d !== day) : [...preferredDays, day];
+    setPreferredDays(next);
+    await fetch("/api/coordinator/faculty-preferred-days", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ facultyId: unavailFacultyId, days: next }) });
+  }
+
   async function loadFacultyUnavailability(facultyId: string) {
+    loadPreferredDays(facultyId);
     setLoadingGrid(true);
     const res = await fetch(`/api/coordinator/faculty-unavailability?facultyId=${facultyId}`);
     const data = await res.json();
@@ -377,7 +391,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               {sections.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>None yet — click "Auto-Generate" above.</td></tr>}
               {sections.map((s) => (
                 <tr key={s.id}>
-                  <td>{s.courseCode}</td><td style={{ fontSize: 11 }}>{s.batchLabel}</td><td>{s.instructorName}</td><td>{s.sectionLabel}</td>
+                  <td>{s.courseCode} <span style={{ color: "var(--slate)", fontSize: 11 }}>— {s.courseTitle}</span></td><td style={{ fontSize: 11 }}>{s.batchLabel}</td><td>{s.instructorName}</td><td>{s.sectionLabel}</td>
                   <td><input type="number" min={1} defaultValue={s.sessionsPerWeek} onBlur={(e) => updateSection(s.id, "sessionsPerWeek", e.target.value)} style={{ width: 50, padding: "3px 5px", border: "1px solid var(--line)" }} /></td>
                   <td><input type="number" min={30} step={15} defaultValue={s.sessionDurationMinutes} onBlur={(e) => updateSection(s.id, "sessionDurationMinutes", e.target.value)} style={{ width: 60, padding: "3px 5px", border: "1px solid var(--line)" }} /></td>
                   <td>
@@ -400,6 +414,17 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             <select value={unavailFacultyId} onChange={(e) => { setUnavailFacultyId(e.target.value); loadFacultyUnavailability(e.target.value); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
               {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>
+                Preferred teaching days (a preference, not a rule — leave all unticked for no preference)
+              </label>
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <label key={d} style={{ fontSize: 12.5, marginRight: 14 }}>
+                  <input type="checkbox" checked={preferredDays.includes(d)} onChange={() => togglePreferredDay(d)} /> {d}
+                </label>
+              ))}
+              <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 6 }}>Used by the local solver. Download a fresh constraints file after changing this. Friday 1:00–2:00 pm is kept free for everyone (Jummah).</p>
+            </div>
           </div>
           {loadingGrid ? (
             <div className="card"><p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p></div>

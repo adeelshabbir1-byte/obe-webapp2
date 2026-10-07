@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Category = { id: string; name: string; courseCount: number; facultyCount: number };
-type CourseGroup = { code: string; title: string; courseIds: string[] };
+type CourseGroup = { code: string; title: string; courseIds: string[]; categoryId: string | null };
 type Faculty = { id: string; name: string; role: string; customCategoryId: string | null };
 
 export default function CustomCategoriesManager({ initialCategories, courseGroups: initialCourseGroups, faculty: initialFaculty }: {
@@ -67,15 +67,18 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusy(false); return; }
-      // Categorized course groups drop out of the picker entirely — this
-      // is exactly what shrinks the Coordinator's remaining workload.
-      setCourseGroups((prev) => prev.filter((g) => !selectedCodes.has(g.code)));
+      // Categorized courses move down into their category's group (below the still-uncategorized ones).
+      setCourseGroups((prev) => prev.map((g) => selectedCodes.has(g.code) ? { ...g, categoryId: assignCategoryId } : g));
       setFaculty((prev) => prev.map((f) => selectedFacultyIds.has(f.id) ? { ...f, customCategoryId: assignCategoryId } : f));
       setCategories((prev) => prev.map((cat) => cat.id === assignCategoryId ? { ...cat, courseCount: cat.courseCount + courseIds.length, facultyCount: cat.facultyCount + selectedFacultyIds.size } : cat));
       setSelectedCodes(new Set()); setSelectedFacultyIds(new Set()); setBusy(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusy(false); }
   }
 
+  // Counts come from the live lists so re-tagging an already-categorized item never double counts.
+  function liveCourseCount(id: string) {
+    return courseGroups.filter((g) => g.categoryId === id).reduce((n, g) => n + g.courseIds.length, 0);
+  }
   function categoryName(id: string | null) {
     return categories.find((c) => c.id === id)?.name || "Uncategorized";
   }
@@ -83,11 +86,21 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
   // Already-categorized faculty sink to the bottom (dimmed, not hidden —
   // unlike courses, the Coordinator may still want to re-tag someone)
   // so whoever still needs attention stays at the top of the list.
-  const sortedFaculty = [...faculty].sort((a, b) => {
-    const aCat = a.customCategoryId ? 1 : 0;
-    const bCat = b.customCategoryId ? 1 : 0;
-    return aCat - bCat || a.name.localeCompare(b.name);
-  });
+  // Uncategorized first, then everyone grouped by category name (all AI together, etc.), alphabetical inside each group.
+  function byCategory<T extends { categoryId: string | null; label: string }>(items: T[]): T[] {
+    return [...items].sort((a, b) => {
+      const aCat = a.categoryId ? 1 : 0;
+      const bCat = b.categoryId ? 1 : 0;
+      if (aCat !== bCat) return aCat - bCat;
+      return categoryName(a.categoryId).localeCompare(categoryName(b.categoryId)) || a.label.localeCompare(b.label);
+    });
+  }
+  const sortedFaculty = byCategory(faculty.map((f) => ({ ...f, categoryId: f.customCategoryId, label: f.name })));
+  const sortedCourses = byCategory(courseGroups.map((g) => ({ ...g, label: g.code })));
+  const uncategorizedCourseCount = courseGroups.filter((g) => !g.categoryId).length;
+  const groupHeader = (catId: string | null) => (
+    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--slate)", textTransform: "uppercase", letterSpacing: 0.5, margin: "8px 0 2px", borderBottom: "1px solid var(--line)" }}>{categoryName(catId)}</div>
+  );
 
   return (
     <>
@@ -108,7 +121,7 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
         {categories.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No categories yet — add one above.</p>}
         {categories.map((c) => (
           <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
-            <span style={{ fontSize: 13 }}>{c.name} <span style={{ color: "var(--slate)", fontSize: 11.5 }}>({c.courseCount} course{c.courseCount === 1 ? "" : "s"}, {c.facultyCount} faculty)</span></span>
+            <span style={{ fontSize: 13 }}>{c.name} <span style={{ color: "var(--slate)", fontSize: 11.5 }}>({liveCourseCount(c.id)} course{liveCourseCount(c.id) === 1 ? "" : "s"}, {faculty.filter((f) => f.customCategoryId === c.id).length} faculty)</span></span>
             <button onClick={() => deleteCategory(c.id)} disabled={busy} style={{ background: "none", border: "none", color: "var(--rust)", cursor: "pointer", fontSize: 11.5 }}>Delete</button>
           </div>
         ))}
@@ -117,7 +130,7 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Assign a Category</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-          Only still-uncategorized courses are listed — one row per course code, regardless of how many
+          Uncategorized items come first, then each category's items grouped together — one row per course code, regardless of how many
           batches/cohorts offer it, and content-sync follower sections are hidden entirely (they inherit
           their base's category automatically). Categorizing one row here applies it everywhere that code
           appears.
@@ -132,26 +145,32 @@ export default function CustomCategoriesManager({ initialCategories, courseGroup
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Uncategorized Courses ({selectedCodes.size} selected of {courseGroups.length})</p>
+            <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Courses ({selectedCodes.size} selected · {uncategorizedCourseCount} still uncategorized)</p>
             <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid var(--line)", padding: 8 }}>
-              {courseGroups.length === 0 && <p style={{ fontSize: 11.5, color: "var(--slate)" }}>Every course already has a category.</p>}
-              {courseGroups.map((g) => (
-                <label key={g.code} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0" }}>
+              {courseGroups.length === 0 && <p style={{ fontSize: 11.5, color: "var(--slate)" }}>No courses.</p>}
+              {sortedCourses.map((g, i) => (
+                <div key={g.code}>
+                {(i === 0 || sortedCourses[i - 1].categoryId !== g.categoryId) && groupHeader(g.categoryId)}
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0", opacity: g.categoryId ? 0.6 : 1 }}>
                   <input type="checkbox" checked={selectedCodes.has(g.code)} onChange={() => toggleCourse(g.code)} />
                   {g.code} — {g.title}
                   {g.courseIds.length > 1 && <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({g.courseIds.length} sections)</span>}
                 </label>
+                </div>
               ))}
             </div>
           </div>
           <div>
             <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Faculty ({selectedFacultyIds.size} selected)</p>
             <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid var(--line)", padding: 8 }}>
-              {sortedFaculty.map((f) => (
-                <label key={f.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0", opacity: f.customCategoryId ? 0.55 : 1 }}>
+              {sortedFaculty.map((f, i) => (
+                <div key={f.id}>
+                {(i === 0 || sortedFaculty[i - 1].categoryId !== f.categoryId) && groupHeader(f.categoryId)}
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 0", opacity: f.customCategoryId ? 0.55 : 1 }}>
                   <input type="checkbox" checked={selectedFacultyIds.has(f.id)} onChange={() => toggleFaculty(f.id)} />
                   {f.name} <span style={{ color: "var(--slate)", fontSize: 10.5 }}>({categoryName(f.customCategoryId)})</span>
                 </label>
+                </div>
               ))}
             </div>
           </div>

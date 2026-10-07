@@ -96,6 +96,7 @@ model User {
   courseShortNames   CourseShortName[] @relation("CourseShortNameChairman")
   contentSyncGroups  CourseContentSyncGroup[] @relation("ContentSyncChairman")
   ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
+  preferredDays      String?  // comma list e.g. "Mon,Wed" — instructor's preferred teaching days (soft preference for the timetable)
   organization       String?  // for a guest / industry Subject Expert: the company or institute they come from (shown beside their public courses)
   isPlatformExpert   Boolean  @default(false) // a Subject Expert created by the platform admin, attached to no institute, who designs Master Curriculum courses for everyone
   publicCourses      PublicCourse[] @relation("PublicCourseAuthor")

@@ -2959,3 +2959,5 @@ CREATE INDEX IF NOT EXISTS "PublicCourseImport_publicCourseId_idx" ON "PublicCou
 DO $$ BEGIN
   ALTER TABLE "PublicCourseImport" ADD CONSTRAINT "PublicCourseImport_publicCourseId_fkey" FOREIGN KEY ("publicCourseId") REFERENCES "PublicCourse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Faculty preferred teaching days (soft preference for the timetable generator)
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "preferredDays" TEXT;

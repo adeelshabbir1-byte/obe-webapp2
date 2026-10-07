@@ -53,12 +53,13 @@ export async function GET() {
         { header: "Label", key: "label", width: 28 },
         { header: "InstructorName", key: "instructorName", width: 24 },
         { header: "BatchLabels", key: "batchLabels", width: 40 },
+        { header: "PreferredDays", key: "preferredDays", width: 20 }, // instructor's preferred days (soft), comma list; blank = no preference
       ],
       // batchId stays a single joined column here for continuity with this
       // sheet's existing shape — a combined-group slot lists every member
       // batch it covers, joined, rather than getting its own column shape.
       rows: slots.map((s) => ({
-        ...s, allowedDays: s.allowedDays.join(","), batchId: s.batchIds.join(","),
+        ...s, allowedDays: s.allowedDays.join(","), preferredDays: (s.preferredDays || []).join(","), batchId: s.batchIds.join(","),
         ...labelFor(s.scheduleSectionId),
         batchLabels: s.batchIds.map((b) => batchLabelById.get(b) || b).join("; "),
       })),

@@ -81,9 +81,10 @@ export default async function CustomCategoriesPage() {
   // Only the still-uncategorized ones need to show up in the picker at
   // all — this is what actually shrinks the Coordinator's remaining
   // workload as they go, rather than re-showing everything every time.
-  const uncategorizedCourseGroups = Array.from(groupsByCode.entries())
-    .filter(([code, members]) => codesWithABaseRow.has(code) && members.every((m) => m.customCategoryId === null))
-    .map(([code, members]) => ({ code, title: members[0].title, courseIds: members.map((m) => m.id) }));
+  // Categorized courses stay in the list too (shown grouped by category, below the uncategorized ones) so they can be reviewed or re-tagged.
+  const allCourseGroups = Array.from(groupsByCode.entries())
+    .filter(([code]) => codesWithABaseRow.has(code))
+    .map(([code, members]) => ({ code, title: members[0].title, courseIds: members.map((m) => m.id), categoryId: members.find((m) => m.customCategoryId)?.customCategoryId ?? null }));
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
@@ -94,7 +95,7 @@ export default async function CustomCategoriesPage() {
       </p>
       <CustomCategoriesManager
         initialCategories={categories.map((c) => ({ id: c.id, name: c.name, courseCount: c._count.courses, facultyCount: c._count.faculty }))}
-        courseGroups={uncategorizedCourseGroups}
+        courseGroups={allCourseGroups}
         faculty={faculty}
       />
     </Shell>

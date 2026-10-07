@@ -15,6 +15,7 @@ export type Slot = {
   // of them must not have another class at the same time, so the conflict
   // check below tests for any shared batch, not equality of a single id.
   batchIds: string[];
+  preferredDays?: string[]; // instructor's preferred days (soft — only the local solver weighs it)
   instructorId: string;
   roomTypeNeeded: string;
   durationHours: number;
