@@ -81,7 +81,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="card">
-          <h3 style={{ fontSize: 14, marginBottom: 4 }}>CO Attainment{selectedCourse ? ` — ${selectedCourse.code}` : ""}</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>CO Attainment{selectedCourse ? ` — ${selectedCourse.code} ${selectedCourse.title}` : ""}</h3>
           <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 12 }}>Target % vs actual % of students who attained each CO.</p>
           {!coData || coData.rows.length === 0 ? (
             <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No CLOs with marks yet for this course.</p>
@@ -95,7 +95,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: 14, marginBottom: 4 }}>PO Attainment{selectedCourse ? ` — ${selectedCourse.code}` : ""}</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>PO Attainment{selectedCourse ? ` — ${selectedCourse.code} ${selectedCourse.title}` : ""}</h3>
           <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 12 }}>Weighted average of contributing COs' levels, scored 0–3.</p>
           {!coData || coData.poRows.length === 0 ? (
             <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No PLO-mapped CLOs with marks yet for this course.</p>

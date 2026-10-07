@@ -22,7 +22,7 @@ export default function CourseRepositioningManager({ courses }: { courses: Cours
 
   async function confirmMove() {
     if (!selectedCourse) return;
-    if (!confirm(`Move ${selectedCourse.code} to Semester ${targetSemester}?`)) return;
+    if (!confirm(`Move ${selectedCourse.code} — ${selectedCourse.title} to Semester ${targetSemester}?`)) return;
     setLoading(true); setError("");
     try {
       const res = await fetch(`/api/omc/courses/${selectedCourse.id}/reposition`, {

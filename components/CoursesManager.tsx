@@ -258,11 +258,11 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           body: JSON.stringify({ labCreditHours: 1 }),
         });
         const data = await res.json();
-        if (!res.ok) { failures.push(`${c.code}: ${data.error || "failed"}`); continue; }
+        if (!res.ok) { failures.push(`${c.code} ${c.title}: ${data.error || "failed"}`); continue; }
         setCourses((prev) => [...prev.map((x) => x.id === c.id ? { ...x, ...data.theoryCourse } : x), data.labCourse]);
         succeeded++;
       } catch (err: any) {
-        failures.push(`${c.code}: ${err.message}`);
+        failures.push(`${c.code} ${c.title}: ${err.message}`);
       }
     }
     setBulkSplitting(false);
@@ -571,7 +571,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>
                   <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value, e.target, c.prerequisiteCourseId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— None —</option>
-                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code}</option>)}
+                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code} — {other.title}</option>)}
                   </select>
                 </td>
                 <td>

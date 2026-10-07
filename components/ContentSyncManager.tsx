@@ -115,9 +115,9 @@ export default function ContentSyncManager() {
       try {
         const res = await fetch(`/api/omc/content-sync/${course.groupId}/members/${courseId}`, { method: "DELETE" });
         if (res.ok) detachedCount++;
-        else { const data = await res.json().catch(() => ({})); failures.push(`${course.code}: ${data.error || "unknown error"}`); }
+        else { const data = await res.json().catch(() => ({})); failures.push(`${course.code} ${course.title}: ${data.error || "unknown error"}`); }
       } catch (err: any) {
-        failures.push(`${course.code}: ${err.message}`);
+        failures.push(`${course.code} ${course.title}: ${err.message}`);
       }
     }
     setNotice(`Detached ${detachedCount} course(s).` + (failures.length > 0 ? ` Issues: ${failures.join("; ")}` : ""));
