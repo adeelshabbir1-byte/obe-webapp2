@@ -4563,3 +4563,6 @@ CREATE TABLE IF NOT EXISTS "LabMark" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "LabMark_courseId_studentId_labNumber_key" ON "LabMark"("courseId","studentId","labNumber");
 CREATE INDEX IF NOT EXISTS "LabMark_courseId_idx" ON "LabMark"("courseId");
+
+-- migration_assigner_hat.sql
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "assignerTerm" TEXT;

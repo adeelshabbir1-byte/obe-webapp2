@@ -3,15 +3,18 @@
 export const TEACHER_EXTRA_ROLES = ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;
 export const DUAL_CAPABLE_PRIMARY = ["SUBJECT_EXPERT", ...TEACHER_EXTRA_ROLES];
 export const DUAL_ROLE_LABEL: Record<string, string> = {
-  INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator",
+  INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner",
 };
-type Hats = { rawRole: string; secondaryRole?: string | null; tertiaryRole?: string | null };
+type Hats = { rawRole: string; secondaryRole?: string | null; tertiaryRole?: string | null; assignerHat?: boolean };
 
 /** Every role this person may work as: their main one plus the extra hats. */
 export function hatsOf(u: Hats): string[] {
-  return [u.rawRole, u.secondaryRole, u.tertiaryRole].filter((r): r is string => !!r);
+  const hats = [u.rawRole, u.secondaryRole, u.tertiaryRole].filter((r): r is string => !!r);
+  if (u.assignerHat && !hats.includes("COURSE_ASSIGNER")) hats.push("COURSE_ASSIGNER");
+  return hats;
 }
-export const isDualCapable = (rawRole: string, secondaryRole: string | null | undefined) => DUAL_CAPABLE_PRIMARY.includes(rawRole) && !!secondaryRole;
+export const isDualCapable = (rawRole: string, secondaryRole: string | null | undefined, assignerHat?: boolean) =>
+  (DUAL_CAPABLE_PRIMARY.includes(rawRole) && !!secondaryRole) || (!!assignerHat && rawRole !== "COURSE_ASSIGNER");
 
 /** A Prisma filter for people who can act as Subject Expert: real Subject Experts of this coordinator,
  * plus Deans / Chairmen / Program Leads (managed directly by the institute head) who keep a Subject Expert hat. */

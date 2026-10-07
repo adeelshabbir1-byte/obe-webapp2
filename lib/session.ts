@@ -2,6 +2,8 @@ import { cookies, headers } from "next/headers";
 import { isDeptCoordinatorPath } from "./deptCoordinator";
 import crypto from "crypto";
 import { prisma } from "./db";
+import { chairmanIdFor } from "./reportScope";
+import { assignerHatActive } from "./assignerHat";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_TTL_DAYS = 7;
@@ -53,8 +55,18 @@ export async function getAuthenticatedUser() {
   // their stored role everywhere else in the app checks `user.role` —
   // rawRole/secondaryRole stay available for the few places (onboarding,
   // the choice screen itself, dropdowns) that need the true picture.
-  const effectiveRole = session.activeRole || safeUser.role;
-  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id };
+  // A teacher given the Course Assigner role for this semester gets it as an extra hat while it lasts.
+  let assignerHat = false;
+  let instituteHeadId = "";
+  if (safeUser.assignerTerm && safeUser.role !== "COURSE_ASSIGNER") {
+    instituteHeadId = await chairmanIdFor(safeUser);
+    assignerHat = await assignerHatActive(safeUser.assignerTerm, instituteHeadId);
+  }
+  let effectiveRole = session.activeRole || safeUser.role;
+  if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER" && !assignerHat) effectiveRole = safeUser.role; // the semester ended
+  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat };
+  // The assigner pages find the institute through managedById, so a teacher wearing this hat is placed directly under the Institute Head.
+  if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") return { ...base, managedById: instituteHeadId };
 
   // A department Program Coordinator who has picked a program works as that program's coordinator, but only on the pages
   // that involve people, calendars and the timetable. Everywhere else they remain a plain department coordinator.
