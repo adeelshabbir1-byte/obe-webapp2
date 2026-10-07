@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
+import { JUMMAH_BREAK } from "../../../../../../../../lib/timetableSlotBuilder";
 import { prisma } from "../../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../../lib/reportScope";
 
@@ -77,6 +78,7 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
       if (instructorBusy) continue;
       const instructorUnavailable = sameDayUnavail.some((u) => overlaps(start, end, u.startHour, u.endHour));
       if (instructorUnavailable) continue;
+      if (day === JUMMAH_BREAK.day && overlaps(start, end, JUMMAH_BREAK.startHour, JUMMAH_BREAK.endHour)) continue; // Jummah break
       const batchBusy = sameDayOthers.some((o) => overlaps(start, end, o.startHour, o.endHour) && batchIdsFor(o.scheduleSection).some((id) => batchIds.includes(id)));
       if (batchBusy) continue;
 

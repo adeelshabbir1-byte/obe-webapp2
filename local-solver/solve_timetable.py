@@ -28,6 +28,7 @@ Soft preferences (it tries, but will give way if it must):
   * keep a section's weekly sessions on different days
   * an instructor teaches at most N hours a day (default 6)
   * earlier in the day rather than later
+  * an instructor's classes on their preferred days (when the portal lists any)
   * only use a lab room for a theory class when lecture rooms are full
     (optional - see allow_theory_in_labs)
 """
@@ -68,6 +69,7 @@ class Slot:
     label: str = ""             # readable name, if the portal supplied one
     instructor_name: str = ""
     batch_label: str = ""
+    preferred_days: List[str] = field(default_factory=list)   # instructor's preferred days (soft); empty = no preference
 
     @property
     def dur_u(self) -> int:
@@ -166,6 +168,7 @@ def read_constraints(path: str) -> Tuple[List[Slot], List[Room], List[Unavail]]:
             label=str(_cell(ws, r, cols, "Label", "") or ""),
             instructor_name=str(_cell(ws, r, cols, "InstructorName", "") or ""),
             batch_label=str(_cell(ws, r, cols, "BatchLabels", "") or ""),
+            preferred_days=[d.strip() for d in str(_cell(ws, r, cols, "PreferredDays", "") or "").split(",") if d.strip() in DAY_ORDER],
         ))
     slots.sort(key=lambda s: s.index)
 
@@ -392,6 +395,8 @@ def _soft_score(slots: List[Slot], rooms: List[Room], assign: Dict[int, Tuple[st
                 score -= cost
                 break
         score -= max(0, u0 - _to_u(s.day_start_h))
+        if s.preferred_days and day not in s.preferred_days:
+            score -= 30
         by_sec[(s.section_id, day)] += 1
         load[(s.instructor_id, day)] += s.dur_u
     score -= 60 * sum(n - 1 for n in by_sec.values() if n > 1)
@@ -511,8 +516,11 @@ def _solve_subproblem(free: List[Slot], fixed: Dict[int, Tuple[Slot, str, int, s
     for s in free:
         base = _to_u(s.day_start_h)
         for (d, u0), v in y[s.index].items():
-            if u0 > base:
-                pen.append((v, u0 - base))
+            cost = max(0, u0 - base)
+            if s.preferred_days and DAY_ORDER[d] not in s.preferred_days:
+                cost += 30   # not one of this instructor's preferred days (soft)
+            if cost > 0:
+                pen.append((v, cost))
 
     model.Maximize(sum(placed[s.index] * (10000 * s.dur_u) for s in free) - sum(v * w for v, w in pen))
 
