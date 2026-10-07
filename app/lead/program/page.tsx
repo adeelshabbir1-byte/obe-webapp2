@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import HodApprovals from "../../../components/HodApprovals";
 
 export default async function LeadProgramPage() {
   const user = await getAuthenticatedUser();
@@ -13,7 +14,11 @@ export default async function LeadProgramPage() {
 
   const program = user.leadProgram || "none";
   const coordinatorScope = { managedById: user.managedById || "", departmentId: user.departmentId || "none" };
-  const [department, batches, courses] = await Promise.all([
+  const [pending, department, batches, courses] = await Promise.all([
+    prisma.course.findMany({
+      where: { instructorApproval: "PENDING", batch: { degreeProgram: program }, coordinator: coordinatorScope },
+      select: { id: true, code: true, title: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
+    }),
     prisma.department.findUnique({ where: { id: user.departmentId || "none" } }),
     prisma.batch.findMany({ where: { degreeProgram: program, coordinator: coordinatorScope }, orderBy: { batchName: "desc" } }),
     prisma.course.findMany({
@@ -34,6 +39,11 @@ export default async function LeadProgramPage() {
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>{user.leadProgram || "My Program"}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>{department?.name ? `${department.name} · ` : ""}Your program at a glance: its batches, offered courses, and who teaches each one.</p>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Teacher assignments waiting for your approval ({pending.length})</h3>
+        <HodApprovals items={pending.map((c) => ({ id: c.id, code: c.code, title: c.title, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", teacher: c.instructor?.name || "—" }))} />
+      </div>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Batches ({batches.length})</h3>

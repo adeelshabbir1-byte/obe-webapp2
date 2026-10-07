@@ -112,6 +112,7 @@ export const HOD_NAV = [
 
 export const LEAD_NAV = [
   { href: "/lead/program", label: "My Program" },
+  { href: "/lead/faculty-requests", label: "Faculty from Other Departments" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },

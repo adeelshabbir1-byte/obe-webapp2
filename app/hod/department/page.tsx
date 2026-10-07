@@ -65,7 +65,7 @@ export default async function HodDepartmentPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Program Leads ({leads.length})</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Each lead looks after one program of your department.</p>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Each lead looks after one program of your department. A lead can approve teacher assignments for their program and ask other departments for teachers.</p>
         <ul>{leads.length === 0 ? <li style={{ color: "var(--slate)" }}>None yet.</li> : leads.map((l) => <li key={l.id}>{l.name} — {l.leadProgram || "no program set"}</li>)}</ul>
         <LeadForm programs={programs.map((p) => p.degreeProgram)} />
       </div>

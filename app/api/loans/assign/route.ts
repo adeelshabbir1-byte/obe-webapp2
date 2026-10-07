@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const loan = await prisma.teacherLoanRequest.findFirst({ where: { id: body.loanId, chairmanId } });
   if (!loan) return NextResponse.json({ error: "request not found" }, { status: 404 });
   if (!REQUEST_ROLES[loan.kind as LoanKind].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  if (user.role === "HEAD_OF_DEPARTMENT" && loan.requestingDepartmentId !== user.departmentId) return NextResponse.json({ error: "request not found" }, { status: 404 });
+  if ((user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD") && loan.requestingDepartmentId !== user.departmentId) return NextResponse.json({ error: "request not found" }, { status: 404 });
 
   const error = await assignFromLoan(loan.id, body.instructorId, user.id);
   if (error) return NextResponse.json({ error }, { status: 400 });

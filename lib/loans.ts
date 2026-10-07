@@ -8,7 +8,7 @@ export type LoanKind = "INSTRUCTOR" | "SUBJECT_EXPERT";
 
 // Who may ask for which kind of help from another department.
 export const REQUEST_ROLES: Record<LoanKind, string[]> = {
-  INSTRUCTOR: ["COURSE_ASSIGNER", "HEAD_OF_DEPARTMENT", "CHAIRMAN"],
+  INSTRUCTOR: ["COURSE_ASSIGNER", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "CHAIRMAN"],
   SUBJECT_EXPERT: ["OMC", "HEAD_OF_DEPARTMENT", "CHAIRMAN"],
 };
 
