@@ -12,10 +12,10 @@ function fileToDataUri(file: File): Promise<string> {
   });
 }
 
-type Institute Head = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
+type InstituteHead = { id: string; username: string; name: string; email: string; department: string | null; instituteName: string | null; instituteLogo: string | null; maxDegreePrograms: number | null };
 
-export default function ChairmenBrandingManager({ chairmen: initialChairmen }: { chairmen: Institute Head[] }) {
-  const [chairmen, setChairmen] = useState<Institute Head[]>(initialChairmen);
+export default function ChairmenBrandingManager({ chairmen: initialChairmen }: { chairmen: InstituteHead[] }) {
+  const [chairmen, setChairmen] = useState<InstituteHead[]>(initialChairmen);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [instituteName, setInstituteName] = useState("");
@@ -24,7 +24,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function startEdit(c: Institute Head) {
+  function startEdit(c: InstituteHead) {
     setExpandedId(c.id); setName(c.name); setInstituteName(c.instituteName || ""); setInstituteLogo(c.instituteLogo);
     setMaxDegreePrograms(c.maxDegreePrograms === null || c.maxDegreePrograms === undefined ? "" : String(c.maxDegreePrograms));
     setError("");
@@ -73,7 +73,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
                     {error && <div className="err">{error}</div>}
                     <div className="field">
                       <label>Name</label>
-                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Institute Head's name" />
+                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Institute Head name" />
                     </div>
                     <div className="field">
                       <label>Institute Name (for {c.name}'s institution)</label>
