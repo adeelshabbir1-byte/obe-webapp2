@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DUAL_ROLE_LABEL } from "../lib/dualRoles";
 
 export default function ChooseRoleButtons({ primaryRole = "SUBJECT_EXPERT" }: { primaryRole?: string }) {
-  const primaryLabel = primaryRole === "HEAD_OF_DEPARTMENT" ? "Chairman" : "Subject Expert";
+  const primaryLabel = DUAL_ROLE_LABEL[primaryRole] || "Subject Expert";
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 

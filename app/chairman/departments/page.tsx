@@ -17,7 +17,7 @@ export default async function ChairmanDepartmentsPage() {
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.id }, select: { id: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
-  const [rooms, departments, deptPrograms, batches, directStaff, faculty] = await Promise.all([
+  const [rooms, departments, deptPrograms, batches, directStaff, faculty, facultyGroups] = await Promise.all([
     prisma.room.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.departmentProgram.findMany({ where: { chairmanId: user.id } }),
@@ -30,6 +30,7 @@ export default async function ChairmanDepartmentsPage() {
       where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
       select: { id: true, name: true, role: true, departmentId: true, managedById: true }, orderBy: { name: "asc" },
     }),
+    prisma.faculty.findMany({ where: { chairmanId: user.id }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   const allPrograms = Array.from(new Set<string>([...batches.map((b) => b.degreeProgram), ...deptPrograms.map((d) => d.degreeProgram)])).sort();
@@ -41,7 +42,7 @@ export default async function ChairmanDepartmentsPage() {
         Split your institute into departments. Each department has its own programs, heads, coordinators, course assigners and faculty.
         A program belongs to one department. Faculty can still be shared between departments later.
       </p>
-      <DepartmentsManager
+      <DepartmentsManager faculties={facultyGroups}
         departments={departments.map((d) => ({ id: d.id, name: d.name, timetableMode: d.timetableMode }))}
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}

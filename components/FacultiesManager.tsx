@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import GiveRole, { TakeRoleBack } from "./GiveRole";
 
-type Fac = { id: string; name: string; deans: string[] };
+type Fac = { id: string; name: string; deans: { id: string; name: string; fromTeacher: boolean }[] };
 type Dept = { id: string; name: string; facultyId: string | null };
 
-export default function FacultiesManager({ faculties, departments }: { faculties: Fac[]; departments: Dept[] }) {
+export default function FacultiesManager({ faculties, departments, teachers = [] }: { faculties: Fac[]; departments: Dept[]; teachers?: { id: string; name: string; departmentName?: string | null }[] }) {
   const router = useRouter();
   const [msg, setMsg] = useState("");
   const [name, setName] = useState("");
@@ -47,7 +48,7 @@ export default function FacultiesManager({ faculties, departments }: { faculties
             {faculties.map((f) => (
               <tr key={f.id}>
                 <td><b>{f.name}</b></td>
-                <td>{f.deans.length ? f.deans.join(", ") : <span style={{ color: "var(--slate)" }}>no Dean yet</span>}</td>
+                <td>{f.deans.length ? f.deans.map((d) => <div key={d.id}>{d.name}{d.fromTeacher && <TakeRoleBack userId={d.id} />}</div>) : <span style={{ color: "var(--slate)" }}>no Dean yet</span>}</td>
                 <td>{departments.filter((d) => d.facultyId === f.id).map((d) => d.name).join(", ") || <span style={{ color: "var(--slate)" }}>none</span>}</td>
                 <td><button className="btn" onClick={() => window.confirm(`Delete ${f.name}? Its departments stay, just outside any faculty.`) && call(`/api/chairman/faculties?id=${f.id}`, "DELETE")}>Delete</button></td>
               </tr>
@@ -75,7 +76,13 @@ export default function FacultiesManager({ faculties, departments }: { faculties
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Add a Dean</h3>
+        <h3 style={{ marginTop: 0 }}>Make one of your teachers a Dean</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>The teacher keeps their login and chooses Dean or Instructor each time they sign in. (Subject Experts can't be chosen.)</p>
+        {faculties.length === 0 ? <p style={{ color: "var(--slate)" }}>Add a faculty first.</p> : <GiveRole roles={["DEAN"]} teachers={teachers} faculties={faculties.map((f) => ({ id: f.id, name: f.name }))} />}
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Add a Dean who is not one of your teachers</h3>
         {faculties.length === 0 ? <p style={{ color: "var(--slate)" }}>Add a faculty first.</p> : (
           <form onSubmit={addDean} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
             <select value={deanFaculty} onChange={(e) => setDeanFaculty(e.target.value)}>{faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>

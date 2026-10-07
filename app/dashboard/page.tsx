@@ -6,6 +6,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
 import Link from "next/link";
+import { isDualCapable } from "../../lib/dualRoles";
 import AssignmentResponses from "../../components/AssignmentResponses";
 
 const ROLE_HOME: Record<string, string> = {
@@ -29,7 +30,7 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if ((user.rawRole === "SUBJECT_EXPERT" || user.rawRole === "HEAD_OF_DEPARTMENT") && user.secondaryRole === "INSTRUCTOR" && !user.roleChosen) {
+  if (isDualCapable(user.rawRole, user.secondaryRole) && !user.roleChosen) {
     redirect("/choose-role");
   }
 
