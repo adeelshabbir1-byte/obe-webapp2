@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { curriculaVisibleTo } from "../../../../lib/curriculumAccess";
 
 // Lists every Master Curriculum with a course/PLO count, for the picker
 // on the editing page — the shared official copies (chairmanId null),
@@ -11,7 +12,7 @@ export async function GET() {
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curricula = await prisma.masterCurriculum.findMany({
-    where: { OR: [{ chairmanId: null }, { chairmanId: user.managedById || "" }] },
+    where: user.managedById ? curriculaVisibleTo(user.managedById) : { id: "none" },
     select: { id: true, title: true, authority: true, version: true, status: true, chairmanId: true, _count: { select: { courses: true, plos: true } } },
     orderBy: { title: "asc" },
   });

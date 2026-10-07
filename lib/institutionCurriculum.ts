@@ -22,8 +22,10 @@ export async function findOwningChairmanId(userId: string): Promise<string | nul
 export async function findOwnInstitutionCurriculum(userId: string) {
   const chairmanId = await findOwningChairmanId(userId);
   if (chairmanId) {
-    const own = await prisma.masterCurriculum.findFirst({ where: { chairmanId, status: "PUBLISHED" } });
+    const own = await prisma.masterCurriculum.findFirst({ where: { chairmanId, status: "PUBLISHED" }, orderBy: [{ createdAt: "asc" }] });
     if (own) return own;
+    // No copy of their own yet: an official curriculum the Super User assigned to them, if any.
+    return prisma.masterCurriculum.findFirst({ where: { chairmanId: null, status: "PUBLISHED", assignments: { some: { chairmanId } } }, orderBy: [{ createdAt: "asc" }] });
   }
-  return prisma.masterCurriculum.findFirst({ where: { chairmanId: null, status: "PUBLISHED" } });
+  return null;
 }

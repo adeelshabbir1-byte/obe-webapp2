@@ -101,6 +101,7 @@ model User {
   isPlatformExpert   Boolean  @default(false) // a Subject Expert created by the platform admin, attached to no institute, who designs Master Curriculum courses for everyone
   publicCourses      PublicCourse[] @relation("PublicCourseAuthor")
   designedMasterCourses MasterCourse[] @relation("MasterCourseDesigner")
+  curriculumAssignments CurriculumAssignment[] @relation("CurriculumAssignmentChairman")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -1626,9 +1627,26 @@ model MasterCurriculum {
   courses            MasterCourse[]
   plos               MasterPLO[]
   pendingCourses     PendingMasterCourse[]
+  assignments        CurriculumAssignment[] // which institutes (chairmen) the Super User has made this official curriculum available to
 
   @@index([chairmanId])
   @@index([parentCurriculumId])
+}
+
+// The Super User decides which institutes (Chairmen) can see and use each official
+// (shared, chairmanId = null) master curriculum. Assigning one also gives the
+// institute its own editable copy; removing the assignment just stops the
+// official one from being offered — the institute's own copy stays theirs.
+model CurriculumAssignment {
+  id           String   @id @default(cuid())
+  curriculumId String
+  curriculum   MasterCurriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  chairmanId   String
+  chairman     User     @relation("CurriculumAssignmentChairman", fields: [chairmanId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([curriculumId, chairmanId])
+  @@index([chairmanId])
 }
 
 model MasterCourse {
