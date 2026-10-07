@@ -1,4 +1,5 @@
 import { homeExpertsFor } from "../../../lib/homeExperts";
+import { subjectExpertWhere } from "../../../lib/dualRoles";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -101,7 +102,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   courseGroups.sort((a, b) => (a.semesterNumber ?? 99) - (b.semesterNumber ?? 99) || a.code.localeCompare(b.code));
 
   const subjectExperts = await prisma.user.findMany({
-    where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    where: subjectExpertWhere(user.id, user.managedById || ""),
     include: { customCategory: { select: { name: true } } },
     orderBy: { name: "asc" },
   });

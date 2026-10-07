@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { subjectExpertWhere } from "../../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -60,7 +61,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   });
 
   const subjectExperts = await prisma.user.findMany({
-    where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    where: subjectExpertWhere(user.id, user.managedById || ""),
     orderBy: { name: "asc" },
   });
 

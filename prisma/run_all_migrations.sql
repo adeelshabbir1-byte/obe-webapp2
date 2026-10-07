@@ -4512,3 +4512,6 @@ CREATE TABLE IF NOT EXISTS "PaperApproval" (
   "decidedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "PaperApproval_submissionId_userId_key" ON "PaperApproval"("submissionId","userId");
+
+-- A third role ("hat") for people who lead, teach and are Subject Experts
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tertiaryRole" TEXT;

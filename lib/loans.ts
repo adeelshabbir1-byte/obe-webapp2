@@ -16,7 +16,15 @@ export const REQUEST_ROLES: Record<LoanKind, string[]> = {
 // for a teaching request any faculty member does, including a Chairman who also teaches.
 export function lendableWhere(chairmanId: string, kind: LoanKind, departmentId?: string) {
   const dept = departmentId ? { departmentId } : { departmentId: { not: null } };
-  if (kind === "SUBJECT_EXPERT") return { ...dept, isVisitingPlaceholder: false, role: "SUBJECT_EXPERT" as const, managedBy: { managedById: chairmanId } };
+  if (kind === "SUBJECT_EXPERT") {
+    return {
+      ...dept, isVisitingPlaceholder: false,
+      OR: [
+        { role: "SUBJECT_EXPERT" as const, managedBy: { managedById: chairmanId } },
+        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR"] as ("HEAD_OF_DEPARTMENT" | "DEAN" | "PROGRAM_COORDINATOR")[] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }] },
+      ],
+    };
+  }
   return {
     ...dept, isVisitingPlaceholder: false,
     OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] as ("INSTRUCTOR" | "SUBJECT_EXPERT")[] }, managedBy: { managedById: chairmanId } }, headFacultyWhere(chairmanId)],

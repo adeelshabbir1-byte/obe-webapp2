@@ -54,6 +54,7 @@ model User {
   maxCreditsPerSemester Int?
   customCategoryId   String?  // faculty's own institution-defined category (see CustomCategory) — separate from specialization, e.g. "Maths", "Management"
   customCategory     CustomCategory? @relation("FacultyCustomCategory", fields: [customCategoryId], references: [id])
+  tertiaryRole       String?  // a third hat for someone who is, say, a Subject Expert AND teaches AND leads (Dean / Chairman / Program Lead)
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited
   isAlumniCustodian  Boolean  @default(false) // set by Chairman on ONE faculty member — that person reviews/approves all alumni & employer data submitted by any faculty

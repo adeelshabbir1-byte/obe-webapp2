@@ -150,7 +150,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                       </select>
                     </label>
                   )}
-                  {p.alsoFaculty && (p.role === "HEAD_OF_DEPARTMENT" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} />}
+                  {(p.role === "HEAD_OF_DEPARTMENT" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} label={p.role === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : "Remove as Program Lead"} />}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -185,11 +185,11 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         <h3 style={{ marginTop: 0 }}>Give a role to one of your teachers</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
           Deans, Chairmen and Program Leads are usually teachers. Pick the teacher and the role. They keep their teacher login and choose which role to work as each time they sign in.
-          (A Subject Expert can't be chosen, because the new role would replace their Subject Expert screens.)
+          Subject Experts can be chosen too and keep their Subject Expert and teaching roles.
         </p>
         <GiveRole
           roles={["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_LEAD"]}
-          teachers={people.filter((p) => p.role === "INSTRUCTOR").map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
+          teachers={people.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT").map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
           faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
           programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}
         />

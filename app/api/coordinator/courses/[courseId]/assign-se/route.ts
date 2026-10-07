@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasSubjectExpertHat } from "../../../../../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
@@ -28,13 +29,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   let borrowedSe = false;
   if (subjectExpertId) {
     const se = await prisma.user.findUnique({ where: { id: subjectExpertId } });
-    let ok = !!se && se.role === "SUBJECT_EXPERT" && se.managedById === user.id;
-    if (!ok && se && se.role === "SUBJECT_EXPERT" && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId && se.managedById) {
+    let ok = !!se && hasSubjectExpertHat(se) && (se.managedById === user.id || (se.role !== "SUBJECT_EXPERT" && se.managedById === user.managedById));
+    if (!ok && se && hasSubjectExpertHat(se) && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId && se.managedById) {
       // An expert from the course's subject-home department (another coordinator's, same institute).
       const theirCoordinator = await prisma.user.findUnique({ where: { id: se.managedById }, select: { managedById: true } });
       ok = !!theirCoordinator && theirCoordinator.managedById === user.managedById;
     }
-    if (!ok && se && se.role === "SUBJECT_EXPERT") {
+    if (!ok && se && hasSubjectExpertHat(se)) {
       const allowed = await prisma.teacherLoanAllowed.findFirst({ where: { instructorId: se.id, loan: { courseId: course.id, status: "APPROVED", kind: "SUBJECT_EXPERT" } } });
       if (allowed) { ok = true; borrowedSe = true; }
     }

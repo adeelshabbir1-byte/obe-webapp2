@@ -55,7 +55,7 @@ export function TakeRoleBack({ userId, label = "Take role back" }: { userId: str
   const router = useRouter();
   const [err, setErr] = useState("");
   async function go() {
-    if (!window.confirm("Take this role back? The person stays on as a teacher.")) return;
+    if (!window.confirm("Remove this role? A teacher or Subject Expert goes back to their earlier role. An account made only for this role is deleted.")) return;
     const res = await fetch("/api/chairman/give-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action: "REVOKE" }) });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { setErr(d.error || "Could not take it back"); return; }
