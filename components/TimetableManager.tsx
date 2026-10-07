@@ -27,6 +27,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<typeof TABS[number]>("Rooms");
+  const [openCell, setOpenCell] = useState<string | null>(null); // "program|term" whose hour breakdown is shown
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -140,7 +141,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     theory: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     lab: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     offeredCoursesCount: number; offeredGroupsCount: number;
-    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number; theoryRoomsNeeded: number; labRoomsNeeded: number }[] };
+    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number; theoryRoomsNeeded: number; labRoomsNeeded: number; details?: { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean }[] }[] };
   };
   const [capacity, setCapacity] = useState<CapacitySummary | null>(null);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
@@ -467,7 +468,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                 <h4 style={{ fontSize: 12.5, margin: "16px 0 6px" }}>Contact Hours by Program &amp; Term</h4>
                 <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 8 }}>
                   Per cell: hours needed per week, and an estimated minimum room count (hours ÷ hours one room offers per week, rounded up —
-                  assumes perfect back-to-back packing, so treat it as a floor, not a guarantee).
+                  assumes perfect back-to-back packing, so treat it as a floor, not a guarantee). Click any cell to see exactly which courses and sections make up its hours.
                 </p>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ fontSize: 11.5 }}>
@@ -484,7 +485,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                           {capacity.programTermMatrix.terms.map((t) => {
                             const cell = capacity.programTermMatrix.cells.find((c) => c.program === p && c.term === t);
                             return (
-                              <td key={t} style={{ textAlign: "center" }}>
+                              <td key={t} style={{ textAlign: "center", cursor: cell ? "pointer" : "default", background: openCell === `${p}|${t}` ? "#FFF3D6" : undefined }} onClick={() => cell && setOpenCell(openCell === `${p}|${t}` ? null : `${p}|${t}`)}>
                                 {cell ? (
                                   <>
                                     <div>{cell.theoryHours}<span style={{ color: "var(--slate)" }}> th-hrs</span> / {cell.labHours}<span style={{ color: "var(--slate)" }}> lab-hrs</span></div>
@@ -503,6 +504,25 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                       )}
                     </tbody>
                   </table>
+                  {openCell && (() => {
+                    const [op, ot] = openCell.split("|");
+                    const cell = capacity.programTermMatrix.cells.find((c) => c.program === op && c.term === ot);
+                    if (!cell) return null;
+                    return (
+                      <div style={{ marginTop: 10, padding: 10, border: "1px solid var(--line)", background: "#FFFBF0", fontSize: 12 }}>
+                        <strong>{op} — {ot}: what makes up these hours</strong> ({(cell.details || []).length} section{(cell.details || []).length === 1 ? "" : "s"})
+                        <table style={{ fontSize: 11.5, marginTop: 6 }}>
+                          <thead><tr><th>Sem.</th><th>Course</th><th>Section</th><th>Type</th><th>Hours / week</th><th></th></tr></thead>
+                          <tbody>
+                            {(cell.details || []).map((d, i) => (
+                              <tr key={i}><td>{d.semester ?? "—"}</td><td>{d.code} — {d.title}</td><td>{d.section}</td><td>{d.type === "LAB" ? "Lab" : "Theory"}</td><td>{d.hours}</td><td>{d.combined ? "combined class" : ""}</td></tr>
+                            ))}
+                            {(cell.details || []).length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No sections.</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
