@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../../../../lib/assignerScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
@@ -25,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   let validManagerIds: string[];
 
   if (user.role === "COURSE_ASSIGNER") {
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
     const coordinatorIds = coordinators.map((c) => c.id);
     course = await prisma.course.findUnique({ where: { id: params.courseId } });
     if (!course || !coordinatorIds.includes(course.coordinatorId)) return NextResponse.json({ error: "not found" }, { status: 404 });

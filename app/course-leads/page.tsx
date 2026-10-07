@@ -1,3 +1,4 @@
+import { assignerDept } from "../../lib/assignerScope";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -16,7 +17,7 @@ export default async function CourseLeadsPage() {
 
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
   const teams = await loadTeams(chairmanId);
-  const scope = user.role === "COURSE_ASSIGNER" ? { coordinator: { managedById: chairmanId } } : courseScopeFor(user);
+  const scope = user.role === "COURSE_ASSIGNER" ? { coordinator: { managedById: chairmanId, ...assignerDept(user) } } : courseScopeFor(user);
   const visible = new Set<string>((await prisma.course.findMany({ where: { id: { in: teams.flatMap((t) => t.rows.map((r) => r.courseId)) }, ...scope }, select: { id: true } })).map((c) => c.id));
   const mine = teams.filter((t) => t.rows.some((r) => visible.has(r.courseId)));
 

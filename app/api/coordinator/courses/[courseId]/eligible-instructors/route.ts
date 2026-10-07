@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../../../../lib/assignerScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
   let validManagerIds: string[];
 
   if (user.role === "COURSE_ASSIGNER") {
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
     const coordinatorIds = coordinators.map((c) => c.id);
     const course = await prisma.course.findUnique({ where: { id: params.courseId } });
     if (!course || !coordinatorIds.includes(course.coordinatorId)) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
 
   const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
   const instructors = await prisma.user.findMany({
-    where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: { in: validManagerIds } }, headFacultyWhere(chairmanId)] },
+    where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: { in: validManagerIds } }, user.role === "COURSE_ASSIGNER" ? { AND: [headFacultyWhere(chairmanId), assignerDept(user)] } : headFacultyWhere(chairmanId)] },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },
   });

@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../../../lib/assignerScope";
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
@@ -14,7 +15,7 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "COURSE_ASSIGNER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const [courses, groups, instructors] = await Promise.all([
@@ -23,8 +24,8 @@ export async function GET() {
       include: { batch: true, sectionAssignments: true },
     }),
     prisma.courseEquivalenceGroup.findMany({
-      where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true } } } },
-      include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true } } } }, sectionAssignments: true },
+      where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } } } },
+      include: { members: { where: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } }, include: { course: { include: { batch: true } } } }, sectionAssignments: true },
     }),
     prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } }),
   ]);
