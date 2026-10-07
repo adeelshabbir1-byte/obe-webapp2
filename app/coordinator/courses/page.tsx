@@ -3,7 +3,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CoursesManager from "../../../components/CoursesManager";
-import { findOwnInstitutionCurriculum } from "../../../lib/institutionCurriculum";
+import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
+import { curriculaVisibleTo, degreeSortKey } from "../../../lib/curriculumAccess";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Faculty Onboarding" },
@@ -67,8 +68,16 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 
-  const ownCurriculum = await findOwnInstitutionCurriculum(user.id);
-  const curricula = ownCurriculum ? [ownCurriculum] : [];
+  // Every curriculum this institute may import from: its own copies, plus any assigned official one it has no copy of yet.
+  // Sorted by degree (all BSCS together, then BBA, ...), with the authority + version shown to tell them apart.
+  const owningChairmanId = await findOwningChairmanId(user.id);
+  const visible = owningChairmanId
+    ? await prisma.masterCurriculum.findMany({ where: { status: "PUBLISHED", ...curriculaVisibleTo(owningChairmanId) } })
+    : [];
+  const copiedFrom = new Set(visible.filter((c) => c.chairmanId && c.parentCurriculumId).map((c) => c.parentCurriculumId));
+  const curricula = visible
+    .filter((c) => c.chairmanId || !copiedFrom.has(c.id))
+    .sort((a, b) => degreeSortKey(a).localeCompare(degreeSortKey(b)) || a.authority.localeCompare(b.authority) || b.version.localeCompare(a.version));
 
   return (
     <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>

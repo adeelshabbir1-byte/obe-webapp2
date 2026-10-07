@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
+import { officialCurriculumIsAssigned } from "../../../../../lib/curriculumAccess";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 
 export async function POST(req: NextRequest) {
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest) {
   // own Coordinator's institution, not the acting user's, so this check
   // means the same thing whether a Coordinator or OMC triggers it.
   const owningChairmanId = await findOwningChairmanId(ownerId);
-  const curriculumBelongsHere = curriculum.chairmanId === null || curriculum.chairmanId === owningChairmanId;
+  // An official (shared) curriculum may only be imported once the Super User has assigned it to this institute.
+  const curriculumBelongsHere = curriculum.chairmanId === null ? await officialCurriculumIsAssigned(curriculum.id, owningChairmanId) : curriculum.chairmanId === owningChairmanId;
   if (!curriculumBelongsHere) {
     return NextResponse.json({ error: "that curriculum doesn't belong to your institution" }, { status: 403 });
   }

@@ -5,7 +5,8 @@ import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-type Curriculum = { id: string; authority: string; title: string; version: string; courseCount: number; ploCount: number };
+type Curriculum = { id: string; authority: string; title: string; version: string; courseCount: number; ploCount: number; degreeGroup?: string; assignedCount?: number };
+type Institute = { id: string; label: string; assigned: boolean };
 
 export default function CurriculaManager({ initialCurricula }: { initialCurricula: Curriculum[] }) {
   const router = useRouter();
@@ -14,6 +15,36 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
   const [loading, setLoading] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState("");
+
+  // Assigning a curriculum to institutes
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
+  const [assignMsg, setAssignMsg] = useState("");
+
+  async function openAssign(id: string) {
+    if (assigningId === id) { setAssigningId(null); return; }
+    setAssigningId(id); setAssignMsg(""); setInstitutes([]); setError("");
+    try {
+      const res = await fetch(`/api/admin/curricula/${id}/access`);
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); return; }
+      setInstitutes(data.institutes);
+    } catch (err: any) { setError("Unexpected error: " + err.message); }
+  }
+  async function saveAssign(id: string) {
+    setLoading(true); setError(""); setAssignMsg("");
+    try {
+      const res = await fetch(`/api/admin/curricula/${id}/access`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chairmanIds: institutes.filter((i) => i.assigned).map((i) => i.id) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      setCurricula((prev) => prev.map((c) => (c.id === id ? { ...c, assignedCount: data.assigned } : c)));
+      setAssignMsg(`Saved - assigned to ${data.assigned} institute(s)` + (data.added ? `, ${data.added} newly added (each also gets its own editable copy)` : "") + (data.removed ? `, ${data.removed} removed` : "") + ".");
+      setLoading(false);
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
+  }
 
   async function doClone(e: React.FormEvent<HTMLFormElement>, sourceId: string) {
     e.preventDefault();
@@ -80,14 +111,21 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       {error && <div className="err">{error}</div>}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>PLOs</th><th></th></tr></thead>
+          <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>PLOs</th><th>Institutes</th><th></th></tr></thead>
           <tbody>
-            {curricula.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
-            {curricula.map((c) => (
+            {curricula.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
+            {curricula.map((c, idx) => (
               <Fragment key={c.id}>
+                {c.degreeGroup && (idx === 0 || curricula[idx - 1].degreeGroup !== c.degreeGroup) && (
+                  <tr><td colSpan={7} style={{ background: "#F4EFE3", fontWeight: 700, fontSize: 12, letterSpacing: 0.4 }}>{c.degreeGroup}</td></tr>
+                )}
                 <tr>
                   <td>{c.authority}</td><td>{c.title}</td><td>{c.version}</td><td>{c.courseCount}</td><td>{c.ploCount}</td>
+                  <td>{c.assignedCount ?? 0}</td>
                   <td style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => openAssign(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, fontWeight: 600 }}>
+                      {assigningId === c.id ? "Close" : "Assign to Institutes"}
+                    </button>
                     <Link href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</Link>
                     <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
                       {cloningId === c.id ? "Cancel" : "Clone as New Version"}
@@ -97,9 +135,34 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                     </button>
                   </td>
                 </tr>
+                {assigningId === c.id && (
+                  <tr>
+                    <td colSpan={7} style={{ background: "#FFFBF0" }}>
+                      <div style={{ padding: "8px 0" }}>
+                        <p style={{ fontSize: 12, marginBottom: 6 }}>Tick the institutes that should see and use <b>{c.title}</b> ({c.authority}, {c.version}). Newly ticked institutes also get their own editable copy. Un-ticking only stops offering it - an institute's own copy stays theirs.</p>
+                        {institutes.length === 0 && <p style={{ fontSize: 12, color: "var(--slate)" }}>Loading institutes…</p>}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 18px", marginBottom: 8 }}>
+                          {institutes.map((i) => (
+                            <label key={i.id} style={{ fontSize: 12.5 }}>
+                              <input type="checkbox" checked={i.assigned} onChange={() => setInstitutes((prev) => prev.map((x) => (x.id === i.id ? { ...x, assigned: !x.assigned } : x)))} /> {i.label}
+                            </label>
+                          ))}
+                        </div>
+                        {institutes.length > 0 && (
+                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <button onClick={() => setInstitutes((prev) => prev.map((x) => ({ ...x, assigned: true })))} className="btn" style={{ fontSize: 11.5, padding: "3px 10px" }}>Select all</button>
+                            <button onClick={() => setInstitutes((prev) => prev.map((x) => ({ ...x, assigned: false })))} className="btn" style={{ fontSize: 11.5, padding: "3px 10px" }}>Clear</button>
+                            <button onClick={() => saveAssign(c.id)} disabled={loading} className="btn btn-brass" style={{ fontSize: 12, padding: "4px 14px" }}>{loading ? "Saving…" : "Save"}</button>
+                            {assignMsg && <span style={{ fontSize: 12, color: "var(--sage)" }}>{assignMsg}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {cloningId === c.id && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <form onSubmit={(e) => doClone(e, c.id)} style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0" }}>
                         <span style={{ fontSize: 12 }}>New version label:</span>
                         <input name="newVersion" placeholder="2027" style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 120 }} required />

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { officialCurriculumIsAssigned } from "../../../../../lib/curriculumAccess";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
   });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // Own copies, or an official curriculum the Super User assigned to this institute - nothing else.
+  const visible = curriculum.chairmanId === null ? await officialCurriculumIsAssigned(curriculum.id, user.managedById) : curriculum.chairmanId === user.managedById;
+  if (!visible) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // HecPloSuggestion is keyed by bare course code, not a foreign key to
   // MasterCourse — joined in manually here rather than via a relation.

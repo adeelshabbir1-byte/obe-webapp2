@@ -34,6 +34,18 @@ export default function CourseShortNamesManager() {
     } catch (err: any) { setError("Unexpected error: " + err.message); setSavingCode(null); }
   }
 
+  // Courses sharing a short name sit together (alphabetical by short name); courses with no short name come last.
+  const key = (c: Course) => (c.shortName || "").trim().toLowerCase();
+  const sorted = [...courses].sort((a, b) => {
+    const ka = key(a), kb = key(b);
+    if (!ka !== !kb) return ka ? -1 : 1;
+    return ka.localeCompare(kb) || a.code.localeCompare(b.code);
+  });
+  const groupSize = new Map<string, number>();
+  for (const c of courses) if (key(c)) groupSize.set(key(c), (groupSize.get(key(c)) || 0) + 1);
+  const shared = sorted.filter((c) => key(c) && (groupSize.get(key(c)) || 0) > 1);
+  const sharedKeys = Array.from(new Set(shared.map(key)));
+
   if (!loaded) return <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Loading…</p></div>;
 
   return (
@@ -42,16 +54,23 @@ export default function CourseShortNamesManager() {
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         Set a short display name (up to 8 characters) for any course — used only in the Section Assignment
         Matrix to keep it compact. This is purely cosmetic: it never changes the course's real code or title
-        anywhere else. Leave blank to fall back to an automatic abbreviation.
+        anywhere else. Leave blank to fall back to an automatic abbreviation. Courses with a short name are listed first, grouped so the ones sharing the same short name sit together and are shaded alike; courses without one are at the bottom.
       </p>
       {error && <div className="err">{error}</div>}
       <SortableTable>
         <thead><tr><th>Code</th><th>Title</th><th>Short Name</th></tr></thead>
         <tbody>
           {courses.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No offered courses yet.</td></tr>}
-          {courses.map((c) => (
-            <tr key={c.code}>
-              <td><b>{c.code}</b></td><td>{c.title}</td>
+          {sorted.map((c, i) => {
+            const k = key(c), n = k ? groupSize.get(k) || 0 : 0;
+            const isShared = n > 1;
+            const startsGroup = k && (i === 0 || key(sorted[i - 1]) !== k);
+            return (
+            <tr key={c.code} style={{
+              background: isShared ? (sharedKeys.indexOf(k) % 2 === 0 ? "#FFF3D6" : "#E8F1FB") : undefined,
+              borderTop: startsGroup && i > 0 ? "2px solid var(--line)" : undefined,
+            }}>
+              <td><b>{c.code}</b></td><td>{c.title}{isShared && <span style={{ marginLeft: 8, fontSize: 10.5, color: "var(--slate)" }}>· same short name as {n - 1} other course{n - 1 === 1 ? "" : "s"}</span>}</td>
               <td>
                 <input
                   defaultValue={c.shortName || ""} maxLength={8} placeholder="e.g. DiscMth"
@@ -61,7 +80,8 @@ export default function CourseShortNamesManager() {
                 />
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </SortableTable>
     </div>

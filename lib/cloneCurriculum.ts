@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "./db";
 
 // Clones every grand (official, chairmanId = null) curriculum for a
@@ -10,14 +11,25 @@ import { prisma } from "./db";
 // Safe to call more than once for the same chairman: skips any grand
 // curriculum they already have a clone of.
 export async function cloneGrandCurriculaForChairman(chairmanId: string) {
-  const grandCurricula = await prisma.masterCurriculum.findMany({ where: { parentCurriculumId: null } });
+  // Only the official curricula the Super User has assigned to this institute - a new institute starts with none.
+  const grandCurricula = await prisma.masterCurriculum.findMany({
+    where: { parentCurriculumId: null, chairmanId: null, assignments: { some: { chairmanId } } },
+  });
   const created: string[] = [];
-
   for (const grand of grandCurricula) {
+    const id = await cloneGrandCurriculumForChairman(grand, chairmanId);
+    if (id) created.push(id);
+  }
+  return created;
+}
+
+// Gives one institute its own editable copy of one official curriculum (skips if it already has one).
+export async function cloneGrandCurriculumForChairman(grand: { id: string; authority: string; title: string; version: string; sourceReference: string | null}, chairmanId: string): Promise<string | null> {
+  {
     const alreadyHasClone = await prisma.masterCurriculum.findFirst({
       where: { chairmanId, parentCurriculumId: grand.id },
     });
-    if (alreadyHasClone) continue;
+    if (alreadyHasClone) return null;
 
     const clone = await prisma.masterCurriculum.create({
       data: {
@@ -26,45 +38,56 @@ export async function cloneGrandCurriculaForChairman(chairmanId: string) {
       },
     });
 
+    // Bulk copy (a few queries total, not several per course) so a large curriculum clones well inside a request.
     const plos = await prisma.masterPLO.findMany({ where: { masterCurriculumId: grand.id } });
-    const ploIdMap = new Map<string, string>();
-    for (const plo of plos) {
-      const newPlo = await prisma.masterPLO.create({
-        data: { masterCurriculumId: clone.id, number: plo.number, title: plo.title, description: plo.description },
+    const ploIdMap = new Map<string, string>(plos.map((p) => [p.id, randomUUID()]));
+    if (plos.length > 0) {
+      await prisma.masterPLO.createMany({
+        data: plos.map((p) => ({ id: ploIdMap.get(p.id)!, masterCurriculumId: clone.id, number: p.number, title: p.title, description: p.description })),
       });
-      ploIdMap.set(plo.id, newPlo.id);
     }
 
     const courses = await prisma.masterCourse.findMany({ where: { masterCurriculumId: grand.id } });
-    for (const course of courses) {
-      const newCourse = await prisma.masterCourse.create({
-        data: {
-          masterCurriculumId: clone.id, code: course.code, title: course.title, creditHours: course.creditHours,
-          category: course.category, domain: course.domain, semesterNumber: course.semesterNumber,
-          catalogDescription: course.catalogDescription, textbook: course.textbook, referenceMaterial: course.referenceMaterial,
-        },
+    const courseIdMap = new Map<string, string>(courses.map((c) => [c.id, randomUUID()]));
+    if (courses.length > 0) {
+      await prisma.masterCourse.createMany({
+        data: courses.map((c) => ({
+          id: courseIdMap.get(c.id)!, masterCurriculumId: clone.id, code: c.code, title: c.title, creditHours: c.creditHours,
+          category: c.category, domain: c.domain, semesterNumber: c.semesterNumber,
+          catalogDescription: c.catalogDescription, textbook: c.textbook, referenceMaterial: c.referenceMaterial,
+          // prerequisite links are filled in below, once every course of the copy exists
+        })),
       });
-
-      const clos = await prisma.masterCourseClo.findMany({ where: { masterCourseId: course.id }, orderBy: { orderIndex: "asc" } });
-      for (const clo of clos) {
-        await prisma.masterCourseClo.create({
-          data: {
-            masterCourseId: newCourse.id, statement: clo.statement, bloomLevel: clo.bloomLevel, orderIndex: clo.orderIndex,
-            mappedPloId: clo.mappedPloId ? ploIdMap.get(clo.mappedPloId) || null : null, ploMappingSource: clo.ploMappingSource,
-          },
-        });
-      }
-
-      const topics = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: course.id }, orderBy: { lectureNumber: "asc" } });
-      for (const topic of topics) {
-        await prisma.masterCourseTopic.create({
-          data: { masterCourseId: newCourse.id, lectureNumber: topic.lectureNumber, topic: topic.topic, subtopic: topic.subtopic },
-        });
-      }
     }
 
-    created.push(clone.id);
-  }
+    const courseIds = courses.map((c) => c.id);
+    const [clos, topics] = courseIds.length > 0
+      ? await Promise.all([
+          prisma.masterCourseClo.findMany({ where: { masterCourseId: { in: courseIds } }, orderBy: { orderIndex: "asc" } }),
+          prisma.masterCourseTopic.findMany({ where: { masterCourseId: { in: courseIds } }, orderBy: { lectureNumber: "asc" } }),
+        ])
+      : [[], []];
+    if (clos.length > 0) {
+      await prisma.masterCourseClo.createMany({
+        data: clos.map((clo) => ({
+          masterCourseId: courseIdMap.get(clo.masterCourseId)!, statement: clo.statement, bloomLevel: clo.bloomLevel, orderIndex: clo.orderIndex,
+          mappedPloId: clo.mappedPloId ? ploIdMap.get(clo.mappedPloId) || null : null, ploMappingSource: clo.ploMappingSource,
+        })),
+      });
+    }
+    if (topics.length > 0) {
+      await prisma.masterCourseTopic.createMany({
+        data: topics.map((t) => ({ masterCourseId: courseIdMap.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic })),
+      });
+    }
 
-  return created;
+    // Carry the prerequisite links across too (re-pointed at the copy's own courses).
+    for (const course of courses) {
+      if (!course.prerequisiteCourseId) continue;
+      const newCourseId = courseIdMap.get(course.id), newPrereqId = courseIdMap.get(course.prerequisiteCourseId);
+      if (newCourseId && newPrereqId) await prisma.masterCourse.update({ where: { id: newCourseId }, data: { prerequisiteCourseId: newPrereqId } });
+    }
+
+    return clone.id;
+  }
 }
