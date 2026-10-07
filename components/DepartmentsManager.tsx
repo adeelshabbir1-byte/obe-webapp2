@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import LeadForm from "./LeadForm";
 import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
-type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean };
+type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null };
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
+  HEAD_OF_DEPARTMENT: "Head of Department", PROGRAM_LEAD: "Program Lead", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
@@ -19,6 +20,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const [newName, setNewName] = useState("");
   const [msg, setMsg] = useState("");
   const [headDept, setHeadDept] = useState(departments[0]?.id || "");
+  const [leadDept, setLeadDept] = useState(departments[0]?.id || "");
   const [roleFilter, setRoleFilter] = useState("ALL");
 
   async function call(url: string, method: string, body?: unknown) {
@@ -38,7 +40,14 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
 
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
-  const shown = people.filter((p) => roleFilter === "ALL" || p.role === roleFilter);
+  // Sorted by department (people with no department first, so nobody is missed), then role, then name.
+  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "PROGRAM_LEAD", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
+  const shown = people
+    .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
+    .sort((a, b) =>
+      (a.departmentId ? deptName(a.departmentId) : "").localeCompare(b.departmentId ? deptName(b.departmentId) : "") ||
+      ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.name.localeCompare(b.name));
+  const noDeptCount = people.filter((p) => !p.departmentId).length;
 
   return (
     <>
@@ -108,7 +117,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>People and their department</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13 }}>Choose the department for each coordinator, course assigner, head and faculty member.</p>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>Choose the department for each person. The list is grouped by department, with anyone still without one at the top.{noDeptCount > 0 ? ` ${noDeptCount} still need a department.` : " Everyone has a department."}</p>
         <label style={{ fontSize: 13 }}>Show: {" "}
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="ALL">Everyone</option>
@@ -118,9 +127,15 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         <table style={{ marginTop: 8 }}>
           <thead><tr><th>Name</th><th>Role</th><th>Department</th></tr></thead>
           <tbody>
-            {shown.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}</td>
+            {shown.map((p, idx) => (
+              <Fragment key={p.id}>
+                {(idx === 0 || shown[idx - 1].departmentId !== p.departmentId) && (
+                  <tr><td colSpan={3} style={{ background: p.departmentId ? "#F4EFEE" : "#FBEED2", fontWeight: 700, fontSize: 12.5 }}>
+                    {p.departmentId ? `${deptName(p.departmentId)} (${people.filter((x) => x.departmentId === p.departmentId).length})` : `No department yet (${noDeptCount}) — please choose one`}
+                  </td></tr>
+                )}
+              <tr>
+                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{p.role === "PROGRAM_LEAD" && p.leadProgram ? ` — ${p.leadProgram}` : ""}</td>
                 <td>
                   <select value={p.departmentId || ""} onChange={(e) => e.target.value && call("/api/chairman/department-members", "PUT", { userId: p.id, departmentId: e.target.value })}>
                     {!p.departmentId && <option value="">— none —</option>}
@@ -134,9 +149,21 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                   )}
                 </td>
               </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Add a Program Lead</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>A Program Lead works under the Head of Department and is responsible for one program of that department.</p>
+        <label style={{ fontSize: 13 }}>Department: {" "}
+          <select value={leadDept} onChange={(e) => setLeadDept(e.target.value)}>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
+        <LeadForm key={leadDept} departmentId={leadDept} programs={programsByDept[leadDept] || []} />
       </div>
 
       <div className="card">

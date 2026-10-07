@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     if (blocked) return NextResponse.json({ error: blocked.replace("edited directly", "assigned a Subject Expert directly") }, { status: 409 });
   }
 
+  let borrowedSe = false;
   if (subjectExpertId) {
     const se = await prisma.user.findUnique({ where: { id: subjectExpertId } });
     let ok = !!se && se.role === "SUBJECT_EXPERT" && se.managedById === user.id;
@@ -33,12 +34,16 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       const theirCoordinator = await prisma.user.findUnique({ where: { id: se.managedById }, select: { managedById: true } });
       ok = !!theirCoordinator && theirCoordinator.managedById === user.managedById;
     }
+    if (!ok && se && se.role === "SUBJECT_EXPERT") {
+      const allowed = await prisma.teacherLoanAllowed.findFirst({ where: { instructorId: se.id, loan: { courseId: course.id, status: "APPROVED", kind: "SUBJECT_EXPERT" } } });
+      if (allowed) { ok = true; borrowedSe = true; }
+    }
     if (!ok) {
       return NextResponse.json({ error: "invalid subject expert" }, { status: 400 });
     }
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId, ...(subjectExpertId !== course.subjectExpertId ? { seResponse: borrowedSe ? "PENDING" : "NONE", seResponseNote: null } : {}) } });
 
   // A course linked in a content-sync group only shows the BASE on the
   // Assign Subject Experts page (followers are hidden — "inherits

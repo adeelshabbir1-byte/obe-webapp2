@@ -21,6 +21,7 @@ enum UserRole {
   OMC
   COURSE_ASSIGNER
   HEAD_OF_DEPARTMENT
+  PROGRAM_LEAD
 }
 
 model User {
@@ -99,6 +100,7 @@ model User {
   ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
   departmentId       String?  // home department (see Department) - coordinators, course assigners, heads and faculty each belong to one
   department_        Department? @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  leadProgram        String?  // PROGRAM_LEAD only: the one degree program (e.g. "BS Computer Science") this person is responsible for
   isVisitingPlaceholder Boolean @default(false) // the built-in "Visiting Faculty (to be decided)" stand-in - not a real person, never logs in
   preferredDays      String?  // comma list e.g. "Mon,Wed" — instructor's preferred teaching days (soft preference for the timetable)
   organization       String?  // for a guest / industry Subject Expert: the company or institute they come from (shown beside their public courses)
@@ -108,6 +110,7 @@ model User {
   curriculumAssignments CurriculumAssignment[] @relation("CurriculumAssignmentChairman")
   departmentsOwned      Department[] @relation("DepartmentChairman")
   teacherLoans          TeacherLoanRequest[] @relation("LoanInstructor")
+  loanAllowances        TeacherLoanAllowed[] @relation("LoanAllowedInstructor")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -1181,6 +1184,10 @@ model Course {
   instructorId        String?
   instructor          User?    @relation("CourseInstructor", fields: [instructorId], references: [id])
   loans                   TeacherLoanRequest[] @relation("CourseLoans")
+  instructorResponse      String   @default("NONE") // NONE | PENDING | ACCEPTED | DECLINED - a borrowed teacher accepts or declines the course given to them
+  instructorResponseNote  String?
+  seResponse              String   @default("NONE") // same, for a borrowed Subject Expert
+  seResponseNote          String?
   instructorApproval      String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED - the department head signs off a teacher assignment
   instructorApprovalNote  String?
   instructorApprovedById  String?
@@ -1906,8 +1913,9 @@ model TeacherLoanRequest {
   chairmanId             String
   courseId               String
   course                 Course   @relation("CourseLoans", fields: [courseId], references: [id], onDelete: Cascade)
-  instructorId           String
-  instructor             User     @relation("LoanInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+  kind                   String   @default("INSTRUCTOR") // INSTRUCTOR (Course Assigner asks) | SUBJECT_EXPERT (OMC asks)
+  instructorId           String?  // the specific teacher asked for; null = "any suitable teacher, the lending head chooses"
+  instructor             User?    @relation("LoanInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
   requestingDepartmentId String
   requestingDepartment   Department @relation("LoanRequesting", fields: [requestingDepartmentId], references: [id], onDelete: Cascade)
   lendingDepartmentId    String
@@ -1919,8 +1927,21 @@ model TeacherLoanRequest {
   decidedById            String?
   createdAt              DateTime @default(now())
   decidedAt              DateTime?
+  allowed                TeacherLoanAllowed[]
 
   @@index([chairmanId, status])
   @@index([lendingDepartmentId, status])
   @@index([courseId])
+}
+
+// The teachers the lending head has allowed for one request; the requester then picks one of them.
+model TeacherLoanAllowed {
+  id           String @id @default(cuid())
+  loanId       String
+  loan         TeacherLoanRequest @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  instructorId String
+  instructor   User   @relation("LoanAllowedInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@unique([loanId, instructorId])
+  @@index([instructorId])
 }

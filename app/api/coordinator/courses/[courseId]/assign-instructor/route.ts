@@ -43,6 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     return NextResponse.json({ error: "this course must be offered before an instructor can be assigned to it" }, { status: 400 });
   }
 
+  let borrowedAllowed = false;
   if (instructorId) {
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
     const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
@@ -52,8 +53,9 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       // A teacher from a different department can only come through an approved "Borrow a Teacher" request.
       const courseDept = (await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { departmentId: true } }))?.departmentId;
       if (courseDept && instructor.departmentId && instructor.departmentId !== courseDept) {
-        const loan = await prisma.teacherLoanRequest.findFirst({ where: { courseId: course.id, instructorId: instructor.id, status: "APPROVED" } });
-        if (!loan) return NextResponse.json({ error: "this teacher belongs to another department - use Borrow a Teacher so their head can approve" }, { status: 400 });
+        const loan = await prisma.teacherLoanAllowed.findFirst({ where: { instructorId: instructor.id, loan: { courseId: course.id, status: "APPROVED", kind: "INSTRUCTOR" } } });
+        if (!loan) return NextResponse.json({ error: "this teacher belongs to another department - ask that department for them on the Faculty from other departments page" }, { status: 400 });
+        borrowedAllowed = true;
       }
     }
     if (!isValidInstructor) {
@@ -61,7 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { instructorId, ...(instructorId !== course.instructorId ? await approvalFieldsFor(course.id, instructorId) : {}) } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { instructorId, ...(instructorId !== course.instructorId ? { ...(await approvalFieldsFor(course.id, instructorId)), instructorResponse: borrowedAllowed ? "PENDING" : "NONE", instructorResponseNote: null } : {}) } });
 
   await writeAuditLog({
     actorUserId: user.id, action: "INSTRUCTOR_ASSIGNED", entityType: "Course", entityId: course.id,

@@ -6,12 +6,14 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import OverviewStatGrid, { Stat } from "../../components/OverviewStatGrid";
 import Link from "next/link";
+import AssignmentResponses from "../../components/AssignmentResponses";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
+  PROGRAM_LEAD: "/lead/program",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
@@ -33,6 +35,17 @@ export default async function Dashboard() {
 
   const stats = await statsForRole(user);
 
+  // Courses another department has given this person, waiting for their yes/no.
+  let offered: { courseId: string; as: "INSTRUCTOR" | "SUBJECT_EXPERT"; course: string; batch: string; from: string }[] = [];
+  if (user.role === "INSTRUCTOR" || user.role === "SUBJECT_EXPERT") {
+    const asSe = user.role === "SUBJECT_EXPERT";
+    const rows = await prisma.course.findMany({
+      where: asSe ? { subjectExpertId: user.id, seResponse: "PENDING" } : { instructorId: user.id, instructorResponse: "PENDING" },
+      select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { department_: { select: { name: true } } } } },
+    });
+    offered = rows.map((c) => ({ courseId: c.id, as: asSe ? "SUBJECT_EXPERT" : "INSTRUCTOR", course: `${c.code} — ${c.title}`, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", from: c.coordinator.department_?.name || "—" }));
+  }
+
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Overview</h1>
@@ -40,6 +53,7 @@ export default async function Dashboard() {
         A quick summary of what's done and what still needs your attention. Click any number to go straight
         to it.
       </p>
+      <AssignmentResponses items={offered} />
       <OverviewStatGrid stats={stats} />
       <div className="card">
         <Link href={ROLE_HOME[user.role] || "/login"} className="btn btn-brass" style={{ textDecoration: "none" }}>
@@ -50,9 +64,10 @@ export default async function Dashboard() {
   );
 }
 
-async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
+async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; leadProgram?: string | null }) {
   switch (user.role) {
     case "PROGRAM_COORDINATOR": return coordinatorStats(user.id);
+    case "PROGRAM_LEAD": return leadStats(user);
     case "HEAD_OF_DEPARTMENT": return hodStats(user);
     case "OMC": return omcStats(user);
     case "SUBJECT_EXPERT": return subjectExpertStats(user.id);
@@ -194,5 +209,19 @@ async function hodStats(user: { managedById: string | null; departmentId?: strin
     { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
     { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },
     { label: "Offered courses with no teacher yet", value: noTeacher, href: "/hod/department", tone: noTeacher > 0 ? "warn" : "ok" },
+  ];
+}
+
+async function leadStats(user: { managedById: string | null; departmentId?: string | null; leadProgram?: string | null }): Promise<Stat[]> {
+  const where = { isOffered: true, coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" }, batch: { degreeProgram: user.leadProgram || "none" } };
+  const [batches, offered, noTeacher] = await Promise.all([
+    prisma.batch.count({ where: { degreeProgram: user.leadProgram || "none", coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } } }),
+    prisma.course.count({ where }),
+    prisma.course.count({ where: { ...where, instructorId: null } }),
+  ]);
+  return [
+    { label: "Batches in your program", value: batches, href: "/lead/program", tone: "neutral" },
+    { label: "Offered courses", value: offered, href: "/lead/program", tone: "neutral" },
+    { label: "Offered courses with no teacher yet", value: noTeacher, href: "/lead/program", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }

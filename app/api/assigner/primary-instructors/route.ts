@@ -23,7 +23,7 @@ export async function GET() {
 
   return NextResponse.json({
     courses: courses.map((c) => ({
-      id: c.id, code: c.code, title: c.title, instructorId: c.instructorId, instructorName: c.instructor?.name || null, approval: c.instructorApproval, approvalNote: c.instructorApprovalNote,
+      id: c.id, code: c.code, title: c.title, instructorId: c.instructorId, instructorName: c.instructor?.name || null, approval: c.instructorApproval, response: c.instructorResponse, responseNote: c.instructorResponseNote, approvalNote: c.instructorApprovalNote,
       batchLabel: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—",
       degreeProgram: c.batch?.degreeProgram || "",
       semesterNumber: c.semesterNumber ?? null,

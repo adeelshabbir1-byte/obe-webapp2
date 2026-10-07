@@ -6,6 +6,7 @@ export const REPORT_VIEWER_NAV = [
 
 export const OMC_ACTION_NAV = [
   { href: "/omc/queue", label: "Review Queue" },
+  { href: "/omc/faculty-requests", label: "Faculty from Other Departments" },
   { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
@@ -102,7 +103,15 @@ export const CHAIRMAN_NAV = [
 
 export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
-  { href: "/hod/borrow-teacher", label: "Borrow a Teacher" },
+  { href: "/hod/borrow-teacher", label: "Faculty from Other Departments" },
+  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
+  { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
+  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
+  { href: "/omc/reports", label: "Reports" },
+];
+
+export const LEAD_NAV = [
+  { href: "/lead/program", label: "My Program" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
@@ -111,6 +120,7 @@ export const HOD_NAV = [
 
 export function navForRole(role: string) {
   switch (role) {
+    case "PROGRAM_LEAD": return LEAD_NAV;
     case "HEAD_OF_DEPARTMENT": return HOD_NAV;
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;

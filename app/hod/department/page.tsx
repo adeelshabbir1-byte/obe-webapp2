@@ -5,6 +5,7 @@ import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import HodApprovals from "../../../components/HodApprovals";
 import HodLoanRequests from "../../../components/HodLoanRequests";
+import LeadForm from "../../../components/LeadForm";
 
 export default async function HodDepartmentPage() {
   const user = await getAuthenticatedUser();
@@ -15,7 +16,8 @@ export default async function HodDepartmentPage() {
 
   const departmentId = user.departmentId || "none";
   const chairmanId = user.managedById || "";
-  const [incomingLoans, pending, department, programs, members, noTeacher, visiting] = await Promise.all([
+  const [leads, incomingLoans, pending, department, programs, members, noTeacher, visiting] = await Promise.all([
+    prisma.user.findMany({ where: { role: "PROGRAM_LEAD", departmentId }, select: { id: true, name: true, leadProgram: true }, orderBy: { name: "asc" } }),
     prisma.teacherLoanRequest.findMany({
       where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId },
       include: { course: { select: { code: true, title: true } }, instructor: { select: { name: true } }, requestingDepartment: { select: { name: true } } },
@@ -27,7 +29,7 @@ export default async function HodDepartmentPage() {
     }),
     prisma.department.findUnique({ where: { id: departmentId } }),
     prisma.departmentProgram.findMany({ where: { departmentId }, orderBy: { degreeProgram: "asc" } }),
-    prisma.user.findMany({ where: { departmentId, isVisitingPlaceholder: false }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true } }),
+    prisma.user.findMany({ where: { departmentId, isVisitingPlaceholder: false }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true } }),
     prisma.course.findMany({
       where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, departmentId } },
       select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
@@ -51,14 +53,21 @@ export default async function HodDepartmentPage() {
       </p>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Teacher loan requests to you ({incomingLoans.length})</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking to borrow one of your teachers.</p>
-        <HodLoanRequests items={incomingLoans.map((l) => ({ id: l.id, teacher: l.instructor.name, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
+        <h3 style={{ marginTop: 0 }}>Requests for your people ({incomingLoans.length})</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking for a teacher or Subject Expert from your department. Tick the people you allow; the requester then picks one.</p>
+        <HodLoanRequests people={members.map((m) => ({ ...m, alsoFaculty: m.secondaryRole === "INSTRUCTOR" })).filter((m) => ["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) || (m.role === "HEAD_OF_DEPARTMENT" && m.alsoFaculty)).map((m) => ({ id: m.id, name: m.name, role: m.role }))} items={incomingLoans.map((l) => ({ id: l.id, kind: l.kind, askedId: l.instructorId, asked: l.instructor?.name || null, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
       </div>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Waiting for your approval ({pending.length})</h3>
         <HodApprovals items={pending.map((c) => ({ id: c.id, code: c.code, title: c.title, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", teacher: c.instructor?.name || "—" }))} />
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Program Leads ({leads.length})</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Each lead looks after one program of your department.</p>
+        <ul>{leads.length === 0 ? <li style={{ color: "var(--slate)" }}>None yet.</li> : leads.map((l) => <li key={l.id}>{l.name} — {l.leadProgram || "no program set"}</li>)}</ul>
+        <LeadForm programs={programs.map((p) => p.degreeProgram)} />
       </div>
 
       <div className="card">
