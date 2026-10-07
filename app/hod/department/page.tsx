@@ -76,7 +76,7 @@ export default async function HodDepartmentPage() {
           <b style={{ fontSize: 13 }}>Make one of your teachers a Program Lead</b>
           <GiveRole roles={["PROGRAM_LEAD"]} teachers={members.filter((m) => m.role === "INSTRUCTOR" || m.role === "SUBJECT_EXPERT").map((m) => ({ id: m.id, name: m.name + (m.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} programs={programs.map((p) => ({ name: p.degreeProgram, department: "" }))} />
         </div>
-        <ProgramLeads departmentId={departmentId} programs={programs.map((p) => p.degreeProgram)} coordinators={coordinators.map((c) => ({ id: c.id, name: c.name, leadProgram: c.leadProgram || null }))} />
+        <ProgramLeads departmentId={departmentId} programs={programs.map((p) => p.degreeProgram)} coordinators={coordinators.map((c) => ({ id: c.id, name: c.name, leadProgram: c.leadProgram || null }))} teachers={members.filter((m) => m.role === "INSTRUCTOR" || m.role === "SUBJECT_EXPERT").map((m) => ({ id: m.id, name: m.name + (m.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} />
       </div>
 
       <div className="card">
