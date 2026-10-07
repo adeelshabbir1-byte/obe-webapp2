@@ -9,6 +9,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const dept = await prisma.department.findFirst({ where: { id: params.id, chairmanId: user.id } });
   if (!dept) return NextResponse.json({ error: "not found" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
+  if (body.timetableMode !== undefined) {
+    if (body.timetableMode !== "SHARED" && body.timetableMode !== "SEPARATE") return NextResponse.json({ error: "timetableMode must be SHARED or SEPARATE" }, { status: 400 });
+    const department = await prisma.department.update({ where: { id: dept.id }, data: { timetableMode: body.timetableMode } });
+    return NextResponse.json({ department });
+  }
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 100) : "";
   if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
   const clash = await prisma.department.findFirst({ where: { chairmanId: user.id, name, id: { not: dept.id } } });

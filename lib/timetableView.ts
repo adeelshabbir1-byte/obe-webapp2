@@ -45,8 +45,19 @@ function batchesFor(section: SectionWithIncludes): { id: string; label: string; 
  * own RUNNING/COMPLETED/STOPPED/FAILED lifecycle), so "latest by createdAt"
  * is the one convention every viewer (Coordinator's own edit screen
  * included) uses for "the current timetable". */
-export async function latestRunFor(chairmanId: string) {
-  return prisma.timetableRun.findFirst({ where: { chairmanId }, orderBy: { createdAt: "desc" } });
+export async function latestRunFor(chairmanId: string, scopeKey?: string) {
+  if (scopeKey === undefined) return prisma.timetableRun.findFirst({ where: { chairmanId }, orderBy: { createdAt: "desc" } });
+  return prisma.timetableRun.findFirst({ where: { chairmanId, ...(scopeKey === "SHARED" ? { OR: [{ scopeKey: "SHARED" }, { scopeKey: null }] } : { scopeKey }) }, orderBy: { createdAt: "desc" } });
+}
+
+/** The current timetable of every scope - the shared one plus each department that runs its own - so a student or
+ * teacher sees everything that applies to them whichever timetable it is in. */
+export async function latestRunIdsFor(chairmanId: string): Promise<string[]> {
+  const runs = await prisma.timetableRun.findMany({ where: { chairmanId }, orderBy: { createdAt: "desc" }, select: { id: true, scopeKey: true } });
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const r of runs) { const k = r.scopeKey || "SHARED"; if (!seen.has(k)) { seen.add(k); ids.push(r.id); } }
+  return ids;
 }
 
 /** Every entry in a chairman's latest (or a specific) timetable run, fully
@@ -54,11 +65,17 @@ export async function latestRunFor(chairmanId: string) {
  * shape is built, shared by every role's read-only view plus the
  * reschedule slot-finder. */
 export async function getTimetableEntries(chairmanId: string, runId?: string): Promise<TimetableEntryView[]> {
-  const run = runId ? await prisma.timetableRun.findFirst({ where: { id: runId, chairmanId } }) : await latestRunFor(chairmanId);
-  if (!run) return [];
+  let runIds: string[];
+  if (runId) {
+    const run = await prisma.timetableRun.findFirst({ where: { id: runId, chairmanId } });
+    runIds = run ? [run.id] : [];
+  } else {
+    runIds = await latestRunIdsFor(chairmanId);
+  }
+  if (runIds.length === 0) return [];
 
   const entries = await prisma.timetableEntry.findMany({
-    where: { timetableRunId: run.id },
+    where: { timetableRunId: { in: runIds } },
     include: { room: true, scheduleSection: { include: sectionInclude } },
   });
 

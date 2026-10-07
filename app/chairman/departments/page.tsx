@@ -17,7 +17,8 @@ export default async function ChairmanDepartmentsPage() {
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.id }, select: { id: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
-  const [departments, deptPrograms, batches, directStaff, faculty] = await Promise.all([
+  const [rooms, departments, deptPrograms, batches, directStaff, faculty] = await Promise.all([
+    prisma.room.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.departmentProgram.findMany({ where: { chairmanId: user.id } }),
     prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { degreeProgram: true }, distinct: ["degreeProgram"] }),
@@ -41,7 +42,8 @@ export default async function ChairmanDepartmentsPage() {
         A program belongs to one department. Faculty can still be shared between departments later.
       </p>
       <DepartmentsManager
-        departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+        departments={departments.map((d) => ({ id: d.id, name: d.name, timetableMode: d.timetableMode }))}
+        rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
         people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId }))}

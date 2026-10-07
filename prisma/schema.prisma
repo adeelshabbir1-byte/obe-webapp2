@@ -246,6 +246,8 @@ model Room {
   name       String // e.g. "Room 204", "AI Lab"
   type       String // "LECTURE" | "LAB"
   capacity   Int
+  departmentId String? // null = common room; otherwise owned by that department
+  department   Department? @relation("RoomDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
 
   timetableEntries TimetableEntry[]
   @@unique([chairmanId, name])
@@ -319,6 +321,7 @@ model TimetableRun {
   chairman     User     @relation("TimetableRunChairman", fields: [chairmanId], references: [id])
   generatedById String
   status       String   @default("RUNNING") // "RUNNING" | "COMPLETED" | "STOPPED" | "FAILED"
+  scopeKey     String? // "SHARED" (the common timetable) or a department id (that department's own timetable)
   fitnessScore Float?
   hardViolations Int?
   generations  Int?
@@ -1662,6 +1665,8 @@ model Department {
   members    User[]              @relation("DepartmentMembers")
   programs   DepartmentProgram[]
   subjectHomeCourses Course[]    @relation("CourseSubjectHome")
+  timetableMode String @default("SHARED") // SHARED = one common timetable with the other shared departments | SEPARATE = its own timetable and its own rooms
+  rooms Room[] @relation("RoomDepartment")
   loansRequested TeacherLoanRequest[] @relation("LoanRequesting")
   loansRequestedFrom TeacherLoanRequest[] @relation("LoanLending")
 

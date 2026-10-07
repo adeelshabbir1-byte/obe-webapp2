@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import { timetableScopeFor } from "../../../lib/timetableScope";
+import { latestRunFor } from "../../../lib/timetableView";
 import TimetableManager from "../../../components/TimetableManager";
 
 export default async function TimetablePage() {
@@ -12,11 +14,12 @@ export default async function TimetablePage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
+  const scope = await timetableScopeFor(user);
   const [rooms, batches, faculty, latestRun] = await Promise.all([
-    prisma.room.findMany({ where: { chairmanId: user.managedById || "" }, orderBy: { name: "asc" } }),
-    prisma.batch.findMany({ where: { coordinatorId: user.id }, include: { scheduleConfig: true } }),
-    prisma.user.findMany({ where: { managedById: user.id, role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR"] } }, orderBy: { name: "asc" } }),
-    prisma.timetableRun.findFirst({ where: { chairmanId: user.managedById || "" }, orderBy: { createdAt: "desc" } }),
+    prisma.room.findMany({ where: scope.roomWhere, orderBy: { name: "asc" } }),
+    prisma.batch.findMany({ where: { coordinatorId: { in: scope.coordinatorIds } }, include: { scheduleConfig: true } }),
+    prisma.user.findMany({ where: { managedById: { in: scope.coordinatorIds }, role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR"] } }, orderBy: { name: "asc" } }),
+    latestRunFor(user.managedById || "", scope.key),
   ]);
 
   return (
@@ -24,7 +27,7 @@ export default async function TimetablePage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Timetable</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Set up rooms, per-batch scheduling windows, and faculty availability, then generate a conflict-checked
-        timetable across your whole institution.
+        timetable. Currently planning: <b>{scope.label}</b>{scope.mode === "SHARED" ? " (shared with the other departments that use the common timetable)" : " (this department only, with its own rooms)"}.
       </p>
       <TimetableManager
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, capacity: r.capacity }))}

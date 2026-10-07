@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Dept = { id: string; name: string };
+type Dept = { id: string; name: string; timetableMode: string };
+type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
 type Person = { id: string; name: string; role: string; departmentId: string | null };
 
 const ROLE_NAME: Record<string, string> = {
@@ -11,8 +12,8 @@ const ROLE_NAME: Record<string, string> = {
   HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
 };
 
-export default function DepartmentsManager({ departments, programsByDept, allPrograms, people }: {
-  departments: Dept[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[];
+export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
+  departments: Dept[]; rooms: RoomRow[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[];
 }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
@@ -53,6 +54,10 @@ export default function DepartmentsManager({ departments, programsByDept, allPro
                 <strong>{d.name}</strong>
                 <button className="btn" onClick={() => { const n = window.prompt("New name for this department", d.name); if (n && n.trim()) call(`/api/chairman/departments/${d.id}`, "PATCH", { name: n }); }}>Rename</button>
                 <button className="btn" onClick={() => { if (window.confirm(`Delete department "${d.name}"?`)) call(`/api/chairman/departments/${d.id}`, "DELETE"); }}>Delete</button>
+                <select value={d.timetableMode} title="Shared = timetabled together with the other shared departments (common rooms). Own = its own timetable and its own rooms." onChange={(e) => call(`/api/chairman/departments/${d.id}`, "PATCH", { timetableMode: e.target.value })}>
+                  <option value="SHARED">Shared timetable</option>
+                  <option value="SEPARATE">Own timetable</option>
+                </select>
                 <span style={{ color: "var(--slate)", fontSize: 13 }}>Head(s): {heads.length ? heads.map((h) => h.name).join(", ") : "none yet"}</span>
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", fontSize: 13 }}>
@@ -74,6 +79,31 @@ export default function DepartmentsManager({ departments, programsByDept, allPro
           <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New department name, e.g. Computer Science" style={{ flex: 1 }} />
           <button className="btn btn-brass" onClick={async () => { if (newName.trim() && await call("/api/chairman/departments", "POST", { name: newName })) setNewName(""); }}>Add Department</button>
         </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Room ownership</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>
+          Common rooms are used by every department on the shared timetable. A room given to a department is used only by that department.
+          A department with its own timetable needs at least one room of its own (lecture, and a lab if it has labs).
+        </p>
+        <table>
+          <thead><tr><th>Room</th><th>Type</th><th>Belongs to</th></tr></thead>
+          <tbody>
+            {rooms.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No rooms yet - coordinators add them on the Timetable page.</td></tr>}
+            {rooms.map((r) => (
+              <tr key={r.id}>
+                <td>{r.name}</td><td>{r.type}</td>
+                <td>
+                  <select value={r.departmentId || ""} onChange={(e) => call("/api/chairman/room-department", "PUT", { roomId: r.id, departmentId: e.target.value || null })}>
+                    <option value="">Common room</option>
+                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div className="card">
