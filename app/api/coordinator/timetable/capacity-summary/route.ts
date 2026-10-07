@@ -39,13 +39,14 @@ export async function GET() {
     prisma.scheduleSection.findMany({
       where: {
         OR: [
-          { course: { batchId: { in: batchIds } } },
-          { group: { members: { some: { course: { batchId: { in: batchIds } } } } } },
+          // Only courses offered now: sections left over from a batch's earlier semesters must not be counted.
+          { course: { batchId: { in: batchIds }, isOffered: true } },
+          { group: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } } },
         ],
       },
       include: {
         course: { select: { batchId: true } },
-        group: { include: { members: { select: { course: { select: { batchId: true } } } } } },
+        group: { include: { members: { select: { course: { select: { batchId: true, isOffered: true } } } } } },
       },
     }),
   ]);
@@ -115,7 +116,7 @@ export async function GET() {
       if (s.course.batchId && batchIds.includes(s.course.batchId)) addHours(s.course.batchId, s.roomTypeNeeded, hours);
     } else if (s.group) {
       for (const m of s.group.members) {
-        if (m.course.batchId && batchIds.includes(m.course.batchId)) addHours(m.course.batchId, s.roomTypeNeeded, hours);
+        if (m.course.isOffered && m.course.batchId && batchIds.includes(m.course.batchId)) addHours(m.course.batchId, s.roomTypeNeeded, hours);
       }
     }
   }

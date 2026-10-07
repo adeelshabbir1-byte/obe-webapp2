@@ -45,6 +45,10 @@ Open it in Excel if you like: the *Solution* sheet shows every class with its da
 
 ## If something goes wrong
 
+First, double-click **`check_setup.bat`**. It prints a short checklist ([OK] / [X]) of what your computer has. `run_solver.bat` now also keeps its window open on any problem and writes `solver_log.txt` next to it — send that file if you need help.
+
+Best Python version: **3.12** (very new versions, e.g. 3.14, often have no solver library yet).
+
 | What you see | What to do |
 |---|---|
 | `'python' is not recognized` | Python was installed without "Add to PATH". Run the Python installer again → **Modify/Repair** → tick *Add to PATH*, or reinstall. Then double-click `run_solver.bat` again. |
