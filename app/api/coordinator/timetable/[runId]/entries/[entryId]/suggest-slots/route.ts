@@ -67,6 +67,7 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
 
   const candidates: { dayOfWeek: string; startHour: number; endHour: number; roomIds: string[]; roomNames: string[] }[] = [];
 
+  const isVisiting = !!(await prisma.user.findUnique({ where: { id: instructorId }, select: { isVisitingPlaceholder: true } }))?.isVisitingPlaceholder;
   for (const day of DAY_ORDER.filter((d) => allowedDays.has(d))) {
     const sameDayOthers = otherEntries.filter((o) => o.dayOfWeek === day);
     const sameDayUnavail = unavailability.filter((u) => u.dayOfWeek === day);
@@ -74,7 +75,7 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
     for (let start = dayStart; start + duration <= dayEnd; start += STEP) {
       const end = start + duration;
 
-      const instructorBusy = sameDayOthers.some((o) => o.scheduleSection.instructorId === instructorId && overlaps(start, end, o.startHour, o.endHour));
+      const instructorBusy = !isVisiting && sameDayOthers.some((o) => o.scheduleSection.instructorId === instructorId && overlaps(start, end, o.startHour, o.endHour));
       if (instructorBusy) continue;
       const instructorUnavailable = sameDayUnavail.some((u) => overlaps(start, end, u.startHour, u.endHour));
       if (instructorUnavailable) continue;

@@ -46,6 +46,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     }
   }
 
+  let subjectHomeDepartmentId: string | null | undefined = undefined;
+  if (body.subjectHomeDepartmentId !== undefined) {
+    subjectHomeDepartmentId = body.subjectHomeDepartmentId || null;
+    if (subjectHomeDepartmentId) {
+      const dept = await prisma.department.findFirst({ where: { id: subjectHomeDepartmentId, chairmanId: course.coordinator.managedById || "" } });
+      if (!dept) return NextResponse.json({ error: "unknown department" }, { status: 400 });
+    }
+  }
+
   if (body.code !== course.code) {
     const clash = await prisma.course.findFirst({ where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: body.code, NOT: { id: course.id } } });
     if (clash) return NextResponse.json({ error: "another course in this batch already uses this code" }, { status: 409 });
@@ -61,6 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       isNonCredit,
       ...(contactHours !== undefined ? { contactHours } : {}),
       ...(trackName !== undefined ? { trackName } : {}),
+      ...(subjectHomeDepartmentId !== undefined ? { subjectHomeDepartmentId } : {}),
       courseType: body.courseType || course.courseType,
       semesterNumber: body.semesterNumber ? parseInt(body.semesterNumber, 10) : null,
       hasLab,

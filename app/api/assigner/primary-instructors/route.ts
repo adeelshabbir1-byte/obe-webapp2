@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { getOrCreateVisitingFaculty } from "../../../../lib/departments";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -18,6 +19,8 @@ export async function GET() {
     prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } }),
   ]);
 
+  const visiting = await getOrCreateVisitingFaculty(user.managedById || "");
+
   return NextResponse.json({
     courses: courses.map((c) => ({
       id: c.id, code: c.code, title: c.title, instructorId: c.instructorId, instructorName: c.instructor?.name || null,
@@ -25,6 +28,6 @@ export async function GET() {
       degreeProgram: c.batch?.degreeProgram || "",
       semesterNumber: c.semesterNumber ?? null,
     })),
-    faculty: faculty.map((f) => ({ id: f.id, name: f.name })),
+    faculty: [{ id: visiting.id, name: visiting.name }, ...faculty.map((f) => ({ id: f.id, name: f.name }))],
   });
 }

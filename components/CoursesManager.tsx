@@ -11,7 +11,7 @@ type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
   prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean; enrolledCount: number;
-  trackName: string | null; isNonCredit: boolean; contactHours: number | null;
+  trackName: string | null; isNonCredit: boolean; contactHours: number | null; subjectHomeDepartmentId?: string | null;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -19,8 +19,8 @@ type Curriculum = { id: string; authority: string; title: string; version: strin
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
-export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId }: {
-  courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string;
+export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId, departments = [] }: {
+  courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string; departments?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>(initialCourses);
@@ -190,6 +190,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           isNonCredit: fd.get("isNonCredit") === "on",
           contactHours: fd.get("contactHours") || null,
           trackName: fd.get("trackName") || null,
+          subjectHomeDepartmentId: fd.get("subjectHomeDepartmentId") || null,
         }),
       });
       const data = await res.json();
@@ -526,6 +527,12 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                       <option value="">All tracks</option>
                       {TRACKS.map((t) => <option key={t} value={t}>{t} only</option>)}
                     </select>
+                    {departments.length > 1 && (
+                      <select name="subjectHomeDepartmentId" defaultValue={c.subjectHomeDepartmentId || ""} title="Which department owns this subject (its Subject Expert comes from there by default)" style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+                        <option value="">Subject home: this program's department</option>
+                        {departments.map((d) => <option key={d.id} value={d.id}>Subject home: {d.name}</option>)}
+                      </select>
+                    )}
                     <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }} title="Deficiency course: no credit hours, not in CGPA, just has to be passed">
                       <input type="checkbox" name="isNonCredit" defaultChecked={c.isNonCredit} /> Non-credit (deficiency)
                     </label>

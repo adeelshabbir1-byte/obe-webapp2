@@ -63,11 +63,12 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   const entryBatchIds = batchIdsFor(entry.scheduleSection);
   const clashingEntryIds: string[] = [];
   const reasons: string[] = [];
+  const entryTeacher = await prisma.user.findUnique({ where: { id: entry.scheduleSection.instructorId }, select: { isVisitingPlaceholder: true } });
   for (const other of allEntries) {
     if (!overlaps(newStartHour, newEndHour, other.startHour, other.endHour)) continue;
     const otherCode = codeFor(other.scheduleSection);
     if (other.roomId === effectiveRoomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
-    if (other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
+    if (!entryTeacher?.isVisitingPlaceholder && other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
     if (batchIdsFor(other.scheduleSection).some((id) => entryBatchIds.includes(id))) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${otherCode}`); }
   }
 

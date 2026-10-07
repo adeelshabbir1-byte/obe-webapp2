@@ -20,6 +20,7 @@ enum UserRole {
   INSTRUCTOR
   OMC
   COURSE_ASSIGNER
+  HEAD_OF_DEPARTMENT
 }
 
 model User {
@@ -96,12 +97,16 @@ model User {
   courseShortNames   CourseShortName[] @relation("CourseShortNameChairman")
   contentSyncGroups  CourseContentSyncGroup[] @relation("ContentSyncChairman")
   ownedMasterCurricula MasterCurriculum[] @relation("MasterCurriculumOwner")
+  departmentId       String?  // home department (see Department) - coordinators, course assigners, heads and faculty each belong to one
+  department_        Department? @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  isVisitingPlaceholder Boolean @default(false) // the built-in "Visiting Faculty (to be decided)" stand-in - not a real person, never logs in
   preferredDays      String?  // comma list e.g. "Mon,Wed" — instructor's preferred teaching days (soft preference for the timetable)
   organization       String?  // for a guest / industry Subject Expert: the company or institute they come from (shown beside their public courses)
   isPlatformExpert   Boolean  @default(false) // a Subject Expert created by the platform admin, attached to no institute, who designs Master Curriculum courses for everyone
   publicCourses      PublicCourse[] @relation("PublicCourseAuthor")
   designedMasterCourses MasterCourse[] @relation("MasterCourseDesigner")
   curriculumAssignments CurriculumAssignment[] @relation("CurriculumAssignmentChairman")
+  departmentsOwned      Department[] @relation("DepartmentChairman")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
   employers          Employer[] @relation("EmployerChairman")
   surveyTemplates    SurveyTemplate[] @relation("SurveyTemplateCoordinator")
@@ -1171,6 +1176,8 @@ model Course {
   subjectExpert       User?    @relation("CourseSubjectExpert", fields: [subjectExpertId], references: [id])
   instructorId        String?
   instructor          User?    @relation("CourseInstructor", fields: [instructorId], references: [id])
+  subjectHomeDepartmentId String? // optional: the department whose subject expertise this course draws on (e.g. a CS program's Management course -> Management Science)
+  subjectHomeDepartment   Department? @relation("CourseSubjectHome", fields: [subjectHomeDepartmentId], references: [id])
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
   offeredTermName     String?  // "Fall" | "Spring" — which term this was offered in, stamped when isOffered becomes true
   offeredTermYear     Int?
@@ -1637,6 +1644,35 @@ model MasterCurriculum {
 // (shared, chairmanId = null) master curriculum. Assigning one also gives the
 // institute its own editable copy; removing the assignment just stops the
 // official one from being offered — the institute's own copy stays theirs.
+// An institute (Chairman) is split into departments. A department has heads (HEAD_OF_DEPARTMENT users),
+// owns degree programs, and has its own coordinators, course assigners and faculty.
+model Department {
+  id         String   @id @default(cuid())
+  chairmanId String
+  chairman   User     @relation("DepartmentChairman", fields: [chairmanId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now())
+
+  members    User[]              @relation("DepartmentMembers")
+  programs   DepartmentProgram[]
+  subjectHomeCourses Course[]    @relation("CourseSubjectHome")
+
+  @@unique([chairmanId, name])
+  @@index([chairmanId])
+}
+
+// Which department a degree program (by name, e.g. "BS Computer Science") belongs to.
+model DepartmentProgram {
+  id            String   @id @default(cuid())
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  chairmanId    String   // denormalised so one program can belong to only one department per institute
+  degreeProgram String
+
+  @@unique([chairmanId, degreeProgram])
+  @@index([departmentId])
+}
+
 model CurriculumAssignment {
   id           String   @id @default(cuid())
   curriculumId String

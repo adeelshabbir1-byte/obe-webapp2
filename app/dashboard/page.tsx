@@ -12,6 +12,7 @@ const ROLE_HOME: Record<string, string> = {
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
+  HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
   COURSE_ASSIGNER: "/assigner/matrix",
@@ -49,9 +50,10 @@ export default async function Dashboard() {
   );
 }
 
-async function statsForRole(user: { id: string; role: string; managedById: string | null }) {
+async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
   switch (user.role) {
     case "PROGRAM_COORDINATOR": return coordinatorStats(user.id);
+    case "HEAD_OF_DEPARTMENT": return hodStats(user);
     case "OMC": return omcStats(user);
     case "SUBJECT_EXPERT": return subjectExpertStats(user.id);
     case "INSTRUCTOR": return instructorStats(user.id);
@@ -174,5 +176,19 @@ async function superUserStats(): Promise<Stat[]> {
   return [
     { label: "Pending account requests", value: pendingRequests, href: "/admin/account-requests", tone: pendingRequests > 0 ? "warn" : "ok" },
     { label: "Institutions (Chairmen)", value: chairmen, href: "/admin/users", tone: "neutral" },
+  ];
+}
+
+async function hodStats(user: { managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
+  const departmentId = user.departmentId || "none";
+  const [programs, staff, noTeacher] = await Promise.all([
+    prisma.departmentProgram.count({ where: { departmentId } }),
+    prisma.user.count({ where: { departmentId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
+    prisma.course.count({ where: { isOffered: true, instructorId: null, coordinator: { managedById: user.managedById || "", departmentId } } }),
+  ]);
+  return [
+    { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
+    { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },
+    { label: "Offered courses with no teacher yet", value: noTeacher, href: "/hod/department", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }

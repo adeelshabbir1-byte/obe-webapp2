@@ -71,6 +71,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   // Every curriculum this institute may import from: its own copies, plus any assigned official one it has no copy of yet.
   // Sorted by degree (all BSCS together, then BBA, ...), with the authority + version shown to tell them apart.
   const owningChairmanId = await findOwningChairmanId(user.id);
+  const departmentList = await prisma.department.findMany({ where: { chairmanId: owningChairmanId || "none" }, orderBy: { name: "asc" } });
   const visible = owningChairmanId
     ? await prisma.masterCurriculum.findMany({ where: { status: "PUBLISHED", ...curriculaVisibleTo(owningChairmanId) } })
     : [];
@@ -103,9 +104,10 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
           id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType,
           semesterNumber: c.semesterNumber, fromHec: !!c.masterCourseId, subjectExpertId: c.subjectExpertId,
           fromBenchmark: !!c.benchmarkSourceId, trackName: c.trackName, isNonCredit: c.isNonCredit, contactHours: c.contactHours, enrolledCount: c._count.studentEnrollments,
-          prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab,
+          prerequisiteCourseId: c.prerequisiteCourseId, batchId: c.batchId, hasLab: c.hasLab, subjectHomeDepartmentId: c.subjectHomeDepartmentId,
           batchName: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : null,
         }))}
+        departments={departmentList.map((d) => ({ id: d.id, name: d.name }))}
         subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name }))}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
         curricula={curricula.map((c) => ({ id: c.id, authority: c.authority, title: c.title, version: c.version }))}

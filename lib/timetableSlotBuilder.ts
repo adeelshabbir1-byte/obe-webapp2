@@ -46,6 +46,11 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   ]);
   const unavailabilityRaw = await prisma.facultyUnavailability.findMany({ where: { facultyId: { in: faculty.map((f) => f.id) } } });
 
+  // "Visiting Faculty (to be decided)" is a placeholder, not one person: give every visiting section its own
+  // virtual teacher so two visiting courses can never be flagged as the same teacher clashing.
+  const visitingIds = new Set<string>((await prisma.user.findMany({ where: { isVisitingPlaceholder: true, managedById: chairmanId || "" }, select: { id: true } })).map((u) => u.id));
+  const teacherOf = (sectionId: string, instructorId: string) => (visitingIds.has(instructorId) ? `visiting:${sectionId}` : instructorId);
+
   const slots: Slot[] = [];
   let slotIndex = 0;
 
@@ -78,7 +83,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
         slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: s.courseId, batchIds: [s.course.batch.id],
-        instructorId: s.instructorId, roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
+        instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
         studentCount: s.course.batch.studentCount, allowedDays, dayStartHour, dayEndHour,
       });
     }
@@ -107,7 +112,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
         slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: null, batchIds: memberBatchIdsInScope,
-        instructorId: s.instructorId, roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
+        instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
         studentCount, allowedDays, dayStartHour, dayEndHour,
       });
     }

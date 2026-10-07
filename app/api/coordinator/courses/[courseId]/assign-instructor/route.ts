@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { courseScopeFor } from "../../../../../../lib/reportScope";
+import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 
 // Originally Course Assigner-only. Chairman, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
@@ -43,7 +43,9 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   if (instructorId) {
     const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
-    const isValidInstructor = instructor && validManagerIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
+    const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
+    const isVisiting = !!instructor && instructor.isVisitingPlaceholder && instructor.managedById === chairmanId;
+    const isValidInstructor = isVisiting || instructor && validManagerIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
     if (!isValidInstructor) {
       return NextResponse.json({ error: "invalid instructor" }, { status: 400 });
     }
