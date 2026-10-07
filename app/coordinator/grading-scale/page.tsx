@@ -6,7 +6,7 @@ import GradingScaleManager from "../../../components/GradingScaleManager";
 import CreditLimitsEditor from "../../../components/CreditLimitsEditor";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/faculty", label: "Faculty Onboarding" }, { href: "/coordinator/faculty-requests", label: "Faculty from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },

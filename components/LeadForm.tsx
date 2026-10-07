@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 // Creates a Program Lead for one of the department's programs. `departmentId` is only sent by the Chairman;
 // a Head of Department's own department is taken from their account.
-export default function LeadForm({ programs, departmentId }: { programs: string[]; departmentId?: string }) {
+export default function LeadForm({ program, departmentId }: { program: string; departmentId?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
@@ -17,21 +17,17 @@ export default function LeadForm({ programs, departmentId }: { programs: string[
     const fd = new FormData(form);
     const res = await fetch("/api/leads", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), program: fd.get("program"), departmentId }),
+      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), program, departmentId }),
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { setError(d.error || "Could not create"); return; }
-    setOk("Program Lead created. They must change the password on first login.");
+    setOk("Program Lead created. They log in as a Program Coordinator and must change the password on first login.");
     form.reset();
     router.refresh();
   }
 
-  if (programs.length === 0) return <p style={{ color: "var(--slate)", fontSize: 13 }}>This department has no programs yet — tick its programs first.</p>;
   return (
     <form onSubmit={onSubmit} style={{ display: "grid", gap: 8, maxWidth: 420, marginTop: 10 }}>
-      <select name="program" required>
-        {programs.map((p) => <option key={p} value={p}>{p}</option>)}
-      </select>
       <input name="name" placeholder="Full name" required />
       <input name="email" type="email" placeholder="Email" required />
       <input name="username" placeholder="Username" required />

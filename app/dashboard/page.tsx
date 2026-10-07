@@ -13,7 +13,6 @@ const ROLE_HOME: Record<string, string> = {
   CHAIRMAN: "/chairman/coordinators",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
-  PROGRAM_LEAD: "/lead/program",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
@@ -64,10 +63,9 @@ export default async function Dashboard() {
   );
 }
 
-async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; leadProgram?: string | null }) {
+async function statsForRole(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
   switch (user.role) {
     case "PROGRAM_COORDINATOR": return coordinatorStats(user.id);
-    case "PROGRAM_LEAD": return leadStats(user);
     case "HEAD_OF_DEPARTMENT": return hodStats(user);
     case "OMC": return omcStats(user);
     case "SUBJECT_EXPERT": return subjectExpertStats(user.id);
@@ -209,19 +207,5 @@ async function hodStats(user: { managedById: string | null; departmentId?: strin
     { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
     { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },
     { label: "Offered courses with no teacher yet", value: noTeacher, href: "/hod/department", tone: noTeacher > 0 ? "warn" : "ok" },
-  ];
-}
-
-async function leadStats(user: { managedById: string | null; departmentId?: string | null; leadProgram?: string | null }): Promise<Stat[]> {
-  const where = { isOffered: true, coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" }, batch: { degreeProgram: user.leadProgram || "none" } };
-  const [batches, offered, noTeacher] = await Promise.all([
-    prisma.batch.count({ where: { degreeProgram: user.leadProgram || "none", coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } } }),
-    prisma.course.count({ where }),
-    prisma.course.count({ where: { ...where, instructorId: null } }),
-  ]);
-  return [
-    { label: "Batches in your program", value: batches, href: "/lead/program", tone: "neutral" },
-    { label: "Offered courses", value: offered, href: "/lead/program", tone: "neutral" },
-    { label: "Offered courses with no teacher yet", value: noTeacher, href: "/lead/program", tone: noTeacher > 0 ? "warn" : "ok" },
   ];
 }

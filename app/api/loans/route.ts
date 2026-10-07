@@ -22,21 +22,22 @@ export async function GET() {
 
   const coordinatorWhere = {
     role: "PROGRAM_COORDINATOR" as const, managedById: chairmanId,
-    ...(user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD" ? { departmentId: user.departmentId || "none" } : {}), ...deptScope(user),
+    ...(user.role === "HEAD_OF_DEPARTMENT" ? { departmentId: user.departmentId || "none" } : {}),
+    ...(user.role === "PROGRAM_COORDINATOR" ? { id: user.id } : {}), ...deptScope(user),
   };
   const coordinators = await prisma.user.findMany({ where: coordinatorWhere, select: { id: true, departmentId: true } });
   const deptOfCoordinator = new Map<string, string | null>(coordinators.map((c: { id: string; departmentId: string | null }) => [c.id, c.departmentId]));
 
   const [courses, departments, teachers, requests] = await Promise.all([
     prisma.course.findMany({
-      where: { coordinatorId: { in: coordinators.map((c: { id: string }) => c.id) }, isOffered: true, ...(user.role === "PROGRAM_LEAD" ? { batch: { degreeProgram: user.leadProgram || "none" } } : {}) },
+      where: { coordinatorId: { in: coordinators.map((c: { id: string }) => c.id) }, isOffered: true },
       select: { id: true, code: true, title: true, coordinatorId: true, instructor: { select: { name: true } }, subjectExpert: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } } },
       orderBy: { code: "asc" },
     }),
     prisma.department.findMany({ where: { chairmanId }, orderBy: { name: "asc" } }),
     prisma.user.findMany({ where: lendableWhere(chairmanId, "INSTRUCTOR"), select: { id: true, name: true, role: true, departmentId: true }, orderBy: { name: "asc" } }),
     prisma.teacherLoanRequest.findMany({
-      where: { chairmanId, kind: { in: kinds }, ...(user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD" ? { requestingDepartmentId: user.departmentId || "none" } : {}) },
+      where: { chairmanId, kind: { in: kinds }, ...(user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_COORDINATOR" ? { requestingDepartmentId: user.departmentId || "none" } : {}) },
       include: {
         course: { select: { code: true, title: true, instructorId: true, subjectExpertId: true, instructorResponse: true, instructorResponseNote: true, seResponse: true, seResponseNote: true } },
         instructor: { select: { name: true } }, lendingDepartment: { select: { name: true } }, requestingDepartment: { select: { name: true } },
@@ -79,11 +80,11 @@ export async function POST(req: NextRequest) {
   if (!body.courseId || !body.lendingDepartmentId) return NextResponse.json({ error: "courseId and lendingDepartmentId are required" }, { status: 400 });
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 300) : null;
 
-  const course = await prisma.course.findFirst({ where: { id: body.courseId, isOffered: true, coordinator: { managedById: chairmanId, ...deptScope(user) }, ...(user.role === "PROGRAM_LEAD" ? { batch: { degreeProgram: user.leadProgram || "none" } } : {}) }, include: { coordinator: true } });
+  const course = await prisma.course.findFirst({ where: { id: body.courseId, isOffered: true, coordinator: { managedById: chairmanId, ...deptScope(user) }, ...(user.role === "PROGRAM_COORDINATOR" ? { coordinatorId: user.id } : {}) }, include: { coordinator: true } });
   if (!course) return NextResponse.json({ error: "course not found" }, { status: 404 });
   const requestingDepartmentId = course.coordinator.departmentId;
   if (!requestingDepartmentId) return NextResponse.json({ error: "this course's coordinator is not in a department yet" }, { status: 400 });
-  if ((user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD") && user.departmentId !== requestingDepartmentId) return NextResponse.json({ error: "course not found" }, { status: 404 });
+  if (user.role === "HEAD_OF_DEPARTMENT" && user.departmentId !== requestingDepartmentId) return NextResponse.json({ error: "course not found" }, { status: 404 });
 
   const lending = await prisma.department.findFirst({ where: { id: body.lendingDepartmentId, chairmanId } });
   if (!lending) return NextResponse.json({ error: "department not found" }, { status: 404 });

@@ -53,7 +53,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
-  { href: "/coordinator/faculty", label: "Faculty Onboarding" },
+  { href: "/coordinator/faculty", label: "Faculty Onboarding" }, { href: "/coordinator/faculty-requests", label: "Faculty from Other Departments" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -110,18 +110,8 @@ export const HOD_NAV = [
   { href: "/omc/reports", label: "Reports" },
 ];
 
-export const LEAD_NAV = [
-  { href: "/lead/program", label: "My Program" },
-  { href: "/lead/faculty-requests", label: "Faculty from Other Departments" },
-  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
-  { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
-  { href: "/omc/reports", label: "Reports" },
-];
-
 export function navForRole(role: string) {
   switch (role) {
-    case "PROGRAM_LEAD": return LEAD_NAV;
     case "HEAD_OF_DEPARTMENT": return HOD_NAV;
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;

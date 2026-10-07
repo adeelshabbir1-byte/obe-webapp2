@@ -1,16 +1,16 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import LeadForm from "./LeadForm";
+import ProgramLeads from "./ProgramLeads";
 import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
-type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null };
+type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null; managerId?: string | null };
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Head of Department", PROGRAM_LEAD: "Program Lead", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
+  HEAD_OF_DEPARTMENT: "Head of Department", INSTRUCTOR: "Faculty", SUBJECT_EXPERT: "Subject Expert",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people }: {
@@ -41,7 +41,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
   // Sorted by department (people with no department first, so nobody is missed), then role, then name.
-  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "PROGRAM_LEAD", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
+  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
   const shown = people
     .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
     .sort((a, b) =>
@@ -135,13 +135,20 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                   </td></tr>
                 )}
               <tr>
-                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{p.role === "PROGRAM_LEAD" && p.leadProgram ? ` — ${p.leadProgram}` : ""}</td>
+                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
                 <td>
                   <select value={p.departmentId || ""} onChange={(e) => e.target.value && call("/api/chairman/department-members", "PUT", { userId: p.id, departmentId: e.target.value })}>
                     {!p.departmentId && <option value="">— none —</option>}
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                   <span style={{ display: "none" }}>{deptName(p.departmentId)}</span>
+                  {(p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT") && p.departmentId && (
+                    <label style={{ marginLeft: 12, fontSize: 12 }}>Program:{" "}
+                      <select value={p.managerId || ""} onChange={(e) => e.target.value && call("/api/faculty-program", "PUT", { userId: p.id, coordinatorId: e.target.value })}>
+                        {people.filter((c) => c.role === "PROGRAM_COORDINATOR" && c.departmentId === p.departmentId).map((c) => <option key={c.id} value={c.id}>{c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name}</option>)}
+                      </select>
+                    </label>
+                  )}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -156,14 +163,20 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Add a Program Lead</h3>
-        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>A Program Lead works under the Head of Department and is responsible for one program of that department.</p>
+        <h3 style={{ marginTop: 0 }}>Program Leads</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
+          A Program Lead is the Program Coordinator responsible for one program of a department, under its Head. They can do everything for their program:
+          batches, courses, faculty, Subject Experts, timetable. Choose one of the department's coordinators for each program, or create a new one.
+        </p>
         <label style={{ fontSize: 13 }}>Department: {" "}
           <select value={leadDept} onChange={(e) => setLeadDept(e.target.value)}>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </label>
-        <LeadForm key={leadDept} departmentId={leadDept} programs={programsByDept[leadDept] || []} />
+        <div style={{ marginTop: 10 }}>
+          <ProgramLeads key={leadDept} departmentId={leadDept} programs={programsByDept[leadDept] || []}
+            coordinators={people.filter((p) => p.role === "PROGRAM_COORDINATOR" && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name, leadProgram: p.leadProgram || null }))} />
+        </div>
       </div>
 
       <div className="card">

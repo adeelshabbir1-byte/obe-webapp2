@@ -2,21 +2,19 @@ import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
 import { deptScope } from "./omcScope";
 
-const REPORT_ROLES = ["PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "OMC", "CHAIRMAN", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "SUPER_USER"];
+const REPORT_ROLES = ["HEAD_OF_DEPARTMENT", "OMC", "CHAIRMAN", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "SUPER_USER"];
 
 export function canViewReports(role: string) {
   return REPORT_ROLES.includes(role);
 }
 
 /** A Prisma `where` filter for Course, scoped to what this role should see. */
-export function courseScopeFor(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; leadProgram?: string | null }): Prisma.CourseWhereInput {
+export function courseScopeFor(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }): Prisma.CourseWhereInput {
   switch (user.role) {
     case "SUPER_USER":
       return {}; // platform-wide — no institution restriction
     case "OMC":
       return { coordinator: { managedById: user.managedById || "", ...deptScope(user) } };
-    case "PROGRAM_LEAD":
-      return { coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" }, batch: { degreeProgram: user.leadProgram || "none" } };
     case "HEAD_OF_DEPARTMENT":
       return { coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } };
     case "CHAIRMAN":
@@ -33,13 +31,13 @@ export function courseScopeFor(user: { id: string; role: string; managedById: st
 }
 
 /** Same idea, but for queries that filter on coordinatorId directly (batches, PLOs, faculty). */
-export async function coordinatorIdsFor(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; leadProgram?: string | null }): Promise<string[]> {
+export async function coordinatorIdsFor(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }): Promise<string[]> {
   if (user.role === "SUPER_USER") {
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR" } });
     return coordinators.map((c) => c.id);
   }
   if (user.role === "PROGRAM_COORDINATOR") return [user.id];
-  if (user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD") {
+  if (user.role === "HEAD_OF_DEPARTMENT") {
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", departmentId: user.departmentId || "none" } });
     return coordinators.map((c) => c.id);
   }
@@ -61,7 +59,7 @@ export async function coordinatorIdsFor(user: { id: string; role: string; manage
  * data like WeightPolicy and CourseEquivalenceGroup. */
 export async function chairmanIdFor(user: { id: string; role: string; managedById: string | null }): Promise<string> {
   if (user.role === "CHAIRMAN") return user.id;
-  if (user.role === "OMC" || user.role === "PROGRAM_COORDINATOR" || user.role === "HEAD_OF_DEPARTMENT" || user.role === "PROGRAM_LEAD") return user.managedById || "";
+  if (user.role === "OMC" || user.role === "PROGRAM_COORDINATOR" || user.role === "HEAD_OF_DEPARTMENT") return user.managedById || "";
   // SE/Instructor: one more hop up (their manager is a Coordinator, whose manager is the Chairman).
   if (!user.managedById) return "";
   const coordinator = await prisma.user.findUnique({ where: { id: user.managedById } });
@@ -71,7 +69,7 @@ export async function chairmanIdFor(user: { id: string; role: string; managedByI
 
 export function roleLabel(role: string) {
   const labels: Record<string, string> = {
-    HEAD_OF_DEPARTMENT: "Head of Department", PROGRAM_LEAD: "Program Lead", OMC: "OMC Member", CHAIRMAN: "Chairman", PROGRAM_COORDINATOR: "Program Coordinator",
+    HEAD_OF_DEPARTMENT: "Head of Department", OMC: "OMC Member", CHAIRMAN: "Chairman", PROGRAM_COORDINATOR: "Program Coordinator",
     SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", SUPER_USER: "Super User",
   };
   return labels[role] || role;
