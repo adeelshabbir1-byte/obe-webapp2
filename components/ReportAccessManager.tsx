@@ -6,11 +6,22 @@ type ReportDef = { id: string; title: string; hasEditActions?: boolean };
 type Rule = { id: string; reportId: string; subjectType: string; subjectValue: string; canView: boolean; canEdit: boolean };
 type Person = { id: string; name: string; role: string };
 
+// Roles a rule can apply to. A Program Lead is a Program Coordinator, so one rule covers both.
+const ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "DEAN", label: "Dean" },
+  { value: "HEAD_OF_DEPARTMENT", label: "Chairman (department head)" },
+  { value: "OMC", label: "OMC" },
+  { value: "PROGRAM_COORDINATOR", label: "Program Coordinator / Program Lead" },
+  { value: "SUBJECT_EXPERT", label: "Subject Expert" },
+  { value: "INSTRUCTOR", label: "Instructor (Teacher)" },
+];
+const roleName = (v: string) => ROLE_OPTIONS.find((o) => o.value === v)?.label || v;
+
 export default function ReportAccessManager({ reports, initialRules: initialRulesProp, people }: { reports: ReportDef[]; initialRules: Rule[]; people: Person[] }) {
   const [initialRules, setRules] = useState<Rule[]>(initialRulesProp);
   const [selectedReportId, setSelectedReportId] = useState(reports[0]?.id || "");
   const [subjectType, setSubjectType] = useState<"ROLE" | "USER">("ROLE");
-  const [subjectValue, setSubjectValue] = useState("OMC");
+  const [subjectValue, setSubjectValue] = useState("DEAN");
   const [canView, setCanView] = useState(true);
   const [canEdit, setCanEdit] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -66,7 +77,7 @@ export default function ReportAccessManager({ reports, initialRules: initialRule
             {rulesForReport.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No rules set — default open access applies.</td></tr>}
             {rulesForReport.map((r) => (
               <tr key={r.id}>
-                <td>{r.subjectType === "ROLE" ? r.subjectValue : personName(r.subjectValue)}{r.subjectType === "USER" && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Individual</span>}</td>
+                <td>{r.subjectType === "ROLE" ? roleName(r.subjectValue) : personName(r.subjectValue)}{r.subjectType === "USER" && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>Individual</span>}</td>
                 <td>{r.canView ? "✓" : "✗"}</td>
                 <td>{r.canEdit ? "✓" : "✗"}</td>
                 <td><button onClick={() => remove(r.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
@@ -81,7 +92,7 @@ export default function ReportAccessManager({ reports, initialRules: initialRule
         <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div>
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Applies To</label>
-            <select value={subjectType} onChange={(e) => { setSubjectType(e.target.value as "ROLE" | "USER"); setSubjectValue(e.target.value === "ROLE" ? "OMC" : people[0]?.id || ""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
+            <select value={subjectType} onChange={(e) => { setSubjectType(e.target.value as "ROLE" | "USER"); setSubjectValue(e.target.value === "ROLE" ? "DEAN" : people[0]?.id || ""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
               <option value="ROLE">A Role</option>
               <option value="USER">A Specific Person</option>
             </select>
@@ -90,14 +101,11 @@ export default function ReportAccessManager({ reports, initialRules: initialRule
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>{subjectType === "ROLE" ? "Role" : "Person"}</label>
             {subjectType === "ROLE" ? (
               <select value={subjectValue} onChange={(e) => setSubjectValue(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-                <option value="OMC">OMC</option>
-                <option value="PROGRAM_COORDINATOR">Program Coordinator</option>
-                <option value="SUBJECT_EXPERT">Subject Expert</option>
-                <option value="INSTRUCTOR">Instructor</option>
+                {ROLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             ) : (
               <select value={subjectValue} onChange={(e) => setSubjectValue(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-                {people.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.role})</option>)}
+                {people.map((p) => <option key={p.id} value={p.id}>{p.name} ({roleName(p.role)})</option>)}
               </select>
             )}
           </div>

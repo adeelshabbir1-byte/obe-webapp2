@@ -14,7 +14,7 @@ export default async function ReportAccessPage() {
 
   const [rules, coordinators] = await Promise.all([
     prisma.reportAccessRule.findMany({ where: { chairmanId: user.id } }),
-    prisma.user.findMany({ where: { managedById: user.id } }),
+    prisma.user.findMany({ where: { managedById: user.id, isVisitingPlaceholder: false } }),
   ]);
   const coordinatorIds = coordinators.filter((c) => c.role === "PROGRAM_COORDINATOR").map((c) => c.id);
   const faculty = await prisma.user.findMany({ where: { managedById: { in: coordinatorIds } } });
