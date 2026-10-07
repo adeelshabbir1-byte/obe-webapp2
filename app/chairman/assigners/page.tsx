@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CreateUserForm from "../../../components/CreateUserForm";
+import AssignerHatManager from "../../../components/AssignerHatManager";
+import { instituteTerm, termLabel, nextTermLabel, assignerHatActive } from "../../../lib/assignerHat";
 
 const NAV = [
   { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
@@ -27,11 +29,20 @@ export default async function ChairmanAssignersPage() {
 
   const assigners = await prisma.user.findMany({ where: { role: "COURSE_ASSIGNER", managedById: user.id }, orderBy: { createdAt: "desc" } });
 
+  const [term, people] = await Promise.all([
+    instituteTerm(user.id),
+    prisma.user.findMany({
+      where: { isVisitingPlaceholder: false, isActive: true, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] }, OR: [{ managedBy: { managedById: user.id } }, { managedById: user.id }] },
+      select: { id: true, name: true, assignerTerm: true }, orderBy: { name: "asc" },
+    }),
+  ]);
+  const holders = await Promise.all(people.filter((p) => p.assignerTerm).map(async (p) => ({ id: p.id, name: p.name, term: p.assignerTerm as string, active: await assignerHatActive(p.assignerTerm, user.id) })));
+
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Assigners</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Course Assigners build the faculty load matrix — assigning how many sections of each offered course each faculty member teaches.
+        Any teacher can be given this role for a semester, or you can create a separate Course Assigner account. Course Assigners build the faculty load matrix — assigning how many sections of each offered course each faculty member teaches.
       </p>
 
       <div className="card">
@@ -43,6 +54,8 @@ export default async function ChairmanAssignersPage() {
           </tbody>
         </SortableTable>
       </div>
+
+      <AssignerHatManager teachers={people.map((p) => ({ id: p.id, name: p.name }))} holders={holders} currentLabel={term ? termLabel(term) : null} nextLabel={term ? nextTermLabel(term) : null} />
 
       <CreateUserForm endpoint="/api/chairman/assigners" buttonLabel="Create Course Assigner" />
     </Shell>

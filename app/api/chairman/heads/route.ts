@@ -17,9 +17,13 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findFirst({ where: { OR: [{ username: body.username }, { email: body.email }] } });
   if (existing) return NextResponse.json({ error: "username or email already in use" }, { status: 409 });
 
+  const role = body.role === "DEPARTMENT_COORDINATOR" ? "DEPARTMENT_COORDINATOR" : "HEAD_OF_DEPARTMENT";
+  if (role === "DEPARTMENT_COORDINATOR" && (await prisma.user.count({ where: { role, departmentId: dept.id } })) > 0) {
+    return NextResponse.json({ error: "this department already has a Program Coordinator - remove them first" }, { status: 409 });
+  }
   const passwordHash = await hashPassword(body.password);
   const created = await prisma.user.create({
-    data: { email: body.email, username: body.username, passwordHash, name: body.name, role: "HEAD_OF_DEPARTMENT", managedById: user.id, departmentId: dept.id, mustChangePassword: true, secondaryRole: body.alsoFaculty ? "INSTRUCTOR" : null },
+    data: { email: body.email, username: body.username, passwordHash, name: body.name, role, managedById: user.id, departmentId: dept.id, mustChangePassword: true, secondaryRole: body.alsoFaculty ? "INSTRUCTOR" : null },
   });
   await writeAuditLog({ actorUserId: user.id, action: "HEAD_OF_DEPARTMENT_CREATED", entityType: "User", entityId: created.id, metadata: { departmentId: dept.id } });
   const { passwordHash: _omit, ...safe } = created;

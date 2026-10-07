@@ -6,7 +6,7 @@ import ReportPrintHeader from "../../../components/ReportPrintHeader";
 import SortableTable from "../../../components/SortableTable";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -56,7 +56,7 @@ export default async function RequiredBooksPage() {
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Required Textbooks — This Semester" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Textbook and reference material for every course offered this semester, as set by each course's Subject Expert.

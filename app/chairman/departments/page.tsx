@@ -23,7 +23,7 @@ export default async function ChairmanDepartmentsPage() {
     prisma.departmentProgram.findMany({ where: { chairmanId: user.id } }),
     prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { degreeProgram: true }, distinct: ["degreeProgram"] }),
     prisma.user.findMany({
-      where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT"] } },
+      where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT"] } },
       select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
     prisma.user.findMany({

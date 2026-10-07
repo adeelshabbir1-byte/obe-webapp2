@@ -10,7 +10,7 @@ type RoomRow = { id: string; name: string; type: string; departmentId: string | 
 type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null; managerId?: string | null };
 
 const ROLE_NAME: Record<string, string> = {
-  PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
+  PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
   HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert",
 };
 
@@ -42,7 +42,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
   // Sorted by department (people with no department first, so nobody is missed), then role, then name.
-  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
+  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
   const shown = people
     .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
     .sort((a, b) =>
@@ -150,7 +150,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                       </select>
                     </label>
                   )}
-                  {p.alsoFaculty && (p.role === "HEAD_OF_DEPARTMENT" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} />}
+                  {(p.role === "HEAD_OF_DEPARTMENT" || p.role === "DEPARTMENT_COORDINATOR" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} label={p.role === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : p.role === "DEPARTMENT_COORDINATOR" ? "Remove Program Coordinator" : "Remove as Program Lead"} />}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -185,14 +185,28 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         <h3 style={{ marginTop: 0 }}>Give a role to one of your teachers</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
           Deans, Chairmen and Program Leads are usually teachers. Pick the teacher and the role. They keep their teacher login and choose which role to work as each time they sign in.
-          (A Subject Expert can't be chosen, because the new role would replace their Subject Expert screens.)
+          Subject Experts can be chosen too and keep their Subject Expert and teaching roles.
         </p>
         <GiveRole
-          roles={["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_LEAD"]}
-          teachers={people.filter((p) => p.role === "INSTRUCTOR").map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
+          roles={["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD"]}
+          teachers={people.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT").map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
           faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
           programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}
         />
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Add a Program Coordinator</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
+          One per department: the Program Leads' assistant. They look after what involves all programs of the department (teacher onboarding, students, the semester and holidays, the timetable).
+          For someone who is not already one of your teachers; otherwise use the box above.
+        </p>
+        <label style={{ fontSize: 13 }}>Department: {" "}
+          <select value={headDept} onChange={(e) => setHeadDept(e.target.value)}>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
+        <HeadForm departmentId={headDept} role="DEPARTMENT_COORDINATOR" />
       </div>
 
       <div className="card">
@@ -210,7 +224,8 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
 }
 
 // CreateUserForm posts only name/email/username/password, but a head also needs the department, so a thin wrapper form is used.
-function HeadForm({ departmentId }: { departmentId: string }) {
+function HeadForm({ departmentId, role = "HEAD_OF_DEPARTMENT" }: { departmentId: string; role?: "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" }) {
+  const roleName = role === "DEPARTMENT_COORDINATOR" ? "Program Coordinator" : "Chairman";
   const router = useRouter();
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
@@ -221,11 +236,11 @@ function HeadForm({ departmentId }: { departmentId: string }) {
     const fd = new FormData(form);
     const res = await fetch("/api/chairman/heads", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId, alsoFaculty: fd.get("alsoFaculty") === "on" }),
+      body: JSON.stringify({ name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"), departmentId, role, alsoFaculty: fd.get("alsoFaculty") === "on" }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Could not create"); return; }
-    setOk("Chairman created. They must change the password on first login.");
+    setOk(`${roleName} created. They must change the password on first login.`);
     form.reset();
     router.refresh();
   }
@@ -238,7 +253,7 @@ function HeadForm({ departmentId }: { departmentId: string }) {
       <label style={{ fontSize: 13 }}><input type="checkbox" name="alsoFaculty" /> Also teaches as a faculty member</label>
       {error && <div style={{ color: "#b3261e" }}>{error}</div>}
       {ok && <div style={{ color: "var(--sage)" }}>{ok}</div>}
-      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create Chairman</button>
+      <button className="btn btn-brass" type="submit" disabled={!departmentId}>Create {roleName}</button>
     </form>
   );
 }

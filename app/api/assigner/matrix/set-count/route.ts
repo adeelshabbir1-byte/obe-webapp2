@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest) {
 
   if (kind === "course") {
     const course = await prisma.course.findUnique({ where: { id }, include: { coordinator: true } });
-    if (!course || course.coordinator.managedById !== user.managedById || (!(instructor.isVisitingPlaceholder && instructor.managedById === user.managedById) && !isHeadFaculty(instructor, user.managedById || "") && instructor.managedById !== course.coordinatorId)) {
+    if (!course || course.coordinator.managedById !== user.managedById || (user.departmentId && course.coordinator.departmentId !== user.departmentId) || (!(instructor.isVisitingPlaceholder && instructor.managedById === user.managedById) && !isHeadFaculty(instructor, user.managedById || "") && instructor.managedById !== course.coordinatorId)) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
     if (count <= 0) {

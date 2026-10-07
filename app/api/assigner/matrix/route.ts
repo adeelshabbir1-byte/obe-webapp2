@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../../lib/assignerScope";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -18,7 +19,7 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "COURSE_ASSIGNER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const offeredCourses = await prisma.course.findMany({
@@ -28,8 +29,8 @@ export async function GET() {
   });
 
   const groups = await prisma.courseEquivalenceGroup.findMany({
-    where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true } } } },
-    include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true, customCategory: true } } } }, sectionAssignments: true },
+    where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } } } },
+    include: { members: { where: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } }, include: { course: { include: { batch: true, customCategory: true } } } }, sectionAssignments: true },
   });
 
   const standaloneCourses = offeredCourses.filter((c) => !c.equivalenceMember);
@@ -96,7 +97,7 @@ export async function GET() {
   rows = rows.sort((a, b) => typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label));
 
   const instructors = await prisma.user.findMany({
-    where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, headFacultyWhere(user.managedById || "")] },
+    where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, { AND: [headFacultyWhere(user.managedById || ""), assignerDept(user)] }] },
     include: { customCategory: true },
   });
   const visitingUser = await getOrCreateVisitingFaculty(user.managedById || "");

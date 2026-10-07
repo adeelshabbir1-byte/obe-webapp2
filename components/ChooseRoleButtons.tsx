@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DUAL_ROLE_LABEL } from "../lib/dualRoles";
 
-export default function ChooseRoleButtons({ primaryRole = "SUBJECT_EXPERT" }: { primaryRole?: string }) {
-  const primaryLabel = DUAL_ROLE_LABEL[primaryRole] || "Subject Expert";
+export default function ChooseRoleButtons({ roles }: { roles: string[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -19,13 +18,12 @@ export default function ChooseRoleButtons({ primaryRole = "SUBJECT_EXPERT" }: { 
   }
 
   return (
-    <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-      <button onClick={() => choose(primaryRole)} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
-        {loading === primaryRole ? "Loading…" : `Continue as ${primaryLabel}`}
-      </button>
-      <button onClick={() => choose("INSTRUCTOR")} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, padding: "14px 10px" }}>
-        {loading === "INSTRUCTOR" ? "Loading…" : "Continue as Instructor"}
-      </button>
+    <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+      {roles.map((r) => (
+        <button key={r} onClick={() => choose(r)} disabled={!!loading} className="btn btn-brass" style={{ flex: 1, minWidth: 150, padding: "14px 10px" }}>
+          {loading === r ? "Loading…" : `Continue as ${DUAL_ROLE_LABEL[r] || r}`}
+        </button>
+      ))}
     </div>
   );
 }

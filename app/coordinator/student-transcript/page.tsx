@@ -8,7 +8,7 @@ import StudentTranscriptReport from "../../../components/StudentTranscriptReport
 import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -107,7 +107,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   }
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <ReportPrintHeader title="Student Transcript" />
       <div className="card no-print">
         <form method="GET" style={{ display: "flex", gap: 10, marginBottom: 14 }}>

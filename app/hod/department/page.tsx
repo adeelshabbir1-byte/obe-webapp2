@@ -43,7 +43,7 @@ export default async function HodDepartmentPage() {
 
   const coordinators = members.filter((m) => m.role === "PROGRAM_COORDINATOR");
   const coordOptions = coordinators.map((c) => ({ id: c.id, label: c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name }));
-  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
+  const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC Member" };
   const courseRow = (c: { id: string; code: string; title: string; batch: { degreeProgram: string; batchName: string } | null }) => (
     <tr key={c.id}><td>{c.code}</td><td>{c.title}</td><td>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td></tr>
   );
@@ -74,7 +74,7 @@ export default async function HodDepartmentPage() {
         </p>
         <div style={{ margin: "10px 0 14px" }}>
           <b style={{ fontSize: 13 }}>Make one of your teachers a Program Lead</b>
-          <GiveRole roles={["PROGRAM_LEAD"]} teachers={members.filter((m) => m.role === "INSTRUCTOR").map((m) => ({ id: m.id, name: m.name }))} programs={programs.map((p) => ({ name: p.degreeProgram, department: "" }))} />
+          <GiveRole roles={["PROGRAM_LEAD"]} teachers={members.filter((m) => m.role === "INSTRUCTOR" || m.role === "SUBJECT_EXPERT").map((m) => ({ id: m.id, name: m.name + (m.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} programs={programs.map((p) => ({ name: p.degreeProgram, department: "" }))} />
         </div>
         <ProgramLeads departmentId={departmentId} programs={programs.map((p) => p.degreeProgram)} coordinators={coordinators.map((c) => ({ id: c.id, name: c.name, leadProgram: c.leadProgram || null }))} />
       </div>
@@ -101,7 +101,7 @@ export default async function HodDepartmentPage() {
         <h3 style={{ marginTop: 0 }}>People in this department ({members.length})</h3>
         <table><thead><tr><th>Name</th><th>Role</th><th>Program (who looks after them)</th></tr></thead>
           <tbody>{members.map((m) => (
-            <tr key={m.id}><td>{m.name}</td><td>{roleName[m.role] || m.role}{m.role === "PROGRAM_COORDINATOR" && m.leadProgram ? ` — Lead of ${m.leadProgram}` : ""}{m.role === "PROGRAM_COORDINATOR" && m.leadProgram && m.secondaryRole === "INSTRUCTOR" && <TakeRoleBack userId={m.id} />}</td>
+            <tr key={m.id}><td>{m.name}</td><td>{roleName[m.role] || m.role}{m.role === "PROGRAM_COORDINATOR" && m.leadProgram ? ` — Lead of ${m.leadProgram}` : ""}{m.role === "PROGRAM_COORDINATOR" && m.leadProgram && <TakeRoleBack userId={m.id} label="Remove as Program Lead" />}</td>
               <td>{["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) && coordOptions.length > 0 ? <MemberProgramSelect userId={m.id} current={m.managedById} coordinators={coordOptions} /> : "—"}</td></tr>
           ))}</tbody></table>
       </div>

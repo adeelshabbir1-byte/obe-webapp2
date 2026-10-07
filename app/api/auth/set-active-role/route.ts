@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const role = body.role;
-  const allowed = [user.rawRole, user.secondaryRole].filter(Boolean);
+  const allowed = [user.rawRole, user.secondaryRole, user.tertiaryRole, user.assignerHat ? "COURSE_ASSIGNER" : null].filter(Boolean);
   if (!allowed.includes(role)) return NextResponse.json({ error: "not a role you're able to act as" }, { status: 403 });
 
   await setActiveRole(role);

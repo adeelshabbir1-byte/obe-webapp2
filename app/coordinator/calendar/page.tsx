@@ -5,7 +5,7 @@ import Shell from "../../../components/Shell";
 import CalendarManager from "../../../components/CalendarManager";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -60,7 +60,7 @@ export default async function CalendarPage() {
   const degreePrograms = Array.from(new Set(batches.map((b) => b.degreeProgram)));
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Calendar & Exam Dates</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Set semester start/midterm/final dates once per Degree Program — applies to every course currently

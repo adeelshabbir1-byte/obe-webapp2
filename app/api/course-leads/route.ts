@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../lib/assignerScope";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   const team = (await loadTeams(chairmanId)).find((t) => t.key === body.teamKey);
   if (!team) return NextResponse.json({ error: "course team not found" }, { status: 404 });
-  const scope = user.role === "COURSE_ASSIGNER" ? { coordinator: { managedById: chairmanId } } : courseScopeFor(user);
+  const scope = user.role === "COURSE_ASSIGNER" ? { coordinator: { managedById: chairmanId, ...assignerDept(user) } } : courseScopeFor(user);
   const visible = await prisma.course.count({ where: { id: { in: team.rows.map((r) => r.courseId) }, ...scope } });
   if (visible === 0) return NextResponse.json({ error: "course team not found" }, { status: 404 });
   if (!team.teachers.some((t) => t.id === body.leadId)) return NextResponse.json({ error: "the lead must be one of the teachers of this course" }, { status: 400 });

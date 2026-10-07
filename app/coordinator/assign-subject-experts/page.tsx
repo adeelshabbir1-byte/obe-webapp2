@@ -1,4 +1,5 @@
 import { homeExpertsFor } from "../../../lib/homeExperts";
+import { subjectExpertWhere } from "../../../lib/dualRoles";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -6,7 +7,7 @@ import Shell from "../../../components/Shell";
 import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpertsManager";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -101,7 +102,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   courseGroups.sort((a, b) => (a.semesterNumber ?? 99) - (b.semesterNumber ?? 99) || a.code.localeCompare(b.code));
 
   const subjectExperts = await prisma.user.findMany({
-    where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    where: subjectExpertWhere(user.id, user.managedById || ""),
     include: { customCategory: { select: { name: true } } },
     orderBy: { name: "asc" },
   });
@@ -119,7 +120,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   });
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assign Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Grouped by course category (Maths, Foundation, etc. — set on the Course & Faculty Categories page),

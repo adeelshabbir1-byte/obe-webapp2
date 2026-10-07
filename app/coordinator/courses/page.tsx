@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { subjectExpertWhere } from "../../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
@@ -8,7 +9,7 @@ import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
 import { curriculaVisibleTo, degreeSortKey } from "../../../lib/curriculumAccess";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -60,7 +61,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   });
 
   const subjectExperts = await prisma.user.findMany({
-    where: { role: "SUBJECT_EXPERT", managedById: user.id },
+    where: subjectExpertWhere(user.id, user.managedById || ""),
     orderBy: { name: "asc" },
   });
 
@@ -82,7 +83,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
     .sort((a, b) => degreeSortKey(a).localeCompare(degreeSortKey(b)) || a.authority.localeCompare(b.authority) || b.version.localeCompare(a.version));
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Courses</h1>
         <a href="/api/coordinator/courses/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

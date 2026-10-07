@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { isDualCapable, DUAL_ROLE_LABEL } from "../../lib/dualRoles";
+import { isDualCapable, DUAL_ROLE_LABEL, hatsOf } from "../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../lib/session";
 import ChooseRoleButtons from "../../components/ChooseRoleButtons";
 
@@ -9,7 +9,7 @@ export default async function ChooseRolePage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
 
-  if (!isDualCapable(user.rawRole, user.secondaryRole)) {
+  if (!isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat)) {
     redirect("/dashboard");
   }
 
@@ -18,9 +18,9 @@ export default async function ChooseRolePage() {
       <div style={{ background: "#fff", padding: "40px 50px", maxWidth: 480, border: "1px solid var(--line)", textAlign: "center" }}>
         <h1 style={{ fontSize: 20, marginBottom: 6 }}>Welcome, {user.name}</h1>
         <p style={{ fontSize: 13, color: "var(--slate)", marginBottom: 28 }}>
-          Your account can act as both {DUAL_ROLE_LABEL[user.rawRole] || user.rawRole} and Instructor. Which one do you want to work as right now?
+          Your account can work as {hatsOf({ ...user, assignerHat: user.assignerHat }).map((r) => DUAL_ROLE_LABEL[r] || r).join(", ")}. Which one do you want to work as right now?
         </p>
-        <ChooseRoleButtons primaryRole={user.rawRole} />
+        <ChooseRoleButtons roles={hatsOf({ ...user, assignerHat: user.assignerHat })} />
       </div>
     </div>
   );

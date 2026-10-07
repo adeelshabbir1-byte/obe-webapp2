@@ -23,7 +23,7 @@ export default async function TimetablePage() {
   ]);
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Timetable</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Set up rooms, per-batch scheduling windows, and faculty availability, then generate a conflict-checked

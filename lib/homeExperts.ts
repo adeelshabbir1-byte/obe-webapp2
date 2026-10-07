@@ -7,7 +7,13 @@ export async function homeExpertsFor(chairmanId: string, ownCoordinatorId: strin
   const ids = Array.from(new Set(departmentIds.filter(Boolean)));
   if (ids.length === 0) return [];
   const experts = await prisma.user.findMany({
-    where: { role: "SUBJECT_EXPERT", departmentId: { in: ids }, managedById: { not: ownCoordinatorId }, managedBy: { managedById: chairmanId } },
+    where: {
+      departmentId: { in: ids },
+      OR: [
+        { role: "SUBJECT_EXPERT", managedById: { not: ownCoordinatorId }, managedBy: { managedById: chairmanId } },
+        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }] },
+      ],
+    },
     select: { id: true, name: true, departmentId: true }, orderBy: { name: "asc" },
   });
   return experts.map((e) => ({ id: e.id, name: e.name, departmentId: e.departmentId as string }));

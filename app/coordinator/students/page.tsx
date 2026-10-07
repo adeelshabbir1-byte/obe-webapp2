@@ -5,7 +5,7 @@ import Shell from "../../../components/Shell";
 import StudentManager from "../../../components/StudentManager";
 
 const NAV = [
-  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
   { href: "/coordinator/courses", label: "Courses" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
@@ -53,7 +53,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
   const students = batchId ? await prisma.student.findMany({ where: { batchId }, orderBy: { rollNumber: "asc" } }) : [];
 
   return (
-    <Shell roleLabel="Program Coordinator" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Students</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Bulk-import students per batch — this is the roster used for marks entry and results.</p>
       {batches.length === 0 ? (

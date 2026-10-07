@@ -23,6 +23,8 @@ enum UserRole {
   HEAD_OF_DEPARTMENT
   PROGRAM_LEAD
   DEAN
+  DEPARTMENT_COORDINATOR
+  LAB_ENGINEER
 }
 
 model User {
@@ -54,6 +56,8 @@ model User {
   maxCreditsPerSemester Int?
   customCategoryId   String?  // faculty's own institution-defined category (see CustomCategory) — separate from specialization, e.g. "Maths", "Management"
   customCategory     CustomCategory? @relation("FacultyCustomCategory", fields: [customCategoryId], references: [id])
+  assignerTerm       String?  // Course Assigner hat given to a teacher: "Fall 2026" (that semester only) or "ALWAYS" (until removed)
+  tertiaryRole       String?  // a third hat for someone who is, say, a Subject Expert AND teaches AND leads (Dean / Chairman / Program Lead)
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited
   isAlumniCustodian  Boolean  @default(false) // set by Chairman on ONE faculty member — that person reviews/approves all alumni & employer data submitted by any faculty
@@ -114,6 +118,7 @@ model User {
   departmentsOwned      Department[] @relation("DepartmentChairman")
   facultiesOwned        Faculty[]    @relation("FacultyInstitute")
   courseLeadOf          CourseLead[] @relation("CourseLeadUser")
+  labCourses            Course[]     @relation("CourseLabEngineer")
   teacherLoans          TeacherLoanRequest[] @relation("LoanInstructor")
   loanAllowances        TeacherLoanAllowed[] @relation("LoanAllowedInstructor")
   timetableRuns      TimetableRun[] @relation("TimetableRunChairman")
@@ -137,6 +142,7 @@ model Session {
   ipAddress  String?
   userAgent  String?
   mfaVerified Boolean @default(true) // false only while an MFA-enabled user's login is pending code entry
+  actingForId String? // DEPARTMENT_COORDINATOR only: which program lead's data they are working on right now
   activeRole  String? // which role a dual-capable person (Subject Expert who can also Instruct) chose for this session
 
   @@index([userId])
@@ -772,6 +778,7 @@ model Student {
 
   enrollments StudentEnrollment[]
   marks       StudentMark[]
+  labMarks    LabMark[]
   transcriptRecords StudentTranscriptRecord[]
   surveyResponses SurveyResponse[]
   attendanceRecords AttendanceRecord[]
@@ -1293,6 +1300,10 @@ model Course {
   weightExceptions    WeightExceptionRequest[]
   assessmentInstruments AssessmentInstrument[]
   sectionAssignments  CourseSectionAssignment[]
+  labEngineerId       String?  // Lab courses only: the Lab Engineer who sets the lab manuals and enters lab marks
+  labEngineer         User?    @relation("CourseLabEngineer", fields: [labEngineerId], references: [id])
+  labManuals          LabManual[]
+  labMarks            LabMark[]
   equivalenceMember   CourseEquivalenceMember?
   feedForwardNotes    FeedForwardNote[]
   guidanceComments    InstructorGuidanceComment[]
@@ -2029,4 +2040,49 @@ model PaperApproval {
   decidedAt    DateTime @default(now())
 
   @@unique([submissionId, userId])
+}
+
+// A lab manual (a Word file) for one lab session of a Lab course. The Lab Engineer uploads it; the lab's lead
+// (by default the theory course's instructor) can read it and upload an updated version. Every version is kept.
+model LabManual {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  labNumber Int      // lab session number (one lab per week)
+  title     String
+  createdAt DateTime @default(now())
+  versions  LabManualVersion[]
+
+  @@unique([courseId, labNumber])
+}
+
+model LabManualVersion {
+  id           String   @id @default(cuid())
+  manualId     String
+  manual       LabManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  version      Int
+  fileName     String
+  fileUrl      String   @db.Text
+  uploadedById String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@unique([manualId, version])
+}
+
+// A student's mark for one lab session, entered by the Lab Engineer.
+model LabMark {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  labNumber   Int
+  score       Float
+  maxScore    Float
+  enteredById String
+  updatedAt   DateTime @updatedAt
+
+  @@unique([courseId, studentId, labNumber])
+  @@index([courseId])
 }

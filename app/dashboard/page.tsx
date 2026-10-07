@@ -15,9 +15,11 @@ const ROLE_HOME: Record<string, string> = {
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
   DEAN: "/dean/overview",
+  DEPARTMENT_COORDINATOR: "/dept-coordinator/home",
   HEAD_OF_DEPARTMENT: "/hod/department",
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
+  LAB_ENGINEER: "/lab-engineer/labs",
   COURSE_ASSIGNER: "/assigner/matrix",
 };
 
@@ -30,7 +32,7 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if (isDualCapable(user.rawRole, user.secondaryRole) && !user.roleChosen) {
+  if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat) && !user.roleChosen) {
     redirect("/choose-role");
   }
 

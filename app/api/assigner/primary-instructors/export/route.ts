@@ -1,3 +1,4 @@
+import { assignerDept } from "../../../../../lib/assignerScope";
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
@@ -7,7 +8,7 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "COURSE_ASSIGNER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "" } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const courses = await prisma.course.findMany({
