@@ -177,7 +177,8 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         </label>
         <div style={{ marginTop: 10 }}>
           <ProgramLeads key={leadDept} departmentId={leadDept} programs={programsByDept[leadDept] || []}
-            coordinators={people.filter((p) => p.role === "PROGRAM_COORDINATOR" && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name, leadProgram: p.leadProgram || null }))} />
+            coordinators={people.filter((p) => p.role === "PROGRAM_COORDINATOR" && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name, leadProgram: p.leadProgram || null }))}
+            teachers={people.filter((p) => (p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT") && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} />
         </div>
       </div>
 
