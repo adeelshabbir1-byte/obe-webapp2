@@ -11,7 +11,7 @@ export async function GET() {
 
   const [courseSections, groupSections] = await Promise.all([
     prisma.scheduleSection.findMany({
-      where: { course: { batchId: { in: batchIds } } },
+      where: { course: { batchId: { in: batchIds }, isOffered: true } }, // only what is offered now — old semesters' leftover sections stay hidden and unscheduled
       include: { course: { include: { batch: true } }, instructor: true },
       orderBy: [{ course: { code: "asc" } }],
     }),
@@ -19,7 +19,7 @@ export async function GET() {
     // of this Coordinator's own — same scoping the timetable generator
     // itself uses.
     prisma.scheduleSection.findMany({
-      where: { group: { members: { some: { course: { batchId: { in: batchIds } } } } } },
+      where: { group: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } } },
       include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } }, instructor: true },
     }),
   ]);

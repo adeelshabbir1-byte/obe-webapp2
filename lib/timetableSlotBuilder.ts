@@ -31,9 +31,11 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   }
 
   const [courseSections, groupSections, rooms, faculty] = await Promise.all([
-    prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds } } }, include: { course: { include: { batch: true } } } }),
+    // Only sections of courses that are offered NOW — a course that is no longer offered (an earlier semester of a batch that has moved on)
+    // can leave its old sections behind, and those must not take up room hours or be scheduled again.
+    prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds }, isOffered: true } }, include: { course: { include: { batch: true } } } }),
     prisma.scheduleSection.findMany({
-      where: { group: { members: { some: { course: { batchId: { in: batchIds } } } } } },
+      where: { group: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } } },
       include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
     }),
     prisma.room.findMany({ where: { chairmanId: chairmanId || "" } }),
@@ -70,7 +72,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
 
   for (const s of groupSections) {
     if (!s.groupId || !s.group) continue;
-    const memberBatches = s.group.members.map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b);
+    const memberBatches = s.group.members.filter((m) => m.course.isOffered).map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b);
     const memberBatchIdsInScope = memberBatches.map((b) => b.id).filter((id) => batchIds.includes(id));
     if (memberBatchIdsInScope.length === 0) continue; // none of this group's member batches belong to this coordinator
     const combinedTotal = memberBatches.reduce((sum, b) => sum + b.studentCount, 0);
