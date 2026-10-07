@@ -6,7 +6,7 @@ import AssignerMatrixTabs from "../../../components/AssignerMatrixTabs";
 const NAV = [
   { href: "/assigner/matrix", label: "Section Assignment Matrix" },
   { href: "/assigner/course-short-names", label: "Course Short Names" },
-  { href: "/assigner/borrow-teacher", label: "Teachers from Other Departments" },
+  { href: "/assigner/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
 ];
 
 export default async function AssignerMatrixPage() {
