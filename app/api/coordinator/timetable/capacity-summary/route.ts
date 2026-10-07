@@ -106,13 +106,18 @@ export async function GET() {
   // uses (see timetableSlotBuilder.ts).
   const hoursByBatch = new Map<string, { theory: number; lab: number }>();
   // Exactly which sections make up each batch's hours, so a surprising total can be traced to its cause.
-  const detailsByBatch = new Map<string, { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean }[]>();
+  const detailsByBatch = new Map<string, { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean; counted: boolean }[]>();
+  // A batch attends ONE section of a course, so each course counts once per type; extra sections (parallel/duplicate/combined splits) are listed but not counted.
+  const seenCourseType = new Set<string>();
   function addHours(batchId: string, type: string, hours: number, detail: { code: string; title: string; semester: number | null; section: string; combined: boolean }) {
     const cur = hoursByBatch.get(batchId) || { theory: 0, lab: 0 };
-    if (type === "LAB") cur.lab += hours; else cur.theory += hours;
+    const key = `${batchId}|${detail.code}|${type === "LAB" ? "LAB" : "TH"}`;
+    const counted = !seenCourseType.has(key);
+    seenCourseType.add(key);
+    if (counted) { if (type === "LAB") cur.lab += hours; else cur.theory += hours; }
     hoursByBatch.set(batchId, cur);
     const list = detailsByBatch.get(batchId) || [];
-    list.push({ ...detail, type, hours });
+    list.push({ ...detail, type, hours, counted });
     detailsByBatch.set(batchId, list);
   }
   for (const s of sections) {

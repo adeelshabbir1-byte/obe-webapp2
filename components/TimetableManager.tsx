@@ -141,7 +141,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     theory: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     lab: { roomCount: number; sectionsCount: number; sessionsPerWeekTotal: number; requiredHoursPerWeek: number; availableHoursPerWeek: number };
     offeredCoursesCount: number; offeredGroupsCount: number;
-    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number; theoryRoomsNeeded: number; labRoomsNeeded: number; details?: { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean }[] }[] };
+    programTermMatrix: { programs: string[]; terms: string[]; cells: { program: string; term: string; theoryHours: number; labHours: number; theoryRoomsNeeded: number; labRoomsNeeded: number; details?: { code: string; title: string; semester: number | null; section: string; type: string; hours: number; combined: boolean; counted?: boolean }[] }[] };
   };
   const [capacity, setCapacity] = useState<CapacitySummary | null>(null);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
@@ -515,7 +515,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                           <thead><tr><th>Sem.</th><th>Course</th><th>Section</th><th>Type</th><th>Hours / week</th><th></th></tr></thead>
                           <tbody>
                             {(cell.details || []).map((d, i) => (
-                              <tr key={i}><td>{d.semester ?? "—"}</td><td>{d.code} — {d.title}</td><td>{d.section}</td><td>{d.type === "LAB" ? "Lab" : "Theory"}</td><td>{d.hours}</td><td>{d.combined ? "combined class" : ""}</td></tr>
+                              <tr key={i} style={d.counted === false ? { opacity: 0.45, textDecoration: "line-through" } : undefined}><td>{d.semester ?? "—"}</td><td>{d.code} — {d.title}</td><td>{d.section}</td><td>{d.type === "LAB" ? "Lab" : "Theory"}</td><td>{d.hours}</td><td>{d.counted === false ? "extra section — not counted" : d.combined ? "combined class" : ""}</td></tr>
                             ))}
                             {(cell.details || []).length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No sections.</td></tr>}
                           </tbody>
