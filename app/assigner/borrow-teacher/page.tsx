@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
-import AssignerMatrixTabs from "../../../components/AssignerMatrixTabs";
+import BorrowTeacher from "../../../components/BorrowTeacher";
 
 const NAV = [
   { href: "/assigner/matrix", label: "Section Assignment Matrix" },
@@ -9,23 +9,17 @@ const NAV = [
   { href: "/assigner/borrow-teacher", label: "Borrow a Teacher" },
 ];
 
-export default async function AssignerMatrixPage() {
+export default async function BorrowTeacherPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "COURSE_ASSIGNER") redirect("/dashboard");
-
   return (
     <Shell roleLabel="Course Assigner" userName={user.name} navLinks={NAV}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Section Assignment Matrix</h1>
-        <a href="/api/assigner/matrix/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
-      </div>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Courses on the left, faculty as columns — enter how many sections each faculty member is teaching.
-      </p>
-      <AssignerMatrixTabs />
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Borrow a Teacher</h1>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>For example a BBA course taught by a CS teacher, or a CS management course taught by a Management teacher.</p>
+      <BorrowTeacher />
     </Shell>
   );
 }

@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       data: {
         email, username, passwordHash, name, role,
         managedById: user.id,
+        departmentId: user.departmentId,
         mustChangePassword: true,
         specialization: rawSpecialization ? String(rawSpecialization).trim() || null : null,
       },

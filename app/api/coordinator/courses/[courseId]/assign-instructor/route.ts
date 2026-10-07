@@ -47,6 +47,14 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
     const isVisiting = !!instructor && instructor.isVisitingPlaceholder && instructor.managedById === chairmanId;
     const isValidInstructor = isVisiting || instructor && validManagerIds.includes(instructor.managedById || "") && (instructor.role === "INSTRUCTOR" || instructor.role === "SUBJECT_EXPERT");
+    if (isValidInstructor && !isVisiting && instructor && instructor.id !== course.instructorId) {
+      // A teacher from a different department can only come through an approved "Borrow a Teacher" request.
+      const courseDept = (await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { departmentId: true } }))?.departmentId;
+      if (courseDept && instructor.departmentId && instructor.departmentId !== courseDept) {
+        const loan = await prisma.teacherLoanRequest.findFirst({ where: { courseId: course.id, instructorId: instructor.id, status: "APPROVED" } });
+        if (!loan) return NextResponse.json({ error: "this teacher belongs to another department - use Borrow a Teacher so their head can approve" }, { status: 400 });
+      }
+    }
     if (!isValidInstructor) {
       return NextResponse.json({ error: "invalid instructor" }, { status: 400 });
     }

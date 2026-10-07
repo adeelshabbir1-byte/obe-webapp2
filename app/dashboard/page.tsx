@@ -181,13 +181,15 @@ async function superUserStats(): Promise<Stat[]> {
 
 async function hodStats(user: { managedById: string | null; departmentId?: string | null }): Promise<Stat[]> {
   const departmentId = user.departmentId || "none";
-  const [pendingApprovals, programs, staff, noTeacher] = await Promise.all([
+  const [loanRequests, pendingApprovals, programs, staff, noTeacher] = await Promise.all([
+    prisma.teacherLoanRequest.count({ where: { lendingDepartmentId: departmentId, status: "PENDING" } }),
     prisma.course.count({ where: { instructorApproval: "PENDING", coordinator: { managedById: user.managedById || "", departmentId } } }),
     prisma.departmentProgram.count({ where: { departmentId } }),
     prisma.user.count({ where: { departmentId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } }),
     prisma.course.count({ where: { isOffered: true, instructorId: null, coordinator: { managedById: user.managedById || "", departmentId } } }),
   ]);
   return [
+    { label: "Teacher loan requests to answer", value: loanRequests, href: "/hod/department", tone: loanRequests > 0 ? "warn" : "ok" },
     { label: "Teacher assignments awaiting your approval", value: pendingApprovals, href: "/hod/department", tone: pendingApprovals > 0 ? "warn" : "ok" },
     { label: "Programs in your department", value: programs, href: "/hod/department", tone: "neutral" },
     { label: "Faculty in your department", value: staff, href: "/hod/department", tone: "neutral" },

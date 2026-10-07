@@ -102,6 +102,7 @@ export const CHAIRMAN_NAV = [
 
 export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
+  { href: "/hod/borrow-teacher", label: "Borrow a Teacher" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },

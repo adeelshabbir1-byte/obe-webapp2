@@ -6,6 +6,7 @@ import CourseShortNamesManager from "../../../components/CourseShortNamesManager
 const NAV = [
   { href: "/assigner/matrix", label: "Section Assignment Matrix" },
   { href: "/assigner/course-short-names", label: "Course Short Names" },
+  { href: "/assigner/borrow-teacher", label: "Borrow a Teacher" },
 ];
 
 export default async function CourseShortNamesPage() {

@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import HodApprovals from "../../../components/HodApprovals";
+import HodLoanRequests from "../../../components/HodLoanRequests";
 
 export default async function HodDepartmentPage() {
   const user = await getAuthenticatedUser();
@@ -14,7 +15,12 @@ export default async function HodDepartmentPage() {
 
   const departmentId = user.departmentId || "none";
   const chairmanId = user.managedById || "";
-  const [pending, department, programs, members, noTeacher, visiting] = await Promise.all([
+  const [incomingLoans, pending, department, programs, members, noTeacher, visiting] = await Promise.all([
+    prisma.teacherLoanRequest.findMany({
+      where: { lendingDepartmentId: departmentId, status: "PENDING", chairmanId },
+      include: { course: { select: { code: true, title: true } }, instructor: { select: { name: true } }, requestingDepartment: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
     prisma.course.findMany({
       where: { instructorApproval: "PENDING", coordinator: { managedById: chairmanId, departmentId } },
       select: { id: true, code: true, title: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
@@ -43,6 +49,12 @@ export default async function HodDepartmentPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Your programs, your people, and the courses still waiting for a teacher. Teacher assignments wait here for your approval.
       </p>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Teacher loan requests to you ({incomingLoans.length})</h3>
+        <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking to borrow one of your teachers.</p>
+        <HodLoanRequests items={incomingLoans.map((l) => ({ id: l.id, teacher: l.instructor.name, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
+      </div>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Waiting for your approval ({pending.length})</h3>
