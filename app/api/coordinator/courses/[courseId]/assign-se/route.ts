@@ -3,6 +3,7 @@ import { hasSubjectExpertHat } from "../../../../../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { handlingAccess } from "../../../../../../lib/courseOwners";
 import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
@@ -12,9 +13,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
-  if (!course || course.coordinatorId !== user.id) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-  }
+  if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // Own program's course, unless the Chairman gave it to another lead; another program's course only if he handles it.
+  const access = await handlingAccess(user.id, course);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const body = await req.json();
   const subjectExpertId = body.subjectExpertId || null;
@@ -66,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   let labSibling: { id: string; code: string; status: "assigned" | "cleared" | "already" | "kept" | "blocked"; subjectExpertId: string | null; keptName?: string } | null = null;
   if (course.courseType !== "Lab") {
     const lab = await prisma.course.findFirst({
-      where: { coordinatorId: user.id, batchId: course.batchId, code: `${course.code}-L`, courseType: "Lab" },
+      where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: `${course.code}-L`, courseType: "Lab" },
       include: { subjectExpert: { select: { name: true } } },
     });
     if (lab) {

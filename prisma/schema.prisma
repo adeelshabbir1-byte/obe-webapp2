@@ -2109,3 +2109,21 @@ model TeacherProgramMove {
   @@index([fromCoordinatorId])
   @@index([toCoordinatorId])
 }
+
+// Who handles a course within a department. Common courses (the same code in several programs) are given to ONE
+// Program Lead; specialised courses stay with their own program's lead. Decided by the Chairman (or Institute Head).
+// courseKey = lower-case trimmed course code. A lab ("<CODE>-L") follows its theory course unless it has its own row.
+model CourseOwner {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  departmentId String
+  courseKey    String
+  ownerId      String
+  ownerDepartmentId String? // the owner's own department; differs from departmentId when another department takes the course
+  status       String   @default("ACCEPTED") // ACCEPTED | PENDING (waiting for the owner's department Chairman)
+  assignedById String
+  createdAt    DateTime @default(now())
+
+  @@unique([chairmanId, departmentId, courseKey])
+  @@index([ownerId])
+}
