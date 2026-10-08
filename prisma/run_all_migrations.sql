@@ -4590,3 +4590,17 @@ CREATE INDEX IF NOT EXISTS "TeacherProgramMove_toCoordinatorId_idx" ON "TeacherP
 -- migration_omc_hat.sql
 -- Lets a faculty member also be an OMC member (the same login, a role to choose at sign-in).
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "omcHat" BOOLEAN NOT NULL DEFAULT false;
+
+-- ===== migration_course_owner.sql =====
+-- Course split: which Program Lead handles each course in a department.
+CREATE TABLE IF NOT EXISTS "CourseOwner" (
+  "id" TEXT PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL,
+  "departmentId" TEXT NOT NULL,
+  "courseKey" TEXT NOT NULL,
+  "ownerId" TEXT NOT NULL,
+  "assignedById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CourseOwner_chairmanId_departmentId_courseKey_key" ON "CourseOwner"("chairmanId","departmentId","courseKey");
+CREATE INDEX IF NOT EXISTS "CourseOwner_ownerId_idx" ON "CourseOwner"("ownerId");

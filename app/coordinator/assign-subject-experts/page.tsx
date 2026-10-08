@@ -3,6 +3,7 @@ import { subjectExpertWhere } from "../../../lib/dualRoles";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { loadOwnerMap, ownerFromMap, ownedElsewhereCourseIds } from "../../../lib/courseOwners";
 import Shell from "../../../components/Shell";
 import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpertsManager";
 
@@ -52,11 +53,16 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
 
   const selectedBatchId = searchParams.batchId || "";
 
-  const allCourses = await prisma.course.findMany({
-    where: { coordinatorId: user.id, ...(selectedBatchId ? { batchId: selectedBatchId } : {}) },
+  // Course split: the Chairman gives each common course to one lead. Courses another lead handles are not mine to set up;
+  // courses of other programs that I handle appear here too, so one assignment covers every program.
+  const [ownerMap, elsewhereIds] = await Promise.all([loadOwnerMap(user), ownedElsewhereCourseIds(user)]);
+  const rawCourses = await prisma.course.findMany({
+    where: { AND: [{ OR: [{ coordinatorId: user.id }, { id: { in: elsewhereIds } }] }, selectedBatchId ? { batchId: selectedBatchId } : {}] },
     orderBy: [{ semesterNumber: "asc" }, { createdAt: "desc" }],
-    include: { batch: true, customCategory: { select: { name: true } }, contentSyncMember: { include: { group: { include: { members: { include: { course: { select: { code: true } } } } } } } } },
+    include: { batch: true, coordinator: { select: { name: true } }, customCategory: { select: { name: true } }, contentSyncMember: { include: { group: { include: { members: { include: { course: { select: { code: true } } } } } } } } },
   });
+  const handledElsewhere = rawCourses.filter((c) => c.coordinatorId === user.id && (ownerFromMap(c, ownerMap) || user.id) !== user.id);
+  const allCourses = rawCourses.filter((c) => !handledElsewhere.includes(c));
 
   // A course is assignable here if it's not tracked in a content-sync
   // group at all, or if it IS that group's own base — a non-base
@@ -95,7 +101,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
       linkedFollowerCodes: Array.from(followerCodes),
       sections: members.map((m) => ({
         id: m.id, subjectExpertId: m.subjectExpertId,
-        batchLabel: m.batch ? `${m.batch.degreeProgram} — ${m.batch.batchName}` : "—",
+        batchLabel: (m.batch ? `${m.batch.degreeProgram} — ${m.batch.batchName}` : "—") + (m.coordinatorId !== user.id ? ` (${m.coordinator.name})` : ""),
       })),
     };
   });
@@ -129,6 +135,8 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
         a single assignment applying to all of them at once. Courses linked as a follower of another section
         (inheriting their Subject Expert automatically) aren't shown.
         {followerCount > 0 && ` (${followerCount} linked follower course${followerCount === 1 ? "" : "s"} hidden.)`}
+        {elsewhereIds.length > 0 && ` ${elsewhereIds.length} course${elsewhereIds.length === 1 ? "" : "s"} of other programs are handled by you; their program lead is shown in brackets.`}
+        {handledElsewhere.length > 0 && ` ${handledElsewhere.length} of your program's course${handledElsewhere.length === 1 ? " is" : "s are"} handled by another Program Lead (decided by the Chairman) and not shown.`}
       </p>
       <AssignSubjectExpertsManager
         key={selectedBatchId || "all"}
