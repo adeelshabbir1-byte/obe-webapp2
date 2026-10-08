@@ -30,7 +30,7 @@ export default async function HodDepartmentPage() {
     }),
     prisma.department.findUnique({ where: { id: departmentId } }),
     prisma.departmentProgram.findMany({ where: { departmentId }, orderBy: { degreeProgram: "asc" } }),
-    prisma.user.findMany({ where: { departmentId, isVisitingPlaceholder: false }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true, managedById: true, leadProgram: true } }),
+    prisma.user.findMany({ where: { isVisitingPlaceholder: false, OR: [{ departmentId }, { departmentId: null, managedBy: { departmentId } }] }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true, managedById: true, leadProgram: true } }),
     prisma.course.findMany({
       where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, departmentId } },
       select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
