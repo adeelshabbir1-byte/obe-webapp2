@@ -27,6 +27,11 @@ export function subjectExpertWhere(coordinatorId: string, chairmanId: string) {
     ],
   };
 }
+/** A Prisma filter for everyone who holds a role, whether as the main role or as an extra hat
+ * (a person can be both Dean and Chairman, so a Chairman may be listed as a hat on a Dean's account). */
+export function holdsRoleWhere(role: "DEAN" | "HEAD_OF_DEPARTMENT") {
+  return { OR: [{ role }, { secondaryRole: role }, { tertiaryRole: role }] };
+}
 /** Same test for one already-loaded person. */
 export function hasSubjectExpertHat(u: { role: string; secondaryRole?: string | null; tertiaryRole?: string | null }) {
   return u.role === "SUBJECT_EXPERT" || (["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(u.role) && (u.secondaryRole === "SUBJECT_EXPERT" || u.tertiaryRole === "SUBJECT_EXPERT"));

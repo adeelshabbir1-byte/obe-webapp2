@@ -5,7 +5,7 @@ export type SplitLead = { id: string; name: string; program: string | null; depa
 export type SplitRow = {
   key: string; code: string; title: string; semester: number | null;
   leads: { id: string; name: string; programs: string[] }[];
-  ownerId: string | null; ownerStatus: "ACCEPTED" | "PENDING" | null; shared: boolean;
+  ownerId: string | null; ownerStatus: "ACCEPTED" | "PENDING" | null; shared: boolean; elective: boolean;
 };
 export type Incoming = { id: string; code: string; title: string; fromDepartment: string; ownerName: string };
 export type SplitData = { leads: SplitLead[]; rows: SplitRow[]; incoming: Incoming[]; departmentName: string };
@@ -17,7 +17,7 @@ export async function loadSplit(chairmanId: string, departmentId: string, incomi
     prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, isActive: true, departmentId: { not: null } }, select: { id: true, name: true, leadProgram: true, departmentId: true }, orderBy: { name: "asc" } }),
     prisma.course.findMany({
       where: { courseType: { not: "Lab" }, coordinator: { managedById: chairmanId, departmentId } },
-      select: { code: true, title: true, semesterNumber: true, coordinatorId: true, coordinator: { select: { name: true } }, batch: { select: { degreeProgram: true } } },
+      select: { code: true, title: true, courseType: true, semesterNumber: true, coordinatorId: true, coordinator: { select: { name: true } }, batch: { select: { degreeProgram: true } } },
       orderBy: { code: "asc" },
     }),
     prisma.courseOwner.findMany({ where: { chairmanId, departmentId } }),
@@ -31,14 +31,16 @@ export async function loadSplit(chairmanId: string, departmentId: string, incomi
   for (const c of courses) {
     const key = courseKey(c.code);
     const o = ownerBy.get(key);
-    const g: SplitRow = groups.get(key) || { key, code: c.code, title: c.title, semester: c.semesterNumber, leads: [], ownerId: o?.ownerId || null, ownerStatus: (o?.status as "ACCEPTED" | "PENDING" | undefined) || null, shared: false };
+    const g: SplitRow = groups.get(key) || { key, code: c.code, title: c.title, semester: c.semesterNumber, leads: [], ownerId: o?.ownerId || null, ownerStatus: (o?.status as "ACCEPTED" | "PENDING" | undefined) || null, shared: false, elective: true };
+    if (c.courseType !== "Elective") g.elective = false; // an elective in every program it appears in
     let lead = g.leads.find((l) => l.id === c.coordinatorId);
     if (!lead) { lead = { id: c.coordinatorId, name: c.coordinator.name, programs: [] }; g.leads.push(lead); }
     const prog = c.batch?.degreeProgram;
     if (prog && !lead.programs.includes(prog)) lead.programs.push(prog);
     groups.set(key, g);
   }
-  const rows = Array.from(groups.values()).map((g) => ({ ...g, shared: g.leads.length >= 2 }));
+  // Electives stay with the program that offers them by default, so they are never "common" unless the Chairman chooses.
+  const rows = Array.from(groups.values()).map((g) => ({ ...g, shared: g.leads.length >= 2 && !g.elective }));
   rows.sort((a, b) => Number(b.shared) - Number(a.shared) || a.code.localeCompare(b.code));
 
   const incoming: Incoming[] = [];

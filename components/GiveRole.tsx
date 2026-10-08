@@ -8,8 +8,8 @@ type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_
 const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program", COURSE_ASSIGNER: "Course Assigner (for a semester)", OMC: "OMC member (outcome management committee)" };
 
 // Pick a teacher and give them an extra role. They keep teaching and choose which hat to wear at sign-in.
-export default function GiveRole({ teachers, roles, faculties = [], departments = [], programs = [] }: {
-  teachers: Teacher[]; roles: Role[];
+export default function GiveRole({ teachers, roles, faculties = [], departments = [], programs = [], leaders = [] }: {
+  teachers: Teacher[]; roles: Role[]; leaders?: { id: string; name: string; departmentName?: string | null; holds: string[] }[];
   faculties?: { id: string; name: string }[]; departments?: { id: string; name: string }[]; programs?: { name: string; department: string }[];
 }) {
   const router = useRouter();
@@ -31,11 +31,20 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
     if (res.ok) router.refresh();
   }
 
+  // A Dean can also be given the Chairman role, and a Chairman the Dean role.
+  const extraLeaders = (role === "HEAD_OF_DEPARTMENT" ? leaders.filter((l) => l.holds.includes("DEAN") && !l.holds.includes("HEAD_OF_DEPARTMENT")) : role === "DEAN" ? leaders.filter((l) => l.holds.includes("HEAD_OF_DEPARTMENT") && !l.holds.includes("DEAN")) : [])
+    .map((l) => ({ id: l.id, name: `${l.name} (${role === "HEAD_OF_DEPARTMENT" ? "Dean" : "Chairman"})`, departmentName: l.departmentName }));
+  const pickList = [...teachers, ...extraLeaders];
+
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 460 }}>
       <select name="userId" required defaultValue="">
         <option value="" disabled>Choose a teacher…</option>
-        {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.departmentName ? ` — ${t.departmentName}` : ""}</option>)}
+        {Array.from(new Set(pickList.map((t) => t.departmentName || ""))).sort((a, b) => (a === "" ? -1 : b === "" ? 1 : a.localeCompare(b))).map((dept) => (
+          <optgroup key={dept || "none"} label={dept || "No department yet"}>
+            {pickList.filter((t) => (t.departmentName || "") === dept).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </optgroup>
+        ))}
       </select>
       {roles.length > 1 && (
         <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
@@ -52,12 +61,12 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
   );
 }
 
-export function TakeRoleBack({ userId, label = "Take role back" }: { userId: string; label?: string }) {
+export function TakeRoleBack({ userId, label = "Take role back", role }: { userId: string; label?: string; role?: "DEAN" | "HEAD_OF_DEPARTMENT" }) {
   const router = useRouter();
   const [err, setErr] = useState("");
   async function go() {
     if (!window.confirm("Remove this role? A teacher or Subject Expert goes back to their earlier role. An account made only for this role is deleted.")) return;
-    const res = await fetch("/api/chairman/give-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action: "REVOKE" }) });
+    const res = await fetch("/api/chairman/give-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action: "REVOKE", ...(role ? { role } : {}) }) });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { setErr(d.error || "Could not take it back"); return; }
     router.refresh();

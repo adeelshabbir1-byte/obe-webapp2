@@ -12,10 +12,11 @@ export default async function ChairmanFacultiesPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
 
-  const [faculties, departments, teachers] = await Promise.all([
+  const [faculties, departments, teachers, chairmen] = await Promise.all([
     prisma.faculty.findMany({ where: { chairmanId: user.id }, include: { deans: { select: { id: true, name: true, secondaryRole: true } } }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
-    prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false, managedBy: { managedById: user.id } }, select: { id: true, name: true, role: true, department_: { select: { name: true } } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false, OR: [{ managedBy: { managedById: user.id } }, { managedById: user.id }] }, select: { id: true, name: true, role: true, department_: { select: { name: true } } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: "HEAD_OF_DEPARTMENT", managedById: user.id, isVisitingPlaceholder: false }, select: { id: true, name: true, secondaryRole: true, tertiaryRole: true, department_: { select: { name: true } } }, orderBy: { name: "asc" } }),
   ]);
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
@@ -24,6 +25,7 @@ export default async function ChairmanFacultiesPage() {
       <FacultiesManager
         faculties={faculties.map((f) => ({ id: f.id, name: f.name, deans: f.deans.map((d) => ({ id: d.id, name: d.name, fromTeacher: true })) }))}
         teachers={teachers.map((t) => ({ id: t.id, name: t.name + (t.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: t.department_?.name || null }))}
+        leaders={chairmen.filter((c) => c.secondaryRole !== "DEAN" && c.tertiaryRole !== "DEAN").map((c) => ({ id: c.id, name: c.name, departmentName: c.department_?.name || null, holds: ["HEAD_OF_DEPARTMENT"] }))}
         departments={departments.map((d) => ({ id: d.id, name: d.name, facultyId: d.facultyId }))}
       />
     </Shell>

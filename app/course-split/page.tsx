@@ -26,7 +26,7 @@ export default async function CourseSplitPage({ searchParams }: { searchParams: 
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Split</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Many courses are common to several programs. Give each common course to <strong>one</strong> Program Lead; he assigns the Subject Expert for that course in every program that teaches it.
-        A specialised course, taught in one program only, stays with that program's lead unless you choose another. Course Assigners still assign the teachers.
+        A specialised course, taught in one program only, stays with that program's lead unless you choose another. Electives also stay in their own program by default. Course Assigners still assign the teachers.
         A course can also go to a lead of another department (Maths, English, Management...); that department's Chairman must accept it first.
       </p>
       {isHead && departments.length > 1 && (

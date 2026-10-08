@@ -1,3 +1,4 @@
+import { holdsRoleWhere } from "../../../lib/dualRoles";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -101,10 +102,10 @@ export async function POST(req: NextRequest) {
   const dup = await prisma.teacherLoanRequest.findFirst({ where: { courseId: course.id, kind, lendingDepartmentId: lending.id, status: { in: ["PENDING", "APPROVED"] }, instructorId } });
   if (dup) return NextResponse.json({ error: "this request already exists" }, { status: 409 });
 
-  const heads = await prisma.user.count({ where: { role: "HEAD_OF_DEPARTMENT", departmentId: lending.id } });
+  const heads = await prisma.user.count({ where: { ...holdsRoleWhere("HEAD_OF_DEPARTMENT"), departmentId: lending.id } });
   // A Dean decides first: the requesting faculty's Dean always, and the lending faculty's Dean too when it is another faculty.
   const requesting = await prisma.department.findUnique({ where: { id: requestingDepartmentId }, select: { facultyId: true } });
-  const hasDean = async (facultyId: string | null | undefined) => !!facultyId && (await prisma.user.count({ where: { role: "DEAN", facultyId } })) > 0;
+  const hasDean = async (facultyId: string | null | undefined) => !!facultyId && (await prisma.user.count({ where: { ...holdsRoleWhere("DEAN"), facultyId } })) > 0;
   const requesterDeanStatus = (await hasDean(requesting?.facultyId)) ? "PENDING" : "NONE";
   const lenderDeanStatus = lending.facultyId && lending.facultyId !== requesting?.facultyId && (await hasDean(lending.facultyId)) ? "PENDING" : "NONE";
   const loan = await prisma.teacherLoanRequest.create({

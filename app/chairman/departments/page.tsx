@@ -17,17 +17,21 @@ export default async function ChairmanDepartmentsPage() {
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.id }, select: { id: true, departmentId: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
+  const staffManagerIds = (await prisma.user.findMany({ where: { managedById: user.id, role: { in: ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "DEAN"] } }, select: { id: true } })).map((u) => u.id);
+
   const [rooms, departments, deptPrograms, batches, directStaff, faculty, facultyGroups] = await Promise.all([
     prisma.room.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }),
     prisma.departmentProgram.findMany({ where: { chairmanId: user.id } }),
     prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { degreeProgram: true }, distinct: ["degreeProgram"] }),
     prisma.user.findMany({
-      where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT"] } },
-      select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
+      where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT", "DEAN"] } },
+      select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, tertiaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
+    // Teachers can sit under a Program Lead, under a Chairman / Program Coordinator, or directly under the Institute Head
+    // (a department that has no Program Lead yet has only the last two). All of them must be listed.
     prisma.user.findMany({
-      where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"] } },
+      where: { managedById: { in: [user.id, ...coordinatorIds, ...staffManagerIds] }, isVisitingPlaceholder: false, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"] } },
       select: { id: true, name: true, role: true, departmentId: true, managedById: true }, orderBy: { name: "asc" },
     }),
     prisma.faculty.findMany({ where: { chairmanId: user.id }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -47,7 +51,7 @@ export default async function ChairmanDepartmentsPage() {
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
-        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR", leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
+        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR" || (p as { tertiaryRole?: string | null }).tertiaryRole === "INSTRUCTOR", hats: [(p as { secondaryRole?: string | null }).secondaryRole, (p as { tertiaryRole?: string | null }).tertiaryRole].filter((r): r is string => !!r), leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
       />
     </Shell>
   );
