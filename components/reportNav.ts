@@ -98,6 +98,7 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
   { href: "/chairman/coordinators", label: "Program Leads" },
   { href: "/course-split", label: "Course Split" },
+  { href: "/move-program", label: "Move Program Data" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
   { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
@@ -137,6 +138,7 @@ export const DEPT_COORDINATOR_NAV = [
 
 export const HOD_NAV = [
   { href: "/course-split", label: "Course Split" },
+  { href: "/move-program", label: "Move Program Data" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/hod/department", label: "My Department" },
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
