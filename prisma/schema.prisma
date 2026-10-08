@@ -58,6 +58,7 @@ model User {
   customCategory     CustomCategory? @relation("FacultyCustomCategory", fields: [customCategoryId], references: [id])
   omcHat             Boolean  @default(false) // a faculty member who also sits on the Outcome Management Committee
   assignerTerm       String?  // Course Assigner hat given to a teacher: "Fall 2026" (that semester only) or "ALWAYS" (until removed)
+  extraRoles         String[] @default([]) // roles beyond the main one and two hats, for a small university where one person holds many
   tertiaryRole       String?  // a third hat for someone who is, say, a Subject Expert AND teaches AND leads (Dean / Chairman / Program Lead)
   secondaryRole      String?  // set on a SUBJECT_EXPERT to also let them be assigned/act as an INSTRUCTOR (same account, same or different course) — a dual-capable person picks which one to act as at login
   maxDegreePrograms  Int?     // set by Super User on a CHAIRMAN account — the number of distinct Degree Programs their institution is licensed for; null = unlimited

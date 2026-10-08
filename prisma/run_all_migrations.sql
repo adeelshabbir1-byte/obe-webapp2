@@ -4610,3 +4610,7 @@ CREATE INDEX IF NOT EXISTS "CourseOwner_ownerId_idx" ON "CourseOwner"("ownerId")
 ALTER TABLE "CourseOwner" ADD COLUMN IF NOT EXISTS "ownerDepartmentId" TEXT;
 ALTER TABLE "CourseOwner" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'ACCEPTED';
 UPDATE "CourseOwner" SET "ownerDepartmentId" = "departmentId" WHERE "ownerDepartmentId" IS NULL;
+
+-- ===== migration_extra_roles.sql =====
+-- One person can hold any number of roles (Dean, Chairman, Program Lead, Subject Expert, Instructor ...)
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "extraRoles" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

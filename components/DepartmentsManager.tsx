@@ -14,6 +14,8 @@ const ROLE_NAME: Record<string, string> = {
   HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer",
 };
 
+const TABS: [string, string][] = [["depts", "Departments"], ["rooms", "Rooms"], ["people", "People"], ["leads", "Program Leads"], ["roles", "Give a role"], ["accounts", "Add accounts"]];
+
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [] }: {
   departments: Dept[]; rooms: RoomRow[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[]; faculties?: { id: string; name: string }[];
 }) {
@@ -23,6 +25,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const [headDept, setHeadDept] = useState(departments[0]?.id || "");
   const [leadDept, setLeadDept] = useState(departments[0]?.id || "");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [tab, setTab] = useState<string>(() => { try { const h = window.location.hash.slice(1); return TABS.some(([k]) => k === h) ? h : "depts"; } catch { return "depts"; } });
 
   async function call(url: string, method: string, body?: unknown) {
     setMsg("");
@@ -53,7 +56,16 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   return (
     <>
       {msg && <div className="card" style={{ color: "var(--rose, #b3261e)" }}>{msg}</div>}
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "2px solid var(--line)", marginBottom: 16, position: "sticky", top: 0, background: "var(--paper, #fff)", zIndex: 5 }}>
+        {TABS.map(([k, label]) => (
+          <button key={k} type="button" onClick={() => { setTab(k); try { window.location.hash = k; } catch {} }}
+            style={{ padding: "10px 16px", border: "none", background: tab === k ? "#fff" : "transparent", borderBottom: tab === k ? "3px solid var(--maroon, #7a1f2b)" : "3px solid transparent", fontWeight: tab === k ? 700 : 500, cursor: "pointer", fontSize: 14 }}>
+            {label}
+          </button>
+        ))}
+      </div>
 
+      {tab === "depts" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Departments</h3>
         {departments.map((d) => {
@@ -90,7 +102,9 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
           <button className="btn btn-brass" onClick={async () => { if (newName.trim() && await call("/api/chairman/departments", "POST", { name: newName })) setNewName(""); }}>Add Department</button>
         </div>
       </div>
+      </>)}
 
+      {tab === "rooms" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Room ownership</h3>
         <p style={{ color: "var(--slate)", fontSize: 13 }}>
@@ -115,7 +129,9 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
           </tbody>
         </table>
       </div>
+      </>)}
 
+      {tab === "people" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>People and their department</h3>
         <p style={{ color: "var(--slate)", fontSize: 13 }}>Choose the department for each person. The list is grouped by department, with anyone still without one at the top.{noDeptCount > 0 ? ` ${noDeptCount} still need a department.` : " Everyone has a department."}</p>
@@ -136,7 +152,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                   </td></tr>
                 )}
               <tr>
-                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{(p.hats || []).filter((h) => h === "DEAN" || h === "HEAD_OF_DEPARTMENT").map((h) => ` + ${ROLE_NAME[h]}`).join("")}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
+                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{(p.hats || []).filter((h) => ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"].includes(h)).map((h) => ` + ${ROLE_NAME[h] || h}`).join("")}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
                 <td>
                   <select value={p.departmentId || ""} onChange={(e) => e.target.value && call("/api/chairman/department-members", "PUT", { userId: p.id, departmentId: e.target.value })}>
                     {!p.departmentId && <option value="">— none —</option>}
@@ -150,8 +166,9 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                       </select>
                     </label>
                   )}
-                  {((p.hats || []).includes("HEAD_OF_DEPARTMENT") && p.role === "DEAN") && <TakeRoleBack userId={p.id} role="HEAD_OF_DEPARTMENT" label="Remove Chairman" />}
-                  {(p.role === "HEAD_OF_DEPARTMENT" || p.role === "DEPARTMENT_COORDINATOR" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} role={p.role === "HEAD_OF_DEPARTMENT" ? "HEAD_OF_DEPARTMENT" : undefined} label={p.role === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : p.role === "DEPARTMENT_COORDINATOR" ? "Remove Program Coordinator" : "Remove as Program Lead"} />}
+                  {[p.role, ...(p.hats || [])].filter((r) => ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"].includes(r) && (r !== "PROGRAM_COORDINATOR" || !!p.leadProgram || (p.hats || []).includes("PROGRAM_COORDINATOR") || false)).map((r) => (
+                    <TakeRoleBack key={r} userId={p.id} role={r} label={r === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : r === "DEPARTMENT_COORDINATOR" ? "Remove Program Coordinator" : r === "DEAN" ? "Remove Dean" : "Remove as Program Lead"} />
+                  ))}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -164,7 +181,9 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
           </tbody>
         </table>
       </div>
+      </>)}
 
+      {tab === "leads" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Program Leads</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
@@ -182,24 +201,28 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
             teachers={people.filter((p) => (p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT") && p.departmentId === leadDept).map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} />
         </div>
       </div>
+      </>)}
 
+      {tab === "roles" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Give a role to one of your teachers</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
           Deans, Chairmen and Program Leads are usually teachers. Pick the teacher and the role. They keep their teacher login and choose which role to work as each time they sign in.
           Subject Experts can be chosen too and keep their Subject Expert and teaching roles. The list is grouped by department.
-          One person can be both Dean and Chairman: when you give the Chairman role, Deans are listed too, and when you give the Dean role, Chairmen are listed too.
-          A Program Lead or Program Coordinator cannot also hold another leadership role: take that role back first.
+          In a small university one person can hold every role at once: Dean, Chairman, Program Lead, Program Coordinator, Subject Expert and Instructor. Everyone is listed for every role, with the roles they already hold in brackets.
+          The only rule: roles tied to a department (Chairman, Program Coordinator, Program Lead) must all be in the same department.
         </p>
         <GiveRole
           roles={["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD", "COURSE_ASSIGNER", "OMC"]}
-          leaders={people.filter((p) => p.role === "DEAN" || p.role === "HEAD_OF_DEPARTMENT").map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null, holds: [p.role, ...(p.hats || [])] }))}
+          leaders={people.filter((p) => ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(p.role)).map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null, holds: [p.role, ...(p.hats || [])] }))}
           teachers={people.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT").map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
           faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
           programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}
         />
       </div>
+      </>)}
 
+      {tab === "accounts" && (<>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Add a Program Coordinator</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
@@ -224,6 +247,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         </label>
         <HeadForm departmentId={headDept} />
       </div>
+      </>)}
     </>
   );
 }

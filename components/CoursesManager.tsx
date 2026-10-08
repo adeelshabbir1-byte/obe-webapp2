@@ -1,5 +1,6 @@
 "use client";
 
+import TabbedCards from "./TabbedCards";
 import { withProgress } from "../lib/busy";
 
 import { useState, useRef, useEffect } from "react";
@@ -353,7 +354,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   }
 
   return (
-    <>
+    <TabbedCards order={["Courses","Add courses"]}>
       {error && <div className="err">{error}</div>}
       {importResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{importResult}</div>}
 
@@ -365,7 +366,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         </select>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add courses">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Copy From Another Batch</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
           Duplicates every course in the source batch into the batch you're currently viewing below (including
@@ -392,7 +393,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         {!selectedBatchId && <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>Use "Viewing batch" above to pick the target batch first.</div>}
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add courses">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Import from a Master Curriculum</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
           Choose which curriculum and which batch — the same curriculum can be imported again for a different batch,
@@ -481,7 +482,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Courses">
         <button type="button" onClick={bulkSplit4CreditToLab} disabled={bulkSplitting} className="btn" style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>
           {bulkSplitting ? "Splitting…" : "Split all 4-credit courses into 3 + 1 Lab"}
         </button>
@@ -504,7 +505,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         </div>
       </div>
 
-      <div className="card" style={{ overflowX: "auto" }}>
+      <div className="card" data-tab="Courses" style={{ overflowX: "auto" }}>
         <SortableTable>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Track</th><th>Semester</th><th>Enrolled</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
@@ -594,7 +595,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         )}
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add courses">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add a Course Manually</h3>
         <form onSubmit={addCourse}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr 1fr", gap: 14 }}>
@@ -617,6 +618,6 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Creating…" : "Create Course"}</button>
         </form>
       </div>
-    </>
+    </TabbedCards>
   );
 }

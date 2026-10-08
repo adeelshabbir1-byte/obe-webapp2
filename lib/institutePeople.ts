@@ -16,7 +16,7 @@ export async function institutePeople(chairmanId: string): Promise<PersonRow[]> 
   ]);
   const users = await prisma.user.findMany({
     where: { isVisitingPlaceholder: false, OR: [{ managedById: chairmanId }, { managedById: { in: coordinators.map((c) => c.id) } }] },
-    select: { id: true, username: true, name: true, email: true, role: true, secondaryRole: true, tertiaryRole: true, omcHat: true, assignerTerm: true, leadProgram: true, departmentId: true, managedById: true, mustChangePassword: true, isActive: true },
+    select: { id: true, username: true, name: true, email: true, role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true, omcHat: true, assignerTerm: true, leadProgram: true, departmentId: true, managedById: true, mustChangePassword: true, isActive: true },
   });
   const leadOf = new Map<string, { leadProgram: string | null; departmentId: string | null }>(coordinators.length ? (await prisma.user.findMany({ where: { id: { in: coordinators.map((c) => c.id) } }, select: { id: true, leadProgram: true, departmentId: true } })).map((c) => [c.id, c]) : []);
   const deptName = (id: string | null | undefined) => departments.find((d) => d.id === id)?.name || "—";
@@ -24,7 +24,7 @@ export async function institutePeople(chairmanId: string): Promise<PersonRow[]> 
     .map((u) => {
       const parent = u.managedById ? leadOf.get(u.managedById) : undefined;
       const isTeaching = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"].includes(u.role);
-      const also = [u.secondaryRole, u.tertiaryRole].filter((r): r is string => !!r).map((r) => ROLE_TEXT[r] || r);
+      const also = [u.secondaryRole, u.tertiaryRole, ...u.extraRoles].filter((r): r is string => !!r).map((r) => ROLE_TEXT[r] || r);
       if (u.omcHat) also.push("OMC member");
       if (u.assignerTerm) also.push(u.assignerTerm === "ALWAYS" ? "Course Assigner" : `Course Assigner (${u.assignerTerm})`);
       return {

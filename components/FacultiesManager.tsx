@@ -1,5 +1,6 @@
 "use client";
 
+import TabbedCards from "./TabbedCards";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import GiveRole, { TakeRoleBack } from "./GiveRole";
@@ -32,9 +33,9 @@ export default function FacultiesManager({ faculties, departments, teachers = []
 
   const unplaced = departments.filter((d) => !d.facultyId);
   return (
-    <>
+    <TabbedCards>
       {msg && <div className="card" style={{ color: msg.startsWith("Dean created") ? "var(--sage)" : "#b3261e" }}>{msg}</div>}
-      <div className="card">
+      <div className="card" data-tab="Faculties">
         <h3 style={{ marginTop: 0 }}>Faculties</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>A faculty groups departments under one Dean, for example Faculty of Computing holding CS, SE and IT.</p>
         <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) call("/api/chairman/faculties", "POST", { name }).then((ok) => ok && setName("")); }} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -57,7 +58,7 @@ export default function FacultiesManager({ faculties, departments, teachers = []
         </table>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Departments">
         <h3 style={{ marginTop: 0 }}>Which faculty is each department in?</h3>
         {unplaced.length > 0 && <p style={{ color: "#96650F", fontSize: 13, marginTop: 0 }}>{unplaced.length} department(s) are not in a faculty yet: {unplaced.map((d) => d.name).join(", ")}.</p>}
         <table>
@@ -75,13 +76,13 @@ export default function FacultiesManager({ faculties, departments, teachers = []
         </table>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Deans">
         <h3 style={{ marginTop: 0 }}>Make one of your teachers a Dean</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>The person keeps their login and earlier roles (teacher, Subject Expert) and chooses which role to work as each time they sign in.</p>
         {faculties.length === 0 ? <p style={{ color: "var(--slate)" }}>Add a faculty first.</p> : <GiveRole roles={["DEAN"]} teachers={teachers} leaders={leaders} faculties={faculties.map((f) => ({ id: f.id, name: f.name }))} />}
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Deans">
         <h3 style={{ marginTop: 0 }}>Add a Dean who is not one of your teachers</h3>
         {faculties.length === 0 ? <p style={{ color: "var(--slate)" }}>Add a faculty first.</p> : (
           <form onSubmit={addDean} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
@@ -94,6 +95,6 @@ export default function FacultiesManager({ faculties, departments, teachers = []
           </form>
         )}
       </div>
-    </>
+    </TabbedCards>
   );
 }

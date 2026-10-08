@@ -26,7 +26,7 @@ export default async function ChairmanDepartmentsPage() {
     prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { degreeProgram: true }, distinct: ["degreeProgram"] }),
     prisma.user.findMany({
       where: { managedById: user.id, isVisitingPlaceholder: false, role: { in: ["PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "HEAD_OF_DEPARTMENT", "DEAN"] } },
-      select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, tertiaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, tertiaryRole: true, extraRoles: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
     // Teachers can sit under a Program Lead, under a Chairman / Program Coordinator, or directly under the Institute Head
     // (a department that has no Program Lead yet has only the last two). All of them must be listed.
@@ -51,7 +51,7 @@ export default async function ChairmanDepartmentsPage() {
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
-        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR" || (p as { tertiaryRole?: string | null }).tertiaryRole === "INSTRUCTOR", hats: [(p as { secondaryRole?: string | null }).secondaryRole, (p as { tertiaryRole?: string | null }).tertiaryRole].filter((r): r is string => !!r), leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
+        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR" || (p as { tertiaryRole?: string | null }).tertiaryRole === "INSTRUCTOR" || ((p as { extraRoles?: string[] }).extraRoles || []).includes("INSTRUCTOR"), hats: [(p as { secondaryRole?: string | null }).secondaryRole, (p as { tertiaryRole?: string | null }).tertiaryRole, ...((p as { extraRoles?: string[] }).extraRoles || [])].filter((r): r is string => !!r), leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
       />
     </Shell>
   );

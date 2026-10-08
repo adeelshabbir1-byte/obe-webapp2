@@ -1,5 +1,6 @@
 "use client";
 
+import TabbedCards from "./TabbedCards";
 import { useState } from "react";
 import SortableTable from "./SortableTable";
 import DownloadButton from "./DownloadButton";
@@ -130,10 +131,10 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
   }
 
   return (
-    <>
+    <TabbedCards order={["Faculty","Add Faculty","Import / Export"]}>
       {error && <div className="err">{error}</div>}
 
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div className="card" data-tab="Import / Export" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div style={{ fontSize: 12, color: "var(--slate)", maxWidth: 440 }}>
           Download the current faculty list, add new names at the bottom (Login ID + Faculty Name required,
           Specialization optional, Role defaults to Course Instructor), then upload it back to create their
@@ -148,7 +149,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         </div>
       </div>
       {bulkResult && (
-        <div className="card" style={{ fontSize: 12, background: bulkResult.created > 0 ? "#F0FBF4" : undefined, border: bulkResult.created > 0 ? "1px solid var(--sage)" : undefined }}>
+        <div className="card" data-tab="Import / Export" style={{ fontSize: 12, background: bulkResult.created > 0 ? "#F0FBF4" : undefined, border: bulkResult.created > 0 ? "1px solid var(--sage)" : undefined }}>
           <div><b>{bulkResult.created}</b> new login{bulkResult.created === 1 ? "" : "s"} created{bulkResult.created > 0 ? ` with temporary password "${bulkResult.tempPassword}"` : ""}.</div>
           {bulkResult.created > 0 && (
             <div style={{ marginTop: 6 }}>
@@ -173,7 +174,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
       )}
 
       {faculty.length > 0 && (
-        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div className="card" data-tab="Faculty" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontSize: 12, color: "var(--slate)" }}>
             No memorable password from an earlier faculty list? Reset everyone at once to a known temporary one.
           </div>
@@ -182,7 +183,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
           </button>
         </div>
       )}
-      <div className="card">
+      <div className="card" data-tab="Faculty">
         <SortableTable>
           <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Login Status</th><th>Specialization</th><th>Load (Normal / External)</th><th></th></tr></thead>
           <tbody>
@@ -242,7 +243,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         </SortableTable>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add Faculty">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Onboard Faculty</h3>
         <form onSubmit={onboard}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -278,6 +279,6 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Onboarding…" : "Onboard Faculty"}</button>
         </form>
       </div>
-    </>
+    </TabbedCards>
   );
 }

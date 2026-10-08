@@ -67,7 +67,7 @@ export async function getAuthenticatedUser() {
   if (omcHat && !instituteHeadId) instituteHeadId = await chairmanIdFor(safeUser);
   // The role chosen at sign-in only counts while the person still holds it; a stale choice (for example Instructor, kept
   // from before they were given a coordinator role) is ignored so the role choice is offered again.
-  const heldRoles = [safeUser.role, safeUser.secondaryRole, safeUser.tertiaryRole, assignerHat ? "COURSE_ASSIGNER" : null, omcHat ? "OMC" : null];
+  const heldRoles = [safeUser.role, safeUser.secondaryRole, safeUser.tertiaryRole, ...((safeUser as { extraRoles?: string[] }).extraRoles || []), assignerHat ? "COURSE_ASSIGNER" : null, omcHat ? "OMC" : null];
   const chosenRole = session.activeRole && heldRoles.includes(session.activeRole) ? session.activeRole : null;
   let effectiveRole = chosenRole || safeUser.role;
   if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER" && !assignerHat) effectiveRole = safeUser.role; // the semester ended
