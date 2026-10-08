@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
   // Their earlier roles stay available as extra hats: Instructor -> [Instructor]; Subject Expert -> [Subject Expert] or [Subject Expert, Instructor].
   const wasSe = teacher.role === "SUBJECT_EXPERT";
   const hats = wasSe ? { secondaryRole: "SUBJECT_EXPERT", tertiaryRole: teacher.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null } : { secondaryRole: "INSTRUCTOR", tertiaryRole: null };
-  if (!isInstituteHead && teacher.departmentId !== user.departmentId) return NextResponse.json({ error: "you can only choose teachers from your own department" }, { status: 403 });
+  const teacherDept = teacher.departmentId || (teacher.managedById ? (await prisma.user.findUnique({ where: { id: teacher.managedById }, select: { departmentId: true } }))?.departmentId : null);
+  if (!isInstituteHead && teacherDept !== user.departmentId) return NextResponse.json({ error: "you can only choose teachers from your own department" }, { status: 403 });
 
   if (wanted === "DEAN") {
     const faculty = body.facultyId ? await prisma.faculty.findFirst({ where: { id: body.facultyId, chairmanId } }) : null;

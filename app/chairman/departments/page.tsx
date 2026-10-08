@@ -14,7 +14,7 @@ export default async function ChairmanDepartmentsPage() {
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
 
   await ensureDefaultDepartment(user.id);
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.id }, select: { id: true } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.id }, select: { id: true, departmentId: true } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const [rooms, departments, deptPrograms, batches, directStaff, faculty, facultyGroups] = await Promise.all([
@@ -27,7 +27,7 @@ export default async function ChairmanDepartmentsPage() {
       select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
     prisma.user.findMany({
-      where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+      where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"] } },
       select: { id: true, name: true, role: true, departmentId: true, managedById: true }, orderBy: { name: "asc" },
     }),
     prisma.faculty.findMany({ where: { chairmanId: user.id }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -47,7 +47,7 @@ export default async function ChairmanDepartmentsPage() {
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
-        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR", leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
+        people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR", leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
       />
     </Shell>
   );
