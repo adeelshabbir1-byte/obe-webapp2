@@ -32,7 +32,7 @@ export default function DeptCoordinatorHome({ programs, actingForId }: { program
         <table>
           <thead><tr><th>Program</th><th>Program Lead</th><th>Batches</th><th>Teachers</th><th>Semester</th><th></th></tr></thead>
           <tbody>
-            {programs.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No Program Leads in your department yet.</td></tr>}
+            {programs.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No Program Leads in your department yet. Teachers, students and batches are kept under a Program Lead, so nothing can be added until one exists. The Institute Head can make you (or any teacher) the Program Lead of a program: Departments → Give a role → Program Lead. You then choose “Program Lead” when you sign in.</td></tr>}
             {programs.map((p) => (
               <tr key={p.id} style={p.id === actingForId ? { background: "rgba(150,101,15,.08)" } : undefined}>
                 <td><b>{p.program}</b>{p.id === actingForId && <span style={{ fontSize: 11, marginLeft: 6, color: "var(--slate)" }}>working on</span>}</td>

@@ -84,6 +84,18 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", fontSize: 13 }}>
                 {allPrograms.length === 0 && <span style={{ color: "var(--slate)" }}>No programs exist yet.</span>}
+                <form style={{ display: "flex", gap: 6, alignItems: "center", width: "100%" }} onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = (e.currentTarget.elements.namedItem("newProgram") as HTMLInputElement);
+                  const name = input.value.trim();
+                  if (!name) return;
+                  const exists = allPrograms.find((p) => p.toLowerCase() === name.toLowerCase());
+                  input.value = "";
+                  toggleProgram(d.id, exists || name, true);
+                }}>
+                  <input name="newProgram" placeholder={`New program for ${d.name}, e.g. BBA`} style={{ padding: "5px 8px", minWidth: 220 }} />
+                  <button className="btn btn-brass" type="submit">Add program</button>
+                </form>
                 {allPrograms.map((p) => {
                   const owner = ownerOf(p);
                   return (
