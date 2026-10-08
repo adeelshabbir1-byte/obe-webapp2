@@ -8,6 +8,8 @@ import HodLoanRequests from "../../../components/HodLoanRequests";
 import ProgramLeads from "../../../components/ProgramLeads";
 import MemberProgramSelect from "../../../components/MemberProgramSelect";
 import GiveRole, { TakeRoleBack } from "../../../components/GiveRole";
+import AssignerHatManager from "../../../components/AssignerHatManager";
+import { instituteTerm, termLabel, nextTermLabel, assignerHatActive } from "../../../lib/assignerHat";
 
 export default async function HodDepartmentPage() {
   const user = await getAuthenticatedUser();
@@ -30,7 +32,7 @@ export default async function HodDepartmentPage() {
     }),
     prisma.department.findUnique({ where: { id: departmentId } }),
     prisma.departmentProgram.findMany({ where: { departmentId }, orderBy: { degreeProgram: "asc" } }),
-    prisma.user.findMany({ where: { isVisitingPlaceholder: false, OR: [{ departmentId }, { departmentId: null, managedBy: { departmentId } }] }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true, managedById: true, leadProgram: true } }),
+    prisma.user.findMany({ where: { isVisitingPlaceholder: false, OR: [{ departmentId }, { departmentId: null, managedBy: { departmentId } }] }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true, secondaryRole: true, managedById: true, leadProgram: true, assignerTerm: true } }),
     prisma.course.findMany({
       where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, departmentId } },
       select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } } }, orderBy: { code: "asc" },
@@ -41,6 +43,9 @@ export default async function HodDepartmentPage() {
     }),
   ]);
 
+  const term = await instituteTerm(chairmanId);
+  const assignerCandidates = members.filter((m) => ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(m.role));
+  const assignerHolders = await Promise.all(assignerCandidates.filter((m) => m.assignerTerm).map(async (m) => ({ id: m.id, name: m.name, term: m.assignerTerm as string, active: await assignerHatActive(m.assignerTerm, chairmanId) })));
   const coordinators = members.filter((m) => m.role === "PROGRAM_COORDINATOR");
   const coordOptions = coordinators.map((c) => ({ id: c.id, label: c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name }));
   const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer", OMC: "OMC Member" };
@@ -96,6 +101,9 @@ export default async function HodDepartmentPage() {
         <table><thead><tr><th>Code</th><th>Title</th><th>Batch</th></tr></thead>
           <tbody>{visiting.length === 0 ? <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None.</td></tr> : visiting.map(courseRow)}</tbody></table>
       </div>
+
+      <h3 style={{ margin: "18px 0 6px" }}>Course Assigner</h3>
+      <AssignerHatManager teachers={assignerCandidates.filter((m) => m.role !== "HEAD_OF_DEPARTMENT" || m.id !== user.id).map((m) => ({ id: m.id, name: m.name }))} holders={assignerHolders} currentLabel={term ? termLabel(term) : null} nextLabel={term ? nextTermLabel(term) : null} />
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>People in this department ({members.length})</h3>
