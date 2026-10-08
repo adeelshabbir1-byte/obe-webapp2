@@ -2086,3 +2086,25 @@ model LabMark {
   @@unique([courseId, studentId, labNumber])
   @@index([courseId])
 }
+
+
+// A request to move a teacher from one Program Lead's program to another's (same department).
+// Raised by the Chairman or a Dean; it only happens once BOTH Program Leads accept.
+model TeacherProgramMove {
+  id                String   @id @default(cuid())
+  chairmanId        String
+  teacherId         String
+  fromCoordinatorId String
+  toCoordinatorId   String
+  requestedById     String
+  note              String?
+  fromStatus        String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  toStatus          String   @default("PENDING")
+  status            String   @default("PENDING") // PENDING | APPLIED | REJECTED | CANCELLED
+  createdAt         DateTime @default(now())
+  decidedAt         DateTime?
+
+  @@index([chairmanId, status])
+  @@index([fromCoordinatorId])
+  @@index([toCoordinatorId])
+}

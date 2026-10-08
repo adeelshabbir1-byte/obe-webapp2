@@ -8,6 +8,7 @@ import { writeAuditLog } from "../../../lib/audit";
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (user.role === "HEAD_OF_DEPARTMENT") return NextResponse.json({ error: "A Chairman asks for a move on the Teacher Program Moves page; both Program Leads must accept it." }, { status: 403 });
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
   const body = await req.json().catch(() => ({}));
   if (!body.userId || !body.coordinatorId) return NextResponse.json({ error: "userId and coordinatorId are required" }, { status: 400 });
