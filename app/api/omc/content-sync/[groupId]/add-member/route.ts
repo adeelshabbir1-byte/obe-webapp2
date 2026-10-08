@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { reconsiderGroupBase } from "../../../../../../lib/contentSync";
+import { reconsiderGroupBase, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../../lib/equivalencePairing";
 
 // Adds a course directly to an existing group, as a follower — the
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   // group's current base — re-checked here rather than assuming the
   // existing base stays correct just because it was added second.
   await reconsiderGroupBase(params.groupId, courseId);
+  await syncGroupSubjectHome(params.groupId);
   await prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } });
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_MEMBER_ADDED", entityType: "CourseContentSyncGroup", entityId: params.groupId, metadata: { courseId } });
 

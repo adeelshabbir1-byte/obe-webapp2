@@ -1,3 +1,4 @@
+import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "marks" | "paper-distribution" | "attendance"; code: string; title: string;
@@ -17,6 +18,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
         <div>
           <h1 style={{ fontSize: 22 }}>{code} — {title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Your delivery record — starts as a copy of the Subject Expert's plan, fully editable.</div>
+          <SubjectHomeLine courseId={courseId} />
         </div>
         <Link href="/instructor/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</Link>
       </div>

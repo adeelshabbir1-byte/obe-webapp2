@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { determineBaseCourseId } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 // Links any number of courses (2+) into one group in a single request —
@@ -79,6 +79,8 @@ export async function POST(req: NextRequest) {
   // follower.
   await prisma.courseContentSyncMember.updateMany({ where: { groupId, courseId: { not: baseCourseId } }, data: { isBase: false } });
   await prisma.courseContentSyncMember.updateMany({ where: { groupId, courseId: baseCourseId }, data: { isBase: true } });
+
+  await syncGroupSubjectHome(groupId);
 
   // Linking only ever updates group membership and flags it as needing
   // a sync — it never copies content immediately. That used to happen

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
-import { determineBaseCourseId, syncSubjectExpertToLinkedCourses } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../lib/audit";
 
 // One-time correction for groups formed before base re-evaluation
@@ -59,6 +59,8 @@ export async function POST() {
         await syncSubjectExpertToLinkedCourses(correctBaseCourseId, oldBaseCourse.subjectExpertId);
       }
     }
+
+    await syncGroupSubjectHome(group.id);
 
     // The corrected base's content should now propagate out for real.
     await prisma.courseContentSyncGroup.update({ where: { id: group.id }, data: { needsSync: true } });

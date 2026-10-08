@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { blockedAsNonBaseCourse, syncSubjectHomeToLinkedCourses } from "../../../../../../lib/contentSync";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
@@ -53,6 +54,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       const dept = await prisma.department.findFirst({ where: { id: subjectHomeDepartmentId, chairmanId: course.coordinator.managedById || "" } });
       if (!dept) return NextResponse.json({ error: "unknown department" }, { status: 400 });
     }
+    // Equivalent (linked) courses: only the BASE course sets the subject home; followers take it from the base.
+    if (subjectHomeDepartmentId !== course.subjectHomeDepartmentId && (await blockedAsNonBaseCourse(course.id))) {
+      return NextResponse.json({ error: "This course follows a linked base course. Change the subject home on the base course instead - this one will follow it automatically." }, { status: 409 });
+    }
   }
 
   if (body.code !== course.code) {
@@ -78,7 +83,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "COURSE_EDITED", entityType: "Course", entityId: course.id });
+  let followersUpdated = 0;
+  if (subjectHomeDepartmentId !== undefined && subjectHomeDepartmentId !== course.subjectHomeDepartmentId) followersUpdated = await syncSubjectHomeToLinkedCourses(course.id);
 
-  return NextResponse.json({ course: updated });
+  await writeAuditLog({ actorUserId: user.id, action: "COURSE_EDITED", entityType: "Course", entityId: course.id, metadata: followersUpdated ? { subjectHomeFollowersUpdated: followersUpdated } : undefined });
+
+  return NextResponse.json({ course: updated, followersUpdated });
 }

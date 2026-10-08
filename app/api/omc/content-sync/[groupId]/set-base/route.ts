@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
+import { syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
 
 export async function PUT(req: NextRequest, { params }: { params: { groupId: string } }) {
   const user = await getAuthenticatedUser();
@@ -40,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
     // once it's actually run.
     prisma.courseContentSyncGroup.update({ where: { id: params.groupId }, data: { needsSync: true } }),
   ]);
+  await syncGroupSubjectHome(params.groupId);
   if (previousBase) {
     await prisma.course.update({ where: { id: previousBase.courseId }, data: { subjectExpertId: null } });
   }

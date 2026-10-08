@@ -11,7 +11,7 @@ type Course = {
   id: string; code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null;
   fromHec: boolean; subjectExpertId: string | null; batchName: string | null; fromBenchmark: boolean;
   prerequisiteCourseId: string | null; batchId: string | null; hasLab: boolean; enrolledCount: number;
-  trackName: string | null; isNonCredit: boolean; contactHours: number | null; subjectHomeDepartmentId?: string | null;
+  trackName: string | null; isNonCredit: boolean; contactHours: number | null; subjectHomeDepartmentId?: string | null; followsBase?: boolean;
 };
 type SubjectExpert = { id: string; name: string };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -190,7 +190,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
           isNonCredit: fd.get("isNonCredit") === "on",
           contactHours: fd.get("contactHours") || null,
           trackName: fd.get("trackName") || null,
-          subjectHomeDepartmentId: fd.get("subjectHomeDepartmentId") || null,
+          ...(fd.has("subjectHomeDepartmentId") ? { subjectHomeDepartmentId: fd.get("subjectHomeDepartmentId") || null } : {}),
         }),
       });
       const data = await res.json();
@@ -528,7 +528,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                       {TRACKS.map((t) => <option key={t} value={t}>{t} only</option>)}
                     </select>
                     {departments.length > 1 && (
-                      <select name="subjectHomeDepartmentId" defaultValue={c.subjectHomeDepartmentId || ""} title="Which department owns this subject (its Subject Expert comes from there by default)" style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+                      <select name="subjectHomeDepartmentId" defaultValue={c.subjectHomeDepartmentId || ""} disabled={!!c.followsBase} title={c.followsBase ? "This course follows its linked base course - change the subject home on the base course" : "Which department owns this subject (its Subject Expert comes from there by default)"} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
                         <option value="">Subject home: this program's department</option>
                         {departments.map((d) => <option key={d.id} value={d.id}>Subject home: {d.name}</option>)}
                       </select>
@@ -545,7 +545,8 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
             ) : (
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{c.batchName || "—"}</td>
-                <td>{c.code}</td><td>{c.title}</td>
+                <td>{c.code}</td>
+                <td>{c.title}<div style={{ fontSize: 10.5, color: "var(--slate)" }}>Subject home: {c.subjectHomeDepartmentId ? (departments.find((d) => d.id === c.subjectHomeDepartmentId)?.name || "another department") : "this program's own department"}{c.followsBase ? " (from its base course)" : ""}</div></td>
                 <td>{c.isNonCredit ? <span title="Non-credit deficiency course">0 <span style={{ fontSize: 9.5, background: "#FBEED2", color: "#96650F", padding: "1px 5px", borderRadius: 2 }}>NON-CREDIT{c.contactHours ? ` · ${c.contactHours}h/wk` : ""}</span></span> : c.creditHours}</td>
                 <td>{c.courseType}</td>
                 <td style={{ fontSize: 11.5 }}>{c.trackName ? <b>{c.trackName}</b> : <span style={{ color: "var(--slate)" }}>All</span>}</td>
