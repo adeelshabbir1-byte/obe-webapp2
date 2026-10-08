@@ -21,7 +21,7 @@ export function lendableWhere(chairmanId: string, kind: LoanKind, departmentId?:
       ...dept, isVisitingPlaceholder: false,
       OR: [
         { role: "SUBJECT_EXPERT" as const, managedBy: { managedById: chairmanId } },
-        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as ("HEAD_OF_DEPARTMENT" | "DEAN" | "PROGRAM_COORDINATOR" | "DEPARTMENT_COORDINATOR")[] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }] },
+        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as ("HEAD_OF_DEPARTMENT" | "DEAN" | "PROGRAM_COORDINATOR" | "DEPARTMENT_COORDINATOR")[] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }, { extraRoles: { has: "SUBJECT_EXPERT" } }] },
       ],
     };
   }

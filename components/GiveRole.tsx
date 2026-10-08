@@ -31,9 +31,11 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
     if (res.ok) router.refresh();
   }
 
-  // A Dean can also be given the Chairman role, and a Chairman the Dean role.
-  const extraLeaders = (role === "HEAD_OF_DEPARTMENT" ? leaders.filter((l) => l.holds.includes("DEAN") && !l.holds.includes("HEAD_OF_DEPARTMENT")) : role === "DEAN" ? leaders.filter((l) => l.holds.includes("HEAD_OF_DEPARTMENT") && !l.holds.includes("DEAN")) : [])
-    .map((l) => ({ id: l.id, name: `${l.name} (${role === "HEAD_OF_DEPARTMENT" ? "Dean" : "Chairman"})`, departmentName: l.departmentName }));
+  // Anyone can hold any combination of roles, so leaders who do not yet hold the chosen role are offered too.
+  const LABEL: Record<string, string> = { DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor" };
+  const target = role === "PROGRAM_LEAD" ? "PROGRAM_COORDINATOR" : role;
+  const extraLeaders = (["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(target) ? leaders.filter((l) => !l.holds.includes(target) || target === "PROGRAM_COORDINATOR") : [])
+    .map((l) => ({ id: l.id, name: `${l.name} (${l.holds.map((h) => LABEL[h] || h).join(" + ")})`, departmentName: l.departmentName }));
   const pickList = [...teachers, ...extraLeaders];
 
   return (
@@ -61,7 +63,7 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
   );
 }
 
-export function TakeRoleBack({ userId, label = "Take role back", role }: { userId: string; label?: string; role?: "DEAN" | "HEAD_OF_DEPARTMENT" }) {
+export function TakeRoleBack({ userId, label = "Take role back", role }: { userId: string; label?: string; role?: string }) {
   const router = useRouter();
   const [err, setErr] = useState("");
   async function go() {

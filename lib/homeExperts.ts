@@ -11,7 +11,7 @@ export async function homeExpertsFor(chairmanId: string, ownCoordinatorId: strin
       departmentId: { in: ids },
       OR: [
         { role: "SUBJECT_EXPERT", managedById: { not: ownCoordinatorId }, managedBy: { managedById: chairmanId } },
-        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }] },
+        { role: { in: ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] }, managedById: chairmanId, OR: [{ secondaryRole: "SUBJECT_EXPERT" }, { tertiaryRole: "SUBJECT_EXPERT" }, { extraRoles: { has: "SUBJECT_EXPERT" } }] },
       ],
     },
     select: { id: true, name: true, departmentId: true }, orderBy: { name: "asc" },
