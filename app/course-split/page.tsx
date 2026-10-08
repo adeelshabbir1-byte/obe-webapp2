@@ -19,7 +19,7 @@ export default async function CourseSplitPage({ searchParams }: { searchParams: 
   const departments = isHead ? await prisma.department.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }) : [];
   const departmentId = isHead ? (departments.find((d) => d.id === searchParams.departmentId)?.id || departments[0]?.id || null) : user.departmentId || null;
   const chairmanId = isHead ? user.id : user.managedById || "";
-  const data = departmentId ? await loadSplit(chairmanId, departmentId) : null;
+  const data = departmentId ? await loadSplit(chairmanId, departmentId, isHead ? null : departmentId) : null;
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -27,6 +27,7 @@ export default async function CourseSplitPage({ searchParams }: { searchParams: 
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Many courses are common to several programs. Give each common course to <strong>one</strong> Program Lead; he assigns the Subject Expert for that course in every program that teaches it.
         A specialised course, taught in one program only, stays with that program's lead unless you choose another. Course Assigners still assign the teachers.
+        A course can also go to a lead of another department (Maths, English, Management...); that department's Chairman must accept it first.
       </p>
       {isHead && departments.length > 1 && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>

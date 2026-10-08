@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await scope(user, new URL(req.url).searchParams.get("departmentId"));
   if (!s) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  return NextResponse.json(await loadSplit(s.chairmanId, s.departmentId));
+  return NextResponse.json(await loadSplit(s.chairmanId, s.departmentId, user.role === "CHAIRMAN" ? null : s.departmentId));
 }
 
 // body: { departmentId?, assignments: [{ key, ownerId | null }] } - null clears the choice (back to "not decided").
@@ -31,18 +31,38 @@ export async function PUT(req: NextRequest) {
   if (!s) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!Array.isArray(body.assignments)) return NextResponse.json({ error: "assignments are required" }, { status: 400 });
 
-  const leads = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: s.chairmanId, departmentId: s.departmentId }, select: { id: true } });
-  const leadIds = new Set(leads.map((l) => l.id));
+  // Any Program Lead of the institute may be named; another department's lead must be accepted by his Chairman first.
+  const leads = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: s.chairmanId, departmentId: { not: null } }, select: { id: true, departmentId: true } });
+  const leadDept = new Map<string, string | null>(leads.map((l) => [l.id, l.departmentId]));
   let set = 0, cleared = 0;
   for (const a of body.assignments as { key: string; ownerId: string | null }[]) {
     const key = String(a.key || "").trim().toLowerCase();
     if (!key) continue;
     const where = { chairmanId_departmentId_courseKey: { chairmanId: s.chairmanId, departmentId: s.departmentId, courseKey: key } };
     if (!a.ownerId) { await prisma.courseOwner.deleteMany({ where: { chairmanId: s.chairmanId, departmentId: s.departmentId, courseKey: key } }); cleared++; continue; }
-    if (!leadIds.has(a.ownerId)) return NextResponse.json({ error: "that person is not a Program Lead of this department" }, { status: 400 });
-    await prisma.courseOwner.upsert({ where, update: { ownerId: a.ownerId, assignedById: user.id }, create: { chairmanId: s.chairmanId, departmentId: s.departmentId, courseKey: key, ownerId: a.ownerId, assignedById: user.id } });
+    if (!leadDept.has(a.ownerId)) return NextResponse.json({ error: "that person is not a Program Lead of this institute" }, { status: 400 });
+    const ownerDepartmentId = leadDept.get(a.ownerId) || s.departmentId;
+    const status = ownerDepartmentId === s.departmentId ? "ACCEPTED" : "PENDING";
+    await prisma.courseOwner.upsert({ where, update: { ownerId: a.ownerId, ownerDepartmentId, status, assignedById: user.id }, create: { chairmanId: s.chairmanId, departmentId: s.departmentId, courseKey: key, ownerId: a.ownerId, ownerDepartmentId, status, assignedById: user.id } });
     set++;
   }
   await writeAuditLog({ actorUserId: user.id, action: "COURSE_SPLIT_UPDATED", entityType: "Department", entityId: s.departmentId, metadata: { set, cleared } });
   return NextResponse.json({ ok: true, set, cleared });
+}
+
+// The Chairman of the department that is asked to take a course accepts or declines it (the Institute Head can too).
+// body: { id, action: "ACCEPT" | "DECLINE" }
+export async function PATCH(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user || (user.role !== "HEAD_OF_DEPARTMENT" && user.role !== "CHAIRMAN")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const body = await req.json().catch(() => ({}));
+  const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
+  const row = await prisma.courseOwner.findFirst({ where: { id: String(body.id || ""), chairmanId, status: "PENDING" } });
+  if (!row) return NextResponse.json({ error: "request not found" }, { status: 404 });
+  if (user.role === "HEAD_OF_DEPARTMENT" && row.ownerDepartmentId !== user.departmentId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (body.action === "ACCEPT") await prisma.courseOwner.update({ where: { id: row.id }, data: { status: "ACCEPTED" } });
+  else if (body.action === "DECLINE") await prisma.courseOwner.delete({ where: { id: row.id } });
+  else return NextResponse.json({ error: "action must be ACCEPT or DECLINE" }, { status: 400 });
+  await writeAuditLog({ actorUserId: user.id, action: body.action === "ACCEPT" ? "COURSE_SPLIT_ACCEPTED" : "COURSE_SPLIT_DECLINED", entityType: "CourseOwner", entityId: row.id });
+  return NextResponse.json({ ok: true });
 }

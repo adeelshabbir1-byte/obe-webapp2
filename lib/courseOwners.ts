@@ -22,7 +22,7 @@ export async function ownerOfCourse(c: { code: string; courseType?: string | nul
   const d = await deptOf(c.coordinatorId);
   if (!d) return null;
   const keys = ownerKeys(c);
-  const rows = await prisma.courseOwner.findMany({ where: { ...d, courseKey: { in: keys } } });
+  const rows = await prisma.courseOwner.findMany({ where: { ...d, status: "ACCEPTED", courseKey: { in: keys } } });
   for (const k of keys) { const hit = rows.find((r) => r.courseKey === k); if (hit) return hit.ownerId; }
   return null;
 }
@@ -40,26 +40,29 @@ export async function handlingAccess(userId: string, c: { code: string; courseTy
   return { ok: false, status: 403, error: `${c.code} is handled by ${o?.name || "another Program Lead"} (set by the Chairman). Ask them, or ask the Chairman to change it.` };
 }
 
-/** Courses of OTHER leads' programs that this lead handles. */
+/** Courses of OTHER leads' programs (also in other departments) that this lead handles. */
 export async function ownedElsewhereCourseIds(user: { id: string; managedById: string | null; departmentId?: string | null }): Promise<string[]> {
-  if (!user.managedById || !user.departmentId) return [];
-  const mine = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, departmentId: user.departmentId, ownerId: user.id } });
+  if (!user.managedById) return [];
+  const mine = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, ownerId: user.id, status: "ACCEPTED" } });
   if (mine.length === 0) return [];
+  const myKeys = new Set(mine.map((m) => `${m.departmentId}|${m.courseKey}`));
+  const all = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, status: "ACCEPTED", departmentId: { in: Array.from(new Set(mine.map((m) => m.departmentId))) } } });
+  const ownerBy = new Map(all.map((o) => [`${o.departmentId}|${o.courseKey}`, o.ownerId]));
   const codes = mine.flatMap((m) => [m.courseKey, `${m.courseKey}-l`]);
   const rows = await prisma.course.findMany({
-    where: { coordinatorId: { not: user.id }, coordinator: { managedById: user.managedById, departmentId: user.departmentId }, OR: codes.map((k) => ({ code: { equals: k, mode: "insensitive" as const } })) },
-    select: { id: true, code: true, courseType: true },
+    where: { coordinatorId: { not: user.id }, coordinator: { managedById: user.managedById, departmentId: { in: Array.from(new Set(mine.map((m) => m.departmentId))) } }, OR: codes.map((k) => ({ code: { equals: k, mode: "insensitive" as const } })) },
+    select: { id: true, code: true, courseType: true, coordinator: { select: { departmentId: true } } },
   });
-  const mineKeys = new Set(mine.map((m) => m.courseKey));
-  const all = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, departmentId: user.departmentId } });
-  const byKey = new Map(all.map((o) => [o.courseKey, o.ownerId]));
-  return rows.filter((r) => { for (const k of ownerKeys(r)) { const o = byKey.get(k); if (o) return mineKeys.has(k) && o === user.id; } return false; }).map((r) => r.id);
+  return rows.filter((r) => {
+    for (const k of ownerKeys(r)) { const dk = `${r.coordinator.departmentId}|${k}`; const o = ownerBy.get(dk); if (o) return o === user.id && myKeys.has(dk); }
+    return false;
+  }).map((r) => r.id);
 }
 
 /** Every named owner in this lead's department, by course key. */
 export async function loadOwnerMap(user: { managedById: string | null; departmentId?: string | null }): Promise<Map<string, string>> {
   if (!user.managedById || !user.departmentId) return new Map();
-  const rows = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, departmentId: user.departmentId } });
+  const rows = await prisma.courseOwner.findMany({ where: { chairmanId: user.managedById, departmentId: user.departmentId, status: "ACCEPTED" } });
   return new Map(rows.map((r) => [r.courseKey, r.ownerId]));
 }
 

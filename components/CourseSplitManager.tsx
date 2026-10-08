@@ -1,10 +1,12 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { SplitData } from "../lib/courseSplit";
 
 export default function CourseSplitManager({ data, departmentId }: { data: SplitData; departmentId: string | null }) {
   const [owners, setOwners] = useState<Record<string, string>>(() => Object.fromEntries(data.rows.map((r) => [r.key, r.ownerId || ""])));
   const [saved, setSaved] = useState<Record<string, string>>(() => Object.fromEntries(data.rows.map((r) => [r.key, r.ownerId || ""])));
+  const router = useRouter();
   const [onlyShared, setOnlyShared] = useState(true);
   const [bulkLead, setBulkLead] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,12 +32,49 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
     if (!res.ok) { setMsg(j.error || "Could not save"); return; }
     setSaved({ ...owners });
     setMsg("Saved.");
+    router.refresh();
   }
+
+  async function answer(id: string, action: "ACCEPT" | "DECLINE") {
+    setBusy(true); setMsg("");
+    const res = await fetch("/api/course-split", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
+    const j = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setMsg(j.error || "Could not save"); return; }
+    router.refresh();
+  }
+
+  // Leads of this department first, then the other departments' leads.
+  const groups = useMemo(() => {
+    const by = new Map<string, typeof data.leads>();
+    for (const l of data.leads) { const k = l.departmentName || "Other"; by.set(k, [...(by.get(k) || []), l]); }
+    return Array.from(by.entries()).sort(([a], [b]) => (a === data.departmentName ? -1 : b === data.departmentName ? 1 : a.localeCompare(b)));
+  }, [data.leads, data.departmentName]);
+  const leadOptions = (
+    groups.map(([dept, ls]) => (
+      <optgroup key={dept} label={dept === data.departmentName ? `${dept} (this department)` : `${dept} (needs their Chairman's OK)`}>
+        {ls.map((l) => <option key={l.id} value={l.id}>{l.name}{l.program ? ` (${l.program})` : ""}</option>)}
+      </optgroup>
+    ))
+  );
+  const leadName = (id: string) => data.leads.find((l) => l.id === id)?.name || "";
 
   if (data.leads.length === 0) return <div className="card"><p style={{ fontSize: 13 }}>This department has no Program Leads yet. Add them under Departments first.</p></div>;
 
   return (
     <div>
+      {data.incoming.length > 0 && (
+        <div className="card" style={{ marginBottom: 14, borderColor: "var(--brass-dark)" }}>
+          <h3 style={{ fontSize: 14, marginTop: 0 }}>Courses other departments want you to take</h3>
+          {data.incoming.map((i) => (
+            <div key={i.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "6px 0", borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: 13, flex: 1 }}><strong>{i.code}</strong> {i.title} from {i.fromDepartment}, to be handled by {i.ownerName}</span>
+              <button className="btn btn-brass" disabled={busy} onClick={() => answer(i.id, "ACCEPT")}>Accept</button>
+              <button className="btn" disabled={busy} onClick={() => answer(i.id, "DECLINE")}>Decline</button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="card" style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 13, marginTop: 0 }}>
           <strong>{data.rows.filter((r) => r.shared).length}</strong> common courses (taught in two or more programs) and <strong>{data.rows.filter((r) => !r.shared).length}</strong> specialised courses.
@@ -45,7 +84,7 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
           <span style={{ fontSize: 12.5 }}>Give all undecided common courses to</span>
           <select value={bulkLead} onChange={(e) => setBulkLead(e.target.value)}>
             <option value="">Choose a Program Lead</option>
-            {data.leads.map((l) => <option key={l.id} value={l.id}>{l.name}{l.program ? ` (${l.program})` : ""}</option>)}
+            {leadOptions}
           </select>
           <button className="btn" onClick={giveAllUndecided} disabled={!bulkLead || undecided.length === 0}>Apply</button>
           <label style={{ fontSize: 12.5, marginLeft: "auto" }}><input type="checkbox" checked={onlyShared} onChange={(e) => setOnlyShared(e.target.checked)} /> Show only common courses</label>
@@ -63,8 +102,9 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
                 <td>
                   <select value={owners[r.key] || ""} onChange={(e) => setOwners((o) => ({ ...o, [r.key]: e.target.value }))}>
                     <option value="">{r.shared ? "Not decided yet" : "The lead of its own program"}</option>
-                    {data.leads.map((l) => <option key={l.id} value={l.id}>{l.name}{l.program ? ` (${l.program})` : ""}</option>)}
+                    {leadOptions}
                   </select>
+                  {r.ownerStatus === "PENDING" && owners[r.key] === (r.ownerId || "") && <div style={{ fontSize: 11.5, color: "var(--rust)" }}>Waiting for {leadName(r.ownerId || "")}'s Chairman to accept. Until then the course stays as it was.</div>}
                 </td>
               </tr>
             ))}

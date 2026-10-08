@@ -2119,6 +2119,8 @@ model CourseOwner {
   departmentId String
   courseKey    String
   ownerId      String
+  ownerDepartmentId String? // the owner's own department; differs from departmentId when another department takes the course
+  status       String   @default("ACCEPTED") // ACCEPTED | PENDING (waiting for the owner's department Chairman)
   assignedById String
   createdAt    DateTime @default(now())
 

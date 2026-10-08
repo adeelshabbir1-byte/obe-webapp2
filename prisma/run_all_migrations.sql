@@ -4604,3 +4604,9 @@ CREATE TABLE IF NOT EXISTS "CourseOwner" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "CourseOwner_chairmanId_departmentId_courseKey_key" ON "CourseOwner"("chairmanId","departmentId","courseKey");
 CREATE INDEX IF NOT EXISTS "CourseOwner_ownerId_idx" ON "CourseOwner"("ownerId");
+
+-- ===== migration_course_owner_2.sql =====
+-- Course split across departments: another department's Program Lead can take a course once its Chairman accepts.
+ALTER TABLE "CourseOwner" ADD COLUMN IF NOT EXISTS "ownerDepartmentId" TEXT;
+ALTER TABLE "CourseOwner" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'ACCEPTED';
+UPDATE "CourseOwner" SET "ownerDepartmentId" = "departmentId" WHERE "ownerDepartmentId" IS NULL;
