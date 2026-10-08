@@ -65,10 +65,14 @@ export async function getAuthenticatedUser() {
   // A faculty member who also sits on the OMC.
   const omcHat = !!safeUser.omcHat && safeUser.role !== "OMC";
   if (omcHat && !instituteHeadId) instituteHeadId = await chairmanIdFor(safeUser);
-  let effectiveRole = session.activeRole || safeUser.role;
+  // The role chosen at sign-in only counts while the person still holds it; a stale choice (for example Instructor, kept
+  // from before they were given a coordinator role) is ignored so the role choice is offered again.
+  const heldRoles = [safeUser.role, safeUser.secondaryRole, safeUser.tertiaryRole, assignerHat ? "COURSE_ASSIGNER" : null, omcHat ? "OMC" : null];
+  const chosenRole = session.activeRole && heldRoles.includes(session.activeRole) ? session.activeRole : null;
+  let effectiveRole = chosenRole || safeUser.role;
   if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER" && !assignerHat) effectiveRole = safeUser.role; // the semester ended
   if (effectiveRole === "OMC" && safeUser.role !== "OMC" && !omcHat) effectiveRole = safeUser.role;
-  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat, omcHat };
+  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!chosenRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat, omcHat };
   // The assigner pages find the institute through managedById, so a teacher wearing this hat is placed directly under the Institute Head.
   if ((effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") || (effectiveRole === "OMC" && safeUser.role !== "OMC")) return { ...base, managedById: instituteHeadId };
 
