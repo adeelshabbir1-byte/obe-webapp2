@@ -11,7 +11,7 @@ type Person = { id: string; name: string; role: string; departmentId: string | n
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert",
+  HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [] }: {
@@ -42,7 +42,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
   // Sorted by department (people with no department first, so nobody is missed), then role, then name.
-  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"];
+  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"];
   const shown = people
     .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
     .sort((a, b) =>
@@ -143,7 +143,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                   <span style={{ display: "none" }}>{deptName(p.departmentId)}</span>
-                  {(p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT") && p.departmentId && (
+                  {(p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT" || p.role === "LAB_ENGINEER") && p.departmentId && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>Program:{" "}
                       <select value={p.managerId || ""} onChange={(e) => e.target.value && call("/api/faculty-program", "PUT", { userId: p.id, coordinatorId: e.target.value })}>
                         {people.filter((c) => c.role === "PROGRAM_COORDINATOR" && c.departmentId === p.departmentId).map((c) => <option key={c.id} value={c.id}>{c.leadProgram ? `${c.leadProgram} (${c.name})` : c.name}</option>)}

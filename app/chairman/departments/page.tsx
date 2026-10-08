@@ -27,7 +27,7 @@ export default async function ChairmanDepartmentsPage() {
       select: { id: true, name: true, role: true, departmentId: true, secondaryRole: true, leadProgram: true }, orderBy: { name: "asc" },
     }),
     prisma.user.findMany({
-      where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+      where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"] } },
       select: { id: true, name: true, role: true, departmentId: true, managedById: true }, orderBy: { name: "asc" },
     }),
     prisma.faculty.findMany({ where: { chairmanId: user.id }, select: { id: true, name: true }, orderBy: { name: "asc" } }),

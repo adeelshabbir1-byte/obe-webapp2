@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   if (!body.userId || !body.coordinatorId) return NextResponse.json({ error: "userId and coordinatorId are required" }, { status: 400 });
 
-  const target = await prisma.user.findFirst({ where: { id: body.userId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false, managedBy: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" } } });
+  const target = await prisma.user.findFirst({ where: { id: body.userId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"] }, isVisitingPlaceholder: false, managedBy: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" } } });
   if (!target) return NextResponse.json({ error: "faculty member not found" }, { status: 404 });
   const coordinator = await prisma.user.findFirst({ where: { id: body.coordinatorId, role: "PROGRAM_COORDINATOR", managedById: chairmanId } });
   if (!coordinator) return NextResponse.json({ error: "coordinator not found" }, { status: 404 });
