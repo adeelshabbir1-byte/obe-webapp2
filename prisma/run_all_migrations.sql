@@ -4586,3 +4586,7 @@ CREATE TABLE IF NOT EXISTS "TeacherProgramMove" (
 CREATE INDEX IF NOT EXISTS "TeacherProgramMove_chairmanId_status_idx" ON "TeacherProgramMove"("chairmanId","status");
 CREATE INDEX IF NOT EXISTS "TeacherProgramMove_fromCoordinatorId_idx" ON "TeacherProgramMove"("fromCoordinatorId");
 CREATE INDEX IF NOT EXISTS "TeacherProgramMove_toCoordinatorId_idx" ON "TeacherProgramMove"("toCoordinatorId");
+
+-- migration_omc_hat.sql
+-- Lets a faculty member also be an OMC member (the same login, a role to choose at sign-in).
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "omcHat" BOOLEAN NOT NULL DEFAULT false;

@@ -7,9 +7,9 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
-  const dualCapable = isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat);
+  const dualCapable = isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat || user.omcHat);
   // The other roles this person can switch to right now (e.g. a Dean who also teaches and is a Subject Expert).
-  const otherRoles = dualCapable ? hatsOf({ ...user, assignerHat: user.assignerHat }).filter((r) => r !== user.role).map((r) => ({ role: r, label: DUAL_ROLE_LABEL[r] || r })) : [];
+  const otherRoles = dualCapable ? hatsOf({ ...user, assignerHat: user.assignerHat, omcHat: user.omcHat }).filter((r) => r !== user.role).map((r) => ({ role: r, label: DUAL_ROLE_LABEL[r] || r })) : [];
   // A department Program Coordinator: the programs of their department they can work on.
   let deptCoordinator = null as null | { actingForId: string | null; programs: { id: string; label: string }[] };
   if (user.role === "DEPARTMENT_COORDINATOR") {

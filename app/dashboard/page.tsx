@@ -32,7 +32,7 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat) && !user.roleChosen) {
+  if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat || user.omcHat) && !user.roleChosen) {
     redirect("/choose-role");
   }
 

@@ -62,11 +62,15 @@ export async function getAuthenticatedUser() {
     instituteHeadId = await chairmanIdFor(safeUser);
     assignerHat = await assignerHatActive(safeUser.assignerTerm, instituteHeadId);
   }
+  // A faculty member who also sits on the OMC.
+  const omcHat = !!safeUser.omcHat && safeUser.role !== "OMC";
+  if (omcHat && !instituteHeadId) instituteHeadId = await chairmanIdFor(safeUser);
   let effectiveRole = session.activeRole || safeUser.role;
   if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER" && !assignerHat) effectiveRole = safeUser.role; // the semester ended
-  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat };
+  if (effectiveRole === "OMC" && safeUser.role !== "OMC" && !omcHat) effectiveRole = safeUser.role;
+  const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!session.activeRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat, omcHat };
   // The assigner pages find the institute through managedById, so a teacher wearing this hat is placed directly under the Institute Head.
-  if (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") return { ...base, managedById: instituteHeadId };
+  if ((effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") || (effectiveRole === "OMC" && safeUser.role !== "OMC")) return { ...base, managedById: instituteHeadId };
 
   // A department Program Coordinator who has picked a program works as that program's coordinator, but only on the pages
   // that involve people, calendars and the timetable. Everywhere else they remain a plain department coordinator.
@@ -77,7 +81,7 @@ export async function getAuthenticatedUser() {
       const target = await prisma.user.findFirst({ where: { id: session.actingForId, role: "PROGRAM_COORDINATOR", departmentId: safeUser.departmentId, managedById: safeUser.managedById } });
       if (target) {
         const { passwordHash: _ph, ...t } = target;
-        return { ...t, mustChangePassword: safeUser.mustChangePassword, role: "PROGRAM_COORDINATOR" as typeof effectiveRole, rawRole: safeUser.role, roleChosen: true, mfaVerified: session.mfaVerified, actingForId: session.actingForId, actingAsLead: true, realUserId: safeUser.id, assignerHat };
+        return { ...t, mustChangePassword: safeUser.mustChangePassword, role: "PROGRAM_COORDINATOR" as typeof effectiveRole, rawRole: safeUser.role, roleChosen: true, mfaVerified: session.mfaVerified, actingForId: session.actingForId, actingAsLead: true, realUserId: safeUser.id, assignerHat, omcHat };
       }
     }
   }

@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     data: {
       email: body.email, username: body.username, passwordHash, name: body.name,
       role: "OMC", managedById: user.id, departmentId: (await ensureDefaultDepartment(user.id)).id, mustChangePassword: true,
+      organization: typeof body.organization === "string" && body.organization.trim() ? body.organization.trim().slice(0, 120) : null,
     },
   });
 

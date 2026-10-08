@@ -189,7 +189,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
           Subject Experts can be chosen too and keep their Subject Expert and teaching roles.
         </p>
         <GiveRole
-          roles={["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD", "COURSE_ASSIGNER"]}
+          roles={["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD", "COURSE_ASSIGNER", "OMC"]}
           teachers={people.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT").map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
           faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
           programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}
