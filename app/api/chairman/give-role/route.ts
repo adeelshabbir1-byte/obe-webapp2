@@ -24,6 +24,23 @@ export async function POST(req: NextRequest) {
     if (!holder) return NextResponse.json({ error: "person not found" }, { status: 404 });
     if (!isInstituteHead && !(holder.role === "PROGRAM_COORDINATOR" && holder.departmentId === user.departmentId)) return NextResponse.json({ error: "you can only remove a Program Lead role in your own department" }, { status: 403 });
 
+    // Someone who is both Dean and Chairman loses only the role that was asked for and keeps the other.
+    const pairOther = body.role === "DEAN" ? "HEAD_OF_DEPARTMENT" : body.role === "HEAD_OF_DEPARTMENT" ? "DEAN" : null;
+    const heldHats = [holder.secondaryRole, holder.tertiaryRole];
+    const bothHeld = !!pairOther && ((holder.role === body.role && heldHats.includes(pairOther)) || (holder.role === pairOther && heldHats.includes(body.role)));
+    if (bothHeld) {
+      const teaching = [holder.secondaryRole, holder.tertiaryRole].filter((r) => r && r !== "DEAN" && r !== "HEAD_OF_DEPARTMENT") as string[];
+      if (holder.role === body.role) {
+        // The removed role was the main one: the other becomes the main role.
+        await prisma.user.update({ where: { id: holder.id }, data: { role: pairOther as "DEAN" | "HEAD_OF_DEPARTMENT", secondaryRole: teaching[0] || null, tertiaryRole: teaching[1] || null, ...(body.role === "DEAN" ? { facultyId: null } : {}) } });
+      } else {
+        await prisma.user.update({ where: { id: holder.id }, data: { secondaryRole: teaching[0] || null, tertiaryRole: teaching[1] || null, ...(body.role === "DEAN" ? { facultyId: null } : {}) } });
+      }
+      await prisma.session.updateMany({ where: { userId: holder.id }, data: { activeRole: null } });
+      await writeAuditLog({ actorUserId: user.id, action: "ROLE_REVOKED_KEEPING_OTHER", entityType: "User", entityId: holder.id, metadata: { removed: body.role } });
+      return NextResponse.json({ ok: true, result: "role removed, the other role is kept" });
+    }
+
     const hats = [holder.secondaryRole, holder.tertiaryRole];
     if (hats.includes("SUBJECT_EXPERT") || hats.includes("INSTRUCTOR")) {
       const backTo = hats.includes("SUBJECT_EXPERT") ? "SUBJECT_EXPERT" : "INSTRUCTOR";
@@ -73,9 +90,32 @@ export async function POST(req: NextRequest) {
   if (!isInstituteHead && wanted !== "PROGRAM_LEAD") return NextResponse.json({ error: "only the Institute Head can name a Dean, a Chairman or a Program Coordinator" }, { status: 403 });
 
   const teacher = await prisma.user.findFirst({
-    where: { id: body.userId, isVisitingPlaceholder: false, OR: [{ managedBy: { managedById: chairmanId } }, { managedById: chairmanId }], role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+    where: { id: body.userId, isVisitingPlaceholder: false, OR: [{ managedBy: { managedById: chairmanId } }, { managedById: chairmanId }], role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "DEAN", "HEAD_OF_DEPARTMENT"] } },
   });
   if (!teacher) return NextResponse.json({ error: "teacher not found" }, { status: 404 });
+  // One person can be Dean and Chairman at the same time. Nothing else can be combined.
+  const isLeader = teacher.role === "DEAN" || teacher.role === "HEAD_OF_DEPARTMENT";
+  if (isLeader) {
+    const other = wanted === "DEAN" ? "HEAD_OF_DEPARTMENT" : wanted === "HEAD_OF_DEPARTMENT" ? "DEAN" : null;
+    if (!other || teacher.role !== other) {
+      return NextResponse.json({ error: wanted === teacher.role || [teacher.secondaryRole, teacher.tertiaryRole].includes(wanted) ? "This person already holds that role." : "A Dean can also be a Chairman (and a Chairman a Dean), but not a Program Lead or Program Coordinator. Take the current role back first." }, { status: 409 });
+    }
+    if ([teacher.secondaryRole, teacher.tertiaryRole].includes(wanted)) return NextResponse.json({ error: "This person already holds that role." }, { status: 409 });
+    if (teacher.secondaryRole && teacher.tertiaryRole) return NextResponse.json({ error: "This person already has two teaching roles besides their leadership role, so there is no room for another. Remove one of them first." }, { status: 409 });
+    const keep = [teacher.secondaryRole, teacher.tertiaryRole].find(Boolean) || null;
+    if (wanted === "DEAN") {
+      const faculty = body.facultyId ? await prisma.faculty.findFirst({ where: { id: body.facultyId, chairmanId } }) : null;
+      if (!faculty) return NextResponse.json({ error: "choose a faculty" }, { status: 400 });
+      await prisma.user.update({ where: { id: teacher.id }, data: { secondaryRole: "DEAN", tertiaryRole: keep, facultyId: faculty.id } });
+    } else {
+      const dept = body.departmentId ? await prisma.department.findFirst({ where: { id: body.departmentId, chairmanId } }) : null;
+      if (!dept) return NextResponse.json({ error: "choose a department" }, { status: 400 });
+      await prisma.user.update({ where: { id: teacher.id }, data: { secondaryRole: "HEAD_OF_DEPARTMENT", tertiaryRole: keep, departmentId: dept.id } });
+    }
+    await prisma.session.updateMany({ where: { userId: teacher.id }, data: { activeRole: null } });
+    await writeAuditLog({ actorUserId: user.id, action: "LEADER_ROLE_ADDED", entityType: "User", entityId: teacher.id, metadata: { role: wanted } });
+    return NextResponse.json({ ok: true });
+  }
   // Their earlier roles stay available as extra hats: Instructor -> [Instructor]; Subject Expert -> [Subject Expert] or [Subject Expert, Instructor].
   const wasSe = teacher.role === "SUBJECT_EXPERT";
   const hats = wasSe ? { secondaryRole: "SUBJECT_EXPERT", tertiaryRole: teacher.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null } : { secondaryRole: "INSTRUCTOR", tertiaryRole: null };

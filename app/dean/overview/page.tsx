@@ -1,3 +1,4 @@
+import { holdsRoleWhere } from "../../../lib/dualRoles";
 import { prisma } from "../../../lib/db";
 import { requireDean } from "../../../lib/deanGuard";
 import { navForRole } from "../../../components/reportNav";
@@ -13,7 +14,7 @@ export default async function DeanOverviewPage() {
   ]);
   const rows = await Promise.all(departments.map(async (d) => {
     const [heads, leads, teachers, noTeacher, awaiting, offered] = await Promise.all([
-      prisma.user.findMany({ where: { role: "HEAD_OF_DEPARTMENT", departmentId: d.id }, select: { name: true } }),
+      prisma.user.findMany({ where: { ...holdsRoleWhere("HEAD_OF_DEPARTMENT"), departmentId: d.id }, select: { name: true } }),
       prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", departmentId: d.id, leadProgram: { not: null } }, select: { name: true, leadProgram: true } }),
       prisma.user.count({ where: { departmentId: d.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false } }),
       prisma.course.count({ where: { isOffered: true, instructorId: null, coordinator: { managedById: chairmanId, departmentId: d.id } } }),

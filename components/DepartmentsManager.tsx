@@ -7,11 +7,11 @@ import { useRouter } from "next/navigation";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
-type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; leadProgram?: string | null; managerId?: string | null };
+type Person = { id: string; name: string; role: string; departmentId: string | null; alsoFaculty?: boolean; hats?: string[]; leadProgram?: string | null; managerId?: string | null };
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Chairman", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer",
+  HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer",
 };
 
 export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [] }: {
@@ -42,7 +42,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const ownerOf = (program: string) => departments.find((d) => (programsByDept[d.id] || []).includes(program));
   // Sorted by department (people with no department first, so nobody is missed), then role, then name.
-  const ROLE_ORDER = ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"];
+  const ROLE_ORDER = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"];
   const shown = people
     .filter((p) => roleFilter === "ALL" || p.role === roleFilter)
     .sort((a, b) =>
@@ -57,7 +57,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Departments</h3>
         {departments.map((d) => {
-          const heads = people.filter((p) => p.role === "HEAD_OF_DEPARTMENT" && p.departmentId === d.id);
+          const heads = people.filter((p) => (p.role === "HEAD_OF_DEPARTMENT" || (p.hats || []).includes("HEAD_OF_DEPARTMENT")) && p.departmentId === d.id);
           return (
             <div key={d.id} style={{ borderTop: "1px solid #eee", paddingTop: 10, marginTop: 10 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -136,7 +136,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                   </td></tr>
                 )}
               <tr>
-                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
+                <td>{p.name}</td><td>{ROLE_NAME[p.role] || p.role}{(p.hats || []).filter((h) => h === "DEAN" || h === "HEAD_OF_DEPARTMENT").map((h) => ` + ${ROLE_NAME[h]}`).join("")}{p.role === "PROGRAM_COORDINATOR" && p.leadProgram ? ` — Program Lead of ${p.leadProgram}` : ""}</td>
                 <td>
                   <select value={p.departmentId || ""} onChange={(e) => e.target.value && call("/api/chairman/department-members", "PUT", { userId: p.id, departmentId: e.target.value })}>
                     {!p.departmentId && <option value="">— none —</option>}
@@ -150,7 +150,8 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                       </select>
                     </label>
                   )}
-                  {(p.role === "HEAD_OF_DEPARTMENT" || p.role === "DEPARTMENT_COORDINATOR" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} label={p.role === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : p.role === "DEPARTMENT_COORDINATOR" ? "Remove Program Coordinator" : "Remove as Program Lead"} />}
+                  {((p.hats || []).includes("HEAD_OF_DEPARTMENT") && p.role === "DEAN") && <TakeRoleBack userId={p.id} role="HEAD_OF_DEPARTMENT" label="Remove Chairman" />}
+                  {(p.role === "HEAD_OF_DEPARTMENT" || p.role === "DEPARTMENT_COORDINATOR" || (p.role === "PROGRAM_COORDINATOR" && p.leadProgram)) && <TakeRoleBack userId={p.id} role={p.role === "HEAD_OF_DEPARTMENT" ? "HEAD_OF_DEPARTMENT" : undefined} label={p.role === "HEAD_OF_DEPARTMENT" ? "Remove Chairman" : p.role === "DEPARTMENT_COORDINATOR" ? "Remove Program Coordinator" : "Remove as Program Lead"} />}
                   {p.role === "HEAD_OF_DEPARTMENT" && (
                     <label style={{ marginLeft: 12, fontSize: 12 }}>
                       <input type="checkbox" checked={!!p.alsoFaculty} onChange={(e) => call("/api/chairman/heads", "PATCH", { userId: p.id, alsoFaculty: e.target.checked })} /> Also teaches (faculty)
@@ -186,10 +187,13 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
         <h3 style={{ marginTop: 0 }}>Give a role to one of your teachers</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
           Deans, Chairmen and Program Leads are usually teachers. Pick the teacher and the role. They keep their teacher login and choose which role to work as each time they sign in.
-          Subject Experts can be chosen too and keep their Subject Expert and teaching roles.
+          Subject Experts can be chosen too and keep their Subject Expert and teaching roles. The list is grouped by department.
+          One person can be both Dean and Chairman: when you give the Chairman role, Deans are listed too, and when you give the Dean role, Chairmen are listed too.
+          A Program Lead or Program Coordinator cannot also hold another leadership role: take that role back first.
         </p>
         <GiveRole
           roles={["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD", "COURSE_ASSIGNER", "OMC"]}
+          leaders={people.filter((p) => p.role === "DEAN" || p.role === "HEAD_OF_DEPARTMENT").map((p) => ({ id: p.id, name: p.name, departmentName: departments.find((d) => d.id === p.departmentId)?.name || null, holds: [p.role, ...(p.hats || [])] }))}
           teachers={people.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT").map((p) => ({ id: p.id, name: p.name + (p.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : ""), departmentName: departments.find((d) => d.id === p.departmentId)?.name || null }))}
           faculties={faculties} departments={departments.map((d) => ({ id: d.id, name: d.name }))}
           programs={departments.flatMap((d) => (programsByDept[d.id] || []).map((name) => ({ name, department: d.name })))}

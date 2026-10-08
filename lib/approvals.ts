@@ -1,3 +1,4 @@
+import { holdsRoleWhere } from "./dualRoles";
 import { prisma } from "./db";
 
 // What approval state a course's teacher assignment should get when it changes.
@@ -13,7 +14,7 @@ export async function approvalFieldsFor(courseId: string, instructorId: string |
   ]);
   if (instructor?.isVisitingPlaceholder) return { instructorApproval: "NONE", ...cleared };
   const departmentId = course?.coordinator.departmentId;
-  const heads = departmentId ? await prisma.user.count({ where: { role: "HEAD_OF_DEPARTMENT", departmentId } }) : 0;
+  const heads = departmentId ? await prisma.user.count({ where: { ...holdsRoleWhere("HEAD_OF_DEPARTMENT"), departmentId } }) : 0;
   if (heads === 0) return { instructorApproval: "APPROVED", ...cleared };
   return { instructorApproval: "PENDING", ...cleared };
 }
