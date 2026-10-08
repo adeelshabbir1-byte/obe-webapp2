@@ -17,9 +17,6 @@ export async function PUT(req: NextRequest) {
   if (!target) return NextResponse.json({ error: "faculty member not found" }, { status: 404 });
   const coordinator = await prisma.user.findFirst({ where: { id: body.coordinatorId, role: "PROGRAM_COORDINATOR", managedById: chairmanId } });
   if (!coordinator) return NextResponse.json({ error: "coordinator not found" }, { status: 404 });
-  if (user.role === "HEAD_OF_DEPARTMENT" && (coordinator.departmentId !== user.departmentId || target.departmentId !== user.departmentId)) {
-    return NextResponse.json({ error: "you can only move faculty within your own department" }, { status: 403 });
-  }
 
   await prisma.user.update({ where: { id: target.id }, data: { managedById: coordinator.id, departmentId: coordinator.departmentId } });
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_MOVED_TO_PROGRAM", entityType: "User", entityId: target.id, metadata: { coordinatorId: coordinator.id } });
