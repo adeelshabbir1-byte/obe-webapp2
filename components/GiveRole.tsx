@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Teacher = { id: string; name: string; departmentName?: string | null };
-type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD" | "COURSE_ASSIGNER";
-const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program", COURSE_ASSIGNER: "Course Assigner (for a semester)" };
+type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD" | "COURSE_ASSIGNER" | "OMC";
+const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program", COURSE_ASSIGNER: "Course Assigner (for a semester)", OMC: "OMC member (outcome management committee)" };
 
 // Pick a teacher and give them an extra role. They keep teaching and choose which hat to wear at sign-in.
 export default function GiveRole({ teachers, roles, faculties = [], departments = [], programs = [] }: {
@@ -21,9 +21,9 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setMsg("");
-    const res = await fetch(role === "COURSE_ASSIGNER" ? "/api/chairman/assigner-hat" : "/api/chairman/give-role", {
+    const res = await fetch(role === "COURSE_ASSIGNER" ? "/api/chairman/assigner-hat" : role === "OMC" ? "/api/chairman/omc-hat" : "/api/chairman/give-role", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(role === "COURSE_ASSIGNER" ? { userId: fd.get("userId"), term: fd.get("term") } : { userId: fd.get("userId"), role, facultyId: fd.get("facultyId"), departmentId: fd.get("departmentId"), program: fd.get("program") }),
+      body: JSON.stringify(role === "OMC" ? { userId: fd.get("userId") } : role === "COURSE_ASSIGNER" ? { userId: fd.get("userId"), term: fd.get("term") } : { userId: fd.get("userId"), role, facultyId: fd.get("facultyId"), departmentId: fd.get("departmentId"), program: fd.get("program") }),
     });
     const d = await res.json().catch(() => ({}));
     setOk(res.ok);

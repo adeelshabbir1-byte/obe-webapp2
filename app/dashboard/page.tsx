@@ -32,7 +32,7 @@ export default async function Dashboard() {
   if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
-  if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat) && !user.roleChosen) {
+  if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat || user.omcHat) && !user.roleChosen) {
     redirect("/choose-role");
   }
 
@@ -168,7 +168,7 @@ async function chairmanStats(chairmanId: string): Promise<Stat[]> {
   return [
     { label: "PLOs awaiting your approval", value: pendingPlos, href: "/chairman/plos", tone: pendingPlos > 0 ? "warn" : "ok" },
     { label: "Open CQI findings", value: openCqi, href: "/chairman/cqi", tone: openCqi > 0 ? "warn" : "ok" },
-    { label: "Program Coordinators", value: coordinators.length, href: "/chairman/coordinators", tone: "neutral" },
+    { label: "Program Leads", value: coordinators.length, href: "/chairman/coordinators", tone: "neutral" },
     { label: "Batches across your institution", value: batches, tone: "neutral" },
   ];
 }

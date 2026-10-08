@@ -29,7 +29,7 @@ export default async function CqiPage() {
   const nav = user.role === "CHAIRMAN"
     ? [
         { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-        { href: "/chairman/coordinators", label: "Program Coordinators" },
+        { href: "/chairman/coordinators", label: "Program Leads" },
         { href: "/chairman/plos", label: "Program Learning Outcomes" },
         { href: "/chairman/omc", label: "OMC Members" },
         { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },

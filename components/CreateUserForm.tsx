@@ -8,11 +8,13 @@ export default function CreateUserForm({
   showRoleSelect,
   roleOptions,
   buttonLabel,
+  showOrganization,
 }: {
   endpoint: string;
   showRoleSelect?: boolean;
   roleOptions?: { value: string; label: string }[];
   buttonLabel: string;
+  showOrganization?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -30,6 +32,7 @@ export default function CreateUserForm({
       password: String(fd.get("password") || ""),
     };
     if (showRoleSelect) body.role = String(fd.get("role") || "");
+    if (showOrganization) body.organization = String(fd.get("organization") || "");
 
     try {
       const res = await fetch(endpoint, {
@@ -61,6 +64,7 @@ export default function CreateUserForm({
         <div className="field"><label>Email</label><input name="email" type="email" required /></div>
         <div className="field"><label>Username</label><input name="username" required /></div>
         <div className="field"><label>Temporary Password</label><input name="password" required /></div>
+        {showOrganization && <div className="field"><label>Organization / company (for an industry member)</label><input name="organization" placeholder="e.g. Systems Ltd" /></div>}
         {showRoleSelect && (
           <div className="field">
             <label>Role</label>

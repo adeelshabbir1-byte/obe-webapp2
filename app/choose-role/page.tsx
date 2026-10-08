@@ -9,7 +9,7 @@ export default async function ChooseRolePage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
 
-  if (!isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat)) {
+  if (!isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat || user.omcHat)) {
     redirect("/dashboard");
   }
 
@@ -18,9 +18,9 @@ export default async function ChooseRolePage() {
       <div style={{ background: "#fff", padding: "40px 50px", maxWidth: 480, border: "1px solid var(--line)", textAlign: "center" }}>
         <h1 style={{ fontSize: 20, marginBottom: 6 }}>Welcome, {user.name}</h1>
         <p style={{ fontSize: 13, color: "var(--slate)", marginBottom: 28 }}>
-          Your account can work as {hatsOf({ ...user, assignerHat: user.assignerHat }).map((r) => DUAL_ROLE_LABEL[r] || r).join(", ")}. Which one do you want to work as right now?
+          Your account can work as {hatsOf({ ...user, assignerHat: user.assignerHat, omcHat: user.omcHat }).map((r) => DUAL_ROLE_LABEL[r] || r).join(", ")}. Which one do you want to work as right now?
         </p>
-        <ChooseRoleButtons roles={hatsOf({ ...user, assignerHat: user.assignerHat })} />
+        <ChooseRoleButtons roles={hatsOf({ ...user, assignerHat: user.assignerHat, omcHat: user.omcHat })} />
       </div>
     </div>
   );
