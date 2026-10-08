@@ -8,7 +8,9 @@ import { instituteTerm, termLabel, nextTermLabel } from "../../../../lib/assigne
 // The teacher keeps all their other roles and picks the hat when they sign in.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
+  const deptId = user.role === "HEAD_OF_DEPARTMENT" ? user.departmentId || "none" : null;
   const body = await req.json().catch(() => ({}));
   if (!body.userId) return NextResponse.json({ error: "choose a person" }, { status: 400 });
 
@@ -16,14 +18,15 @@ export async function POST(req: NextRequest) {
     where: {
       id: body.userId, isVisitingPlaceholder: false, isActive: true,
       role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] },
-      OR: [{ managedBy: { managedById: user.id } }, { managedById: user.id }],
+      OR: [{ managedBy: { managedById: chairmanId } }, { managedById: chairmanId }],
+      ...(deptId ? { AND: [{ OR: [{ departmentId: deptId }, { departmentId: null, managedBy: { departmentId: deptId } }] }] } : {}),
     },
   });
   if (!person) return NextResponse.json({ error: "person not found" }, { status: 404 });
 
   let assignerTerm: string | null = null;
   if (body.action !== "REVOKE") {
-    const t = await instituteTerm(user.id);
+    const t = await instituteTerm(chairmanId);
     if (body.term === "ALWAYS") assignerTerm = "ALWAYS";
     else if (body.term === "CURRENT" && t) assignerTerm = termLabel(t);
     else if (body.term === "NEXT" && t) assignerTerm = nextTermLabel(t);

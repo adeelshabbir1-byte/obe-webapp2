@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Teacher = { id: string; name: string; departmentName?: string | null };
-type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD";
-const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program" };
+type Role = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD" | "COURSE_ASSIGNER";
+const ROLE_LABEL: Record<Role, string> = { DEAN: "Dean of a faculty", HEAD_OF_DEPARTMENT: "Chairman of a department", DEPARTMENT_COORDINATOR: "Program Coordinator of a department (assistant to the Program Leads)", PROGRAM_LEAD: "Program Lead of a program", COURSE_ASSIGNER: "Course Assigner (for a semester)" };
 
 // Pick a teacher and give them an extra role. They keep teaching and choose which hat to wear at sign-in.
 export default function GiveRole({ teachers, roles, faculties = [], departments = [], programs = [] }: {
@@ -21,9 +21,9 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setMsg("");
-    const res = await fetch("/api/chairman/give-role", {
+    const res = await fetch(role === "COURSE_ASSIGNER" ? "/api/chairman/assigner-hat" : "/api/chairman/give-role", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: fd.get("userId"), role, facultyId: fd.get("facultyId"), departmentId: fd.get("departmentId"), program: fd.get("program") }),
+      body: JSON.stringify(role === "COURSE_ASSIGNER" ? { userId: fd.get("userId"), term: fd.get("term") } : { userId: fd.get("userId"), role, facultyId: fd.get("facultyId"), departmentId: fd.get("departmentId"), program: fd.get("program") }),
     });
     const d = await res.json().catch(() => ({}));
     setOk(res.ok);
@@ -44,6 +44,7 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
       )}
       {role === "DEAN" && <select name="facultyId" required defaultValue=""><option value="" disabled>Which faculty?</option>{faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>}
       {(role === "HEAD_OF_DEPARTMENT" || role === "DEPARTMENT_COORDINATOR") && <select name="departmentId" required defaultValue=""><option value="" disabled>Which department?</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>}
+      {role === "COURSE_ASSIGNER" && <select name="term" required defaultValue="CURRENT"><option value="CURRENT">This semester</option><option value="NEXT">Next semester</option><option value="ALWAYS">Until I remove it</option></select>}
       {role === "PROGRAM_LEAD" && <select name="program" required defaultValue=""><option value="" disabled>Which program?</option>{programs.map((p) => <option key={p.name} value={p.name}>{p.name}{p.department ? ` (${p.department})` : ""}</option>)}</select>}
       <button className="btn btn-brass" type="submit">Give this role</button>
       {msg && <div style={{ color: ok ? "var(--sage)" : "#b3261e", fontSize: 13 }}>{msg}</div>}
