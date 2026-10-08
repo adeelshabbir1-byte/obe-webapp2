@@ -98,7 +98,7 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
             {shown.map((r) => (
               <tr key={r.key}>
                 <td><strong>{r.code}</strong><div style={{ fontSize: 12, color: "var(--slate)" }}>{r.title}{r.semester ? ` · Sem ${r.semester}` : ""}</div></td>
-                <td style={{ fontSize: 12 }}>{r.leads.map((l) => `${l.programs.join(", ") || "—"} (${l.name})`).join("; ")}{r.shared && <span style={{ color: "var(--brass-dark)" }}> · common</span>}</td>
+                <td style={{ fontSize: 12 }}>{r.leads.map((l) => `${l.programs.join(", ") || "—"} (${l.name})`).join("; ")}{r.shared && <span style={{ color: "var(--brass-dark)" }}> · common</span>}{r.elective && <span style={{ color: "var(--slate)" }}> · elective, stays in its own program</span>}</td>
                 <td>
                   <select value={owners[r.key] || ""} onChange={(e) => setOwners((o) => ({ ...o, [r.key]: e.target.value }))}>
                     <option value="">{r.shared ? "Not decided yet" : "The lead of its own program"}</option>
