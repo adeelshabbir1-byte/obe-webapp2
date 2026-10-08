@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses } from "../../../../../lib/contentSync";
+import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({ actorUserId: user.id, action: "CONTENT_SYNC_PAIRED", entityType: "CourseContentSyncGroup", entityId: groupId, metadata: { courseIdA, courseIdB } });
 
+  await syncGroupSubjectHome(groupId);
   const groupBase = await prisma.courseContentSyncMember.findFirst({ where: { groupId, isBase: true }, include: { course: true } });
 
   // Every base-change branch above (reconsiderGroupBase, or the new-

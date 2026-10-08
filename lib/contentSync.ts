@@ -92,6 +92,7 @@ export async function reconsiderGroupBase(groupId: string, newlyJoinedCourseId: 
       await prisma.course.update({ where: { id: newlyJoinedCourseId }, data: { subjectExpertId: oldBaseCourse.subjectExpertId } });
     }
   }
+  await syncGroupSubjectHome(groupId);
 }
 
 /**
@@ -126,6 +127,41 @@ export async function syncSubjectExpertToLinkedCourses(sourceCourseId: string, s
     if (value === undefined) continue; // SE doesn't report to this follower's coordinator — leave it as-is
     await prisma.course.update({ where: { id: m.courseId }, data: { subjectExpertId: value } });
   }
+}
+
+/**
+ * A linked (equivalent) course takes its "subject home" department from the group's BASE course. Call this after the
+ * base's subject home is changed, and after a group's base changes. Does nothing unless the given course is the base.
+ * Applies to every follower, including those of older batches - the subject home is not teaching content.
+ */
+export async function syncSubjectHomeToLinkedCourses(baseCourseId: string): Promise<number> {
+  const membership = await prisma.courseContentSyncMember.findUnique({
+    where: { courseId: baseCourseId },
+    include: { group: { include: { members: true } } },
+  });
+  if (!membership || !membership.isBase) return 0;
+  const base = await prisma.course.findUnique({ where: { id: baseCourseId }, select: { subjectHomeDepartmentId: true } });
+  const followerIds = membership.group.members.filter((m) => m.courseId !== baseCourseId).map((m) => m.courseId);
+  if (followerIds.length === 0) return 0;
+  const r = await prisma.course.updateMany({ where: { id: { in: followerIds } }, data: { subjectHomeDepartmentId: base?.subjectHomeDepartmentId ?? null } });
+  return r.count;
+}
+
+/**
+ * After a group's membership or base changes: every follower takes the BASE's subject home. If the (new) base has none
+ * yet but another member does, the base adopts that one first, so an existing choice is never lost by a base change.
+ */
+export async function syncGroupSubjectHome(groupId: string): Promise<void> {
+  const members = await prisma.courseContentSyncMember.findMany({ where: { groupId }, include: { course: { select: { subjectHomeDepartmentId: true } } } });
+  const base = members.find((m) => m.isBase);
+  if (!base || members.length < 2) return;
+  let home = base.course.subjectHomeDepartmentId;
+  if (!home) {
+    home = members.find((m) => m.course.subjectHomeDepartmentId)?.course.subjectHomeDepartmentId || null;
+    if (!home) return;
+    await prisma.course.update({ where: { id: base.courseId }, data: { subjectHomeDepartmentId: home } });
+  }
+  await prisma.course.updateMany({ where: { id: { in: members.filter((m) => !m.isBase).map((m) => m.courseId) } }, data: { subjectHomeDepartmentId: home } });
 }
 
 /**
@@ -180,6 +216,7 @@ export async function linkAsFollowerOfSource(sourceCourseId: string, newCourseId
   if (existingSourceMembership) {
     await prisma.courseContentSyncMember.create({ data: { groupId: existingSourceMembership.groupId, courseId: newCourseId, isBase: false } });
     await reconsiderGroupBase(existingSourceMembership.groupId, newCourseId);
+    await syncGroupSubjectHome(existingSourceMembership.groupId);
     // If the newly-added course happens to be offered in the same term
     // as any existing group member, they're genuinely the same real
     // class running twice — combine them for teaching too, same as
@@ -212,6 +249,7 @@ export async function linkAsFollowerOfSource(sourceCourseId: string, newCourseId
   await prisma.courseContentSyncMember.createMany({
     data: [{ groupId: group.id, courseId: sourceCourseId, isBase: false }, { groupId: group.id, courseId: newCourseId, isBase: true }],
   });
+  await syncGroupSubjectHome(group.id);
 }
 
 /**

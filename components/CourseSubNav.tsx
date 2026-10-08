@@ -1,3 +1,4 @@
+import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
@@ -17,6 +18,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
         <div>
           <h1 style={{ fontSize: 22 }}>{code} — {title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Template status: {status}</div>
+          <SubjectHomeLine courseId={courseId} />
         </div>
         <Link href="/subjectexpert/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</Link>
       </div>
