@@ -1,5 +1,6 @@
 "use client";
 
+import TabbedCards from "./TabbedCards";
 import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
@@ -131,7 +132,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
   }
 
   return (
-    <>
+    <TabbedCards order={["Students","Add Students","Activate & Logins","Semester"]}>
       {error && <div className="err">{error}</div>}
       <div className="card">
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Batch</label>
@@ -140,7 +141,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         </select>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Activate & Logins">
         <h3 style={{ fontSize: 14, marginBottom: 6 }}>Activate All Students, Every Batch</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
           One click, across every batch you coordinate — not just the one selected above. Activates a login
@@ -154,7 +155,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         </button>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Activate & Logins">
         <h3 style={{ fontSize: 14, marginBottom: 6 }}>Student Portal Logins</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
           Students have no email on file, so a login can't be emailed to them — instead, activate their
@@ -172,7 +173,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Semester">
         <h3 style={{ fontSize: 14, marginBottom: 6 }}>Advance to Next Semester</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
           Once per term, advances every student in this batch by one semester — this is what actually
@@ -189,7 +190,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         </button>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Students">
         <SortableTable>
           <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Track</th><th>Hold Back</th><th></th></tr></thead>
           <tbody>
@@ -206,7 +207,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         </SortableTable>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add Students">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
         {result && <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{result}</div>}
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
@@ -216,12 +217,12 @@ export default function StudentManager({ batches, initialBatchId, students: init
         <button onClick={importFile} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Add Students">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Or Paste Student Data Directly</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>One student per line, as "Name, Roll Number" (comma or tab separated) — works directly from a copied Excel column.</p>
         <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8} placeholder={"Ali Khan, 2026-CS-001\nSara Ahmed, 2026-CS-002"} style={{ width: "100%", padding: 8, border: "1px solid var(--line)", fontFamily: "monospace", fontSize: 12.5 }} />
         <button onClick={importCsv} disabled={loading || !csvText.trim()} className="btn btn-brass" style={{ marginTop: 10 }}>{loading ? "Importing…" : "Import Pasted Text"}</button>
       </div>
-    </>
+    </TabbedCards>
   );
 }

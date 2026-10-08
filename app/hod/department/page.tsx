@@ -1,3 +1,4 @@
+import TabbedCards from "../../../components/TabbedCards";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -60,18 +61,19 @@ export default async function HodDepartmentPage() {
         Your programs, your people, and the courses still waiting for a teacher. Teacher assignments wait here for your approval.
       </p>
 
-      <div className="card">
+      <TabbedCards>
+      <div className="card" data-tab="Approvals">
         <h3 style={{ marginTop: 0 }}>Requests for your people ({incomingLoans.length})</h3>
         <p style={{ color: "var(--slate)", fontSize: 13 }}>Other departments asking for a teacher or Subject Expert from your department. Tick the people you allow; the requester then picks one.</p>
         <HodLoanRequests people={members.map((m) => ({ ...m, alsoFaculty: m.secondaryRole === "INSTRUCTOR" })).filter((m) => ["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) || (m.role === "HEAD_OF_DEPARTMENT" && m.alsoFaculty)).map((m) => ({ id: m.id, name: m.name, role: m.role }))} items={incomingLoans.map((l) => ({ id: l.id, kind: l.kind, askedId: l.instructorId, asked: l.instructor?.name || null, course: `${l.course.code} — ${l.course.title}`, from: l.requestingDepartment.name, note: l.note }))} />
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Approvals">
         <h3 style={{ marginTop: 0 }}>Waiting for your approval ({pending.length})</h3>
         <HodApprovals items={pending.map((c) => ({ id: c.id, code: c.code, title: c.title, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", teacher: c.instructor?.name || "—" }))} />
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Programs">
         <h3 style={{ marginTop: 0 }}>Program Leads</h3>
         <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
           A Program Lead is the Program Coordinator responsible for one program of your department. They can do everything for their program: batches, courses, faculty, Subject Experts, timetable.
@@ -84,28 +86,28 @@ export default async function HodDepartmentPage() {
         <ProgramLeads departmentId={departmentId} programs={programs.map((p) => p.degreeProgram)} coordinators={coordinators.map((c) => ({ id: c.id, name: c.name, leadProgram: c.leadProgram || null }))} teachers={members.filter((m) => m.role === "INSTRUCTOR" || m.role === "SUBJECT_EXPERT").map((m) => ({ id: m.id, name: m.name + (m.role === "SUBJECT_EXPERT" ? " (Subject Expert)" : "") }))} />
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Programs">
         <h3 style={{ marginTop: 0 }}>Programs</h3>
         {programs.length === 0 ? <p style={{ color: "var(--slate)" }}>No programs assigned to this department yet — ask the Institute Head.</p> : <ul>{programs.map((p) => <li key={p.id}>{p.degreeProgram}</li>)}</ul>}
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Courses to staff">
         <h3 style={{ marginTop: 0 }}>Offered courses with no teacher yet ({noTeacher.length})</h3>
         <table><thead><tr><th>Code</th><th>Title</th><th>Batch</th></tr></thead>
           <tbody>{noTeacher.length === 0 ? <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None — every offered course has a teacher.</td></tr> : noTeacher.map(courseRow)}</tbody></table>
       </div>
 
-      <div className="card">
+      <div className="card" data-tab="Courses to staff">
         <h3 style={{ marginTop: 0 }}>Waiting for a visiting teacher ({visiting.length})</h3>
         <p style={{ color: "var(--slate)", fontSize: 13 }}>These courses were given to “Visiting Faculty (to be decided)”. A real teacher still has to be chosen.</p>
         <table><thead><tr><th>Code</th><th>Title</th><th>Batch</th></tr></thead>
           <tbody>{visiting.length === 0 ? <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None.</td></tr> : visiting.map(courseRow)}</tbody></table>
       </div>
 
-      <h3 style={{ margin: "18px 0 6px" }}>Course Assigner</h3>
-      <AssignerHatManager teachers={assignerCandidates.filter((m) => m.role !== "HEAD_OF_DEPARTMENT" || m.id !== user.id).map((m) => ({ id: m.id, name: m.name }))} holders={assignerHolders} currentLabel={term ? termLabel(term) : null} nextLabel={term ? nextTermLabel(term) : null} />
+      <div data-tab="Course Assigner"><h3 style={{ margin: "18px 0 6px" }}>Course Assigner</h3>
+      <AssignerHatManager teachers={assignerCandidates.filter((m) => m.role !== "HEAD_OF_DEPARTMENT" || m.id !== user.id).map((m) => ({ id: m.id, name: m.name }))} holders={assignerHolders} currentLabel={term ? termLabel(term) : null} nextLabel={term ? nextTermLabel(term) : null} /></div>
 
-      <div className="card">
+      <div className="card" data-tab="People">
         <h3 style={{ marginTop: 0 }}>People in this department ({members.length})</h3>
         <table><thead><tr><th>Name</th><th>Role</th><th>Program (who looks after them)</th></tr></thead>
           <tbody>{members.map((m) => (
@@ -113,6 +115,7 @@ export default async function HodDepartmentPage() {
               <td>{["INSTRUCTOR", "SUBJECT_EXPERT"].includes(m.role) && coordOptions.length > 0 ? <MemberProgramSelect userId={m.id} current={m.managedById} coordinators={coordOptions} /> : "—"}</td></tr>
           ))}</tbody></table>
       </div>
+      </TabbedCards>
     </Shell>
   );
 }
