@@ -168,7 +168,7 @@ async function chairmanStats(chairmanId: string): Promise<Stat[]> {
   return [
     { label: "PLOs awaiting your approval", value: pendingPlos, href: "/chairman/plos", tone: pendingPlos > 0 ? "warn" : "ok" },
     { label: "Open CQI findings", value: openCqi, href: "/chairman/cqi", tone: openCqi > 0 ? "warn" : "ok" },
-    { label: "Program Coordinators", value: coordinators.length, href: "/chairman/coordinators", tone: "neutral" },
+    { label: "Program Leads", value: coordinators.length, href: "/chairman/coordinators", tone: "neutral" },
     { label: "Batches across your institution", value: batches, tone: "neutral" },
   ];
 }
