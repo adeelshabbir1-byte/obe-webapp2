@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import { heldSet } from "../../../lib/dualRoles";
 
 type DeptNode = {
-  id: string; name: string; heads: string[]; teachers: number;
-  programs: { name: string; lead: string | null; teachers: number }[];
+  id: string; name: string; heads: string[]; coordinators: string[]; assigners: string[]; teachers: string[];
+  programs: { name: string; lead: string | null; teachers: string[] }[];
 };
 
 const CSS = `
@@ -50,39 +51,57 @@ export default async function InstituteHierarchyPage() {
     prisma.faculty.findMany({ where: { chairmanId: user.id }, include: { deans: { select: { name: true } } }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { chairmanId: user.id }, include: { programs: true }, orderBy: { name: "asc" } }),
     prisma.user.findMany({
-      where: { OR: [{ managedById: user.id }, { managedBy: { managedById: user.id } }], isVisitingPlaceholder: false, role: { in: ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT"] } },
-      select: { id: true, name: true, role: true, departmentId: true, leadProgram: true, managedById: true },
+      where: { OR: [{ managedById: user.id }, { managedBy: { managedById: user.id } }], isVisitingPlaceholder: false, AND: [{ OR: [{ role: { in: ["HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT", "COURSE_ASSIGNER"] } }, { assignerTerm: { not: null } }] }] },
+      select: { id: true, name: true, role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true, assignerTerm: true, departmentId: true, leadProgram: true, managedById: true },
     }),
   ]);
 
+  // A person can hold several roles (small universities), so every test looks at all the roles they hold.
+  const holds = (p: (typeof people)[number], role: string) => heldSet(p).includes(role);
+  const teaches = (p: (typeof people)[number]) => holds(p, "INSTRUCTOR") || holds(p, "SUBJECT_EXPERT");
+  const assignerOf = (p: (typeof people)[number]) => p.role === "COURSE_ASSIGNER" || !!p.assignerTerm;
   const nodeFor = (d: (typeof departments)[number]): DeptNode => {
     const inDept = people.filter((p) => p.departmentId === d.id);
-    const coordinators = inDept.filter((p) => p.role === "PROGRAM_COORDINATOR");
-    const teachers = inDept.filter((p) => p.role === "INSTRUCTOR" || p.role === "SUBJECT_EXPERT");
+    const leads = inDept.filter((p) => holds(p, "PROGRAM_COORDINATOR") && p.leadProgram);
+    const names = (xs: typeof people) => xs.map((p) => p.name).sort();
     return {
-      id: d.id, name: d.name, heads: inDept.filter((p) => p.role === "HEAD_OF_DEPARTMENT").map((p) => p.name), teachers: teachers.length,
+      id: d.id, name: d.name,
+      heads: names(inDept.filter((p) => holds(p, "HEAD_OF_DEPARTMENT"))),
+      coordinators: names(inDept.filter((p) => holds(p, "DEPARTMENT_COORDINATOR"))),
+      assigners: names(inDept.filter(assignerOf)),
+      teachers: names(inDept.filter(teaches)),
       programs: d.programs.map((p) => {
-        const lead = coordinators.find((c) => c.leadProgram === p.degreeProgram) || null;
-        return { name: p.degreeProgram, lead: lead?.name || null, teachers: lead ? teachers.filter((t) => t.managedById === lead.id).length : 0 };
+        const lead = leads.find((c) => c.leadProgram === p.degreeProgram) || null;
+        return { name: p.degreeProgram, lead: lead?.name || null, teachers: lead ? names(people.filter((t) => t.managedById === lead.id && teaches(t))) : [] };
       }),
     };
   };
+  const instituteAssigners = people.filter((p) => assignerOf(p) && !p.departmentId).map((p) => p.name).sort();
+  const list = (xs: string[]) => (xs.length ? xs.join(", ") : "—");
 
   const deptCard = (n: DeptNode) => (
     <div className={`node dept${n.heads.length === 0 ? " warn" : ""}`}>
       <div className="role">Department</div>
       <b>{n.name}</b>
-      <div className="who">Chairman: {n.heads.length ? n.heads.join(", ") : "not set"} · {n.teachers} teachers</div>
+      <div className="who">Chairman: {n.heads.length ? n.heads.join(", ") : "not set"}</div>
+      <div className="who">Program Coordinator: {list(n.coordinators)}</div>
+      <div className="who">Course Assigner: {list(n.assigners)}</div>
       {n.programs.length > 0 && (
         <div className="prog">
           {n.programs.map((p) => (
             <div key={p.name}>
               <b style={{ fontSize: 12.5 }}>{p.name}</b>
-              <span className={p.lead ? "lead" : "nolead"}>Program Lead: {p.lead || "none yet"}</span>{p.lead ? ` · ${p.teachers} teachers` : ""}
+              <span className={p.lead ? "lead" : "nolead"}>Program Lead: {p.lead || "none yet"}</span>
+              {p.lead && (
+                <details style={{ marginTop: 2 }}><summary style={{ cursor: "pointer", color: "var(--slate)" }}>{p.teachers.length} faculty</summary>
+                  <div style={{ color: "var(--slate)" }}>{list(p.teachers)}</div></details>
+              )}
             </div>
           ))}
         </div>
       )}
+      <details className="prog"><summary style={{ cursor: "pointer", fontSize: 12 }}>All faculty of the department ({n.teachers.length})</summary>
+        <div className="who">{list(n.teachers)}</div></details>
     </div>
   );
 
@@ -93,7 +112,7 @@ export default async function InstituteHierarchyPage() {
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <style>{CSS}</style>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Institute Chart</h1>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Your whole institute at a glance. Dashed boxes are missing a head or a lead. Change any of this from Faculties &amp; Deans and Departments.</p>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Your whole institute at a glance. Dashed boxes are missing a head or a lead. Click “faculty” to see the teachers. Change any of this from Faculties &amp; Deans and Departments.</p>
       <div className="key" style={{ marginBottom: 14 }}>
         <span><i style={{ borderColor: "#96650F" }} />Institute Head</span>
         <span><i style={{ borderColor: "#3d6b8f" }} />Faculty (Dean)</span>
@@ -102,7 +121,7 @@ export default async function InstituteHierarchyPage() {
       <div className="card">
         <ul className="org">
           <li>
-            <div className="node inst"><div className="role">Institute Head</div><b>{instituteName}</b><div className="who">{user.name}</div></div>
+            <div className="node inst"><div className="role">Institute Head</div><b>{instituteName}</b><div className="who">{user.name}</div>{instituteAssigners.length > 0 && <div className="who">Course Assigner: {instituteAssigners.join(", ")}</div>}</div>
             <ul>
               {faculties.map((f) => (
                 <li key={f.id}>
