@@ -27,7 +27,7 @@ export function lendableWhere(chairmanId: string, kind: LoanKind, departmentId?:
   }
   return {
     ...dept, isVisitingPlaceholder: false,
-    OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] as ("INSTRUCTOR" | "SUBJECT_EXPERT")[] }, managedBy: { managedById: chairmanId } }, headFacultyWhere(chairmanId)],
+    OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] as ("INSTRUCTOR" | "SUBJECT_EXPERT")[] }, canTeach: true, managedBy: { managedById: chairmanId } }, headFacultyWhere(chairmanId)],
   };
 }
 

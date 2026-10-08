@@ -91,7 +91,7 @@ export default async function CoordinatorFacultyPage() {
       <FacultyManager
         initialFaculty={faculty.map((f) => ({
           id: f.id, username: f.username, name: f.name, role: f.role, mustChangePassword: f.mustChangePassword,
-          normalLoad: f.normalLoad, externalLoadCount: f.externalLoadCount, externalLoadNote: f.externalLoadNote, specialization: f.specialization, secondaryRole: f.secondaryRole,
+          normalLoad: f.normalLoad, externalLoadCount: f.externalLoadCount, externalLoadNote: f.externalLoadNote, specialization: f.specialization, secondaryRole: f.secondaryRole, canTeach: f.canTeach, organization: f.organization,
         }))}
       />
     </Shell>

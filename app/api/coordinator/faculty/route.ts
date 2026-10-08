@@ -48,8 +48,9 @@ export async function POST(req: NextRequest) {
       mustChangePassword: true,
       normalLoad: body.normalLoad ? parseInt(body.normalLoad, 10) : 3,
       specialization: body.specialization || null,
+      ...(body.role === "SUBJECT_EXPERT" && body.outsideExpert ? { canTeach: false, organization: typeof body.organization === "string" && body.organization.trim() ? body.organization.trim() : null } : {}),
       organization: typeof body.organization === "string" && body.organization.trim() ? body.organization.trim().slice(0, 120) : null,
-      secondaryRole: body.role === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null,
+      secondaryRole: body.role === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" && !body.outsideExpert ? "INSTRUCTOR" : null,
     },
   });
 

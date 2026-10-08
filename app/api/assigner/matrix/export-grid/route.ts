@@ -27,7 +27,7 @@ export async function GET() {
       where: { chairmanId: user.managedById || "", members: { some: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } } } },
       include: { members: { where: { course: { isOffered: true, coordinatorId: { in: coordinatorIds } } }, include: { course: { include: { batch: true } } } }, sectionAssignments: true },
     }),
-    prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true }, orderBy: { name: "asc" } }),
   ]);
 
   const standaloneCourses = courses.filter((c) => !groups.some((g) => g.members.some((m) => m.courseId === c.id)));

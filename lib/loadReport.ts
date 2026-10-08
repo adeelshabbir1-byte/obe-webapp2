@@ -23,7 +23,7 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
   // assignment just like an Instructor can, and section assignments
   // don't discriminate by role — leaving SE out here undercounts real
   // load exactly the way the Assignment Matrix already avoids doing.
-  const instructors = await prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: coordinatorId }, orderBy: { name: "asc" } });
+  const instructors = await prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true, managedById: coordinatorId }, orderBy: { name: "asc" } });
 
   const courses = await prisma.course.findMany({
     where: { coordinatorId, isOffered: true },

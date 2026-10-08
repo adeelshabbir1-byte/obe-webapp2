@@ -5,7 +5,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import DownloadButton from "./DownloadButton";
 
-type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; secondaryRole: string | null };
+type Faculty = { id: string; username: string; name: string; role: string; mustChangePassword: boolean; normalLoad: number; externalLoadCount: number; externalLoadNote: string | null; specialization: string | null; secondaryRole: string | null; canTeach?: boolean; organization?: string | null };
 
 export default function FacultyManager({ initialFaculty }: { initialFaculty: Faculty[] }) {
   const [faculty, setFaculty] = useState<Faculty[]>(initialFaculty);
@@ -54,7 +54,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
           name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"),
           role: fd.get("role"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
           secondaryRole: fd.get("alsoInstructor") === "on" ? "INSTRUCTOR" : null,
-          organization: fd.get("organization"),
+          organization: fd.get("organization"), outsideExpert: fd.get("outsideExpert") === "on",
         }),
       });
       const data = await res.json();
@@ -230,7 +230,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
             ) : (
               <tr key={f.id}>
                 <td>{f.username}</td><td>{f.name}</td>
-                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : f.role === "LAB_ENGINEER" ? "Lab Engineer" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}</td>
+                <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : f.role === "LAB_ENGINEER" ? "Lab Engineer" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}{f.canTeach === false && <span className="badge badge-neutral" style={{ marginLeft: 4 }}>Outside expert{f.organization ? ` — ${f.organization}` : ""}</span>}</td>
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.normalLoad} {f.externalLoadCount > 0 ? `+ ${f.externalLoadCount} external` : ""}{f.externalLoadNote ? ` (${f.externalLoadNote})` : ""}</td>
@@ -260,6 +260,9 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               </select>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 400, marginTop: 6 }}>
                 <input type="checkbox" name="alsoInstructor" /> If Subject Expert: can also be assigned as Instructor
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 400, marginTop: 6 }}>
+                <input type="checkbox" name="outsideExpert" /> Outside expert (industry / other institute): designs courses, can never be assigned to teach
               </label>
             </div>
             <div className="field">

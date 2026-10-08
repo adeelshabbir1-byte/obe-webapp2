@@ -18,7 +18,7 @@ export async function GET() {
   });
 
   const faculty = await prisma.user.findMany({
-    where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } },
+    where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true },
     orderBy: { name: "asc" },
   });
   // The upload matches faculty by exact NAME, so a name shared by two people

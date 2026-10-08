@@ -97,7 +97,7 @@ export async function GET() {
   rows = rows.sort((a, b) => typeRank(a.courseType) - typeRank(b.courseType) || a.label.localeCompare(b.label));
 
   const instructors = await prisma.user.findMany({
-    where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, { AND: [headFacultyWhere(user.managedById || ""), assignerDept(user)] }] },
+    where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true }, { AND: [headFacultyWhere(user.managedById || ""), assignerDept(user)] }] },
     include: { customCategory: true },
   });
   const visitingUser = await getOrCreateVisitingFaculty(user.managedById || "");
