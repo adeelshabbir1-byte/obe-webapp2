@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
+import { completeness } from "../../../lib/facultyProfile";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/program-moves", label: "Teacher Program Moves" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
@@ -46,11 +47,19 @@ const NAV = [
 // things count as half. Nothing is estimated and nothing is typed in by hand.
 type State = "ok" | "partial" | "missing" | "na";
 type Check = { label: string; done: number; total: number; hint: string; href: string };
-type Area = { key: string; title: string; checks: Check[] };
+type Criterion = { no: number; title: string; checks: Check[]; manual: string[] };
 
 const pct = (c: Check) => (c.total === 0 ? null : Math.round((c.done / c.total) * 100));
-const colour = (p: number | null) => (p === null ? "#9AA0A6" : p >= 80 ? "#2E7D4F" : p >= 50 ? "#C58A12" : "#B3261E");
-const word = (p: number | null) => (p === null ? "No data yet" : p >= 80 ? "On track" : p >= 50 ? "Needs work" : "Weak");
+// NCEAC-style quality ratings: E Exceptional, G Good, C Concern, W Weakness, D Deficient, X not measured here.
+const RATINGS = [
+  { code: "E", name: "Exceptional", min: 90, colour: "#1B6B3A" }, { code: "G", name: "Good", min: 75, colour: "#4F9A5E" },
+  { code: "C", name: "Concern", min: 60, colour: "#C9A227" }, { code: "W", name: "Weakness", min: 40, colour: "#D9822B" },
+  { code: "D", name: "Deficient", min: 0, colour: "#B3261E" },
+];
+const NOT_MEASURED = { code: "X", name: "Not measured here", colour: "#9AA0A6" };
+const rate = (p: number | null) => (p === null ? NOT_MEASURED : RATINGS.find((r) => p >= r.min)!);
+const colour = (p: number | null) => rate(p).colour;
+const word = (p: number | null) => rate(p).name;
 const STATE_COLOUR: Record<State, string> = { ok: "#2E7D4F", partial: "#C58A12", missing: "#B3261E", na: "#D5D8DC" };
 const STATE_TEXT: Record<State, string> = { ok: "Done", partial: "Partly done", missing: "Missing", na: "Not applicable yet" };
 
@@ -95,11 +104,12 @@ export default async function AccreditationStatusPage({ searchParams }: { search
   const courseIds = courses.map((c) => c.id);
   const inCourses = { courseId: { in: courseIds.length ? courseIds : ["none"] } };
 
-  const [profile, plos, clos, seRows, instRows, instruments, marks, ploMaps, papers, cqi, templates, chairmanAlumni] = await Promise.all([
+  const chairmanId = user.managedById || "none";
+  const [profile, plos, clos, seRows, instRows, instruments, marks, ploMaps, papers, cqi, templates, rooms, employers, alumni, faculty, studentCount, courseMeta] = await Promise.all([
     prisma.programProfile.findMany({ where: { coordinatorId: user.id } }),
     prisma.pLO.findMany({ where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) }, select: { id: true, status: true, batchId: true } }),
     prisma.cLO.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, mappedPloId: true } }),
-    prisma.lectureRow.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, cloId: true } }),
+    prisma.lectureRow.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, cloId: true, week: true } }),
     prisma.lectureRow.findMany({ where: { ...inCourses, source: "INSTRUCTOR" }, select: { courseId: true, actualDate: true } }),
     prisma.assessmentInstrument.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, marksPct: true } }),
     prisma.studentMark.groupBy({ by: ["courseId"], where: inCourses, _count: { _all: true } }),
@@ -107,9 +117,18 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     prisma.paperSubmission.findMany({ where: { leadCourseId: { in: courseIds.length ? courseIds : ["none"] } }, select: { status: true } }),
     prisma.cqiRecord.findMany({ where: { chairmanId: user.managedById || "none", OR: [{ courseId: { in: courseIds.length ? courseIds : ["none"] } }, { batchId: { in: batchIds.length ? batchIds : ["none"] } }] }, select: { status: true } }),
     prisma.surveyTemplate.findMany({ where: { coordinatorId: user.id }, select: { stakeholderType: true, responses: { where: { submittedAt: { not: null } }, select: { id: true } } } }),
-    Promise.resolve(null),
+    prisma.room.findMany({ where: { chairmanId }, select: { type: true } }),
+    prisma.employer.count({ where: { chairmanId, status: "APPROVED" } }),
+    prisma.alumni.count({ where: { chairmanId, status: "APPROVED" } }),
+    prisma.user.findMany({ where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, isVisitingPlaceholder: false, isActive: true }, select: { id: true, normalLoad: true } }),
+    prisma.student.count({ where: { batchId: { in: batchIds.length ? batchIds : ["none"] } } }),
+    prisma.course.findMany({ where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) }, select: { id: true, batchId: true, creditHours: true, semesterNumber: true, courseType: true, isNonCredit: true, instructorId: true, isOffered: true } }),
   ]);
-  void chairmanAlumni;
+  const facultyIds = faculty.map((f) => f.id);
+  const [facProfiles, facEdu] = await Promise.all([
+    prisma.facultyProfile.findMany({ where: { userId: { in: facultyIds.length ? facultyIds : ["none"] } }, select: { userId: true, photo: true, designation: true, dateOfJoining: true, bloodGroup: true, phone: true, nextOfKinName: true, nextOfKinPhone: true } }),
+    prisma.facultyRecord.findMany({ where: { userId: { in: facultyIds.length ? facultyIds : ["none"] }, kind: "EDUCATION" }, select: { userId: true, title: true } }),
+  ]);
 
   // ---- one traffic light per course and per requirement ----
   const by = <T extends { courseId: string }>(rows: T[]) => { const m = new Map<string, T[]>(); rows.forEach((r) => m.set(r.courseId, [...(m.get(r.courseId) || []), r])); return m; };
@@ -153,51 +172,93 @@ export default async function AccreditationStatusPage({ searchParams }: { search
   const closedCqi = cqi.filter((x) => ["closed", "verified-effective"].includes(x.status)).length;
   const approvedPapers = papers.filter((p) => p.status === "APPROVED").length;
 
-  const areas: Area[] = [
-    { key: "peo", title: "Program objectives", checks: [
+  // Curriculum facts per batch
+  const perBatch = scopeBatches.map((b) => {
+    const cs = courseMeta.filter((c) => c.batchId === b.id);
+    return {
+      credits: cs.filter((c) => !c.isNonCredit).reduce((n, c) => n + c.creditHours, 0),
+      semesters: new Set(cs.map((c) => c.semesterNumber).filter(Boolean)).size,
+      capstone: cs.some((c) => c.courseType === "Capstone Project"),
+      genEd: cs.some((c) => c.courseType === "General Education"),
+    };
+  });
+  const maxWeek = new Map<string, number>();
+  seRows.forEach((r) => maxWeek.set(r.courseId, Math.max(maxWeek.get(r.courseId) || 0, r.week)));
+  const coursesWith15 = courses.filter((c) => (maxWeek.get(c.id) || 0) >= 15).length;
+
+  // Faculty facts
+  const profOf = new Map(facProfiles.map((p) => [p.userId, p]));
+  const eduOf = (id: string) => facEdu.filter((e) => e.userId === id);
+  const facComplete = faculty.filter((f) => completeness(profOf.get(f.id) || null, eduOf(f.id).length) >= 80).length;
+  const terminal = faculty.filter((f) => eduOf(f.id).some((e) => /ph\.?\s?d|doctor|\bm\.?\s?phil|\bms\b|\bmasters?\b/i.test(e.title))).length;
+  const loadOk = faculty.filter((f) => courseMeta.filter((c) => c.isOffered && c.instructorId === f.id).length <= f.normalLoad).length;
+  const labs = rooms.filter((r) => r.type === "LAB").length, lectureRooms = rooms.filter((r) => r.type === "LECTURE").length;
+
+  const areas: Criterion[] = [
+    { no: 1, title: "Admission", manual: ["Admission policy (minimum 50% in Intermediate/HSSC, Mathematics requirement)", "Yearly intake within what the infrastructure can carry", "Transfer-credit policy and graduation requirements"], checks: [
+      { label: "Batches with a student count recorded", done: scopeBatches.filter((b) => b.studentCount > 0).length, total: scopeBatches.length, hint: "Record the number of students in each batch.", href: "/coordinator/batches" },
+    ] },
+    { no: 2, title: "Students", manual: ["Counselling and student support records"], checks: [
+      { label: "Batches with an advisor", done: scopeBatches.filter((b) => b.advisorId).length, total: scopeBatches.length, hint: "Appoint an advisor for each batch.", href: "/coordinator/batches" },
+      colCheck("marks", "Offered courses with marks entered (progress can be monitored)", "Enter marks so student progress can be tracked.", "/omc/reports/result-mate"),
+    ] },
+    { no: 3, title: "Program Educational Objectives (PEOs)", manual: ["Evidence that faculty and industry reviewed the PEOs", "Key Performance Indicators for the PEOs"], checks: [
       { label: "Vision written", done: prof?.departmentVision?.trim() ? 1 : 0, total: 1, hint: "Fill in the vision on the Program Document page.", href: "/coordinator/program-profile" },
       { label: "Mission written", done: prof?.departmentMission?.trim() ? 1 : 0, total: 1, hint: "Fill in the mission on the Program Document page.", href: "/coordinator/program-profile" },
-      { label: "Program Educational Objectives (at least 3)", done: Math.min(peoCount, 3), total: 3, hint: "Add the PEOs on the Program Document page.", href: "/coordinator/program-profile" },
-    ] },
-    { key: "plo", title: "Graduate attributes (PLOs)", checks: [
-      { label: "Batches that have PLOs", done: scopeBatches.filter((b) => plos.some((p) => p.batchId === b.id)).length, total: scopeBatches.length, hint: "Create or import the PLOs for each batch.", href: "/coordinator/plos" },
-      { label: "PLOs approved by the Institute Head", done: plos.filter((p) => p.status === "approved").length, total: plos.length, hint: "Send the PLOs for approval.", href: "/coordinator/plos" },
-      { label: "PLOs covered by at least one course", done: plos.filter((p) => coveredPlos.has(p.id)).length, total: plos.length, hint: "Some PLOs are not taught anywhere. See the PLO coverage report.", href: "/omc/reports/coverage" },
-    ] },
-    { key: "cur", title: "Curriculum and course design", checks: [
-      colCheck("clos", "Courses with CLOs written", "Ask the Subject Expert to write the CLOs.", "/coordinator/assign-subject-experts"),
-      colCheck("plo", "CLOs linked to a PLO", "Link every CLO to a PLO.", "/omc/reports/audit"),
-      colCheck("plan", "Courses with a lecture plan", "The Subject Expert must build the lecture plan.", "/coordinator/assign-subject-experts"),
-      colCheck("link", "Lecture plan linked to CLOs", "Each lecture should point to a CLO.", "/omc/total-summary"),
-      colCheck("assess", "Assessments add up to 100%", "Set quiz, assignment, midterm and final weights.", "/omc/weight-compliance"),
-    ] },
-    { key: "fac", title: "Faculty and delivery", checks: [
-      colCheck("se", "Courses with a Subject Expert", "Give each course a Subject Expert.", "/coordinator/assign-subject-experts"),
-      colCheck("inst", "Offered courses with an Instructor", "Assign the instructor.", "/coordinator/courses"),
-      colCheck("deliv", "Offered courses with lectures logged (90%+)", "Instructors must log each lecture as it happens.", "/omc/delivery-completion"),
-    ] },
-    { key: "res", title: "Assessment and results", checks: [
-      colCheck("marks", "Offered courses with marks entered", "Enter marks so attainment can be calculated.", "/omc/reports/result-mate"),
-      { label: "Exam papers approved", done: approvedPapers, total: papers.length, hint: "Papers waiting for the team's approval.", href: "/coordinator/courses" },
-    ] },
-    { key: "cqi", title: "Continuous improvement", checks: [
-      { label: "At least one improvement action recorded", done: cqi.length > 0 ? 1 : 0, total: 1, hint: "Record actions for weak CLOs or PLOs.", href: "/omc/reports/pass-rates" },
-      { label: "Improvement actions closed", done: closedCqi, total: cqi.length, hint: "Follow up and close the open actions.", href: "/chairman/cqi" },
-    ] },
-    { key: "fb", title: "Stakeholder feedback", checks: [
-      { label: "Student survey answered", done: surveyOf("STUDENT") > 0 ? 1 : 0, total: 1, hint: "Send the student survey.", href: "/coordinator/surveys" },
+      { label: "PEOs written (at least 3)", done: Math.min(peoCount, 3), total: 3, hint: "Add the PEOs on the Program Document page.", href: "/coordinator/program-profile" },
       { label: "Alumni survey answered", done: surveyOf("ALUMNI") > 0 ? 1 : 0, total: 1, hint: "Send the alumni survey.", href: "/coordinator/surveys" },
       { label: "Employer survey answered", done: surveyOf("EMPLOYER") > 0 ? 1 : 0, total: 1, hint: "Send the employer survey.", href: "/coordinator/surveys" },
     ] },
+    { no: 4, title: "Student Outcomes / Graduate Attributes (PLOs)", manual: ["Alignment of the PLOs with the Seoul Accord graduate attributes"], checks: [
+      { label: "Batches that have PLOs", done: scopeBatches.filter((b) => plos.some((p) => p.batchId === b.id)).length, total: scopeBatches.length, hint: "Create or import the PLOs for each batch.", href: "/coordinator/plos" },
+      { label: "PLOs approved by the Institute Head", done: plos.filter((p) => p.status === "approved").length, total: plos.length, hint: "Send the PLOs for approval.", href: "/coordinator/plos" },
+      { label: "PLOs covered by at least one course", done: plos.filter((p) => coveredPlos.has(p.id)).length, total: plos.length, hint: "Some PLOs are not taught anywhere.", href: "/omc/reports/coverage" },
+      colCheck("plo", "CLOs linked to a PLO", "Link every CLO to a PLO.", "/omc/reports/audit"),
+      { label: "Student survey answered", done: surveyOf("STUDENT") > 0 ? 1 : 0, total: 1, hint: "Send the student survey.", href: "/coordinator/surveys" },
+    ] },
+    { no: 5, title: "Curriculum", manual: ["Compliance with the HEC curriculum guidelines for your discipline (core, supporting, general education, depth)"], checks: [
+      { label: "Batches with at least 130 credit hours", done: perBatch.filter((b) => b.credits >= 130).length, total: perBatch.length, hint: "The usual minimum is 130 credit hours (check your discipline's guideline).", href: "/coordinator/courses" },
+      { label: "Batches spread over at least 8 semesters", done: perBatch.filter((b) => b.semesters >= 8).length, total: perBatch.length, hint: "Place courses in all 8 semesters.", href: "/coordinator/program-semester-map" },
+      { label: "Batches with a general education course", done: perBatch.filter((b) => b.genEd).length, total: perBatch.length, hint: "Add the general education courses.", href: "/coordinator/courses" },
+      { label: "Batches with a capstone project", done: perBatch.filter((b) => b.capstone).length, total: perBatch.length, hint: "Add the final-year project course (type: Capstone Project).", href: "/coordinator/courses" },
+    ] },
+    { no: 6, title: "Learning Process", manual: ["Course folders kept (hard copy or LMS)", "Office hours of faculty", "Internship / supervised project arrangements"], checks: [
+      colCheck("clos", "Courses with CLOs written", "Ask the Subject Expert to write the CLOs.", "/coordinator/assign-subject-experts"),
+      colCheck("plan", "Courses with a lecture plan", "The Subject Expert must build the lecture plan.", "/coordinator/assign-subject-experts"),
+      colCheck("link", "Lecture plan linked to CLOs", "Each lecture should point to a CLO.", "/omc/total-summary"),
+      { label: "Courses planned for at least 15 weeks", done: coursesWith15, total: courses.length, hint: "The lecture plan should cover 15 teaching weeks.", href: "/omc/reports/weekly-plan" },
+      colCheck("assess", "Assessments add up to 100%", "Set quiz, assignment, midterm and final weights.", "/omc/weight-compliance"),
+      colCheck("deliv", "Offered courses with lectures logged (90%+)", "Instructors must log each lecture as it happens.", "/omc/delivery-completion"),
+      { label: "Exam papers approved", done: approvedPapers, total: papers.length, hint: "Papers waiting for the team's approval.", href: "/coordinator/courses" },
+      { label: "Improvement actions closed", done: closedCqi, total: cqi.length, hint: "Follow up and close the open actions.", href: "/chairman/cqi" },
+    ] },
+    { no: 7, title: "Faculty", manual: ["Faculty-to-student ratio against the NCEAC limit", "Professional development, retention and office space"], checks: [
+      colCheck("se", "Courses with a Subject Expert", "Give each course a Subject Expert.", "/coordinator/assign-subject-experts"),
+      colCheck("inst", "Offered courses with an Instructor", "Assign the instructor.", "/coordinator/courses"),
+      { label: "Faculty with a MS / PhD recorded", done: terminal, total: faculty.length, hint: "Faculty should record their degrees under My Profile.", href: "/faculty-report" },
+      { label: "Faculty within their normal teaching load", done: loadOk, total: faculty.length, hint: "Some teachers have more courses than their normal load.", href: "/coordinator/load-report" },
+      { label: "Faculty profiles 80% complete", done: facComplete, total: faculty.length, hint: "Ask faculty to complete My Profile.", href: "/faculty-report" },
+    ] },
+    { no: 8, title: "Infrastructure and Facilities", manual: ["Multimedia equipment and the learning environment", "Software licences, internet bandwidth, hardware per student", "Library resources, digital databases and textbooks"], checks: [
+      { label: "Lecture rooms defined", done: Math.min(lectureRooms, 1), total: 1, hint: "Add the rooms in the timetable settings.", href: "/coordinator/timetable" },
+      { label: "Computing labs defined", done: Math.min(labs, 1), total: 1, hint: "Add the labs in the timetable settings.", href: "/coordinator/timetable" },
+    ] },
+    { no: 9, title: "Industrial Linkages", manual: ["Advisory board and signed agreements with industry"], checks: [
+      { label: "Employers on record (approved)", done: Math.min(employers, 1), total: 1, hint: "Record the employers your graduates work for.", href: "/coordinator/stakeholders" },
+      { label: "Alumni on record (approved)", done: Math.min(alumni, 1), total: 1, hint: "Record your alumni.", href: "/coordinator/stakeholders" },
+      { label: "Employer survey answered", done: surveyOf("EMPLOYER") > 0 ? 1 : 0, total: 1, hint: "Send the employer survey.", href: "/coordinator/surveys" },
+      { label: "Batches with a capstone project", done: perBatch.filter((b) => b.capstone).length, total: perBatch.length, hint: "Add the final-year project course.", href: "/coordinator/courses" },
+    ] },
+    { no: 10, title: "Institutional Support", manual: ["Financial sustainability and budget for labs and library", "Administrative backing and departmental autonomy"], checks: [] },
   ];
-  const areaScore = (a: Area) => {
+  const areaScore = (a: Criterion) => {
     const rated = a.checks.filter((c) => c.total > 0);
     return rated.length ? Math.round(rated.reduce((s, c) => s + (c.done / c.total) * 100, 0) / rated.length) : null;
   };
   const scored = areas.map((a) => ({ a, s: areaScore(a) }));
   const withData = scored.filter((x) => x.s !== null);
   const overall = withData.length ? Math.round(withData.reduce((s, x) => s + (x.s as number), 0) / withData.length) : null;
-  const priorities = areas.flatMap((a) => a.checks.map((c) => ({ ...c, area: a.title, p: pct(c) })))
+  const priorities = areas.flatMap((a) => a.checks.map((c) => ({ ...c, area: `Criterion ${a.no}: ${a.title}`, p: pct(c) })))
     .filter((c) => c.p !== null && c.p < 100).sort((x, y) => (x.p as number) - (y.p as number)).slice(0, 6);
 
   return (
@@ -205,7 +266,7 @@ export default async function AccreditationStatusPage({ searchParams }: { search
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Status</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         How ready your program is for an outcome-based accreditation review such as NCEAC, counted live from your own records.
-        A score is the share of work that is done; half-done work counts as half. Green is 80% or more, amber 50–79%, red below 50%.
+        The ten criteria below follow the NCEAC program-evaluation structure as listed in the document you shared (please check the numbering against the official NCEAC manual). Each criterion gets the usual quality rating: E Exceptional (90%+), G Good (75%+), C Concern (60%+), W Weakness (40%+), D Deficient (below 40%), X not measured by this system.
       </p>
       <form method="get" style={{ marginBottom: 14, display: "flex", gap: 8, alignItems: "center" }}>
         <label style={{ fontSize: 13 }}>Show{" "}
@@ -225,12 +286,16 @@ export default async function AccreditationStatusPage({ searchParams }: { search
             {courses.length} course(s) and {plos.length} PLO(s) in view. The overall figure is the average of the areas that already have data.
           </p>
           <div style={{ display: "grid", gap: 8 }}>
-            {scored.map(({ a, s }) => (
-              <div key={a.key} style={{ display: "grid", gridTemplateColumns: "210px 1fr 90px", gap: 10, alignItems: "center", fontSize: 13 }}>
-                <span>{a.title}</span><Bar value={s} />
-                <b style={{ color: colour(s), textAlign: "right" }}>{s === null ? "no data" : `${s}%`}</b>
-              </div>
-            ))}
+            {scored.map(({ a, s }) => {
+              const r = rate(s);
+              return (
+                <div key={a.no} style={{ display: "grid", gridTemplateColumns: "34px 270px 1fr 70px", gap: 10, alignItems: "center", fontSize: 13 }}>
+                  <span title={r.name} style={{ background: r.colour, color: "#fff", fontWeight: 700, borderRadius: 6, textAlign: "center", padding: "3px 0" }}>{r.code}</span>
+                  <span>{a.no}. {a.title}</span><Bar value={s} />
+                  <b style={{ color: r.colour, textAlign: "right" }}>{s === null ? "—" : `${s}%`}</b>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -250,21 +315,34 @@ export default async function AccreditationStatusPage({ searchParams }: { search
         </div>
       )}
 
-      {areas.map((a) => (
-        <div className="card" key={a.key}>
-          <h3 style={{ marginTop: 0 }}>{a.title}</h3>
-          {a.checks.map((c, i) => {
-            const p = pct(c);
-            return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(200px, 320px) 1fr 110px 80px", gap: 12, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
-                <span>{c.label}</span><Bar value={p} />
-                <span style={{ color: "var(--slate)", textAlign: "right" }}>{c.total === 0 ? "nothing yet" : `${c.done} of ${c.total}`}</span>
-                <b style={{ color: colour(p), textAlign: "right" }}>{p === null ? "—" : `${p}%`}</b>
+      {areas.map((a) => {
+        const sc = areaScore(a), r = rate(sc);
+        return (
+          <div className="card" key={a.no}>
+            <h3 style={{ marginTop: 0, display: "flex", gap: 10, alignItems: "center" }}>
+              <span style={{ background: r.colour, color: "#fff", borderRadius: 6, padding: "2px 10px", fontSize: 14 }} title={r.name}>{r.code}</span>
+              Criterion {a.no}: {a.title}
+              <span style={{ marginLeft: "auto", fontSize: 13, color: r.colour }}>{sc === null ? "Not measured here" : `${sc}% · ${r.name}`}</span>
+            </h3>
+            {a.checks.map((c, i) => {
+              const p = pct(c);
+              return (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(200px, 320px) 1fr 110px 80px", gap: 12, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
+                  <span>{c.label}</span><Bar value={p} />
+                  <span style={{ color: "var(--slate)", textAlign: "right" }}>{c.total === 0 ? "nothing yet" : `${c.done} of ${c.total}`}</span>
+                  <b style={{ color: colour(p), textAlign: "right" }}>{p === null ? "—" : `${p}%`}</b>
+                </div>
+              );
+            })}
+            {a.manual.length > 0 && (
+              <div style={{ marginTop: 8, padding: "8px 12px", background: "#F4F1EA", fontSize: 12.5, color: "var(--slate)" }}>
+                <b>Prepare separately (this system does not hold it):</b>
+                <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>{a.manual.map((m) => <li key={m}>{m}</li>)}</ul>
               </div>
-            );
-          })}
-        </div>
-      ))}
+            )}
+          </div>
+        );
+      })}
 
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>Course by course</h3>
