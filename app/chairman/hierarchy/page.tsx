@@ -77,6 +77,8 @@ export default async function InstituteHierarchyPage() {
     };
   };
   const instituteAssigners = people.filter((p) => assignerOf(p) && !p.departmentId).map((p) => p.name).sort();
+  // One name per row, numbered, so long faculty lists are easy to read.
+  const rows = (xs: string[]) => (xs.length ? xs.map((name, i) => <div key={name + i} style={{ padding: "1px 0" }}>{i + 1}. {name}</div>) : "—");
   const list = (xs: string[]) => (xs.length ? xs.join(", ") : "—");
 
   const deptCard = (n: DeptNode) => (
@@ -94,14 +96,14 @@ export default async function InstituteHierarchyPage() {
               <span className={p.lead ? "lead" : "nolead"}>Program Lead: {p.lead || "none yet"}</span>
               {p.lead && (
                 <details style={{ marginTop: 2 }}><summary style={{ cursor: "pointer", color: "var(--slate)" }}>{p.teachers.length} faculty</summary>
-                  <div style={{ color: "var(--slate)" }}>{list(p.teachers)}</div></details>
+                  <div style={{ color: "var(--slate)" }}>{rows(p.teachers)}</div></details>
               )}
             </div>
           ))}
         </div>
       )}
       <details className="prog"><summary style={{ cursor: "pointer", fontSize: 12 }}>All faculty of the department ({n.teachers.length})</summary>
-        <div className="who">{list(n.teachers)}</div></details>
+        <div className="who">{rows(n.teachers)}</div></details>
     </div>
   );
 
