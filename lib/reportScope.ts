@@ -82,7 +82,7 @@ export async function chairmanIdFor(user: { id: string; role: string; managedByI
 export function roleLabel(role: string) {
   const labels: Record<string, string> = {
     DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", OMC: "OMC Member", CHAIRMAN: "Institute Head", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator",
-    SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", SUPER_USER: "Super User",
+    SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", SUPER_USER: "Super User",
   };
   return labels[role] || role;
 }

@@ -4618,3 +4618,79 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "extraRoles" TEXT[] NOT NULL DEFAULT
 -- ===== migration_can_teach.sql =====
 -- Outside Subject Experts (industry / other institute) design courses but never teach
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "canTeach" BOOLEAN NOT NULL DEFAULT true;
+
+-- ===== migration_faculty_profile.sql =====
+-- Faculty profile pages and faculty details reports
+CREATE TABLE IF NOT EXISTS "FacultyProfile" (
+  "id" TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL UNIQUE,
+  "photo" TEXT,
+  "designation" TEXT,
+  "employmentType" TEXT,
+  "dateOfJoining" TIMESTAMP(3),
+  "dateOfBirth" TIMESTAMP(3),
+  "gender" TEXT,
+  "bloodGroup" TEXT,
+  "phone" TEXT,
+  "address" TEXT,
+  "nextOfKinName" TEXT,
+  "nextOfKinRelation" TEXT,
+  "nextOfKinPhone" TEXT,
+  "nextOfKinAddress" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "FacultyRecord" (
+  "id" TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL,
+  "kind" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "organisation" TEXT,
+  "role" TEXT,
+  "startYear" INTEGER,
+  "endYear" INTEGER,
+  "amount" TEXT,
+  "status" TEXT,
+  "link" TEXT,
+  "details" TEXT,
+  "photo" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "FacultyRecord_userId_kind_idx" ON "FacultyRecord"("userId", "kind");
+
+-- ===== migration_lab_manager.sql (run the ALTER TYPE line on its own first) =====
+-- Lab Manager role. Run this line on its own, first, then run migration_lab_finance_activities.sql.
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'LAB_MANAGER';
+
+-- ===== migration_lab_finance_activities.sql =====
+-- Lab inventory, finance entries and extra-curricular activity log
+CREATE TABLE IF NOT EXISTS "LabInfo" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "departmentId" TEXT, "name" TEXT NOT NULL, "location" TEXT,
+  "seats" INTEGER NOT NULL DEFAULT 0, "computers" INTEGER NOT NULL DEFAULT 0, "computersWorking" INTEGER NOT NULL DEFAULT 0,
+  "software" TEXT, "equipment" TEXT, "internetMbps" INTEGER, "lastAudit" TIMESTAMP(3), "notes" TEXT, "updatedById" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "LabInfo_chairmanId_name_key" ON "LabInfo"("chairmanId", "name");
+CREATE INDEX IF NOT EXISTS "LabInfo_chairmanId_idx" ON "LabInfo"("chairmanId");
+
+CREATE TABLE IF NOT EXISTS "FinanceEntry" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "fiscalYear" TEXT NOT NULL, "kind" TEXT NOT NULL, "category" TEXT NOT NULL,
+  "amount" DOUBLE PRECISION NOT NULL DEFAULT 0, "note" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "FinanceEntry_chairmanId_fiscalYear_kind_category_key" ON "FinanceEntry"("chairmanId", "fiscalYear", "kind", "category");
+CREATE INDEX IF NOT EXISTS "FinanceEntry_chairmanId_idx" ON "FinanceEntry"("chairmanId");
+
+CREATE TABLE IF NOT EXISTS "ActivityLog" (
+  "id" TEXT PRIMARY KEY, "coordinatorId" TEXT NOT NULL, "batchId" TEXT, "title" TEXT NOT NULL, "category" TEXT NOT NULL,
+  "activityDate" TIMESTAMP(3) NOT NULL, "organizer" TEXT, "venue" TEXT, "participants" INTEGER, "description" TEXT, "outcome" TEXT, "photo" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ActivityLog_coordinatorId_idx" ON "ActivityLog"("coordinatorId");
+
+-- ===== migration_library.sql =====
+-- Library inventory
+CREATE TABLE IF NOT EXISTS "LibraryInfo" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL UNIQUE, "seats" INTEGER NOT NULL DEFAULT 0, "totalTitles" INTEGER NOT NULL DEFAULT 0,
+  "computingTitles" INTEGER NOT NULL DEFAULT 0, "totalVolumes" INTEGER NOT NULL DEFAULT 0, "printJournals" INTEGER NOT NULL DEFAULT 0,
+  "ebooks" INTEGER NOT NULL DEFAULT 0, "databases" TEXT, "openHoursPerWeek" INTEGER, "hasLibrarian" BOOLEAN NOT NULL DEFAULT false,
+  "lastStockCheck" TIMESTAMP(3), "notes" TEXT, "updatedById" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

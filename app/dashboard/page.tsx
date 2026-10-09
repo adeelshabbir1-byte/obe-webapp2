@@ -20,6 +20,7 @@ const ROLE_HOME: Record<string, string> = {
   OMC: "/omc/queue",
   INSTRUCTOR: "/instructor/courses",
   LAB_ENGINEER: "/lab-engineer/labs",
+  LAB_MANAGER: "/lab-inventory",
   COURSE_ASSIGNER: "/assigner/matrix",
 };
 

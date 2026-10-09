@@ -33,7 +33,7 @@ const NAV = [
   { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/faculty/profile", label: "My Profile" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/coordinator/activities", label: "Extra-curricular Activities" }, { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
@@ -49,7 +49,7 @@ export default async function CoordinatorFacultyPage() {
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
   const faculty = await prisma.user.findMany({
-    where: { role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"] }, managedById: user.id },
+    where: { role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"] }, managedById: user.id },
     orderBy: { createdAt: "desc" },
   });
 

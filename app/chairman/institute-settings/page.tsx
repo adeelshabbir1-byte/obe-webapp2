@@ -17,7 +17,7 @@ export default async function InstituteSettingsPage() {
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={[
       { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-      { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/move-program", label: "Move Program Data" },
+      { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/move-program", label: "Move Program Data" },
       { href: "/chairman/plos", label: "Program Learning Outcomes" },
       { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
       { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },

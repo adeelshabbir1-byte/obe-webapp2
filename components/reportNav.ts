@@ -29,6 +29,13 @@ export const OMC_ACTION_NAV = [
 export const LAB_ENGINEER_NAV = [
   { href: "/lab-engineer/labs", label: "My Labs" },
   { href: "/faculty/my-availability", label: "My Availability" },
+  { href: "/faculty/profile", label: "My Profile" },
+];
+
+export const LAB_MANAGER_NAV = [
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -43,6 +50,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
 ];
 
 export const SUBJECT_EXPERT_NAV = [
@@ -58,6 +66,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -85,13 +94,18 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/coordinator/activities", label: "Extra-curricular Activities" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -110,6 +124,10 @@ export const CHAIRMAN_NAV = [
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/chairman/finance", label: "Finance" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const DEAN_NAV = [
@@ -119,6 +137,10 @@ export const DEAN_NAV = [
   { href: "/dean/curricula", label: "Curricula" },
   { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -132,8 +154,12 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const HOD_NAV = [
@@ -143,6 +169,10 @@ export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export function navForRole(role: string) {
@@ -153,6 +183,7 @@ export function navForRole(role: string) {
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;
     case "LAB_ENGINEER": return LAB_ENGINEER_NAV;
+    case "LAB_MANAGER": return LAB_MANAGER_NAV;
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;
     case "CHAIRMAN": return CHAIRMAN_NAV;
