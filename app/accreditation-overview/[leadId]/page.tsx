@@ -21,7 +21,7 @@ export default async function ProgramReadinessPage({ params, searchParams }: { p
       <a className="btn" href="/accreditation-overview" style={{ marginBottom: 10, display: "inline-block" }}>← All programs</a>
       <a className="btn" href={`/accreditation-overview/${lead.id}/hec`} style={{ marginLeft: 8, marginBottom: 10, display: "inline-block" }}>Curriculum vs HEC</a>
       <h2 style={{ fontSize: 16, margin: "6px 0 2px", color: "var(--slate)" }}>{lead.leadProgram || "Program"} · {lead.department_?.name || ""} · Program Lead: {lead.name}</h2>
-      <ReadinessReport data={data} />
+      <ReadinessReport data={data} sarHref={`/accreditation-overview/${lead.id}/sar`} />
     </Shell>
   );
 }

@@ -134,6 +134,22 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const loadOk = faculty.filter((f) => courseMeta.filter((c) => c.isOffered && c.instructorId === f.id).length <= f.normalLoad).length;
   const labs = rooms.filter((r) => r.type === "LAB").length, lectureRooms = rooms.filter((r) => r.type === "LECTURE").length;
 
+  // Evidence kept by the Program Lead, course folders and office hours
+  const evSince = new Date(Date.now() - 365 * 86400000);
+  const [evidence, folders, officeProfiles] = await Promise.all([
+    prisma.programEvidence.findMany({ where: { coordinatorId: user.id }, select: { area: true, kind: true, date: true, count: true, target: true, actual: true } }),
+    prisma.courseFolder.findMany({ where: { coordinatorId: user.id, kept: true }, select: { courseId: true } }),
+    prisma.facultyProfile.findMany({ where: { userId: { in: faculty.map((f) => f.id) } }, select: { userId: true, officeHours: true } }),
+  ]);
+  const recent = (x: { date: Date | null }) => !x.date || x.date >= evSince;
+  const ev = (area: string, kind?: string) => evidence.filter((e) => e.area === area && (!kind || e.kind === kind));
+  const offeredIds = new Set(courseMeta.filter((c) => c.isOffered).map((c) => c.id));
+  const foldersKept = folders.filter((f) => offeredIds.has(f.courseId)).length;
+  const withOfficeHours = officeProfiles.filter((p) => p.officeHours?.trim()).length;
+  const kpis = ev("PEO", "KPI");
+  const peoReviewGroups = new Set(ev("PEO").filter((e) => e.kind.startsWith("Review") && recent(e)).map((e) => e.kind)).size;
+  const teachingStudents = scopeBatches.reduce((n, b) => n + b.studentCount, 0);
+
   // Admission criteria set by the Dean for this lead's program(s)
   const leadRow = await prisma.user.findUnique({ where: { id: user.id }, select: { leadProgram: true, department_: { select: { facultyId: true } } } });
   const admissionPrograms = Array.from(new Set([...(leadRow?.leadProgram ? [leadRow.leadProgram] : []), ...scopeBatches.map((b) => b.degreeProgram)]));
@@ -147,13 +163,16 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Programs with admission criteria set by the Dean", done: admissionSet, total: admissionPrograms.length, hint: "Ask your Dean to set the admission criteria for this program.", href: "/admission-criteria" },
       { label: "Batches with a student count recorded", done: scopeBatches.filter((b) => b.studentCount > 0).length, total: scopeBatches.length, hint: "Record the number of students in each batch.", href: "/coordinator/batches" },
     ] },
-    { no: 2, title: "Students", manual: ["Counselling and student support records"], checks: [
+    { no: 2, title: "Students", manual: [], checks: [
+      { label: "Counselling or support sessions in the last 12 months (assumed target: 4)", done: Math.min(ev("COUNSELLING").filter(recent).length, 4), total: 4, hint: "Record the sessions you held under Accreditation Evidence.", href: "/coordinator/evidence" },
       { label: "Batches with an advisor", done: scopeBatches.filter((b) => b.advisorId).length, total: scopeBatches.length, hint: "Appoint an advisor for each batch.", href: "/coordinator/batches" },
       colCheck("marks", "Offered courses with marks entered (progress can be monitored)", "Enter marks so student progress can be tracked.", "/omc/reports/result-mate"),
       { label: "Extra-curricular activities logged in the last 12 months (your target: 4)", done: Math.min(activities.length, 4), total: 4, hint: "Log sports, societies, competitions and workshops.", href: "/coordinator/activities" },
       { label: "Kinds of activity covered (your target: 3)", done: Math.min(new Set(activities.map((a) => a.category)).size, 3), total: 3, hint: "Cover sports, cultural, technical and service activities.", href: "/coordinator/activities" },
     ] },
-    { no: 3, title: "Program Educational Objectives (PEOs)", manual: ["Evidence that faculty and industry reviewed the PEOs", "Key Performance Indicators for the PEOs"], checks: [
+    { no: 3, title: "Program Educational Objectives (PEOs)", manual: [], checks: [
+      { label: "PEO reviews in the last 12 months by faculty, industry, alumni or students (assumed target: 2 groups)", done: Math.min(peoReviewGroups, 2), total: 2, hint: "Record who reviewed the PEOs under Accreditation Evidence.", href: "/coordinator/evidence" },
+      { label: "PEO key performance indicators that met their target", done: kpis.filter((k) => k.target !== null && k.actual !== null && (k.actual as number) >= (k.target as number)).length, total: Math.max(kpis.length, 1), hint: "Add KPIs with a target and actual value, and work on the ones that fall short.", href: "/coordinator/evidence" },
       { label: "Vision written", done: prof?.departmentVision?.trim() ? 1 : 0, total: 1, hint: "Fill in the vision on the Program Document page.", href: "/coordinator/program-profile" },
       { label: "Mission written", done: prof?.departmentMission?.trim() ? 1 : 0, total: 1, hint: "Fill in the mission on the Program Document page.", href: "/coordinator/program-profile" },
       { label: "PEOs written (at least 3)", done: Math.min(peoCount, 3), total: 3, hint: "Add the PEOs on the Program Document page.", href: "/coordinator/program-profile" },
@@ -173,7 +192,10 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Batches with a general education course", done: perBatch.filter((b) => b.genEd).length, total: perBatch.length, hint: "Add the general education courses.", href: "/coordinator/courses" },
       { label: "Batches with a capstone project", done: perBatch.filter((b) => b.capstone).length, total: perBatch.length, hint: "Add the final-year project course (type: Capstone Project).", href: "/coordinator/courses" },
     ] },
-    { no: 6, title: "Learning Process", manual: ["Course folders kept (hard copy or LMS)", "Office hours of faculty", "Internship / supervised project arrangements"], checks: [
+    { no: 6, title: "Learning Process", manual: [], checks: [
+      { label: "Offered courses with a course folder kept", done: foldersKept, total: offeredIds.size, hint: "Tick the courses whose folders are kept under Course Folders.", href: "/coordinator/course-folders" },
+      { label: "Faculty with office hours listed", done: withOfficeHours, total: faculty.length, hint: "Ask faculty to fill in their office hours under My Profile.", href: "/faculty-report" },
+      { label: "Internships or supervised projects recorded (assumed target: 1)", done: Math.min(ev("INTERNSHIP").length, 1), total: 1, hint: "Record where students did internships under Accreditation Evidence.", href: "/coordinator/evidence" },
       colCheck("clos", "Courses with CLOs written", "Ask the Subject Expert to write the CLOs.", "/coordinator/assign-subject-experts"),
       colCheck("plan", "Courses with a lecture plan", "The Subject Expert must build the lecture plan.", "/coordinator/assign-subject-experts"),
       colCheck("link", "Lecture plan linked to CLOs", "Each lecture should point to a CLO.", "/omc/total-summary"),
@@ -183,7 +205,8 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Exam papers approved", done: approvedPapers, total: papers.length, hint: "Papers waiting for the team's approval.", href: "/coordinator/courses" },
       { label: "Improvement actions closed", done: closedCqi, total: cqi.length, hint: "Follow up and close the open actions.", href: "/chairman/cqi" },
     ] },
-    { no: 7, title: "Faculty", manual: ["Faculty-to-student ratio against the NCEAC limit", "Professional development, retention and office space"], checks: [
+    { no: 7, title: "Faculty", manual: ["Professional development, retention and office space"], checks: [
+      { label: `Enough teachers for the students (assumed limit: 20 students per teacher; you have ${teachingStudents} students and ${faculty.length} teachers)`, done: Math.min(faculty.length, Math.max(Math.ceil(teachingStudents / 20), 1)), total: Math.max(Math.ceil(teachingStudents / 20), 1), hint: "More teachers, or fewer students per teacher.", href: "/coordinator/faculty" },
       colCheck("se", "Courses with a Subject Expert", "Give each course a Subject Expert.", "/coordinator/assign-subject-experts"),
       colCheck("inst", "Offered courses with an Instructor", "Assign the instructor.", "/coordinator/courses"),
       { label: "Faculty with a MS / PhD recorded", done: terminal, total: faculty.length, hint: "Faculty should record their degrees under My Profile.", href: "/faculty-report" },
@@ -202,7 +225,11 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Digital databases listed", done: library?.databases?.trim() ? 1 : 0, total: 1, hint: "List the digital databases the library subscribes to.", href: "/library-inventory" },
       { label: "A qualified librarian in post", done: library?.hasLibrarian ? 1 : 0, total: 1, hint: "Record whether a librarian is in post.", href: "/library-inventory" },
     ] },
-    { no: 9, title: "Industrial Linkages", manual: ["Advisory board and signed agreements with industry"], checks: [
+    { no: 9, title: "Industrial Linkages", manual: [], checks: [
+      { label: "Industrial advisory board members (assumed target: 3)", done: Math.min(ev("INDUSTRY", "Advisory board member").length, 3), total: 3, hint: "Record the advisory board members under Accreditation Evidence.", href: "/coordinator/evidence" },
+      { label: "Advisory board meetings in the last 12 months (assumed target: 1)", done: Math.min(ev("INDUSTRY", "Advisory board meeting").filter(recent).length, 1), total: 1, hint: "Hold and record a meeting.", href: "/coordinator/evidence" },
+      { label: "Signed MoUs or agreements with industry (assumed target: 1)", done: Math.min(ev("INDUSTRY", "MoU / agreement").length, 1), total: 1, hint: "Record the agreements under Accreditation Evidence.", href: "/coordinator/evidence" },
+      { label: "Industry visits, guest lectures or projects in the last 12 months (assumed target: 2)", done: Math.min(ev("INDUSTRY").filter((e) => ["Guest lecture", "Industrial visit", "Industry project"].includes(e.kind) && recent(e)).length, 2), total: 2, hint: "Invite industry speakers or arrange visits.", href: "/coordinator/evidence" },
       { label: "Employers on record (approved)", done: Math.min(employers, 1), total: 1, hint: "Record the employers your graduates work for.", href: "/coordinator/stakeholders" },
       { label: "Alumni on record (approved)", done: Math.min(alumni, 1), total: 1, hint: "Record your alumni.", href: "/coordinator/stakeholders" },
       { label: "Employer survey answered", done: surveyOf("EMPLOYER") > 0 ? 1 : 0, total: 1, hint: "Send the employer survey.", href: "/coordinator/surveys" },

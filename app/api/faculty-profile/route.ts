@@ -30,12 +30,15 @@ export async function PUT(req: NextRequest) {
     if (!b.photo.startsWith("data:image/") || b.photo.length > 400_000) return NextResponse.json({ error: "the picture is too large - choose a smaller one" }, { status: 400 });
     photo = b.photo;
   }
-  const data = {
+  const all = {
     designation: str(b.designation, 80), employmentType: str(b.employmentType, 40), dateOfJoining: date(b.dateOfJoining), dateOfBirth: date(b.dateOfBirth),
     gender: str(b.gender, 20), bloodGroup: str(b.bloodGroup, 5), phone: str(b.phone, 40), address: str(b.address, 500),
     nextOfKinName: str(b.nextOfKinName, 120), nextOfKinRelation: str(b.nextOfKinRelation, 60), nextOfKinPhone: str(b.nextOfKinPhone, 40), nextOfKinAddress: str(b.nextOfKinAddress, 500),
-    ...(photo !== undefined ? { photo } : {}),
-  };
+    officeHours: str(b.officeHours, 300),
+  } as Record<string, unknown>;
+  // Each tab of the form sends only its own fields: leave the others as they were.
+  const data = Object.fromEntries(Object.entries(all).filter(([k]) => k in b)) as Record<string, never>;
+  if (photo !== undefined) (data as Record<string, unknown>).photo = photo;
   const id = ownerId(user);
   const profile = await prisma.facultyProfile.upsert({ where: { userId: id }, create: { userId: id, ...data }, update: data });
   return NextResponse.json({ ok: true, profile });

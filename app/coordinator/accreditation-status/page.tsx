@@ -33,7 +33,7 @@ const NAV = [
   { href: "/coordinator/elective-instructor-report", label: "Elective Instructor Report" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/faculty/profile", label: "My Profile" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/faculty/profile", label: "My Profile" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/evidence", label: "Accreditation Evidence" }, { href: "/coordinator/course-folders", label: "Course Folders" }, { href: "/deadlines", label: "Deadlines" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
@@ -54,7 +54,7 @@ export default async function AccreditationStatusPage({ searchParams }: { search
   const data = await computeReadiness(user, searchParams.batchId || "");
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
-      <ReadinessReport data={data} />
+      <ReadinessReport data={data} sarHref={`/coordinator/sar?batchId=${data.batchId}`} />
     </Shell>
   );
 }

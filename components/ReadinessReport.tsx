@@ -22,11 +22,12 @@ function Bar({ value }: { value: number | null }) {
   );
 }
 
-export default function ReadinessReport({ data }: { data: Awaited<ReturnType<typeof computeReadiness>> }) {
+export default function ReadinessReport({ data, sarHref }: { data: Awaited<ReturnType<typeof computeReadiness>>; sarHref?: string }) {
   const { batches, batchId, courses, plos, scored, overall, priorities, areas, areaScore, grid, COLS } = data;
   return (
     <>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Status</h1>
+      {sarHref && <p style={{ margin: "0 0 8px" }}><a className="btn" href={sarHref}>Self-Assessment Report (print / PDF)</a></p>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         How ready your program is for an outcome-based accreditation review such as NCEAC, counted live from your own records.
         The ten criteria below follow the NCEAC program-evaluation structure as listed in the document you shared (please check the numbering against the official NCEAC manual). Each criterion gets the usual quality rating: E Exceptional (90%+), G Good (75%+), C Concern (60%+), W Weakness (40%+), D Deficient (below 40%), X not measured by this system.
