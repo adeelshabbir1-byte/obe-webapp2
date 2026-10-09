@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const faculty = await prisma.user.findMany({
-    where: { role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"] }, managedById: user.id },
+    where: { role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"] }, managedById: user.id },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ faculty: faculty.map(({ passwordHash, ...u }) => u) });
@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
   if (!body.username || !body.password || !body.name || !body.email || !body.role) {
     return NextResponse.json({ error: "name, email, username, password, role are required" }, { status: 400 });
   }
-  if (!["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER"].includes(body.role)) {
-    return NextResponse.json({ error: "role must be SUBJECT_EXPERT, INSTRUCTOR or LAB_ENGINEER" }, { status: 400 });
+  if (!["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"].includes(body.role)) {
+    return NextResponse.json({ error: "role must be SUBJECT_EXPERT, INSTRUCTOR, LAB_ENGINEER or LAB_MANAGER" }, { status: 400 });
   }
 
   const existing = await prisma.user.findFirst({ where: { OR: [{ username: body.username }, { email: body.email }] } });

@@ -51,7 +51,7 @@ export function yearsOfService(joining: Date | string | null | undefined) {
 
 type Viewer = { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null };
 export const REPORT_VIEWER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
-const STAFF = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;
+const STAFF = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "LAB_MANAGER", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;
 
 /** The staff this viewer may see in the faculty details report. */
 export async function reportPeople(viewer: Viewer) {

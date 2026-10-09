@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { completeness } from "../../../lib/facultyProfile";
+import { fiscalYearNow, labRatio } from "../../../lib/resources";
 
 const NAV = [
   { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/program-moves", label: "Teacher Program Moves" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
@@ -124,6 +125,13 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     prisma.student.count({ where: { batchId: { in: batchIds.length ? batchIds : ["none"] } } }),
     prisma.course.findMany({ where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) }, select: { id: true, batchId: true, creditHours: true, semesterNumber: true, courseType: true, isNonCredit: true, instructorId: true, isOffered: true } }),
   ]);
+  const yearAgo = new Date(); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+  const [activities, ratio, finance] = await Promise.all([
+    prisma.activityLog.findMany({ where: { coordinatorId: user.id, activityDate: { gte: yearAgo } }, select: { category: true } }),
+    labRatio(chairmanId, user.departmentId || null),
+    prisma.financeEntry.findMany({ where: { chairmanId, fiscalYear: fiscalYearNow(), kind: "BUDGET" }, select: { category: true, amount: true } }),
+  ]);
+  const budgetOf = (cat: string) => finance.find((x) => x.category === cat)?.amount || 0;
   const facultyIds = faculty.map((f) => f.id);
   const [facProfiles, facEdu] = await Promise.all([
     prisma.facultyProfile.findMany({ where: { userId: { in: facultyIds.length ? facultyIds : ["none"] } }, select: { userId: true, photo: true, designation: true, dateOfJoining: true, bloodGroup: true, phone: true, nextOfKinName: true, nextOfKinPhone: true } }),
@@ -201,6 +209,8 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     { no: 2, title: "Students", manual: ["Counselling and student support records"], checks: [
       { label: "Batches with an advisor", done: scopeBatches.filter((b) => b.advisorId).length, total: scopeBatches.length, hint: "Appoint an advisor for each batch.", href: "/coordinator/batches" },
       colCheck("marks", "Offered courses with marks entered (progress can be monitored)", "Enter marks so student progress can be tracked.", "/omc/reports/result-mate"),
+      { label: "Extra-curricular activities logged in the last 12 months (your target: 4)", done: Math.min(activities.length, 4), total: 4, hint: "Log sports, societies, competitions and workshops.", href: "/coordinator/activities" },
+      { label: "Kinds of activity covered (your target: 3)", done: Math.min(new Set(activities.map((a) => a.category)).size, 3), total: 3, hint: "Cover sports, cultural, technical and service activities.", href: "/coordinator/activities" },
     ] },
     { no: 3, title: "Program Educational Objectives (PEOs)", manual: ["Evidence that faculty and industry reviewed the PEOs", "Key Performance Indicators for the PEOs"], checks: [
       { label: "Vision written", done: prof?.departmentVision?.trim() ? 1 : 0, total: 1, hint: "Fill in the vision on the Program Document page.", href: "/coordinator/program-profile" },
@@ -242,6 +252,8 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     { no: 8, title: "Infrastructure and Facilities", manual: ["Multimedia equipment and the learning environment", "Software licences, internet bandwidth, hardware per student", "Library resources, digital databases and textbooks"], checks: [
       { label: "Lecture rooms defined", done: Math.min(lectureRooms, 1), total: 1, hint: "Add the rooms in the timetable settings.", href: "/coordinator/timetable" },
       { label: "Computing labs defined", done: Math.min(labs, 1), total: 1, hint: "Add the labs in the timetable settings.", href: "/coordinator/timetable" },
+      { label: "Labs with their inventory filled in by the Lab Manager", done: Math.min(ratio.labs, 1), total: 1, hint: "Ask the Lab Manager to enter the lab data.", href: "/lab-inventory" },
+      { label: `Working computers for your ${ratio.students} students (assumed target: 1 per 2 students; now ${ratio.perComputer ?? "—"} students per computer)`, done: Math.min(ratio.working, Math.ceil(ratio.students / 2)), total: Math.ceil(ratio.students / 2), hint: "More working computers, or fewer students per lab.", href: "/lab-inventory" },
     ] },
     { no: 9, title: "Industrial Linkages", manual: ["Advisory board and signed agreements with industry"], checks: [
       { label: "Employers on record (approved)", done: Math.min(employers, 1), total: 1, hint: "Record the employers your graduates work for.", href: "/coordinator/stakeholders" },
@@ -249,7 +261,13 @@ export default async function AccreditationStatusPage({ searchParams }: { search
       { label: "Employer survey answered", done: surveyOf("EMPLOYER") > 0 ? 1 : 0, total: 1, hint: "Send the employer survey.", href: "/coordinator/surveys" },
       { label: "Batches with a capstone project", done: perBatch.filter((b) => b.capstone).length, total: perBatch.length, hint: "Add the final-year project course.", href: "/coordinator/courses" },
     ] },
-    { no: 10, title: "Institutional Support", manual: ["Financial sustainability and budget for labs and library", "Administrative backing and departmental autonomy"], checks: [] },
+    { no: 10, title: "Institutional Support", manual: ["Financial sustainability over several years", "Administrative backing and departmental autonomy"], checks: [
+      { label: `Budget set for ${fiscalYearNow()} (Institute Head's Finance page)`, done: finance.some((x) => x.amount > 0) ? 1 : 0, total: 1, hint: "The Institute Head enters the yearly budget under Finance.", href: "/dashboard" },
+      { label: "Lab equipment budget set", done: budgetOf("Laboratory equipment and upgrades") > 0 ? 1 : 0, total: 1, hint: "Set a budget for lab equipment and upgrades.", href: "/dashboard" },
+      { label: "Library budget set", done: budgetOf("Library and digital resources") > 0 ? 1 : 0, total: 1, hint: "Set a budget for the library and digital resources.", href: "/dashboard" },
+      { label: "Faculty development budget set", done: budgetOf("Faculty development and training") > 0 ? 1 : 0, total: 1, hint: "Set a budget for training.", href: "/dashboard" },
+      { label: "Research budget set", done: budgetOf("Research and grants") > 0 ? 1 : 0, total: 1, hint: "Set a budget for research.", href: "/dashboard" },
+    ] },
   ];
   const areaScore = (a: Criterion) => {
     const rated = a.checks.filter((c) => c.total > 0);

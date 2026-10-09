@@ -32,6 +32,11 @@ export const LAB_ENGINEER_NAV = [
   { href: "/faculty/profile", label: "My Profile" },
 ];
 
+export const LAB_MANAGER_NAV = [
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/faculty/profile", label: "My Profile" },
+];
+
 export const INSTRUCTOR_NAV = [
   { href: "/instructor/courses", label: "My Semester Courses" },
   { href: "/instructor/timetable", label: "My Timetable" },
@@ -97,6 +102,8 @@ export const COORDINATOR_NAV = [
   { href: "/public-library", label: "Public Course Library" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/coordinator/activities", label: "Extra-curricular Activities" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -116,6 +123,8 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/chairman/finance", label: "Finance" },
 ];
 
 export const DEAN_NAV = [
@@ -127,6 +136,7 @@ export const DEAN_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -144,6 +154,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
 ];
 
 export const HOD_NAV = [
@@ -155,6 +166,7 @@ export const HOD_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
+  { href: "/lab-inventory", label: "Lab Inventory" },
 ];
 
 export function navForRole(role: string) {
@@ -165,6 +177,7 @@ export function navForRole(role: string) {
     case "OMC": return OMC_ACTION_NAV;
     case "INSTRUCTOR": return INSTRUCTOR_NAV;
     case "LAB_ENGINEER": return LAB_ENGINEER_NAV;
+    case "LAB_MANAGER": return LAB_MANAGER_NAV;
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;
     case "CHAIRMAN": return CHAIRMAN_NAV;
