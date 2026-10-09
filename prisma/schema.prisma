@@ -2340,7 +2340,8 @@ model CourseFolder {
 model Deadline {
   id          String   @id @default(cuid())
   chairmanId  String
-  assigneeId  String
+  assigneeId  String?  // a named person (optional): otherwise the deadline belongs to the role / the task, whoever holds it
+  role        String?  // the role the work belongs to, e.g. SUBJECT_EXPERT or INSTRUCTOR of the course
   setById     String
   kind        String   // CUSTOM | CLO_SET | LECTURE_PLAN | ASSESSMENT_PLAN | PAPERS | SUBMITTED | MARKS | ATTENDANCE
   title       String

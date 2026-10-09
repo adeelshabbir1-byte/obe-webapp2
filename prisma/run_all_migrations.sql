@@ -4744,3 +4744,7 @@ CREATE TABLE IF NOT EXISTS "Deadline" (
 );
 CREATE INDEX IF NOT EXISTS "Deadline_chairmanId_idx" ON "Deadline"("chairmanId");
 CREATE INDEX IF NOT EXISTS "Deadline_assigneeId_idx" ON "Deadline"("assigneeId");
+
+-- Deadlines belong to a role / task, whoever holds it (a named person is now optional)
+ALTER TABLE "Deadline" ALTER COLUMN "assigneeId" DROP NOT NULL;
+ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "role" TEXT;
