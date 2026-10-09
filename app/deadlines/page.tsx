@@ -5,7 +5,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import DeadlineForm from "../../components/DeadlineForm";
 import DeadlineRowActions from "../../components/DeadlineRowActions";
-import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, detectDone, reach, statusOf, type DlStatus } from "../../lib/deadlines";
+import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, detectDone, topUpStanding, reach, statusOf, type DlStatus } from "../../lib/deadlines";
 import { ROLE_TEXT } from "../../lib/institutePeople";
 import { hatsOf } from "../../lib/dualRoles";
 
@@ -32,8 +32,9 @@ export default async function DeadlinesPage() {
   const myCourseIds = myCourses.map((c) => c.id);
   const scopeIds = (scopeCourses as { id: string }[]).map((c) => c.id);
 
+  await topUpStanding(chairmanId);
   const rows = (await prisma.deadline.findMany({
-    where: { chairmanId, OR: [
+    where: { chairmanId, allCourses: false, OR: [
       { assigneeId: user.id }, { setById: user.id }, { role: { in: myHats }, courseId: null },
       { courseId: { in: myCourseIds.length ? myCourseIds : ["none"] } },
       ...(isSetter ? [{ assigneeId: { in: peopleIds.length ? peopleIds : ["none"] } }, { courseId: { in: scopeIds.length ? scopeIds : ["none"] } }] : []),

@@ -32,7 +32,7 @@ export default function DeadlineForm({ people, courses, roles }: { people: Perso
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
         <label style={{ fontSize: 12 }}>What<br /><select style={input} value={f.kind} onChange={(e) => pickKind(e.target.value)}>{Object.entries(DEADLINE_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-        {isCourse && <label style={{ fontSize: 12 }}>Course<br /><select style={input} value={f.courseId} onChange={(e) => setF({ ...f, courseId: e.target.value })}><option value="">— choose —</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></label>}
+        {isCourse && <label style={{ fontSize: 12 }}>Course<br /><select style={input} value={f.courseId} onChange={(e) => setF({ ...f, courseId: e.target.value })}><option value="">— choose —</option>{f.mode === "role" && <option value="ALL">All courses (every course in my area, now and later)</option>}{courses.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></label>}
         {f.mode === "role" ? (
           <label style={{ fontSize: 12 }}>Role<br /><select style={input} value={impliedRole || f.role} disabled={!!impliedRole} onChange={(e) => setF({ ...f, role: e.target.value })}>{roleChoices.map((r) => <option key={r.value} value={r.value}>{isCourse ? `${r.label} of the course` : r.label}</option>)}</select></label>
         ) : (
@@ -44,7 +44,7 @@ export default function DeadlineForm({ people, courses, roles }: { people: Perso
         <span style={{ fontSize: 12.5, color: ok ? "var(--sage)" : "#b3261e" }}>{msg}</span>
       </div>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 0 }}>
-        A deadline for a role or task stays with the work: if the course gets a different Subject Expert or Instructor, the deadline moves to them. Course work (CLOs, lecture plan, papers, marks and so on) is marked done automatically when it is saved. Other tasks are ticked off by whoever holds the role.
+        You do not need to know who will do it. Choose All courses and the deadline applies to every course in your area, including courses added later; each person sees it once the course is assigned to them. A deadline for a role or task stays with the work: if the course gets a different Subject Expert or Instructor, the deadline moves to them. Course work (CLOs, lecture plan, papers, marks and so on) is marked done automatically when it is saved. Other tasks are ticked off by whoever holds the role.
       </p>
     </div>
   );
