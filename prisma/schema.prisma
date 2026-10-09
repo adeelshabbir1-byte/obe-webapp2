@@ -2246,3 +2246,23 @@ model LibraryInfo {
   updatedById      String?
   updatedAt        DateTime @updatedAt
 }
+
+// One row per kind of computer in a lab, e.g. "30 x Core i7-12700, 16 GB, 512 GB SSD".
+model LabComputerSpec {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  labId        String
+  quantity     Int      @default(1)
+  makeModel    String?
+  processor    String?
+  ramGb        Int?
+  storage      String?
+  gpu          String?
+  os           String?
+  purchaseYear Int?
+  notes        String?
+  updatedAt    DateTime @updatedAt
+
+  @@index([labId])
+  @@index([chairmanId])
+}

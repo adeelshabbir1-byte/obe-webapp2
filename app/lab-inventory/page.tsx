@@ -20,6 +20,7 @@ export default async function LabInventoryPage() {
     prisma.department.findMany({ where: { chairmanId: scope.chairmanId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.labInfo.findMany({ where: { chairmanId: scope.chairmanId, ...(scope.departmentIds ? { departmentId: { in: scope.departmentIds.length ? scope.departmentIds : ["none"] } } : {}) }, orderBy: [{ departmentId: "asc" }, { name: "asc" }] }),
   ]);
+  const specs = await prisma.labComputerSpec.findMany({ where: { labId: { in: labs.length ? labs.map((l) => l.id) : ["none"] } }, orderBy: [{ purchaseYear: "desc" }, { updatedAt: "desc" }] });
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "Common";
   const shownDepts = scope.departmentIds ? departments.filter((d) => scope.departmentIds!.includes(d.id)) : departments;
   const ratios = await Promise.all(shownDepts.map(async (d) => ({ d, r: await labRatio(scope.chairmanId, d.id) })));
@@ -40,6 +41,7 @@ export default async function LabInventoryPage() {
           </div>
         ))}
       </div>
+      <p><a className="btn" href="/api/lab-inventory/export">Download Excel (labs and PC specifications)</a></p>
       {ratios.length > 1 && (
         <div className="card">
           <h3 style={{ marginTop: 0 }}>By department</h3>
@@ -49,7 +51,7 @@ export default async function LabInventoryPage() {
           </table>
         </div>
       )}
-      <LabInventoryManager canEdit={scope.canEdit} departments={scope.departmentIds ? null : departments}
+      <LabInventoryManager canEdit={scope.canEdit} specs={specs.map((x) => ({ id: x.id, labId: x.labId, quantity: x.quantity, makeModel: x.makeModel, processor: x.processor, ramGb: x.ramGb, storage: x.storage, gpu: x.gpu, os: x.os, purchaseYear: x.purchaseYear, notes: x.notes }))} departments={scope.departmentIds ? null : departments}
         labs={labs.map((l) => ({ id: l.id, name: l.name, departmentId: l.departmentId, departmentName: deptName(l.departmentId), location: l.location, seats: l.seats, computers: l.computers, computersWorking: l.computersWorking, software: l.software, equipment: l.equipment, internetMbps: l.internetMbps, lastAudit: l.lastAudit ? l.lastAudit.toISOString() : null, notes: l.notes }))} />
     </Shell>
   );
