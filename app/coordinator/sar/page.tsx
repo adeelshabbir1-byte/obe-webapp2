@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { computeReadiness } from "../../../lib/readiness";
 import { computeHecComparison } from "../../../lib/hecCompare";
+import { sarExtras } from "../../../lib/evidenceFiles";
 import SarDocument from "../../../components/SarDocument";
 
 export default async function SarPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -14,9 +15,10 @@ export default async function SarPage({ searchParams }: { searchParams: { batchI
   const data = await computeReadiness(user, searchParams.batchId || "");
   const hec = await computeHecComparison(user.id, searchParams.batchId || "", "");
   const evidence = await prisma.programEvidence.findMany({ where: { coordinatorId: user.id }, orderBy: [{ date: "asc" }] });
+  const extras = await sarExtras(user.managedById || "none", user.id);
   const [dept, head] = await Promise.all([
     user.departmentId ? prisma.department.findUnique({ where: { id: user.departmentId }, select: { name: true } }) : null,
     user.managedById ? prisma.user.findUnique({ where: { id: user.managedById }, select: { name: true } }) : null,
   ]);
-  return <SarDocument data={data} hec={hec} evidence={evidence} program={user.leadProgram || "Degree program"} department={dept?.name || "—"} lead={user.name} instituteHead={head?.name || "—"} back="/coordinator/accreditation-status" />;
+  return <SarDocument data={data} hec={hec} evidence={evidence} program={user.leadProgram || "Degree program"} department={dept?.name || "—"} lead={user.name} instituteHead={head?.name || "—"} back="/coordinator/accreditation-status" files={extras.files} meetings={extras.meetings} />;
 }

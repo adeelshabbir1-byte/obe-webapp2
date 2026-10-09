@@ -2387,3 +2387,107 @@ model TaskRequest {
   @@index([fromId, status])
   @@index([chairmanId])
 }
+
+// A file kept as accreditation evidence (minutes, certificates, photos, reports). Stored in the database; limited to about 3 MB each.
+model EvidenceFile {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  leadId       String?  // the Program Lead's program it belongs to; null = whole institute
+  criterion    Int?     // NCEAC criterion 1 to 9
+  title        String
+  note         String?
+  fileName     String
+  mimeType     String
+  size         Int
+  data         String   @db.Text // base64
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([chairmanId])
+  @@index([leadId])
+}
+
+// A meeting held, with its minutes: OMC, BOS, BPF, faculty meeting, advisory board.
+model MeetingMinutes {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  leadId      String?
+  kind        String   // OMC | BOS | BPF | FACULTY | IAB | OTHER
+  title       String
+  meetingDate DateTime
+  attendees   String?  @db.Text
+  decisions   String?  @db.Text
+  fileName    String?
+  mimeType    String?
+  data        String?  @db.Text // base64 of the signed minutes, optional
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, kind])
+  @@index([createdById])
+}
+
+// Who changed library, finance, admission or lab figures, and when.
+model ChangeLog {
+  id         String   @id @default(cuid())
+  chairmanId String
+  area       String   // LIBRARY | FINANCE | ADMISSION | LABS
+  summary    String
+  byId       String
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId, area])
+}
+
+// Admitted, graduated and dropped-out students of a program, per intake year.
+model OutcomeFigure {
+  id            String   @id @default(cuid())
+  chairmanId    String
+  leadId        String
+  intakeYear    Int
+  admitted      Int      @default(0)
+  graduated     Int      @default(0)
+  graduatedOnTime Int    @default(0)
+  droppedOut    Int      @default(0)
+  employedOrStudying Int? // graduates employed or in further study within a year
+  notes         String?
+  updatedById   String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([leadId, intakeYear])
+  @@index([chairmanId])
+}
+
+// A survey held for a program (students, graduating students, alumni, employers) and what it found.
+model SurveyResult {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  leadId      String
+  kind        String   // STUDENT | EXIT | ALUMNI | EMPLOYER | COURSE
+  surveyDate  DateTime
+  respondents Int      @default(0)
+  invited     Int?
+  avgRating   Float?   // out of 5
+  findings    String?  @db.Text
+  actionTaken String?  @db.Text
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([chairmanId])
+}
+
+// The accreditation scores of a program on a given day, kept so progress can be shown between visits.
+model ReadinessSnapshot {
+  id         String   @id @default(cuid())
+  chairmanId String
+  leadId     String
+  label      String
+  overall    Int?
+  areas      String   @db.Text // JSON: [{ no, title, score }]
+  takenById  String
+  createdAt  DateTime @default(now())
+
+  @@index([leadId])
+  @@index([chairmanId])
+}

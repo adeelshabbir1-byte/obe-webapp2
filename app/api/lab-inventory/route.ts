@@ -1,3 +1,4 @@
+import { logChange } from "../../../lib/changeLog";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "a lab with that name already exists" }, { status: 409 });
   }
+  await logChange(scope.chairmanId, "LABS", `Lab ${b.id ? "updated" : "added"}: ${name} (${computers} computers, ${working} working)`, user.id);
   return NextResponse.json({ ok: true });
 }
 

@@ -1,3 +1,4 @@
+import { logChange } from "../../../lib/changeLog";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -30,5 +31,6 @@ export async function PUT(req: NextRequest) {
     create: { chairmanId, scopeKey, degreeProgram, ...data }, update: data,
   });
   await writeAuditLog({ actorUserId: user.id, action: "ADMISSION_CRITERIA_SET", entityType: "AdmissionCriteria", entityId: row.id });
+  await logChange(chairmanId, "ADMISSION", `Admission criteria saved for ${degreeProgram}${data.seats ? ` (${data.seats} seats)` : ""}`, user.id);
   return NextResponse.json({ ok: true });
 }

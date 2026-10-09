@@ -6,7 +6,7 @@ type Section = { title: string; links: Link[] };
 const ORDER = ["My work", "Setup", "Semester Operations", "Teaching & Timetable", "People & Structure", "Review & Approval", "Curriculum & Outcomes", "Accreditation & Resources", "Calendar & Admissions", "Reports & Analytics", "Community", "Platform", "More"];
 
 const RULES: { match: (href: string) => boolean; section: string }[] = [
-  { match: (h) => /^\/(deadlines|semester-plan|dashboard|requests)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
+  { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h), section: "My work" },
 
   { match: (h) => /^\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale|lab-engineers|elective-options|custom-categories|bulk-student-upload|program-profile|required-books|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || /^\/chairman\/(ai-configuration|institute-settings)$/.test(h), section: "Setup" },
@@ -21,11 +21,11 @@ const RULES: { match: (href: string) => boolean; section: string }[] = [
       || /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || /^\/chairman\/(plos|cqi)$/.test(h) || /^\/dean\/curricula$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
   { match: (h) => /^\/(accreditation-overview|resources|lab-inventory|library-inventory)$/.test(h) || /^\/chairman\/finance$/.test(h)
-      || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status|activities)$/.test(h), section: "Accreditation & Resources" },
+      || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status|activities)$/.test(h) || /^\/(evidence-files|meetings|outcomes)$/.test(h), section: "Accreditation & Resources" },
   { match: (h) => /^\/(academic-calendar|admission-criteria)$/.test(h), section: "Calendar & Admissions" },
 
   { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)
-      || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h), section: "Reports & Analytics" },
+      || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h) || h === "/yearly-summary", section: "Reports & Analytics" },
 
   { match: (h) => /^\/(advisor\/dashboard|coordinator\/(stakeholders|surveys)|public-library|instructor\/peers)$/.test(h), section: "Community" },
   { match: (h) => /^\/admin\//.test(h), section: "Platform" },

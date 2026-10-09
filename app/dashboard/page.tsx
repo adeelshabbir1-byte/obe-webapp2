@@ -11,7 +11,7 @@ import AssignmentResponses from "../../components/AssignmentResponses";
 
 const ROLE_HOME: Record<string, string> = {
   SUPER_USER: "/admin/users",
-  CHAIRMAN: "/chairman/coordinators",
+  CHAIRMAN: "/home",
   PROGRAM_COORDINATOR: "/coordinator/faculty",
   SUBJECT_EXPERT: "/subjectexpert/courses",
   DEAN: "/dean/overview",

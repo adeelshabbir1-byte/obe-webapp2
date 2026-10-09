@@ -161,6 +161,12 @@ export async function computeReadiness(user: { id: string; managedById: string |
         .filter((c) => c.minPercentage !== null || c.requiredSubjects || c.entryTest || c.seats !== null).length
     : 0;
 
+  const [outcomeRows, surveyRows] = await Promise.all([
+    prisma.outcomeFigure.findMany({ where: { leadId: user.id } as never, select: { intakeYear: true, admitted: true, graduated: true } }),
+    prisma.surveyResult.findMany({ where: { leadId: user.id, surveyDate: { gte: yearAgo } } as never, select: { kind: true } }),
+  ]) as unknown as [{ intakeYear: number; admitted: number; graduated: number }[], { kind: string }[]];
+  const surveyKinds = new Set(surveyRows.map((s) => s.kind));
+
   // ---- extra facts for the official NCEAC criteria (Accreditation Manual, 2nd edition, 2023) ----
   const fyNow = fiscalYearNow();
   const prevFy = (() => { const y = parseInt(fyNow.slice(0, 4), 10) - 1; return `${y}-${String((y + 1) % 100).padStart(2, "0")}`; })();
@@ -236,7 +242,9 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Supervised internship recorded: 6 to 8 weeks with employer feedback (3.h)", done: Math.min(ev("INTERNSHIP").length, 1), total: 1, hint: "Record where students did internships.", href: EV },
     ] },
     { no: 4, title: "Students", manual: ["Annual intake in line with the maximum NCEAC allows for your faculty strength (4.b)", "Students' workload, policies on harassment and plagiarism, student discipline", "Quality of the process for evaluating student performance and taking corrective measures (4.i)", "Student organisations that give experience in management and governance"], checks: [
-      { label: "Programs whose admission criteria are set by the Dean (4.a)", done: admissionSet, total: admissionPrograms.length, hint: "Ask your Dean to set the admission criteria for this program.", href: "/admission-criteria" },
+      { label: "Programs whose admission criteria are set by Student Affairs (4.a)", done: admissionSet, total: admissionPrograms.length, hint: "Ask Student Affairs to set the admission criteria for this program.", href: "/admission-criteria" },
+      { label: "Admission, graduation and dropout figures recorded for at least 3 intake years (4.h)", done: Math.min(outcomeRows.length, 3), total: 3, hint: "Enter the figures under Graduation and Surveys.", href: "/outcomes" },
+      { label: "Student, exit, alumni and employer surveys held in the last 12 months", done: ["STUDENT", "EXIT", "ALUMNI", "EMPLOYER"].filter((k) => surveyKinds.has(k)).length, total: 4, hint: "Record each survey's results and the action taken under Graduation and Surveys.", href: "/outcomes" },
       { label: "Admission criteria with at least 50% marks in Intermediate (NCEAC minimum)", done: minAdmission, total: admissionPrograms.length, hint: "NCEAC requires at least 50% (60% for computing engineering).", href: "/admission-criteria" },
       { label: "Transfer-credit policy written: at most 50% of credit hours transferable (4.c)", done: transferSet, total: admissionPrograms.length, hint: "Write the transfer policy in the admission criteria.", href: "/admission-criteria" },
       { label: "Batches with a student count recorded", done: scopeBatches.filter((b) => b.studentCount > 0).length, total: scopeBatches.length, hint: "Record the number of students in each batch.", href: "/coordinator/batches" },

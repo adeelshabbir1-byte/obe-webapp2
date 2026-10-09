@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { logChange } from "../../../lib/changeLog";
 import { libraryScope } from "../../../lib/resources";
 
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
@@ -21,5 +22,6 @@ export async function PUT(req: NextRequest) {
     hasLibrarian: b.hasLibrarian === true || b.hasLibrarian === "on", lastStockCheck: last && !isNaN(last.getTime()) ? last : null, notes: str(b.notes), updatedById: user.id,
   };
   await prisma.libraryInfo.upsert({ where: { chairmanId: scope.chairmanId }, create: { chairmanId: scope.chairmanId, ...data }, update: data });
+  await logChange(scope.chairmanId, "LIBRARY", `Library record saved: ${data.totalTitles} titles, ${data.totalVolumes} volumes, ${data.seats} seats`, user.id);
   return NextResponse.json({ ok: true });
 }

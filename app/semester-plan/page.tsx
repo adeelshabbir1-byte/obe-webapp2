@@ -6,6 +6,7 @@ import SemesterPlanForm from "../../components/SemesterPlanForm";
 import PassOnForm from "../../components/PassOnForm";
 import GanttChart from "../../components/GanttChart";
 import { prisma } from "../../lib/db";
+import RemindButton from "../../components/RemindButton";
 import { PLAN_ROLES, PLAN_TEMPLATE, ROLE_LABEL, SETTER_ROLES, planProgress, type PlanState } from "../../lib/deadlines";
 
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead" };
@@ -84,7 +85,7 @@ export default async function SemesterPlanPage() {
             <details key={l.id} style={{ marginTop: 8 }}>
               <summary style={{ cursor: "pointer", fontSize: 13 }}><b>{l.title}</b>: courses not done yet ({l.total - l.done})</summary>
               <ul style={{ fontSize: 12.5, margin: "6px 0 0 18px" }}>
-                {l.notDone.map((n) => <li key={n.courseId}>{n.label} — {n.who || <span style={{ color: "#B3261E" }}>nobody holds this yet</span>}</li>)}
+                {l.notDone.map((n) => <li key={n.courseId}>{n.label} — {n.who || <span style={{ color: "#B3261E" }}>nobody holds this yet</span>}{n.whoId && <RemindButton deadlineId={l.id} toId={n.whoId} item={n.label} />}</li>)}
                 {l.total - l.done > l.notDone.length && <li style={{ color: "var(--slate)" }}>and {l.total - l.done - l.notDone.length} more</li>}
               </ul>
             </details>

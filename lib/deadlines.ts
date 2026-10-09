@@ -1,9 +1,10 @@
 import { prisma } from "./db";
 import { hatsOf } from "./dualRoles";
+import { autoTick } from "./planAuto";
 
 export const DEADLINE_KINDS: Record<string, string> = {
   CUSTOM: "Any task", PLO_MAP: "Course mapped to PLOs", CLO_PLO: "CLOs mapped to PLOs", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan built and mapped to CLOs", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
-  PAPERS: "Midterm and final paper distribution set", SUBMITTED: "Course submitted to OMC", MARKS: "Marks entered", ATTENDANCE: "Attendance recorded",
+  PAPERS: "Midterm and final paper distribution set", SUBMITTED: "Course submitted to OMC", MARKS: "Marks entered", MID_MARKS: "Midterm marks entered", FINAL_MARKS: "Final exam marks entered", ATTENDANCE: "Attendance recorded",
 };
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
 export const ROLE_LABEL: Record<string, string> = {
@@ -13,7 +14,7 @@ export const ROLE_LABEL: Record<string, string> = {
 /** The role a piece of course work belongs to. null = the setter chooses (papers) or it is a free task. */
 export const KIND_ROLE: Record<string, string | null> = {
   CUSTOM: null, PLO_MAP: "PROGRAM_COORDINATOR", CLO_PLO: "SUBJECT_EXPERT", CLO_SET: "SUBJECT_EXPERT", LECTURE_PLAN: "SUBJECT_EXPERT", ASSESSMENT_PLAN: "SUBJECT_EXPERT", SUBMITTED: "SUBJECT_EXPERT",
-  PAPERS: null, MARKS: "INSTRUCTOR", ATTENDANCE: "INSTRUCTOR",
+  PAPERS: null, MARKS: "INSTRUCTOR", MID_MARKS: "INSTRUCTOR", FINAL_MARKS: "INSTRUCTOR", ATTENDANCE: "INSTRUCTOR",
 };
 export const SETTER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
@@ -72,6 +73,8 @@ export async function detectDone(kind: string, courseId: string, role: string | 
     }
     case "SUBMITTED": return course.templateStatus !== "draft" && course.templateStatus !== "changes-requested";
     case "MARKS": return (await prisma.studentMark.count({ where: { courseId } })) > 0;
+    case "MID_MARKS": return (await prisma.studentMark.count({ where: { courseId, instrument: { type: "Midterm" } } as never })) > 0;
+    case "FINAL_MARKS": return (await prisma.studentMark.count({ where: { courseId, instrument: { type: "Final" } } as never })) > 0;
     case "ATTENDANCE": return (await prisma.attendanceRecord.count({ where: { courseId } })) > 0;
     default: return false;
   }
@@ -182,7 +185,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "COUNSEL", kind: "CUSTOM", title: "Student counselling session held", role: "PROGRAM_COORDINATOR", offset: 40, days: 7, scope: "EACH", phase: "During the semester", why: "Counselling sessions with students are recorded" },
   { key: "PAPER_MID", kind: "CUSTOM", title: "Midterm papers set and approved", role: "SUBJECT_EXPERT", offset: 42, days: 10, scope: "EACH", phase: "Exams and assessment", why: "Midterm papers follow the paper distribution" },
   { key: "SURVEY_MID", kind: "CUSTOM", title: "Mid-semester course evaluation survey conducted", role: "PROGRAM_COORDINATOR", offset: 50, days: 7, scope: "EACH", phase: "Exams and assessment", why: "Students rate courses and teaching" },
-  { key: "MID_EXAM", kind: "CUSTOM", title: "Midterm marks entered", role: "INSTRUCTOR", offset: 63, days: 7, scope: "EACH", phase: "Exams and assessment", why: "Midterm marks are entered for every course" },
+  { key: "MID_EXAM", kind: "MID_MARKS", title: "Midterm marks entered", role: "INSTRUCTOR", offset: 63, days: 7, scope: "COURSE", phase: "Exams and assessment", why: "Midterm marks are entered for every course" },
   { key: "SHORTAGE", kind: "CUSTOM", title: "Attendance shortage list shared", role: "INSTRUCTOR", offset: 60, days: 5, scope: "EACH", phase: "Exams and assessment", why: "Students below the attendance limit are informed" },
   { key: "FYP_MID", kind: "CUSTOM", title: "Final year project mid evaluation held", role: "HEAD_OF_DEPARTMENT", offset: 70, days: 7, scope: "EACH", phase: "During the semester", why: "Supervisors and the committee review progress" },
   { key: "IAB", kind: "CUSTOM", title: "Industrial advisory board meeting held and minutes filed", role: "HEAD_OF_DEPARTMENT", offset: 80, days: 3, scope: "EACH", phase: "Meetings", why: "Industry gives feedback on the program" },
@@ -190,6 +193,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "PAPER_FINAL", kind: "CUSTOM", title: "Final papers set and approved", role: "SUBJECT_EXPERT", offset: 100, days: 10, scope: "EACH", phase: "Exams and assessment", why: "Final papers follow the paper distribution" },
   { key: "SURVEY_END", kind: "CUSTOM", title: "End-of-semester course evaluation survey conducted", role: "PROGRAM_COORDINATOR", offset: 105, days: 7, scope: "EACH", phase: "Exams and assessment", why: "Students rate courses and teachers at the end" },
   { key: "EXIT", kind: "CUSTOM", title: "Graduating student exit survey conducted", role: "PROGRAM_COORDINATOR", offset: 110, days: 7, scope: "EACH", phase: "Semester close", why: "Final year students give their feedback on the program" },
+  { key: "FINAL_EXAM", kind: "FINAL_MARKS", title: "Final exam marks entered", role: "INSTRUCTOR", offset: 118, days: 7, scope: "COURSE", phase: "Exams and assessment", why: "Final exam marks are entered for every course" },
   { key: "RESULTS", kind: "CUSTOM", title: "Final results submitted", role: "INSTRUCTOR", offset: 125, days: 5, scope: "EACH", phase: "Semester close", why: "Grades are submitted for every course taught" },
   { key: "FOLDER", kind: "CUSTOM", title: "Course folders completed", role: "INSTRUCTOR", offset: 130, days: 10, scope: "EACH", phase: "Semester close", why: "Every course folder holds the papers, solutions and samples" },
   { key: "ATTAIN", kind: "CUSTOM", title: "CLO and PLO attainment reviewed", role: "SUBJECT_EXPERT", offset: 135, days: 10, scope: "EACH", phase: "Semester close", why: "Subject Experts review how well each CLO was met" },
@@ -236,6 +240,7 @@ async function doneSets(kinds: string[], courseIds: string[]) {
         out.set(kind, new Set(rows.filter((r) => r.templateStatus !== "draft" && r.templateStatus !== "changes-requested").map((r) => r.id))); break;
       }
       case "MARKS": out.set(kind, distinct(await prisma.studentMark.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      case "MID_MARKS": case "FINAL_MARKS": out.set(kind, distinct(await prisma.studentMark.findMany({ where: { courseId: inList, instrument: { type: kind === "MID_MARKS" ? "Midterm" : "Final" } }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
       case "ATTENDANCE": out.set(kind, distinct(await prisma.attendanceRecord.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
       default: break;
     }
@@ -262,7 +267,7 @@ export type PlanState = "BEHIND" | "AT_RISK" | "ON_TRACK" | "COMPLETE";
 export type PlanLine = {
   id: string; title: string; kind: string; planKey: string | null; days: number; phase: string; role: string | null; planTerm: string | null; dueDate: Date; setBy: string; setById: string; mine: boolean;
   total: number; done: number; late: number; behind: number; state: PlanState; daysLeft: number;
-  notDone: { courseId: string; label: string; who: string }[];
+  notDone: { courseId: string; label: string; who: string; whoId: string }[];
   passed: { by: string; dueDate: Date; slack: number }[];
 };
 
@@ -284,7 +289,17 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
   const courseSet = new Set(courseIds);
   const allRows = new Map<string, typeof flat>();
   for (const r of flat) { const k = `${r.setById}|${r.title}|${r.dueDate.getTime()}`; allRows.set(k, [...(allRows.get(k) || []), r]); }
-  if (opts.stamp !== false) await stampDone(flat.filter((r) => r.courseId && courseSet.has(r.courseId)));
+  if (opts.stamp !== false) {
+    await stampDone(flat.filter((r) => r.courseId && courseSet.has(r.courseId)));
+    const plainOpen: { id: string; key: string; assigneeId: string | null; dueDate: Date; completedAt: Date | null }[] = [];
+    for (const t of visible) {
+      if (!t.planKey) continue;
+      const key = t.planKey.split(":")[1];
+      for (const r of allRows.get(`${t.setById}|${t.title}|${t.dueDate.getTime()}`) || []) if (!r.courseId && !r.completedAt) plainOpen.push({ id: r.id, key, assigneeId: r.assigneeId, dueDate: r.dueDate, completedAt: null });
+    }
+    await autoTick(chairmanId, plainOpen);
+    for (const p of plainOpen) if (p.completedAt) for (const rs of Array.from(allRows.values())) { const hit = rs.find((x) => x.id === p.id); if (hit) hit.completedAt = p.completedAt; }
+  }
   const lines: PlanLine[] = [];
   for (const t of visible) {
     const plain = !!t.planKey;
@@ -299,10 +314,10 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
     let state: PlanState = rows.length && done === rows.length ? "COMPLETE" : behind > 0 ? "BEHIND" : daysLeft <= 14 && rows.length > 0 && done / rows.length < 0.5 ? "AT_RISK" : "ON_TRACK";
     const role = t.role || KIND_ROLE[t.kind];
     const notDone = open.slice(0, 40).map((r) => {
-      if (plain) return { courseId: r.id, label: ROLE_LABEL[role as string] || String(role || ""), who: r.assigneeId || "" };
+      if (plain) return { courseId: r.id, label: ROLE_LABEL[role as string] || String(role || ""), who: r.assigneeId || "", whoId: r.assigneeId || "" };
       const c = cMap.get(r.courseId as string);
       const who = role === "INSTRUCTOR" ? c?.instructorId : role === "PROGRAM_COORDINATOR" ? c?.coordinatorId : c?.subjectExpertId;
-      return { courseId: r.courseId as string, label: c ? `${c.code} ${c.title}` : "—", who: who || "" };
+      return { courseId: r.courseId as string, label: c ? `${c.code} ${c.title}` : "—", who: who || "", whoId: who || "" };
     });
     const kids = templates.filter((k) => k.parentId === t.id);
     lines.push({

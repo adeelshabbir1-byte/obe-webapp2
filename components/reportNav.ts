@@ -37,6 +37,7 @@ export const LAB_MANAGER_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 
@@ -46,11 +47,13 @@ export const LIBRARIAN_NAV = [
 ];
 export const STUDENT_AFFAIRS_NAV = [
   { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/evidence-files", label: "Evidence Files" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 export const FINANCE_NAV = [
   { href: "/chairman/finance", label: "Finance" },
+  { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 
@@ -102,6 +105,9 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/timetable", label: "Timetable" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/students", label: "Students" },
+  { href: "/outcomes", label: "Graduation & Surveys" },
+  { href: "/evidence-files", label: "Evidence Files" },
+  { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
@@ -133,6 +139,8 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/home", label: "Needs Attention" },
+  { href: "/yearly-summary", label: "Yearly Summary" },
   { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
   
   { href: "/course-split", label: "Course Split" },
@@ -170,6 +178,8 @@ export const DEAN_NAV = [
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/evidence-files", label: "Evidence Files" },
+  { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 
@@ -193,6 +203,8 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/evidence-files", label: "Evidence Files" },
+  { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 
@@ -210,6 +222,8 @@ export const HOD_NAV = [
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/evidence-files", label: "Evidence Files" },
+  { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 

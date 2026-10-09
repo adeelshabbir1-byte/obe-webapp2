@@ -23,7 +23,8 @@ const EXHIBIT = [
 type Ev = { area: string; kind: string; title: string; organization: string | null; date: Date | null; count: number | null; target: number | null; actual: number | null };
 const d = (x: Date | null) => (x ? x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
-export default function SarDocument({ data, hec, evidence, program, department, lead, instituteHead, back }: {
+export default function SarDocument({ data, hec, evidence, program, department, lead, instituteHead, back, files = [], meetings = [] }: {
+  files?: { title: string; criterion: number | null; fileName: string; createdAt: Date }[]; meetings?: { kind: string; title: string; meetingDate: Date; fileName: string | null }[];
   data: Awaited<ReturnType<typeof computeReadiness>>; hec: Awaited<ReturnType<typeof computeHecComparison>> | null; evidence: Ev[];
   program: string; department: string; lead: string; instituteHead: string; back: string;
 }) {
@@ -111,6 +112,24 @@ export default function SarDocument({ data, hec, evidence, program, department, 
           </section>
         );
       })}
+      {files.length > 0 && (
+        <section>
+          <h2 style={h2}>Appendix: evidence files held in the system</h2>
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead><tr><th style={cell}>Criterion</th><th style={cell}>Title</th><th style={cell}>File</th><th style={cell}>Added</th></tr></thead>
+            <tbody>{files.map((f, i) => <tr key={i}><td style={cell}>{f.criterion ?? "General"}</td><td style={cell}>{f.title}</td><td style={cell}>{f.fileName}</td><td style={cell}>{d(f.createdAt)}</td></tr>)}</tbody>
+          </table>
+        </section>
+      )}
+      {meetings.length > 0 && (
+        <section>
+          <h2 style={h2}>Appendix: meetings held</h2>
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead><tr><th style={cell}>Date</th><th style={cell}>Meeting</th><th style={cell}>Title</th><th style={cell}>Minutes filed</th></tr></thead>
+            <tbody>{meetings.map((m, i) => <tr key={i}><td style={cell}>{d(m.meetingDate)}</td><td style={cell}>{m.kind}</td><td style={cell}>{m.title}</td><td style={cell}>{m.fileName ? "Yes" : "Recorded, no file"}</td></tr>)}</tbody>
+          </table>
+        </section>
+      )}
     </div>
   );
 }

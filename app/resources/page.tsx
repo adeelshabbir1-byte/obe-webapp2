@@ -18,6 +18,9 @@ export default async function ResourcesPage() {
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
   const id = user.id;
   const year = fiscalYearNow();
+  const changes = (await prisma.changeLog.findMany({ where: { chairmanId: id } as never, orderBy: { createdAt: "desc" }, take: 15 })) as unknown as { id: string; area: string; summary: string; byId: string; createdAt: Date }[];
+  const changers = (await prisma.user.findMany({ where: { id: { in: Array.from(new Set(changes.map((c) => c.byId))).concat(["none"]) } }, select: { id: true, name: true } })) as unknown as { id: string; name: string }[];
+  const changer = new Map<string, string>(changers.map((u) => [u.id, u.name]));
 
   const [ratio, labLast, lib, fin, finLast, crit, staff, programs] = await Promise.all([
     labRatio(id, null),
@@ -74,6 +77,13 @@ export default async function ResourcesPage() {
       <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 14 }}>
         Need a login for one of these departments? <Link href="/chairman/staff">Create or view their logins</Link>. A Lab Manager made here looks after the labs of every department.
       </p>
+      <div className="card" style={{ marginTop: 14 }}>
+        <h3 style={{ marginTop: 0 }}>Recent changes</h3>
+        {changes.length === 0 ? <p style={{ color: "var(--slate)", margin: 0, fontSize: 13 }}>No changes recorded yet. From now on every save to the library, finance, admission or lab figures is listed here with who made it.</p> : (
+          <table><thead><tr><th>When</th><th>Area</th><th>Change</th><th>By</th></tr></thead>
+            <tbody>{changes.map((c) => <tr key={c.id}><td style={{ whiteSpace: "nowrap" }}>{c.createdAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td><td>{c.area}</td><td>{c.summary}</td><td>{changer.get(c.byId) || "—"}</td></tr>)}</tbody></table>
+        )}
+      </div>
     </Shell>
   );
 }

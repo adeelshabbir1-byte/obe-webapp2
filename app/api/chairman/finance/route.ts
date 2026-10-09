@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { logChange } from "../../../../lib/changeLog";
 import { financeScope, EXPENSE_CATEGORIES, INCOME_CATEGORIES, recentFiscalYears } from "../../../../lib/resources";
 
 // The Finance Officer or the Institute Head enters the budget, what was spent, and the income for a fiscal year.
@@ -23,5 +24,6 @@ export async function PUT(req: NextRequest) {
     create: { chairmanId: scope.chairmanId, fiscalYear: year, kind: e.kind, category: e.category, amount: Number(e.amount) },
     update: { amount: Number(e.amount) },
   })));
+  await logChange(scope.chairmanId, "FINANCE", `Finance figures for ${year} saved (${rows.length} lines, total ${rows.reduce((n, e) => n + Number(e.amount), 0).toLocaleString("en-US")})`, user.id);
   return NextResponse.json({ ok: true, years: recentFiscalYears(1) });
 }

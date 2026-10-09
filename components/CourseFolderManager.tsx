@@ -22,13 +22,14 @@ export default function CourseFolderManager({ rows }: { rows: Row[] }) {
     <div className="card" style={{ overflowX: "auto" }}>
       <p style={{ marginTop: 0 }}><b>{kept}</b> of {list.length} course folders kept. {msg && <span style={{ color: "#b3261e" }}>{msg}</span>}</p>
       <table>
-        <thead><tr><th>Kept</th><th>Course</th><th>Batch</th><th>Where it is kept</th></tr></thead>
+        <thead><tr><th>Kept</th><th>Course</th><th>Batch</th><th>Where it is kept</th><th>Folder file</th></tr></thead>
         <tbody>{list.map((r) => (
           <tr key={r.id}>
             <td><input type="checkbox" checked={r.kept} onChange={(e) => change(r.id, { kept: e.target.checked }, true)} /></td>
             <td>{r.code} {r.title}</td><td>{r.batch}</td>
             <td><input value={r.note} placeholder="e.g. Room 12 cabinet, or LMS link" style={{ width: 260, padding: "5px 8px", border: "1px solid var(--line)" }}
               onChange={(e) => change(r.id, { note: e.target.value }, false)} onBlur={() => save(r)} /></td>
+            <td><a className="btn" style={{ fontSize: 12 }} href={`/api/coordinator/course-folders/export?courseId=${r.id}`}>Download Excel</a></td>
           </tr>
         ))}</tbody>
       </table>
