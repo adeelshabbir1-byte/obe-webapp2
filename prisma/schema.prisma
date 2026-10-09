@@ -2350,6 +2350,7 @@ model Deadline {
   dueDate     DateTime
   completedAt DateTime?
   parentId    String?  // the higher-level deadline this one was passed on from (earlier date = slack)
+  planKey     String?  // for plan tasks that are not about a course: "ONE:<key>" (one per area) or "EACH:<key>" (one per person holding the role)
   planTerm    String?  // the semester plan this belongs to, e.g. "Spring 2027"
   allCourses  Boolean  @default(false) // a standing deadline for every course in the setter's area, current and future: the per-course rows are made from it
   createdAt   DateTime @default(now())

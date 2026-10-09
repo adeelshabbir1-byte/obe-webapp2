@@ -4,7 +4,9 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import SemesterPlanForm from "../../components/SemesterPlanForm";
 import PassOnForm from "../../components/PassOnForm";
-import { PLAN_TEMPLATE, ROLE_LABEL, SETTER_ROLES, planProgress, type PlanState } from "../../lib/deadlines";
+import GanttChart from "../../components/GanttChart";
+import { prisma } from "../../lib/db";
+import { PLAN_ROLES, PLAN_TEMPLATE, ROLE_LABEL, SETTER_ROLES, planProgress, type PlanState } from "../../lib/deadlines";
 
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead" };
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -23,6 +25,9 @@ export default async function SemesterPlanPage() {
   const lines = await planProgress(user);
   const behind = lines.filter((l) => l.state === "BEHIND");
   const risk = lines.filter((l) => l.state === "AT_RISK");
+  const starts = (await prisma.academicCalendarEntry.findMany({ where: { chairmanId: user.role === "CHAIRMAN" ? user.id : user.managedById || "none", kind: "SEMESTER_START" }, select: { termName: true, startDate: true } })) as { termName: string | null; startDate: Date }[];
+  const startOf = (t: string) => starts.find((x) => x.termName === t)?.startDate || null;
+  const now = new Date();
   const terms = Array.from(new Set(lines.map((l) => l.planTerm || "Other")));
 
   return (
@@ -31,7 +36,7 @@ export default async function SemesterPlanPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         {isIH ? "Set a date for each task in the order the work happens. Each target belongs to a role, whoever holds it. Deans, Chairmen and Program Leads then pass them down with their own earlier dates." : "Targets set above you. Pass each one down to the people in your area with an earlier date so there is slack before the date above you."}
       </p>
-      {isIH && <SemesterPlanForm items={PLAN_TEMPLATE.map((p) => ({ key: p.key, title: p.title, roleLabel: ROLE_LABEL[p.role], offset: p.offset, why: p.why }))} />}
+      {isIH && <SemesterPlanForm items={PLAN_TEMPLATE.map((p) => ({ key: p.key, title: p.title, role: p.role, offset: p.offset, why: p.why, phase: p.phase, scope: p.scope }))} roles={PLAN_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))} />}
 
       {lines.length > 0 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: `4px solid ${behind.length ? "#B3261E" : risk.length ? "#B7791F" : "#2E7D4F"}` }}>
@@ -48,6 +53,7 @@ export default async function SemesterPlanPage() {
       {terms.map((term) => (
         <div key={term} className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
           <h3 style={{ marginTop: 0 }}>{term}</h3>
+          <div style={{ marginBottom: 12 }}><GanttChart lines={lines.filter((l) => (l.planTerm || "Other") === term)} start={startOf(term)} now={now} /></div>
           <table>
             <thead><tr><th>Final date</th><th>Task</th><th>Role</th><th>Progress</th><th>State</th><th>{isIH ? "Passed down" : "My date for my area"}</th></tr></thead>
             <tbody>{lines.filter((l) => (l.planTerm || "Other") === term).map((l) => {

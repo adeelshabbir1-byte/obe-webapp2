@@ -91,12 +91,13 @@ export default async function DeadlinesPage() {
   const finalOf = new Map<string, Date>();
   const earliest = new Map<string, (typeof withStatus)[number]>();
   for (const x of mine) {
-    if (!x.r.courseId) continue;
-    const key = `${x.r.courseId}|${x.r.kind}`;
+    if (!x.r.courseId && !x.r.assigneeId) continue;
+    const key = x.r.courseId ? `${x.r.courseId}|${x.r.kind}` : `T|${x.r.assigneeId}|${x.r.title}`;
     const f = finalOf.get(key); if (!f || x.r.dueDate > f) finalOf.set(key, x.r.dueDate);
     const e = earliest.get(key); if (!e || x.r.dueDate < e.r.dueDate) earliest.set(key, x);
   }
-  const mineShown = mine.filter((x) => !x.r.courseId || earliest.get(`${x.r.courseId}|${x.r.kind}`) === x);
+  const keyOf = (r: DlRow) => (r.courseId ? `${r.courseId}|${r.kind}` : `T|${r.assigneeId}|${r.title}`);
+  const mineShown = mine.filter((x) => (!x.r.courseId && !x.r.assigneeId) || earliest.get(keyOf(x.r)) === x);
 
   // Per-person summary, by whoever holds the work now. Work nobody holds is listed on its own.
   const per = new Map<string, Record<DlStatus, number>>();
@@ -135,7 +136,7 @@ export default async function DeadlinesPage() {
           <td style={{ whiteSpace: "nowrap" }}>{day(r.dueDate)}</td>
           {showWho && <td>{whoCell(r, who)}</td>}
           <td><b>{r.title}</b>{r.kind !== "CUSTOM" && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{DEADLINE_KINDS[r.kind]}</div>}{r.description && <div style={{ fontSize: 12, color: "var(--slate)" }}>{r.description}</div>}
-            {!showWho && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>Set by {names.get(r.setById) || "—"}{r.courseId && finals?.get(`${r.courseId}|${r.kind}`) && finals.get(`${r.courseId}|${r.kind}`)!.getTime() !== r.dueDate.getTime() ? ` · final date ${day(finals.get(`${r.courseId}|${r.kind}`)!)}` : ""}</div>}</td>
+            {!showWho && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>Set by {names.get(r.setById) || "—"}{(() => { const k = r.courseId ? `${r.courseId}|${r.kind}` : `T|${r.assigneeId}|${r.title}`; const f = finals?.get(k); return f && f.getTime() !== r.dueDate.getTime() ? ` · final date ${day(f)}` : ""; })()}</div>}</td>
           <td style={{ fontSize: 12.5 }}>{r.courseId ? (courseOf.get(r.courseId) ? `${courseOf.get(r.courseId)!.code} ${courseOf.get(r.courseId)!.title}` : "—") : "—"}</td>
           <td>{badge(s)}{r.completedAt && <div style={{ fontSize: 11, color: "var(--slate)" }}>on {day(r.completedAt)}</div>}</td>
           <td><DeadlineRowActions id={r.id} canTick={!r.courseId && (who.includes(user.id) || r.setById === user.id || (!!r.role && myHats.includes(r.role)))} done={!!r.completedAt} canRemove={isSetter && (user.role === "CHAIRMAN" || r.setById === user.id)} /></td>

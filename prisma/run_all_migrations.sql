@@ -4756,3 +4756,6 @@ ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "allCourses" BOOLEAN NOT NULL DE
 ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "parentId" TEXT;
 ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planTerm" TEXT;
 CREATE INDEX IF NOT EXISTS "Deadline_planTerm_idx" ON "Deadline"("planTerm");
+
+-- plan_tasks
+ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planKey" TEXT;

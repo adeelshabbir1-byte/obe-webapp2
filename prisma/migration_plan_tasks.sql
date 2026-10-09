@@ -1,0 +1,1 @@
+ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planKey" TEXT;
