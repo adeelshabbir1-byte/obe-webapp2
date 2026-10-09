@@ -47,7 +47,7 @@ export async function computeHecComparison(leadId: string, batchIdParam: string,
   const missing = unmatched.filter((m) => !m.domain);
   const differences = matched.filter(({ c, m }) => c.creditHours !== m.creditHours || (m.semesterNumber != null && c.semesterNumber != null && c.semesterNumber !== m.semesterNumber));
 
-  const cats = Array.from(new Set(master.filter((m) => !m.domain).map((m) => m.category)));
+  const cats: string[] = Array.from(new Set<string>(master.filter((m) => !m.domain).map((m) => String(m.category))));
   const credit = (x: { creditHours: number }) => x.creditHours;
   const categories = cats.map((cat) => {
     const required = master.filter((m) => !m.domain && m.category === cat);
