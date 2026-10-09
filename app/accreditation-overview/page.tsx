@@ -5,6 +5,7 @@ import Shell from "../../components/Shell";
 import { computeReadiness, rate } from "../../lib/readiness";
 import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
 
+const SHORT: Record<number, string> = { 1: "Admission", 2: "Students", 3: "PEOs", 4: "PLOs", 5: "Curriculum", 6: "Learning Process", 7: "Faculty", 8: "Infrastructure", 9: "Industrial Linkages", 10: "Institutional Support" };
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator" };
 
 export default async function AccreditationOverviewPage({ searchParams }: { searchParams: { all?: string } }) {
@@ -65,7 +66,11 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
           <table>
             <thead><tr>
               <th>Program</th><th>Overall</th>
-              {criteria.map((c) => <th key={c.no} title={c.title} style={{ textAlign: "center", fontSize: 11 }}>{c.no}</th>)}
+              {criteria.map((c) => (
+                <th key={c.no} title={`${c.no}. ${c.title}`} style={{ textAlign: "center", verticalAlign: "bottom", padding: "6px 2px" }}>
+                  <span style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap", fontSize: 12, display: "inline-block" }}>{SHORT[c.no] || c.title}</span>
+                </th>
+              ))}
               <th>Weakest area</th><th></th>
             </tr></thead>
             <tbody>
