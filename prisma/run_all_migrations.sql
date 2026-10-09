@@ -4614,3 +4614,7 @@ UPDATE "CourseOwner" SET "ownerDepartmentId" = "departmentId" WHERE "ownerDepart
 -- ===== migration_extra_roles.sql =====
 -- One person can hold any number of roles (Dean, Chairman, Program Lead, Subject Expert, Instructor ...)
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "extraRoles" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+
+-- ===== migration_can_teach.sql =====
+-- Outside Subject Experts (industry / other institute) design courses but never teach
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "canTeach" BOOLEAN NOT NULL DEFAULT true;

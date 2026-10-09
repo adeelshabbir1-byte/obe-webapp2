@@ -17,7 +17,7 @@ export async function GET() {
       include: { batch: true, instructor: true },
       orderBy: [{ code: "asc" }],
     }),
-    prisma.user.findMany({ where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, { AND: [headFacultyWhere(user.managedById || ""), assignerDept(user)] }] }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { OR: [{ managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true }, { AND: [headFacultyWhere(user.managedById || ""), assignerDept(user)] }] }, orderBy: { name: "asc" } }),
   ]);
 
   const visiting = await getOrCreateVisitingFaculty(user.managedById || "");

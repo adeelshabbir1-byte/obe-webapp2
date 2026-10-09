@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...assignerDept(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
-  const instructors = await prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } } });
+  const instructors = await prisma.user.findMany({ where: { managedById: { in: coordinatorIds }, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true } });
   // Exact-name matching, same rigor as the earlier allocation import —
   // a name that isn't unique among this chairman's faculty is skipped
   // rather than guessed at.

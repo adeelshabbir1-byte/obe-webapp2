@@ -112,6 +112,7 @@ model User {
   leadProgram        String?  // PROGRAM_LEAD only: the one degree program (e.g. "BS Computer Science") this person is responsible for
   isVisitingPlaceholder Boolean @default(false) // the built-in "Visiting Faculty (to be decided)" stand-in - not a real person, never logs in
   preferredDays      String?  // comma list e.g. "Mon,Wed" — instructor's preferred teaching days (soft preference for the timetable)
+  canTeach           Boolean  @default(true) // false for an outside (industry / other-institute) Subject Expert who designs courses but is never assigned to teach
   organization       String?  // for a guest / industry Subject Expert: the company or institute they come from (shown beside their public courses)
   isPlatformExpert   Boolean  @default(false) // a Subject Expert created by the platform admin, attached to no institute, who designs Master Curriculum courses for everyone
   publicCourses      PublicCourse[] @relation("PublicCourseAuthor")

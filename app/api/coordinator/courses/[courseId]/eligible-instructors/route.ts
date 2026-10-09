@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
 
   const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
   const instructors = await prisma.user.findMany({
-    where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, managedById: { in: validManagerIds } }, user.role === "COURSE_ASSIGNER" ? { AND: [headFacultyWhere(chairmanId), assignerDept(user)] } : headFacultyWhere(chairmanId)] },
+    where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true, managedById: { in: validManagerIds } }, user.role === "COURSE_ASSIGNER" ? { AND: [headFacultyWhere(chairmanId), assignerDept(user)] } : headFacultyWhere(chairmanId)] },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },
   });
