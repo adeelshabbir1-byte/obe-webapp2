@@ -19,6 +19,7 @@ export async function PUT(req: NextRequest) {
   if (!(await programsOf(chairmanId, scopeKey === INSTITUTE_KEY ? null : scopeKey)).includes(degreeProgram)) return NextResponse.json({ error: "That program is not in this faculty" }, { status: 400 });
   const pct = num(b.minPercentage);
   if (pct !== null && (pct < 0 || pct > 100)) return NextResponse.json({ error: "Minimum percentage must be between 0 and 100" }, { status: 400 });
+  if (pct !== null && pct < 50) return NextResponse.json({ error: "NCEAC requires at least 50% marks in Intermediate for admission to a computing program" }, { status: 400 });
   const data = {
     academicYear: txt(b.academicYear), minPercentage: pct, requiredSubjects: txt(b.requiredSubjects), entryTest: txt(b.entryTest),
     minTestScore: num(b.minTestScore), seats: num(b.seats) === null ? null : Math.round(num(b.seats) as number),

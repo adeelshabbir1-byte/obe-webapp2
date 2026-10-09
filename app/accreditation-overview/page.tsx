@@ -5,7 +5,7 @@ import Shell from "../../components/Shell";
 import { computeReadiness, rate } from "../../lib/readiness";
 import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
 
-const SHORT: Record<number, string> = { 1: "Admission", 2: "Students", 3: "PEOs", 4: "PLOs", 5: "Curriculum", 6: "Learning Process", 7: "Faculty", 8: "Infrastructure", 9: "Industrial Linkages", 10: "Institutional Support" };
+const SHORT: Record<number, string> = { 1: "Objectives (POs)", 2: "Graduate Attributes", 3: "Curriculum & Learning", 4: "Students", 5: "Faculty & Staff", 6: "Facilities", 7: "Finance & Support", 8: "Improvement", 9: "Industry Links" };
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator" };
 
 export default async function AccreditationOverviewPage({ searchParams }: { searchParams: { all?: string } }) {
@@ -33,7 +33,7 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
     <Shell roleLabel={LABEL[user.role] || "Overview"} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Overview</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
-        Visit preparation for every program, side by side. Each cell is one NCEAC criterion: the letter is the rating (E Exceptional, G Good, C Concern, W Weakness, D Deficient, X not measured here) and the number is the score.
+        Visit preparation for every program, side by side. Each cell is one of the nine NCEAC criteria: the letter is the rating (G Good, S Satisfactory, C Concern, W Weakness, D Deficient, X not measured here) and the number is the score.
         Click a program for its full report and the list of what to fix.
       </p>
       {!compareAll && (

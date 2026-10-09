@@ -27,7 +27,7 @@ function Row({ scopeKey, c, canEdit }: { scopeKey: string; c: Crit; canEdit: boo
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10, marginTop: 10 }}>
         <label style={{ fontSize: 12 }}>Intake year<input style={input} disabled={!canEdit} value={v.academicYear} placeholder="e.g. 2026" onChange={set("academicYear")} /></label>
-        <label style={{ fontSize: 12 }}>Minimum marks in Intermediate / HSSC (%)<input style={input} disabled={!canEdit} type="number" min={0} max={100} value={v.minPercentage} onChange={set("minPercentage")} /></label>
+        <label style={{ fontSize: 12 }}>Minimum marks in Intermediate / HSSC (%)<input style={input} disabled={!canEdit} type="number" min={50} max={100} value={v.minPercentage} onChange={set("minPercentage")} /></label>
         <label style={{ fontSize: 12 }}>Seats per year<input style={input} disabled={!canEdit} type="number" min={0} value={v.seats} onChange={set("seats")} /></label>
         <label style={{ fontSize: 12 }}>Entry test<input style={input} disabled={!canEdit} value={v.entryTest} placeholder="e.g. NTS NAT-IE, ECAT, university test" onChange={set("entryTest")} /></label>
         <label style={{ fontSize: 12 }}>Minimum test score (%)<input style={input} disabled={!canEdit} type="number" min={0} max={100} value={v.minTestScore} onChange={set("minTestScore")} /></label>

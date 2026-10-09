@@ -4,6 +4,22 @@ import type { computeHecComparison } from "../lib/hecCompare";
 import { EVIDENCE } from "../lib/evidence";
 import PrintButton from "./PrintButton";
 
+const EXHIBIT = [
+  "Program objectives; program structure (core and electives) against the HEC framework; years, total credit hours, summary of required courses",
+  "One page for every course: outline, structure, credit hours, prerequisite, CLOs, CLO-to-GA mapping, weekly planner, reference books",
+  "A course folder for every course (and lab): objectives, CLOs, contents, weekly plan, attendance, assignments, quizzes and exams with solutions, three graded samples (maximum, average, minimum), grading model, results, outcomes assessment",
+  "Student evaluation of every course and instructor",
+  "Class schedule and lab schedule for the whole academic year",
+  "Final year design projects: areas, technologies used, link with industry, reports and demonstrations",
+  "Alumni data: entry and graduation statistics, placement in industry and in higher education",
+  "Faculty contracts (offer letters) of permanent faculty",
+  "Admission policy and eligibility, previous admission data, student strength and dropout",
+  "Annual budget; financial profile of investments since the start of the program",
+  "Lab inventory, schedule and manuals of every lab",
+  "Approved rules: admissions, registration, examinations, probation, discipline, faculty hiring, evaluation and promotion, curriculum revision",
+  "Minutes of Board of Governors / Syndicate, Board of Studies and departmental meetings",
+];
+
 type Ev = { area: string; kind: string; title: string; organization: string | null; date: Date | null; count: number | null; target: number | null; actual: number | null };
 const d = (x: Date | null) => (x ? x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
@@ -11,7 +27,7 @@ export default function SarDocument({ data, hec, evidence, program, department, 
   data: Awaited<ReturnType<typeof computeReadiness>>; hec: Awaited<ReturnType<typeof computeHecComparison>> | null; evidence: Ev[];
   program: string; department: string; lead: string; instituteHead: string; back: string;
 }) {
-  const { scored, overall, areas } = data;
+  const { scored, overall, areas, qualifying, qualifyingManual } = data;
   const ov = rate(overall);
   const h2 = { fontSize: 16, margin: "22px 0 6px", borderBottom: "1px solid #999", paddingBottom: 3 } as const;
   const cell = { border: "1px solid #bbb", padding: "4px 8px", fontSize: 12.5, textAlign: "left", verticalAlign: "top" } as const;
@@ -26,10 +42,19 @@ export default function SarDocument({ data, hec, evidence, program, department, 
       <div style={{ fontSize: 12.5, color: "#555" }}>{department} · Program Lead: {lead} · Institute Head: {instituteHead}</div>
       <div style={{ fontSize: 12.5, color: "#555", marginBottom: 12 }}>Prepared on {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}. Every figure is taken from the institute&apos;s own records.</div>
 
+      <h2 style={h2}>Qualifying requirements</h2>
+      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+        <thead><tr><th style={cell}>Requirement</th><th style={cell}>Met</th></tr></thead>
+        <tbody>{qualifying.map((c) => (
+          <tr key={c.label}><td style={cell}>{c.label}</td><td style={{ ...cell, whiteSpace: "nowrap", color: c.total > 0 && c.done >= c.total ? "#2E7D4F" : "#B3261E" }}>{c.total > 0 ? `${c.done} of ${c.total}` : "—"}</td></tr>
+        ))}</tbody>
+      </table>
+      {qualifyingManual.map((m) => <p key={m} style={{ fontSize: 12.5, margin: "4px 0" }}>To be shown from paper records: {m}</p>)}
+
       <h2 style={h2}>Summary</h2>
       <p style={{ fontSize: 13.5, margin: "4px 0" }}>Overall readiness: <b style={{ color: ov.colour }}>{overall === null ? "not measured" : `${overall}% (${ov.name})`}</b></p>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
-        <thead><tr><th style={cell}>No.</th><th style={cell}>Criterion</th><th style={cell}>Score</th><th style={cell}>Rating</th></tr></thead>
+        <thead><tr><th style={cell}>No.</th><th style={cell}>Criterion</th><th style={cell}>Score</th><th style={cell}>Compliance level</th></tr></thead>
         <tbody>{scored.map(({ a, s }) => { const r = rate(s); return (
           <tr key={a.no}><td style={cell}>{a.no}</td><td style={cell}>{a.title}</td><td style={cell}>{s === null ? "—" : `${s}%`}</td><td style={{ ...cell, color: r.colour, fontWeight: 700 }}>{r.name}</td></tr>
         ); })}</tbody>
@@ -63,6 +88,12 @@ export default function SarDocument({ data, hec, evidence, program, department, 
           {hec.missing.length > 0 && <p style={{ fontSize: 12.5, margin: "2px 0" }}>Missing: {hec.missing.map((m) => `${m.code} ${m.title}`).join("; ")}.</p>}
         </>
       )}
+
+      <h2 style={h2}>Exhibit room checklist (Manual, Annexure B)</h2>
+      <p style={{ fontSize: 12.5, margin: "4px 0" }}>Documents the visiting team expects to find on display. Tick each one when it is ready.</p>
+      <ul style={{ fontSize: 12.5, margin: 0, paddingLeft: 20, listStyle: "none" }}>
+        {EXHIBIT.map((x) => <li key={x}>☐ {x}</li>)}
+      </ul>
 
       {EVIDENCE.map((def) => {
         const rows = evidence.filter((e) => e.area === def.area);

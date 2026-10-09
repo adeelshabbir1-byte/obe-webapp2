@@ -31,7 +31,7 @@ export default async function AdmissionCriteriaPage({ searchParams }: { searchPa
     <Shell roleLabel={LABEL[user.role] || "Admissions"} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Admission Criteria</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
-        Who may be admitted to each degree program{title ? ` of ${title}` : ""}. Each Dean sets these for the programs of their own faculty. They count towards the Admission criterion in the accreditation report.
+        Who may be admitted to each degree program{title ? ` of ${title}` : ""}. Each Dean sets these for the programs of their own faculty. NCEAC&apos;s rules: at least 50% in Intermediate or DAE with Mathematics (pre-medical candidates are eligible at 50% if they study two extra Mathematics courses of 6 credit hours in the first year); at least 60% for computing engineering; no more than 50% of the degree&apos;s credit hours may be transferred in. These feed Criterion 4 of the accreditation report.
       </p>
       {isChairman && options.length > 1 && (
         <form method="GET" className="card" style={{ marginBottom: 14, display: "flex", gap: 10, alignItems: "end" }}>
