@@ -126,11 +126,12 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     prisma.course.findMany({ where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) }, select: { id: true, batchId: true, creditHours: true, semesterNumber: true, courseType: true, isNonCredit: true, instructorId: true, isOffered: true } }),
   ]);
   const yearAgo = new Date(); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-  const [activities, ratio, finance, library] = await Promise.all([
+  const [activities, ratio, finance, library, pcSpecs] = await Promise.all([
     prisma.activityLog.findMany({ where: { coordinatorId: user.id, activityDate: { gte: yearAgo } }, select: { category: true } }),
     labRatio(chairmanId, user.departmentId || null),
     prisma.financeEntry.findMany({ where: { chairmanId, fiscalYear: fiscalYearNow(), kind: "BUDGET" }, select: { category: true, amount: true } }),
     prisma.libraryInfo.findUnique({ where: { chairmanId } }),
+    prisma.labComputerSpec.findMany({ where: { chairmanId, ...(user.departmentId ? { labId: { in: (await prisma.labInfo.findMany({ where: { chairmanId, departmentId: user.departmentId }, select: { id: true } })).map((l) => l.id) } } : {}) }, select: { quantity: true, ramGb: true, purchaseYear: true } }),
   ]);
   const budgetOf = (cat: string) => finance.find((x) => x.category === cat)?.amount || 0;
   const facultyIds = faculty.map((f) => f.id);
@@ -255,6 +256,8 @@ export default async function AccreditationStatusPage({ searchParams }: { search
       { label: "Computing labs defined", done: Math.min(labs, 1), total: 1, hint: "Add the labs in the timetable settings.", href: "/coordinator/timetable" },
       { label: "Labs with their inventory filled in by the Lab Manager", done: Math.min(ratio.labs, 1), total: 1, hint: "Ask the Lab Manager to enter the lab data.", href: "/lab-inventory" },
       { label: `Working computers for your ${ratio.students} students (assumed target: 1 per 2 students; now ${ratio.perComputer ?? "—"} students per computer)`, done: Math.min(ratio.working, Math.ceil(ratio.students / 2)), total: Math.ceil(ratio.students / 2), hint: "More working computers, or fewer students per lab.", href: "/lab-inventory" },
+      { label: "Installed computers with their specification recorded", done: Math.min(pcSpecs.reduce((n, x) => n + x.quantity, 0), ratio.computers), total: ratio.computers, hint: "The Lab Manager lists each kind of PC (processor, RAM, storage) under PC specs.", href: "/lab-inventory" },
+      { label: `Described computers bought in the last 5 years (assumed limit)`, done: pcSpecs.filter((x) => (x.purchaseYear || 0) >= new Date().getFullYear() - 5).reduce((n, x) => n + x.quantity, 0), total: pcSpecs.reduce((n, x) => n + x.quantity, 0), hint: "Older machines may need replacing.", href: "/lab-inventory" },
       { label: "Library record filled in", done: library ? 1 : 0, total: 1, hint: "Ask the Lab Manager or the Institute Head to enter the library details.", href: "/library-inventory" },
       { label: "Computing book titles recorded", done: (library?.computingTitles || 0) > 0 ? 1 : 0, total: 1, hint: "Record how many of the library's titles are in computing.", href: "/library-inventory" },
       { label: "Digital databases listed", done: library?.databases?.trim() ? 1 : 0, total: 1, hint: "List the digital databases the library subscribes to.", href: "/library-inventory" },
