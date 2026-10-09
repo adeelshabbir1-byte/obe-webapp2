@@ -46,6 +46,7 @@ export default function Shell({
     }
   }, [roleLabel]);
 
+  const [openSec, setOpenSec] = useState<Record<string, boolean>>({});
   const [switching, setSwitching] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -92,26 +93,35 @@ export default function Shell({
             </Link>
           )}
         </div>
-        {groupNavLinks(deptCoordinator ? navLinks.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : navLinks).map((section) => (
-          <div key={section.title} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 9.5, letterSpacing: ".08em", textTransform: "uppercase", color: "#8A8266", margin: "0 0 4px", paddingLeft: 2 }}>
-              {section.title}
-            </div>
-            {section.links.map((n) => {
-              const isActive = pathname === n.href;
-              const Icon = getNavIcon(n.label);
-              return (
-                <Link key={n.href} href={n.href} className="nav-link" style={{
-                  display: "flex", alignItems: "center", gap: 9,
-                  ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
-                }}>
-                  <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
-                  <span>{n.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        {(() => {
+          const sections = groupNavLinks(deptCoordinator ? navLinks.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : navLinks);
+          const crowded = sections.length > 2;
+          return sections.map((section, idx) => {
+            const hasActive = section.links.some((n) => n.href === pathname);
+            // With many sections only the first and the one you are in are open; click a heading to open or close any.
+            const open = openSec[section.title] ?? (!crowded || idx === 0 || hasActive);
+            return (
+              <div key={section.title} style={{ marginBottom: crowded ? 6 : 14 }}>
+                <button type="button" onClick={() => setOpenSec({ ...openSec, [section.title]: !open })} style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: crowded ? "pointer" : "default", fontSize: 9.5, letterSpacing: ".08em", textTransform: "uppercase", color: hasActive ? "#D8CFAE" : "#8A8266", margin: "0 0 4px", padding: "4px 2px" }} aria-expanded={open}>
+                  <span>{section.title}</span>{crowded && <span style={{ fontSize: 11 }}>{open ? "▾" : "▸"}</span>}
+                </button>
+                {open && section.links.map((n) => {
+                  const isActive = pathname === n.href;
+                  const Icon = getNavIcon(n.label);
+                  return (
+                    <Link key={n.href} href={n.href} className="nav-link" style={{
+                      display: "flex", alignItems: "center", gap: 9,
+                      ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
+                    }}>
+                      <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
+                      <span>{n.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          });
+        })()}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
           <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
           {deptCoordinator && (

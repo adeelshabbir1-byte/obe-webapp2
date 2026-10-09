@@ -150,7 +150,7 @@ export const CHAIRMAN_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
-  { href: "/resources", label: "Resources (labs, library, finance, admissions)" },
+  { href: "/resources", label: "Resources" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
 ];

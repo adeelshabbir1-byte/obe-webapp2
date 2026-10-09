@@ -20,9 +20,13 @@ const RULES: { match: (href: string) => boolean; section: string }[] = [
   { match: (h) => /\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h), section: "Review & Approval" },
   { match: (h) => /\/omc\/(plo-matrix|weight-policy|equivalence)$/.test(h), section: "Curriculum Governance" },
 
-  // Institute Head
-  { match: (h) => /\/chairman\/(coordinators|omc|assigners)$/.test(h), section: "Accounts" },
-  { match: (h) => /\/chairman\/(plos|cqi|audit-log)$/.test(h), section: "Governance" },
+  // Institute Head and other managers
+  { match: (h) => /^\/(chairman\/faculty-workload|deadlines|semester-plan)$/.test(h), section: "Daily work" },
+  { match: (h) => /^\/(academic-calendar|admission-criteria)$/.test(h), section: "Calendar & Admissions" },
+  { match: (h) => /\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h), section: "People & Structure" },
+  { match: (h) => /\/chairman\/(plos|cqi)$/.test(h) || /\/coordinator\/semester-section-map$/.test(h), section: "Curriculum & Outcomes" },
+  { match: (h) => /^\/(accreditation-overview|resources)$/.test(h) || /\/coordinator\/(evidence|course-folders|hec-comparison|sar)$/.test(h), section: "Accreditation & Resources" },
+  { match: (h) => /\/chairman\/(audit-log|report-access)$/.test(h) || /^\/faculty-report$/.test(h), section: "Reports & Records" },
 
   // Super User
   { match: (h) => /\/admin\/(users|curricula|curriculum-migration|platform-settings)/.test(h), section: "Platform" },
