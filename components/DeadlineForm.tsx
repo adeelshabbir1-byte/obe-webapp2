@@ -21,8 +21,8 @@ export default function DeadlineForm({ people, courses, roles }: { people: Perso
     setOk(res.ok); setMsg(res.ok ? "Deadline set." : d.error || "Something went wrong");
     if (res.ok) { setF({ ...f, title: "", description: "", dueDate: "" }); router.refresh(); }
   }
-  function pickKind(kind: string) { setF({ ...f, kind, courseId: "", role: KIND_ROLE[kind] || (["SUBJECT_EXPERT", "INSTRUCTOR"].includes(f.role) || kind === "CUSTOM" ? f.role : "SUBJECT_EXPERT"), title: kind === "CUSTOM" ? f.title : DEADLINE_KINDS[kind] }); }
-  const roleChoices = isCourse ? roles.filter((r) => ["SUBJECT_EXPERT", "INSTRUCTOR"].includes(r.value)) : roles;
+  function pickKind(kind: string) { setF({ ...f, kind, courseId: "", role: KIND_ROLE[kind] || (["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(f.role) || kind === "CUSTOM" ? f.role : "SUBJECT_EXPERT"), title: kind === "CUSTOM" ? f.title : DEADLINE_KINDS[kind] }); }
+  const roleChoices = isCourse ? roles.filter((r) => ["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(r.value)) : roles;
   return (
     <div className="card" style={{ marginBottom: 14 }}>
       <h3 style={{ marginTop: 0 }}>Set a deadline</h3>

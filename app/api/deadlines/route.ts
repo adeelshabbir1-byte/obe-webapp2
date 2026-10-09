@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     if (!people.some((p) => p.id === assigneeId)) return NextResponse.json({ error: "You can only set deadlines for people in your own area" }, { status: 403 });
   } else {
     role = KIND_ROLE[b.kind] || String(b.role || "");
-    if (standing && !["SUBJECT_EXPERT", "INSTRUCTOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the Subject Expert or Instructor" }, { status: 400 });
+    if (standing && !["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the Subject Expert, Instructor or Program Lead" }, { status: 400 });
     if (!ROLE_LABEL[role]) return NextResponse.json({ error: "Choose the role this belongs to" }, { status: 400 });
-    if (courseId && !["SUBJECT_EXPERT", "INSTRUCTOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the course's Subject Expert or Instructor" }, { status: 400 });
+    if (courseId && !["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the course's Subject Expert, Instructor or Program Lead" }, { status: 400 });
   }
   const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: due, ...(standing ? { allCourses: true } : {}) } as never });
   if (standing) await topUpStanding(chairmanOf(user));
