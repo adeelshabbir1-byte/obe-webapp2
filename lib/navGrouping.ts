@@ -1,50 +1,42 @@
 type Link = { href: string; label: string };
 type Section = { title: string; links: Link[] };
 
-// Ordered list of (matcher, section title) rules — first match wins. This
-// lets Shell group any flat nav array without every page needing to change
-// how it passes navLinks.
+// The same headings are used for every role, in the same order, so the menu looks alike wherever you sign in.
+// First matching rule wins, which lets Shell group any flat nav array without each page changing how it passes navLinks.
+const ORDER = ["My work", "Setup", "Semester Operations", "Teaching & Timetable", "People & Structure", "Review & Approval", "Curriculum & Outcomes", "Accreditation & Resources", "Calendar & Admissions", "Reports & Analytics", "Community", "Platform", "More"];
+
 const RULES: { match: (href: string) => boolean; section: string }[] = [
-  // Shared across every role that can reach them (PC, SE, OMC, Institute Head) —
-  // matched first, before any role-specific rule below, so these three
-  // always land together in one section no matter which role's nav list
-  // they're coming from or which URL prefix they happen to live under.
-  { match: (h) => /\/coordinator\/prerequisite-map$/.test(h) || /\/omc\/course-repositioning$/.test(h) || /\/coordinator\/program-semester-map$/.test(h), section: "Program & Course Mapping" },
+  { match: (h) => /^\/(deadlines|semester-plan|dashboard)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
+      || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h), section: "My work" },
 
-  // Coordinator
-  { match: (h) => /\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale)$/.test(h), section: "Setup" },
-  { match: (h) => /\/coordinator\/(semester|repeat-offering)$/.test(h), section: "Semester Operations" },
-  { match: (h) => /\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest)$/.test(h), section: "Reports & Analytics" },
+  { match: (h) => /^\/coordinator\/(faculty|batches|courses|assign-subject-experts|plos|calendar|students|grading-scale|lab-engineers|elective-options|custom-categories|bulk-student-upload|program-profile|required-books|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || /^\/chairman\/(ai-configuration|institute-settings)$/.test(h), section: "Setup" },
+  { match: (h) => /^\/coordinator\/(semester|repeat-offering)$/.test(h), section: "Semester Operations" },
+  { match: (h) => /^\/coordinator\/(timetable|out-of-batch-requests|assignment-history|elective-instructor-report)$/.test(h) || /^\/instructor\/course-team$/.test(h) || /^\/assigner\/(matrix|course-short-names)$/.test(h), section: "Teaching & Timetable" },
 
-  // OMC
-  { match: (h) => /\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h), section: "Review & Approval" },
-  { match: (h) => /\/omc\/(plo-matrix|weight-policy|equivalence)$/.test(h), section: "Curriculum Governance" },
+  { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
+      || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/chairman\/alumni-custodian$/.test(h), section: "People & Structure" },
 
-  // Institute Head and other managers
-  { match: (h) => /^\/(chairman\/faculty-workload|deadlines|semester-plan)$/.test(h), section: "Daily work" },
+  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h) || /^\/dean\/approvals$/.test(h), section: "Review & Approval" },
+  { match: (h) => /^\/omc\/(plo-matrix|weight-policy|equivalence|import-content|content-sync|prerequisite-correlation|master-curriculum|passing-criteria|section-comparison|course-repositioning)$/.test(h)
+      || /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || /^\/chairman\/(plos|cqi)$/.test(h) || /^\/dean\/curricula$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
+
+  { match: (h) => /^\/(accreditation-overview|resources|lab-inventory|library-inventory)$/.test(h) || /^\/chairman\/finance$/.test(h)
+      || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status|activities)$/.test(h), section: "Accreditation & Resources" },
   { match: (h) => /^\/(academic-calendar|admission-criteria)$/.test(h), section: "Calendar & Admissions" },
-  { match: (h) => /\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h), section: "People & Structure" },
-  { match: (h) => /\/chairman\/(plos|cqi)$/.test(h) || /\/coordinator\/semester-section-map$/.test(h), section: "Curriculum & Outcomes" },
-  { match: (h) => /^\/(accreditation-overview|resources)$/.test(h) || /\/coordinator\/(evidence|course-folders|hec-comparison|sar)$/.test(h), section: "Accreditation & Resources" },
-  { match: (h) => /\/chairman\/(audit-log|report-access)$/.test(h) || /^\/faculty-report$/.test(h), section: "Reports & Records" },
 
-  // Super User
-  { match: (h) => /\/admin\/(users|curricula|curriculum-migration|platform-settings)/.test(h), section: "Platform" },
+  { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)
+      || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h), section: "Reports & Analytics" },
 
-  // Shared
-  { match: (h) => /\/(omc\/)?reports/.test(h), section: "Reports & Analytics" },
+  { match: (h) => /^\/(advisor\/dashboard|coordinator\/(stakeholders|surveys)|public-library|instructor\/peers)$/.test(h), section: "Community" },
+  { match: (h) => /^\/admin\//.test(h), section: "Platform" },
 ];
 
 export function groupNavLinks(links: Link[]): Section[] {
   const sections = new Map<string, Link[]>();
-  const order: string[] = [];
-
   for (const link of links) {
-    const rule = RULES.find((r) => r.match(link.href));
-    const title = rule?.section || "More";
-    if (!sections.has(title)) { sections.set(title, []); order.push(title); }
+    const title = RULES.find((r) => r.match(link.href))?.section || "More";
+    if (!sections.has(title)) sections.set(title, []);
     sections.get(title)!.push(link);
   }
-
-  return order.map((title) => ({ title, links: sections.get(title)! }));
+  return ORDER.filter((t) => sections.has(t)).map((title) => ({ title, links: sections.get(title)! }));
 }
