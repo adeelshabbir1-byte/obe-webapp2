@@ -2227,3 +2227,22 @@ model ActivityLog {
 
   @@index([coordinatorId])
 }
+
+// The institute's library: one record per institute, kept by the Lab Manager or the Institute Head.
+model LibraryInfo {
+  id               String   @id @default(cuid())
+  chairmanId       String   @unique
+  seats            Int      @default(0)
+  totalTitles      Int      @default(0) // printed book titles
+  computingTitles  Int      @default(0) // of which in computing
+  totalVolumes     Int      @default(0) // copies
+  printJournals    Int      @default(0)
+  ebooks           Int      @default(0)
+  databases        String?  @db.Text // digital databases subscribed to (HEC digital library, IEEE, ACM ...)
+  openHoursPerWeek Int?
+  hasLibrarian     Boolean  @default(false)
+  lastStockCheck   DateTime?
+  notes            String?  @db.Text
+  updatedById      String?
+  updatedAt        DateTime @updatedAt
+}

@@ -35,6 +35,7 @@ export const LAB_ENGINEER_NAV = [
 export const LAB_MANAGER_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/faculty/profile", label: "My Profile" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -104,6 +105,7 @@ export const COORDINATOR_NAV = [
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/coordinator/activities", label: "Extra-curricular Activities" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -125,6 +127,7 @@ export const CHAIRMAN_NAV = [
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/chairman/finance", label: "Finance" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const DEAN_NAV = [
@@ -137,6 +140,7 @@ export const DEAN_NAV = [
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -155,6 +159,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export const HOD_NAV = [
@@ -167,6 +172,7 @@ export const HOD_NAV = [
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
+  { href: "/library-inventory", label: "Library Inventory" },
 ];
 
 export function navForRole(role: string) {

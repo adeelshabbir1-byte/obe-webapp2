@@ -126,10 +126,11 @@ export default async function AccreditationStatusPage({ searchParams }: { search
     prisma.course.findMany({ where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) }, select: { id: true, batchId: true, creditHours: true, semesterNumber: true, courseType: true, isNonCredit: true, instructorId: true, isOffered: true } }),
   ]);
   const yearAgo = new Date(); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-  const [activities, ratio, finance] = await Promise.all([
+  const [activities, ratio, finance, library] = await Promise.all([
     prisma.activityLog.findMany({ where: { coordinatorId: user.id, activityDate: { gte: yearAgo } }, select: { category: true } }),
     labRatio(chairmanId, user.departmentId || null),
     prisma.financeEntry.findMany({ where: { chairmanId, fiscalYear: fiscalYearNow(), kind: "BUDGET" }, select: { category: true, amount: true } }),
+    prisma.libraryInfo.findUnique({ where: { chairmanId } }),
   ]);
   const budgetOf = (cat: string) => finance.find((x) => x.category === cat)?.amount || 0;
   const facultyIds = faculty.map((f) => f.id);
@@ -249,11 +250,15 @@ export default async function AccreditationStatusPage({ searchParams }: { search
       { label: "Faculty within their normal teaching load", done: loadOk, total: faculty.length, hint: "Some teachers have more courses than their normal load.", href: "/coordinator/load-report" },
       { label: "Faculty profiles 80% complete", done: facComplete, total: faculty.length, hint: "Ask faculty to complete My Profile.", href: "/faculty-report" },
     ] },
-    { no: 8, title: "Infrastructure and Facilities", manual: ["Multimedia equipment and the learning environment", "Software licences, internet bandwidth, hardware per student", "Library resources, digital databases and textbooks"], checks: [
+    { no: 8, title: "Infrastructure and Facilities", manual: ["Multimedia equipment and the learning environment", "Software licences, internet bandwidth, hardware per student"], checks: [
       { label: "Lecture rooms defined", done: Math.min(lectureRooms, 1), total: 1, hint: "Add the rooms in the timetable settings.", href: "/coordinator/timetable" },
       { label: "Computing labs defined", done: Math.min(labs, 1), total: 1, hint: "Add the labs in the timetable settings.", href: "/coordinator/timetable" },
       { label: "Labs with their inventory filled in by the Lab Manager", done: Math.min(ratio.labs, 1), total: 1, hint: "Ask the Lab Manager to enter the lab data.", href: "/lab-inventory" },
       { label: `Working computers for your ${ratio.students} students (assumed target: 1 per 2 students; now ${ratio.perComputer ?? "—"} students per computer)`, done: Math.min(ratio.working, Math.ceil(ratio.students / 2)), total: Math.ceil(ratio.students / 2), hint: "More working computers, or fewer students per lab.", href: "/lab-inventory" },
+      { label: "Library record filled in", done: library ? 1 : 0, total: 1, hint: "Ask the Lab Manager or the Institute Head to enter the library details.", href: "/library-inventory" },
+      { label: "Computing book titles recorded", done: (library?.computingTitles || 0) > 0 ? 1 : 0, total: 1, hint: "Record how many of the library's titles are in computing.", href: "/library-inventory" },
+      { label: "Digital databases listed", done: library?.databases?.trim() ? 1 : 0, total: 1, hint: "List the digital databases the library subscribes to.", href: "/library-inventory" },
+      { label: "A qualified librarian in post", done: library?.hasLibrarian ? 1 : 0, total: 1, hint: "Record whether a librarian is in post.", href: "/library-inventory" },
     ] },
     { no: 9, title: "Industrial Linkages", manual: ["Advisory board and signed agreements with industry"], checks: [
       { label: "Employers on record (approved)", done: Math.min(employers, 1), total: 1, hint: "Record the employers your graduates work for.", href: "/coordinator/stakeholders" },
