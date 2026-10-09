@@ -1,5 +1,9 @@
 import { STATE_COLOUR, STATE_TEXT, colour, pct, rate, word, type State } from "../lib/readiness";
 import type { computeReadiness } from "../lib/readiness";
+import type { Recipient } from "../lib/requests";
+import AskForAction from "./AskForAction";
+
+export type AskInfo = { leadId: string; programName: string; recipients: Recipient[] };
 
 function Donut({ value, size = 150 }: { value: number | null; size?: number }) {
   const r = size / 2 - 12, c = 2 * Math.PI * r, v = value ?? 0;
@@ -22,7 +26,8 @@ function Bar({ value }: { value: number | null }) {
   );
 }
 
-export default function ReadinessReport({ data, sarHref }: { data: Awaited<ReturnType<typeof computeReadiness>>; sarHref?: string }) {
+export default function ReadinessReport({ data, sarHref, ask }: { data: Awaited<ReturnType<typeof computeReadiness>>; sarHref?: string; ask?: AskInfo }) {
+  const askMsg = (label: string, done: number, total: number, hint: string) => `Please complete: ${label} for ${ask?.programName || "the program"} (${total === 0 ? "nothing recorded yet" : `${done} of ${total} done`}). ${hint}\n\nPlease reply when it is done, or tell me what is holding it up.`;
   const { batches, batchId, courses, plos, scored, overall, priorities, areas, areaScore, grid, COLS, qualifying, qualifyingManual } = data;
   return (
     <>
@@ -88,11 +93,12 @@ export default function ReadinessReport({ data, sarHref }: { data: Awaited<Retur
           <h3 style={{ marginTop: 0 }}>Fix these first</h3>
           <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>The weakest items, lowest first.</p>
           {priorities.map((c, i) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "26px 1fr 70px 120px", gap: 10, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
+            <div key={i} style={{ display: "grid", gridTemplateColumns: ask ? "26px 1fr 70px 120px 60px" : "26px 1fr 70px 120px", gap: 10, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
               <b style={{ color: colour(c.p) }}>{i + 1}</b>
               <span><b>{c.label}</b> <span style={{ color: "var(--slate)" }}>· {c.area}. {c.hint}</span></span>
               <b style={{ color: colour(c.p), textAlign: "right" }}>{c.p}%</b>
               <a href={c.href} className="btn" style={{ textAlign: "center", fontSize: 12 }}>Open</a>
+              {ask && <AskForAction leadId={ask.leadId} recipients={ask.recipients} subject={`${c.label} (${ask.programName})`} area={c.area} href={c.href} message={askMsg(c.label, c.done, c.total, c.hint)} />}
             </div>
           ))}
         </div>
@@ -110,10 +116,11 @@ export default function ReadinessReport({ data, sarHref }: { data: Awaited<Retur
             {a.checks.map((c, i) => {
               const p = pct(c);
               return (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(200px, 320px) 1fr 110px 80px", gap: 12, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
+                <div key={i} style={{ display: "grid", gridTemplateColumns: ask ? "minmax(200px, 320px) 1fr 110px 80px 60px" : "minmax(200px, 320px) 1fr 110px 80px", gap: 12, alignItems: "center", padding: "7px 0", borderTop: i ? "1px solid #eee" : undefined, fontSize: 13 }}>
                   <span>{c.label}</span><Bar value={p} />
                   <span style={{ color: "var(--slate)", textAlign: "right" }}>{c.total === 0 ? "nothing yet" : `${c.done} of ${c.total}`}</span>
                   <b style={{ color: colour(p), textAlign: "right" }}>{p === null ? "—" : `${p}%`}</b>
+                  {ask && (p === null || p < 100) ? <AskForAction leadId={ask.leadId} recipients={ask.recipients} subject={`${c.label} (${ask.programName})`} area={`Criterion ${a.no}: ${a.title}`} href={c.href} message={askMsg(c.label, c.done, c.total, c.hint)} /> : ask ? <span /> : null}
                 </div>
               );
             })}

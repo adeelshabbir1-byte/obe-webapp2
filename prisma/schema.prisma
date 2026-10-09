@@ -2361,3 +2361,29 @@ model Deadline {
   @@index([chairmanId])
   @@index([assigneeId])
 }
+
+// A request for action: the Institute Head (or a Dean / Chairman) asks a person to finish something found in the accreditation report;
+// the person replies or marks it done, and the sender sees the answer.
+model TaskRequest {
+  id          String    @id @default(cuid())
+  chairmanId  String
+  fromId      String
+  toId        String
+  leadId      String?   // the Program Lead whose program the request is about
+  subject     String
+  area        String?
+  href        String?   // the page where the work is done
+  body        String    @db.Text
+  dueDate     DateTime?
+  status      String    @default("OPEN") // OPEN | RESPONDED | DONE | CLOSED
+  response    String?   @db.Text
+  respondedAt DateTime?
+  doneAt      DateTime?
+  remindedAt  DateTime?
+  reminders   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([toId, status])
+  @@index([fromId, status])
+  @@index([chairmanId])
+}

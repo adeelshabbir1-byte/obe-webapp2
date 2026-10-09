@@ -31,6 +31,7 @@ export default function Shell({
   const [currentTerm, setCurrentTerm] = useState<{ termName: string; year: number } | null>(null);
 
   useEffect(() => {
+    fetch("/api/requests/count").then((r) => r.json()).then((d) => setReqCount(Number(d.count) || 0)).catch(() => {});
     fetch("/api/institute-info").then((r) => r.json()).then((d) => {
       setInstituteName(d.instituteName); setInstituteLogo(d.instituteLogo);
       setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
@@ -46,6 +47,7 @@ export default function Shell({
     }
   }, [roleLabel]);
 
+  const [reqCount, setReqCount] = useState(0);
   const [openSec, setOpenSec] = useState<Record<string, boolean>>({});
   const [switching, setSwitching] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -94,7 +96,8 @@ export default function Shell({
           )}
         </div>
         {(() => {
-          const sections = groupNavLinks(deptCoordinator ? navLinks.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : navLinks);
+          const withRequests = navLinks.some((n) => n.href === "/requests") ? navLinks : [...navLinks, { href: "/requests", label: "Requests" }];
+          const sections = groupNavLinks(deptCoordinator ? withRequests.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : withRequests);
           const crowded = sections.length > 2;
           return sections.map((section, idx) => {
             const hasActive = section.links.some((n) => n.href === pathname);
@@ -114,7 +117,7 @@ export default function Shell({
                       ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
                     }}>
                       <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
-                      <span>{n.label}</span>
+                      <span>{n.href === "/requests" && reqCount > 0 ? `Requests (${reqCount})` : n.label}</span>
                     </Link>
                   );
                 })}
