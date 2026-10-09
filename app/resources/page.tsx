@@ -72,7 +72,7 @@ export default async function ResourcesPage() {
           [["Programs", programs], ["Programs with criteria set", crit.length], ["Lowest minimum %", critRows.length ? Math.min(...critRows.map((c) => c.minPercentage ?? 100)) : "—"]], "/admission-criteria", "Open admission criteria")}
       </div>
       <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 14 }}>
-        Need a login for one of these departments? <Link href="/chairman/staff">Create or view their logins</Link>. A Lab Manager is created by the Program Lead under Faculty.
+        Need a login for one of these departments? <Link href="/chairman/staff">Create or view their logins</Link>. A Lab Manager made here looks after the labs of every department.
       </p>
     </Shell>
   );
