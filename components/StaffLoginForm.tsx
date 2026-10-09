@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const input = { padding: "6px 8px", border: "1px solid var(--line)" } as const;
 export default function StaffLoginForm() {
   const router = useRouter();
-  const [f, setF] = useState({ role: "LIBRARIAN", name: "", email: "", username: "", password: "" });
+  const [f, setF] = useState({ role: "LAB_MANAGER", name: "", email: "", username: "", password: "" });
   const [msg, setMsg] = useState(""); const [ok, setOk] = useState(false);
   async function add() {
     setMsg("");
@@ -19,7 +19,7 @@ export default function StaffLoginForm() {
     <div className="card" style={{ marginBottom: 14 }}>
       <h3 style={{ marginTop: 0 }}>Create a login</h3>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
-        <label style={{ fontSize: 12 }}>Role<br /><select style={input} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option value="LIBRARIAN">Librarian (keeps the library record)</option><option value="FINANCE_OFFICER">Finance Officer (keeps budget and spending)</option><option value="STUDENT_AFFAIRS">Student Affairs (enters admission criteria)</option></select></label>
+        <label style={{ fontSize: 12 }}>Role<br /><select style={input} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option value="LAB_MANAGER">Lab Manager / Lab In-charge (keeps the computer lab inventory)</option><option value="LIBRARIAN">Librarian (keeps the library record)</option><option value="FINANCE_OFFICER">Finance Officer (keeps budget and spending)</option><option value="STUDENT_AFFAIRS">Student Affairs (enters admission criteria)</option></select></label>
         <label style={{ fontSize: 12 }}>Name<br /><input style={input} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label style={{ fontSize: 12 }}>Email<br /><input style={input} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <label style={{ fontSize: 12 }}>Username<br /><input style={input} value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></label>

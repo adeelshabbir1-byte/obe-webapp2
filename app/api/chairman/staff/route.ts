@@ -4,7 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 
-const ROLES = ["LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
+const ROLES = ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 
 // The Institute Head creates a Librarian or a Finance Officer login.
 export async function POST(req: NextRequest) {

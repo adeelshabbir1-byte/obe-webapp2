@@ -32,7 +32,8 @@ export async function labScope(user: Who) {
   const { chairmanIdFor } = await import("./reportScope");
   if (user.role === "CHAIRMAN") return { chairmanId: user.id, departmentIds: null as string[] | null, canEdit: true };
   const chairmanId = await chairmanIdFor({ id: user.id, role: user.role, managedById: user.managedById });
-  if (user.role === "LAB_MANAGER") return { chairmanId, departmentIds: user.departmentId ? [user.departmentId] : [], canEdit: true };
+  // A Lab Manager made by the Institute Head has no department and looks after the labs of every department.
+  if (user.role === "LAB_MANAGER") return { chairmanId, departmentIds: user.departmentId ? [user.departmentId] : null, canEdit: true };
   if (["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"].includes(user.role)) return { chairmanId, departmentIds: user.departmentId ? [user.departmentId] : [], canEdit: false };
   if (user.role === "DEAN") {
     const ds = await prisma.department.findMany({ where: { chairmanId, facultyId: user.facultyId || "none" }, select: { id: true } });
