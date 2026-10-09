@@ -15,11 +15,13 @@ export default async function AccreditationOverviewPage() {
   if (!OVERVIEW_ROLES.includes(user.role)) redirect("/dashboard");
 
   const { chairmanId, leads } = await leadsInScope(user);
-  const rows = await Promise.all(leads.slice(0, 40).map(async (l) => {
+  // One program at a time: each report already runs many queries, and the database pool is small.
+  const rows: { l: (typeof leads)[number]; d: Awaited<ReturnType<typeof computeReadiness>>; weakest: { a: { no: number; title: string }; s: number | null } | undefined }[] = [];
+  for (const l of leads.slice(0, 40)) {
     const d = await computeReadiness({ id: l.id, managedById: chairmanId, departmentId: l.departmentId }, "");
     const weakest = d.scored.filter((x) => x.s !== null).sort((a, b) => (a.s as number) - (b.s as number))[0];
-    return { l, d, weakest };
-  }));
+    rows.push({ l, d, weakest });
+  }
   const withScore = rows.filter((r) => r.d.overall !== null);
   const avg = withScore.length ? Math.round(withScore.reduce((n, r) => n + (r.d.overall as number), 0) / withScore.length) : null;
   const needAttention = withScore.filter((r) => (r.d.overall as number) < 60).length;
