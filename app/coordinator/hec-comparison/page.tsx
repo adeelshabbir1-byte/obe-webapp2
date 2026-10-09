@@ -34,7 +34,7 @@ const NAV = [
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
   { href: "/faculty/profile", label: "My Profile" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/coordinator/accreditation-status", label: "Accreditation Status" },
-  { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" },
+  { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },

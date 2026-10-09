@@ -134,8 +134,17 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const loadOk = faculty.filter((f) => courseMeta.filter((c) => c.isOffered && c.instructorId === f.id).length <= f.normalLoad).length;
   const labs = rooms.filter((r) => r.type === "LAB").length, lectureRooms = rooms.filter((r) => r.type === "LECTURE").length;
 
+  // Admission criteria set by the Dean for this lead's program(s)
+  const leadRow = await prisma.user.findUnique({ where: { id: user.id }, select: { leadProgram: true, department_: { select: { facultyId: true } } } });
+  const admissionPrograms = Array.from(new Set([...(leadRow?.leadProgram ? [leadRow.leadProgram] : []), ...scopeBatches.map((b) => b.degreeProgram)]));
+  const admissionSet = admissionPrograms.length
+    ? (await prisma.admissionCriteria.findMany({ where: { chairmanId: user.managedById || "none", scopeKey: leadRow?.department_?.facultyId || "INSTITUTE", degreeProgram: { in: admissionPrograms } }, select: { degreeProgram: true, minPercentage: true, requiredSubjects: true, entryTest: true, seats: true } }))
+        .filter((c) => c.minPercentage !== null || c.requiredSubjects || c.entryTest || c.seats !== null).length
+    : 0;
+
   const areas: Criterion[] = [
-    { no: 1, title: "Admission", manual: ["Admission policy (minimum 50% in Intermediate/HSSC, Mathematics requirement)", "Yearly intake within what the infrastructure can carry", "Transfer-credit policy and graduation requirements"], checks: [
+    { no: 1, title: "Admission", manual: ["Yearly intake within what the infrastructure can carry", "Graduation requirements"], checks: [
+      { label: "Programs with admission criteria set by the Dean", done: admissionSet, total: admissionPrograms.length, hint: "Ask your Dean to set the admission criteria for this program.", href: "/admission-criteria" },
       { label: "Batches with a student count recorded", done: scopeBatches.filter((b) => b.studentCount > 0).length, total: scopeBatches.length, hint: "Record the number of students in each batch.", href: "/coordinator/batches" },
     ] },
     { no: 2, title: "Students", manual: ["Counselling and student support records"], checks: [

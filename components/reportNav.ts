@@ -106,6 +106,8 @@ export const COORDINATOR_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/coordinator/activities", label: "Extra-curricular Activities" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -129,6 +131,8 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/finance", label: "Finance" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
 ];
 
 export const DEAN_NAV = [
@@ -143,6 +147,8 @@ export const DEAN_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -163,6 +169,8 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
 ];
 
 export const HOD_NAV = [
@@ -177,6 +185,8 @@ export const HOD_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
 ];
 
 export function navForRole(role: string) {
