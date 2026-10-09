@@ -26,7 +26,7 @@ export default async function DeadlinesPage() {
   const { people, leadIds } = isSetter ? await reach(user) : { people: [], leadIds: [] as string[] };
   const peopleIds = people.map((p) => p.id);
   const [myCourses, scopeCourses] = await Promise.all([
-    prisma.course.findMany({ where: { OR: [{ subjectExpertId: user.id }, { instructorId: user.id }] }, select: { id: true } }),
+    prisma.course.findMany({ where: { OR: [{ subjectExpertId: user.id }, { instructorId: user.id }, { coordinatorId: user.id }] }, select: { id: true } }),
     isSetter && leadIds.length ? prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true, batch: { select: { batchName: true } } }, orderBy: { code: "asc" }, take: 800 }) : Promise.resolve([]),
   ]);
   const myCourseIds = myCourses.map((c) => c.id);
@@ -45,7 +45,7 @@ export default async function DeadlinesPage() {
 
   // Who holds each course's roles right now
   const courseIds = Array.from(new Set(rows.map((r) => r.courseId).filter((x): x is string => !!x)));
-  const courseRows = (await prisma.course.findMany({ where: { id: { in: courseIds.length ? courseIds : ["none"] } }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true } })) as unknown as { id: string; code: string; title: string; subjectExpertId: string | null; instructorId: string | null }[];
+  const courseRows = (await prisma.course.findMany({ where: { id: { in: courseIds.length ? courseIds : ["none"] } }, select: { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true } })) as unknown as { id: string; code: string; title: string; coordinatorId: string | null; subjectExpertId: string | null; instructorId: string | null }[];
   const courseOf = new Map(courseRows.map((c) => [c.id, c]));
 
   // Role tasks that are not about a course: whoever, in the setter's area, holds the role
@@ -62,7 +62,7 @@ export default async function DeadlinesPage() {
     if (r.courseId) {
       const c = courseOf.get(r.courseId); if (!c) return [];
       const role = r.role || KIND_ROLE[r.kind];
-      const id = role === "INSTRUCTOR" ? c.instructorId : c.subjectExpertId;
+      const id = role === "INSTRUCTOR" ? c.instructorId : role === "PROGRAM_COORDINATOR" ? c.coordinatorId : c.subjectExpertId;
       return id ? [id] : [];
     }
     return r.role ? (await peopleOfSetter(r.setById)).filter((p) => p.hats.includes(r.role as string)).map((p) => p.id) : [];
@@ -87,6 +87,16 @@ export default async function DeadlinesPage() {
   const mine = withStatus.filter((x) => x.who.includes(user.id) || (!x.r.courseId && !!x.r.role && myHats.includes(x.r.role) && x.r.assigneeId === null && x.r.setById !== user.id));
   const mineIds = new Set(mine.map((x) => x.r.id));
   const team = withStatus.filter((x) => !mineIds.has(x.r.id));
+  // The same course task can carry several dates (the Institute Head's final date, then a Dean's earlier one). Show the earliest and note the final.
+  const finalOf = new Map<string, Date>();
+  const earliest = new Map<string, (typeof withStatus)[number]>();
+  for (const x of mine) {
+    if (!x.r.courseId) continue;
+    const key = `${x.r.courseId}|${x.r.kind}`;
+    const f = finalOf.get(key); if (!f || x.r.dueDate > f) finalOf.set(key, x.r.dueDate);
+    const e = earliest.get(key); if (!e || x.r.dueDate < e.r.dueDate) earliest.set(key, x);
+  }
+  const mineShown = mine.filter((x) => !x.r.courseId || earliest.get(`${x.r.courseId}|${x.r.kind}`) === x);
 
   // Per-person summary, by whoever holds the work now. Work nobody holds is listed on its own.
   const per = new Map<string, Record<DlStatus, number>>();
@@ -117,7 +127,7 @@ export default async function DeadlinesPage() {
       </>
     );
   };
-  const table = (list: typeof withStatus, showWho: boolean) => (
+  const table = (list: typeof withStatus, showWho: boolean, finals?: Map<string, Date>) => (
     <table>
       <thead><tr><th>Due</th>{showWho && <th>Who</th>}<th>What</th><th>Course</th><th>Status</th><th></th></tr></thead>
       <tbody>{list.map(({ r, s, who }) => (
@@ -125,7 +135,7 @@ export default async function DeadlinesPage() {
           <td style={{ whiteSpace: "nowrap" }}>{day(r.dueDate)}</td>
           {showWho && <td>{whoCell(r, who)}</td>}
           <td><b>{r.title}</b>{r.kind !== "CUSTOM" && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{DEADLINE_KINDS[r.kind]}</div>}{r.description && <div style={{ fontSize: 12, color: "var(--slate)" }}>{r.description}</div>}
-            {!showWho && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>Set by {names.get(r.setById) || "—"}</div>}</td>
+            {!showWho && <div style={{ fontSize: 11.5, color: "var(--slate)" }}>Set by {names.get(r.setById) || "—"}{r.courseId && finals?.get(`${r.courseId}|${r.kind}`) && finals.get(`${r.courseId}|${r.kind}`)!.getTime() !== r.dueDate.getTime() ? ` · final date ${day(finals.get(`${r.courseId}|${r.kind}`)!)}` : ""}</div>}</td>
           <td style={{ fontSize: 12.5 }}>{r.courseId ? (courseOf.get(r.courseId) ? `${courseOf.get(r.courseId)!.code} ${courseOf.get(r.courseId)!.title}` : "—") : "—"}</td>
           <td>{badge(s)}{r.completedAt && <div style={{ fontSize: 11, color: "var(--slate)" }}>on {day(r.completedAt)}</div>}</td>
           <td><DeadlineRowActions id={r.id} canTick={!r.courseId && (who.includes(user.id) || r.setById === user.id || (!!r.role && myHats.includes(r.role)))} done={!!r.completedAt} canRemove={isSetter && (user.role === "CHAIRMAN" || r.setById === user.id)} /></td>
@@ -140,6 +150,9 @@ export default async function DeadlinesPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         {isSetter ? "Set a deadline for a role or a task, whoever holds it, or for one named person, and see who is on time and who is late." : "The deadlines that belong to you or to your role."}
       </p>
+      {isSetter && (
+        <p style={{ marginBottom: 12 }}><a className="btn" href="/semester-plan">Semester plan: targets for every role, and who is behind</a></p>
+      )}
       {isSetter && <DeadlineForm people={people.map((p) => ({ id: p.id, name: `${p.name} (${ROLE_TEXT[p.role] || p.role})` }))} courses={courseOpts} roles={roleOpts} />}
       {isSetter && unheld > 0 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: "4px solid #B3261E" }}>
@@ -163,7 +176,7 @@ export default async function DeadlinesPage() {
       )}
       <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>For me</h3>
-        {mine.length === 0 ? <p style={{ color: "var(--slate)" }}>Nothing is due from you.</p> : table(mine, false)}
+        {mineShown.length === 0 ? <p style={{ color: "var(--slate)" }}>Nothing is due from you.</p> : table(mineShown, false, finalOf)}
       </div>
       {isSetter && (
         <div className="card" style={{ overflowX: "auto" }}>

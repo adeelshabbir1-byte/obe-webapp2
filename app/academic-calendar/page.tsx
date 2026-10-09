@@ -36,6 +36,9 @@ export default async function AcademicCalendarPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         The official dates for the institute. The Institute Head sets dates for everyone, and each Dean adds dates for their own faculty. Program Leads copy them into their own calendar.
       </p>
+      {(isChairman || isDean || user.role === "PROGRAM_COORDINATOR" || user.role === "HEAD_OF_DEPARTMENT" || user.role === "DEPARTMENT_COORDINATOR") && (
+        <p style={{ marginBottom: 12 }}><a className="btn" href="/semester-plan">Semester plan: task targets by role, and who is behind</a></p>
+      )}
       <AcademicCalendarManager entries={entries} canSet={isChairman || isDean} faculties={faculties} canChooseFaculty={isChairman} canApply={user.role === "PROGRAM_COORDINATOR"} />
     </Shell>
   );
