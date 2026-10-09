@@ -149,13 +149,9 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty-report", label: "Faculty Details Report" },
-  { href: "/lab-inventory", label: "Lab Inventory" },
-  { href: "/chairman/finance", label: "Finance" },
-  { href: "/chairman/staff", label: "Librarian, Finance & Student Affairs Logins" },
-  { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/resources", label: "Resources (labs, library, finance, admissions)" },
   { href: "/academic-calendar", label: "Academic Calendar" },
-  { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 
