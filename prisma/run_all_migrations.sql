@@ -4751,3 +4751,8 @@ ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "role" TEXT;
 
 -- deadline_all_courses
 ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "allCourses" BOOLEAN NOT NULL DEFAULT false;
+
+-- semester_plan
+ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "parentId" TEXT;
+ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planTerm" TEXT;
+CREATE INDEX IF NOT EXISTS "Deadline_planTerm_idx" ON "Deadline"("planTerm");
