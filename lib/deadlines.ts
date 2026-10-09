@@ -92,32 +92,38 @@ export const STATUS_COLOUR: Record<DlStatus, string> = { ON_TIME: "#2E7D4F", LAT
  * - Course work: every course in the setter's area gets its own row, including courses added later.
  * - Plan task "ONE:": one row for the setter's area, ticked off by whoever holds the role.
  * - Plan task "EACH:": one row for every person holding the role in the setter's area, including people who join later.
+ * Works in a handful of queries per setter, however many templates there are.
  */
 export async function topUpStanding(chairmanId: string) {
-  const templates = (await prisma.deadline.findMany({ where: { chairmanId, allCourses: true } as never })) as unknown as { id: string; planTerm: string | null; planKey: string | null; role: string | null; setById: string; kind: string; title: string; description: string | null; dueDate: Date }[];
-  for (const t of templates) {
-    const setter = await prisma.user.findUnique({ where: { id: t.setById }, select: { id: true, role: true, managedById: true, facultyId: true, departmentId: true } });
+  type T = { id: string; planTerm: string | null; planKey: string | null; role: string | null; setById: string; kind: string; title: string; description: string | null; dueDate: Date };
+  const templates = (await prisma.deadline.findMany({ where: { chairmanId, allCourses: true } as never })) as unknown as T[];
+  if (!templates.length) return;
+  const bySetter = new Map<string, T[]>();
+  for (const t of templates) bySetter.set(t.setById, [...(bySetter.get(t.setById) || []), t]);
+  for (const [setById, list] of Array.from(bySetter.entries())) {
+    const setter = await prisma.user.findUnique({ where: { id: setById }, select: { id: true, role: true, managedById: true, facultyId: true, departmentId: true } });
     if (!setter || !SETTER_ROLES.includes(setter.role)) continue;
     const { leadIds, people } = await reach(setter);
-    const base = { chairmanId, setById: t.setById, kind: t.kind, title: t.title, description: t.description, dueDate: t.dueDate, planTerm: t.planTerm, planKey: t.planKey };
-    if (t.planKey) {
-      const scope = t.planKey.split(":")[0];
-      if (scope === "ONE") {
-        const have = await prisma.deadline.findFirst({ where: { chairmanId, setById: t.setById, title: t.title, dueDate: t.dueDate, courseId: null, allCourses: false } as never, select: { id: true } });
-        if (!have) await prisma.deadline.create({ data: { ...base, assigneeId: null, role: t.role, courseId: null } as never });
+    const needCourses = list.some((t) => !t.planKey);
+    const courses = needCourses && leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true }, take: 1500 }) : [];
+    const existing = (await prisma.deadline.findMany({ where: { chairmanId, setById, allCourses: false } as never, select: { title: true, dueDate: true, courseId: true, assigneeId: true } })) as unknown as { title: string; dueDate: Date; courseId: string | null; assigneeId: string | null }[];
+    const have = new Set(existing.map((e) => `${e.title}|${e.dueDate.getTime()}|${e.courseId || ""}|${e.assigneeId || ""}`));
+    const toMake: Record<string, unknown>[] = [];
+    for (const t of list) {
+      const base = { chairmanId, setById, kind: t.kind, title: t.title, description: t.description, dueDate: t.dueDate, planTerm: t.planTerm, planKey: t.planKey, role: t.role };
+      const k = (course: string, who: string) => `${t.title}|${t.dueDate.getTime()}|${course}|${who}`;
+      if (t.planKey) {
+        if (t.planKey.split(":")[0] === "ONE") {
+          const anyOne = existing.some((e) => e.title === t.title && e.dueDate.getTime() === t.dueDate.getTime() && !e.courseId);
+          if (!anyOne) toMake.push({ ...base, assigneeId: null, courseId: null });
+        } else {
+          for (const h of people.filter((p) => t.role && p.hats.includes(t.role))) if (!have.has(k("", h.id))) toMake.push({ ...base, assigneeId: h.id, courseId: null });
+        }
       } else {
-        const holders = people.filter((p) => t.role && p.hats.includes(t.role));
-        const have = new Set((await prisma.deadline.findMany({ where: { chairmanId, setById: t.setById, title: t.title, dueDate: t.dueDate, courseId: null, allCourses: false } as never, select: { assigneeId: true } })).map((x) => x.assigneeId as string));
-        const missing = holders.filter((h) => !have.has(h.id));
-        if (missing.length) await prisma.deadline.createMany({ data: missing.map((h) => ({ ...base, assigneeId: h.id, role: t.role, courseId: null })) as never });
+        for (const c of courses) if (!have.has(k(c.id, ""))) toMake.push({ ...base, assigneeId: null, courseId: c.id });
       }
-      continue;
     }
-    if (!leadIds.length) continue;
-    const courses = await prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true }, take: 1500 });
-    const have = new Set((await prisma.deadline.findMany({ where: { chairmanId, setById: t.setById, kind: t.kind, title: t.title, dueDate: t.dueDate, courseId: { not: null } }, select: { courseId: true } })).map((x) => x.courseId as string));
-    const missing = courses.filter((c) => !have.has(c.id));
-    if (missing.length) await prisma.deadline.createMany({ data: missing.map((c) => ({ ...base, assigneeId: null, role: t.role, courseId: c.id })) as never });
+    for (let i = 0; i < toMake.length; i += 500) await prisma.deadline.createMany({ data: toMake.slice(i, i + 500) as never });
   }
 }
 
@@ -196,17 +202,60 @@ PLAN_TEMPLATE.sort((a, b) => a.offset - b.offset);
 export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 export const RANK: Record<string, number> = { CHAIRMAN: 0, DEAN: 1, HEAD_OF_DEPARTMENT: 2, DEPARTMENT_COORDINATOR: 3, PROGRAM_COORDINATOR: 4 };
 
-/** Stamp the first time we see that the work behind a course deadline has been done. */
-export async function stampDone(rows: { id: string; kind: string; courseId: string | null; role: string | null; completedAt: Date | null }[], limit = 150) {
-  let n = 0;
-  for (const d of rows) {
-    if (d.completedAt || !d.courseId) continue;
-    if (n++ >= limit) break;
-    if (await detectDone(d.kind, d.courseId, d.role || KIND_ROLE[d.kind])) {
-      d.completedAt = new Date();
-      await prisma.deadline.update({ where: { id: d.id }, data: { completedAt: d.completedAt } });
+/** Which of these courses already have the work a kind of deadline asks for? One batch of queries per kind, not per course. */
+async function doneSets(kinds: string[], courseIds: string[]) {
+  const out = new Map<string, Set<string>>();
+  if (!courseIds.length) return out;
+  const inList = { in: courseIds };
+  const distinct = (rows: unknown) => new Set((rows as { courseId: string }[]).map((r) => r.courseId));
+  for (const kind of kinds) {
+    switch (kind) {
+      case "PLO_MAP": out.set(kind, distinct(await prisma.coursePloMapping.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      case "CLO_SET": out.set(kind, distinct(await prisma.cLO.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      case "CLO_PLO": {
+        const rows = (await prisma.cLO.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true, mappedPloId: true } } as never)) as unknown as { courseId: string; mappedPloId: string | null }[];
+        const bad = new Set(rows.filter((r) => !r.mappedPloId).map((r) => r.courseId));
+        out.set(kind, new Set(rows.filter((r) => !bad.has(r.courseId)).map((r) => r.courseId))); break;
+      }
+      case "LECTURE_PLAN": {
+        const rows = (await prisma.lectureRow.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true, cloId: true } } as never)) as unknown as { courseId: string; cloId: string | null }[];
+        const bad = new Set(rows.filter((r) => !r.cloId).map((r) => r.courseId));
+        out.set(kind, new Set(rows.filter((r) => !bad.has(r.courseId)).map((r) => r.courseId))); break;
+      }
+      case "ASSESSMENT_PLAN": out.set(kind, distinct(await prisma.assessmentInstrument.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      case "PAPERS": {
+        const rows = (await prisma.paperDistributionItem.findMany({ where: { courseId: inList }, select: { courseId: true, examType: true, source: true } } as never)) as unknown as { courseId: string; examType: string; source: string }[];
+        for (const src of ["SE", "INSTRUCTOR"]) {
+          const mid = new Set(rows.filter((r) => r.source === src && r.examType === "Midterm").map((r) => r.courseId));
+          out.set(`PAPERS|${src}`, new Set(rows.filter((r) => r.source === src && r.examType === "Final" && mid.has(r.courseId)).map((r) => r.courseId)));
+        }
+        break;
+      }
+      case "SUBMITTED": {
+        const rows = (await prisma.course.findMany({ where: { id: inList }, select: { id: true, templateStatus: true } } as never)) as unknown as { id: string; templateStatus: string | null }[];
+        out.set(kind, new Set(rows.filter((r) => r.templateStatus !== "draft" && r.templateStatus !== "changes-requested").map((r) => r.id))); break;
+      }
+      case "MARKS": out.set(kind, distinct(await prisma.studentMark.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      case "ATTENDANCE": out.set(kind, distinct(await prisma.attendanceRecord.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
+      default: break;
     }
   }
+  return out;
+}
+
+/** Stamp the first time we see that the work behind a course deadline has been done (a few queries for all rows together). */
+export async function stampDone(rows: { id: string; kind: string; courseId: string | null; role: string | null; completedAt: Date | null }[]) {
+  const open = rows.filter((r) => !r.completedAt && r.courseId);
+  if (!open.length) return;
+  const sets = await doneSets(Array.from(new Set(open.map((r) => r.kind))), Array.from(new Set(open.map((r) => r.courseId as string))));
+  const now = new Date();
+  const done: string[] = [];
+  for (const r of open) {
+    const role = r.role || KIND_ROLE[r.kind];
+    const set = r.kind === "PAPERS" ? sets.get(`PAPERS|${role === "INSTRUCTOR" ? "INSTRUCTOR" : "SE"}`) : sets.get(r.kind);
+    if (set?.has(r.courseId as string)) { r.completedAt = now; done.push(r.id); }
+  }
+  if (done.length) await prisma.deadline.updateMany({ where: { id: { in: done } }, data: { completedAt: now } });
 }
 
 export type PlanState = "BEHIND" | "AT_RISK" | "ON_TRACK" | "COMPLETE";
@@ -231,14 +280,16 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
   const courseIds = courses.map((c) => c.id);
   const cMap = new Map(courses.map((c) => [c.id, c]));
   const now = new Date();
+  const flat = (await prisma.deadline.findMany({ where: { chairmanId, allCourses: false, planTerm: { not: null } } as never, select: { id: true, kind: true, courseId: true, role: true, completedAt: true, assigneeId: true, setById: true, title: true, dueDate: true } })) as unknown as { id: string; kind: string; courseId: string | null; role: string | null; completedAt: Date | null; assigneeId: string | null; setById: string; title: string; dueDate: Date }[];
+  const courseSet = new Set(courseIds);
+  const allRows = new Map<string, typeof flat>();
+  for (const r of flat) { const k = `${r.setById}|${r.title}|${r.dueDate.getTime()}`; allRows.set(k, [...(allRows.get(k) || []), r]); }
+  if (opts.stamp !== false) await stampDone(flat.filter((r) => r.courseId && courseSet.has(r.courseId)));
   const lines: PlanLine[] = [];
   for (const t of visible) {
     const plain = !!t.planKey;
-    const rawRows = (await prisma.deadline.findMany({ where: plain
-      ? { chairmanId, setById: t.setById, title: t.title, dueDate: t.dueDate, courseId: null, allCourses: false }
-      : { chairmanId, setById: t.setById, kind: t.kind, title: t.title, dueDate: t.dueDate, courseId: { in: courseIds.length ? courseIds : ["none"] }, allCourses: false } as never, select: { id: true, kind: true, courseId: true, role: true, completedAt: true, assigneeId: true } })) as unknown as { id: string; kind: string; courseId: string | null; role: string | null; completedAt: Date | null; assigneeId: string | null }[];
+    const rawRows = (allRows.get(`${t.setById}|${t.title}|${t.dueDate.getTime()}`) || []).filter((r) => (plain ? !r.courseId : !!r.courseId && courseSet.has(r.courseId)));
     const rows = plain && user.role !== "CHAIRMAN" ? rawRows.filter((r) => !r.assigneeId || myPeople.has(r.assigneeId) || t.setById === user.id) : rawRows;
-    if (opts.stamp !== false) await stampDone(rows, 120);
     const end = new Date(t.dueDate.getTime() + 86400000 - 1);
     const done = rows.filter((r) => r.completedAt).length;
     const late = rows.filter((r) => r.completedAt && r.completedAt > end).length;

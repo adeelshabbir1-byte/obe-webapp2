@@ -5,7 +5,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import DeadlineForm from "../../components/DeadlineForm";
 import DeadlineRowActions from "../../components/DeadlineRowActions";
-import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, detectDone, topUpStanding, reach, statusOf, type DlStatus } from "../../lib/deadlines";
+import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, stampDone, topUpStanding, reach, statusOf, type DlStatus } from "../../lib/deadlines";
 import { ROLE_TEXT } from "../../lib/institutePeople";
 import { hatsOf } from "../../lib/dualRoles";
 
@@ -69,15 +69,7 @@ export default async function DeadlinesPage() {
   };
 
   // Work saved in the course marks the deadline done: note the first time we see it.
-  let checked = 0;
-  for (const d of rows) {
-    if (d.completedAt || !d.courseId || checked >= 80) continue;
-    checked++;
-    if (await detectDone(d.kind, d.courseId, d.role || KIND_ROLE[d.kind])) {
-      d.completedAt = new Date();
-      await prisma.deadline.update({ where: { id: d.id }, data: { completedAt: d.completedAt } });
-    }
-  }
+  await stampDone(rows);
 
   const holders = new Map<string, string[]>();
   for (const r of rows) holders.set(r.id, await holdersOf(r));
