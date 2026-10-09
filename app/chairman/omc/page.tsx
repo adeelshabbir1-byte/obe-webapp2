@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import PeopleTabs from "../../../components/PeopleTabs";
 import CreateUserForm from "../../../components/CreateUserForm";
 import GiveRole from "../../../components/GiveRole";
 import OmcHatButton from "../../../components/OmcHatButton";
@@ -38,7 +40,8 @@ export default async function ChairmanOmcPage() {
   const candidates = facultyMembers.filter((f) => !f.omcHat && (f.role === "INSTRUCTOR" || f.role === "SUBJECT_EXPERT"));
 
   return (
-    <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+      <PeopleTabs />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>OMC Members</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         The Outcome Management Committee reviews and approves Subject Expert course templates. A member is either a faculty member of your institute (keeps their teacher login and chooses the OMC role at sign-in) or someone from industry with their own OMC login.

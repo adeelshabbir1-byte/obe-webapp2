@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import PeopleTabs from "../../../components/PeopleTabs";
 import FacultiesManager from "../../../components/FacultiesManager";
 
 export default async function ChairmanFacultiesPage() {
@@ -20,6 +21,7 @@ export default async function ChairmanFacultiesPage() {
   ]);
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+      <PeopleTabs />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculties &amp; Deans</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Institute → Faculty (Dean) → Department (Chairman) → Program (Program Lead).</p>
       <FacultiesManager

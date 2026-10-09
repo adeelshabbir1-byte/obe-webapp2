@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import PeopleTabs from "../../../components/PeopleTabs";
 import DepartmentsManager from "../../../components/DepartmentsManager";
 import { ensureDefaultDepartment } from "../../../lib/departments";
 
@@ -41,6 +42,7 @@ export default async function ChairmanDepartmentsPage() {
 
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+      <PeopleTabs />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Split your institute into departments. Each department has its own programs, heads, coordinators, course assigners and faculty.

@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { institutePeople } from "../../../lib/institutePeople";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import PeopleTabs from "../../../components/PeopleTabs";
 
 export default async function ChairmanPeoplePage() {
   const user = await getAuthenticatedUser();
@@ -15,6 +16,7 @@ export default async function ChairmanPeoplePage() {
   const people = await institutePeople(user.id);
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
+      <PeopleTabs />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>All Users and Roles</h1>
         <a href="/api/chairman/people/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>

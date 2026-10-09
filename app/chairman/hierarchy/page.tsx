@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import PeopleTabs from "../../../components/PeopleTabs";
 import { heldSet } from "../../../lib/dualRoles";
 
 type DeptNode = {
@@ -113,6 +114,7 @@ export default async function InstituteHierarchyPage() {
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <style>{CSS}</style>
+      <PeopleTabs />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Institute Chart</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Your whole institute at a glance. Dashed boxes are missing a head or a lead. Click “faculty” to see the teachers. Change any of this from Faculties &amp; Deans and Departments.</p>
       <div className="key" style={{ marginBottom: 14 }}>
