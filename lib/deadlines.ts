@@ -1,10 +1,20 @@
 import { prisma } from "./db";
+import { hatsOf } from "./dualRoles";
 
 export const DEADLINE_KINDS: Record<string, string> = {
   CUSTOM: "Any task", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan built and mapped to CLOs", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
   PAPERS: "Midterm and final paper distribution set", SUBMITTED: "Course submitted to OMC", MARKS: "Marks entered", ATTENDANCE: "Attendance recorded",
 };
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
+export const ROLE_LABEL: Record<string, string> = {
+  DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead",
+  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager",
+};
+/** The role a piece of course work belongs to. null = the setter chooses (papers) or it is a free task. */
+export const KIND_ROLE: Record<string, string | null> = {
+  CUSTOM: null, CLO_SET: "SUBJECT_EXPERT", LECTURE_PLAN: "SUBJECT_EXPERT", ASSESSMENT_PLAN: "SUBJECT_EXPERT", SUBMITTED: "SUBJECT_EXPERT",
+  PAPERS: null, MARKS: "INSTRUCTOR", ATTENDANCE: "INSTRUCTOR",
+};
 export const SETTER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"];
 
@@ -30,19 +40,20 @@ export async function reach(user: U) {
       ? { OR: [{ managedById: chairmanId }, { managedById: { in: leadIds } }] }
       : { OR: [{ departmentId: { in: deptIds } }, { managedById: { in: leadIds } }] };
   }
-  const people = await prisma.user.findMany({
+  const peopleRaw = (await prisma.user.findMany({
     where: { ...where, id: { not: user.id }, isActive: true, isVisitingPlaceholder: false, role: { in: PEOPLE_ROLES as never } } as never,
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true },
     orderBy: { name: "asc" },
-  });
+  })) as unknown as { id: string; name: string; role: string; secondaryRole: string | null; tertiaryRole: string | null; extraRoles: string[] }[];
+  const people = peopleRaw.map((p) => ({ id: p.id, name: p.name, role: p.role, hats: hatsOf({ rawRole: p.role, secondaryRole: p.secondaryRole, tertiaryRole: p.tertiaryRole, extraRoles: p.extraRoles }) }));
   return { chairmanId, leadIds, people };
 }
 
 /** Has the thing the deadline asks for actually been done? Course-linked kinds are detected from the data. */
-export async function detectDone(kind: string, courseId: string, assigneeId: string): Promise<boolean> {
-  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { subjectExpertId: true, templateStatus: true } });
+export async function detectDone(kind: string, courseId: string, role: string | null): Promise<boolean> {
+  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { templateStatus: true } });
   if (!course) return false;
-  const source = course.subjectExpertId === assigneeId ? "SE" : "INSTRUCTOR";
+  const source = role === "INSTRUCTOR" ? "INSTRUCTOR" : "SE";
   switch (kind) {
     case "CLO_SET": return (await prisma.cLO.count({ where: { courseId, source: "SE" } })) > 0;
     case "LECTURE_PLAN": {
