@@ -81,3 +81,21 @@ export function statusOf(d: { dueDate: Date; completedAt: Date | null }, now = n
 }
 export const STATUS_TEXT: Record<DlStatus, string> = { ON_TIME: "Done on time", LATE_DONE: "Done late", OVERDUE: "Overdue", SOON: "Due soon", UPCOMING: "Upcoming" };
 export const STATUS_COLOUR: Record<DlStatus, string> = { ON_TIME: "#2E7D4F", LATE_DONE: "#B7791F", OVERDUE: "#B3261E", SOON: "#1B6CA8", UPCOMING: "#6B7177" };
+
+/**
+ * A standing deadline ("allCourses") applies to every course in the setter's area, including courses added later.
+ * The template row is never shown; each course gets its own row so it can be tracked and completed on its own.
+ */
+export async function topUpStanding(chairmanId: string) {
+  const templates = (await prisma.deadline.findMany({ where: { chairmanId, allCourses: true } as never })) as unknown as { id: string; role: string | null; setById: string; kind: string; title: string; description: string | null; dueDate: Date }[];
+  for (const t of templates) {
+    const setter = await prisma.user.findUnique({ where: { id: t.setById }, select: { id: true, role: true, managedById: true, facultyId: true, departmentId: true } });
+    if (!setter || !SETTER_ROLES.includes(setter.role)) continue;
+    const { leadIds } = await reach(setter);
+    if (!leadIds.length) continue;
+    const courses = await prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true }, take: 1500 });
+    const have = new Set((await prisma.deadline.findMany({ where: { chairmanId, setById: t.setById, kind: t.kind, title: t.title, dueDate: t.dueDate, courseId: { not: null } }, select: { courseId: true } })).map((x) => x.courseId as string));
+    const missing = courses.filter((c) => !have.has(c.id));
+    if (missing.length) await prisma.deadline.createMany({ data: missing.map((c) => ({ chairmanId, assigneeId: null, role: t.role, setById: t.setById, kind: t.kind, title: t.title, description: t.description, courseId: c.id, dueDate: t.dueDate })) });
+  }
+}

@@ -2349,6 +2349,7 @@ model Deadline {
   courseId    String?
   dueDate     DateTime
   completedAt DateTime?
+  allCourses  Boolean  @default(false) // a standing deadline for every course in the setter's area, current and future: the per-course rows are made from it
   createdAt   DateTime @default(now())
 
   @@index([chairmanId])

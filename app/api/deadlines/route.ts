@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
-import { COURSE_KINDS, DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, chairmanOf, reach } from "../../../lib/deadlines";
+import { COURSE_KINDS, DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, chairmanOf, reach, topUpStanding } from "../../../lib/deadlines";
 
 /**
  * A deadline belongs to a role / task, whoever holds it ("mode": "role"), or to one named person ("mode": "person").
@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
   const { people, leadIds } = await reach(user);
 
   let courseId: string | null = null;
-  if (COURSE_KINDS.includes(b.kind)) {
+  const standing = COURSE_KINDS.includes(b.kind) && b.courseId === "ALL" && b.mode !== "person";
+  if (COURSE_KINDS.includes(b.kind) && !standing) {
     const c = await prisma.course.findFirst({ where: { id: String(b.courseId || ""), coordinatorId: { in: leadIds.length ? leadIds : ["none"] } }, select: { id: true } });
     if (!c) return NextResponse.json({ error: "Choose the course this deadline is about" }, { status: 400 });
     courseId = c.id;
@@ -31,11 +32,12 @@ export async function POST(req: NextRequest) {
     if (!people.some((p) => p.id === assigneeId)) return NextResponse.json({ error: "You can only set deadlines for people in your own area" }, { status: 403 });
   } else {
     role = KIND_ROLE[b.kind] || String(b.role || "");
+    if (standing && !["SUBJECT_EXPERT", "INSTRUCTOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the Subject Expert or Instructor" }, { status: 400 });
     if (!ROLE_LABEL[role]) return NextResponse.json({ error: "Choose the role this belongs to" }, { status: 400 });
     if (courseId && !["SUBJECT_EXPERT", "INSTRUCTOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the course's Subject Expert or Instructor" }, { status: 400 });
-    if (!courseId && !people.some((p) => p.hats.includes(role as string))) return NextResponse.json({ error: `Nobody in your area holds the role ${ROLE_LABEL[role]}` }, { status: 400 });
   }
-  const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: due } });
+  const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: due, ...(standing ? { allCourses: true } : {}) } as never });
+  if (standing) await topUpStanding(chairmanOf(user));
   await writeAuditLog({ actorUserId: user.id, action: "DEADLINE_SET", entityType: "Deadline", entityId: row.id });
   return NextResponse.json({ ok: true }, { status: 201 });
 }
