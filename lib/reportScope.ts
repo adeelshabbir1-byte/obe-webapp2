@@ -71,7 +71,7 @@ export async function coordinatorIdsFor(user: { id: string; role: string; manage
  * data like WeightPolicy and CourseEquivalenceGroup. */
 export async function chairmanIdFor(user: { id: string; role: string; managedById: string | null }): Promise<string> {
   if (user.role === "CHAIRMAN") return user.id;
-  if (user.role === "OMC" || user.role === "PROGRAM_COORDINATOR" || user.role === "HEAD_OF_DEPARTMENT" || user.role === "DEAN" || user.role === "DEPARTMENT_COORDINATOR") return user.managedById || "";
+  if (user.role === "OMC" || user.role === "PROGRAM_COORDINATOR" || user.role === "HEAD_OF_DEPARTMENT" || user.role === "DEAN" || user.role === "DEPARTMENT_COORDINATOR" || user.role === "LIBRARIAN" || user.role === "FINANCE_OFFICER") return user.managedById || "";
   // SE/Instructor: one more hop up (their manager is a Coordinator, whose manager is the Institute Head).
   if (!user.managedById) return "";
   const coordinator = await prisma.user.findUnique({ where: { id: user.managedById } });
@@ -82,7 +82,7 @@ export async function chairmanIdFor(user: { id: string; role: string; managedByI
 export function roleLabel(role: string) {
   const labels: Record<string, string> = {
     DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", OMC: "OMC Member", CHAIRMAN: "Institute Head", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator",
-    SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", SUPER_USER: "Super User",
+    SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", SUPER_USER: "Super User",
   };
   return labels[role] || role;
 }

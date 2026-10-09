@@ -4,16 +4,16 @@ import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import LibraryInventoryForm from "../../components/LibraryInventoryForm";
-import { labScope } from "../../lib/resources";
+import { libraryScope } from "../../lib/resources";
 
-const LABEL: Record<string, string> = { LAB_MANAGER: "Lab Manager", CHAIRMAN: "Institute Head", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator" };
+const LABEL: Record<string, string> = { LIBRARIAN: "Librarian", LAB_MANAGER: "Lab Manager", CHAIRMAN: "Institute Head", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator" };
 
 export default async function LibraryInventoryPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  const scope = await labScope(user);
+  const scope = await libraryScope(user);
   if (!scope) redirect("/dashboard");
   const [lib, students] = await Promise.all([
     prisma.libraryInfo.findUnique({ where: { chairmanId: scope.chairmanId } }),
@@ -29,7 +29,7 @@ export default async function LibraryInventoryPage() {
     <Shell roleLabel={LABEL[user.role] || "Library"} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Library Inventory</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
-        What the library holds. The Lab Manager or the Institute Head keeps it up to date; the ratios below are worked out from it and the student lists.
+        What the library holds. The Librarian keeps it up to date and the Institute Head can correct it; the ratios below are worked out from it and the student lists.
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         {cards.map(([l, v]) => (

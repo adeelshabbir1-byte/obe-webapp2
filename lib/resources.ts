@@ -40,3 +40,15 @@ export async function labScope(user: Who) {
   }
   return null;
 }
+
+/** The library record: the Librarian, the Lab Manager and the Institute Head may change it; others in management may look. */
+export async function libraryScope(user: Who) {
+  if (user.role === "LIBRARIAN") return { chairmanId: user.managedById || "", departmentIds: null as string[] | null, canEdit: !!user.managedById };
+  return labScope(user);
+}
+/** Finance: the Finance Officer and the Institute Head enter the figures. Nobody else sees them. */
+export function financeScope(user: Who) {
+  if (user.role === "CHAIRMAN") return { chairmanId: user.id, canEdit: true };
+  if (user.role === "FINANCE_OFFICER" && user.managedById) return { chairmanId: user.managedById, canEdit: true };
+  return null;
+}

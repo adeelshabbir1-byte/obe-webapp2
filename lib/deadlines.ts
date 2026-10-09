@@ -8,7 +8,7 @@ export const DEADLINE_KINDS: Record<string, string> = {
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
 export const ROLE_LABEL: Record<string, string> = {
   DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead",
-  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager",
+  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer",
 };
 /** The role a piece of course work belongs to. null = the setter chooses (papers) or it is a free task. */
 export const KIND_ROLE: Record<string, string | null> = {
@@ -16,7 +16,7 @@ export const KIND_ROLE: Record<string, string | null> = {
   PAPERS: null, MARKS: "INSTRUCTOR", ATTENDANCE: "INSTRUCTOR",
 };
 export const SETTER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
-const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"];
+const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER"];
 
 type U = { id: string; role: string; managedById: string | null; facultyId?: string | null; departmentId?: string | null };
 
@@ -133,7 +133,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "STUDENT_ENTRY", kind: "CUSTOM", title: "Student data entered", role: "PROGRAM_COORDINATOR", offset: -60, days: 14, scope: "EACH", phase: "Before the semester", why: "Students of every batch are in the system" },
   { key: "SHARED_FACULTY", kind: "CUSTOM", title: "Shared faculty requests sent", role: "HEAD_OF_DEPARTMENT", offset: -60, days: 10, scope: "EACH", phase: "Before the semester", why: "Teachers needed from other departments are requested" },
   { key: "MISSION_VISION", kind: "CUSTOM", title: "Mission and vision checked against the program", role: "HEAD_OF_DEPARTMENT", offset: -55, days: 7, scope: "EACH", phase: "Before the semester", why: "Program objectives still agree with the mission and vision" },
-  { key: "LIBRARY", kind: "CUSTOM", title: "Library record updated", role: "HEAD_OF_DEPARTMENT", offset: -55, days: 10, scope: "EACH", phase: "Before the semester", why: "Books, magazines and titles for the program are current" },
+  { key: "LIBRARY", kind: "CUSTOM", title: "Library record updated", role: "LIBRARIAN", offset: -55, days: 10, scope: "EACH", phase: "Before the semester", why: "Books, magazines and titles for the program are current" },
   { key: "PLO_MAP", kind: "PLO_MAP", title: "Course-to-PLO mapping complete", role: "PROGRAM_COORDINATOR", offset: -50, days: 14, scope: "COURSE", phase: "Courses and outcomes", why: "Every course is mapped to the PLOs it serves" },
   { key: "COURSES_OFFERED", kind: "CUSTOM", title: "Courses to be offered decided", role: "PROGRAM_COORDINATOR", offset: -48, days: 7, scope: "EACH", phase: "Before the semester", why: "The list of courses offered this semester is final" },
   { key: "COURSE_UPDATE", kind: "CUSTOM", title: "Course contents updated", role: "SUBJECT_EXPERT", offset: -45, days: 10, scope: "EACH", phase: "Courses and outcomes", why: "Course contents reviewed and updated where needed" },
@@ -159,6 +159,10 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "ECA", kind: "CUSTOM", title: "Extra-curricular activities updated", role: "HEAD_OF_DEPARTMENT", offset: 100, days: 14, scope: "EACH", phase: "During the semester", why: "Student activities of the semester are recorded" },
   { key: "CHECK_3", kind: "CUSTOM", title: "Attendance and marks entry checked (checkpoint 3)", role: "HEAD_OF_DEPARTMENT", offset: 105, days: 5, scope: "EACH", phase: "During the semester", why: "Final assessments and attendance are in" },
   { key: "MARKS", kind: "MARKS", title: "Marks entered", role: "INSTRUCTOR", offset: 119, days: 14, scope: "COURSE", phase: "During the semester", why: "All marks are in so reports can be produced" },
+  { key: "BUDGET_ENTRY", kind: "CUSTOM", title: "Budget and income figures entered", role: "FINANCE_OFFICER", offset: -60, days: 14, scope: "EACH", phase: "Before the semester", why: "Budget by category for the year is in, so accreditation can see lab, library and training funds" },
+  { key: "STOCK_CHECK", kind: "CUSTOM", title: "Library stock check done", role: "LIBRARIAN", offset: -40, days: 10, scope: "EACH", phase: "Labs and facilities", why: "Titles, volumes and journals are counted and the record is current" },
+  { key: "SPEND_MID", kind: "CUSTOM", title: "Spending figures updated (mid year)", role: "FINANCE_OFFICER", offset: 90, days: 10, scope: "EACH", phase: "During the semester", why: "What was actually spent so far is recorded" },
+  { key: "SPEND_END", kind: "CUSTOM", title: "Spending and income figures updated (year end)", role: "FINANCE_OFFICER", offset: 140, days: 10, scope: "EACH", phase: "Semester close", why: "Final spending and income for the year are recorded" },
   { key: "FAC_CALENDAR", kind: "CUSTOM", title: "Faculty academic calendar published", role: "DEAN", offset: -75, days: 7, scope: "EACH", phase: "Before the semester", why: "Dean adds the faculty's own dates to the institute calendar" },
   { key: "VISITING", kind: "CUSTOM", title: "Visiting faculty appointed", role: "HEAD_OF_DEPARTMENT", offset: -32, days: 14, scope: "EACH", phase: "Allocation and timetable", why: "Visiting teachers needed for the semester are appointed" },
   { key: "LAB_REQ", kind: "CUSTOM", title: "Lab equipment and consumables requirements submitted", role: "LAB_MANAGER", offset: -50, days: 14, scope: "EACH", phase: "Labs and facilities", why: "What each lab needs for the semester is requested" },
@@ -189,7 +193,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
 ];
 PLAN_TEMPLATE.sort((a, b) => a.offset - b.offset);
 /** Roles a plan task can be given to. */
-export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER"];
+export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER", "LIBRARIAN", "FINANCE_OFFICER"];
 export const RANK: Record<string, number> = { CHAIRMAN: 0, DEAN: 1, HEAD_OF_DEPARTMENT: 2, DEPARTMENT_COORDINATOR: 3, PROGRAM_COORDINATOR: 4 };
 
 /** Stamp the first time we see that the work behind a course deadline has been done. */

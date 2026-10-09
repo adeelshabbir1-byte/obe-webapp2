@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { labScope } from "../../../lib/resources";
+import { libraryScope } from "../../../lib/resources";
 
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
 const str = (v: unknown, max = 2000) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
@@ -10,8 +10,8 @@ const str = (v: unknown, max = 2000) => (typeof v === "string" && v.trim() ? v.t
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
-  const scope = await labScope(user);
-  if (!scope || !scope.canEdit) return NextResponse.json({ error: "only the Lab Manager or the Institute Head can change the library record" }, { status: 403 });
+  const scope = await libraryScope(user);
+  if (!scope || !scope.canEdit) return NextResponse.json({ error: "only the Librarian, the Lab Manager or the Institute Head can change the library record" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   const total = int(b.totalTitles), computing = Math.min(int(b.computingTitles), total);
   const last = typeof b.lastStockCheck === "string" && b.lastStockCheck ? new Date(b.lastStockCheck) : null;

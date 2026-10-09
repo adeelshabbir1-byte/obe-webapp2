@@ -21,6 +21,8 @@ const ROLE_HOME: Record<string, string> = {
   INSTRUCTOR: "/instructor/courses",
   LAB_ENGINEER: "/lab-engineer/labs",
   LAB_MANAGER: "/lab-inventory",
+  LIBRARIAN: "/library-inventory",
+  FINANCE_OFFICER: "/chairman/finance",
   COURSE_ASSIGNER: "/assigner/matrix",
 };
 

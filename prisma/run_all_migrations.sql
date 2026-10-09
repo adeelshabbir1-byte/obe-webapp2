@@ -4759,3 +4759,8 @@ CREATE INDEX IF NOT EXISTS "Deadline_planTerm_idx" ON "Deadline"("planTerm");
 
 -- plan_tasks
 ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planKey" TEXT;
+
+-- librarian_finance (run on its own)
+-- Run these two lines on their own, before anything else (like lab_manager).
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'LIBRARIAN';
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'FINANCE_OFFICER';
