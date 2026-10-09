@@ -2,9 +2,9 @@ import { prisma } from "./db";
 
 export const ROLE_TEXT: Record<string, string> = {
   CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator",
-  COURSE_ASSIGNER: "Course Assigner", OMC: "OMC member", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer",
+  COURSE_ASSIGNER: "Course Assigner", OMC: "OMC member", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs",
 };
-const ORDER = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER"];
+const ORDER = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 
 export type PersonRow = { id: string; username: string; name: string; email: string; role: string; also: string; department: string; program: string; status: string };
 

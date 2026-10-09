@@ -23,6 +23,7 @@ const ROLE_HOME: Record<string, string> = {
   LAB_MANAGER: "/lab-inventory",
   LIBRARIAN: "/library-inventory",
   FINANCE_OFFICER: "/chairman/finance",
+  STUDENT_AFFAIRS: "/admission-criteria",
   COURSE_ASSIGNER: "/assigner/matrix",
 };
 

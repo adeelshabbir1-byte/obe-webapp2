@@ -4764,3 +4764,7 @@ ALTER TABLE "Deadline" ADD COLUMN IF NOT EXISTS "planKey" TEXT;
 -- Run these two lines on their own, before anything else (like lab_manager).
 ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'LIBRARIAN';
 ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'FINANCE_OFFICER';
+
+-- student_affairs (run on its own)
+-- Run this line on its own, before anything else (like lab_manager).
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'STUDENT_AFFAIRS';

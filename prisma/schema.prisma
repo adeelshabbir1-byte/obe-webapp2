@@ -28,6 +28,7 @@ enum UserRole {
   LAB_MANAGER
   LIBRARIAN
   FINANCE_OFFICER
+  STUDENT_AFFAIRS
 }
 
 model User {

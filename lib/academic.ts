@@ -9,7 +9,7 @@ export const CAL_COLOUR: Record<string, string> = {
   SEMESTER_END: "#2E7D4F", HOLIDAY: "#7A7F85", BREAK: "#7A7F85", OTHER: "#4B5563",
 };
 export const SETTER_ROLES = ["CHAIRMAN", "DEAN"];
-export const VIEWER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
+export const VIEWER_ROLES = ["CHAIRMAN", "STUDENT_AFFAIRS", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 export const INSTITUTE_KEY = "INSTITUTE";
 
 type U = { id: string; role: string; managedById: string | null; facultyId?: string | null; departmentId?: string | null };
@@ -21,7 +21,7 @@ export async function academicScope(user: U) {
   if (user.role !== "CHAIRMAN" && user.role !== "DEAN" && user.departmentId) {
     facultyId = (await prisma.department.findUnique({ where: { id: user.departmentId }, select: { facultyId: true } }))?.facultyId || null;
   }
-  return { chairmanId, facultyId, isChairman: user.role === "CHAIRMAN", isDean: user.role === "DEAN" };
+  return { chairmanId, facultyId, isChairman: user.role === "CHAIRMAN", isDean: user.role === "DEAN", isStudentAffairs: user.role === "STUDENT_AFFAIRS" };
 }
 
 /** Degree programs that belong to a faculty (or to the institute when it has no faculties). */

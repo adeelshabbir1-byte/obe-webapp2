@@ -8,7 +8,7 @@ export const DEADLINE_KINDS: Record<string, string> = {
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
 export const ROLE_LABEL: Record<string, string> = {
   DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead",
-  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer",
+  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs",
 };
 /** The role a piece of course work belongs to. null = the setter chooses (papers) or it is a free task. */
 export const KIND_ROLE: Record<string, string | null> = {
@@ -16,7 +16,7 @@ export const KIND_ROLE: Record<string, string | null> = {
   PAPERS: null, MARKS: "INSTRUCTOR", ATTENDANCE: "INSTRUCTOR",
 };
 export const SETTER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
-const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER"];
+const PEOPLE_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 
 type U = { id: string; role: string; managedById: string | null; facultyId?: string | null; departmentId?: string | null };
 
@@ -128,7 +128,7 @@ export async function topUpStanding(chairmanId: string) {
  */
 export type PlanItem = { key: string; kind: string; title: string; role: string; offset: number; days: number; scope: "COURSE" | "EACH" | "ONE"; phase: string; why: string };
 export const PLAN_TEMPLATE: PlanItem[] = [
-  { key: "ADMISSION_DATA", kind: "CUSTOM", title: "Admission data updated", role: "DEAN", offset: -70, days: 14, scope: "EACH", phase: "Before the semester", why: "Admission criteria and intake figures are current" },
+  { key: "ADMISSION_DATA", kind: "CUSTOM", title: "Admission criteria and intake figures updated", role: "STUDENT_AFFAIRS", offset: -70, days: 14, scope: "EACH", phase: "Before the semester", why: "Admission criteria and intake figures are current" },
   { key: "FACULTY_ENTRY", kind: "CUSTOM", title: "Faculty data entered and checked", role: "HEAD_OF_DEPARTMENT", offset: -65, days: 14, scope: "EACH", phase: "Before the semester", why: "Every teacher in the department is listed correctly" },
   { key: "STUDENT_ENTRY", kind: "CUSTOM", title: "Student data entered", role: "PROGRAM_COORDINATOR", offset: -60, days: 14, scope: "EACH", phase: "Before the semester", why: "Students of every batch are in the system" },
   { key: "SHARED_FACULTY", kind: "CUSTOM", title: "Shared faculty requests sent", role: "HEAD_OF_DEPARTMENT", offset: -60, days: 10, scope: "EACH", phase: "Before the semester", why: "Teachers needed from other departments are requested" },
@@ -193,7 +193,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
 ];
 PLAN_TEMPLATE.sort((a, b) => a.offset - b.offset);
 /** Roles a plan task can be given to. */
-export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER", "LIBRARIAN", "FINANCE_OFFICER"];
+export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 export const RANK: Record<string, number> = { CHAIRMAN: 0, DEAN: 1, HEAD_OF_DEPARTMENT: 2, DEPARTMENT_COORDINATOR: 3, PROGRAM_COORDINATOR: 4 };
 
 /** Stamp the first time we see that the work behind a course deadline has been done. */

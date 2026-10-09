@@ -44,6 +44,11 @@ export const LIBRARIAN_NAV = [
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/deadlines", label: "Deadlines" },
 ];
+export const STUDENT_AFFAIRS_NAV = [
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/deadlines", label: "Deadlines" },
+];
 export const FINANCE_NAV = [
   { href: "/chairman/finance", label: "Finance" },
   { href: "/deadlines", label: "Deadlines" },
@@ -146,7 +151,7 @@ export const CHAIRMAN_NAV = [
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/chairman/finance", label: "Finance" },
-  { href: "/chairman/staff", label: "Librarian & Finance Logins" },
+  { href: "/chairman/staff", label: "Librarian, Finance & Student Affairs Logins" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
@@ -223,6 +228,7 @@ export function navForRole(role: string) {
     case "LAB_MANAGER": return LAB_MANAGER_NAV;
     case "LIBRARIAN": return LIBRARIAN_NAV;
     case "FINANCE_OFFICER": return FINANCE_NAV;
+    case "STUDENT_AFFAIRS": return STUDENT_AFFAIRS_NAV;
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;
     case "CHAIRMAN": return CHAIRMAN_NAV;
