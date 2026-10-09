@@ -85,7 +85,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
@@ -132,7 +132,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/omc/reports", label: "Reports" },
 ];
 
