@@ -2148,6 +2148,7 @@ model FacultyProfile {
   nextOfKinRelation String?
   nextOfKinPhone    String?
   nextOfKinAddress  String?  @db.Text
+  officeHours       String?  // e.g. "Mon & Wed 2-4 pm, Room B-12"
   updatedAt         DateTime @updatedAt
 }
 
@@ -2265,4 +2266,90 @@ model LabComputerSpec {
 
   @@index([labId])
   @@index([chairmanId])
+}
+
+// Official academic calendar, set by the Institute Head (whole institute) or a Dean (own faculty).
+model AcademicCalendarEntry {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  facultyId   String?  // null = applies to the whole institute
+  kind        String   // SEMESTER_START | SEMESTER_END | MIDTERM | FINAL | REGISTRATION | ADMISSION | HOLIDAY | BREAK | OTHER
+  title       String
+  startDate   DateTime
+  endDate     DateTime?
+  termName    String?
+  termYear    Int?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// Admission rules per degree program, set by the Dean of the faculty (scopeKey = faculty id, or "INSTITUTE" when there are no faculties).
+model AdmissionCriteria {
+  id               String   @id @default(cuid())
+  chairmanId       String
+  scopeKey         String
+  degreeProgram    String
+  academicYear     String?
+  minPercentage    Float?
+  requiredSubjects String?  @db.Text
+  entryTest        String?
+  minTestScore     Float?
+  seats            Int?
+  transferPolicy   String?  @db.Text
+  otherConditions  String?  @db.Text
+  updatedById      String?
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  @@unique([chairmanId, scopeKey, degreeProgram])
+  @@index([chairmanId])
+}
+
+// Evidence a Program Lead keeps for accreditation: industry links, internships, counselling, PEO reviews and KPIs.
+model ProgramEvidence {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  area          String   // INDUSTRY | INTERNSHIP | COUNSELLING | PEO
+  kind          String
+  title         String
+  organization  String?
+  date          DateTime?
+  count         Int?
+  target        Float?
+  actual        Float?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@index([coordinatorId, area])
+}
+
+// Whether a course folder (hard copy or LMS) is kept for a course.
+model CourseFolder {
+  id            String   @id @default(cuid())
+  courseId      String   @unique
+  coordinatorId String
+  kept          Boolean  @default(false)
+  note          String?
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@index([coordinatorId])
+}
+
+// A deadline set by a Dean / Chairman / Program Lead for someone below them.
+model Deadline {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  assigneeId  String
+  setById     String
+  kind        String   // CUSTOM | CLO_SET | LECTURE_PLAN | ASSESSMENT_PLAN | PAPERS | SUBMITTED | MARKS | ATTENDANCE
+  title       String
+  description String?  @db.Text
+  courseId    String?
+  dueDate     DateTime
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+  @@index([assigneeId])
 }

@@ -9,7 +9,7 @@ import ProgressBar from "../../../components/ProgressBar";
 
 const NAV = [
   { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-  { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/accreditation-overview", label: "Accreditation Overview" }, { href: "/move-program", label: "Move Program Data" },
+  { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/accreditation-overview", label: "Accreditation Overview" }, { href: "/deadlines", label: "Deadlines" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" }, { href: "/move-program", label: "Move Program Data" },
   { href: "/chairman/plos", label: "Program Learning Outcomes" },
   { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
   { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
@@ -34,7 +34,7 @@ function statusLabel(status: string) {
 // same person can hold both roles on different courses. Doubles as the
 // raw material for writing a faculty member's annual report: what were
 // they assigned, and did they actually get it done.
-export default async function FacultyWorkloadPage() {
+export default async function FacultyWorkloadPage({ searchParams }: { searchParams: { faculty?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -189,20 +189,78 @@ export default async function FacultyWorkloadPage() {
     );
   }
 
+  // One row per person, combining the Subject Expert and Instructor work they carry.
+  const people = new Map<string, { id: string; name: string; email: string; se?: FacultyGroup; instr?: FacultyGroup }>();
+  for (const g of seGroups) people.set(g.id, { id: g.id, name: g.name, email: g.email, se: g });
+  for (const g of instrGroups) people.set(g.id, { ...(people.get(g.id) || { id: g.id, name: g.name, email: g.email }), instr: g });
+  const avg = (g?: FacultyGroup) => (g && g.courses.length ? Math.round(g.courses.reduce((n, c) => n + progressPct(c.steps), 0) / g.courses.length) : null);
+  const summary = Array.from(people.values()).map((p) => {
+    const all = [...(p.se?.courses || []), ...(p.instr?.courses || [])];
+    const overall = all.length ? Math.round(all.reduce((n, c) => n + progressPct(c.steps), 0) / all.length) : 0;
+    return { ...p, courses: all.length, seAvg: avg(p.se), instrAvg: avg(p.instr), overall };
+  }).sort((x, y) => x.name.localeCompare(y.name));
+  const tone = (v: number | null) => (v === null ? "#9AA0A6" : v >= 75 ? "#2E7D4F" : v >= 40 ? "#B7791F" : "#B3261E");
+  const selected = summary.find((p) => p.id === searchParams.faculty);
+  const instituteAvg = summary.length ? Math.round(summary.reduce((n, p) => n + p.overall, 0) / summary.length) : null;
+
+  if (selected) {
+    return (
+      <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
+        <Link href="/chairman/faculty-workload" className="btn" style={{ marginBottom: 10, display: "inline-block" }}>← All faculty</Link>
+        <h1 style={{ fontSize: 22, marginBottom: 2 }}>{selected.name}</h1>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
+          {selected.email} · {selected.courses} course{selected.courses !== 1 ? "s" : ""} ·{" "}
+          <b style={{ color: tone(selected.overall) }}>{selected.overall}% overall</b>
+          {selected.seAvg !== null && <> · Subject Expert work {selected.seAvg}%</>}
+          {selected.instrAvg !== null && <> · Teaching {selected.instrAvg}%</>}
+          {" · "}<Link href={`/faculty-report/${selected.id}`} style={{ color: "var(--brass-dark)" }}>Faculty profile report</Link>
+        </p>
+        {selected.se && (<><h2 style={{ fontSize: 15, marginBottom: 8 }}>As Subject Expert</h2>{renderFacultyGroup(selected.se, true)}</>)}
+        {selected.instr && (<><h2 style={{ fontSize: 15, margin: "20px 0 8px" }}>As Instructor</h2>{renderFacultyGroup(selected.instr, false)}</>)}
+      </Shell>
+    );
+  }
+
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Work Progress</h1>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        What each faculty member is currently assigned, and how far along it is — as Subject Expert (building the
-        course template) and as Instructor (delivering it this semester). Useful raw material when writing a
-        faculty member's annual report.
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
+        Overall percentage of work done by each faculty member, across the courses they build as Subject Expert and the courses they teach.
+        Click "View details" to see every course of that person and which steps are still open.
       </p>
-
-      <h2 style={{ fontSize: 15, marginBottom: 8 }}>As Subject Expert</h2>
-      {seGroups.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No Subject Expert assignments in scope.</p> : seGroups.map((g) => renderFacultyGroup(g, true))}
-
-      <h2 style={{ fontSize: 15, margin: "24px 0 8px" }}>As Instructor</h2>
-      {instrGroups.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No Instructor assignments in scope.</p> : instrGroups.map((g) => renderFacultyGroup(g, false))}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        {([["Faculty with work assigned", summary.length], ["Average progress", instituteAvg === null ? "—" : `${instituteAvg}%`], ["Below 40%", summary.filter((p) => p.overall < 40).length]] as [string, string | number][]).map(([l, v]) => (
+          <div key={l} style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "12px 18px", minWidth: 150 }}>
+            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "Georgia, serif" }}>{v}</div>
+            <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{ overflowX: "auto" }}>
+        {summary.length === 0 ? <p style={{ color: "var(--slate)" }}>No faculty have courses assigned yet.</p> : (
+          <table style={{ width: "100%" }}>
+            <thead><tr style={{ textAlign: "left" }}><th>Faculty</th><th>Courses</th><th>Subject Expert work</th><th>Teaching</th><th style={{ minWidth: 170 }}>Overall</th><th></th></tr></thead>
+            <tbody>
+              {summary.map((p) => (
+                <tr key={p.id}>
+                  <td><b>{p.name}</b><div style={{ fontSize: 11.5, color: "var(--slate)" }}>{p.email}</div></td>
+                  <td>{p.courses}</td>
+                  <td style={{ color: tone(p.seAvg) }}>{p.seAvg === null ? "—" : `${p.seAvg}%`}</td>
+                  <td style={{ color: tone(p.instrAvg) }}>{p.instrAvg === null ? "—" : `${p.instrAvg}%`}</td>
+                  <td>
+                    <b style={{ color: tone(p.overall) }}>{p.overall}%</b>
+                    <div style={{ background: "#ECE8E0", borderRadius: 6, height: 8, marginTop: 3 }}><div style={{ width: `${p.overall}%`, height: "100%", background: tone(p.overall), borderRadius: 6 }} /></div>
+                  </td>
+                  <td><Link className="btn" style={{ fontSize: 12 }} href={`/chairman/faculty-workload?faculty=${p.id}`}>View details</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>
+          Overall is the average of every course's progress, each course counting equally. Subject Expert steps: CLOs, lecture plan, assessments, paper distribution, submission. Teaching steps: lectures delivered, paper distribution, marks, attendance.
+        </p>
+      </div>
     </Shell>
   );
 }

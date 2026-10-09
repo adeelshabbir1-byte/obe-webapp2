@@ -4704,3 +4704,43 @@ CREATE TABLE IF NOT EXISTS "LabComputerSpec" (
 );
 CREATE INDEX IF NOT EXISTS "LabComputerSpec_labId_idx" ON "LabComputerSpec"("labId");
 CREATE INDEX IF NOT EXISTS "LabComputerSpec_chairmanId_idx" ON "LabComputerSpec"("chairmanId");
+-- Academic calendar (Institute Head / Dean) and admission criteria (Dean)
+CREATE TABLE IF NOT EXISTS "AcademicCalendarEntry" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "facultyId" TEXT, "kind" TEXT NOT NULL, "title" TEXT NOT NULL,
+  "startDate" TIMESTAMP(3) NOT NULL, "endDate" TIMESTAMP(3), "termName" TEXT, "termYear" INTEGER,
+  "createdById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "AcademicCalendarEntry_chairmanId_idx" ON "AcademicCalendarEntry"("chairmanId");
+
+CREATE TABLE IF NOT EXISTS "AdmissionCriteria" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "scopeKey" TEXT NOT NULL, "degreeProgram" TEXT NOT NULL, "academicYear" TEXT,
+  "minPercentage" DOUBLE PRECISION, "requiredSubjects" TEXT, "entryTest" TEXT, "minTestScore" DOUBLE PRECISION, "seats" INTEGER,
+  "transferPolicy" TEXT, "otherConditions" TEXT, "updatedById" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "AdmissionCriteria_chairmanId_scopeKey_degreeProgram_key" ON "AdmissionCriteria"("chairmanId","scopeKey","degreeProgram");
+CREATE INDEX IF NOT EXISTS "AdmissionCriteria_chairmanId_idx" ON "AdmissionCriteria"("chairmanId");
+
+-- Accreditation evidence, course folders, deadlines, office hours
+ALTER TABLE "FacultyProfile" ADD COLUMN IF NOT EXISTS "officeHours" TEXT;
+
+CREATE TABLE IF NOT EXISTS "ProgramEvidence" (
+  "id" TEXT PRIMARY KEY, "coordinatorId" TEXT NOT NULL, "area" TEXT NOT NULL, "kind" TEXT NOT NULL, "title" TEXT NOT NULL,
+  "organization" TEXT, "date" TIMESTAMP(3), "count" INTEGER, "target" DOUBLE PRECISION, "actual" DOUBLE PRECISION, "notes" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ProgramEvidence_coordinatorId_area_idx" ON "ProgramEvidence"("coordinatorId","area");
+
+CREATE TABLE IF NOT EXISTS "CourseFolder" (
+  "id" TEXT PRIMARY KEY, "courseId" TEXT NOT NULL, "coordinatorId" TEXT NOT NULL, "kept" BOOLEAN NOT NULL DEFAULT false, "note" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CourseFolder_courseId_key" ON "CourseFolder"("courseId");
+CREATE INDEX IF NOT EXISTS "CourseFolder_coordinatorId_idx" ON "CourseFolder"("coordinatorId");
+
+CREATE TABLE IF NOT EXISTS "Deadline" (
+  "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "assigneeId" TEXT NOT NULL, "setById" TEXT NOT NULL, "kind" TEXT NOT NULL,
+  "title" TEXT NOT NULL, "description" TEXT, "courseId" TEXT, "dueDate" TIMESTAMP(3) NOT NULL, "completedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "Deadline_chairmanId_idx" ON "Deadline"("chairmanId");
+CREATE INDEX IF NOT EXISTS "Deadline_assigneeId_idx" ON "Deadline"("assigneeId");

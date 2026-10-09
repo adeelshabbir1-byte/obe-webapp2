@@ -30,12 +30,14 @@ export const LAB_ENGINEER_NAV = [
   { href: "/lab-engineer/labs", label: "My Labs" },
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/profile", label: "My Profile" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const LAB_MANAGER_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -51,6 +53,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
   { href: "/faculty/profile", label: "My Profile" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const SUBJECT_EXPERT_NAV = [
@@ -67,6 +70,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
   { href: "/faculty/profile", label: "My Profile" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -94,7 +98,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
@@ -106,6 +110,11 @@ export const COORDINATOR_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/coordinator/activities", label: "Extra-curricular Activities" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/deadlines", label: "Deadlines" },
+  { href: "/coordinator/evidence", label: "Accreditation Evidence" },
+  { href: "/coordinator/course-folders", label: "Course Folders" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -129,6 +138,9 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/finance", label: "Finance" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const DEAN_NAV = [
@@ -143,6 +155,9 @@ export const DEAN_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -156,13 +171,16 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/coordinator/load-report", label: "Teacher Load Report" },
   { href: "/coordinator/out-of-batch-requests", label: "Out-of-Batch Requests" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
-  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export const HOD_NAV = [
@@ -177,6 +195,9 @@ export const HOD_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/deadlines", label: "Deadlines" },
 ];
 
 export function navForRole(role: string) {

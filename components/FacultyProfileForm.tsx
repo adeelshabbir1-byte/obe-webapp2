@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import TabbedCards from "./TabbedCards";
 import { BLOOD_GROUPS, DESIGNATIONS, EMPLOYMENT_TYPES, KINDS, type KindDef } from "../lib/facultyProfile";
 
-type Profile = { photo?: string | null; designation?: string | null; employmentType?: string | null; dateOfJoining?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null; phone?: string | null; address?: string | null; nextOfKinName?: string | null; nextOfKinRelation?: string | null; nextOfKinPhone?: string | null; nextOfKinAddress?: string | null };
+type Profile = { photo?: string | null; designation?: string | null; employmentType?: string | null; dateOfJoining?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null; phone?: string | null; address?: string | null; nextOfKinName?: string | null; nextOfKinRelation?: string | null; nextOfKinPhone?: string | null; nextOfKinAddress?: string | null; officeHours?: string | null };
 type Rec = { id: string; kind: string; title: string; organisation?: string | null; role?: string | null; startYear?: number | null; endYear?: number | null; amount?: string | null; status?: string | null; link?: string | null; details?: string | null; photo?: string | null };
 
 // Shrinks a picture in the browser so it stays small enough to keep with the profile.
@@ -78,6 +78,7 @@ export default function FacultyProfileForm({ profile, records, name }: { profile
                 {f("Blood group", <select name="bloodGroup" defaultValue={profile?.bloodGroup || ""} style={input}><option value="">— choose —</option>{BLOOD_GROUPS.map((d) => <option key={d}>{d}</option>)}</select>)}
                 {f("Phone", <input name="phone" defaultValue={profile?.phone || ""} style={input} />)}
                 {f("Address", <input name="address" defaultValue={profile?.address || ""} style={input} />)}
+                {f("Office hours (students can meet you)", <input name="officeHours" defaultValue={profile?.officeHours || ""} placeholder="e.g. Mon & Wed 2-4 pm, Room B-12" style={input} />)}
               </div>
             </div>
             <button className="btn btn-brass" type="submit" style={{ marginTop: 14 }}>Save</button>

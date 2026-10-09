@@ -22,14 +22,16 @@ function Bar({ value }: { value: number | null }) {
   );
 }
 
-export default function ReadinessReport({ data }: { data: Awaited<ReturnType<typeof computeReadiness>> }) {
-  const { batches, batchId, courses, plos, scored, overall, priorities, areas, areaScore, grid, COLS } = data;
+export default function ReadinessReport({ data, sarHref }: { data: Awaited<ReturnType<typeof computeReadiness>>; sarHref?: string }) {
+  const { batches, batchId, courses, plos, scored, overall, priorities, areas, areaScore, grid, COLS, qualifying, qualifyingManual } = data;
   return (
     <>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Status</h1>
+      {sarHref && <p style={{ margin: "0 0 8px" }}><a className="btn" href={sarHref}>Self-Assessment Report (print / PDF)</a></p>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         How ready your program is for an outcome-based accreditation review such as NCEAC, counted live from your own records.
-        The ten criteria below follow the NCEAC program-evaluation structure as listed in the document you shared (please check the numbering against the official NCEAC manual). Each criterion gets the usual quality rating: E Exceptional (90%+), G Good (75%+), C Concern (60%+), W Weakness (40%+), D Deficient (below 40%), X not measured by this system.
+        The nine criteria below are those of the NCEAC Accreditation Manual (second edition, 2023). Each gets one of NCEAC&apos;s compliance levels: G Good (exceeds), S Satisfactory (compliant), C Concern, W Weakness, D Deficient (not compliant), X not measured here.
+        The manual gives these as words, so the score bands used here are indicative: 90%+ G, 75%+ S, 60%+ C, 40%+ W, below 40% D.
       </p>
       <form method="get" style={{ marginBottom: 14, display: "flex", gap: 8, alignItems: "center" }}>
         <label style={{ fontSize: 13 }}>Show{" "}
@@ -60,6 +62,24 @@ export default function ReadinessReport({ data }: { data: Awaited<ReturnType<typ
               );
             })}
           </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Qualifying requirements</h3>
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>NCEAC screens every program on these first. Failing any one can stop the assessment (Manual 2.3).</p>
+        <div style={{ display: "grid", gap: 6 }}>
+          {qualifying.map((c) => {
+            const p = pct(c); const ok = p !== null && p >= 100;
+            return (
+              <div key={c.label} style={{ display: "grid", gridTemplateColumns: "26px 1fr 80px", gap: 10, alignItems: "center", fontSize: 13 }}>
+                <span style={{ background: p === null ? "#9AA0A6" : ok ? "#2E7D4F" : "#B3261E", color: "#fff", borderRadius: 6, textAlign: "center", fontWeight: 700 }}>{p === null ? "–" : ok ? "✓" : "✗"}</span>
+                <span>{c.label}{!ok && <a href={c.href} style={{ marginLeft: 8, fontSize: 12 }}>{c.hint}</a>}</span>
+                <span style={{ textAlign: "right", color: "var(--slate)" }}>{c.total > 0 ? `${c.done} of ${c.total}` : "—"}</span>
+              </div>
+            );
+          })}
+          {qualifyingManual.map((m) => <div key={m} style={{ fontSize: 12.5, color: "var(--slate)" }}>To show from paper records: {m}</div>)}
         </div>
       </div>
 
