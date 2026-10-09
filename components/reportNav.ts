@@ -29,6 +29,7 @@ export const OMC_ACTION_NAV = [
 export const LAB_ENGINEER_NAV = [
   { href: "/lab-engineer/labs", label: "My Labs" },
   { href: "/faculty/my-availability", label: "My Availability" },
+  { href: "/faculty/profile", label: "My Profile" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -43,6 +44,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
 ];
 
 export const SUBJECT_EXPERT_NAV = [
@@ -58,6 +60,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -92,6 +95,8 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
   { href: "/public-library", label: "Public Course Library" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -110,6 +115,7 @@ export const CHAIRMAN_NAV = [
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/chairman/report-access", label: "Report Access Control" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
 ];
 
 export const DEAN_NAV = [
@@ -119,6 +125,8 @@ export const DEAN_NAV = [
   { href: "/dean/curricula", label: "Curricula" },
   { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -134,6 +142,8 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
 ];
 
 export const HOD_NAV = [
@@ -143,6 +153,8 @@ export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/faculty/profile", label: "My Profile" },
+  { href: "/faculty-report", label: "Faculty Details Report" },
 ];
 
 export function navForRole(role: string) {

@@ -2129,3 +2129,43 @@ model CourseOwner {
   @@unique([chairmanId, departmentId, courseKey])
   @@index([ownerId])
 }
+
+// A faculty member's own profile: personal and contact details, next of kin, employment. Used for the faculty details reports.
+model FacultyProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  photo             String?  @db.Text // small JPEG as a data URL (resized in the browser)
+  designation       String?
+  employmentType    String?  // Permanent | Contract | Visiting | Part-time
+  dateOfJoining     DateTime?
+  dateOfBirth       DateTime?
+  gender            String?
+  bloodGroup        String?
+  phone             String?
+  address           String?  @db.Text
+  nextOfKinName     String?
+  nextOfKinRelation String?
+  nextOfKinPhone    String?
+  nextOfKinAddress  String?  @db.Text
+  updatedAt         DateTime @updatedAt
+}
+
+// One row per education / experience / research paper / grant / project / event of a faculty member.
+model FacultyRecord {
+  id           String   @id @default(cuid())
+  userId       String
+  kind         String   // EDUCATION | EXPERIENCE | PUBLICATION | GRANT | PROJECT | EVENT
+  title        String
+  organisation String?
+  role         String?
+  startYear    Int?
+  endYear      Int?
+  amount       String?
+  status       String?
+  link         String?
+  details      String?  @db.Text
+  photo        String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([userId, kind])
+}
