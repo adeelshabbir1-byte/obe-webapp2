@@ -50,19 +50,35 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ ok: true, set, cleared });
 }
 
-// The Chairman of the department that is asked to take a course accepts or declines it (the Institute Head can too).
-// body: { id, action: "ACCEPT" | "DECLINE" }
+// A course another department is asked to take can be accepted by that department's Chairman, by the Dean of its faculty,
+// or by the Program Lead who would handle it. The Institute Head does not have to, but can.
+// body: { id, action: "ACCEPT" | "DECLINE" } or { action: "ACCEPT_ALL" }
 export async function PATCH(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || (user.role !== "HEAD_OF_DEPARTMENT" && user.role !== "CHAIRMAN")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !["HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
+  const facultyDepts = user.role === "DEAN" ? new Set((await prisma.department.findMany({ where: { chairmanId, facultyId: user.facultyId || "none" }, select: { id: true } })).map((d) => d.id)) : null;
+  const canAnswer = (r: { ownerId: string; ownerDepartmentId: string | null }) =>
+    user.role === "CHAIRMAN" ? true
+    : user.role === "HEAD_OF_DEPARTMENT" ? r.ownerDepartmentId === user.departmentId
+    : user.role === "DEAN" ? !!r.ownerDepartmentId && !!facultyDepts?.has(r.ownerDepartmentId)
+    : r.ownerId === user.id;
+
+  if (body.action === "ACCEPT_ALL") {
+    const pending = await prisma.courseOwner.findMany({ where: { chairmanId, status: "PENDING" } });
+    const mine = pending.filter(canAnswer);
+    if (mine.length) await prisma.courseOwner.updateMany({ where: { id: { in: mine.map((m) => m.id) } }, data: { status: "ACCEPTED" } });
+    await writeAuditLog({ actorUserId: user.id, action: "COURSE_SPLIT_ACCEPTED_ALL", entityType: "CourseOwner", entityId: user.id, metadata: { count: mine.length } as never });
+    return NextResponse.json({ ok: true, count: mine.length });
+  }
+
   const row = await prisma.courseOwner.findFirst({ where: { id: String(body.id || ""), chairmanId, status: "PENDING" } });
   if (!row) return NextResponse.json({ error: "request not found" }, { status: 404 });
-  if (user.role === "HEAD_OF_DEPARTMENT" && row.ownerDepartmentId !== user.departmentId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!canAnswer(row)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (body.action === "ACCEPT") await prisma.courseOwner.update({ where: { id: row.id }, data: { status: "ACCEPTED" } });
   else if (body.action === "DECLINE") await prisma.courseOwner.delete({ where: { id: row.id } });
-  else return NextResponse.json({ error: "action must be ACCEPT or DECLINE" }, { status: 400 });
+  else return NextResponse.json({ error: "action must be ACCEPT, DECLINE or ACCEPT_ALL" }, { status: 400 });
   await writeAuditLog({ actorUserId: user.id, action: body.action === "ACCEPT" ? "COURSE_SPLIT_ACCEPTED" : "COURSE_SPLIT_DECLINED", entityType: "CourseOwner", entityId: row.id });
   return NextResponse.json({ ok: true });
 }

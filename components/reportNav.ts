@@ -83,6 +83,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/coordinator/batches", label: "Degree Programs & Batches" },
@@ -154,6 +155,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/dean/overview", label: "My Faculty" },
   { href: "/dean/approvals", label: "Approvals" },

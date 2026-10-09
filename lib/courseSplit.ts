@@ -10,6 +10,23 @@ export type SplitRow = {
 export type Incoming = { id: string; code: string; title: string; fromDepartment: string; ownerName: string };
 export type SplitData = { leads: SplitLead[]; rows: SplitRow[]; incoming: Incoming[]; departmentName: string };
 
+/** Requests waiting to be accepted, narrowed by `where` (a department, a faculty's departments or one Program Lead). */
+export async function loadIncoming(chairmanId: string, where: Record<string, unknown>): Promise<Incoming[]> {
+  const [pending, depts, leads] = await Promise.all([
+    prisma.courseOwner.findMany({ where: { chairmanId, status: "PENDING", ...where } as never }),
+    prisma.department.findMany({ where: { chairmanId }, select: { id: true, name: true } }),
+    prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId }, select: { id: true, name: true } }),
+  ]);
+  const deptName = new Map<string, string>(depts.map((d) => [d.id, d.name]));
+  const nameOf = new Map<string, string>(leads.map((l) => [l.id, l.name]));
+  const out: Incoming[] = [];
+  for (const p of pending) {
+    const c = await prisma.course.findFirst({ where: { code: { equals: p.courseKey, mode: "insensitive" }, coordinator: { managedById: chairmanId, departmentId: p.departmentId } }, select: { code: true, title: true } });
+    out.push({ id: p.id, code: c?.code || p.courseKey, title: c?.title || "", fromDepartment: deptName.get(p.departmentId) || "another department", ownerName: nameOf.get(p.ownerId) || "a Program Lead" });
+  }
+  return out;
+}
+
 /** Every course of the department grouped by code, with the leads whose programs run it and who handles it.
  * Any Program Lead of the institute can be picked (another department can take a course); `incomingDepartmentId` null = all requests. */
 export async function loadSplit(chairmanId: string, departmentId: string, incomingDepartmentId: string | null = departmentId): Promise<SplitData> {

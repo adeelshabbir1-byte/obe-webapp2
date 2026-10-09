@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SplitData } from "../lib/courseSplit";
+import IncomingRequests from "./IncomingRequests";
 
 export default function CourseSplitManager({ data, departmentId }: { data: SplitData; departmentId: string | null }) {
   const [owners, setOwners] = useState<Record<string, string>>(() => Object.fromEntries(data.rows.map((r) => [r.key, r.ownerId || ""])));
@@ -63,18 +64,7 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
 
   return (
     <div>
-      {data.incoming.length > 0 && (
-        <div className="card" style={{ marginBottom: 14, borderColor: "var(--brass-dark)" }}>
-          <h3 style={{ fontSize: 14, marginTop: 0 }}>Courses other departments want you to take</h3>
-          {data.incoming.map((i) => (
-            <div key={i.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "6px 0", borderTop: "1px solid var(--line)" }}>
-              <span style={{ fontSize: 13, flex: 1 }}><strong>{i.code}</strong> {i.title} from {i.fromDepartment}, to be handled by {i.ownerName}</span>
-              <button className="btn btn-brass" disabled={busy} onClick={() => answer(i.id, "ACCEPT")}>Accept</button>
-              <button className="btn" disabled={busy} onClick={() => answer(i.id, "DECLINE")}>Decline</button>
-            </div>
-          ))}
-        </div>
-      )}
+      {data.incoming.length > 0 && <IncomingRequests items={data.incoming} title="Courses other departments want you to take" />}
       <div className="card" style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 13, marginTop: 0 }}>
           <strong>{data.rows.filter((r) => r.shared).length}</strong> common courses (taught in two or more programs) and <strong>{data.rows.filter((r) => !r.shared).length}</strong> specialised courses.
@@ -104,7 +94,7 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
                     <option value="">{r.shared ? "Not decided yet" : "The lead of its own program"}</option>
                     {leadOptions}
                   </select>
-                  {r.ownerStatus === "PENDING" && owners[r.key] === (r.ownerId || "") && <div style={{ fontSize: 11.5, color: "var(--rust)" }}>Waiting for {leadName(r.ownerId || "")}'s Chairman to accept. Until then the course stays as it was.</div>}
+                  {r.ownerStatus === "PENDING" && owners[r.key] === (r.ownerId || "") && <div style={{ fontSize: 11.5, color: "var(--rust)" }}>Waiting for {leadName(r.ownerId || "")}, his Chairman or his Dean to accept. Until then the course stays as it was.</div>}
                 </td>
               </tr>
             ))}
