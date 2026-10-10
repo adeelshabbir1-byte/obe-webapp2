@@ -7,6 +7,7 @@ import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
 import LoadHecContentButton from "../../../../../components/LoadHecContentButton";
 import ImportContentFromCourseButton from "../../../../../components/ImportContentFromCourseButton";
+import CloExcelButtons from "../../../../../components/CloExcelButtons";
 import { navForRole } from "../../../../../components/reportNav";
 
 
@@ -66,6 +67,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
       )}
       {!isFollower && course.masterCourseId && <LoadHecContentButton courseId={course.id} hasExistingClos={course.clos.length > 0} />}
       {!isFollower && <ImportContentFromCourseButton courseId={course.id} />}
+      <CloExcelButtons courseId={course.id} canImport={!isFollower} />
       <ClosManager
         courseId={course.id}
         initialClos={course.clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploMappingSource: c.ploMappingSource, ploContributionPct: c.ploContributionPct, targetPct: c.targetPct }))}
