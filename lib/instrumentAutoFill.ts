@@ -68,7 +68,19 @@ export async function ensureInstrumentCount(
 
   const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type } });
   const missing = desiredCount - existing.length;
-  if (missing <= 0) return;
+  if (missing <= 0) {
+    // Same count but the category weight changed (e.g. Midterm 30 -> 25): scale the items so they add to the new target again.
+    const sum = existing.reduce((s, i) => s + i.marksPct, 0);
+    if (categoryTargetPct > 0 && existing.length > 0 && Math.abs(sum - categoryTargetPct) > 0.01) {
+      const totalHund = Math.round(categoryTargetPct * 100);
+      const scaled = existing.map((i) => Math.floor((i.marksPct / (sum || 1)) * totalHund));
+      let rest = totalHund - scaled.reduce((a, b) => a + b, 0);
+      for (let i = 0; rest > 0; i = (i + 1) % scaled.length, rest--) scaled[i]++;
+      for (let i = 0; i < existing.length; i++) await prisma.assessmentInstrument.update({ where: { id: existing[i].id }, data: { marksPct: scaled[i] / 100 } });
+      await recomputeCourseRows(courseId, source);
+    }
+    return;
+  }
 
   const existingSum = existing.reduce((s, i) => s + i.marksPct, 0);
   const remaining = Math.max(0, categoryTargetPct - existingSum);
@@ -76,7 +88,9 @@ export async function ensureInstrumentCount(
 
   const isNumbered = type === "Midterm" || type === "Final";
   for (let i = 0; i < missing; i++) {
-    const n = existing.length + i + 1;
+    // Next free number (not count + 1), so deleting Q2 and adding one never produces two items called "5".
+    const used = existing.map((e) => parseInt(String(e.label).replace(/\D+/g, ""), 10)).filter((x) => Number.isFinite(x));
+    const n = (used.length ? Math.max(...used) : 0) + 1 + i;
     const label = isNumbered ? String(n) : `${type} ${n}`;
     const marksPct = parts[i];
     await prisma.assessmentInstrument.create({ data: { courseId, source, type, label, marksPct, maxScore: 10 } });
