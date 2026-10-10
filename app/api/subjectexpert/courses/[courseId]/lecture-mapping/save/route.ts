@@ -5,7 +5,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/lectureWeights";
+import { recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
 
 // Batched version of instrument-toggle + set-questions. The per-click
 // versions of those two routes each finish by re-syncing this course's
@@ -22,6 +22,9 @@ import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/l
 // to linked courses exactly once, at the very end.
 type TogglePayload = { lectureRowId: string; instrumentId: string; linked: boolean };
 type QuestionsPayload = { lectureRowId: string; type: "Midterm" | "Final"; numbers: string };
+
+// Saving many ticks at once can take a while on a big course.
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -57,54 +60,44 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   // instead of keeping its old weight (see recomputeRows' doc comment).
   const touchedRowIds = new Set<string>([...safeToggles.map((t) => t.lectureRowId), ...safeQuestions.map((q) => q.lectureRowId)]);
 
-  // Apply every toggle first.
-  for (const t of safeToggles) {
-    if (t.linked) {
-      await prisma.lectureRowInstrument.upsert({
-        where: { lectureRowId_instrumentId: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId } },
-        create: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId },
-        update: {},
-      });
-    } else {
-      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId } });
-    }
+  // Apply every toggle in bulk: one insert for all new ticks, one delete per instrument for all unticks.
+  const toAdd = safeToggles.filter((t) => t.linked).map((t) => ({ lectureRowId: t.lectureRowId, instrumentId: t.instrumentId }));
+  if (toAdd.length > 0) await prisma.lectureRowInstrument.createMany({ data: toAdd, skipDuplicates: true });
+  const removeByInstrument = new Map<string, string[]>();
+  for (const t of safeToggles) if (!t.linked) removeByInstrument.set(t.instrumentId, [...(removeByInstrument.get(t.instrumentId) || []), t.lectureRowId]);
+  for (const [instrumentId, rows] of Array.from(removeByInstrument.entries())) {
+    await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId, lectureRowId: { in: rows } } });
   }
 
-  // Then every question-number change — same "replace this row's links
-  // of this type" logic as the single-row route, validating labels
-  // against this course's own Midterm/Final instruments.
+  // Then every question-number change — "replace this row's links of this type", also done in bulk.
   if (safeQuestions.length > 0) {
     const allNumbered = await prisma.assessmentInstrument.findMany({
       where: { courseId: course.id, source: "SE", type: { in: ["Midterm", "Final"] } },
     });
     const byTypeLabel = new Map(allNumbered.map((i) => [`${i.type}:${i.label}`, i]));
     const badLabels: string[] = [];
+    const creates: { lectureRowId: string; instrumentId: string }[] = [];
+    const replaceRows = new Map<string, Set<string>>(); // type -> row ids whose links of that type are replaced
 
     for (const q of safeQuestions) {
       const numbers = (q.numbers || "").split(",").map((n) => n.trim()).filter((n) => n.length > 0);
       const resolved = numbers.map((n) => byTypeLabel.get(`${q.type}:${n}`));
       const missing = numbers.filter((n, idx) => !resolved[idx]);
       if (missing.length > 0) { badLabels.push(...missing.map((n) => `${q.type} ${n}`)); continue; }
-
-      const existingLinksOfType = await prisma.lectureRowInstrument.findMany({
-        where: { lectureRowId: q.lectureRowId, instrument: { type: q.type, source: "SE" } },
-      });
-      for (const l of existingLinksOfType) touchedInstrumentIds.add(l.instrumentId);
-      await prisma.lectureRowInstrument.deleteMany({ where: { id: { in: existingLinksOfType.map((l) => l.id) } } });
-
-      for (const inst of resolved) {
-        if (!inst) continue;
-        touchedInstrumentIds.add(inst.id);
-        await prisma.lectureRowInstrument.create({ data: { lectureRowId: q.lectureRowId, instrumentId: inst.id } });
-      }
+      replaceRows.set(q.type, (replaceRows.get(q.type) || new Set<string>()).add(q.lectureRowId));
+      for (const inst of resolved) if (inst) creates.push({ lectureRowId: q.lectureRowId, instrumentId: (inst as { id: string }).id });
     }
     if (badLabels.length > 0) {
       return NextResponse.json({ error: `Question(s) not defined yet: ${badLabels.join(", ")} — add them on the Quizzes/Assignments/Exams tab first` }, { status: 400 });
     }
+    for (const [type, rowSet] of Array.from(replaceRows.entries())) {
+      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: Array.from(rowSet) }, instrument: { type, source: "SE" } } });
+    }
+    if (creates.length > 0) await prisma.lectureRowInstrument.createMany({ data: creates, skipDuplicates: true });
   }
 
-  await recomputeAffectedRows(Array.from(touchedInstrumentIds));
-  await recomputeRows(Array.from(touchedRowIds));
+  // One batched recompute of every lecture weight in the course (a handful of queries), not row-by-row.
+  await recomputeCourseRows(course.id, "SE");
   await writeAuditLog({
     actorUserId: user.id, action: "LECTURE_MAPPING_SAVED", entityType: "Course", entityId: course.id,
     metadata: { toggleCount: safeToggles.length, questionRowCount: safeQuestions.length },

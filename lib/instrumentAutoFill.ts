@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { r4, usableBestOf } from "./assessmentWeights";
-import { recomputeRowWeight } from "./lectureWeights";
+import { recomputeCourseRows } from "./lectureWeights";
 
 /**
  * Tops up one assessment type (Quiz, Assignment, Midterm, Final, Project,
@@ -40,7 +40,7 @@ async function trimInstrumentCount(courseId: string, source: "SE" | "INSTRUCTOR"
   await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: { in: ids } } });
   await prisma.instrumentEvidence.deleteMany({ where: { instrumentId: { in: ids } } });
   await prisma.assessmentInstrument.deleteMany({ where: { id: { in: ids } } });
-  for (const rowId of rowIds) await recomputeRowWeight(rowId);
+  if (rowIds.length > 0) await recomputeCourseRows(courseId, source);
   return extra.length;
 }
 
@@ -59,7 +59,7 @@ export async function ensureInstrumentCount(
     const left = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
     const parts = splitHundredths(categoryTargetPct, left.length);
     for (let i = 0; i < left.length; i++) await prisma.assessmentInstrument.update({ where: { id: left[i].id }, data: { marksPct: parts[i] } });
-    for (const row of await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } })) await recomputeRowWeight(row.id);
+    await recomputeCourseRows(courseId, source);
   }
 
   const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type } });

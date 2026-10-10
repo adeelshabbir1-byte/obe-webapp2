@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
-import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/lectureWeights";
+import { recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
 
 // Instructor counterpart to the SE lecture-mapping batch-save route —
 // same "apply everything, recompute once" shape, for the same reason
@@ -14,6 +14,8 @@ import { recomputeAffectedRows, recomputeRows } from "../../../../../../../lib/l
 // Save click.
 type TogglePayload = { lectureRowId: string; instrumentId: string; linked: boolean };
 type QuestionsPayload = { lectureRowId: string; type: "Midterm" | "Final"; numbers: string };
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -39,16 +41,13 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const touchedInstrumentIds = new Set<string>(safeToggles.map((t) => t.instrumentId));
   const touchedRowIds = new Set<string>([...safeToggles.map((t) => t.lectureRowId), ...safeQuestions.map((q) => q.lectureRowId)]);
 
-  for (const t of safeToggles) {
-    if (t.linked) {
-      await prisma.lectureRowInstrument.upsert({
-        where: { lectureRowId_instrumentId: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId } },
-        create: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId },
-        update: {},
-      });
-    } else {
-      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: t.lectureRowId, instrumentId: t.instrumentId } });
-    }
+  // Bulk apply: one insert for all new ticks, one delete per instrument for all unticks.
+  const toAdd = safeToggles.filter((t) => t.linked).map((t) => ({ lectureRowId: t.lectureRowId, instrumentId: t.instrumentId }));
+  if (toAdd.length > 0) await prisma.lectureRowInstrument.createMany({ data: toAdd, skipDuplicates: true });
+  const removeByInstrument = new Map<string, string[]>();
+  for (const t of safeToggles) if (!t.linked) removeByInstrument.set(t.instrumentId, [...(removeByInstrument.get(t.instrumentId) || []), t.lectureRowId]);
+  for (const [instrumentId, rows] of Array.from(removeByInstrument.entries())) {
+    await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId, lectureRowId: { in: rows } } });
   }
 
   if (safeQuestions.length > 0) {
@@ -57,32 +56,27 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     });
     const byTypeLabel = new Map(allNumbered.map((i) => [`${i.type}:${i.label}`, i]));
     const badLabels: string[] = [];
+    const creates: { lectureRowId: string; instrumentId: string }[] = [];
+    const replaceRows = new Map<string, Set<string>>();
 
     for (const q of safeQuestions) {
       const numbers = (q.numbers || "").split(",").map((n) => n.trim()).filter((n) => n.length > 0);
       const resolved = numbers.map((n) => byTypeLabel.get(`${q.type}:${n}`));
       const missing = numbers.filter((n, idx) => !resolved[idx]);
       if (missing.length > 0) { badLabels.push(...missing.map((n) => `${q.type} ${n}`)); continue; }
-
-      const existingLinksOfType = await prisma.lectureRowInstrument.findMany({
-        where: { lectureRowId: q.lectureRowId, instrument: { type: q.type, source: "INSTRUCTOR" } },
-      });
-      for (const l of existingLinksOfType) touchedInstrumentIds.add(l.instrumentId);
-      await prisma.lectureRowInstrument.deleteMany({ where: { id: { in: existingLinksOfType.map((l) => l.id) } } });
-
-      for (const inst of resolved) {
-        if (!inst) continue;
-        touchedInstrumentIds.add(inst.id);
-        await prisma.lectureRowInstrument.create({ data: { lectureRowId: q.lectureRowId, instrumentId: inst.id } });
-      }
+      replaceRows.set(q.type, (replaceRows.get(q.type) || new Set<string>()).add(q.lectureRowId));
+      for (const inst of resolved) if (inst) creates.push({ lectureRowId: q.lectureRowId, instrumentId: (inst as { id: string }).id });
     }
     if (badLabels.length > 0) {
       return NextResponse.json({ error: `Question(s) not defined yet: ${badLabels.join(", ")} — add them on the Instruments tab first` }, { status: 400 });
     }
+    for (const [type, rowSet] of Array.from(replaceRows.entries())) {
+      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: Array.from(rowSet) }, instrument: { type, source: "INSTRUCTOR" } } });
+    }
+    if (creates.length > 0) await prisma.lectureRowInstrument.createMany({ data: creates, skipDuplicates: true });
   }
 
-  await recomputeAffectedRows(Array.from(touchedInstrumentIds));
-  await recomputeRows(Array.from(touchedRowIds));
+  await recomputeCourseRows(course.id, "INSTRUCTOR");
 
   const allRows = await prisma.lectureRow.findMany({
     where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" },
