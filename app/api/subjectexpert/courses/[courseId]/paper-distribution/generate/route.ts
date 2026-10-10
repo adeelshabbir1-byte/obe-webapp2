@@ -66,8 +66,12 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   let orderIndex = 0;
   for (const inst of instruments) {
     const rows = rowsByInstrument.get(inst.id) || [];
-    const topicText = rows.map((r) => r.topic).filter((t) => t.trim().length > 0).join("; ");
-    const distinctCloIds = new Set(rows.map((r) => r.cloId).filter((id): id is string => !!id));
+    const topicText = Array.from(new Set(rows.map((r) => r.topic.trim()).filter((t) => t.length > 0))).join("; ");
+    // CLO: the one most of the question's topics belong to (first one wins a tie).
+    const cloCount = new Map<string, number>();
+    for (const r of rows) if (r.cloId) cloCount.set(r.cloId, (cloCount.get(r.cloId) || 0) + 1);
+    let mainClo: string | null = null;
+    cloCount.forEach((n, id) => { if (mainClo === null || n > (cloCount.get(mainClo) || 0)) mainClo = id; });
     const levels = rows.map((r) => r.bloomLevel || (r.cloId ? cloBloom.get(r.cloId) : null)).filter((lv): lv is string => !!lv);
     const topLevel = levels.length ? levels.reduce((a, b) => (levelNo(b) > levelNo(a) ? b : a)) : null;
     await prisma.paperDistributionItem.create({
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
         questionNo: orderIndex + 1, orderIndex,
         lectureRowId: rows.length === 1 ? rows[0].id : null,
         topicText: topicText || "(not yet linked to a topic on the Assessments tab)",
-        cloId: distinctCloIds.size === 1 ? Array.from(distinctCloIds)[0] : null,
+        cloId: mainClo,
         cognitiveLevel: topLevel,
         marks: inst.marksPct,
       },
