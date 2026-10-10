@@ -55,6 +55,11 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     rowsByInstrument.set(l.instrumentId, arr);
   }
 
+  // Cognitive level: the topic's own level if set; otherwise its CLO's level. A question covering several topics takes the highest level.
+  const closForBloom = await prisma.cLO.findMany({ where: { courseId: course.id, source: "SE" }, select: { id: true, bloomLevel: true } });
+  const cloBloom = new Map<string, string>(closForBloom.map((c: { id: string; bloomLevel: string }) => [c.id, c.bloomLevel]));
+  const levelNo = (lv: string) => parseInt(lv.replace(/\D/g, ""), 10) || 0;
+
   // Replace this exam's current list entirely.
   await prisma.paperDistributionItem.deleteMany({ where: { courseId: course.id, source: "SE", examType } });
 
@@ -63,7 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     const rows = rowsByInstrument.get(inst.id) || [];
     const topicText = rows.map((r) => r.topic).filter((t) => t.trim().length > 0).join("; ");
     const distinctCloIds = new Set(rows.map((r) => r.cloId).filter((id): id is string => !!id));
-    const distinctLevels = new Set(rows.map((r) => r.bloomLevel).filter((lv): lv is string => !!lv));
+    const levels = rows.map((r) => r.bloomLevel || (r.cloId ? cloBloom.get(r.cloId) : null)).filter((lv): lv is string => !!lv);
+    const topLevel = levels.length ? levels.reduce((a, b) => (levelNo(b) > levelNo(a) ? b : a)) : null;
     await prisma.paperDistributionItem.create({
       data: {
         courseId: course.id, source: "SE", examType,
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
         lectureRowId: rows.length === 1 ? rows[0].id : null,
         topicText: topicText || "(not yet linked to a topic on the Assessments tab)",
         cloId: distinctCloIds.size === 1 ? Array.from(distinctCloIds)[0] : null,
-        cognitiveLevel: distinctLevels.size === 1 ? Array.from(distinctLevels)[0] : null,
+        cognitiveLevel: topLevel,
         marks: inst.marksPct,
       },
     });
