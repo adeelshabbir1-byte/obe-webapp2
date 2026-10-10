@@ -189,6 +189,24 @@ export default function MasterCurriculumEditor() {
             Export to Excel
           </a>
         )}
+        {selectedId && detail?.isOwned && (
+          <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, cursor: "pointer", display: "inline-block" }}>
+            Import CLOs &amp; PLO mapping from Excel
+            <input type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={async (e) => {
+              const f = e.target.files?.[0]; if (!f) return;
+              if (!confirm("For every course in the file, its existing CLOs will be replaced by the ones in the file. Continue?")) { e.target.value = ""; return; }
+              setBusy(true); setError(""); setNotice("");
+              const fd = new FormData(); fd.append("file", f);
+              try {
+                const r = await fetch(`/api/omc/master-curriculum/${selectedId}/import-clos`, { method: "POST", body: fd });
+                const d = await r.json();
+                if (!r.ok) setError(d.error || "Import failed.");
+                else { setNotice(`${d.clos} CLO(s) loaded for ${d.courses} course(s).${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`); await loadDetail(selectedId); }
+              } catch { setError("Import failed."); }
+              setBusy(false); e.target.value = "";
+            }} />
+          </label>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
