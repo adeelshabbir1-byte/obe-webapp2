@@ -152,6 +152,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Bulk CLO Import": Upload,
   "Program Semester Map": Map,
   "Semester Section Map": LayoutGrid,
+  "Topic Workspace": Shuffle,
   "Back to Dashboard": ArrowLeft,
 };
 

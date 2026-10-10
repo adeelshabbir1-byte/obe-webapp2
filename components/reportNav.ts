@@ -62,6 +62,7 @@ export const FINANCE_NAV = [
 
 export const INSTRUCTOR_NAV = [
   { href: "/instructor/courses", label: "My Semester Courses" },
+  { href: "/faculty/topic-workspace", label: "Topic Workspace" },
   { href: "/instructor/timetable", label: "My Timetable" },
   { href: "/instructor/course-team", label: "Course Teams" },
   { href: "/instructor/labs", label: "My Labs" },
@@ -78,6 +79,7 @@ export const INSTRUCTOR_NAV = [
 
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },
+  { href: "/faculty/topic-workspace", label: "Topic Workspace" },
   { href: "/instructor/timetable", label: "My Timetable" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
