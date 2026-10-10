@@ -135,16 +135,19 @@ async function omcStats(user: { id: string; role: string; managedById: string | 
 }
 
 async function subjectExpertStats(subjectExpertId: string): Promise<Stat[]> {
-  const courses = await prisma.course.findMany({
+  const all = await prisma.course.findMany({
     where: { subjectExpertId },
-    include: { _count: { select: { clos: { where: { source: "SE" } }, lectureRows: { where: { source: "SE" } } } } },
+    include: { contentSyncMember: { select: { isBase: true } }, _count: { select: { clos: { where: { source: "SE" } }, lectureRows: { where: { source: "SE" } } } } },
   });
+  // A follower course copies its content from its base course, so there is nothing to do on it. Only base and standalone courses are work.
+  const courses = all.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
+  const followers = all.length - courses.length;
   const noClos = courses.filter((c) => c._count.clos === 0).length;
   const incompletePlan = courses.filter((c) => c._count.lectureRows < 32).length;
   return [
     { label: "Courses with no CLOs yet", value: noClos, href: "/subjectexpert/courses", tone: noClos > 0 ? "warn" : "ok" },
     { label: "Courses with an incomplete lecture plan", value: incompletePlan, href: "/subjectexpert/courses", tone: incompletePlan > 0 ? "warn" : "ok" },
-    { label: "Total courses assigned to you", value: courses.length, tone: "neutral" },
+    { label: followers > 0 ? `Courses you work on (${followers} more follow them and copy their content)` : "Courses assigned to you", value: courses.length, href: "/subjectexpert/courses", tone: "neutral" },
   ];
 }
 
