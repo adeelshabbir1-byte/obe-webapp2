@@ -8,6 +8,10 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
+  // Too many wrong codes in a row: stop guessing (a 6-digit code can otherwise be brute-forced).
+  const recentFails = await prisma.auditLog.count({ where: { actorUserId: user.id, action: "MFA_VERIFY_FAILED", createdAt: { gte: new Date(Date.now() - 15 * 60_000) } } });
+  if (recentFails >= 5) return NextResponse.json({ error: "Too many wrong codes. Wait 15 minutes and try again." }, { status: 429 });
+
   const body = await req.json();
   if (!body.code) return NextResponse.json({ error: "code is required" }, { status: 400 });
 

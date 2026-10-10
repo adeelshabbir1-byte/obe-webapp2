@@ -50,6 +50,16 @@ export async function getAuthenticatedUser() {
 
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
+  // A session that has passed the password but not the second step (authenticator code) may only call the few
+  // sign-in endpoints. Pages redirect such a session to the code screen, but the API must refuse it outright,
+  // otherwise anyone who knows a password could skip two-step verification by calling the API directly.
+  if (!session.mfaVerified) {
+    let apiPath = "";
+    try { apiPath = headers().get("x-pathname") || ""; } catch { apiPath = ""; }
+    const allowed = ["/api/auth/mfa-verify", "/api/auth/logout", "/api/auth/change-password"];
+    if (apiPath.startsWith("/api/") && !allowed.includes(apiPath)) return null;
+  }
+
   const { passwordHash, ...safeUser } = session.user;
   // A dual-capable Subject Expert's chosen role for this session overrides
   // their stored role everywhere else in the app checks `user.role` —
