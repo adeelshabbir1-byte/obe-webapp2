@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
 const txt = (v: unknown, max = 3000) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
-export const SURVEY_KINDS = ["STUDENT", "EXIT", "ALUMNI", "EMPLOYER", "COURSE"];
+const SURVEY_KINDS = ["STUDENT", "EXIT", "ALUMNI", "EMPLOYER", "COURSE"];
 
 // Program Lead records yearly figures (type "FIGURES") or a survey result (type "SURVEY"); DELETE ?type=&id=
 export async function POST(req: NextRequest) {
