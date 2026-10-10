@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { cloOrder } from "../../../../../lib/assessmentWeights";
+import { closWithPlo } from "../../../../../lib/assessmentWeights";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -120,7 +120,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
             cloId: r.cloId,
           };
         })}
-        clos={[...course.clos].sort(cloOrder).map((c) => ({ id: c.id, code: c.code }))}
+        clos={await closWithPlo(course.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId })))}
         apiBase="/api/subjectexpert"
       />}
 

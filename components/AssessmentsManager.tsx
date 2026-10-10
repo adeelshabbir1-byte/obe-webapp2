@@ -19,7 +19,7 @@ type Row = { id: string; week: number; lectureNumber: number; topic: string; sub
 function effectiveSubtopic(r: { topic: string; subtopic: string | null }) {
   return (r.subtopic && r.subtopic.trim()) || r.topic;
 }
-type Clo = { id: string; code: string };
+type Clo = { id: string; code: string; ploId?: string | null; ploNumber?: number | null; ploTitle?: string };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
 const TARGET_KEY: Record<string, keyof Targets> = {
@@ -274,6 +274,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
 
+  // The real goal is PLOs: CLOs that map to the same PLO sit side by side (already sorted), a banner row above names the PLO
+  // and the marks it receives, and a summary lists every PLO with its marks.
+  const PLO_TINTS = ["#EEF2FA", "#F7EEF5", "#EEF6F0", "#FAF3E6"];
+  const ploGroups: { key: string; label: string; title: string; cols: number; total: number; tint: string }[] = [];
+  cloList.forEach((c, idx) => {
+    const key = c.ploId || "none";
+    const last = ploGroups[ploGroups.length - 1];
+    if (last && last.key === key) { last.cols += 1; last.total += cloTotals[idx]; return; }
+    ploGroups.push({ key, label: c.ploNumber != null ? `PLO-${c.ploNumber}` : "No PLO", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
+  });
+  const cloTint = (c: Clo) => ploGroups.find((g) => g.key === (c.ploId || "none"))?.tint;
+
   // CLOs should each carry roughly the same share of the total marks — one
   // CLO barely tested while another dominates the paper is a red flag for
   // OMC review. A small spread is normal (marks don't divide perfectly
@@ -431,6 +443,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} data-save-shortcut="true" className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
           </div>
         </div>
+        {ploGroups.length > 0 && cloList.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            {ploGroups.map((g) => (
+              <div key={g.key} title={g.title} style={{ background: g.tint, border: "1px solid var(--line)", borderRadius: 6, padding: "6px 12px", minWidth: 110 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700 }}>{g.label}</div>
+                <div style={{ fontSize: 17, fontWeight: 700 }}>{fmtPct(g.total)}%</div>
+                <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of total marks · {g.cols} CLO{g.cols > 1 ? "s" : ""}</div>
+              </div>
+            ))}
+          </div>
+        )}
         {cloImbalanced && (
           <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 10, fontWeight: 600 }}>
             ⚠ CLOs are not equally distributed — {fmtPct(cloSpread)}% spread between the highest and lowest CLO total
@@ -445,6 +468,16 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         ) : (
           <SortableTable>
             <thead>
+              {cloList.length > 0 && (
+                <tr>
+                  <td colSpan={2 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0) + 1}></td>
+                  {ploGroups.map((g) => (
+                    <td key={g.key} colSpan={g.cols} style={{ textAlign: "center", background: g.tint, fontSize: 11.5, fontWeight: 700, borderLeft: "2px solid var(--line)", padding: "6px 4px" }} title={g.title}>
+                      {g.label}<br /><span style={{ fontWeight: 600 }}>{fmtPct(g.total)}%</span>
+                    </td>
+                  ))}
+                </tr>
+              )}
               <tr>
                 <th style={{ verticalAlign: "bottom" }}>Sr#</th>
                 <th style={{ verticalAlign: "bottom" }}>Topic</th>
@@ -454,7 +487,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 {hasMidterm && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Midterm }} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
                 {hasFinal && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Final }} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
                 <th style={verticalHeaderStyle} title="Weight"><span style={verticalTextStyle}>Weight</span></th>
-                {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}><span style={verticalTextStyle}>{c.code}</span></th>)}
+                {cloList.map((c) => <th key={c.id} style={{ ...verticalHeaderStyle, background: cloTint(c) }} title={c.code}><span style={verticalTextStyle}>{c.code}</span></th>)}
               </tr>
               {(cloList.length > 0 || hasMidterm || hasFinal) && (
                 // <td> (not <th>) deliberately — SortableTable binds
@@ -469,7 +502,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   {hasMidterm && <td style={{ background: TYPE_TINT.Midterm, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
                   {hasFinal && <td style={{ background: TYPE_TINT.Final, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
                   <td style={{ fontSize: 12 }}>{fmtPct(grandTotal)}%</td>
-                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{fmtPct(t)}%</td>)}
+                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12, background: cloTint(cloList[idx]) }}>{fmtPct(t)}%</td>)}
                 </tr>
               )}
             </thead>
@@ -509,7 +542,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   <td style={{ fontWeight: 600 }}>{fmtPct(groupWeight)}%</td>
                   {cloList.map((c) => {
                     const t = g.rows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0);
-                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{t > 0 ? `${fmtPct(t)}%` : ""}</td>;
+                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12, background: cloTint(c) }}>{t > 0 ? `${fmtPct(t)}%` : ""}</td>;
                   })}
                 </tr>
                 );
