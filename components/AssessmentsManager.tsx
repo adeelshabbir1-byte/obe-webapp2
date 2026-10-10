@@ -89,6 +89,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const [saving, setSaving] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
+  // Click a CLO or PLO to light up the topics mapped to it (click it again to stop).
+  const [focus, setFocus] = useState<{ kind: "clo" | "plo"; id: string } | null>(null);
 
   async function uploadEvidence(instrumentId: string, file: File) {
     setUploadingId(instrumentId); setError("");
@@ -322,6 +324,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const CLO_BALANCE_TOLERANCE = 7;
   const cloSpread = cloTotals.length > 1 ? Math.max(...cloTotals) - Math.min(...cloTotals) : 0;
   const cloImbalanced = cloTotals.length > 1 && cloSpread > CLO_BALANCE_TOLERANCE;
+  // A CLO is "under-hit" when it gets no marks or clearly less than an even share; a PLO when it gets no marks at all.
+  const cloAvg = cloTotals.length ? grandTotal / cloTotals.length : 0;
+  const cloLow = (idx: number) => cloTotals[idx] === 0 || (cloTotals.length > 1 && cloTotals[idx] < cloAvg - CLO_BALANCE_TOLERANCE / 2);
+  const ploLow = (key: string) => key !== "none" && (ploGroups.find((g) => g.key === key)?.total || 0) === 0;
+  const focusCloIds = new Set<string>(!focus ? [] : focus.kind === "clo" ? [focus.id] : cloList.filter((c) => (c.ploId || "none") === focus.id).map((c) => c.id));
+  const toggleFocus = (kind: "clo" | "plo", id: string) => setFocus((f) => (f && f.kind === kind && f.id === id ? null : { kind, id }));
+  const focusLabel = !focus ? "" : focus.kind === "clo" ? cloList.find((c) => c.id === focus.id)?.code || "" : ploGroups.find((g) => g.key === focus.id)?.label || "";
 
   // The mapping grid below groups lecture rows by their (effective)
   // subtopic — if the same subtopic was taught across several lectures,
@@ -487,7 +496,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         {ploGroups.length > 0 && cloList.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
             {ploGroups.map((g) => (
-              <div key={g.key} title={g.title} style={{ background: g.tint, border: "1px solid var(--line)", borderRadius: 6, padding: "6px 12px", minWidth: 110 }}>
+              <div key={g.key} title={`${g.title}${g.title ? " - " : ""}click to highlight its topics`} onClick={() => toggleFocus("plo", g.key)}
+                style={{ background: g.tint, border: focus?.kind === "plo" && focus.id === g.key ? "2px solid #B7791F" : ploLow(g.key) ? "2px solid var(--rust)" : "1px solid var(--line)", borderRadius: 6, padding: "6px 12px", minWidth: 110, cursor: "pointer" }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700 }}>{g.label}</div>
                 <div style={{ fontSize: 17, fontWeight: 700 }}>{fmtPct(g.total)}%</div>
                 <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of total marks · {g.cols} CLO{g.cols > 1 ? "s" : ""}</div>
@@ -503,6 +513,37 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             under-weighted CLO(s) so each CLO carries a similar share of the marks.
           </p>
         )}
+        {cloList.length > 0 && filledRows.length > 0 && (
+          <div className="no-print" style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 5 }}>
+              Click a CLO or PLO to highlight the topics mapped to it, then tick quizzes/assignments or add question numbers for those topics. Click it again to stop.
+              {" "}<span style={{ color: "var(--rust)" }}>Red = not hit enough.</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ploGroups.filter((g) => g.key !== "none").map((g) => {
+                const on = focus?.kind === "plo" && focus.id === g.key;
+                return <button key={g.key} type="button" onClick={() => toggleFocus("plo", g.key)} title={g.title}
+                  style={{ fontSize: 12, padding: "4px 10px", borderRadius: 14, cursor: "pointer", fontWeight: 700, background: on ? "#B7791F" : g.tint, color: on ? "#fff" : "inherit", border: ploLow(g.key) ? "2px solid var(--rust)" : "1px solid var(--line)" }}>
+                  {g.label} · {fmtPct(g.total)}%</button>;
+              })}
+              <span style={{ width: 10 }} />
+              {cloList.map((c, idx) => {
+                const on = focus?.kind === "clo" && focus.id === c.id;
+                return <button key={c.id} type="button" onClick={() => toggleFocus("clo", c.id)}
+                  style={{ fontSize: 12, padding: "4px 10px", borderRadius: 14, cursor: "pointer", background: on ? "#B7791F" : cloTint(c) || "#fff", color: on ? "#fff" : cloLow(idx) ? "var(--rust)" : "inherit", border: cloLow(idx) ? "2px solid var(--rust)" : "1px solid var(--line)" }}>
+                  {c.code} · {fmtPct(cloTotals[idx])}%</button>;
+              })}
+            </div>
+            {focus && (
+              <div style={{ marginTop: 8, background: "#FFF6D9", border: "1px solid #E8C766", padding: "6px 10px", fontSize: 12.5 }}>
+                Highlighting <b>{focusLabel}</b>: {groups.filter((g) => g.rows.some((r) => r.cloId && focusCloIds.has(r.cloId))).length} topic(s) mapped to it.
+                {groups.filter((g) => g.rows.some((r) => r.cloId && focusCloIds.has(r.cloId))).length === 0 && " No topic is mapped to it yet - map topics to it on the Lecture Content tab."}
+                {" "}Marks update after "Save Mapping Changes".{" "}
+                <button type="button" onClick={() => setFocus(null)} style={{ background: "none", border: "none", color: "var(--brass-dark)", textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}>Stop highlighting</button>
+              </div>
+            )}
+          </div>
+        )}
         {filledRows.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Fill in some lecture topics on the Lecture Content tab first.</p>
         ) : instruments.length === 0 ? (
@@ -516,7 +557,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <tr>
                   <td colSpan={2 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0) + 1}></td>
                   {ploGroups.map((g) => (
-                    <td key={g.key} colSpan={g.cols} style={{ textAlign: "center", background: g.tint, fontSize: 11.5, fontWeight: 700, borderLeft: "2px solid var(--line)", padding: "6px 4px" }} title={g.title}>
+                    <td key={g.key} colSpan={g.cols} onClick={() => toggleFocus("plo", g.key)} style={{ textAlign: "center", background: focus?.kind === "plo" && focus.id === g.key ? "#F3D58A" : g.tint, fontSize: 11.5, fontWeight: 700, borderLeft: "2px solid var(--line)", padding: "6px 4px", cursor: "pointer", color: ploLow(g.key) ? "var(--rust)" : undefined }} title={`${g.title} - click to highlight its topics`}>
                       {g.label}<br /><span style={{ fontWeight: 600 }}>{fmtPct(g.total)}%</span>
                     </td>
                   ))}
@@ -554,7 +595,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     )}
                     {unmappablePct > 0 && <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--slate)", lineHeight: 1.3 }}>Project/Lab {fmtPct(unmappablePct)}% is not tied to topics</div>}
                   </td>
-                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12, background: cloTint(cloList[idx]) }}>{fmtPct(t)}%</td>)}
+                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} onClick={() => toggleFocus("clo", cloList[idx].id)} title="Click to highlight this CLO's topics" style={{ textAlign: "center", fontSize: 12, cursor: "pointer", background: focusCloIds.has(cloList[idx].id) ? "#F3D58A" : cloTint(cloList[idx]), color: cloLow(idx) ? "var(--rust)" : undefined }}>{fmtPct(t)}%</td>)}
                 </tr>
               )}
             </thead>
@@ -566,10 +607,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   ? `Wk${first.week}·L${first.lectureNumber}`
                   : `L${g.rows.map((r) => r.lectureNumber).join(",")}`;
                 const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
+                const hit = !!focus && g.rows.some((r) => r.cloId && focusCloIds.has(r.cloId));
                 return (
-                <tr key={g.key}>
-                  <td style={{ fontSize: 12, color: "var(--slate)" }}>{idx + 1}</td>
-                  <td style={{ fontSize: 12 }}>
+                <tr key={g.key} style={focus ? (hit ? { outline: "2px solid #E0A526", outlineOffset: -2 } : { opacity: 0.4 }) : undefined}>
+                  <td style={{ fontSize: 12, color: "var(--slate)", background: hit ? "#FFE58F" : undefined }}>{idx + 1}</td>
+                  <td style={{ fontSize: 12, background: hit ? "#FFF1B8" : undefined, fontWeight: hit ? 600 : undefined }}>
                     {lectureLabel} — {g.key}
                     {g.rows.length > 1 && <span style={{ color: "var(--slate)" }}> ({g.rows.length} lec)</span>}
                   </td>
@@ -594,7 +636,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   <td style={{ fontWeight: 600 }}>{fmtPct(groupWeight)}%</td>
                   {cloList.map((c) => {
                     const t = g.rows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0);
-                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12, background: cloTint(c) }}>{t > 0 ? `${fmtPct(t)}%` : ""}</td>;
+                    const mine = hit && focusCloIds.has(c.id) && g.rows.some((r) => r.cloId === c.id);
+                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12, background: mine ? "#FFD666" : cloTint(c), fontWeight: mine ? 700 : undefined }}>{mine && t === 0 ? "●" : t > 0 ? `${fmtPct(t)}%` : ""}</td>;
                   })}
                 </tr>
                 );
