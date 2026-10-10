@@ -83,11 +83,18 @@ export default async function SemesterPlanPage() {
           </table>
           {lines.filter((l) => (l.planTerm || "Other") === term && l.notDone.length > 0 && (l.state === "BEHIND" || l.state === "AT_RISK")).map((l) => (
             <details key={l.id} style={{ marginTop: 8 }}>
-              <summary style={{ cursor: "pointer", fontSize: 13 }}><b>{l.title}</b>: courses not done yet ({l.total - l.done})</summary>
-              <ul style={{ fontSize: 12.5, margin: "6px 0 0 18px" }}>
-                {l.notDone.map((n) => <li key={n.courseId}>{n.label} — {n.who || <span style={{ color: "#B3261E" }}>nobody holds this yet</span>}{n.whoId && <RemindButton deadlineId={l.id} toId={n.whoId} item={n.label} />}</li>)}
-                {l.total - l.done > l.notDone.length && <li style={{ color: "var(--slate)" }}>and {l.total - l.done - l.notDone.length} more</li>}
-              </ul>
+              <summary style={{ cursor: "pointer", fontSize: 13 }}><b>{l.title}</b>: not done yet ({l.total - l.done})</summary>
+              <div style={{ fontSize: 12.5, margin: "6px 0 0 18px" }}>
+                {Array.from(l.notDone.reduce((m, n) => m.set(n.whoId || "none", [...(m.get(n.whoId || "none") || []), n]), new Map<string, typeof l.notDone>()).entries()).map(([whoId, items]) => (
+                  <div key={whoId} style={{ marginBottom: 6 }}>
+                    <b>{items[0].who || <span style={{ color: "#B3261E" }}>Nobody holds this yet</span>}</b>
+                    {" "}— {items.length === 1 && l.planKey ? "not done" : `${items.length} not done`}
+                    {whoId !== "none" && <RemindButton deadlineId={l.id} toId={whoId} item={l.planKey ? "" : `${items.length} course${items.length === 1 ? "" : "s"}`} />}
+                    {!l.planKey && <div style={{ color: "var(--slate)", fontSize: 11.5 }}>{items.map((n) => n.label).join(", ")}</div>}
+                  </div>
+                ))}
+                {l.total - l.done > l.notDone.length && <div style={{ color: "var(--slate)" }}>and {l.total - l.done - l.notDone.length} more</div>}
+              </div>
             </details>
           ))}
         </div>
