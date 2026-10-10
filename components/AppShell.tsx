@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -63,6 +63,10 @@ export default function AppShell({
   const [loggingOut, setLoggingOut] = useState(false);
   const [deptCoordinator, setDeptCoordinator] = useState(deptCoordinatorProp);
   const navRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [hit, setHit] = useState(0);
+  const [recent, setRecent] = useState<string[]>([]);
 
   // The program picker updates at once when chosen, then follows whatever the server sends after the refresh.
   useEffect(() => { setDeptCoordinator(deptCoordinatorProp); }, [deptCoordinatorProp]);
@@ -88,6 +92,63 @@ export default function AppShell({
   const currentLink = allLinks.find((l) => l.href === current);
   const currentSection = sections.find((s) => s.links.some((l) => l.href === current))?.title;
   const crumb = currentLink ? [currentSection, currentLink.label].filter(Boolean).join("  ›  ") : "Workspace";
+
+  // Which sections are open is remembered per role on this computer, so the menu looks the same on every page.
+  const secKey = `obe:nav-open:${roleLabel}`;
+  const recentKey = `obe:nav-recent:${roleLabel}`;
+  useEffect(() => {
+    try { const saved = JSON.parse(localStorage.getItem(secKey) || "null"); if (saved && typeof saved === "object") setOpenSec(saved); } catch { /* ignore */ }
+    try { const r = JSON.parse(localStorage.getItem(recentKey) || "[]"); if (Array.isArray(r)) setRecent(r.filter((x) => typeof x === "string")); } catch { /* ignore */ }
+  }, [secKey, recentKey]);
+  function setSections(next: Record<string, boolean>) {
+    setOpenSec(next);
+    try { localStorage.setItem(secKey, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+  // Recently opened pages (only pages from this role's menu, newest first).
+  useEffect(() => {
+    if (!current || current === "/dashboard") return;
+    setRecent((prev) => {
+      const next = [current, ...prev.filter((h) => h !== current)].slice(0, 6);
+      try { localStorage.setItem(recentKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [current, recentKey]);
+  const recentLinks = recent.map((h) => links.find((l) => l.href === h)).filter((l): l is NavLink => !!l && l.href !== current).slice(0, 4);
+  const isOpen = (title: string, idx: number, hasActive: boolean) => openSec[title] ?? (!crowded || idx === 0 || hasActive);
+  const allOpen = sections.every((sec, idx) => isOpen(sec.title, idx, sec.links.some((n) => n.href === current)));
+
+  // Search: matches page names and section names, ignoring case and punctuation.
+  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const q = norm(query);
+  const results = q
+    ? sections.flatMap((sec) => sec.links.map((l) => ({ ...l, section: sec.title })))
+        .filter((l) => q.split(" ").every((w) => norm(`${l.label} ${l.section}`).includes(w)))
+        .sort((a, b) => Number(!norm(a.label).startsWith(q)) - Number(!norm(b.label).startsWith(q)))
+    : [];
+  useEffect(() => { setHit(0); }, [query]);
+  // "/" or Ctrl+K (Cmd+K on Mac) jumps to the search box from anywhere on the page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      if ((e.key === "k" && (e.ctrlKey || e.metaKey)) || (e.key === "/" && !typing)) {
+        e.preventDefault();
+        setNavOpen(true);
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); return; }
+    if (!results.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setHit((h) => (h + 1) % results.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHit((h) => (h - 1 + results.length) % results.length); }
+    else if (e.key === "Enter") { e.preventDefault(); const r = results[Math.min(hit, results.length - 1)]; setQuery(""); router.push(r.href); }
+  }
+  const showSearch = links.length > 8;
 
   // Keep the sidebar where the user left it — each page renders its own
   // Shell, so without this the nav list would jump back to the top on every click.
@@ -197,6 +258,15 @@ export default function AppShell({
           )}
         </div>
 
+        {showSearch && (
+          <div className="sb-search">
+            <Search size={15} aria-hidden="true" />
+            <input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onSearchKey}
+              placeholder="Find a page…" aria-label="Find a page" aria-controls="sb-results" autoComplete="off" spellCheck={false} />
+            {!query && <kbd title="Press / or Ctrl+K from anywhere">/</kbd>}
+          </div>
+        )}
+
         <nav className="sb-nav" ref={navRef}>
           {showHome && (
             <Link prefetch={false} href="/dashboard" className="nav-link" aria-current={homeActive ? "page" : undefined} style={{ marginBottom: 6 }}>
@@ -204,10 +274,44 @@ export default function AppShell({
               <span className="nl-label">Home</span>
             </Link>
           )}
-          {sections.map((section, idx) => {
+          {q && (
+            <div id="sb-results" role="listbox" aria-label="Matching pages">
+              {results.length === 0 && <div className="sb-empty">No page matches “{query}”.</div>}
+              {results.map((n, i) => {
+                const Icon = n.href === "/requests" ? Inbox : getNavIcon(n.label);
+                return (
+                  <Link key={n.href} href={n.href} prefetch={false} className="nav-link" role="option" aria-selected={i === hit} data-hit={i === hit ? "true" : "false"}
+                    aria-current={n.href === current ? "page" : undefined} onClick={() => setQuery("")} onMouseEnter={() => setHit(i)}>
+                    <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
+                    <span className="nl-label">{n.label}<span className="nl-sub">{n.section}</span></span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          {!q && crowded && recentLinks.length > 0 && (
+            <div className="sb-section">
+              <div className="sb-section-title" data-collapsible="false"><span><History size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Recent</span></div>
+              {recentLinks.map((n) => {
+                const Icon = n.href === "/requests" ? Inbox : getNavIcon(n.label);
+                return (
+                  <Link key={n.href} href={n.href} prefetch={false} className="nav-link nl-compact" title={n.label}>
+                    <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span>
+                    <span className="nl-label">{n.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          {!q && crowded && (
+            <button type="button" className="sb-toggle-all" onClick={() => setSections(Object.fromEntries(sections.map((sec) => [sec.title, !allOpen])))}>
+              {allOpen ? <><ChevronsDownUp size={13} /> Collapse all</> : <><ChevronsUpDown size={13} /> Expand all</>}
+            </button>
+          )}
+          {!q && sections.map((section, idx) => {
             const hasActive = section.links.some((n) => n.href === current);
-            // With many sections only the first and the one you are in are open; click a heading to open or close any.
-            const open = openSec[section.title] ?? (!crowded || idx === 0 || hasActive);
+            // With many sections only the first and the one you are in are open (unless you changed that); click a heading to open or close any.
+            const open = isOpen(section.title, idx, hasActive);
             return (
               <div className="sb-section" key={section.title}>
                 <button
@@ -215,11 +319,11 @@ export default function AppShell({
                   className="sb-section-title"
                   data-collapsible={crowded ? "true" : "false"}
                   data-active={hasActive ? "true" : "false"}
-                  onClick={() => setOpenSec((prev) => ({ ...prev, [section.title]: !open }))}
+                  onClick={() => setSections({ ...openSec, [section.title]: !open })}
                   aria-expanded={open}
                 >
                   <span>{section.title}</span>
-                  {crowded && (open ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                  {crowded && <span className="sb-sec-right">{!open && <span className="sb-count">{section.links.length}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>}
                 </button>
                 {open && section.links.map((n) => {
                   const isActive = n.href === current;

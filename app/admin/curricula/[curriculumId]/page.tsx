@@ -4,15 +4,8 @@ import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import CurriculumDetailManager from "../../../../components/CurriculumDetailManager";
 import Link from "next/link";
+import { navForRole } from "../../../../components/reportNav";
 
-const NAV = [
-  { href: "/admin/users", label: "Manage Chairmen" },
-  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
-  { href: "/admin/curriculum-migration", label: "Version Migration" },
-  { href: "/admin/platform-settings", label: "Platform Settings" },
-  { href: "/admin/report-bundles", label: "Report Bundles" },
-  { href: "/admin/landing-page", label: "Landing Page" },
-];
 
 export default async function CurriculumDetailPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
@@ -36,7 +29,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   for (const s of suggestions) ploNumbersByCode.set(s.courseCode, [...(ploNumbersByCode.get(s.courseCode) || []), s.ploNumber]);
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22 }}>{curriculum.authority} {curriculum.title} ({curriculum.version})</h1>

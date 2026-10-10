@@ -4,16 +4,8 @@ import { prisma } from "../../../lib/db";
 import { ALL_REPORTS } from "../../../lib/reportRegistry";
 import Shell from "../../../components/Shell";
 import ReportBundleManager from "../../../components/ReportBundleManager";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [
-  { href: "/admin/users", label: "Institute Head Accounts" },
-  { href: "/admin/account-requests", label: "Account Requests" },
-  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
-  { href: "/admin/curriculum-migration", label: "Version Migration" },
-  { href: "/admin/platform-settings", label: "Platform Settings" },
-  { href: "/admin/report-bundles", label: "Report Bundles" },
-  { href: "/admin/landing-page", label: "Landing Page" },
-];
 
 export default async function AdminReportBundlesPage() {
   const user = await getAuthenticatedUser();
@@ -25,7 +17,7 @@ export default async function AdminReportBundlesPage() {
   const bundles = await prisma.reportBundle.findMany({ where: { scope: "PLATFORM" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Report Bundles</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Platform-wide report groups — available to every institution for one-go printing.

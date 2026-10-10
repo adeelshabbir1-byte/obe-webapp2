@@ -1,3 +1,4 @@
+import { ADMIN_NAV } from "./adminNav";
 export const REPORT_VIEWER_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/omc/total-summary", label: "Total Summary" },
@@ -109,7 +110,7 @@ export const COORDINATOR_NAV = [
   { href: "/outcomes", label: "Graduation & Surveys" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
-  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
+  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload" },
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/grading-scale", label: "Grading Scale" },
   { href: "/coordinator/assignment-history", label: "Assignment History" },
@@ -137,6 +138,12 @@ export const COORDINATOR_NAV = [
   { href: "/deadlines", label: "Deadlines" },
   { href: "/coordinator/evidence", label: "Accreditation Evidence" },
   { href: "/coordinator/course-folders", label: "Course Folders" },
+  { href: "/coordinator/student-transcript", label: "Student Transcript" },
+  { href: "/coordinator/deficiency-status", label: "Deficiency Courses Status" },
+  { href: "/coordinator/historical-grades-upload", label: "Historical Grades Upload" },
+  { href: "/coordinator/required-books", label: "Required Textbooks" },
+  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
+  { href: "/coordinator/surveys", label: "Feedback Surveys" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -162,6 +169,9 @@ export const CHAIRMAN_NAV = [
   { href: "/resources", label: "Resources" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/chairman/institute-settings", label: "Institute Settings" },
+  { href: "/chairman/ai-configuration", label: "AI Configuration" },
+  { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
 ];
 
 export const DEAN_NAV = [
@@ -188,7 +198,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/dept-coordinator/home", label: "My Programs" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" },
   { href: "/coordinator/students", label: "Students" },
-  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload (Multi-Batch)" },
+  { href: "/coordinator/bulk-student-upload", label: "Bulk Student Upload" },
   { href: "/coordinator/semester", label: "Current Semester" },
   { href: "/coordinator/calendar", label: "Calendar & Exam Dates" },
   { href: "/coordinator/timetable", label: "Timetable" },
@@ -243,6 +253,7 @@ export function navForRole(role: string) {
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;
     case "CHAIRMAN": return CHAIRMAN_NAV;
+    case "SUPER_USER": return ADMIN_NAV;
     default: return REPORT_VIEWER_NAV;
   }
 }

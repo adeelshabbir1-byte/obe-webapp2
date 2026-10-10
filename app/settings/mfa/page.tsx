@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import MfaSetupManager from "../../../components/MfaSetupManager";
 import { roleLabel } from "../../../lib/reportScope";
+import { navForRole } from "../../../components/reportNav";
 
 export default async function MfaSettingsPage() {
   const user = await getAuthenticatedUser();
@@ -13,7 +14,7 @@ export default async function MfaSettingsPage() {
   const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
 
   return (
-    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={[{ href: "/dashboard", label: "Back to Dashboard" }]}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Security Settings</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Manage two-factor authentication for your account.</p>
       <MfaSetupManager mfaEnabled={fullUser?.mfaEnabled || false} />

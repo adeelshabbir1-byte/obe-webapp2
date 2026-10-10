@@ -5,16 +5,8 @@ import Shell from "../../../components/Shell";
 import CurriculaManager from "../../../components/CurriculaManager";
 import AssignByInstitute from "../../../components/AssignByInstitute";
 import { degreeSortKey, degreeGroupLabel } from "../../../lib/degreeGroup";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [
-  { href: "/admin/users", label: "Manage Chairmen" },
-  { href: "/admin/account-requests", label: "Account Requests" },
-  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
-  { href: "/admin/curriculum-migration", label: "Version Migration" },
-  { href: "/admin/platform-settings", label: "Platform Settings" },
-  { href: "/admin/report-bundles", label: "Report Bundles" },
-  { href: "/admin/landing-page", label: "Landing Page" },
-];
 
 export default async function AdminCurriculaPage() {
   const user = await getAuthenticatedUser();
@@ -30,7 +22,7 @@ export default async function AdminCurriculaPage() {
   })).sort((a, b) => degreeSortKey(a).localeCompare(degreeSortKey(b)) || a.authority.localeCompare(b.authority) || b.version.localeCompare(a.version));
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curricula</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Manage the official curricula and choose which institutes each one is assigned to — institutes only see the curricula you assign to them. Grouped by degree, so every BSCS curriculum sits together. Clone a curriculum as a

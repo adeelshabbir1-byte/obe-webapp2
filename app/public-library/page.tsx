@@ -15,9 +15,7 @@ export default async function PublicLibraryPage() {
   if (!ROLE_LABEL[user.role]) redirect("/dashboard");
 
   const myCourses = await eligibleCourses(user);
-  const nav = user.role === "SUPER_USER"
-    ? [{ href: "/admin/users", label: "Manage Institute Heads" }, { href: "/public-library", label: "Public Course Library" }]
-    : navForRole(user.role);
+  const nav = navForRole(user.role);
 
   return (
     <Shell roleLabel={ROLE_LABEL[user.role]} userName={user.name} navLinks={nav}>

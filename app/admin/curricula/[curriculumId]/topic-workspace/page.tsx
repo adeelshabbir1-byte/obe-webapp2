@@ -4,11 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import TopicWorkspace from "../../../../../components/TopicWorkspace";
 import Link from "next/link";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [
-  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
-  { href: "/admin/curriculum-migration", label: "Curriculum Migration" },
-];
 
 export default async function TopicWorkspacePage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
@@ -22,7 +19,7 @@ export default async function TopicWorkspacePage({ params }: { params: { curricu
   if (!curriculum) notFound();
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22 }}>Topic Workspace</h1>
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>

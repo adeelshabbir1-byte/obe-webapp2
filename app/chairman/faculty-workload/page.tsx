@@ -6,20 +6,8 @@ import Shell from "../../../components/Shell";
 import Link from "next/link";
 import { buildSeProgress, buildInstructorProgress, progressPct, ProgressStep } from "../../../lib/courseProgress";
 import ProgressBar from "../../../components/ProgressBar";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [
-  { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-  { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/accreditation-overview", label: "Accreditation Overview" }, { href: "/deadlines", label: "Deadlines" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" }, { href: "/move-program", label: "Move Program Data" },
-  { href: "/chairman/plos", label: "Program Learning Outcomes" },
-  { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
-  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
-  { href: "/chairman/cqi", label: "CQI Records" },
-  { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/chairman/report-access", label: "Report Access Control" },
-  { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-  { href: "/chairman/ai-configuration", label: "AI Configuration" },
-  { href: "/omc/reports", label: "Reports" },
-];
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
@@ -205,7 +193,7 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
 
   if (selected) {
     return (
-      <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
+      <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}>
         <Link href="/chairman/faculty-workload" className="btn" style={{ marginBottom: 10, display: "inline-block" }}>← All faculty</Link>
         <h1 style={{ fontSize: 22, marginBottom: 2 }}>{selected.name}</h1>
         <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
@@ -222,7 +210,7 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
   }
 
   return (
-    <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Work Progress</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         Overall percentage of work done by each faculty member, across the courses they build as Subject Expert and the courses they teach.

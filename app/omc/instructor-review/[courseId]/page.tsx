@@ -6,16 +6,8 @@ import { computeTopicVariance } from "../../../../lib/varianceReport";
 import Shell from "../../../../components/Shell";
 import GuidanceThread from "../../../../components/GuidanceThread";
 import Link from "next/link";
+import { navForRole } from "../../../../components/reportNav";
 
-const NAV = [
-  { href: "/omc/queue", label: "Review Queue" },
-  { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
-  { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
-  { href: "/omc/weight-policy", label: "Weight Policy" },
-  { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
-  { href: "/omc/equivalence", label: "Course Equivalence" },
-  { href: "/omc/reports", label: "Reports" },
-];
 
 export default async function InstructorReviewDetailPage({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -31,7 +23,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
   const guidance = await prisma.instructorGuidanceComment.findMany({ where: { courseId: course.id }, orderBy: { createdAt: "asc" } });
 
   return (
-    <Shell roleLabel="OMC Member" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="OMC Member" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22 }}>{course.code} — {course.title}</h1>

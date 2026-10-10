@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { ALL_REPORTS } from "../../../lib/reportRegistry";
 import Shell from "../../../components/Shell";
 import ReportAccessManager from "../../../components/ReportAccessManager";
+import { navForRole } from "../../../components/reportNav";
 
 export default async function ReportAccessPage() {
   const user = await getAuthenticatedUser();
@@ -21,18 +22,7 @@ export default async function ReportAccessPage() {
   const people = [...coordinators, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role }));
 
   return (
-    <Shell roleLabel="Institute Head" userName={user.name} navLinks={[
-      { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-      { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/accreditation-overview", label: "Accreditation Overview" }, { href: "/deadlines", label: "Deadlines" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" }, { href: "/move-program", label: "Move Program Data" },
-      { href: "/chairman/plos", label: "Program Learning Outcomes" },
-      { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
-      { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
-      { href: "/chairman/cqi", label: "CQI Records" },
-      { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-      { href: "/chairman/report-access", label: "Report Access Control" },
-      { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-      { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
-    ]}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Report Access Control</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Control who can view or edit each report — by role, or for one specific person. Anything with no rule

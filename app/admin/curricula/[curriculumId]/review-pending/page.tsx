@@ -4,11 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import PendingCourseReview from "../../../../../components/PendingCourseReview";
 import Link from "next/link";
+import { navForRole } from "../../../../../components/reportNav";
 
-const NAV = [
-  { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" },
-  { href: "/admin/curriculum-migration", label: "Curriculum Migration" },
-];
 
 function normalize(title: string) {
   return title.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
@@ -39,7 +36,7 @@ export default async function ReviewPendingPage({ params }: { params: { curricul
   });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22 }}>Review Pending Courses</h1>
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>

@@ -148,7 +148,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Deficiency Courses Status": TriangleAlert,
   "Out-of-Batch Requests": Shuffle,
   "Historical Grades Upload": Archive,
-  "Bulk Student Upload (Multi-Batch)": Upload,
+  "Bulk Student Upload": Upload,
   "Program Semester Map": Map,
   "Semester Section Map": LayoutGrid,
   "Back to Dashboard": ArrowLeft,

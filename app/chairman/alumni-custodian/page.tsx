@@ -3,19 +3,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CustodianPicker from "../../../components/CustodianPicker";
+import { navForRole } from "../../../components/reportNav";
 
-const NAV = [
-  { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
-  { href: "/chairman/coordinators", label: "Program Leads" }, { href: "/course-split", label: "Course Split" }, { href: "/faculty-report", label: "Faculty Details Report" }, { href: "/lab-inventory", label: "Lab Inventory" }, { href: "/library-inventory", label: "Library Inventory" }, { href: "/chairman/finance", label: "Finance" }, { href: "/accreditation-overview", label: "Accreditation Overview" }, { href: "/deadlines", label: "Deadlines" }, { href: "/academic-calendar", label: "Academic Calendar" }, { href: "/admission-criteria", label: "Admission Criteria" }, { href: "/move-program", label: "Move Program Data" },
-  { href: "/chairman/plos", label: "Program Learning Outcomes" },
-  { href: "/chairman/omc", label: "OMC Members" }, { href: "/chairman/people", label: "All Users and Roles" },
-  { href: "/chairman/assigners", label: "Course Assigners" }, { href: "/chairman/hierarchy", label: "Institute Chart" }, { href: "/chairman/faculties", label: "Faculties & Deans" }, { href: "/course-leads", label: "Course Leads" }, { href: "/chairman/departments", label: "Departments" },
-  { href: "/chairman/cqi", label: "CQI Records" },
-  { href: "/chairman/audit-log", label: "Audit Log" }, { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, { href: "/omc/course-repositioning", label: "Course Repositioning" }, { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/chairman/report-access", label: "Report Access Control" },
-  { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
-  { href: "/chairman/ai-configuration", label: "AI Configuration" }, { href: "/omc/reports", label: "Reports" },
-];
 
 export default async function AlumniCustodianPage() {
   const user = await getAuthenticatedUser();
@@ -33,7 +22,7 @@ export default async function AlumniCustodianPage() {
   const current = all.find((u) => u.isAlumniCustodian);
 
   return (
-    <Shell roleLabel="Institute Head" userName={user.name} navLinks={NAV}>
+    <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Alumni Data Custodian</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Assign who reviews alumni and employer data submitted by your faculty.

@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CreateUserForm from "../../../components/CreateUserForm";
 import ChairmenBrandingManager from "../../../components/ChairmenBrandingManager";
+import { navForRole } from "../../../components/reportNav";
 
 export default async function AdminUsersPage() {
   const user = await getAuthenticatedUser();
@@ -15,8 +16,7 @@ export default async function AdminUsersPage() {
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={[{ href: "/admin/users", label: "Manage Institute Heads" },
-  { href: "/admin/account-requests", label: "Account Requests" }, { href: "/admin/curricula", label: "Master Curricula" }, { href: "/admin/master-experts", label: "Master Curriculum Experts" }, { href: "/admin/curriculum-migration", label: "Version Migration" }, { href: "/admin/platform-settings", label: "Platform Settings" }, { href: "/admin/report-bundles", label: "Report Bundles" }, { href: "/admin/landing-page", label: "Landing Page" }, { href: "/public-library", label: "Public Course Library" }]}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Institute Heads</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create the Institute Head account(s) who each run a department's accreditation pipeline. Each is its own
