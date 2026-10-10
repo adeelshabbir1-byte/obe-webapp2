@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { OVERVIEW_ROLES, leadsInScope } from "../../../lib/readinessScope";
-import { requestRecipients } from "../../../lib/requests";
+import { requestRecipients, requestInboxIds } from "../../../lib/requests";
 
 const txt = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -36,8 +36,11 @@ export async function PATCH(req: NextRequest) {
   if (!r) return NextResponse.json({ error: "not found" }, { status: 404 });
   const now = new Date();
   if (b.action === "RESPOND" || b.action === "DONE") {
-    if (r.toId !== user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    const response = txt(b.response, 3000);
+    const inbox = await requestInboxIds(user);
+    if (!inbox.includes(r.toId)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    let response = txt(b.response, 3000);
+    // Another OMC member answering for the committee: say who answered.
+    if (response && r.toId !== user.id) response = `${response}\n— ${user.name}`;
     if (b.action === "RESPOND" && !response) return NextResponse.json({ error: "Write your reply" }, { status: 400 });
     await prisma.taskRequest.update({ where: { id: r.id }, data: b.action === "DONE" ? { status: "DONE", doneAt: now, respondedAt: now, ...(response ? { response } : {}) } : { status: "RESPONDED", response, respondedAt: now } });
   } else if (b.action === "REMIND" || b.action === "CLOSE") {

@@ -5,6 +5,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import RequestActions from "../../components/RequestActions";
 import { ROLE_TEXT } from "../../lib/institutePeople";
+import { requestInboxIds } from "../../lib/requests";
 
 type Row = { id: string; fromId: string; toId: string; subject: string; area: string | null; href: string | null; body: string; dueDate: Date | null; status: string; response: string | null; respondedAt: Date | null; doneAt: Date | null; remindedAt: Date | null; reminders: number; createdAt: Date };
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -15,11 +16,13 @@ export default async function RequestsPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  const rows = (await prisma.taskRequest.findMany({ where: { OR: [{ toId: user.id }, { fromId: user.id }] }, orderBy: { createdAt: "desc" }, take: 200 })) as unknown as Row[];
+  const inbox = await requestInboxIds(user);
+  const shared = inbox.length > 1;
+  const rows = (await prisma.taskRequest.findMany({ where: { OR: [{ toId: { in: inbox } }, { fromId: user.id }] }, orderBy: { createdAt: "desc" }, take: 200 })) as unknown as Row[];
   const ids = Array.from(new Set(rows.flatMap((r) => [r.fromId, r.toId])));
   const people = (await prisma.user.findMany({ where: { id: { in: ids.length ? ids : ["none"] } }, select: { id: true, name: true, role: true } })) as unknown as { id: string; name: string; role: string }[];
   const who = new Map(people.map((p) => [p.id, `${p.name} (${ROLE_TEXT[p.role] || p.role})`]));
-  const toMe = rows.filter((r) => r.toId === user.id);
+  const toMe = rows.filter((r) => inbox.includes(r.toId));
   const byMe = rows.filter((r) => r.fromId === user.id);
   const now = new Date();
 
@@ -33,7 +36,7 @@ export default async function RequestsPage() {
           <span><span style={{ background: s.colour, color: "#fff", borderRadius: 5, padding: "2px 7px", fontSize: 11.5 }}>{s.text}</span>{late && <span style={{ color: "#B3261E", fontSize: 12, marginLeft: 6 }}>overdue</span>}</span>
         </div>
         <div style={{ fontSize: 12, color: "var(--slate)" }}>
-          {mode === "to" ? `From ${who.get(r.fromId) || "—"}` : `To ${who.get(r.toId) || "—"}`} · sent {day(r.createdAt)}{r.dueDate ? ` · needed by ${day(r.dueDate)}` : ""}{r.reminders ? ` · reminded ${r.reminders} time${r.reminders > 1 ? "s" : ""}` : ""}{r.area ? ` · ${r.area}` : ""}
+          {mode === "to" ? `From ${who.get(r.fromId) || "—"}${r.toId !== user.id ? ` · sent to ${who.get(r.toId) || "an OMC member"}` : ""}` : `To ${who.get(r.toId) || "—"}`} · sent {day(r.createdAt)}{r.dueDate ? ` · needed by ${day(r.dueDate)}` : ""}{r.reminders ? ` · reminded ${r.reminders} time${r.reminders > 1 ? "s" : ""}` : ""}{r.area ? ` · ${r.area}` : ""}
         </div>
         <div style={{ fontSize: 13, margin: "6px 0", whiteSpace: "pre-wrap" }}>{r.body}</div>
         {r.href && mode === "to" && r.status !== "DONE" && r.status !== "CLOSED" && <a className="btn" href={r.href} style={{ fontSize: 12 }}>Open the page to do it</a>}
@@ -50,8 +53,9 @@ export default async function RequestsPage() {
         Requests to finish something, sent from the accreditation report. Reply, or mark it done once the work is finished. The person who asked sees your answer here.
       </p>
       <div className="card" style={{ marginBottom: 14 }}>
-        <h3 style={{ marginTop: 0 }}>Asked of me</h3>
-        {toMe.length === 0 ? <p style={{ color: "var(--slate)", margin: 0 }}>Nothing has been asked of you.</p> : toMe.map((r) => card(r, "to"))}
+        <h3 style={{ marginTop: 0 }}>{shared ? "Asked of the OMC" : "Asked of me"}</h3>
+        {shared && <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -4 }}>Every OMC member sees requests sent to any OMC member, and any of you can reply or mark one done.</p>}
+        {toMe.length === 0 ? <p style={{ color: "var(--slate)", margin: 0 }}>{shared ? "Nothing has been asked of the OMC." : "Nothing has been asked of you."}</p> : toMe.map((r) => card(r, "to"))}
       </div>
       {byMe.length > 0 && (
         <div className="card">
