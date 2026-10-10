@@ -30,7 +30,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
-    const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+    const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const variance = selectedCourseId ? await computeTopicVariance(selectedCourseId) : null;
   const totalPlos = course ? await prisma.pLO.count({ where: { batchId: course.batchId || "" } }) : 0;

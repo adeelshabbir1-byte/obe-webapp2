@@ -41,7 +41,7 @@ export default async function CloPloFlowPage({ searchParams }: { searchParams: {
   const courses = showAll ? allCourses : allCourses.filter((c) => readyIds.has(c.id) || c.id === searchParams.courseId);
   const hiddenCount = allCourses.length - ready.length;
   const flaggedCount = ready.filter((c) => (diffCount.get(c.id) || 0) > 0).length;
-  const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+  const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
 
   const selectedPlans = plans.get(selectedCourseId) || { se: { assessments: [], clos: [], plos: [], exists: false }, instructor: { assessments: [], clos: [], plos: [], exists: false } };
   const comparison = comparePlans(selectedPlans.se, selectedPlans.instructor);

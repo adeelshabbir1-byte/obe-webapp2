@@ -31,7 +31,10 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
   const m = await prisma.meetingMinutes.findUnique({ where: { id } });
-  if (!m || (m.createdById !== user.id && user.role !== "CHAIRMAN")) return NextResponse.json({ error: "You can only remove minutes you added" }, { status: 403 });
+  // Another institute's minutes are never reachable, even for an Institute Head.
+  const myScope = await fileScope(user);
+  if (!m || m.chairmanId !== myScope.chairmanId) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if ( (m.createdById !== user.id && user.role !== "CHAIRMAN")) return NextResponse.json({ error: "You can only remove minutes you added" }, { status: 403 });
   await prisma.meetingMinutes.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

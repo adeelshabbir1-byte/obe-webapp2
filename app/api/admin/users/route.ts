@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ chairmen: chairmen.map(({ passwordHash, ...u }) => u) });
+  return NextResponse.json({ chairmen: chairmen.map(({ passwordHash, mfaSecret, mfaBackupCodes, ...u }) => u) });
 }
 
 export async function POST(req: NextRequest) {
@@ -45,6 +45,6 @@ export async function POST(req: NextRequest) {
 
   await writeAuditLog({ actorUserId: user.id, action: "CHAIRMAN_CREATED", entityType: "User", entityId: created.id });
 
-  const { passwordHash: _omit, ...safe } = created;
+  const { passwordHash: _omit, mfaSecret: _s, mfaBackupCodes: _b, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });
 }

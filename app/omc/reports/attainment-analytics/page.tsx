@@ -31,7 +31,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
     where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: { not: null } },
     orderBy: { code: "asc" },
   });
-  const selectedCourseId = searchParams.courseId || offeredCourses[0]?.id || "";
+  const selectedCourseId = (searchParams.courseId && offeredCourses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : offeredCourses[0]?.id) || "";
   const selectedCourse = offeredCourses.find((c) => c.id === selectedCourseId);
 
   const passCriteria = await getPassingCriteria(await chairmanIdFor(user));

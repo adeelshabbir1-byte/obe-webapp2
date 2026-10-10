@@ -33,7 +33,7 @@ export default async function AdherenceReportPage({ searchParams }: { searchPara
   if (searchParams.batchId) instructorCourses = instructorCourses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) instructorCourses = instructorCourses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
-  const selectedCourseId = searchParams.courseId || instructorCourses[0]?.id || "";
+  const selectedCourseId = (searchParams.courseId && instructorCourses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : instructorCourses[0]?.id) || "";
   const family = selectedCourseId ? await getCourseFamily(selectedCourseId) : [];
 
   return (

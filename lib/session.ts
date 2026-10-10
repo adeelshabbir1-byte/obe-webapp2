@@ -49,6 +49,8 @@ export async function getAuthenticatedUser() {
   const session = await prisma.session.findUnique({ where: { tokenHash }, include: { user: true } });
 
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
+  // A switched-off account stops working immediately, not when its session expires.
+  if (session.user.isActive === false) return null;
 
   // A session that has passed the password but not the second step (authenticator code) may only call the few
   // sign-in endpoints. Pages redirect such a session to the code screen, but the API must refuse it outright,

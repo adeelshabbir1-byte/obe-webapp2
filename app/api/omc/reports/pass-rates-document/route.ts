@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
-import { canViewReports } from "../../../../../lib/reportScope";
+import { canViewReports, courseScopeFor } from "../../../../../lib/reportScope";
 import { canViewReport } from "../../../../../lib/reportAcl";
 import { generatePassRateReport } from "../../../../../lib/passRateReportGenerator";
 import { buildDocxResponse } from "../../../../../lib/docxExport";
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const courseId = req.nextUrl.searchParams.get("courseId");
   if (!courseId) return NextResponse.json({ error: "courseId is required" }, { status: 400 });
 
-  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  const course = await prisma.course.findFirst({ where: { id: courseId, ...courseScopeFor(user) } });
   if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   try {

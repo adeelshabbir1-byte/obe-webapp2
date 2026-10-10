@@ -151,7 +151,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
 
   async function removeInstrument(id: string) {
     setLoading(true);
-    await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, { method: "DELETE" });
+    const res = await fetch(`${apiBase}/courses/${courseId}/instruments/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Could not delete this item.");
+      setLoading(false);
+      return;
+    }
     setInstruments((prev) => prev.filter((i) => i.id !== id));
     setLoading(false);
   }

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (limit) return NextResponse.json({ error: `You have defined ${limit} ${body.type.toLowerCase()}(s) for this course. To add more, change the number on the Assessment Weights page first.` }, { status: 400 });
 
   const instrument = await prisma.assessmentInstrument.create({
-    data: { courseId: course.id, type: body.type, label: body.label, marksPct, maxScore: body.maxScore ? parseInt(body.maxScore, 10) : 10 },
+    data: { courseId: course.id, type: body.type, label: body.label, marksPct, maxScore: Math.max(1, parseInt(String(body.maxScore ?? ""), 10) || 10) },
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENT_ADDED", entityType: "AssessmentInstrument", entityId: instrument.id });

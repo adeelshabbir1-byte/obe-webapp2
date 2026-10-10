@@ -39,6 +39,10 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
     }, { status: 400 });
   }
 
+  // An approved template is locked: it can only be reopened through an approved change request.
+  if (course.templateStatus === "approved") {
+    return NextResponse.json({ error: "This template is already approved and locked. Request a change if something must be edited." }, { status: 409 });
+  }
   const updated = await prisma.course.update({ where: { id: course.id }, data: { templateStatus: "submitted" } });
   // Resubmitting a reopened template: record exactly what changed, for the semester's improvement log.
   if (course.templateStatus === "reopened") {

@@ -152,7 +152,7 @@ model Session {
   actingForId String? // DEPARTMENT_COORDINATOR only: which program lead's data they are working on right now
   activeRole  String? // which role a dual-capable person (Subject Expert who can also Instruct) chose for this session
 
-  @@index([userId])
+  @@index([userId])  @@index([expiresAt])
 }
 
 model PasswordResetToken {
@@ -813,7 +813,7 @@ model StudentSession {
   expiresAt  DateTime
   revokedAt  DateTime?
   ipAddress  String?
-  userAgent  String?
+  userAgent  String?  @@index([studentId])
 }
 
 // A student's request to enroll in a course belonging to a DIFFERENT
@@ -983,7 +983,7 @@ model StudentMark {
 
   @@unique([studentId, instrumentId])
   @@index([courseId])
-  @@index([studentId])
+  @@index([studentId])  @@index([instrumentId])
 }
 
 // Semester-wide dates for an entire Degree Program — set once by the
@@ -1886,7 +1886,7 @@ model AuditLog {
   createdAt    DateTime @default(now())
 
   @@index([actorUserId])
-  @@index([action])
+  @@index([action])  @@index([action, createdAt])  @@index([actorUserId, createdAt])
 }
 
 // A course shared in the public library: a frozen snapshot of the author's

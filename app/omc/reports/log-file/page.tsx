@@ -25,7 +25,7 @@ export default async function LogFilePage({ searchParams }: { searchParams: { co
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
-    const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+    const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const rows = selectedCourseId
     ? await prisma.lectureRow.findMany({ where: { courseId: selectedCourseId, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" }, include: { clo: true } })

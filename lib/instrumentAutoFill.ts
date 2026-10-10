@@ -32,14 +32,18 @@ function splitHundredths(total: number, n: number): number[] {
  */
 async function trimInstrumentCount(courseId: string, source: "SE" | "INSTRUCTOR", type: string, desiredCount: number): Promise<number> {
   const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
-  const extra = existing.slice(desiredCount);
+  // Items that already have student marks are never trimmed (that would fail on the marks link and lose data).
+  const marked = new Set<string>((await prisma.studentMark.findMany({ where: { instrumentId: { in: existing.map((i: { id: string }) => i.id) } }, select: { instrumentId: true }, distinct: ["instrumentId"] })).map((m: { instrumentId: string }) => m.instrumentId));
+  const extra = existing.slice(desiredCount).filter((i: { id: string }) => !marked.has(i.id));
   if (extra.length === 0) return 0;
   const ids = extra.map((i: { id: string }) => i.id);
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: { in: ids } } });
   const rowIds = Array.from(new Set<string>(links.map((l: { lectureRowId: string }) => l.lectureRowId)));
-  await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: { in: ids } } });
-  await prisma.instrumentEvidence.deleteMany({ where: { instrumentId: { in: ids } } });
-  await prisma.assessmentInstrument.deleteMany({ where: { id: { in: ids } } });
+  await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: { in: ids } } }),
+    prisma.instrumentEvidence.deleteMany({ where: { instrumentId: { in: ids } } }),
+    prisma.assessmentInstrument.deleteMany({ where: { id: { in: ids } } }),
+  ]);
   if (rowIds.length > 0) await recomputeCourseRows(courseId, source);
   return extra.length;
 }

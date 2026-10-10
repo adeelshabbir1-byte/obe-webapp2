@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const experts = await prisma.user.findMany({ where: { role: "SUBJECT_EXPERT", isPlatformExpert: true }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ experts: experts.map(({ passwordHash, ...u }) => u) });
+  return NextResponse.json({ experts: experts.map(({ passwordHash, mfaSecret, mfaBackupCodes, ...u }) => u) });
 }
 
 export async function POST(req: NextRequest) {
@@ -29,6 +29,6 @@ export async function POST(req: NextRequest) {
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "PLATFORM_EXPERT_CREATED", entityType: "User", entityId: created.id });
-  const { passwordHash: _omit, ...safe } = created;
+  const { passwordHash: _omit, mfaSecret: _s, mfaBackupCodes: _b, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });
 }

@@ -57,5 +57,5 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
     create: { groupId: group.id, studentId: student.id, optionId: option.id },
   });
 
-  return NextResponse.json({ ok: true, studentName: student.name, courseTitle: option.course.title, changed: !!existingChoice, choiceId: choice.id });
+  return NextResponse.json({ ok: true, studentName: student.name.split(" ")[0], courseTitle: option.course.title, changed: !!existingChoice, choiceId: choice.id });
 }

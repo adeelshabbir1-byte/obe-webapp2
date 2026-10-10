@@ -19,7 +19,7 @@ export default async function MeetingsPage() {
   if (!FILE_ROLES.includes(user.role)) redirect("/dashboard");
   const scope = await fileScope(user);
   const canAdd = MEETING_ROLES.includes(user.role);
-  const rows = (await prisma.meetingMinutes.findMany({ where: scope.visible("createdById") as never, orderBy: { meetingDate: "desc" }, take: 300 })) as unknown as M[];
+  const rows = (await prisma.meetingMinutes.findMany({ where: scope.visible("createdById") as never, select: { id: true, leadId: true, kind: true, title: true, meetingDate: true, attendees: true, decisions: true, fileName: true, createdById: true }, orderBy: { meetingDate: "desc" }, take: 300 })) as unknown as M[];
   const users = (await prisma.user.findMany({ where: { id: { in: Array.from(new Set(rows.map((r) => r.createdById))).concat(["none"]) } }, select: { id: true, name: true } })) as unknown as { id: string; name: string }[];
   const name = new Map(users.map((u) => [u.id, u.name]));
   const lead = new Map(scope.leads.map((l) => [l.id, l.leadProgram || l.name]));

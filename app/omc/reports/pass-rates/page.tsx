@@ -25,7 +25,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
     include: { batch: true, instructor: true },
     orderBy: { code: "asc" },
   });
-  const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+  const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const criteria = await getPassingCriteria(await chairmanIdFor(user));
   const result = selectedCourseId ? await computeCloPloPassRates(selectedCourseId, criteria) : null;

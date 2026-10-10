@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { recomputeRowWeight } from "../../../../../../../lib/lectureWeights";
+import { recomputeRowWeight, recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
@@ -50,9 +50,14 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: params.instrumentId } });
   const affectedRowIds = links.map((l) => l.lectureRowId);
-  await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: params.instrumentId } });
-  await prisma.assessmentInstrument.delete({ where: { id: params.instrumentId } });
-  for (const rowId of affectedRowIds) await recomputeRowWeight(rowId);
+  const markCount = await prisma.studentMark.count({ where: { instrumentId: params.instrumentId } });
+  if (markCount > 0) return NextResponse.json({ error: `Marks have already been entered against this item (${markCount}). Remove the marks first, or keep the item.` }, { status: 409 });
+  await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: params.instrumentId } }),
+    prisma.instrumentEvidence.deleteMany({ where: { instrumentId: params.instrumentId } }),
+    prisma.assessmentInstrument.delete({ where: { id: params.instrumentId } }),
+  ]);
+  if (affectedRowIds.length > 0) await recomputeCourseRows(course.id, "INSTRUCTOR");
 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_INSTRUMENT_DELETED", entityType: "AssessmentInstrument", entityId: params.instrumentId });
   return NextResponse.json({ ok: true });

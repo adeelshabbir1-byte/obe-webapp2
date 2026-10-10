@@ -35,7 +35,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
-    const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+    const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
   const course = courses.find((c) => c.id === selectedCourseId);
   const result = selectedCourseId ? await computeResultMate(selectedCourseId) : null;
   const passCriteria = await getPassingCriteria(await chairmanIdFor(user));

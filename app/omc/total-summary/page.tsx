@@ -31,7 +31,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
-  const selectedCourseId = searchParams.courseId || courses[0]?.id || "";
+  const selectedCourseId = (searchParams.courseId && courses.some((c) => c.id === searchParams.courseId) ? searchParams.courseId : courses[0]?.id) || "";
   const summary = selectedCourseId ? await computeTotalSummary(selectedCourseId) : null;
 
   return (
