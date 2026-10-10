@@ -66,7 +66,8 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   let orderIndex = 0;
   for (const inst of instruments) {
     const rows = rowsByInstrument.get(inst.id) || [];
-    const topicText = Array.from(new Set(rows.map((r) => r.topic.trim()).filter((t) => t.length > 0))).join("; ");
+    // Show the subtopic (what the question is really about); fall back to the topic when no subtopic is set.
+    const topicText = Array.from(new Set(rows.map((r) => (r.subtopic || "").trim() || r.topic.trim()).filter((t) => t.length > 0))).join("; ");
     // CLO: the one most of the question's topics belong to (first one wins a tie).
     const cloCount = new Map<string, number>();
     for (const r of rows) if (r.cloId) cloCount.set(r.cloId, (cloCount.get(r.cloId) || 0) + 1);
