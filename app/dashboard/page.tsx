@@ -40,6 +40,7 @@ export default async function Dashboard() {
     redirect("/choose-role");
   }
 
+  if (user.role === "CHAIRMAN") redirect("/home");
   const stats = await statsForRole(user);
 
   // Courses another department has given this person, waiting for their yes/no.

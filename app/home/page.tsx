@@ -5,7 +5,7 @@ import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import { planProgress } from "../../lib/deadlines";
-import { OVERVIEW_ROLES } from "../../lib/readinessScope";
+import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
 
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const box = { background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" } as const;
@@ -35,6 +35,20 @@ export default async function HomePage() {
     prisma.libraryInfo.findUnique({ where: { chairmanId }, select: { updatedAt: true } }),
     prisma.changeLog.findMany({ where: { chairmanId } as never, orderBy: { createdAt: "desc" }, take: 5 }),
   ]) as unknown as [Awaited<ReturnType<typeof planProgress>>, number, number, number, { id: string; title: string; dueDate: Date }[], { updatedAt: Date } | null, { id: string; area: string; summary: string; createdAt: Date }[]];
+  const { leads } = await leadsInScope(user);
+  const offered = (await prisma.course.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) }, isOffered: true, isNonCredit: false } as never, select: { id: true, coordinatorId: true, instructorId: true, subjectExpertId: true }, take: 3000 })) as unknown as { id: string; coordinatorId: string; instructorId: string | null; subjectExpertId: string | null }[];
+  const offeredIds = offered.map((c) => c.id).concat(["none"]);
+  const [cloRows, lectureRows, markRows] = (await Promise.all([
+    prisma.cLO.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
+    prisma.lectureRow.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
+    prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _count: { _all: true } } as never),
+  ])) as unknown as { courseId: string }[][];
+  const hasClo = new Set(cloRows.map((r) => r.courseId)), hasPlan = new Set(lectureRows.map((r) => r.courseId)), hasMarks = new Set(markRows.map((r) => r.courseId));
+  const perLead = leads.map((l) => {
+    const cs = offered.filter((c) => c.coordinatorId === l.id);
+    return { id: l.id, program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length };
+  }).filter((r) => r.total > 0);
+  const sumOf = (k: "total" | "noInstr" | "noSe" | "noClo" | "noPlan" | "noMarks") => perLead.reduce((n, r) => n + r[k], 0);
   const behind = lines.filter((l) => l.state === "BEHIND").sort((a, b) => b.behind - a.behind);
   const risk = lines.filter((l) => l.state === "AT_RISK");
   const staleDays = staleLib ? Math.floor((now.getTime() - staleLib.updatedAt.getTime()) / 86400000) : null;
@@ -49,6 +63,18 @@ export default async function HomePage() {
         <Tile n={openAsked} label="requests waiting for you" href="/requests" />
         <Tile n={answered} label="replies to read" href="/requests" />
         <Tile n={splitWaiting} label="course requests to accept" href="/course-split" />
+      </div>
+      <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
+        <h3 style={{ marginTop: 0 }}>Courses offered this semester: {sumOf("total")}</h3>
+        {perLead.length === 0 ? <p style={{ margin: 0, color: "var(--slate)" }}>No course is marked as offered yet. Program Leads mark them under Courses.</p> : (
+          <table>
+            <thead><tr><th>Program</th><th>Offered</th><th>No instructor</th><th>No Subject Expert</th><th>No CLOs</th><th>No lecture plan</th><th>No marks yet</th><th></th></tr></thead>
+            <tbody>
+              {perLead.map((r) => <tr key={r.id}><td><b>{r.program}</b></td><td>{r.total}</td>{[r.noInstr, r.noSe, r.noClo, r.noPlan, r.noMarks].map((n, i) => <td key={i} style={{ color: n ? "#B3261E" : "#2E7D4F", fontWeight: n ? 700 : 400 }}>{n}</td>)}<td><Link href={`/accreditation-overview/${r.id}`}>Report</Link></td></tr>)}
+              <tr style={{ borderTop: "2px solid var(--line)" }}><td><b>All programs</b></td><td><b>{sumOf("total")}</b></td><td><b>{sumOf("noInstr")}</b></td><td><b>{sumOf("noSe")}</b></td><td><b>{sumOf("noClo")}</b></td><td><b>{sumOf("noPlan")}</b></td><td><b>{sumOf("noMarks")}</b></td><td></td></tr>
+            </tbody>
+          </table>
+        )}
       </div>
       <div className="card" style={{ marginBottom: 14 }}>
         <h3 style={{ marginTop: 0 }}>Most behind</h3>
