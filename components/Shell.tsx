@@ -95,6 +95,11 @@ export default function Shell({
             </Link>
           )}
         </div>
+        {pathname !== "/dashboard" && (
+          <Link href="/dashboard" className="nav-link" style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12, fontWeight: 600, color: "#fff" }}>
+            <span aria-hidden>⌂</span><span>Home</span>
+          </Link>
+        )}
         {(() => {
           const withRequests = navLinks.some((n) => n.href === "/requests") ? navLinks : [...navLinks, { href: "/requests", label: "Requests" }];
           const sections = groupNavLinks(deptCoordinator ? withRequests.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : withRequests);

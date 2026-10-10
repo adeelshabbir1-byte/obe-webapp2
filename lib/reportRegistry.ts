@@ -120,3 +120,20 @@ export const NCEAC_PACKAGE_REPORT_HREFS = [
   "/omc/submission-timeliness",
   "/omc/delivery-completion",
 ];
+
+// What each report needs to be filled in, so a bundle can supply it automatically:
+// "batch" = degree + batch, "course" = degree + batch + one course, "courseOnly" = one course,
+// "code" = one course code, "student" = one student, "none" = nothing.
+export type ReportParam = "batch" | "course" | "courseOnly" | "code" | "student" | "none";
+export const REPORT_PARAM: Record<string, ReportParam> = {
+  "/omc/reports/coverage": "batch", "/omc/reports/heatmap": "batch", "/omc/reports/progression": "batch", "/omc/reports/audit": "batch",
+  "/omc/reports/bloom": "batch", "/omc/plo-readiness": "batch", "/omc/weight-compliance": "batch", "/omc/submission-timeliness": "batch",
+  "/omc/delivery-completion": "batch", "/omc/section-utilization": "batch", "/omc/reports/course-offering-map": "batch",
+  "/omc/total-summary": "course", "/omc/reports/midterm-distribution": "course", "/omc/reports/final-distribution": "course",
+  "/omc/adherence-report": "course", "/omc/reports/log-file": "course", "/omc/reports/weekly-plan": "course",
+  "/omc/reports/course-description": "course", "/omc/reports/course-monitoring": "course", "/omc/reports/result-mate": "course",
+  "/omc/reports/attainment-analytics": "courseOnly", "/omc/reports/pass-rates": "courseOnly", "/omc/reports/clo-plo-flow": "courseOnly",
+  "/omc/reports/cross-instructor-comparison": "code", "/omc/reports/student-transcript": "student",
+  "/omc/reports/indirect-attainment": "none", "/omc/reports/timetable": "none", "/omc/reports/omc-activity-log": "none",
+};
+export const reportParam = (href: string): ReportParam => REPORT_PARAM[href] || "none";

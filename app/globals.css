@@ -85,3 +85,12 @@ tbody tr:hover{background:#F5EBEA;}
 .sticky-col{position:-webkit-sticky !important;position:sticky !important;left:0;z-index:1;background:var(--card);}
 .sticky-row{position:-webkit-sticky !important;position:sticky !important;top:0;z-index:2;background:var(--card);}
 .sticky-corner{position:-webkit-sticky !important;position:sticky !important;left:0;top:0;z-index:3;background:var(--card);}
+
+/* Printing any page: no sidebar, no filters or buttons marked no-print, full width. */
+@media print{
+  .sidebar{display:none !important;}
+  .no-print{display:none !important;}
+  .shell{display:block !important;min-height:0 !important;}
+  .main{padding:0 !important;animation:none !important;}
+  body{background:#fff !important;}
+}
