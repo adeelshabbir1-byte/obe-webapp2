@@ -120,7 +120,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
             cloId: r.cloId,
           };
         })}
-        clos={await closWithPlo(course.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId })))}
+        clos={await closWithPlo(course.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct })))}
         apiBase="/api/subjectexpert"
       />}
 

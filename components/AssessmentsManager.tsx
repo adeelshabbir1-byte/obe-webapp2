@@ -19,7 +19,7 @@ type Row = { id: string; week: number; lectureNumber: number; topic: string; sub
 function effectiveSubtopic(r: { topic: string; subtopic: string | null }) {
   return (r.subtopic && r.subtopic.trim()) || r.topic;
 }
-type Clo = { id: string; code: string; ploId?: string | null; ploNumber?: number | null; ploTitle?: string };
+type Clo = { id: string; code: string; ploId?: string | null; ploNumber?: number | null; ploTitle?: string; contribution?: number | null };
 
 const TYPES = ["Quiz", "Assignment", "Midterm", "Final", "Project", "Lab"];
 const TARGET_KEY: Record<string, keyof Targets> = {
@@ -277,12 +277,12 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   // The real goal is PLOs: CLOs that map to the same PLO sit side by side (already sorted), a banner row above names the PLO
   // and the marks it receives, and a summary lists every PLO with its marks.
   const PLO_TINTS = ["#EEF2FA", "#F7EEF5", "#EEF6F0", "#FAF3E6"];
-  const ploGroups: { key: string; label: string; title: string; cols: number; total: number; tint: string }[] = [];
+  const ploGroups: { key: string; label: string; title: string; cols: number; total: number; weighted: number; tint: string }[] = [];
   cloList.forEach((c, idx) => {
     const key = c.ploId || "none";
     const last = ploGroups[ploGroups.length - 1];
-    if (last && last.key === key) { last.cols += 1; last.total += cloTotals[idx]; return; }
-    ploGroups.push({ key, label: c.ploNumber != null ? `PLO-${c.ploNumber}` : "No PLO", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
+    if (last && last.key === key) { last.cols += 1; last.total += cloTotals[idx]; last.weighted += cloTotals[idx] * ((c.contribution ?? 0) / 100); return; }
+    ploGroups.push({ key, label: c.ploNumber != null ? `PLO-${c.ploNumber}` : "No PLO", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], weighted: cloTotals[idx] * ((c.contribution ?? 0) / 100), tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
   });
   const cloTint = (c: Clo) => ploGroups.find((g) => g.key === (c.ploId || "none"))?.tint;
 
@@ -450,6 +450,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <div style={{ fontSize: 11.5, fontWeight: 700 }}>{g.label}</div>
                 <div style={{ fontSize: 17, fontWeight: 700 }}>{fmtPct(g.total)}%</div>
                 <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of total marks · {g.cols} CLO{g.cols > 1 ? "s" : ""}</div>
+                {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }} title="Each CLO's marks multiplied by its contribution % to this PLO">{fmtPct(g.weighted)}% by CLO contribution</div>}
               </div>
             ))}
           </div>

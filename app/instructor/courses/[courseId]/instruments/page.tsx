@@ -92,7 +92,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
             cloId: r.cloId,
           };
         })}
-        clos={await closWithPlo(updated.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId })))}
+        clos={await closWithPlo(updated.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct })))}
         apiBase="/api/instructor"
       />
 

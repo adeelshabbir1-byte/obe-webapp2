@@ -31,12 +31,12 @@ export const cloOrder = (a: { code: string }, b: { code: string }) => {
 };
 
 /** Adds the PLO each CLO maps to, and sorts so CLOs of the same PLO sit together (PLO 1 first; unmapped last). */
-export async function closWithPlo(clos: { id: string; code: string; mappedPloId: string | null }[]) {
+export async function closWithPlo(clos: { id: string; code: string; mappedPloId: string | null; ploContributionPct?: number | null }[]) {
   const { prisma } = await import("./db");
   const ids = Array.from(new Set(clos.map((c) => c.mappedPloId).filter((x): x is string => !!x)));
   const plos = ids.length ? await prisma.pLO.findMany({ where: { id: { in: ids } }, select: { id: true, number: true, title: true } }) : [];
   const byId = new Map<string, { number: number; title: string }>(plos.map((p: { id: string; number: number; title: string }) => [p.id, p]));
   return clos
-    .map((c) => ({ id: c.id, code: c.code, ploId: c.mappedPloId, ploNumber: c.mappedPloId ? byId.get(c.mappedPloId)?.number ?? null : null, ploTitle: c.mappedPloId ? byId.get(c.mappedPloId)?.title ?? "" : "" }))
+    .map((c) => ({ id: c.id, code: c.code, contribution: c.ploContributionPct ?? null, ploId: c.mappedPloId, ploNumber: c.mappedPloId ? byId.get(c.mappedPloId)?.number ?? null : null, ploTitle: c.mappedPloId ? byId.get(c.mappedPloId)?.title ?? "" : "" }))
     .sort((a, b) => (a.ploNumber ?? 9999) - (b.ploNumber ?? 9999) || cloOrder(a, b));
 }
