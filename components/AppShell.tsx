@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -357,6 +357,7 @@ export default function AppShell({
                   <Link prefetch={false} href="/coordinator/surveys" className="sb-action"><MessageSquareText size={14} /> Manage Feedback Surveys</Link>
                 </>
               )}
+              <Link prefetch={false} href="/change-password" className="sb-action"><KeyRound size={14} /> Change Password</Link>
               <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={14} /> Security Settings</Link>
               <button type="button" onClick={logout} className="sb-action sb-danger" disabled={loggingOut}>
                 <LogOut size={14} /> {loggingOut ? "Signing out…" : "Sign out"}

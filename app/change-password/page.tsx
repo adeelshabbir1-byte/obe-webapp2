@@ -16,6 +16,7 @@ export default async function ChangePasswordPage() {
           {user.mustChangePassword ? "You must set a new password before continuing." : "Update your account password."}
         </p>
         <ChangePasswordForm forced={user.mustChangePassword} />
+        {!user.mustChangePassword && <p style={{ textAlign: "center", marginTop: 14, fontSize: 13 }}><a href="/dashboard">← Back to dashboard</a></p>}
       </div>
     </div>
   );

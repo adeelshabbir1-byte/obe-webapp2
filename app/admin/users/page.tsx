@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import CreateUserForm from "../../../components/CreateUserForm";
 import ChairmenBrandingManager from "../../../components/ChairmenBrandingManager";
+import HeadPasswordReset from "../../../components/HeadPasswordReset";
 import { navForRole } from "../../../components/reportNav";
 
 export default async function AdminUsersPage() {
@@ -31,6 +32,8 @@ export default async function AdminUsersPage() {
           }))}
         />
       </div>
+
+      <HeadPasswordReset heads={chairmen.map((c) => ({ id: c.id, label: `${c.name} (${c.username})${c.instituteName ? ` — ${c.instituteName}` : ""}` }))} />
 
       <CreateUserForm endpoint="/api/admin/users" buttonLabel="Create Institute Head" />
     </Shell>
