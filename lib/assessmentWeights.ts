@@ -23,3 +23,9 @@ export function coverageWeight(marksPct: number, k: number | null | undefined, c
   const use = usableBestOf(k, count);
   return use ? (marksPct * use) / count : marksPct;
 }
+
+/** Natural order for CLO codes: CLO-1, CLO-2 ... CLO-10 (not CLO-1, CLO-10, CLO-2). */
+export const cloOrder = (a: { code: string }, b: { code: string }) => {
+  const n = (c: string) => { const m = /(\d+)/.exec(c); return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER; };
+  return n(a.code) - n(b.code) || a.code.localeCompare(b.code);
+};

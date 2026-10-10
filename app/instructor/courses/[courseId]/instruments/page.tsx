@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { cloOrder } from "../../../../../lib/assessmentWeights";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
@@ -90,7 +91,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
             cloId: r.cloId,
           };
         })}
-        clos={updated.clos.map((c) => ({ id: c.id, code: c.code }))}
+        clos={[...updated.clos].sort(cloOrder).map((c) => ({ id: c.id, code: c.code }))}
         apiBase="/api/instructor"
       />
 
