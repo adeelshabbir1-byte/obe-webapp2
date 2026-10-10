@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import CurriculumDetailManager from "../../../../components/CurriculumDetailManager";
+import OfficialCurriculumCloTools from "../../../../components/OfficialCurriculumCloTools";
 import Link from "next/link";
 import { navForRole } from "../../../../components/reportNav";
 
@@ -43,6 +44,8 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
         <Link href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</Link>
         <Link href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</Link>
       </div>
+
+      {!curriculum.chairmanId && <OfficialCurriculumCloTools curriculumId={curriculum.id} />}
 
       <CurriculumDetailManager
         curriculumId={curriculum.id}

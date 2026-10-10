@@ -191,6 +191,20 @@ export default function MasterCurriculumEditor() {
           </a>
         )}
         {selectedId && detail?.isOwned && (
+          <button className="btn" disabled={busy} style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10 }} title="Bring in CLOs and PLO mapping improved in the official curriculum" onClick={async () => {
+            if (!confirm("Bring the latest CLOs and PLO mapping from the official curriculum into your copy?")) return;
+            const all = confirm("Also REPLACE the CLOs of courses that already have CLOs in your copy?\n\nOK = yes, replace them with the official ones.\nCancel = no, only fill courses that have no CLOs yet (keeps your own work).");
+            setBusy(true); setError(""); setNotice("");
+            try {
+              const r = await fetch(`/api/omc/master-curriculum/${selectedId}/pull-official`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ onlyEmpty: !all }) });
+              const d = await r.json();
+              if (!r.ok) setError(d.error || "Could not get updates.");
+              else { setNotice(`${d.clos} CLO(s) brought in for ${d.courses} course(s)${d.keptOwn ? `; ${d.keptOwn} course(s) kept your own CLOs` : ""}.`); await loadDetail(selectedId); }
+            } catch { setError("Could not get updates."); }
+            setBusy(false);
+          }}>Get updates from the official curriculum</button>
+        )}
+        {selectedId && detail?.isOwned && (
           <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, cursor: "pointer", display: "inline-block" }}>
             Import CLOs &amp; PLO mapping from Excel
             <input type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={async (e) => {
