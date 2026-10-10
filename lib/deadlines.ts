@@ -108,7 +108,7 @@ export async function topUpStanding(chairmanId: string) {
     if (!setter || !SETTER_ROLES.includes(setter.role)) continue;
     const { leadIds, people } = await reach(setter);
     const needCourses = list.some((t) => !t.planKey);
-    const courses = needCourses && leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true }, take: 1500 }) : [];
+    const courses = needCourses && leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true }, take: 1500 }) : [];
     const existing = (await prisma.deadline.findMany({ where: { chairmanId, setById, allCourses: false } as never, select: { title: true, dueDate: true, courseId: true, assigneeId: true } })) as unknown as { title: string; dueDate: Date; courseId: string | null; assigneeId: string | null }[];
     const have = new Set(existing.map((e) => `${e.title}|${e.dueDate.getTime()}|${e.courseId || ""}|${e.assigneeId || ""}`));
     const toMake: Record<string, unknown>[] = [];
@@ -281,7 +281,7 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
   const setters = new Map((await prisma.user.findMany({ where: { id: { in: Array.from(new Set(templates.map((t) => t.setById))) } }, select: { id: true, name: true, role: true } })).map((u) => [u.id as string, u as { id: string; name: string; role: string }]));
   const myRank = RANK[user.role] ?? 9;
   const visible = templates.filter((t) => t.setById === user.id || (RANK[setters.get(t.setById)?.role || ""] ?? 9) < myRank || user.role === "CHAIRMAN");
-  const courses = leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true }, take: 1500 }) : [];
+  const courses = leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true }, take: 1500 }) : [];
   const courseIds = courses.map((c) => c.id);
   const cMap = new Map(courses.map((c) => [c.id, c]));
   const now = new Date();

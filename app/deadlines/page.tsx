@@ -26,8 +26,8 @@ export default async function DeadlinesPage() {
   const { people, leadIds } = isSetter ? await reach(user) : { people: [], leadIds: [] as string[] };
   const peopleIds = people.map((p) => p.id);
   const [myCourses, scopeCourses] = await Promise.all([
-    prisma.course.findMany({ where: { OR: [{ subjectExpertId: user.id }, { instructorId: user.id }, { coordinatorId: user.id }] }, select: { id: true } }),
-    isSetter && leadIds.length ? prisma.course.findMany({ where: { coordinatorId: { in: leadIds } }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true, batch: { select: { batchName: true } } }, orderBy: { code: "asc" }, take: 800 }) : Promise.resolve([]),
+    prisma.course.findMany({ where: { isOffered: true, OR: [{ subjectExpertId: user.id }, { instructorId: user.id }, { coordinatorId: user.id }] }, select: { id: true } }),
+    isSetter && leadIds.length ? prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true, batch: { select: { batchName: true } } }, orderBy: { code: "asc" }, take: 800 }) : Promise.resolve([]),
   ]);
   const myCourseIds = myCourses.map((c) => c.id);
   const scopeIds = (scopeCourses as { id: string }[]).map((c) => c.id);
