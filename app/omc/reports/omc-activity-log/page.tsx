@@ -9,6 +9,7 @@ import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import { getOmcActivityLog } from "../../../../lib/reports";
 import { formatActionLabel, formatMetadata } from "../../../../lib/auditLabels";
 import Shell from "../../../../components/Shell";
+import OmcActivityFilters from "../../../../components/OmcActivityFilters";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 export default async function OmcActivityLogPage({ searchParams }: { searchParams: { omcId?: string; from?: string; to?: string; page?: string; degreeProgram?: string; termName?: string; termYear?: string } }) {
@@ -73,47 +74,9 @@ export default async function OmcActivityLogPage({ searchParams }: { searchParam
       </p>
       <ReportsSubNav active="omc-activity-log" />
 
-      <form method="GET" className="card no-print" style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div>
-          <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: ".05em" }}>OMC Member</label>
-          <select name="omcId" defaultValue={searchParams.omcId || ""} onChange={(e) => e.currentTarget.form?.submit()} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
-            <option value="">Every OMC Member</option>
-            {omcMembers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: ".05em" }}>From</label>
-          <input type="date" name="from" defaultValue={searchParams.from || ""} onChange={(e) => e.currentTarget.form?.submit()} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }} />
-        </div>
-        <div>
-          <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: ".05em" }}>To</label>
-          <input type="date" name="to" defaultValue={searchParams.to || ""} onChange={(e) => e.currentTarget.form?.submit()} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }} />
-        </div>
-        <div>
-          <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: ".05em" }}>Semester (for Word minutes)</label>
-          <select
-            name="term" defaultValue={selectedTermKey}
-            onChange={(e) => {
-              const form = e.currentTarget.form; if (!form) return;
-              const [degreeProgram, termName, termYear] = e.currentTarget.value.split("|");
-              (form.elements.namedItem("degreeProgram") as HTMLInputElement).value = degreeProgram || "";
-              (form.elements.namedItem("termName") as HTMLInputElement).value = termName || "";
-              (form.elements.namedItem("termYear") as HTMLInputElement).value = termYear || "";
-              form.submit();
-            }}
-            style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}
-          >
-            <option value="">No semester selected</option>
-            {terms.map((t) => {
-              const k = `${t.degreeProgram}|${t.termName}|${t.termYear}`;
-              return <option key={k} value={k}>{t.degreeProgram} — {t.termName} {t.termYear}</option>;
-            })}
-          </select>
-          <input type="hidden" name="degreeProgram" defaultValue={searchParams.degreeProgram || ""} />
-          <input type="hidden" name="termName" defaultValue={searchParams.termName || ""} />
-          <input type="hidden" name="termYear" defaultValue={searchParams.termYear || ""} />
-        </div>
-      </form>
+      <OmcActivityFilters omcMembers={omcMembers.map((m) => ({ id: m.id, name: m.name }))} omcId={searchParams.omcId || ""} from={searchParams.from || ""} to={searchParams.to || ""}
+        terms={terms.map((t) => ({ degreeProgram: t.degreeProgram, termName: t.termName, termYear: t.termYear }))} selectedTermKey={selectedTermKey}
+        degreeProgram={searchParams.degreeProgram || ""} termName={searchParams.termName || ""} termYear={searchParams.termYear || ""} />
 
       <div className="card no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <p style={{ fontSize: 12, color: "var(--slate)" }}>
