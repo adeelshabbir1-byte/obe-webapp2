@@ -192,13 +192,13 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       {warnings.length > 0 && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
           <p style={{ fontSize: 12.5, color: "var(--rust)", fontWeight: 600, marginBottom: 6 }}>Contribution percentages don't add up to 100%:</p>
-          {warnings.map((w) => (
-            <p key={w.label} style={{ fontSize: 12, color: "var(--slate)" }}>{w.label} — currently totals {w.total}%</p>
+          {warnings.map((w, i) => (
+            <p key={`${i}-${w.label}`} style={{ fontSize: 12, color: "var(--slate)" }}>{w.label} — currently totals {w.total}%</p>
           ))}
         </div>
       )}
       <div className="card">
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
           <tbody>
             {clos.length === 0 && (
@@ -246,7 +246,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
                     <input type="number" min={1} max={100} value={d.targetPct} onChange={(e) => edit(c, { targetPct: Number(e.target.value) })} title="Expected % of students attaining this CLO" style={{ ...box, width: 64 }} />
                   </td>
                   <td>
-                    <button onClick={() => removeClo(c.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                    <button onClick={() => removeClo(c.id)} disabled={loading} className="act act-danger">Remove</button>
                   </td>
                 </tr>
               );

@@ -39,7 +39,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
             Instructor: {course.instructor?.name || "—"} · {course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"}
           </div>
         </div>
-        <Link href="/omc/instructor-review" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to list</Link>
+        <Link href="/omc/instructor-review" className="btn btn-secondary btn-sm">← Back to list</Link>
       </div>
 
       <div className="card">
@@ -55,7 +55,7 @@ export default async function InstructorReviewDetailPage({ params }: { params: {
         </div>
 
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Planned vs. Actual, by Topic</h3>
-        <SortableTable>
+        <SortableTable paginate={false} searchable={false}>
           <thead><tr><th>Topic</th><th>Planned Lectures</th><th>Planned Marks%</th><th>Actual Lectures</th><th>Actual Marks%</th><th>Status</th></tr></thead>
           <tbody>
             {variance.topics.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No planned topics yet.</td></tr>}

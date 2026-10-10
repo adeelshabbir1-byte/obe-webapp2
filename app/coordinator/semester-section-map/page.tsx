@@ -127,7 +127,7 @@ export default async function SemesterSectionMapPage({ searchParams }: { searchP
       <div className="card">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {rows.map((r) => (
-            <div key={r.key} style={{ minWidth: 220, maxWidth: 260, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(r.courseType, r.code || undefined)}`, padding: "8px 10px", borderRadius: 3 }}>
+            <div key={r.key} style={{ minWidth: 220, maxWidth: 260, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(r.courseType, r.code || undefined)}`, padding: "8px 10px", borderRadius: 6 }}>
               <div style={{ fontSize: 12.5, fontWeight: 600 }}>{r.code ? `${r.code} — ${r.label}` : r.label}</div>
               <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{r.batchLabel}</div>
               {r.kind === "group" && r.combinedWith.length > 0 && (

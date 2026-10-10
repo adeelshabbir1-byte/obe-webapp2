@@ -245,7 +245,7 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                 <g key={c.id} style={{ cursor: readOnly ? "default" : loading ? "wait" : "pointer" }}>
                   <rect x={pos.x} y={pos.y} width={BOX_W} height={BOX_H} rx={6} fill={courseTypeColor(c.courseType, c.code)} opacity={c.isOffered ? 0.5 : 0.9}
                     stroke={isSelected ? "#241A1D" : "none"} strokeWidth={isSelected ? 3 : 0} onClick={() => onCourseClick(c)} />
-                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}<title>{c.code} — {c.title}</title></text>
+                  <text x={pos.x + BOX_W / 2} y={pos.y + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff" onClick={() => onCourseClick(c)}>{c.code}<title>{`${c.code} — ${c.title}`}</title></text>
                   {!readOnly && mode === "reposition" && c.slotCategory && (
                     // Elective/IDS boxes already use a plain click to open
                     // the "choose which real course this is" popup

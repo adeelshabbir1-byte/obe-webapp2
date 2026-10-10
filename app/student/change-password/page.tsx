@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { BRAND } from "../../../lib/brandAssets";
 
 export default function StudentChangePasswordPage() {
   const router = useRouter();
@@ -34,13 +35,13 @@ export default function StudentChangePasswordPage() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="seal">S</div>
+        <img className="auth-logo" src={BRAND.logo.src} alt="OBEHUB" width={BRAND.logo.width} height={BRAND.logo.height} style={{ width: 150 }} />
         <h1 style={{ textAlign: "center", fontSize: 20, marginBottom: 4 }}>Set Your Password</h1>
         <p style={{ textAlign: "center", color: "var(--slate)", fontSize: 13, marginBottom: 24 }}>
           Choose a password only you know — you won't use your roll number to sign in again after this.
         </p>
         {error && <div className="err">{error}</div>}
-        <form onSubmit={onSubmit}>
+        <form method="post" onSubmit={onSubmit}>
           <div className="field">
             <label>Current Password (your roll number, if this is your first time)</label>
             <input name="currentPassword" type="password" />

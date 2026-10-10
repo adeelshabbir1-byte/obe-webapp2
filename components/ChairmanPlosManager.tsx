@@ -10,7 +10,7 @@ function statusBadge(status: string) {
     draft: ["#EFECE3", "#574C50"], approved: ["#E2F4E8", "#1D8A4E"], "changes-requested": ["#FBE2DF", "#C0312B"],
   };
   const [bg, fg] = map[status] || map.draft;
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
+  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
 export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[] }) {
@@ -72,7 +72,7 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
               <tr>
                 <td>PLO-{p.number}</td><td>{p.title}</td><td style={{ fontSize: 11.5 }}>{p.degreeProgram}</td><td>{p.coordinatorName}</td>
                 <td>{statusBadge(p.status)}</td>
-                <td><button onClick={() => setOpenId(openId === p.id ? null : p.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>{openId === p.id ? "Close" : "Review"}</button></td>
+                <td><button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="act act-primary">{openId === p.id ? "Close" : "Review"}</button></td>
               </tr>
               {openId === p.id && (
                 <tr>

@@ -12,7 +12,7 @@ function statusBadge(status: string) {
     submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
   };
   const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
-  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
+  return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{status.replace("-", " ")}</span>;
 }
 
 export default function OmcReviewQueue({ myId, courses: initialCourses, omcMembers }: { myId: string; courses: Course[]; omcMembers: OmcMember[] }) {
@@ -66,7 +66,7 @@ export default function OmcReviewQueue({ myId, courses: initialCourses, omcMembe
             {omcMembers.map((m) => <option key={m.id} value={m.id}>{m.id === myId ? "Me" : m.name}</option>)}
           </select>
         </td>
-        <td><Link href={`/omc/templates/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Review</Link></td>
+        <td><Link href={`/omc/templates/${c.id}`} className="act act-primary">Review</Link></td>
       </tr>
     );
   }

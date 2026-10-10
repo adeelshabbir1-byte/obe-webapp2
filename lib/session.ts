@@ -1,12 +1,22 @@
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { isDeptCoordinatorPath } from "./deptCoordinator";
 import crypto from "crypto";
+import { Prisma, type Session, type User } from "@prisma/client";
 import { prisma } from "./db";
 import { chairmanIdFor } from "./reportScope";
 import { assignerHatActive } from "./assignerHat";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_TTL_DAYS = 7;
+
+// Every User column except the institute logo — a base64 image that used to be read from the
+// database on every single signed-in request of an Institute Head. Built from the schema, so a
+// column added to User later is included automatically. Nothing reads the logo through the session.
+const SESSION_USER_COLUMNS = Object.fromEntries(
+  Object.values(Prisma.UserScalarFieldEnum).filter((column) => column !== "instituteLogo").map((column) => [column, true]),
+) as Prisma.UserSelect;
+type SessionRow = Session & { user: Omit<User, "instituteLogo"> };
 
 export async function createSession(userId: string, ip?: string, userAgent?: string, mfaVerified = true) {
   const rawToken = crypto.randomBytes(32).toString("hex");
@@ -41,12 +51,14 @@ export async function destroySession() {
   cookies().delete(SESSION_COOKIE);
 }
 
-export async function getAuthenticatedUser() {
+// The signed-in person, worked out once per request: a page, its Shell and any helper can all ask
+// for the current user and the session lookup (and the extra-hat checks) still run only once.
+const resolveSelf = cache(async () => {
   const raw = cookies().get(SESSION_COOKIE)?.value;
   if (!raw) return null;
 
   const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
-  const session = await prisma.session.findUnique({ where: { tokenHash }, include: { user: true } });
+  const session = (await prisma.session.findUnique({ where: { tokenHash }, include: { user: { select: SESSION_USER_COLUMNS } } })) as unknown as SessionRow | null;
 
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
   // A switched-off account stops working immediately, not when its session expires.
@@ -86,7 +98,19 @@ export async function getAuthenticatedUser() {
   if (effectiveRole === "OMC" && safeUser.role !== "OMC" && !omcHat) effectiveRole = safeUser.role;
   const base = { ...safeUser, role: effectiveRole, rawRole: safeUser.role, roleChosen: !!chosenRole, mfaVerified: session.mfaVerified, actingForId: session.actingForId || null, actingAsLead: false, realUserId: safeUser.id, assignerHat, omcHat };
   // The assigner pages find the institute through managedById, so a teacher wearing this hat is placed directly under the Institute Head.
-  if ((effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") || (effectiveRole === "OMC" && safeUser.role !== "OMC")) return { ...base, managedById: instituteHeadId };
+  const self = (effectiveRole === "COURSE_ASSIGNER" && safeUser.role !== "COURSE_ASSIGNER") || (effectiveRole === "OMC" && safeUser.role !== "OMC") ? { ...base, managedById: instituteHeadId } : base;
+  return { self, base, safeUser, session, effectiveRole, assignerHat, omcHat };
+});
+
+/** The signed-in person themselves — never swapped for the Program Lead a department coordinator is working as.
+ * This is what the sign-in API routes have always seen; the page chrome (Shell) uses it for the same reason. */
+export const getSignedInUser = cache(async () => (await resolveSelf())?.self ?? null);
+
+export const getAuthenticatedUser = cache(async () => {
+  const resolved = await resolveSelf();
+  if (!resolved) return null;
+  const { self, base, safeUser, session, effectiveRole, assignerHat, omcHat } = resolved;
+  if (self !== base) return self;
 
   // A department Program Coordinator who has picked a program works as that program's coordinator, but only on the pages
   // that involve people, calendars and the timetable. Everywhere else they remain a plain department coordinator.
@@ -102,7 +126,7 @@ export async function getAuthenticatedUser() {
     }
   }
   return base;
-}
+});
 
 /** Called from the role-choice screen once a dual-capable person picks
  * which role to act as for this session. */

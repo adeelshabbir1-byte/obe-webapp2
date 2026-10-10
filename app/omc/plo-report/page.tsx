@@ -91,14 +91,14 @@ export default async function OmcPloReportPage() {
                     <div style={{ fontSize: 12.5, fontWeight: 600 }}>
                       PLO-{r.number}: {r.title}
                       {r.status !== "approved" && (
-                        <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 2 }}>
+                        <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 6 }}>
                           {r.status.replace("-", " ")}
                         </span>
                       )}
                     </div>
                     <div style={{ fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
                       {r.count} course{r.count === 1 ? "" : "s"}
-                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
                     </div>
                   </div>
 
@@ -136,7 +136,7 @@ export default async function OmcPloReportPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {legendTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 2 }} />
+                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                 {t}
               </span>
             ))}

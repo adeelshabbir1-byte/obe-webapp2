@@ -40,7 +40,7 @@ export default function ElectiveChoiceForm({ groupId, initialOptions, registrati
           {result.changed ? "Your choice has been updated." : "Your choice has been recorded."}
         </p>
         <p style={{ fontSize: 13.5, color: "#5B6B7C" }}>{result.studentName} — {result.courseTitle}</p>
-        <button onClick={() => setResult(null)} style={{ marginTop: 14, background: "none", border: "none", color: "#5A1923", textDecoration: "underline", cursor: "pointer", fontSize: 12.5 }}>
+        <button onClick={() => setResult(null)} className="act act-primary" style={{ marginTop: 14 }}>
           Change my choice
         </button>
       </div>

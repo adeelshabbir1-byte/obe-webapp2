@@ -138,7 +138,7 @@ export default function ReadinessReport({ data, sarHref, ask }: { data: Awaited<
         <h3 style={{ marginTop: 0 }}>Course by course</h3>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>
           {(Object.keys(STATE_COLOUR) as State[]).map((k) => (
-            <span key={k} style={{ marginRight: 14 }}><i style={{ display: "inline-block", width: 11, height: 11, borderRadius: 3, background: STATE_COLOUR[k], marginRight: 5, verticalAlign: -1 }} />{STATE_TEXT[k]}</span>
+            <span key={k} style={{ marginRight: 14 }}><i style={{ display: "inline-block", width: 11, height: 11, borderRadius: 6, background: STATE_COLOUR[k], marginRight: 5, verticalAlign: -1 }} />{STATE_TEXT[k]}</span>
           ))}
         </p>
         {courses.length === 0 ? <p style={{ color: "var(--slate)" }}>No courses yet.</p> : (

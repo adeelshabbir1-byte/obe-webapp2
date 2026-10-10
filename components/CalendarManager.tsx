@@ -212,7 +212,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             {holidays.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None added yet.</td></tr>}
             {holidays.map((h) => (
               <tr key={h.id}><td>{h.date.slice(0, 10)}</td><td>{h.label}</td>
-                <td><button onClick={() => removeHoliday(h.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeHoliday(h.id)} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -232,7 +232,7 @@ export default function CalendarManager({ initialHolidays, initialDayModes, cour
             {dayModes.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None set — days default to On-Campus.</td></tr>}
             {dayModes.map((m) => (
               <tr key={m.id}><td>{m.date.slice(0, 10)}</td><td>{m.mode === "Online" ? "Online" : "On-Campus"}</td>
-                <td><button onClick={() => removeDayMode(m.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeDayMode(m.id)} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

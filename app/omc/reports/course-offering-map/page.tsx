@@ -77,7 +77,7 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {usedTypes.map((t) => (
                 <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
+                  <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                   {t}
                 </span>
               ))}
@@ -153,12 +153,12 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {usedTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 3 }} />
+                <span style={{ width: 14, height: 14, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />
                 {t}
               </span>
             ))}
             <span style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 14, height: 14, background: "#8884", display: "inline-block", borderRadius: 3, border: "1px solid var(--line)" }} />
+              <span style={{ width: 14, height: 14, background: "#8884", display: "inline-block", borderRadius: 6, border: "1px solid var(--line)" }} />
               Not Offered (faded)
             </span>
           </div>

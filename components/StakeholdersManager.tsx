@@ -145,7 +145,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
                 <td>{a.rollNumber}</td><td>{a.name}</td><td>{a.email || "—"}</td><td>{a.degreeProgram}</td><td>{a.graduationYear}</td>
                 <td>{a.totalWorkExperienceYears !== null ? `${a.totalWorkExperienceYears} yrs` : "—"}</td>
                 <td><StatusBadge status={a.status} /></td>
-                <td><button onClick={() => removeAlumni(a.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeAlumni(a.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -172,7 +172,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
                 <td>{e.organizationName}</td><td>{e.contactName || "—"}</td><td>{e.contactEmail || "—"}</td>
                 <td>{e.companySize || "—"}</td><td>{e.industryType || "—"}</td>
                 <td><StatusBadge status={e.status} /></td>
-                <td><button onClick={() => removeEmployer(e.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeEmployer(e.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -208,7 +208,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
                 <td>{alumName(e.alumniId)}</td><td>{employerName(e.employerId)}</td><td>{e.jobTitle || "—"}</td>
                 <td>{e.startDate || "—"}</td><td>{e.endDate || <span style={{ color: "var(--sage)" }}>Current</span>}</td><td>{e.salaryRange || "—"}</td>
                 <td><StatusBadge status={e.status} /></td>
-                <td><button onClick={() => removeEmployment(e.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeEmployment(e.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -251,7 +251,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
               <tr key={d.id}>
                 <td>{alumName(d.alumniId)}</td><td>{d.degreeName}</td><td>{d.institution}</td><td>{d.completionYear || "—"}</td>
                 <td><StatusBadge status={d.status} /></td>
-                <td><button onClick={() => removeDegree(d.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeDegree(d.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

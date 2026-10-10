@@ -87,7 +87,7 @@ export default function InstructorAssignCell({ courseId, initialInstructorId, in
         </select>
       )}
       {!loading && !saving && (
-        <button type="button" onClick={() => setEditing(false)} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", marginLeft: 6, padding: 0 }}>
+        <button type="button" onClick={() => setEditing(false)} className="act act-neutral" style={{ marginLeft: 6 }}>
           Cancel
         </button>
       )}

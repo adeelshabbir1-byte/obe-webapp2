@@ -23,7 +23,7 @@ function statusBadge(status: string) {
     ERROR: { bg: "#F5B8B8", label: "Error" },
   };
   const s = styles[status] || styles.PENDING;
-  return <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: s.bg }}>{s.label}</span>;
+  return <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 6, background: s.bg }}>{s.label}</span>;
 }
 
 export default function InstrumentsManager({ courseId, initialInstruments, targets }: { courseId: string; initialInstruments: Instrument[]; targets: Targets }) {
@@ -83,7 +83,7 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
                 {mismatch && <span style={{ marginLeft: 6, fontWeight: 600 }}>— doesn't match</span>}
               </span>
             </div>
-            <SortableTable>
+            <SortableTable paginate={false}>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th>Evidence</th><th></th></tr></thead>
               <tbody>
                 {items.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
@@ -106,7 +106,7 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
                           <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: "none" }} disabled={uploadingId === i.id}
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadEvidence(i.id, f); e.target.value = ""; }} />
                         </label>
-                        <button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                        <button onClick={() => removeInstrument(i.id)} className="act act-danger">Remove</button>
                       </td>
                     </tr>
                     {expandedId === i.id && i.evidence.length > 0 && (

@@ -1,14 +1,18 @@
-"use client";
+import { getSignedInUser } from "../lib/session";
+import { getBrandingFor } from "../lib/branding";
+import { getRequestsCount, getSessionInfo, getSidebarCurrentTerm } from "../lib/shellData";
+import AppShell from "./AppShell";
 
-import { useEffect, useState } from "react";
-import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { groupNavLinks } from "../lib/navGrouping";
-import { getNavIcon } from "../lib/navIcons";
-import BusyBanner from "./BusyBanner";
-
-export default function Shell({
+/**
+ * Server wrapper for the app chrome. Everything the sidebar needs (branding,
+ * role-switch options, department-coordinator programs, open-requests count,
+ * current term) is resolved here during the page's own server render —
+ * previously the browser fetched four API routes after every navigation,
+ * which re-downloaded the base64 logos and made the sidebar fill in late.
+ * The signed-in user is memoised per request, so this adds no extra session
+ * query on top of the page's own.
+ */
+export default async function Shell({
   roleLabel,
   userName,
   navLinks,
@@ -19,157 +23,31 @@ export default function Shell({
   navLinks: { href: string; label: string }[];
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [instituteName, setInstituteName] = useState<string | null>(null);
-  const [instituteLogo, setInstituteLogo] = useState<string | null>(null);
-  const [ownerLogo, setOwnerLogo] = useState<string | null>(null);
-  const [nceacLogo, setNceacLogo] = useState<string | null>(null);
-  const [roleSwitch, setRoleSwitch] = useState<{ dualCapable: boolean; activeRole: string; otherRole: string | null; otherRoleLabel: string | null; otherRoles?: { role: string; label: string }[] } | null>(null);
-  const [deptCoordinator, setDeptCoordinator] = useState<{ actingForId: string | null; programs: { id: string; label: string }[] } | null>(null);
-  const [isAlumniCustodian, setIsAlumniCustodian] = useState(false);
-  const [currentTerm, setCurrentTerm] = useState<{ termName: string; year: number } | null>(null);
+  // The person themselves (as the sign-in API routes see them), not the Program Lead a department coordinator may be working as.
+  const user = await getSignedInUser();
 
-  useEffect(() => {
-    fetch("/api/requests/count").then((r) => r.json()).then((d) => setReqCount(Number(d.count) || 0)).catch(() => {});
-    fetch("/api/institute-info").then((r) => r.json()).then((d) => {
-      setInstituteName(d.instituteName); setInstituteLogo(d.instituteLogo);
-      setOwnerLogo(d.ownerLogo); setNceacLogo(d.nceacLogo);
-    }).catch(() => {});
-    fetch("/api/auth/session-info").then((r) => r.json()).then((d) => { if (d.dualCapable) setRoleSwitch(d); if (d.deptCoordinator) setDeptCoordinator(d.deptCoordinator); if (d.isAlumniCustodian) setIsAlumniCustodian(true); }).catch(() => {});
-    // Shown as a standing reminder in the sidebar on every Coordinator
-    // page, not just the semester-management one — it's easy to lose
-    // track of which term is actually "current" when working across
-    // two dozen different pages, and several of them (reports, the
-    // registration window, degree planning) all implicitly depend on it.
-    if (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") {
-      fetch("/api/coordinator/current-term").then((r) => r.json()).then((d) => setCurrentTerm(d.current)).catch(() => {});
-    }
-  }, [roleLabel]);
-
-  const [reqCount, setReqCount] = useState(0);
-  const [openSec, setOpenSec] = useState<Record<string, boolean>>({});
-  const [switching, setSwitching] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  async function switchRole(nextRole: string) {
-    if (!roleSwitch || switching) return;
-    setSwitching(true);
-    await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) });
-    router.push("/dashboard");
-    router.refresh();
-  }
-
-  async function pickProgram(coordinatorId: string) {
-    await fetch("/api/auth/acting-for", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coordinatorId }) });
-    setDeptCoordinator((d) => (d ? { ...d, actingForId: coordinatorId } : d));
-    router.refresh();
-  }
-
-  async function logout() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
+  const [branding, sessionInfo, requestsCount, currentTerm] = await Promise.all([
+    getBrandingFor(user),
+    user ? getSessionInfo(user) : null,
+    user ? getRequestsCount(user) : 0,
+    // Shown as a standing reminder on every Program Lead / Program Coordinator page — several screens
+    // (reports, the registration window, degree planning) depend on which term is "current".
+    user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
+  ]);
 
   return (
-    <div className="shell">
-      <div className="sidebar">
-        <div style={{ textAlign: "center" }}>
-          {nceacLogo ? (
-            <img src={nceacLogo} alt="NCEAC" style={{ width: 40, height: 40, objectFit: "contain", margin: "0 auto 8px", display: "block", background: "#fff", borderRadius: "50%", padding: 2 }} />
-          ) : (
-            <div className="seal" style={{ width: 36, height: 36, fontSize: 12, margin: "0 auto 8px" }}>NC</div>
-          )}
-          <h2 style={{ fontSize: 14, color: "#fff" }}>OBE Curriculum Governance</h2>
-          {instituteLogo && <img src={instituteLogo} alt={instituteName || "Institute"} style={{ maxWidth: 100, maxHeight: 34, margin: "6px auto 0", display: "block", background: "#fff", padding: 4, borderRadius: 3 }} />}
-          {instituteName && <div style={{ fontSize: 11, color: "#B7AE97", marginTop: 2 }}>{instituteName}</div>}
-          <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#B7AE97", margin: "5px 0 20px" }}>
-            {roleLabel}
-          </div>
-          {currentTerm && (
-            <Link href="/coordinator/semester" style={{ display: "block", fontSize: 10.5, color: "#D8CFAE", background: "rgba(255,255,255,0.06)", borderRadius: 3, padding: "4px 8px", marginTop: -12, marginBottom: 16, textDecoration: "none" }}>
-              Current: {currentTerm.termName} {currentTerm.year}
-            </Link>
-          )}
-        </div>
-        {pathname !== "/dashboard" && (
-          <Link href="/dashboard" className="nav-link" style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12, fontWeight: 600, color: "#fff" }}>
-            <span aria-hidden>⌂</span><span>Home</span>
-          </Link>
-        )}
-        {(() => {
-          const withRequests = navLinks.some((n) => n.href === "/requests") ? navLinks : [...navLinks, { href: "/requests", label: "Requests" }];
-          const sections = groupNavLinks(deptCoordinator ? withRequests.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href)) : withRequests);
-          const crowded = sections.length > 2;
-          return sections.map((section, idx) => {
-            const hasActive = section.links.some((n) => n.href === pathname);
-            // With many sections only the first and the one you are in are open; click a heading to open or close any.
-            const open = openSec[section.title] ?? (!crowded || idx === 0 || hasActive);
-            return (
-              <div key={section.title} style={{ marginBottom: crowded ? 6 : 14 }}>
-                <button type="button" onClick={() => setOpenSec({ ...openSec, [section.title]: !open })} style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: crowded ? "pointer" : "default", fontSize: 9.5, letterSpacing: ".08em", textTransform: "uppercase", color: hasActive ? "#D8CFAE" : "#8A8266", margin: "0 0 4px", padding: "4px 2px" }} aria-expanded={open}>
-                  <span>{section.title}</span>{crowded && <span style={{ fontSize: 11 }}>{open ? "▾" : "▸"}</span>}
-                </button>
-                {open && section.links.map((n) => {
-                  const isActive = pathname === n.href;
-                  const Icon = getNavIcon(n.label);
-                  return (
-                    <Link key={n.href} href={n.href} className="nav-link" style={{
-                      display: "flex", alignItems: "center", gap: 9,
-                      ...(isActive ? { background: "rgba(91,79,232,0.25)", color: "#fff", fontWeight: 600, borderLeft: "3px solid var(--brass)", paddingLeft: 11 } : {}),
-                    }}>
-                      <Icon size={14} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
-                      <span>{n.href === "/requests" && reqCount > 0 ? `Requests (${reqCount})` : n.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          });
-        })()}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 20, paddingTop: 14 }}>
-          <div style={{ fontSize: 11.5, color: "#CFC9B6", marginBottom: 8 }}>{userName}</div>
-          {deptCoordinator && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10.5, color: "#CFC9B6", opacity: 0.8, marginBottom: 3 }}>Working on program</div>
-              <select value={deptCoordinator.actingForId || ""} onChange={(e) => e.target.value && pickProgram(e.target.value)} style={{ width: "100%", fontSize: 11.5 }}>
-                {!deptCoordinator.actingForId && <option value="">— choose a program —</option>}
-                {deptCoordinator.programs.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-              </select>
-            </div>
-          )}
-          <Link href="/settings/mfa" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>Security Settings</Link>
-          {roleSwitch && (roleSwitch.otherRoles && roleSwitch.otherRoles.length > 0 ? roleSwitch.otherRoles : [{ role: roleSwitch.otherRole || "INSTRUCTOR", label: roleSwitch.otherRoleLabel || "Instructor" }]).map((o) => (
-            <button key={o.role} onClick={() => switchRole(o.role)} disabled={switching} style={{ display: "block", background: "none", border: "none", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline", cursor: switching ? "default" : "pointer", padding: 0, textAlign: "left", opacity: switching ? 0.6 : 1 }}>
-              {switching ? "Switching…" : `Switch to ${o.label}`}
-            </button>
-          ))}
-          {isAlumniCustodian && (
-            <>
-              <Link href="/faculty/alumni-review" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
-                Review Alumni & Employer Data
-              </Link>
-              <Link href="/coordinator/surveys" style={{ display: "block", fontSize: 11.5, color: "#CFC9B6", marginBottom: 8, textDecoration: "underline" }}>
-                Manage Feedback Surveys
-              </Link>
-            </>
-          )}
-          <button onClick={logout} disabled={loggingOut} style={{ background: "none", border: "none", color: "#FBC4B4", fontSize: 11.5, textDecoration: "underline", cursor: loggingOut ? "default" : "pointer", padding: 0, opacity: loggingOut ? 0.6 : 1 }}>
-            {loggingOut ? "Signing out…" : "Sign out"}
-          </button>
-        </div>
-      </div>
-      <BusyBanner />
-      <div className="main">
-        {children}
-        <div style={{ marginTop: 40, paddingTop: 14, borderTop: "1px solid var(--line)", fontSize: 10.5, color: "var(--slate)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {ownerLogo && <img src={ownerLogo} alt="Lets Innovate Pvt Ltd" style={{ height: 16, objectFit: "contain" }} />}
-          <span>{instituteName ? `${instituteName} — ` : ""}© {new Date().getFullYear()} Lets Innovate Pvt Ltd. All rights reserved.</span>
-        </div>
-      </div>
-    </div>
+    <AppShell
+      roleLabel={roleLabel}
+      userName={userName}
+      navLinks={navLinks}
+      branding={branding}
+      roleSwitch={sessionInfo?.dualCapable ? sessionInfo : null}
+      deptCoordinator={sessionInfo?.deptCoordinator || null}
+      isAlumniCustodian={!!sessionInfo?.isAlumniCustodian}
+      currentTerm={currentTerm}
+      requestsCount={requestsCount}
+    >
+      {children}
+    </AppShell>
   );
 }

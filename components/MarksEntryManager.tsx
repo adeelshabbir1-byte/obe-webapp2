@@ -95,7 +95,7 @@ export default function MarksEntryManager({ courseId, instruments, students: ini
         {instruments.length === 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No assessment instruments defined yet — go to the Assessments tab first.</p>}
         {students.length === 0 && instruments.length > 0 && <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No students enrolled yet.</p>}
         {students.length > 0 && instruments.length > 0 && (
-          <SortableTable style={{ tableLayout: "fixed" }}>
+          <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th style={{ width: 140 }}>Name</th><th style={{ width: 90 }}>Roll #</th>
@@ -120,7 +120,7 @@ export default function MarksEntryManager({ courseId, instruments, students: ini
                       </td>
                     );
                   })}
-                  <td><button onClick={() => dropStudent(s.id, s.name)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Drop</button></td>
+                  <td><button onClick={() => dropStudent(s.id, s.name)} disabled={loading} className="act act-danger">Drop</button></td>
                 </tr>
               ))}
             </tbody>

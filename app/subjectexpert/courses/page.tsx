@@ -91,7 +91,7 @@ export default async function SubjectExpertCoursesPage() {
                   <td style={{ fontSize: 12.5 }}>{batchLabel}</td>
                   <td><ProgressBar steps={steps} /></td>
                   <td>{statusLabel(c.templateStatus)}</td>
-                  <td><Link href={`/subjectexpert/courses/${c.id}/clos`} style={{ color: "var(--brass-dark)", fontSize: 12.5 }}>Open</Link></td>
+                  <td><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link></td>
                 </tr>
               );
             })}

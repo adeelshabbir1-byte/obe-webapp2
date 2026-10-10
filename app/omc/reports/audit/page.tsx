@@ -12,9 +12,9 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 function flagBadge(flag: string) {
-  if (flag === "orphan") return <span style={{ background: "#FFE4DC", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Orphan — No PLO</span>;
-  if (flag === "broad") return <span style={{ background: "#E8E6FB", color: "var(--brass-dark)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 700 }}>Overly Broad</span>;
-  return <span style={{ background: "#CCFBF1", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, fontWeight: 600 }}>OK</span>;
+  if (flag === "orphan") return <span style={{ background: "#FFE4DC", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>Orphan — No PLO</span>;
+  if (flag === "broad") return <span style={{ background: "#E8E6FB", color: "var(--brass-dark)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>Overly Broad</span>;
+  return <span style={{ background: "#CCFBF1", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>OK</span>;
 }
 
 export default async function AuditReportPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {

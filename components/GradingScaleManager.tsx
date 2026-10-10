@@ -71,7 +71,7 @@ export default function GradingScaleManager({ initialScale: initialScaleProp }: 
               {versions.get(key)!.sort((a, b) => a.orderIndex - b.orderIndex).map((s) => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.letter}</td><td>{s.gpaValue.toFixed(2)}</td>
-                  <td><button onClick={() => remove(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                  <td><button onClick={() => remove(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
                 </tr>
               ))}
             </tbody>

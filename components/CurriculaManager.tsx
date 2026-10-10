@@ -123,14 +123,14 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                   <td>{c.authority}</td><td>{c.title}</td><td>{c.version}</td><td>{c.courseCount}</td><td>{c.ploCount}</td>
                   <td>{c.assignedCount ?? 0}</td>
                   <td style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => openAssign(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, fontWeight: 600 }}>
+                    <button onClick={() => openAssign(c.id)} className="act act-primary">
                       {assigningId === c.id ? "Close" : "Assign to Institutes"}
                     </button>
-                    <Link href={`/admin/curricula/${c.id}`} style={{ color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline" }}>Edit</Link>
-                    <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                    <Link href={`/admin/curricula/${c.id}`} className="act act-primary">Edit</Link>
+                    <button onClick={() => setCloningId(cloningId === c.id ? null : c.id)} className="act act-primary">
                       {cloningId === c.id ? "Cancel" : "Clone as New Version"}
                     </button>
-                    <button onClick={() => deleteCurriculum(c.id, c.title, c.courseCount)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                    <button onClick={() => deleteCurriculum(c.id, c.title, c.courseCount)} disabled={loading} className="act act-danger">
                       Delete
                     </button>
                   </td>

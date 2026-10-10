@@ -69,7 +69,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <SortableTable style={{ tableLayout: "fixed" }}>
+        <SortableTable paginate={false} searchable={false} style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
               <th style={{ width: 70 }}>PLO #</th>

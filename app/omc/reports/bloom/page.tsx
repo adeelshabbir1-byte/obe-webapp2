@@ -73,7 +73,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                 {BLOOM_ORDER.map((b) => (
                   <span key={b} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ width: 9, height: 9, background: BLOOM_COLORS[b], display: "inline-block", borderRadius: 2 }} />
+                    <span style={{ width: 9, height: 9, background: BLOOM_COLORS[b], display: "inline-block", borderRadius: 6 }} />
                     {b} {BLOOM_LABELS[b]}: {prog.overall[b] || 0}
                   </span>
                 ))}
@@ -83,7 +83,7 @@ export default async function BloomReportPage({ searchParams }: { searchParams: 
             {semesters.length > 0 && (
               <div className="card" style={{ overflowX: "auto" }}>
                 <h4 style={{ fontSize: 12.5, marginBottom: 10, color: "var(--slate)" }}>By Semester</h4>
-                <SortableTable>
+                <SortableTable paginate={false} searchable={false}>
                   <thead><tr><th>Semester</th>{BLOOM_ORDER.map((b) => <th key={b} style={{ textAlign: "center" }}>{b}</th>)}</tr></thead>
                   <tbody>
                     {semesters.map((s) => (

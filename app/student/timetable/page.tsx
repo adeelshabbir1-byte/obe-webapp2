@@ -3,6 +3,7 @@ import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import { prisma } from "../../../lib/db";
 import { getTimetableEntries, timeRangeLabel } from "../../../lib/timetableView";
 import TimetableView from "../../../components/TimetableView";
+import StudentShell from "../../../components/StudentShell";
 
 export default async function StudentTimetablePage() {
   const student = await getAuthenticatedStudent();
@@ -19,20 +20,16 @@ export default async function StudentTimetablePage() {
     .map((e) => ({ ...e, timeLabel: timeRangeLabel(e.startHour, e.endHour) }));
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--paper)", padding: "40px 20px" }}>
+    <StudentShell studentName={student.name}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: 10 }}>
           <h1 style={{ fontSize: 22 }}>My Timetable</h1>
-          <div style={{ display: "flex", gap: 14 }}>
-            <a href="/student/transcript" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Transcript</a>
-            <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan</a>
-          </div>
         </div>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 20 }}>
           Your batch's weekly class schedule — room, time, course, and instructor.
         </p>
         <TimetableView entries={entries} />
       </div>
-    </div>
+    </StudentShell>
   );
 }

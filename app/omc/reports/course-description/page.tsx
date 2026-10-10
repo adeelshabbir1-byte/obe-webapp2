@@ -74,7 +74,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
       </div>
       {course && (
         <div className="card">
-          <SortableTable>
+          <SortableTable paginate={false} searchable={false}>
             <tbody>
               <Row label="Degree Program" value={course.batch?.degreeProgram || "—"} />
               <Row label="Course Code" value={course.code} />
@@ -82,7 +82,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
               <Row label="Credit Hours" value={course.creditHours} />
               <Row label="Assessment Instruments with Weights" value={
                 <>
-                  <SortableTable style={{ marginTop: 0 }}>
+                  <SortableTable paginate={false} searchable={false} style={{ marginTop: 0 }}>
                     <tbody>
                       <tr><td>Assignment</td><td>{liveWeights!.assignmentPct}</td></tr>
                       <tr><td>Quiz</td><td>{liveWeights!.quizPct}</td></tr>
@@ -107,7 +107,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
                 <ol style={{ margin: 0, paddingLeft: 18 }}>{course.clos.map((c) => <li key={c.id} style={{ marginBottom: 4 }}>{c.statement}</li>)}</ol>
               } />
               <Row label="Topics Covered, by Week" value={
-                <SortableTable style={{ marginTop: 0 }}>
+                <SortableTable paginate={false} searchable={false} style={{ marginTop: 0 }}>
                   <thead><tr><th>Week</th><th>Topics</th><th>No. of Lectures</th></tr></thead>
                   <tbody>
                     {Array.from(byWeek.entries()).map(([week, topics]) => (

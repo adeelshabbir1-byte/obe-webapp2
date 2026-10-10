@@ -44,7 +44,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
               const ok = n >= 3;
               return (
                 <span key={c.id} style={{
-                  fontSize: 11.5, padding: "4px 10px", borderRadius: 2,
+                  fontSize: 11.5, padding: "4px 10px", borderRadius: 6,
                   background: ok ? "#CCFBF1" : "#FFE4DC", color: ok ? "var(--sage)" : "var(--rust)",
                 }}>
                   {c.code}: {n} topic{n === 1 ? "" : "s"}{!ok ? ` (needs ${3 - n} more)` : ""}

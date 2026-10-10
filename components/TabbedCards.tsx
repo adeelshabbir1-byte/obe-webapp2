@@ -20,10 +20,9 @@ export default function TabbedCards({ children, defaultTab, order }: { children:
         return (
           <div key={i}>
             {i === firstIdx && (
-              <div role="tablist" style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "2px solid var(--line)", marginBottom: 16, position: "sticky", top: 0, background: "var(--paper, #fff)", zIndex: 5 }}>
+              <div role="tablist" className="tabs no-print" style={{ marginBottom: 16, position: "sticky", top: "calc(var(--topbar-h, 0px) + 8px)", zIndex: 5 }}>
                 {labels.map((k) => (
-                  <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => { setTab(k); try { window.location.hash = encodeURIComponent(k); } catch { /* ignore */ } }}
-                    style={{ padding: "10px 16px", border: "none", background: tab === k ? "#fff" : "transparent", borderBottom: tab === k ? "3px solid var(--maroon, #7a1f2b)" : "3px solid transparent", fontWeight: tab === k ? 700 : 500, cursor: "pointer", fontSize: 14 }}>
+                  <button key={k} type="button" role="tab" className="tab" aria-selected={tab === k} onClick={() => { setTab(k); try { window.location.hash = encodeURIComponent(k); } catch { /* ignore */ } }}>
                     {k}
                   </button>
                 ))}

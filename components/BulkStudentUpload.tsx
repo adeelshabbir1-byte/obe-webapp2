@@ -85,7 +85,7 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {batches.map((b, i) => (
-            <span key={i} style={{ fontSize: 11.5, background: "#F2EEE6", padding: "3px 9px", borderRadius: 3 }}>
+            <span key={i} style={{ fontSize: 11.5, background: "#F2EEE6", padding: "3px 9px", borderRadius: 6 }}>
               {b.batchName} <span style={{ color: "var(--slate)" }}>({b.degreeProgram})</span>
             </span>
           ))}

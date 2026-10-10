@@ -49,7 +49,7 @@ export default function MyAvailabilityManager({ initialRecords }: { initialRecor
             {initialRecords.map((r) => (
               <tr key={r.id}>
                 <td>{r.dayOfWeek}</td><td>{formatHour(r.startHour)}–{formatHour(r.endHour)}</td><td>{r.note || "—"}</td>
-                <td><button onClick={() => remove(r.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => remove(r.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

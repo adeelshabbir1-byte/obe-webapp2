@@ -55,7 +55,7 @@ export default function StudentElectiveDashboard({ studentName }: { studentName:
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: "var(--slate)" }}>Signed in as <b>{studentName}</b></p>
-        <button onClick={logout} style={{ background: "none", border: "none", color: "var(--brass-dark)", textDecoration: "underline", cursor: "pointer", fontSize: 12.5 }}>
+        <button onClick={logout} className="act act-primary">
           Sign out
         </button>
       </div>

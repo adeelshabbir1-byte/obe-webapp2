@@ -50,7 +50,7 @@ export default function PeoAlignmentCheck({ degreeProgram, batchId, peoCount }: 
               <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < results.length - 1 ? "1px solid var(--line)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ fontSize: 12.5, flex: 1 }}>{r.peo}</div>
-                  <span style={{ background: style.bg, color: style.fg, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", padding: "2px 8px", borderRadius: 2, whiteSpace: "nowrap" }}>
+                  <span style={{ background: style.bg, color: style.fg, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
                     {style.label}
                   </span>
                 </div>

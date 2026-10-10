@@ -324,7 +324,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
               {rooms.map((r) => (
                 <tr key={r.id}>
                   <td>{r.name}</td><td>{r.type}</td><td>{r.capacity}</td>
-                  <td><button onClick={() => removeRoom(r.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                  <td><button onClick={() => removeRoom(r.id)} disabled={loading} className="act act-danger">Remove</button></td>
                 </tr>
               ))}
             </tbody>
@@ -399,7 +399,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                       <option value="LECTURE">Lecture</option><option value="LAB">Lab</option>
                     </select>
                   </td>
-                  <td><button onClick={() => removeSection(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                  <td><button onClick={() => removeSection(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
                 </tr>
               ))}
             </tbody>
@@ -439,7 +439,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
           <div className="card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ fontSize: 14, margin: 0 }}>Readiness Summary</h3>
-              <button onClick={loadCapacitySummary} disabled={loadingCapacity} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+              <button onClick={loadCapacitySummary} disabled={loadingCapacity} className="act act-primary">
                 {loadingCapacity ? "Refreshing…" : "Refresh"}
               </button>
             </div>
@@ -650,7 +650,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                                 onDragEnd={() => setDraggedEntryId(null)}
                                 title={isClashing ? clashInfo?.reasons.join("; ") : "Drag to move"}
                                 style={{
-                                  padding: 4, borderRadius: 3, cursor: movingEntryId ? "wait" : "grab",
+                                  padding: 4, borderRadius: 6, cursor: movingEntryId ? "wait" : "grab",
                                   background: isClashing ? "#FBE2DF" : "#F0EDFB",
                                   border: isClashing ? "1.5px solid var(--rust)" : "1px solid transparent",
                                   opacity: movingEntryId === entry.id ? 0.5 : 1,

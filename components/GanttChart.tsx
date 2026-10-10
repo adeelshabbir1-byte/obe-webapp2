@@ -61,7 +61,7 @@ export default function GanttChart({ lines, start, now }: { lines: PlanLine[]; s
         <g><line x1={x(now.getTime())} y1={HEAD - 4} x2={x(now.getTime())} y2={H} stroke="#B3261E" strokeWidth={1.5} /><text x={x(now.getTime()) + 3} y={HEAD - 6} fontSize={10} fill="#B3261E" fontWeight={700}>today</text></g>
       </svg>
       <div style={{ fontSize: 11.5, padding: "6px 10px", color: "#555", display: "flex", gap: 14, flexWrap: "wrap" }}>
-        {([ ["BEHIND", "Behind"], ["AT_RISK", "At risk"], ["ON_TRACK", "On track"], ["COMPLETE", "Complete"] ] as [PlanState, string][]).map(([s, t]) => <span key={s}><span style={{ display: "inline-block", width: 10, height: 10, background: COLOUR[s], borderRadius: 2, marginRight: 4 }} />{t}</span>)}
+        {([ ["BEHIND", "Behind"], ["AT_RISK", "At risk"], ["ON_TRACK", "On track"], ["COMPLETE", "Complete"] ] as [PlanState, string][]).map(([s, t]) => <span key={s}><span style={{ display: "inline-block", width: 10, height: 10, background: COLOUR[s], borderRadius: 6, marginRight: 4 }} />{t}</span>)}
         <span>◇ white diamond = a date passed down by a Dean, Chairman or Program Lead</span>
         <span>{phases.length} groups of work</span>
       </div>

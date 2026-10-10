@@ -45,7 +45,7 @@ const NAV = [
 function StatusBadge({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
   const bg = ok ? "#E2F4E8" : warn ? "#FBEED2" : "#FBE2DF";
   const fg = ok ? "#4B7A63" : warn ? "#96650F" : "#B1512E";
-  return <span style={{ background: bg, color: fg, fontSize: 10.5, fontWeight: 600, padding: "3px 9px", borderRadius: 3, whiteSpace: "nowrap" }}>{label}</span>;
+  return <span style={{ background: bg, color: fg, fontSize: 10.5, fontWeight: 600, padding: "3px 9px", borderRadius: 6, whiteSpace: "nowrap" }}>{label}</span>;
 }
 
 export default async function CurriculumReadinessMatrixPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -133,7 +133,7 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
                     <td style={{ padding: "6px 10px", fontWeight: 600 }}>{c.code}</td>
                     <td style={{ padding: "6px 10px" }}>{c.title}</td>
                     <td style={{ padding: "6px 10px" }}>
-                      <span style={{ fontSize: 10.5, padding: "3px 9px", borderRadius: 3, background: courseTypeColor(c.courseType, c.code), color: "#fff", fontWeight: 600 }}>
+                      <span style={{ fontSize: 10.5, padding: "3px 9px", borderRadius: 6, background: courseTypeColor(c.courseType, c.code), color: "#fff", fontWeight: 600 }}>
                         {c.courseType}
                       </span>
                     </td>

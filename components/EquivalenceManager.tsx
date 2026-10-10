@@ -123,7 +123,7 @@ export default function EquivalenceManager() {
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <SortableTable style={{ tableLayout: "fixed" }}>
+        <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
               <th style={{ minWidth: 130 }}>Group</th>

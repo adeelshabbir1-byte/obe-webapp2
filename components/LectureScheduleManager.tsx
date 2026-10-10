@@ -100,7 +100,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
           <h3 style={{ fontSize: 14 }}>Lecture Schedule</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} rows filled in</span>
         </div>
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead>
             <tr>
               <th>Wk</th><th>Lec</th><th>Topic</th><th>Sub Topic</th><th>CLO</th><th>Bloom</th>
@@ -167,7 +167,7 @@ export default function LectureScheduleManager({ courseId, initialRows, clos, in
                   </td>
                 )}
                 <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
-                <td><button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>
+                <td><button onClick={() => setEditingId(r.id)} className="act act-primary">Edit</button></td>
               </tr>
             ))}
           </tbody>

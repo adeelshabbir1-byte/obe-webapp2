@@ -82,7 +82,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
                 <a
                   key={b.id}
                   href={`/coordinator/prerequisite-map?degree=${encodeURIComponent(b.degreeProgram)}&batchId=${b.id}`}
-                  style={{ fontSize: 12, color: "#96650F", textDecoration: "underline", background: b.id === selectedBatchId ? "#F5DDA3" : "transparent", padding: "2px 6px", borderRadius: 3 }}
+                  style={{ fontSize: 12, color: "#96650F", textDecoration: "underline", background: b.id === selectedBatchId ? "#F5DDA3" : "transparent", padding: "2px 6px", borderRadius: 6 }}
                 >
                   {b.degreeProgram} — {b.batchName}
                 </a>
@@ -104,7 +104,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {legendEntries.map((entry) => (
               <span key={entry.label} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 3 }} />
+                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 6 }} />
                 {entry.label}
               </span>
             ))}
@@ -141,7 +141,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
 
       {canEdit && selectedBatchId && (
         <BatchCoursesQuickEditTable
-          key={selectedBatchId}
+          key={`quick-edit-${selectedBatchId}`}
           initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber }))}
         />
       )}

@@ -3,6 +3,7 @@ import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptReport";
 import { standingFromCgpa } from "../../../lib/academicStanding";
 import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
+import StudentShell from "../../../components/StudentShell";
 
 export default async function StudentTranscriptPage() {
   const student = await getAuthenticatedStudent();
@@ -13,15 +14,10 @@ export default async function StudentTranscriptPage() {
   const standing = standingFromCgpa(report.cgpa);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--paper)", padding: "40px 20px" }}>
+    <StudentShell studentName={student.name}>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: 10 }}>
           <h1 style={{ fontSize: 22 }}>My Transcript</h1>
-          <div style={{ display: "flex", gap: 14 }}>
-            <a href="/student/obe-analytics" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My OBE Progress</a>
-            <a href="/student/timetable" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>My Timetable</a>
-            <a href="/student/degree-plan" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>Degree Plan</a>
-          </div>
         </div>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 20 }}>
           Two separate records: your course grades and GPA/CGPA (Transcript 1), and which Course/Program Learning
@@ -46,6 +42,6 @@ export default async function StudentTranscriptPage() {
           cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation} remaining={report.remaining}
         />
       </div>
-    </div>
+    </StudentShell>
   );
 }

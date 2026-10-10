@@ -3,8 +3,10 @@
 import TabbedCards from "./TabbedCards";
 import { withProgress } from "../lib/busy";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Search } from "lucide-react";
 import SortableTable from "./SortableTable";
+import Pager from "./Pager";
 import { TRACKS } from "../lib/tracks";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +21,7 @@ type Batch = { id: string; degreeProgram: string; batchName: string };
 type Curriculum = { id: string; authority: string; title: string; version: string };
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
+const PAGE_SIZES = [10, 25, 50, 100];
 
 export default function CoursesManager({ courses: initialCourses, subjectExperts, batches, curricula, selectedBatchId, departments = [], homeExperts = [] }: {
   courses: Course[]; subjectExperts: SubjectExpert[]; batches: Batch[]; curricula: Curriculum[]; selectedBatchId: string; departments?: { id: string; name: string }[]; homeExperts?: { id: string; name: string; departmentId: string }[];
@@ -43,6 +46,54 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   const [bulkSplitResult, setBulkSplitResult] = useState("");
   const [fixingLabOffering, setFixingLabOffering] = useState(false);
   const [fixLabOfferingResult, setFixLabOfferingResult] = useState("");
+
+  // The course table can hold every course of every batch; each row carries two
+  // dropdowns (Subject Expert, and every course of its batch as a prerequisite),
+  // so only the current page is rendered. Filter and sort work on the full list.
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sort, setSort] = useState<{ col: number; asc: boolean } | null>(null);
+  const expertNameById = useMemo(() => new Map([...homeExperts, ...subjectExperts].map((e) => [e.id, e.name])), [homeExperts, subjectExperts]);
+  const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+  const coursesByBatch = useMemo(() => {
+    const m = new Map<string | null, Course[]>();
+    for (const c of courses) { const list = m.get(c.batchId) || []; list.push(c); m.set(c.batchId, list); }
+    return m;
+  }, [courses]);
+  const visibleCourses = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    let list = !needle ? courses : courses.filter((c) =>
+      [c.code, c.title, c.courseType, c.batchName || "", c.trackName || "", expertNameById.get(c.subjectExpertId || "") || ""].some((v) => v.toLowerCase().includes(needle)));
+    if (sort) {
+      // Same column order as the table header.
+      const key = (c: Course): string | number => {
+        switch (sort.col) {
+          case 0: return c.batchName || "";
+          case 1: return c.code;
+          case 2: return c.title;
+          case 3: return c.isNonCredit ? 0 : c.creditHours;
+          case 4: return c.courseType;
+          case 5: return c.trackName || "All";
+          case 6: return c.semesterNumber ?? 99;
+          case 7: return c.enrolledCount;
+          case 8: return c.fromHec ? "Imported" : "Manual";
+          case 9: return expertNameById.get(c.subjectExpertId || "") || "";
+          case 10: return courseById.get(c.prerequisiteCourseId || "")?.code || "";
+          default: return 0;
+        }
+      };
+      list = [...list].sort((a, b) => {
+        const ka = key(a), kb = key(b);
+        const cmp = typeof ka === "number" && typeof kb === "number" ? ka - kb : String(ka).localeCompare(String(kb), undefined, { numeric: true, sensitivity: "base" });
+        return sort.asc ? cmp : -cmp;
+      });
+    }
+    return list;
+  }, [courses, query, sort, expertNameById, courseById]);
+  const pageCount = Math.max(1, Math.ceil(visibleCourses.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageCourses = visibleCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function switchBatch(batchId: string) {
     const url = batchId ? `/coordinator/courses?batchId=${batchId}` : "/coordinator/courses";
@@ -507,12 +558,24 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
         </div>
       </div>
 
-      <div className="card" data-tab="Courses" style={{ overflowX: "auto" }}>
-        <SortableTable>
+      <div className="card" data-tab="Courses">
+        {courses.length > 8 && (
+          <div className="dt-toolbar no-print">
+            <label className="dt-search">
+              <Search size={15} />
+              <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search courses…" title="Search by code, title, type, batch, track or Subject Expert" aria-label="Search courses" />
+            </label>
+            <span className="dt-count">
+              {query.trim() ? <><b>{visibleCourses.length}</b> of {courses.length} courses match</> : <><b>{courses.length}</b> courses</>}
+            </span>
+          </div>
+        )}
+        <SortableTable style={{ minWidth: 1280 }} paginate={false} searchable={false} onSort={(col, direction) => { setSort(direction ? { col, asc: direction === "asc" } : null); setPage(1); }}>
           <thead><tr><th>Batch</th><th>Code</th><th>Title</th><th>Credits</th><th>Type</th><th>Track</th><th>Semester</th><th>Enrolled</th><th>Source</th><th>Subject Expert</th><th>Prerequisite</th><th></th></tr></thead>
           <tbody>
             {courses.length === 0 && <tr><td colSpan={12} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
-            {courses.map((c) => editingId === c.id ? (
+            {courses.length > 0 && visibleCourses.length === 0 && <tr><td colSpan={12} style={{ color: "var(--slate)", textAlign: "center" }}>No courses match this search.</td></tr>}
+            {pageCourses.map((c) => editingId === c.id ? (
               <tr key={c.id}>
                 <td colSpan={12}>
                   <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
@@ -550,7 +613,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{c.batchName || "—"}</td>
                 <td>{c.code}</td>
                 <td>{c.title}<div style={{ fontSize: 10.5, color: "var(--slate)" }}>Subject home: {c.subjectHomeDepartmentId ? (departments.find((d) => d.id === c.subjectHomeDepartmentId)?.name || "another department") : "this program's own department"}{c.followsBase ? " (from its base course)" : ""}</div></td>
-                <td>{c.isNonCredit ? <span title="Non-credit deficiency course">0 <span style={{ fontSize: 9.5, background: "#FBEED2", color: "#96650F", padding: "1px 5px", borderRadius: 2 }}>NON-CREDIT{c.contactHours ? ` · ${c.contactHours}h/wk` : ""}</span></span> : c.creditHours}</td>
+                <td>{c.isNonCredit ? <span title="Non-credit deficiency course">0 <span style={{ fontSize: 9.5, background: "#FBEED2", color: "#96650F", padding: "1px 5px", borderRadius: 6 }}>NON-CREDIT{c.contactHours ? ` · ${c.contactHours}h/wk` : ""}</span></span> : c.creditHours}</td>
                 <td>{c.courseType}</td>
                 <td style={{ fontSize: 11.5 }}>{c.trackName ? <b>{c.trackName}</b> : <span style={{ color: "var(--slate)" }}>All</span>}</td>
                 <td>{c.semesterNumber ?? "—"}</td>
@@ -558,7 +621,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>{c.fromHec ? <span style={{ color: "var(--sage)" }}>Imported</span> : "Manual"}</td>
                 <td>
                   {c.fromBenchmark && (
-                    <span style={{ fontSize: 10, background: "#F3E4E7", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 2, marginRight: 6 }}>
+                    <span style={{ fontSize: 10, background: "#F3E4E7", color: "var(--brass-dark)", padding: "2px 7px", borderRadius: 6, marginRight: 6 }}>
                       Pre-filled from prior batch
                     </span>
                   )}
@@ -575,23 +638,27 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 <td>
                   <select defaultValue={c.prerequisiteCourseId || ""} onChange={(e) => setPrerequisite(c.id, e.target.value, e.target, c.prerequisiteCourseId || "")} disabled={loading} style={{ padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5 }}>
                     <option value="">— None —</option>
-                    {courses.filter((other) => other.id !== c.id && other.batchId === c.batchId).map((other) => <option key={other.id} value={other.id}>{other.code} — {other.title}</option>)}
+                    {(coursesByBatch.get(c.batchId) || []).filter((other) => other.id !== c.id).map((other) => <option key={other.id} value={other.id}>{other.code} — {other.title}</option>)}
                   </select>
                 </td>
                 <td>
-                  <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
+                  <button onClick={() => setEditingId(c.id)} className="act act-primary" style={{ marginRight: 10 }}>Edit</button>
                   {c.courseType !== "Lab" && !isFyp(c) && (
-                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Split into Lab</button>
+                    <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} className="act act-neutral" style={{ marginRight: 10 }}>Split into Lab</button>
                   )}
                   {c.courseType === "Elective" && c.fromHec && (
-                    <button onClick={() => unlinkElective(c.id, c.code)} disabled={loading} title="If this still shows a generic 'Elective N' title but the picker popup won't open for it, this resets it back to an unfilled slot." style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Reset to Unfilled</button>
+                    <button onClick={() => unlinkElective(c.id, c.code)} disabled={loading} title="If this still shows a generic 'Elective N' title but the picker popup won't open for it, this resets it back to an unfilled slot." className="act act-neutral" style={{ marginRight: 10 }}>Reset to Unfilled</button>
                   )}
-                  <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Delete</button>
+                  <button onClick={() => removeCourse(c.id, c.code)} disabled={loading} className="act act-danger">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </SortableTable>
+        {visibleCourses.length > pageSize || pageSize !== 25 ? (
+          <Pager page={currentPage} pageSize={pageSize} total={visibleCourses.length} onPage={setPage}
+            onPageSize={(n) => { setPageSize(n); setPage(1); }} pageSizes={PAGE_SIZES} noun="courses" />
+        ) : null}
         {subjectExperts.length === 0 && (
           <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 10 }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</div>
         )}

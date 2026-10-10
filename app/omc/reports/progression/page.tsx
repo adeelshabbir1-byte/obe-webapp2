@@ -59,7 +59,7 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
             {prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No PLOs defined yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} searchable={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>

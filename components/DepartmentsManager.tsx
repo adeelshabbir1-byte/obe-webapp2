@@ -56,10 +56,9 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   return (
     <>
       {msg && <div className="card" style={{ color: "var(--rose, #b3261e)" }}>{msg}</div>}
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "2px solid var(--line)", marginBottom: 16, position: "sticky", top: 0, background: "var(--paper, #fff)", zIndex: 5 }}>
+      <div role="tablist" className="tabs" style={{ marginBottom: 16, position: "sticky", top: "calc(var(--topbar-h, 0px) + 8px)", zIndex: 5 }}>
         {TABS.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => { setTab(k); try { window.location.hash = k; } catch {} }}
-            style={{ padding: "10px 16px", border: "none", background: tab === k ? "#fff" : "transparent", borderBottom: tab === k ? "3px solid var(--maroon, #7a1f2b)" : "3px solid transparent", fontWeight: tab === k ? 700 : 500, cursor: "pointer", fontSize: 14 }}>
+          <button key={k} type="button" role="tab" className="tab" aria-selected={tab === k} onClick={() => { setTab(k); try { window.location.hash = k; } catch {} }}>
             {label}
           </button>
         ))}

@@ -75,7 +75,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {legendEntries.map((entry) => (
               <span key={entry.label} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 3 }} />
+                <span style={{ width: 14, height: 14, background: entry.color, display: "inline-block", borderRadius: 6 }} />
                 {entry.label}
               </span>
             ))}
@@ -112,7 +112,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
 
       {canManageCourses && selectedBatchId && (
         <BatchCoursesAdminPanel
-          key={selectedBatchId}
+          key={`quick-edit-${selectedBatchId}`}
           batchId={selectedBatchId}
           curriculumId={curriculum?.id || null}
           initialCourses={courses.map((c) => ({ id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, semesterNumber: c.semesterNumber, courseType: c.courseType }))}

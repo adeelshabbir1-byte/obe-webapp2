@@ -73,8 +73,8 @@ export default function AssignByInstitute() {
               <div key={g} style={{ marginBottom: 10 }}>
                 <div style={{ fontWeight: 600, fontSize: 13, display: "flex", gap: 10, alignItems: "baseline" }}>
                   {g}
-                  <button type="button" onClick={() => setGroup(g, true)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>all</button>
-                  <button type="button" onClick={() => setGroup(g, false)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0 }}>none</button>
+                  <button type="button" onClick={() => setGroup(g, true)} className="act act-primary">all</button>
+                  <button type="button" onClick={() => setGroup(g, false)} className="act act-primary">none</button>
                 </div>
                 {curricula.filter((c) => c.degreeGroup === g).map((c) => (
                   <label key={c.id} style={{ display: "block", fontSize: 13, padding: "2px 0 2px 14px" }}>

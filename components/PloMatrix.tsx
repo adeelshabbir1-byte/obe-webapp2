@@ -76,7 +76,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
             ) : prog.courses.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No courses in this program yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>Course</th><th>Type</th><th>Sem</th>

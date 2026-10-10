@@ -60,7 +60,7 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
             {prog.courseTypes.length === 0 || prog.plos.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>Not enough data yet.</p>
             ) : (
-              <SortableTable style={{ marginTop: 10 }}>
+              <SortableTable paginate={false} searchable={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
                     <th>PLO</th>

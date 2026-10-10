@@ -2,8 +2,8 @@ export default function SimpleBarChart({ bars, maxValue, unit }: { bars: { label
   const max = maxValue || Math.max(1, ...bars.map((b) => b.value));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {bars.map((b) => (
-        <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {bars.map((b, i) => (
+        <div key={`${i}-${b.label}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 140, fontSize: 11.5, textAlign: "right", flexShrink: 0 }}>{b.label}</div>
           <div style={{ flex: 1, background: "var(--paper)", border: "1px solid var(--line)", height: 20, position: "relative" }}>
             <div style={{

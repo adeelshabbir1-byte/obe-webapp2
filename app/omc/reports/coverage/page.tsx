@@ -88,14 +88,14 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
                       <td>{r.title}</td>
                       <td>
                         {r.status !== "approved" ? (
-                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 2 }}>{r.status.replace("-", " ")}</span>
+                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 6 }}>{r.status.replace("-", " ")}</span>
                         ) : (
-                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--sage)", background: "#CCFBF1", padding: "1px 6px", borderRadius: 2 }}>Approved</span>
+                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--sage)", background: "#CCFBF1", padding: "1px 6px", borderRadius: 6 }}>Approved</span>
                         )}
                       </td>
                       <td>
                         {r.count}
-                        {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 2, fontWeight: 700 }}>Not Hit</span>}
+                        {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
                       </td>
                       <td>
                         {typeEntries.length === 0 ? "—" : (
@@ -124,7 +124,7 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {legendTypes.map((t) => (
               <span key={t} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 2 }} />{t}
+                <span style={{ width: 10, height: 10, background: courseTypeColor(t), display: "inline-block", borderRadius: 6 }} />{t}
               </span>
             ))}
           </div>

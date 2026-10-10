@@ -137,7 +137,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
         <span style={{ color: "var(--slate)" }}>Assessment colours:</span>
         {Array.from(new Set(assessments.map((a) => a.type.trim().toLowerCase()))).sort((x, y) => typeRank(x) - typeRank(y)).map((t) => (
           <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 12, background: typeColor(t), display: "inline-block", borderRadius: 2 }} />
+            <span style={{ width: 12, height: 12, background: typeColor(t), display: "inline-block", borderRadius: 6 }} />
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </span>
         ))}

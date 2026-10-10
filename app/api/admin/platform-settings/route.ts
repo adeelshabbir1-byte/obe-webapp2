@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { invalidatePlatformBranding } from "../../../../lib/branding";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -23,6 +24,7 @@ export async function PUT(req: NextRequest) {
     create: { id: "singleton", ...data },
     update: data,
   });
+  invalidatePlatformBranding();
 
   return NextResponse.json({ settings });
 }

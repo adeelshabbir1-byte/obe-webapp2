@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import PrintButton from "../../components/PrintButton";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
@@ -43,7 +44,7 @@ export default async function YearlySummaryPage({ searchParams }: { searchParams
       <style>{`@media print { .no-print { display: none !important; } aside, nav { display: none !important; } }`}</style>
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
         <form method="get"><label style={{ fontSize: 13 }}>Year <input name="year" type="number" defaultValue={year} min={2015} max={thisYear} style={{ width: 80, padding: "5px 8px" }} /></label> <button className="btn" type="submit">Show</button></form>
-        <a className="btn" href="javascript:window.print()">Print</a>
+        <PrintButton label="Print" className="btn" />
       </div>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Yearly summary {year}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13 }}>Meetings, surveys and files are for {year}. Readiness scores and plan progress are as of today.</p>

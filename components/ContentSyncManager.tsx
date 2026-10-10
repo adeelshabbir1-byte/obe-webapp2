@@ -445,7 +445,7 @@ export default function ContentSyncManager() {
           <ContentSyncSuggestions batchIds={Array.from(selectedBatchIds)} onLinked={loadCoursesAndGroups} />
 
           {pendingLinks.size > 0 && (
-            <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: "#FFF7ED", position: "sticky", top: 0, zIndex: 5 }}>
+            <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: "#FFF7ED", position: "sticky", top: "calc(var(--topbar-h, 0px) + 8px)", zIndex: 5 }}>
               <span style={{ fontSize: 12.5 }}>
                 <b>{pendingLinks.size}</b> HEC course link(s) selected but not saved yet.
               </span>
@@ -605,7 +605,7 @@ export default function ContentSyncManager() {
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}
                                   >
-                                    {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 2 }}>BASE</span>}
+                                    {cIsBase && <span style={{ fontSize: 8.5, background: "var(--sage)", color: "#fff", padding: "0 4px", borderRadius: 6 }}>BASE</span>}
                                     <span style={{ flex: 1 }}>{c.shortName || c.code}</span>
                                     <span
                                       onClick={(e) => { e.stopPropagation(); startEditCode(cId, c.code, row.courseType); }}

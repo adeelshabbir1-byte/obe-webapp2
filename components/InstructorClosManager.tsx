@@ -75,7 +75,7 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
       {error && <div className="err">{error}</div>}
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <h3 style={{ fontSize: 14, marginBottom: 8, color: "var(--brass-dark)" }}>Subject Expert's Planned CLOs (reference)</h3>
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th></tr></thead>
           <tbody>
             {seClos.map((c) => <tr key={c.id}><td>{c.code}</td><td style={{ fontSize: 12 }}>{c.statement}</td><td>{c.bloomLevel}</td></tr>)}
@@ -84,7 +84,7 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
       </div>
 
       <div className="card">
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th></th></tr></thead>
           <tbody>
             {clos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
@@ -110,8 +110,8 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
                 <tr key={c.id}>
                   <td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
                   <td style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                    <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                    <button onClick={() => setEditingId(c.id)} className="act act-primary">Edit</button>
+                    <button onClick={() => removeClo(c.id)} className="act act-danger">Remove</button>
                   </td>
                 </tr>
               )

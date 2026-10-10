@@ -8,7 +8,7 @@ import { planProgress } from "../../lib/deadlines";
 import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
 
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const box = { background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" } as const;
+const box = { background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px" } as const;
 
 function Tile({ n, label, href, bad }: { n: number; label: string; href: string; bad?: boolean }) {
   return (

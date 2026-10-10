@@ -191,7 +191,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
                   {savingId === c.id ? "Saving…" : savedId === c.id ? "Saved" : ""}
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <button type="button" onClick={() => deleteCourse(c)} disabled={deletingId === c.id} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                  <button type="button" onClick={() => deleteCourse(c)} disabled={deletingId === c.id} className="act act-danger">
                     {deletingId === c.id ? "…" : "Delete"}
                   </button>
                 </td>

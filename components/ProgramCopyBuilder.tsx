@@ -92,7 +92,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {core.map((c) => (
-            <span key={c.id} style={{ fontSize: 11, padding: "2px 8px", background: "#fff", border: "1px solid var(--line)", borderRadius: 3 }}>
+            <span key={c.id} style={{ fontSize: 11, padding: "2px 8px", background: "#fff", border: "1px solid var(--line)", borderRadius: 6 }}>
               {c.title}{c.semesterNumber ? ` (Sem ${c.semesterNumber})` : ""}
             </span>
           ))}
@@ -119,7 +119,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
               {isExpanded && (
                 <div style={{ padding: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {list.map((c) => (
-                    <label key={c.id} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", border: "1px solid var(--line)", borderRadius: 3, background: selectedElectiveIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
+                    <label key={c.id} style={{ fontSize: 11.5, display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", border: "1px solid var(--line)", borderRadius: 6, background: selectedElectiveIds.has(c.id) ? "#F0EAD6" : "#fff" }}>
                       <input type="checkbox" checked={selectedElectiveIds.has(c.id)} onChange={() => toggleElective(c.id)} />
                       {c.title}
                     </label>

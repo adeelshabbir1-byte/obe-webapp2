@@ -251,8 +251,8 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
                       );
                     })()}
                     <td style={{ display: "flex", gap: 10 }}>
-                      <button onClick={() => setEditingId(it.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                      <button onClick={() => removeItem(it.id, examType)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                      <button onClick={() => setEditingId(it.id)} className="act act-primary">Edit</button>
+                      <button onClick={() => removeItem(it.id, examType)} className="act act-danger">Remove</button>
                     </td>
                   </tr>
                 )

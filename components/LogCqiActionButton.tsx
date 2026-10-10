@@ -28,7 +28,7 @@ export default function LogCqiActionButton({ courseId, batchId, sourceType, sour
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} style={{ background: "none", border: "1px solid var(--rust)", color: "var(--rust)", padding: "2px 8px", fontSize: 10.5, cursor: "pointer", borderRadius: 3 }}>
+      <button onClick={() => setOpen(true)} style={{ background: "none", border: "1px solid var(--rust)", color: "var(--rust)", padding: "2px 8px", fontSize: 10.5, cursor: "pointer", borderRadius: 6 }}>
         Log CQI Action
       </button>
     );

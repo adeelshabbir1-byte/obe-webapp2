@@ -49,7 +49,7 @@ export default async function FinalDistributionPage({ searchParams }: { searchPa
         <>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topics → CLO Marks (Final only)</h3>
-            <SortableTable>
+            <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Topic</th><th>Lec</th>{dist.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
               <tbody>
                 {dist.topics.map((t) => (
@@ -65,7 +65,7 @@ export default async function FinalDistributionPage({ searchParams }: { searchPa
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Question → CLO Breakdown</h3>
-            <SortableTable>
+            <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Question</th><th>Marks</th>{dist.cloCodes.map((c) => <th key={c}>{c}</th>)}</tr></thead>
               <tbody>
                 {dist.questionRows.map((q) => (

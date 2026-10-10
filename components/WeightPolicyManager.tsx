@@ -59,7 +59,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
   return (
     <div className="card" style={{ overflowX: "auto" }}>
       {error && <div className="err">{error}</div>}
-      <SortableTable className="xlgrid" style={{ borderCollapse: "collapse" }}>
+      <SortableTable paginate={false} className="xlgrid" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr>
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}>Course Type</th>

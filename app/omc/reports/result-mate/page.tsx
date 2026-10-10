@@ -165,7 +165,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           {result.instruments.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 10 }}>Per-Assessment-Item Scores</h3>
-              <SortableTable style={{ tableLayout: "fixed" }}>
+              <SortableTable paginate={false} searchable={false} style={{ tableLayout: "fixed" }}>
                 <thead>
                   <tr>
                     <th rowSpan={2} style={{ width: 70 }}>Roll #</th><th rowSpan={2} style={{ width: 130 }}>Name</th>
@@ -200,7 +200,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 4 }}>CLO Attainment, by Student</h3>
             <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.cloPct}% pass threshold for that CLO.</p>
-            <SortableTable>
+            <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => {
                 const max = result.cloMaxWeight[c] || 0;
                 const threshold = max * (passCriteria.cloPct / 100);
@@ -244,7 +244,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLO Attainment, by Student</h3>
               <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
-              <SortableTable>
+              <SortableTable paginate={false} searchable={false}>
                 <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => {
                   const max = result.ploMaxWeight[p] || 0;
                   const threshold = max * (passCriteria.ploPct / 100);

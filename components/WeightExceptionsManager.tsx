@@ -45,7 +45,7 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
                   A {r.assignmentPct}% · Q {r.quizPct}% · P {r.projectPct}% · L {r.labPct}% · Mid {r.midtermPct}% · Final {r.finalPct}%
                 </td>
                 <td>
-                  <button onClick={() => setOpenId(openId === r.id ? null : r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                  <button onClick={() => setOpenId(openId === r.id ? null : r.id)} className="act act-primary">
                     {openId === r.id ? "Close" : "Review"}
                   </button>
                   {openId === r.id && (

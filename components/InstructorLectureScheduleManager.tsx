@@ -69,7 +69,7 @@ export default function InstructorLectureScheduleManager({ courseId, initialRows
           <h3 style={{ fontSize: 14 }}>Actual Lecture Delivery</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {initialRows.length} lectures dated</span>
         </div>
-        <SortableTable>
+        <SortableTable paginate={false}>
           <thead>
             <tr>
               <th>Wk</th><th>Lec</th><th>Planned Topic</th><th>Actual Topic</th><th>Actual Date</th><th>CLO</th><th>Bloom</th>
@@ -125,7 +125,7 @@ export default function InstructorLectureScheduleManager({ courseId, initialRows
                     style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12 }} /></td>
                 )}
                 <td style={{ fontWeight: 600 }}>{r.weightPct}%</td>
-                <td><button onClick={() => setEditingId(r.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button></td>
+                <td><button onClick={() => setEditingId(r.id)} className="act act-primary">Edit</button></td>
               </tr>
             ))}
           </tbody>

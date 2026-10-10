@@ -55,7 +55,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version})
         </div>
-        <Link href={`/admin/curricula/${curriculum.id}`} style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to curriculum</Link>
+        <Link href={`/admin/curricula/${curriculum.id}`} className="btn btn-secondary btn-sm">← Back to curriculum</Link>
       </div>
 
       <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 11.5 }}>

@@ -157,7 +157,7 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5 }}>{c.batchLabel}</td><td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
                 <td style={{ fontSize: 12.5 }}>{c.instructorName || <span style={{ color: "var(--slate)" }}>Not yet assigned — see Course Assigner</span>}</td>
-                <td><button onClick={() => toggleOffered(c.id, false)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => toggleOffered(c.id, false)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -177,7 +177,7 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
             {notOfferedCourses.map((c) => (
               <tr key={c.id}>
                 <td style={{ fontSize: 11.5 }}>{c.batchLabel}</td><td>{c.code}</td><td>{c.title}</td><td>{c.semesterNumber ?? "—"}</td>
-                <td><button onClick={() => toggleOffered(c.id, true)} disabled={loading} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Offer</button></td>
+                <td><button onClick={() => toggleOffered(c.id, true)} disabled={loading} className="act act-primary">Offer</button></td>
               </tr>
             ))}
           </tbody>

@@ -20,18 +20,13 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Your delivery record — starts as a copy of the Subject Expert's plan, fully editable.</div>
           <SubjectHomeLine courseId={courseId} />
         </div>
-        <Link href="/instructor/courses" style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>← Back to courses</Link>
+        <Link href="/instructor/courses" className="btn btn-secondary btn-sm no-print">← Back to courses</Link>
       </div>
-      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--line)" }}>
+      <nav className="tabs no-print" aria-label="Course sections" style={{ marginBottom: 0 }}>
         {tabs.map((t) => (
-          <a key={t.key} href={t.href} style={{
-            padding: "8px 14px", fontSize: 12.5, textDecoration: "none",
-            color: active === t.key ? "var(--ink)" : "var(--slate)",
-            borderBottom: active === t.key ? "2px solid var(--brass)" : "2px solid transparent",
-            fontWeight: active === t.key ? 600 : 400,
-          }}>{t.label}</a>
+          <a key={t.key} href={t.href} className="tab" aria-current={active === t.key ? "page" : undefined}>{t.label}</a>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }

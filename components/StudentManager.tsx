@@ -200,7 +200,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
                 <td>{s.name}</td><td>{s.rollNumber}</td><td>{s.currentSemesterNumber}</td>
                 <td><select value={s.track || "Non-Medical"} onChange={(e) => changeTrack(s.id, e.target.value)} style={{ padding: "3px 6px", border: "1px solid var(--line)", fontSize: 12 }}>{TRACKS.map((t) => <option key={t} value={t}>{t}</option>)}</select></td>
                 <td><input type="checkbox" checked={heldBack.has(s.id)} onChange={() => toggleHeldBack(s.id)} /></td>
-                <td><button onClick={() => removeStudent(s.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
+                <td><button onClick={() => removeStudent(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>
             ))}
           </tbody>

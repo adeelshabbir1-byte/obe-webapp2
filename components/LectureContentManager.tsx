@@ -87,7 +87,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
           <h3 style={{ fontSize: 14 }}>Lecture Content</h3>
           <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} topics filled in — click any cell to edit</span>
         </div>
-        <SortableTable style={{ tableLayout: "fixed" }}>
+        <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
           <thead>
             <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: 46 }}></th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
           </thead>

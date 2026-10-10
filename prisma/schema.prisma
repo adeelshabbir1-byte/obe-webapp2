@@ -136,6 +136,9 @@ model User {
   auditLogs          AuditLog[]
 
   @@index([managedById])
+  @@index([customCategoryId])
+  @@index([departmentId])
+  @@index([facultyId])
 }
 
 model Session {
@@ -214,6 +217,7 @@ model Batch {
 
   @@unique([coordinatorId, degreeProgram, batchName])
   @@index([coordinatorId])
+  @@index([advisorId])
 }
 
 // The single "what term is it right now" setting per coordinator/program —
@@ -274,6 +278,7 @@ model Room {
   timetableEntries TimetableEntry[]
   @@unique([chairmanId, name])
   @@index([chairmanId])
+  @@index([departmentId])
 }
 
 // One schedulable teaching unit — a course taught by one instructor to one
@@ -727,6 +732,7 @@ model SurveyQuestion {
 
   answers SurveyAnswer[]
   @@index([surveyTemplateId])
+  @@index([mappedPloId])
 }
 
 // One respondent's link into one survey — token-based, no login required.
@@ -750,6 +756,9 @@ model SurveyResponse {
   answers SurveyAnswer[]
   @@index([surveyTemplateId])
   @@index([token])
+  @@index([studentId])
+  @@index([alumniId])
+  @@index([employerId])
 }
 
 model SurveyAnswer {
@@ -761,6 +770,7 @@ model SurveyAnswer {
   ratingValue      Int            // 1-5
 
   @@unique([surveyResponseId, questionId])
+  @@index([questionId])
 }
 
 // A real student, imported by the Coordinator per batch (bulk CSV) — the
@@ -839,6 +849,7 @@ model OutOfBatchRequest {
 
   @@index([courseId])
   @@index([studentId])
+  @@index([reviewedById])
 }
 
 // A student's own draft plan for a future (not-yet-enrolled) course —
@@ -862,6 +873,7 @@ model DegreePlanEntry {
 
   @@unique([studentId, courseId])
   @@index([studentId])
+  @@index([courseId])
 }
 
 // A registration action (register or withdraw) that's held for an
@@ -889,6 +901,7 @@ model RegistrationApprovalRequest {
 
   @@index([studentId])
   @@index([courseId])
+  @@index([reviewedById])
 }
 
 // A named elective slot (e.g. "Elective-I") for one batch/semester,
@@ -914,6 +927,7 @@ model ElectiveSlotGroup {
   choices ElectiveChoice[]
 
   @@index([batchId])
+  @@index([coordinatorId])
 }
 
 model ElectiveSlotOption {
@@ -946,6 +960,7 @@ model ElectiveChoice {
 
   @@unique([groupId, studentId])
   @@index([optionId])
+  @@index([studentId])
 }
 
 // A student taking a specific course — decoupled from their home batch so a
@@ -1329,6 +1344,15 @@ model Course {
   @@unique([coordinatorId, batchId, code])
   @@index([coordinatorId])
   @@index([batchId])
+  @@index([subjectExpertId])
+  @@index([instructorId])
+  @@index([subjectHomeDepartmentId])
+  @@index([masterCourseId])
+  @@index([benchmarkSourceId])
+  @@index([prerequisiteCourseId])
+  @@index([assignedOmcReviewerId])
+  @@index([customCategoryId])
+  @@index([labEngineerId])
 }
 
 // Left by an instructor at any point (typically end of semester) for whoever
@@ -1486,6 +1510,7 @@ model CLO {
 
   @@unique([courseId, source, code])
   @@index([courseId])
+  @@index([mappedPloId])
 }
 
 // Final/mid-term paper distribution — one row per question, built by SE
@@ -1512,6 +1537,8 @@ model PaperDistributionItem {
   createdAt      DateTime    @default(now())
 
   @@index([courseId])
+  @@index([lectureRowId])
+  @@index([cloId])
 }
 
 // The 30-lecture schedule set by the Subject Expert
@@ -1537,6 +1564,7 @@ model LectureRow {
 
   @@unique([courseId, source, lectureNumber])
   @@index([courseId])
+  @@index([cloId])
 }
 
 // A specific gradeable item (Quiz 1, Assignment 2, Midterm Q3, Final Q5...)
@@ -1623,6 +1651,7 @@ model AccountRequest {
   createdAt       DateTime  @default(now())
 
   @@index([status])
+  @@index([reviewedById])
 }
 
 // An institution's own course/faculty classification, entirely separate
@@ -1709,6 +1738,7 @@ model Department {
 
   @@unique([chairmanId, name])
   @@index([chairmanId])
+  @@index([facultyId])
 }
 
 // Which department a degree program (by name, e.g. "BS Computer Science") belongs to.
@@ -1764,6 +1794,7 @@ model MasterCourse {
   @@index([masterCurriculumId])
   @@index([prerequisiteCourseId])
   @@unique([masterCurriculumId, code])
+  @@index([designerId])
 }
 
 // HEC's stated learning outcomes for a major course — seeded as a starting
@@ -1966,6 +1997,8 @@ model TeacherLoanRequest {
   @@index([chairmanId, status])
   @@index([lendingDepartmentId, status])
   @@index([courseId])
+  @@index([instructorId])
+  @@index([requestingDepartmentId])
 }
 
 // The teachers the lending head has allowed for one request; the requester then picks one of them.
@@ -2099,6 +2132,7 @@ model LabMark {
 
   @@unique([courseId, studentId, labNumber])
   @@index([courseId])
+  @@index([studentId])
 }
 
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { isDualCapable, DUAL_ROLE_LABEL, hatsOf } from "../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../lib/session";
 import ChooseRoleButtons from "../../components/ChooseRoleButtons";
+import { BRAND } from "../../lib/brandAssets";
 
 export default async function ChooseRolePage() {
   const user = await getAuthenticatedUser();
@@ -14,8 +15,9 @@ export default async function ChooseRolePage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}>
-      <div style={{ background: "#fff", padding: "40px 50px", maxWidth: 480, border: "1px solid var(--line)", textAlign: "center" }}>
+    <div className="login-wrap">
+      <div className="login-card" style={{ maxWidth: 520, textAlign: "center" }}>
+        <img className="auth-logo" src={BRAND.logo.src} alt="OBEHUB" width={BRAND.logo.width} height={BRAND.logo.height} style={{ width: 150 }} />
         <h1 style={{ fontSize: 20, marginBottom: 6 }}>Welcome, {user.name}</h1>
         <p style={{ fontSize: 13, color: "var(--slate)", marginBottom: 28 }}>
           Your account can work as {hatsOf({ ...user, assignerHat: user.assignerHat, omcHat: user.omcHat }).map((r) => DUAL_ROLE_LABEL[r] || r).join(", ")}. Which one do you want to work as right now?

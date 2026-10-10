@@ -180,7 +180,7 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
                 <td style={{ padding: "5px 6px" }}>{c.batchLabel}</td>
                 <td style={{ padding: "5px 6px" }}><ProgressBar steps={c.steps} width={90} /></td>
                 {showStatus && <td style={{ padding: "5px 6px" }}>{c.statusLabel}</td>}
-                <td style={{ padding: "5px 6px" }}><Link href={c.openHref} style={{ color: "var(--brass-dark)" }}>Open</Link></td>
+                <td style={{ padding: "5px 6px" }}><Link href={c.openHref} className="act act-primary">Open</Link></td>
               </tr>
             ))}
           </tbody>

@@ -417,7 +417,7 @@ export default function AssignmentMatrix() {
           );
 
           return (
-            <SortableTable>
+            <SortableTable paginate={false}>
               <thead><tr>{headerCells}</tr></thead>
               <tbody>
                 {sortedRows.map((r, rowIdx) => {
@@ -433,7 +433,7 @@ export default function AssignmentMatrix() {
                   const nameCell = (
                     <td className="sticky-col" title={r.label} style={{ whiteSpace: "nowrap", maxWidth: 220 }}>
                       <b>{shortLabel}</b>
-                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F3E4E7", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 2, textTransform: "uppercase" }}>Combined</span>}
+                      {r.kind === "group" && <span style={{ marginLeft: 6, fontSize: 9.5, background: "#F3E4E7", color: "var(--brass-dark)", padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>Combined</span>}
                       {settled && <span style={{ marginLeft: 6, fontSize: 9.5, color: "var(--sage)", fontWeight: 700 }}>SETTLED</span>}
                       {r.title && r.title !== shortLabel && (
                         <div style={{ fontSize: 10, color: "var(--slate)", maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis" }}>{r.title}</div>

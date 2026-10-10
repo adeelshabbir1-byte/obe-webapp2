@@ -61,7 +61,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
         <>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → CLO Contribution</h3>
-            <SortableTable>
+            <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Topic</th><th>Lec</th>{summary.cloCodes.map((c) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
@@ -82,7 +82,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
 
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → Assessment Type</h3>
-            <SortableTable>
+            <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Topic</th><th>Lec</th><th>Assignment</th><th>Quiz</th><th>Project</th><th>Lab</th><th>Mid</th><th>Final</th><th>Total</th></tr></thead>
               <tbody>
                 {summary.topics.map((t) => (
@@ -107,7 +107,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
           {summary.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → PLO Contribution</h3>
-              <SortableTable>
+              <SortableTable paginate={false} searchable={false}>
                 <thead><tr><th>Topic</th><th>Lec</th>{summary.ploLabels.map((p) => <th key={p}>{p}</th>)}<th>Total</th></tr></thead>
                 <tbody>
                   {summary.topics.map((t) => (
