@@ -8,20 +8,18 @@ export default function ElectiveChoiceForm({ groupId, initialOptions, registrati
   groupId: string; initialOptions: Option[]; registrationOpen: boolean;
 }) {
   const [options, setOptions] = useState<Option[]>(initialOptions);
-  const [rollNumber, setRollNumber] = useState("");
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ studentName: string; courseTitle: string; changed: boolean } | null>(null);
 
   async function submit() {
-    if (!rollNumber.trim()) { setError("Enter your roll number first."); return; }
     if (!selectedOptionId) { setError("Choose one of the options above."); return; }
     setLoading(true); setError(""); setResult(null);
     try {
       const res = await fetch(`/api/elective-choice/${groupId}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollNumber: rollNumber.trim(), optionId: selectedOptionId }),
+        body: JSON.stringify({ optionId: selectedOptionId }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -52,14 +50,6 @@ export default function ElectiveChoiceForm({ groupId, initialOptions, registrati
   return (
     <div>
       {error && <div style={{ background: "#FBE2DF", color: "#C0312B", padding: "8px 12px", fontSize: 12.5, marginBottom: 14 }}>{error}</div>}
-
-      <div style={{ marginBottom: 20 }}>
-        <label style={{ fontSize: 12, color: "#5B6B7C", display: "block", marginBottom: 4 }}>Your Roll Number</label>
-        <input
-          value={rollNumber} onChange={(e) => setRollNumber(e.target.value)}
-          placeholder="e.g. BSCS-F23-042" style={{ padding: "8px 10px", border: "1px solid #D4D0C4", fontSize: 14, width: "100%", maxWidth: 260 }}
-        />
-      </div>
 
       <div style={{ marginBottom: 20 }}>
         {options.map((o) => (

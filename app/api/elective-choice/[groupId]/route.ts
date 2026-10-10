@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
+import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 
 // Fully public — no login, matching how Feedback Survey links work,
 // since students have no account anywhere in this system. Identifies
@@ -31,13 +32,14 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   if (!group) return NextResponse.json({ error: "invalid link" }, { status: 404 });
   if (!group.registrationOpen) return NextResponse.json({ error: "Registration for this elective isn't open right now — check with your Program Coordinator." }, { status: 400 });
 
-  const body = await req.json();
-  const rollNumber = String(body.rollNumber || "").trim();
-  const optionId = String(body.optionId || "");
-  if (!rollNumber || !optionId) return NextResponse.json({ error: "Roll number and a chosen option are required." }, { status: 400 });
+  // Only the signed-in student can choose, and only for their own batch: nobody can pick on behalf of a classmate.
+  const student = await getAuthenticatedStudent();
+  if (!student) return NextResponse.json({ error: "Please sign in with your student login first." }, { status: 401 });
+  if (student.batchId !== group.batchId) return NextResponse.json({ error: "This elective is not for your batch." }, { status: 403 });
 
-  const student = await prisma.student.findFirst({ where: { batchId: group.batchId, rollNumber } });
-  if (!student) return NextResponse.json({ error: "That roll number wasn't found in this batch — double check it and try again." }, { status: 404 });
+  const body = await req.json();
+  const optionId = String(body.optionId || "");
+  if (!optionId) return NextResponse.json({ error: "Choose one of the options." }, { status: 400 });
 
   const option = await prisma.electiveSlotOption.findUnique({ where: { id: optionId }, include: { choices: true, course: { select: { title: true } } } });
   if (!option || option.groupId !== group.id) return NextResponse.json({ error: "invalid option" }, { status: 400 });
