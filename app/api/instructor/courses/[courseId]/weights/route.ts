@@ -21,7 +21,12 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const courseWithCoordinator = await prisma.course.findUnique({ where: { id: course.id }, include: { coordinator: true } });
   const policy = await getPolicyForCourse(courseWithCoordinator?.coordinator.managedById || null, course.courseType);
-  const violations = checkPolicyCompliance(vals as any, policy, course.hasLab);
+  // Same percentages as the ones already approved for this instructor: no new OMC request needed.
+  const instField = (f: string) => "instructor" + f[0].toUpperCase() + f.slice(1);
+  // (Keeping the Subject Expert's own approved split also needs no new request.)
+  const alreadyApproved = (!!(course as any).instructorWeightsConfirmedAt && fields.every((f) => (course as any)[instField(f)] === vals[f]))
+    || (!!course.weightsConfirmedAt && fields.every((f) => (course as any)[f] === vals[f]));
+  const violations = alreadyApproved ? [] : checkPolicyCompliance(vals as any, policy, course.hasLab);
 
   if (violations.length > 0) {
     // Out of policy range — don't apply directly, same as the SE's flow.

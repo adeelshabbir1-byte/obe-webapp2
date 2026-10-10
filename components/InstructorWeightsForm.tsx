@@ -18,7 +18,7 @@ const ROWS: { key: keyof Weights; label: string; minKey: string; maxKey: string 
   { key: "finalPct", label: "Final", minKey: "finalMin", maxKey: "finalMax" },
 ];
 
-export default function InstructorWeightsForm({ courseId, current, sePlanned, policy, hasLab }: { courseId: string; current: Weights; sePlanned: Weights; policy: Policy; hasLab: boolean }) {
+export default function InstructorWeightsForm({ courseId, current, sePlanned, policy, hasLab, approved = false, seApproved = false }: { courseId: string; current: Weights; sePlanned: Weights; policy: Policy; hasLab: boolean; approved?: boolean; seApproved?: boolean }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
   const [pending, setPending] = useState<{ violations: string[]; message: string } | null>(null);
@@ -63,7 +63,9 @@ export default function InstructorWeightsForm({ courseId, current, sePlanned, po
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(""); setOk(false); setPending(null);
-    const violations = checkViolations(values);
+    const same = (a: Weights) => (Object.keys(a) as (keyof Weights)[]).every((k) => values[k] === a[k]);
+    const unchanged = (approved && same(current)) || (seApproved && same(sePlanned));
+    const violations = unchanged ? [] : checkViolations(values);
     if (violations.length > 0) {
       setConfirming({ values, violations });
       return;

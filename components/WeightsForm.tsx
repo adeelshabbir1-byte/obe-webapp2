@@ -24,8 +24,8 @@ const ROWS: { key: keyof Weights; countKey: keyof Counts; bestOfKey?: keyof Best
   { key: "finalPct", countKey: "finalCount", label: "Final", minKey: "finalMin", maxKey: "finalMax", minCountKey: "finalMinCount", itemNoun: "question(s)" },
 ];
 
-export default function WeightsForm({ courseId, current, currentCounts, currentBestOf, policy, policyMinCount, hasLab }: {
-  courseId: string; current: Weights; currentCounts?: Counts; currentBestOf?: BestOf; policy: Policy; policyMinCount?: PolicyMinCount; hasLab: boolean;
+export default function WeightsForm({ courseId, current, currentCounts, currentBestOf, policy, policyMinCount, hasLab, approved = false }: {
+  courseId: string; current: Weights; currentCounts?: Counts; currentBestOf?: BestOf; policy: Policy; policyMinCount?: PolicyMinCount; hasLab: boolean; approved?: boolean;
 }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
@@ -103,7 +103,9 @@ export default function WeightsForm({ courseId, current, currentCounts, currentB
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(""); setOk(false); setPending(null);
-    const violations = checkViolations(values);
+    // The approved percentages kept as they are (only counts or best-of changed): no new OMC approval needed.
+    const unchanged = approved && (Object.keys(current) as (keyof Weights)[]).every((k) => values[k] === current[k]);
+    const violations = unchanged ? [] : checkViolations(values);
     if (violations.length > 0) {
       setConfirming({ values, counts, bestOf, violations });
       return;

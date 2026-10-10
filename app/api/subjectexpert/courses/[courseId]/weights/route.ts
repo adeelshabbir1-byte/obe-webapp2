@@ -38,7 +38,10 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const courseWithCoordinator = await prisma.course.findUnique({ where: { id: course.id }, include: { coordinator: true } });
   const policy = await getPolicyForCourse(courseWithCoordinator?.coordinator.managedById || null, course.courseType);
-  const violations = checkPolicyCompliance(vals as any, policy, course.hasLab);
+  // Percentages identical to the ones already in force (approved by the OMC, or saved within policy) need no
+  // fresh approval - e.g. when only the number of quizzes/assignments or the "best of" is changed afterwards.
+  const alreadyApproved = !!course.weightsConfirmedAt && fields.every((f) => (course as any)[f] === vals[f]);
+  const violations = alreadyApproved ? [] : checkPolicyCompliance(vals as any, policy, course.hasLab);
 
   // Number of items per category — pre-filled from the OMC's minimum on
   // the form, the SE can raise it. Can't be saved below that minimum.

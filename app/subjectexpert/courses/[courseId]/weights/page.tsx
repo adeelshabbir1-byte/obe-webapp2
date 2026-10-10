@@ -51,6 +51,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
 
       <WeightsForm
         courseId={course.id}
+        approved={!!course.weightsConfirmedAt}
         current={{
           assignmentPct: course.assignmentPct, quizPct: course.quizPct, projectPct: course.projectPct,
           labPct: course.labPct, midtermPct: course.midtermPct, finalPct: course.finalPct,
