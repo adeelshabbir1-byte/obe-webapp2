@@ -22,7 +22,18 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   // Swap the CONTENT (topic, sub-topic, CLO, Bloom level, weight) between the
   // two positions — the date and week/lecture number stay tied to the slot,
   // not the content, since dates are calendar-based.
+  // The quiz/assignment/exam links belong to the topic, so they move with it.
+  const [rowLinks, targetLinks] = await Promise.all([
+    prisma.lectureRowInstrument.findMany({ where: { lectureRowId: row.id } }),
+    prisma.lectureRowInstrument.findMany({ where: { lectureRowId: target.id } }),
+  ]);
+
   await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: [row.id, target.id] } } }),
+    prisma.lectureRowInstrument.createMany({ data: [
+      ...targetLinks.map((l) => ({ lectureRowId: row.id, instrumentId: l.instrumentId })),
+      ...rowLinks.map((l) => ({ lectureRowId: target.id, instrumentId: l.instrumentId })),
+    ] }),
     prisma.lectureRow.update({
       where: { id: row.id },
       data: { topic: target.topic, subtopic: target.subtopic, cloId: target.cloId, bloomLevel: target.bloomLevel, weightPct: target.weightPct },

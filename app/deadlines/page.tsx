@@ -40,7 +40,7 @@ export default async function DeadlinesPage() {
       ...(isSetter ? [{ assigneeId: { in: peopleIds.length ? peopleIds : ["none"] } }, { courseId: { in: scopeIds.length ? scopeIds : ["none"] } }] : []),
     ] },
     orderBy: { dueDate: "asc" },
-    take: 400,
+    take: 1500,
   })) as unknown as DlRow[];
 
   // Who holds each course's roles right now

@@ -31,7 +31,18 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const target = await prisma.lectureRow.findFirst({ where: { courseId: course.id, source: "SE", lectureNumber: targetLectureNumber } });
   if (!target) return NextResponse.json({ error: "already at the edge — nothing to swap with" }, { status: 400 });
 
+  // The quiz/assignment/exam links belong to the topic, so they move with it.
+  const [rowLinks, targetLinks] = await Promise.all([
+    prisma.lectureRowInstrument.findMany({ where: { lectureRowId: row.id } }),
+    prisma.lectureRowInstrument.findMany({ where: { lectureRowId: target.id } }),
+  ]);
+
   await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: [row.id, target.id] } } }),
+    prisma.lectureRowInstrument.createMany({ data: [
+      ...targetLinks.map((l) => ({ lectureRowId: row.id, instrumentId: l.instrumentId })),
+      ...rowLinks.map((l) => ({ lectureRowId: target.id, instrumentId: l.instrumentId })),
+    ] }),
     prisma.lectureRow.update({
       where: { id: row.id },
       data: { topic: target.topic, subtopic: target.subtopic, cloId: target.cloId, bloomLevel: target.bloomLevel, weightPct: target.weightPct },

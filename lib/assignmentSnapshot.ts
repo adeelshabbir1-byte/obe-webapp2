@@ -97,6 +97,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
   // otherwise auto-enrollment would add new students on top of the old
   // ones, mixing two semesters' marks together in one Result Mate view.
   await prisma.studentMark.deleteMany({ where: { courseId } });
+  await prisma.labMark.deleteMany({ where: { courseId } });
   await prisma.studentEnrollment.deleteMany({ where: { courseId } });
 }
 

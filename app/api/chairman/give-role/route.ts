@@ -33,6 +33,9 @@ export async function POST(req: NextRequest) {
       const left = heldNow.filter((r) => r !== body.role);
       const packed = packRoles(left);
       const teachingOnly = packed.role === "SUBJECT_EXPERT" || packed.role === "INSTRUCTOR";
+      if (body.role === "PROGRAM_COORDINATOR" && teachingOnly && (await prisma.batch.count({ where: { coordinatorId: holder.id } })) > 0) {
+        return NextResponse.json({ error: "This person still owns batches and courses. Hand the program to a new Program Coordinator before removing the role." }, { status: 409 });
+      }
       const manager = teachingOnly && holder.departmentId ? await prisma.user.findFirst({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: holder.departmentId, id: { not: holder.id } }, orderBy: { createdAt: "asc" } }) : null;
       await prisma.user.update({ where: { id: holder.id }, data: {
         ...packed,
@@ -47,6 +50,9 @@ export async function POST(req: NextRequest) {
 
     const hats = [holder.secondaryRole, holder.tertiaryRole];
     if (hats.includes("SUBJECT_EXPERT") || hats.includes("INSTRUCTOR")) {
+      if (holder.role === "PROGRAM_COORDINATOR" && (await prisma.batch.count({ where: { coordinatorId: holder.id } })) > 0) {
+        return NextResponse.json({ error: "This person still owns batches and courses. Hand the program to a new Program Coordinator before removing the role." }, { status: 409 });
+      }
       const backTo = hats.includes("SUBJECT_EXPERT") ? "SUBJECT_EXPERT" : "INSTRUCTOR";
       const keepsTeaching = backTo === "SUBJECT_EXPERT" && hats.includes("INSTRUCTOR");
       const manager = holder.departmentId ? await prisma.user.findFirst({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: holder.departmentId, id: { not: holder.id } }, orderBy: { createdAt: "asc" } }) : null;
