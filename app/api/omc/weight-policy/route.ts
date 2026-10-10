@@ -52,7 +52,7 @@ export async function PUT(req: NextRequest) {
   }
   // sanity: min <= max for each pair
   for (const key of ["assignment", "quiz", "project", "lab", "midterm", "final"]) {
-    if (data[`${key}Min`] > data[`${key}Max`]) {
+    if ((data[`${key}Min`] as number) > (data[`${key}Max`] as number)) {
       return NextResponse.json({ error: `${key} minimum cannot exceed its maximum` }, { status: 400 });
     }
   }
