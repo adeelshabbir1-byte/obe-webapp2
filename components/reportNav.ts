@@ -6,6 +6,7 @@ export const REPORT_VIEWER_NAV = [
 ];
 
 export const OMC_ACTION_NAV = [
+  { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
@@ -93,6 +94,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
@@ -147,6 +149,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/home", label: "Needs Attention" },
   { href: "/yearly-summary", label: "Yearly Summary" },
   { href: "/chairman/faculty-workload", label: "Teacher Work Progress" },
@@ -195,6 +198,7 @@ export const DEAN_NAV = [
 ];
 
 export const DEPT_COORDINATOR_NAV = [
+  { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/dept-coordinator/home", label: "My Programs" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" },
   { href: "/coordinator/students", label: "Students" },

@@ -149,6 +149,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Out-of-Batch Requests": Shuffle,
   "Historical Grades Upload": Archive,
   "Bulk Student Upload": Upload,
+  "Bulk CLO Import": Upload,
   "Program Semester Map": Map,
   "Semester Section Map": LayoutGrid,
   "Back to Dashboard": ArrowLeft,

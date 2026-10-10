@@ -4,7 +4,7 @@
 // those pages are not shown to the coordinator. (The semester and calendar pages need the course/batch services behind them to offer
 // a semester and set exam dates, so those services are reachable, but only through those pages.)
 export const DEPT_COORDINATOR_PAGES = [
-  "/coordinator/faculty", "/coordinator/students", "/coordinator/bulk-student-upload", "/coordinator/semester", "/coordinator/calendar",
+  "/clo-bulk-import", "/coordinator/faculty", "/coordinator/students", "/coordinator/bulk-student-upload", "/coordinator/semester", "/coordinator/calendar",
   "/coordinator/timetable", "/coordinator/load-report", "/coordinator/out-of-batch-requests", "/coordinator/repeat-offering",
   "/coordinator/semester-health", "/coordinator/historical-grades-upload", "/coordinator/student-transcript", "/coordinator/faculty-requests", "/coordinator/lab-engineers",
 ];

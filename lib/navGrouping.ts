@@ -15,7 +15,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
       || /^\/instructor\/course-team$/.test(h) || /^\/assigner\/(matrix|course-short-names)$/.test(h), section: "Semester & Timetable" },
 
   { match: (h) => /^\/coordinator\/(batches|courses|assign-subject-experts|plos|grading-scale|elective-options|custom-categories|program-profile|required-books)$/.test(h)
-      || /^\/dean\/curricula$/.test(h), section: "Programs & Courses" },
+      || /^\/dean\/curricula$/.test(h) || h === "/clo-bulk-import", section: "Programs & Courses" },
 
   { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || h === "/outcomes", section: "Students" },
 
