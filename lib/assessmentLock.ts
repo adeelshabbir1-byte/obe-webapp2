@@ -10,7 +10,7 @@ export async function lockedWeights(courseId: string, source: "SE" | "INSTRUCTOR
   const out = new Map<string, number>();
   if (!course) return out;
   for (const [type, k, target] of [["Quiz", course.quizBestOf, course.quizPct], ["Assignment", course.assignmentBestOf, course.assignmentPct]] as [string, number | null, number][]) {
-    const count = items.filter((i) => i.type === type).length + (extraCount[type] || 0);
+    const count = items.filter((i: { type: string }) => i.type === type).length + (extraCount[type] || 0);
     const use = usableBestOf(k, count);
     if (use && target) out.set(type, Math.round((target / use) * 10000) / 10000);
   }
