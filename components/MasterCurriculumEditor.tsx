@@ -184,6 +184,11 @@ export default function MasterCurriculumEditor() {
             <option key={c.id} value={c.id}>{c.title} ({c.authority} {c.version}) — {c._count.courses} courses {c.isOwned ? "— your copy" : ""}</option>
           ))}
         </select>
+        {selectedId && (
+          <a href={`/api/omc/master-curriculum/${selectedId}/export`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }}>
+            Export to Excel
+          </a>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
