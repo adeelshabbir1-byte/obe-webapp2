@@ -4,6 +4,7 @@ import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import LibraryInventoryForm from "../../components/LibraryInventoryForm";
+import ExcelImportButton from "../../components/ExcelImportButton";
 import { libraryScope } from "../../lib/resources";
 
 const LABEL: Record<string, string> = { LIBRARIAN: "Librarian", LAB_MANAGER: "Lab Manager", CHAIRMAN: "Institute Head", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator" };
@@ -38,7 +39,11 @@ export default async function LibraryInventoryPage() {
           </div>
         ))}
       </div>
-      <LibraryInventoryForm canEdit={scope.canEdit}
+      <p style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <a className="btn" href="/api/library-inventory/export">Download Excel</a>
+        {scope.canEdit && <ExcelImportButton endpoint="/api/library-inventory/import" label="Import from Excel" />}
+      </p>
+      <LibraryInventoryForm key={lib ? lib.updatedAt.getTime() : "none"} canEdit={scope.canEdit}
         lib={lib ? { seats: lib.seats, totalTitles: lib.totalTitles, computingTitles: lib.computingTitles, totalVolumes: lib.totalVolumes, printJournals: lib.printJournals, ebooks: lib.ebooks, databases: lib.databases, openHoursPerWeek: lib.openHoursPerWeek, hasLibrarian: lib.hasLibrarian, lastStockCheck: lib.lastStockCheck ? lib.lastStockCheck.toISOString() : null, notes: lib.notes } : null} />
     </Shell>
   );

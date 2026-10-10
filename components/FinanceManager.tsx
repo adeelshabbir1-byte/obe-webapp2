@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ExcelImportButton from "./ExcelImportButton";
 
 type Entry = { fiscalYear: string; kind: string; category: string; amount: number };
 
@@ -38,6 +39,8 @@ export default function FinanceManager({ years, year, entries, expense, income }
         <label style={{ fontSize: 13 }}>Fiscal year (July to June){" "}
           <select value={year} onChange={(e) => router.push(`/chairman/finance?year=${e.target.value}`)} style={{ padding: "5px 8px" }}>{years.map((y) => <option key={y}>{y}</option>)}</select>
         </label>
+        <a className="btn" href={`/api/chairman/finance/export?year=${year}`}>Download Excel ({year})</a>
+        <ExcelImportButton endpoint="/api/chairman/finance/import" label={`Import ${year} from Excel`} fields={{ fiscalYear: year }} />
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         {[["Total budget", fmt(totBudget)], ["Spent so far", fmt(totSpent)], ["Budget used", totBudget > 0 ? `${Math.round((totSpent / totBudget) * 100)}%` : "—"], ["Income", fmt(totIncome)]].map(([l, v]) => (

@@ -23,7 +23,7 @@ export default async function FinancePage({ searchParams }: { searchParams: { ye
         The yearly budget, what was actually spent, and the income. Accreditation reviewers ask for the funds set aside for labs, library, faculty development and research.
         The Finance Officer keeps these figures up to date and the Institute Head can correct them. Nobody else can see this page.
       </p>
-      <FinanceManager key={year} years={years} year={year} expense={EXPENSE_CATEGORIES} income={INCOME_CATEGORIES}
+      <FinanceManager key={`${year}-${entries.filter((e) => e.fiscalYear === year).reduce((n, e) => n + e.amount * (e.kind.length + e.category.length), 0)}`} years={years} year={year} expense={EXPENSE_CATEGORIES} income={INCOME_CATEGORIES}
         entries={entries.map((e) => ({ fiscalYear: e.fiscalYear, kind: e.kind, category: e.category, amount: e.amount }))} />
     </Shell>
   );

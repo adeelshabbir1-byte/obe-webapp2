@@ -4,6 +4,7 @@ import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import LabInventoryManager from "../../components/LabInventoryManager";
+import ExcelImportButton from "../../components/ExcelImportButton";
 import { labRatio, labScope } from "../../lib/resources";
 
 const LABEL: Record<string, string> = { LAB_MANAGER: "Lab Manager", CHAIRMAN: "Institute Head", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator" };
@@ -41,7 +42,11 @@ export default async function LabInventoryPage() {
           </div>
         ))}
       </div>
-      <p><a className="btn" href="/api/lab-inventory/export">Download Excel (labs and PC specifications)</a></p>
+      <p style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <a className="btn" href="/api/lab-inventory/export">Download Excel (labs and PC specifications)</a>
+        {scope.canEdit && <ExcelImportButton endpoint="/api/lab-inventory/import" label="Import from Excel" />}
+      </p>
+      {scope.canEdit && <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -6 }}>Upload the same file after editing it. Labs are matched by name (new ones are added). For each lab listed on the PC specifications sheet, its PC lines are replaced by the lines in the file.</p>}
       {ratios.length > 1 && (
         <div className="card">
           <h3 style={{ marginTop: 0 }}>By department</h3>
