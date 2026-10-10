@@ -186,9 +186,14 @@ export default function MasterCurriculumEditor() {
           ))}
         </select>
         {selectedId && (
-          <a href={`/api/omc/master-curriculum/${selectedId}/export`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }}>
-            Export to Excel
-          </a>
+          <>
+            <a href={`/api/master-curriculum/${selectedId}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }} title="Courses, CLOs with PLOs, Course–PLO matrix, lecture topics and PLOs">
+              Download full curriculum (Excel)
+            </a>
+            <a href={`/api/master-curriculum/${selectedId}/download?format=docx`} className="btn" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 8, textDecoration: "none", display: "inline-block" }} title="A readable curriculum document: PLOs, scheme of studies and every course's details">
+              Download as Word
+            </a>
+          </>
         )}
         {selectedId && detail?.isOwned && (
           <button className="btn" disabled={busy} style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10 }} title="Bring in CLOs and PLO mapping improved in the official curriculum" onClick={async () => {

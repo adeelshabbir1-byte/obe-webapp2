@@ -43,6 +43,8 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
         <Link href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</Link>
         <Link href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</Link>
         <Link href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</Link>
+        <a href={`/api/master-curriculum/${curriculum.id}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Download full curriculum (Excel)</a>
+        <a href={`/api/master-curriculum/${curriculum.id}/download?format=docx`} className="btn" style={{ fontSize: 12.5, marginLeft: 8 }}>Download as Word</a>
       </div>
 
       {!curriculum.chairmanId && <OfficialCurriculumCloTools curriculumId={curriculum.id} />}
