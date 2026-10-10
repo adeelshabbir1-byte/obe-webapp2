@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
   const password = String(body.password || "");
   if (!rollNumber || !password) return NextResponse.json({ error: "Roll number and password are required." }, { status: 400 });
 
+  // Roll numbers are guessable and first passwords are the roll number itself, so repeated wrong passwords must stop
+  // the guessing: 8 failures in 15 minutes for the same roll number blocks further attempts for a while.
+  const recentFails = await prisma.auditLog.count({
+    where: { action: "STUDENT_LOGIN_FAILED", createdAt: { gte: new Date(Date.now() - 15 * 60_000) }, metadata: { path: ["rollNumber"], equals: rollNumber } },
+  });
+  if (recentFails >= 8) return NextResponse.json({ error: "Too many wrong attempts. Please wait 15 minutes and try again." }, { status: 429 });
+
   const candidates = await prisma.student.findMany({ where: { rollNumber } });
   const genericError = NextResponse.json({ error: "Incorrect roll number or password." }, { status: 401 });
 
