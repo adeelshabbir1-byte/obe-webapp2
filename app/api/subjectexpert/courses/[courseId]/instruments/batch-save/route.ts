@@ -3,7 +3,7 @@ import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
-import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
+import { blockedAsNonBaseCourse } from "../../../../../../../lib/contentSync";
 import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const locked = await lockedWeights(course.id, "SE");
   const typeOf = new Map<string, string>(validInstruments.map((i) => [i.id as string, i.type as string]));
   const badMarks: string[] = [];
+  const pending: Promise<unknown>[] = [];
   for (const e of edits) {
     if (!validIds.has(e.instrumentId)) continue;
     const data: any = {};
@@ -53,15 +54,16 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     }
     if (e.label !== undefined && e.label.trim()) data.label = e.label.trim();
     if (Object.keys(data).length === 0) continue;
-    await prisma.assessmentInstrument.update({ where: { id: e.instrumentId }, data });
+    pending.push(prisma.assessmentInstrument.update({ where: { id: e.instrumentId }, data }));
+    if (pending.length >= 4) { await Promise.all(pending); pending.length = 0; }
   }
+  await Promise.all(pending);
   if (badMarks.length > 0) {
     return NextResponse.json({ error: "Marks % must be 0-100 and Out Of must be at least 1 — check the highlighted fields." }, { status: 400 });
   }
 
   await recomputeAffectedRows(Array.from(validIds));
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUMENTS_BATCH_UPDATED", entityType: "Course", entityId: course.id, metadata: { count: edits.length } });
-  await syncCourseContentToLinkedCourses(course.id);
 
   const instruments = await prisma.assessmentInstrument.findMany({
     where: { courseId: course.id, source: "SE" },

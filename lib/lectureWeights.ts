@@ -74,13 +74,15 @@ async function instrumentShares(instrumentId: string): Promise<Map<string, numbe
  * with every lectureRowId actually touched, not rely on this alone.
  */
 export async function recomputeAffectedRows(instrumentIds: string[]) {
-  const rowIds = new Set<string>();
-  for (const instrumentId of instrumentIds) {
-    const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId } });
-    for (const l of links) rowIds.add(l.lectureRowId);
-  }
-  for (const rowId of rowIds) {
-    await recomputeRowWeight(rowId);
+  // Weights are cheap to recompute for a whole course at once (a handful of queries), and far slower row by row.
+  if (instrumentIds.length === 0) return;
+  const insts = await prisma.assessmentInstrument.findMany({ where: { id: { in: instrumentIds } }, select: { courseId: true, source: true } });
+  const seen = new Set<string>();
+  for (const i of insts) {
+    const key = `${i.courseId}|${i.source}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await recomputeCourseRows(i.courseId, i.source as "SE" | "INSTRUCTOR");
   }
 }
 
@@ -91,8 +93,14 @@ export async function recomputeAffectedRows(instrumentIds: string[]) {
  * link gets recomputed down to 0 instead of keeping its previous weight.
  */
 export async function recomputeRows(lectureRowIds: string[]) {
-  for (const rowId of new Set(lectureRowIds)) {
-    await recomputeRowWeight(rowId);
+  if (lectureRowIds.length === 0) return;
+  const rows = await prisma.lectureRow.findMany({ where: { id: { in: lectureRowIds } }, select: { courseId: true, source: true } });
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const key = `${r.courseId}|${r.source}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await recomputeCourseRows(r.courseId, r.source as "SE" | "INSTRUCTOR");
   }
 }
 

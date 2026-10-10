@@ -145,6 +145,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       pendingEditsRef.current = {};
       setDirtyInstrumentIds(new Set());
       setSaving(false);
+      if (apiBase.includes("subjectexpert")) fetch(`${apiBase}/courses/${courseId}/sync-followers`, { method: "POST" }).catch(() => {});
     } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 
