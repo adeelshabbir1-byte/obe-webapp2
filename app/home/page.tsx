@@ -38,6 +38,16 @@ export default async function HomePage() {
   const { leads } = await leadsInScope(user);
   const offered = (await prisma.course.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) }, isOffered: true, isNonCredit: false } as never, select: { id: true, coordinatorId: true, instructorId: true, subjectExpertId: true }, take: 3000 })) as unknown as { id: string; coordinatorId: string; instructorId: string | null; subjectExpertId: string | null }[];
   const offeredIds = offered.map((c) => c.id).concat(["none"]);
+  const staleCut = new Date(Date.now() - 14 * 86400000);
+  const [studentRows, attRows, outFigs] = (await Promise.all([
+    prisma.student.groupBy({ by: ["batchId"], _count: { _all: true }, where: { batch: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } } } } as never),
+    prisma.attendanceRecord.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _max: { updatedAt: true } } as never),
+    prisma.outcomeFigure.findMany({ where: { leadId: { in: leads.map((l) => l.id).concat(["none"]) } } as never, orderBy: { intakeYear: "desc" }, select: { leadId: true, intakeYear: true, admitted: true, graduated: true, droppedOut: true } }),
+  ])) as unknown as [{ batchId: string; _count: { _all: number } }[], { courseId: string; _max: { updatedAt: Date | null } }[], { leadId: string; intakeYear: number; admitted: number; graduated: number; droppedOut: number }[]];
+  const batchOwner = new Map<string, string>((await prisma.batch.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } }, select: { id: true, coordinatorId: true } })).map((b) => [b.id as string, b.coordinatorId as string]));
+  const studentsOf = new Map<string, number>();
+  for (const r of studentRows) { const o = batchOwner.get(r.batchId); if (o) studentsOf.set(o, (studentsOf.get(o) || 0) + r._count._all); }
+  const lastAtt = new Map<string, Date | null>(attRows.map((r) => [r.courseId, r._max.updatedAt]));
   const [cloRows, lectureRows, markRows] = (await Promise.all([
     prisma.cLO.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
     prisma.lectureRow.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
@@ -46,9 +56,9 @@ export default async function HomePage() {
   const hasClo = new Set(cloRows.map((r) => r.courseId)), hasPlan = new Set(lectureRows.map((r) => r.courseId)), hasMarks = new Set(markRows.map((r) => r.courseId));
   const perLead = leads.map((l) => {
     const cs = offered.filter((c) => c.coordinatorId === l.id);
-    return { id: l.id, program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length };
+    return { id: l.id, program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length, noAtt: cs.filter((c) => { const d = lastAtt.get(c.id); return !d || d < staleCut; }).length, students: studentsOf.get(l.id) || 0, fig: outFigs.find((f) => f.leadId === l.id) || null };
   }).filter((r) => r.total > 0);
-  const sumOf = (k: "total" | "noInstr" | "noSe" | "noClo" | "noPlan" | "noMarks") => perLead.reduce((n, r) => n + r[k], 0);
+  const sumOf = (k: "total" | "noInstr" | "noSe" | "noClo" | "noPlan" | "noMarks" | "noAtt" | "students") => perLead.reduce((n, r) => n + r[k], 0);
   const behind = lines.filter((l) => l.state === "BEHIND").sort((a, b) => b.behind - a.behind);
   const risk = lines.filter((l) => l.state === "AT_RISK");
   const staleDays = staleLib ? Math.floor((now.getTime() - staleLib.updatedAt.getTime()) / 86400000) : null;
@@ -68,11 +78,20 @@ export default async function HomePage() {
         <h3 style={{ marginTop: 0 }}>Courses offered this semester: {sumOf("total")}</h3>
         {perLead.length === 0 ? <p style={{ margin: 0, color: "var(--slate)" }}>No course is marked as offered yet. Program Leads mark them under Courses.</p> : (
           <table>
-            <thead><tr><th>Program</th><th>Offered</th><th>No instructor</th><th>No Subject Expert</th><th>No CLOs</th><th>No lecture plan</th><th>No marks yet</th><th></th></tr></thead>
+            <thead><tr><th>Program</th><th>Offered</th><th>No instructor</th><th>No Subject Expert</th><th>No CLOs</th><th>No lecture plan</th><th>No marks yet</th><th>Attendance not marked in 14 days</th><th></th></tr></thead>
             <tbody>
-              {perLead.map((r) => <tr key={r.id}><td><b>{r.program}</b></td><td>{r.total}</td>{[r.noInstr, r.noSe, r.noClo, r.noPlan, r.noMarks].map((n, i) => <td key={i} style={{ color: n ? "#B3261E" : "#2E7D4F", fontWeight: n ? 700 : 400 }}>{n}</td>)}<td><Link href={`/accreditation-overview/${r.id}`}>Report</Link></td></tr>)}
-              <tr style={{ borderTop: "2px solid var(--line)" }}><td><b>All programs</b></td><td><b>{sumOf("total")}</b></td><td><b>{sumOf("noInstr")}</b></td><td><b>{sumOf("noSe")}</b></td><td><b>{sumOf("noClo")}</b></td><td><b>{sumOf("noPlan")}</b></td><td><b>{sumOf("noMarks")}</b></td><td></td></tr>
+              {perLead.map((r) => <tr key={r.id}><td><b>{r.program}</b></td><td>{r.total}</td>{[r.noInstr, r.noSe, r.noClo, r.noPlan, r.noMarks, r.noAtt].map((n, i) => <td key={i} style={{ color: n ? "#B3261E" : "#2E7D4F", fontWeight: n ? 700 : 400 }}>{n}</td>)}<td><Link href={`/accreditation-overview/${r.id}`}>Report</Link></td></tr>)}
+              <tr style={{ borderTop: "2px solid var(--line)" }}><td><b>All programs</b></td><td><b>{sumOf("total")}</b></td><td><b>{sumOf("noInstr")}</b></td><td><b>{sumOf("noSe")}</b></td><td><b>{sumOf("noClo")}</b></td><td><b>{sumOf("noPlan")}</b></td><td><b>{sumOf("noMarks")}</b></td><td><b>{sumOf("noAtt")}</b></td><td></td></tr>
             </tbody>
+          </table>
+        )}
+      </div>
+      <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
+        <h3 style={{ marginTop: 0 }}>Students: {sumOf("students")} on record</h3>
+        {perLead.length === 0 ? <p style={{ margin: 0, color: "var(--slate)" }}>No programs yet.</p> : (
+          <table>
+            <thead><tr><th>Program</th><th>Students now</th><th>Latest intake year</th><th>Admitted</th><th>Graduated</th><th>Dropped out</th><th>Dropout rate</th></tr></thead>
+            <tbody>{perLead.map((r) => <tr key={r.id}><td><b>{r.program}</b></td><td>{r.students}</td>{r.fig ? <><td>{r.fig.intakeYear}</td><td>{r.fig.admitted}</td><td>{r.fig.graduated}</td><td>{r.fig.droppedOut}</td><td style={{ color: r.fig.admitted && r.fig.droppedOut / r.fig.admitted > 0.15 ? "#B3261E" : "inherit" }}>{r.fig.admitted ? `${Math.round((r.fig.droppedOut / r.fig.admitted) * 100)}%` : "—"}</td></> : <td colSpan={5} style={{ color: "var(--slate)" }}>No graduation figures entered yet</td>}</tr>)}</tbody>
           </table>
         )}
       </div>
