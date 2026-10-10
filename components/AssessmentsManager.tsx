@@ -263,6 +263,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       setRows(reconciled);
       setSavedRows(reconciled);
       setSaving(false);
+      // Followers of this course (other batches) are updated in the background; nothing to wait for.
+      if (apiBase.includes("subjectexpert")) fetch(`${apiBase}/courses/${courseId}/sync-followers`, { method: "POST" }).catch(() => {});
     } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
 

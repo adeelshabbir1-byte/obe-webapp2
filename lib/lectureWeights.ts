@@ -111,8 +111,20 @@ export async function recomputeRows(lectureRowIds: string[]) {
  * turns into hundreds of individually-awaited round trips and the page
  * just hangs for a course with any real number of lecture rows).
  */
+/** Writes row weights in ONE statement, and only for rows whose weight actually changed (a transaction of N updates costs N round trips). */
+async function writeRowWeights(rows: { id: string; weightPct: number }[], next: Map<string, number>) {
+  const changed = rows.filter((r) => Math.abs(r.weightPct - (next.get(r.id) ?? 0)) > 0.0001);
+  if (changed.length === 0) return;
+  const params: (string | number)[] = [];
+  const tuples = changed.map((r, i) => { params.push(r.id, next.get(r.id) ?? 0); return `($${i * 2 + 1}::text, $${i * 2 + 2}::float8)`; });
+  await prisma.$executeRawUnsafe(
+    `UPDATE "LectureRow" AS t SET "weightPct" = v.w FROM (VALUES ${tuples.join(",")}) AS v(id, w) WHERE t.id = v.id`,
+    ...params,
+  );
+}
+
 export async function recomputeCourseRows(courseId: string, source: "SE" | "INSTRUCTOR") {
-  const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } });
+  const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true, weightPct: true } });
   if (rows.length === 0) return;
   const rowIds = rows.map((r) => r.id);
 
@@ -122,7 +134,7 @@ export async function recomputeCourseRows(courseId: string, source: "SE" | "INST
   });
   if (links.length === 0) {
     // No instrument links at all — every row's weight should read 0.
-    await prisma.$transaction(rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: 0 } })));
+    await writeRowWeights(rows, new Map());
     return;
   }
 
@@ -158,9 +170,7 @@ export async function recomputeCourseRows(courseId: string, source: "SE" | "INST
     });
   }
 
-  await prisma.$transaction(
-    rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: Math.round((totalByRow.get(id) || 0) * 100) / 100 } }))
-  );
+  await writeRowWeights(rows, new Map(rowIds.map((id) => [id, Math.round((totalByRow.get(id) || 0) * 100) / 100] as [string, number])));
 }
 
 export async function recomputeRowWeight(lectureRowId: string) {

@@ -3,7 +3,7 @@ import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
-import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
+import { blockedAsNonBaseCourse } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
 
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     actorUserId: user.id, action: "LECTURE_MAPPING_SAVED", entityType: "Course", entityId: course.id,
     metadata: { toggleCount: safeToggles.length, questionRowCount: safeQuestions.length },
   });
-  await syncCourseContentToLinkedCourses(course.id);
+  // Copying out to follower courses is slow, so the browser triggers it separately (sync-followers) after this response.
 
   const allRows = await prisma.lectureRow.findMany({
     where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" },
