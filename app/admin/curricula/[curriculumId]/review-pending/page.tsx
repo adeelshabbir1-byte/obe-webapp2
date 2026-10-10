@@ -17,6 +17,7 @@ function normalize(title: string) {
 export default async function ReviewPendingPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUPER_USER") redirect("/login");
+  if (!user.mfaVerified) redirect("/mfa-verify");
 
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: params.curriculumId },
