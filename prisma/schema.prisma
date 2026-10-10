@@ -2491,3 +2491,25 @@ model ReadinessSnapshot {
   @@index([leadId])
   @@index([chairmanId])
 }
+
+
+// An SE asks to change a template the OMC already approved. While approved, the SE's edit screens are locked. When the OMC approves the
+// request the template reopens (a snapshot is taken); when the SE resubmits, the differences are recorded as the change log for that semester.
+model TemplateChangeRequest {
+  id            String    @id @default(cuid())
+  courseId      String
+  requestedById String
+  reason        String    @db.Text
+  status        String    @default("pending") // pending | approved (reopened for edits) | rejected | completed (resubmitted, changes recorded)
+  omcComment    String?   @db.Text
+  reviewedById  String?
+  reviewedAt    DateTime?
+  termLabel     String?   // "Fall 2026" — the semester this change belongs to
+  beforeJson    String?   @db.Text // snapshot taken when edits were reopened
+  changesJson   String?   @db.Text // list of what changed, filled in when the SE resubmits
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([courseId])
+  @@index([status])
+}

@@ -1,6 +1,7 @@
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
+import TemplateChangeBanner from "./TemplateChangeBanner";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery"; code: string; title: string; status: string;
 }) {
@@ -32,6 +33,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           }}>{t.label}</Link>
         ))}
       </div>
+      {(status === "approved" || status === "reopened") && <TemplateChangeBanner courseId={courseId} />}
       {active === "clos" && (
         <div style={{ marginTop: 14 }}>
           <ContentSyncStatusBanner courseId={courseId} />

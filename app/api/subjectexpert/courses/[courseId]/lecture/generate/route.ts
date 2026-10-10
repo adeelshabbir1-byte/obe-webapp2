@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
@@ -9,6 +10,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const locked = templateLockResponse(course); if (locked) return locked;
 
   const blocked = await blockedAsNonBaseCourse(course.id);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });

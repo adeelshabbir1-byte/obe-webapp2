@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { r4, usableBestOf } from "./assessmentWeights";
+import { recomputeRowWeight } from "./lectureWeights";
 
 /**
  * Tops up one assessment type (Quiz, Assignment, Midterm, Final, Project,
@@ -17,6 +18,24 @@ import { r4, usableBestOf } from "./assessmentWeights";
  * already exist, this does nothing — it only ever adds, never removes,
  * so nothing the SE already customized is touched or deleted.
  */
+/**
+ * If the SE lowers a count (6 quizzes -> 4), the extra items are removed, newest first, along with their topic links,
+ * and every lecture topic they were tied to has its weight recomputed. Returns how many were removed.
+ */
+async function trimInstrumentCount(courseId: string, source: "SE" | "INSTRUCTOR", type: string, desiredCount: number): Promise<number> {
+  const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
+  const extra = existing.slice(desiredCount);
+  if (extra.length === 0) return 0;
+  const ids = extra.map((i: { id: string }) => i.id);
+  const links = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: { in: ids } } });
+  const rowIds = Array.from(new Set<string>(links.map((l: { lectureRowId: string }) => l.lectureRowId)));
+  await prisma.lectureRowInstrument.deleteMany({ where: { instrumentId: { in: ids } } });
+  await prisma.instrumentEvidence.deleteMany({ where: { instrumentId: { in: ids } } });
+  await prisma.assessmentInstrument.deleteMany({ where: { id: { in: ids } } });
+  for (const rowId of rowIds) await recomputeRowWeight(rowId);
+  return extra.length;
+}
+
 export async function ensureInstrumentCount(
   courseId: string,
   source: "SE" | "INSTRUCTOR",
@@ -25,6 +44,16 @@ export async function ensureInstrumentCount(
   categoryTargetPct: number
 ) {
   if (!desiredCount || desiredCount <= 0) return;
+
+  const removed = await trimInstrumentCount(courseId, source, type, desiredCount);
+  if (removed > 0) {
+    // The remaining items now carry the whole category weight, split evenly (whole points, remainder to the first ones).
+    const left = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
+    const target = Math.round(categoryTargetPct);
+    const base = Math.floor(target / left.length), rem = target - base * left.length;
+    for (let i = 0; i < left.length; i++) await prisma.assessmentInstrument.update({ where: { id: left[i].id }, data: { marksPct: base + (i < rem ? 1 : 0) } });
+    for (const row of await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } })) await recomputeRowWeight(row.id);
+  }
 
   const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type } });
   const missing = desiredCount - existing.length;
@@ -58,6 +87,7 @@ const TYPES_WITH_TARGET_KEY: { type: string; targetKey: string; countKey: string
  * (best 3 of 4 quizzes worth 10 -> 3.33 each). Creates missing items and re-sets the weight of all of them.
  */
 async function ensureBestOf(courseId: string, source: "SE" | "INSTRUCTOR", type: string, count: number, target: number, k: number) {
+  await trimInstrumentCount(courseId, source, type, count);
   const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
   const each = r4(target / k);
   for (let n = existing.length + 1; n <= count; n++) {

@@ -41,7 +41,13 @@ const verticalHeaderStyle = {
   textAlign: "center", fontSize: 11, padding: "6px 2px", verticalAlign: "bottom",
 } as const;
 // One tint per assessment type, used down the whole column so you can tell where you are while scrolling a long lecture list.
-const TYPE_TINT: Record<string, string> = { Quiz: "#E3F0FB", Assignment: "#E6F4E4", Midterm: "#FCEFD9", Final: "#F3E4F4" };
+const TYPE_SHADES: Record<string, [string, string]> = {
+  Quiz: ["#D6E8FB", "#A9CBF1"], Assignment: ["#D3EDD5", "#A3D7A8"], Midterm: ["#FBE3AE", "#F6CF7C"], Final: ["#E8CFEE", "#D6AEE0"],
+};
+// Alternate two shades of a type's colour column by column, so neighbouring quizzes (or assignments) are still easy to tell apart.
+const shade = (type: string, indexInType: number) => TYPE_SHADES[type]?.[indexInType % 2];
+const TYPE_TINT: Record<string, string> = { Quiz: TYPE_SHADES.Quiz[0], Assignment: TYPE_SHADES.Assignment[0], Midterm: TYPE_SHADES.Midterm[0], Final: TYPE_SHADES.Final[0] };
+const GROUP_EDGE = "2px solid #5E5A4B";
 const verticalTextStyle = {
   display: "inline-block", writingMode: "vertical-rl", transform: "rotate(180deg)",
   whiteSpace: "nowrap", maxHeight: 140,
@@ -273,6 +279,20 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const cloList = clos || [];
   const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
+  const typeIndex = new Map<string, number>(); // instrument id -> position within its own type
+  const seenPerType: Record<string, number> = {};
+  checkboxInstruments.forEach((i) => { typeIndex.set(i.id, seenPerType[i.type] || 0); seenPerType[i.type] = (seenPerType[i.type] || 0) + 1; });
+  const colBg = (i: { id: string; type: string }) => shade(i.type, typeIndex.get(i.id) || 0);
+  const colEdge = (i: { id: string }) => ((typeIndex.get(i.id) || 0) === 0 ? { borderLeft: GROUP_EDGE } : {});
+  // What the Total can reach here: Project and Lab marks are not tied to lecture topics, so they never appear in this table.
+  const mappablePct = (targets.quizPct || 0) + (targets.assignmentPct || 0) + (targets.midtermPct || 0) + (targets.finalPct || 0);
+  const unmappablePct = (targets.projectPct || 0) + (targets.labPct || 0);
+  const linkedIds = new Set(filledRows.flatMap((r) => r.linkedInstrumentIds));
+  const notLinked = [
+    ...checkboxInstruments.filter((i) => !linkedIds.has(i.id)).map((i) => headingFor(i)),
+    ...(hasMidterm && !filledRows.some((r) => r.midtermQuestions.trim()) ? ["Midterm questions"] : []),
+    ...(hasFinal && !filledRows.some((r) => r.finalQuestions.trim()) ? ["Final questions"] : []),
+  ];
 
   // The real goal is PLOs: CLOs that map to the same PLO sit side by side (already sorted), a banner row above names the PLO
   // and the marks it receives, and a summary lists every PLO with its marks.
@@ -467,6 +487,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         ) : instruments.length === 0 ? (
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Define at least one instrument above first.</p>
         ) : (
+          <div className="mapgrid">
+          <style>{`.mapgrid th, .mapgrid td { border: 1px solid #BDB8A8; }`}</style>
           <SortableTable>
             <thead>
               {cloList.length > 0 && (
@@ -483,10 +505,10 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <th style={{ verticalAlign: "bottom" }}>Sr#</th>
                 <th style={{ verticalAlign: "bottom" }}>Topic</th>
                 {checkboxInstruments.map((i) => (
-                  <th key={i.id} style={{ ...verticalHeaderStyle, background: TYPE_TINT[i.type] }} title={headingFor(i)}><span style={verticalTextStyle}>{headingFor(i)}</span></th>
+                  <th key={i.id} style={{ ...verticalHeaderStyle, background: colBg(i), ...colEdge(i) }} title={headingFor(i)}><span style={verticalTextStyle}>{headingFor(i)}</span></th>
                 ))}
-                {hasMidterm && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Midterm }} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
-                {hasFinal && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Final }} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
+                {hasMidterm && <th style={{ ...verticalHeaderStyle, background: TYPE_SHADES.Midterm[0], borderLeft: GROUP_EDGE }} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
+                {hasFinal && <th style={{ ...verticalHeaderStyle, background: TYPE_SHADES.Final[0], borderLeft: GROUP_EDGE }} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
                 <th style={verticalHeaderStyle} title="Weight"><span style={verticalTextStyle}>Weight</span></th>
                 {cloList.map((c) => <th key={c.id} style={{ ...verticalHeaderStyle, background: cloTint(c) }} title={c.code}><span style={verticalTextStyle}>{c.code}</span></th>)}
               </tr>
@@ -499,10 +521,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <tr style={{ background: "#FAFAF8", fontWeight: 600 }}>
                   <td></td>
                   <td style={{ fontSize: 12 }}>Total</td>
-                  {checkboxInstruments.map((i) => <td key={i.id} style={{ background: TYPE_TINT[i.type] }}></td>)}
-                  {hasMidterm && <td style={{ background: TYPE_TINT.Midterm, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
-                  {hasFinal && <td style={{ background: TYPE_TINT.Final, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
-                  <td style={{ fontSize: 12 }}>{fmtPct(grandTotal)}%</td>
+                  {checkboxInstruments.map((i) => <td key={i.id} style={{ background: colBg(i), ...colEdge(i) }}></td>)}
+                  {hasMidterm && <td style={{ background: TYPE_SHADES.Midterm[0], borderLeft: GROUP_EDGE, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
+                  {hasFinal && <td style={{ background: TYPE_SHADES.Final[0], borderLeft: GROUP_EDGE, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
+                  <td style={{ fontSize: 12 }}>
+                    {fmtPct(grandTotal)}%
+                    {Math.abs(grandTotal - mappablePct) > 0.05 && (
+                      <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--rust)", lineHeight: 1.3 }}>
+                        of {fmtPct(mappablePct)}%{notLinked.length ? ` — not linked to a topic yet: ${notLinked.join(", ")}` : ""}
+                      </div>
+                    )}
+                    {unmappablePct > 0 && <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--slate)", lineHeight: 1.3 }}>Project/Lab {fmtPct(unmappablePct)}% is not tied to topics</div>}
+                  </td>
                   {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12, background: cloTint(cloList[idx]) }}>{fmtPct(t)}%</td>)}
                 </tr>
               )}
@@ -524,17 +554,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   </td>
                   {checkboxInstruments.map((i) => {
                     const checked = g.rows.every((r) => r.linkedInstrumentIds.includes(i.id));
-                    return <td key={i.id} style={{ textAlign: "center", background: TYPE_TINT[i.type] }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
+                    return <td key={i.id} style={{ textAlign: "center", background: colBg(i), ...colEdge(i) }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td style={{ background: first.midtermQuestions.trim() ? "#F6D79A" : TYPE_TINT.Midterm }}>
+                    <td style={{ background: first.midtermQuestions.trim() ? "#F0B94E" : TYPE_SHADES.Midterm[0], borderLeft: GROUP_EDGE }}>
                       <input value={first.midtermQuestions} disabled={saving}
                         onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.midtermQuestions.trim() ? "#FFF3D6" : undefined }} />
                     </td>
                   )}
                   {hasFinal && (
-                    <td style={{ background: first.finalQuestions.trim() ? "#E3BFE6" : TYPE_TINT.Final }}>
+                    <td style={{ background: first.finalQuestions.trim() ? "#C28DD1" : TYPE_SHADES.Final[0], borderLeft: GROUP_EDGE }}>
                       <input value={first.finalQuestions} disabled={saving}
                         onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }} />
@@ -550,6 +580,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
               })}
             </tbody>
           </SortableTable>
+          </div>
         )}
         {filledRows.length > 0 && instruments.length > 0 && cloList.length === 0 && (
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 8 }}>

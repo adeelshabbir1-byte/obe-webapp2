@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { snapshotTemplate, diffTemplates } from "../../../../../../lib/templateDiff";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -39,6 +40,14 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   }
 
   const updated = await prisma.course.update({ where: { id: course.id }, data: { templateStatus: "submitted" } });
+  // Resubmitting a reopened template: record exactly what changed, for the semester's improvement log.
+  if (course.templateStatus === "reopened") {
+    const open = await prisma.templateChangeRequest.findFirst({ where: { courseId: course.id, status: "approved" }, orderBy: { createdAt: "desc" } });
+    if (open && open.beforeJson) {
+      const changes = diffTemplates(JSON.parse(open.beforeJson), await snapshotTemplate(course.id));
+      await prisma.templateChangeRequest.update({ where: { id: open.id }, data: { status: "completed", changesJson: JSON.stringify(changes), completedAt: new Date() } });
+    }
+  }
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_SUBMITTED", entityType: "Course", entityId: course.id });
 
   return NextResponse.json({ course: updated });

@@ -11,7 +11,7 @@ import ProgressBar from "../../../components/ProgressBar";
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    draft: "Draft", submitted: "Submitted", approved: "Approved", "changes-requested": "Changes Requested",
+    draft: "Draft", submitted: "Submitted", approved: "Approved", "changes-requested": "Changes Requested", reopened: "Reopened for changes",
   };
   return map[status] || status;
 }
@@ -69,7 +69,7 @@ export default async function SubjectExpertCoursesPage() {
     }));
   }
 
-  const pending = courses.filter((c) => c.templateStatus === "draft" || c.templateStatus === "changes-requested");
+  const pending = courses.filter((c) => c.templateStatus === "draft" || c.templateStatus === "changes-requested" || c.templateStatus === "reopened");
   const submitted = courses.filter((c) => c.templateStatus === "submitted" || c.templateStatus === "approved");
 
   function renderTable(list: typeof courses) {

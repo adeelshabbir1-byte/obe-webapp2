@@ -16,7 +16,7 @@ const RULES: { match: (href: string) => boolean; section: string }[] = [
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/chairman\/alumni-custodian$/.test(h), section: "People & Structure" },
 
-  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions)$/.test(h) || /^\/dean\/approvals$/.test(h), section: "Review & Approval" },
+  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h), section: "Review & Approval" },
   { match: (h) => /^\/omc\/(plo-matrix|weight-policy|equivalence|import-content|content-sync|prerequisite-correlation|master-curriculum|passing-criteria|section-comparison|course-repositioning)$/.test(h)
       || /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || /^\/chairman\/(plos|cqi)$/.test(h) || /^\/dean\/curricula$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
