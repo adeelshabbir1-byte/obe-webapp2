@@ -16,3 +16,13 @@ export async function lockedWeights(courseId: string, source: "SE" | "INSTRUCTOR
   }
   return out;
 }
+
+/** Quizzes/assignments can't exceed the number defined on the Assessment Weights page. Returns the limit when already reached, else null. */
+export async function reachedDefinedCount(courseId: string, source: "SE" | "INSTRUCTOR", type: string): Promise<number | null> {
+  if (type !== "Quiz" && type !== "Assignment") return null;
+  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { quizCount: true, assignmentCount: true } });
+  const limit = type === "Quiz" ? course?.quizCount : course?.assignmentCount;
+  if (!limit || limit <= 0) return null;
+  const have = await prisma.assessmentInstrument.count({ where: { courseId, source, type } });
+  return have >= limit ? limit : null;
+}

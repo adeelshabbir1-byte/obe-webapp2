@@ -40,10 +40,17 @@ const POLICY_MIN_COUNT_KEY: Record<string, keyof PolicyMinCount> = {
 const verticalHeaderStyle = {
   textAlign: "center", fontSize: 11, padding: "6px 2px", verticalAlign: "bottom",
 } as const;
+// One tint per assessment type, used down the whole column so you can tell where you are while scrolling a long lecture list.
+const TYPE_TINT: Record<string, string> = { Quiz: "#E3F0FB", Assignment: "#E6F4E4", Midterm: "#FCEFD9", Final: "#F3E4F4" };
 const verticalTextStyle = {
   display: "inline-block", writingMode: "vertical-rl", transform: "rotate(180deg)",
   whiteSpace: "nowrap", maxHeight: 140,
 } as const;
+
+/** "Assignment 1" is enough — only prefix the type when the label doesn't already start with it. */
+function headingFor(i: { type: string; label: string }) {
+  return i.label.toLowerCase().startsWith(i.type.toLowerCase()) ? i.label : `${i.type} ${i.label}`;
+}
 
 function statusBadge(status: string) {
   const styles: Record<string, { bg: string; label: string }> = {
@@ -60,8 +67,8 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf }: {
-  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string; bestOf?: Record<string, number | null>;
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf, counts }: {
+  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string; counts?: Record<string, number | null>; bestOf?: Record<string, number | null>;
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
   // "rows" is the working copy the checkboxes/question-number boxes edit
@@ -315,6 +322,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         const nextLabel = isNumbered ? String(items.length + 1) : `${type} ${items.length + 1}`;
         const minCount = policyMinCount?.[POLICY_MIN_COUNT_KEY[type]] || 0;
         const underMinCount = minCount > 0 && items.length < minCount;
+        const definedCount = counts?.[type] || 0;
+        const atLimit = (type === "Quiz" || type === "Assignment") && definedCount > 0 && items.length >= definedCount;
         return (
           <div className="card" key={type}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -407,7 +416,9 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 ))}
               </tbody>
             </SortableTable>
-            <AddRow type={type} nextLabel={nextLabel} loading={loading} onAdd={addInstrument} />
+            {atLimit
+              ? <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 8 }}>You defined {definedCount} {type.toLowerCase()}(s) for this course. To add more, raise the number on the Assessment Weights page.</p>
+              : <AddRow type={type} nextLabel={nextLabel} loading={loading} onAdd={addInstrument} />}
           </div>
         );
       })}
@@ -438,11 +449,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <th style={{ verticalAlign: "bottom" }}>Sr#</th>
                 <th style={{ verticalAlign: "bottom" }}>Topic</th>
                 {checkboxInstruments.map((i) => (
-                  <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}><span style={verticalTextStyle}>{i.type} {i.label}</span></th>
+                  <th key={i.id} style={{ ...verticalHeaderStyle, background: TYPE_TINT[i.type] }} title={headingFor(i)}><span style={verticalTextStyle}>{headingFor(i)}</span></th>
                 ))}
-                {hasMidterm && <th style={verticalHeaderStyle} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
-                {hasFinal && <th style={verticalHeaderStyle} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
-                <th style={{ verticalAlign: "bottom" }}>Weight</th>
+                {hasMidterm && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Midterm }} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
+                {hasFinal && <th style={{ ...verticalHeaderStyle, background: TYPE_TINT.Final }} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
+                <th style={verticalHeaderStyle} title="Weight"><span style={verticalTextStyle}>Weight</span></th>
                 {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}><span style={verticalTextStyle}>{c.code}</span></th>)}
               </tr>
               {(cloList.length > 0 || hasMidterm || hasFinal) && (
@@ -454,9 +465,9 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <tr style={{ background: "#FAFAF8", fontWeight: 600 }}>
                   <td></td>
                   <td style={{ fontSize: 12 }}>Total</td>
-                  {checkboxInstruments.map((i) => <td key={i.id}></td>)}
-                  {hasMidterm && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
-                  {hasFinal && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
+                  {checkboxInstruments.map((i) => <td key={i.id} style={{ background: TYPE_TINT[i.type] }}></td>)}
+                  {hasMidterm && <td style={{ background: TYPE_TINT.Midterm, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
+                  {hasFinal && <td style={{ background: TYPE_TINT.Final, fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
                   <td style={{ fontSize: 12 }}>{fmtPct(grandTotal)}%</td>
                   {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{fmtPct(t)}%</td>)}
                 </tr>
@@ -479,17 +490,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   </td>
                   {checkboxInstruments.map((i) => {
                     const checked = g.rows.every((r) => r.linkedInstrumentIds.includes(i.id));
-                    return <td key={i.id} style={{ textAlign: "center" }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
+                    return <td key={i.id} style={{ textAlign: "center", background: TYPE_TINT[i.type] }}><input type="checkbox" checked={checked} disabled={saving} onChange={(e) => toggleInstrumentLocal(rowIds, i.id, e.target.checked)} /></td>;
                   })}
                   {hasMidterm && (
-                    <td style={{ background: first.midtermQuestions.trim() ? "#FFF3D6" : undefined }}>
+                    <td style={{ background: first.midtermQuestions.trim() ? "#F6D79A" : TYPE_TINT.Midterm }}>
                       <input value={first.midtermQuestions} disabled={saving}
                         onChange={(e) => setQuestionsLocal(rowIds, "Midterm", e.target.value)}
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.midtermQuestions.trim() ? "#FFF3D6" : undefined }} />
                     </td>
                   )}
                   {hasFinal && (
-                    <td style={{ background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }}>
+                    <td style={{ background: first.finalQuestions.trim() ? "#E3BFE6" : TYPE_TINT.Final }}>
                       <input value={first.finalQuestions} disabled={saving}
                         onChange={(e) => setQuestionsLocal(rowIds, "Final", e.target.value)}
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }} />

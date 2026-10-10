@@ -62,7 +62,9 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     // already enforced above), so save them regardless of whether the
     // %'s themselves need OMC approval — no reason to make the SE re-type
     // their item counts once the exception is approved.
-    await prisma.course.update({ where: { id: course.id }, data: { ...counts, ...bestOf } });
+    const savedCounts = await prisma.course.update({ where: { id: course.id }, data: { ...counts, ...bestOf } });
+    // The counts and best-of choice are saved right away, so build the items now (using the percentages already approved).
+    await ensureAllInstrumentCounts(course.id, "SE", savedCounts);
 
     // Out of policy range — don't apply directly. Create/update a pending
     // exception request for the OMC to approve instead.

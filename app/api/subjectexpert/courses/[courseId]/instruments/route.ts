@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
-import { lockedWeights } from "../../../../../../lib/assessmentLock";
+import { lockedWeights, reachedDefinedCount } from "../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../lib/audit";
 
 const TYPES = ["Assignment", "Quiz", "Midterm", "Final", "Project", "Lab"];
@@ -29,6 +29,9 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   // Under "best K of N" every quiz or assignment carries target / K, so a newly added one takes that weight.
   const lock = await lockedWeights(course.id, "SE", { [body.type]: 1 });
   if (lock.has(body.type)) marksPct = lock.get(body.type) as number;
+
+  const limit = await reachedDefinedCount(course.id, "SE", body.type);
+  if (limit) return NextResponse.json({ error: `You have defined ${limit} ${body.type.toLowerCase()}(s) for this course. To add more, change the number on the Assessment Weights page first.` }, { status: 400 });
 
   const instrument = await prisma.assessmentInstrument.create({
     data: { courseId: course.id, type: body.type, label: body.label, marksPct, maxScore: body.maxScore ? parseInt(body.maxScore, 10) : 10 },
