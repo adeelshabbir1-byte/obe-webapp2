@@ -121,7 +121,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
     try {
       const res = await fetch("/api/coordinator/faculty/load", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role: newRole, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote"), specialization: fd.get("specialization"), secondaryRole: fd.get("alsoInstructorEdit") === "on" ? "INSTRUCTOR" : null }),
+        body: JSON.stringify({ userId, role: newRole, normalLoad: fd.get("normalLoad"), externalLoadCount: fd.get("externalLoadCount"), externalLoadNote: fd.get("externalLoadNote"), specialization: fd.get("specialization"), secondaryRole: fd.get("alsoInstructorEdit") === "on" ? "INSTRUCTOR" : null, ...(newRole === "SUBJECT_EXPERT" ? { outsideExpert: fd.get("outsideExpertEdit") === "on", organization: fd.get("organizationEdit") } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -206,6 +206,14 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
                       <label style={{ fontSize: 10.5, color: "var(--slate)", display: "block" }}>Specialization</label>
                       <input name="specialization" defaultValue={f.specialization || ""} placeholder="e.g. Software Engineering" style={{ width: 160, padding: "5px 6px", border: "1px solid var(--line)" }} />
                     </div>
+                    {f.role === "SUBJECT_EXPERT" && (
+                      <>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5 }}>
+                          <input type="checkbox" name="outsideExpertEdit" defaultChecked={f.canTeach === false} /> Outside expert (never teaches)
+                        </label>
+                        <input name="organizationEdit" defaultValue={f.organization || ""} placeholder="Company or university" style={{ width: 160, padding: "5px 6px", border: "1px solid var(--line)" }} />
+                      </>
+                    )}
                     {f.role === "SUBJECT_EXPERT" && (
                       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5 }}>
                         <input type="checkbox" name="alsoInstructorEdit" defaultChecked={f.secondaryRole === "INSTRUCTOR"} /> Can also be Instructor

@@ -20,20 +20,31 @@ export async function PUT(req: NextRequest) {
     newRole = body.role;
   }
 
+  // Outside expert: designs courses but never teaches. Refuse while the person still teaches a course.
+  const makeOutside = body.outsideExpert === true && newRole === "SUBJECT_EXPERT";
+  if (makeOutside && faculty.canTeach !== false) {
+    const teaching = await prisma.course.count({ where: { instructorId: faculty.id } });
+    if (teaching > 0) return NextResponse.json({ error: `${faculty.name} is the Instructor of ${teaching} course${teaching === 1 ? "" : "s"}. Give those to another teacher first.` }, { status: 409 });
+  }
+  const outsideData = body.outsideExpert === undefined ? {} : makeOutside
+    ? { canTeach: false, organization: typeof body.organization === "string" && body.organization.trim() ? body.organization.trim() : null }
+    : { canTeach: true, organization: null };
+
   const updated = await prisma.user.update({
     where: { id: body.userId },
     data: {
       role: newRole,
+      ...outsideData,
       normalLoad: body.normalLoad !== undefined ? parseInt(body.normalLoad, 10) : faculty.normalLoad,
       externalLoadCount: body.externalLoadCount !== undefined ? parseInt(body.externalLoadCount, 10) : faculty.externalLoadCount,
       externalLoadNote: body.externalLoadNote !== undefined ? body.externalLoadNote || null : faculty.externalLoadNote,
       specialization: body.specialization !== undefined ? body.specialization || null : faculty.specialization,
       // secondaryRole only makes sense once the (possibly just-changed) primary role is Subject Expert.
-      secondaryRole: body.secondaryRole !== undefined ? (newRole === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null) : faculty.secondaryRole,
+      secondaryRole: makeOutside ? null : body.secondaryRole !== undefined ? (newRole === "SUBJECT_EXPERT" && body.secondaryRole === "INSTRUCTOR" ? "INSTRUCTOR" : null) : faculty.secondaryRole,
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: newRole !== faculty.role ? "FACULTY_ROLE_CHANGED" : "FACULTY_LOAD_UPDATED", entityType: "User", entityId: body.userId });
+  await writeAuditLog({ actorUserId: user.id, action: body.outsideExpert !== undefined && makeOutside !== (faculty.canTeach === false) ? (makeOutside ? "FACULTY_MADE_OUTSIDE_EXPERT" : "FACULTY_MADE_INTERNAL") : newRole !== faculty.role ? "FACULTY_ROLE_CHANGED" : "FACULTY_LOAD_UPDATED", entityType: "User", entityId: body.userId });
 
   const { passwordHash, ...safe } = updated;
   return NextResponse.json({ user: safe });
