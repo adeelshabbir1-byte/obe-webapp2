@@ -25,7 +25,7 @@ export async function GET() {
   // failed (grade F, gpaPoints 0) or withdrawn (grade W, gpaPoints null)
   // attempt must stay in the planner so the student gets re-queued to
   // retake it, not silently dropped off the plan.
-  const takenCourseCodes = new Set(transcriptRecords.filter((t) => t.gpaPoints !== null && t.gpaPoints > 0).map((t) => t.courseCode));
+  const takenCourseCodes = new Set(transcriptRecords.filter((t) => t.grade === "P" || (t.gpaPoints !== null && t.gpaPoints > 0)).map((t) => t.courseCode));
   const enrolledIds = new Set(enrolledCourseIds.map((e) => e.courseId));
   const planByCourseId = new Map(degreePlanEntries.map((e) => [e.courseId, e]));
 

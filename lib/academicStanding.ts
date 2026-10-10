@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { bestAttemptTotals } from "./cgpaMath";
 
 export type AcademicStanding = "GOOD_STANDING" | "WARNING" | "PROBATION";
 
@@ -7,12 +8,8 @@ export type AcademicStanding = "GOOD_STANDING" | "WARNING" | "PROBATION";
 // never affect a real academic-standing determination).
 export async function computeCgpa(studentId: string): Promise<number | null> {
   const records = await prisma.studentTranscriptRecord.findMany({ where: { studentId } });
-  let totalPoints = 0, totalCredits = 0;
-  for (const r of records) {
-    if (r.gpaPoints === null) continue;
-    totalPoints += r.gpaPoints * r.creditHours;
-    totalCredits += r.creditHours;
-  }
+  // Best attempt per course counts (see lib/cgpaMath.ts).
+  const { points: totalPoints, credits: totalCredits } = bestAttemptTotals(records);
   return totalCredits > 0 ? totalPoints / totalCredits : null;
 }
 

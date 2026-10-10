@@ -50,9 +50,9 @@ export async function suggestSchedule(studentId: string): Promise<SuggestedSched
 
   // A course only counts as done if actually PASSED — failed/withdrawn
   // attempts must be re-scheduled, same fix as the degree-plan API.
-  const passedCodes = new Set(transcriptRecords.filter((t) => t.gpaPoints !== null && t.gpaPoints > 0).map((t) => t.courseCode));
+  const passedCodes = new Set(transcriptRecords.filter((t) => t.grade === "P" || (t.gpaPoints !== null && t.gpaPoints > 0)).map((t) => t.courseCode));
   const failedOrWithdrawnCodes = new Set(
-    transcriptRecords.filter((t) => !(t.gpaPoints !== null && t.gpaPoints > 0)).map((t) => t.courseCode)
+    transcriptRecords.filter((t) => !(t.grade === "P" || (t.gpaPoints !== null && t.gpaPoints > 0))).map((t) => t.courseCode)
   );
   const activeEnrolledIds = new Set(activeEnrollments.map((e) => e.courseId));
 

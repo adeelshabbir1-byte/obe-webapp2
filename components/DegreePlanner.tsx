@@ -87,11 +87,16 @@ export default function DegreePlanner() {
 
   const cgpa = useMemo(() => {
     if (!data) return null;
-    let totalPoints = 0, totalCredits = 0;
+    // Best attempt per course counts (a retaken F does not drag the average).
+    const bestByCode = new Map<string, { gpaPoints: number; creditHours: number }>();
     for (const t of data.transcriptRecords) {
       if (t.gpaPoints === null) continue;
-      totalPoints += t.gpaPoints * t.creditHours; totalCredits += t.creditHours;
+      const key = t.courseCode.trim().toUpperCase();
+      const cur = bestByCode.get(key);
+      if (!cur || t.gpaPoints > cur.gpaPoints) bestByCode.set(key, { gpaPoints: t.gpaPoints, creditHours: t.creditHours });
     }
+    let totalPoints = 0, totalCredits = 0;
+    bestByCode.forEach((b) => { totalPoints += b.gpaPoints * b.creditHours; totalCredits += b.creditHours; });
     for (const p of data.planned) {
       if (!p.hypotheticalGrade) continue;
       const scaleEntry = data.gradingScale.find((g) => g.letter === p.hypotheticalGrade);
