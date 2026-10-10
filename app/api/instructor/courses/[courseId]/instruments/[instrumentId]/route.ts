@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
+import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeRowWeight } from "../../../../../../../lib/lectureWeights";
 
@@ -15,6 +16,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   const body = await req.json();
   const data: any = {};
+  if (body.marksPct !== undefined && (await lockedWeights(course.id, "INSTRUCTOR")).has(instrument.type)) {
+    return NextResponse.json({ error: "Best-of quizzes and assignments all carry the same weight, which is set from the Assessment Weights page. You can change what each is marked out of." }, { status: 400 });
+  }
   if (body.marksPct !== undefined) {
     const marksPct = Math.round(parseFloat(body.marksPct) * 10000) / 10000;
     if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });

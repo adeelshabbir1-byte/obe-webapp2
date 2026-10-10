@@ -38,8 +38,11 @@ const POLICY_MIN_COUNT_KEY: Record<string, keyof PolicyMinCount> = {
 // used on the columns that actually multiply (instruments, CLOs); the
 // fixed ones (Topic, Weight, Q#) stay normal horizontal headers.
 const verticalHeaderStyle = {
-  writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap",
-  fontSize: 11, padding: "6px 2px", verticalAlign: "bottom", maxHeight: 140,
+  textAlign: "center", fontSize: 11, padding: "6px 2px", verticalAlign: "bottom",
+} as const;
+const verticalTextStyle = {
+  display: "inline-block", writingMode: "vertical-rl", transform: "rotate(180deg)",
+  whiteSpace: "nowrap", maxHeight: 140,
 } as const;
 
 function statusBadge(status: string) {
@@ -357,7 +360,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     </td>
                     <td>
                       <input
-                        type="number" step="any" min={0} max={100} defaultValue={fmtPct(i.marksPct)}
+                        type="number" step="any" min={0} max={100} defaultValue={fmtPct(i.marksPct)} readOnly={!!kBest} disabled={!!kBest} title={kBest ? `Best ${kBest} of ${items.length} count, so every ${type.toLowerCase()} carries the same weight. You can still change what it is marked out of.` : undefined}
                         onBlur={(e) => { const n = parseFloat(e.target.value); if (!isNaN(n) && Math.abs(n - i.marksPct) > 0.0001) editInstrumentLocal(i.id, { marksPct: n }); }}
                         style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />%
@@ -435,12 +438,12 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <th style={{ verticalAlign: "bottom" }}>Sr#</th>
                 <th style={{ verticalAlign: "bottom" }}>Topic</th>
                 {checkboxInstruments.map((i) => (
-                  <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}>{i.type} {i.label}</th>
+                  <th key={i.id} style={verticalHeaderStyle} title={`${i.type} ${i.label}`}><span style={verticalTextStyle}>{i.type} {i.label}</span></th>
                 ))}
-                {hasMidterm && <th style={verticalHeaderStyle} title="Midterm Q#">Midterm Q#</th>}
-                {hasFinal && <th style={verticalHeaderStyle} title="Final Q#">Final Q#</th>}
+                {hasMidterm && <th style={verticalHeaderStyle} title="Midterm Q#"><span style={verticalTextStyle}>Midterm Q#</span></th>}
+                {hasFinal && <th style={verticalHeaderStyle} title="Final Q#"><span style={verticalTextStyle}>Final Q#</span></th>}
                 <th style={{ verticalAlign: "bottom" }}>Weight</th>
-                {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}>{c.code}</th>)}
+                {cloList.map((c) => <th key={c.id} style={verticalHeaderStyle} title={c.code}><span style={verticalTextStyle}>{c.code}</span></th>)}
               </tr>
               {(cloList.length > 0 || hasMidterm || hasFinal) && (
                 // <td> (not <th>) deliberately — SortableTable binds

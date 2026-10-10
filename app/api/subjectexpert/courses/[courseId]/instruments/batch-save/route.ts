@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
+import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
 
@@ -31,11 +32,14 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const validInstruments = await prisma.assessmentInstrument.findMany({ where: { id: { in: instrumentIds }, courseId: course.id, source: "SE" } });
   const validIds = new Set(validInstruments.map((i) => i.id));
 
+  // With "best K of N" quizzes or assignments each item's weight is fixed; only the marks it is out of can change.
+  const locked = await lockedWeights(course.id, "SE");
+  const typeOf = new Map<string, string>(validInstruments.map((i) => [i.id as string, i.type as string]));
   const badMarks: string[] = [];
   for (const e of edits) {
     if (!validIds.has(e.instrumentId)) continue;
     const data: any = {};
-    if (e.marksPct !== undefined) {
+    if (e.marksPct !== undefined && !locked.has(typeOf.get(e.instrumentId) || "")) {
       const marksPct = Math.round(Number(e.marksPct) * 10000) / 10000;
       if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) { badMarks.push(e.instrumentId); continue; }
       data.marksPct = marksPct;
