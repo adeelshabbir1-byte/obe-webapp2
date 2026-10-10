@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const locked = templateLockResponse(course); if (locked) return locked;
+  const tplLocked = templateLockResponse(course); if (tplLocked) return tplLocked;
 
   const blocked = await blockedAsNonBaseCourse(course.id);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
