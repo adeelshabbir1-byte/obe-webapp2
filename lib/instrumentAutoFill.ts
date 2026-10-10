@@ -18,6 +18,14 @@ import { recomputeRowWeight } from "./lectureWeights";
  * already exist, this does nothing — it only ever adds, never removes,
  * so nothing the SE already customized is touched or deleted.
  */
+/** Splits a percentage evenly into n parts to two decimals (50 over 8 -> 6.25 each; 40 over 3 -> 13.34, 13.33, 13.33), summing exactly. */
+function splitHundredths(total: number, n: number): number[] {
+  if (n <= 0) return [];
+  const all = Math.round(total * 100);
+  const base = Math.floor(all / n), rem = all - base * n;
+  return Array.from({ length: n }, (_, i) => (base + (i < rem ? 1 : 0)) / 100);
+}
+
 /**
  * If the SE lowers a count (6 quizzes -> 4), the extra items are removed, newest first, along with their topic links,
  * and every lecture topic they were tied to has its weight recomputed. Returns how many were removed.
@@ -49,9 +57,8 @@ export async function ensureInstrumentCount(
   if (removed > 0) {
     // The remaining items now carry the whole category weight, split evenly (whole points, remainder to the first ones).
     const left = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
-    const target = Math.round(categoryTargetPct);
-    const base = Math.floor(target / left.length), rem = target - base * left.length;
-    for (let i = 0; i < left.length; i++) await prisma.assessmentInstrument.update({ where: { id: left[i].id }, data: { marksPct: base + (i < rem ? 1 : 0) } });
+    const parts = splitHundredths(categoryTargetPct, left.length);
+    for (let i = 0; i < left.length; i++) await prisma.assessmentInstrument.update({ where: { id: left[i].id }, data: { marksPct: parts[i] } });
     for (const row of await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true } })) await recomputeRowWeight(row.id);
   }
 
@@ -61,14 +68,13 @@ export async function ensureInstrumentCount(
 
   const existingSum = existing.reduce((s, i) => s + i.marksPct, 0);
   const remaining = Math.max(0, categoryTargetPct - existingSum);
-  const base = Math.floor(remaining / missing);
-  const remainder = remaining - base * missing; // leftover whole points, one each to the first N new rows
+  const parts = splitHundredths(remaining, missing);
 
   const isNumbered = type === "Midterm" || type === "Final";
   for (let i = 0; i < missing; i++) {
     const n = existing.length + i + 1;
     const label = isNumbered ? String(n) : `${type} ${n}`;
-    const marksPct = base + (i < remainder ? 1 : 0);
+    const marksPct = parts[i];
     await prisma.assessmentInstrument.create({ data: { courseId, source, type, label, marksPct, maxScore: 10 } });
   }
 }
