@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { importClosIntoMasterCurriculum } from "../../../../../../lib/masterClos";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // Super User: load CLOs and PLO mapping from Excel into an official (shared) curriculum, so every institute benefits.
 export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {

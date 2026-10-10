@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { coordinatorIdsFor } from "./reportScope";
 import { ensureCoursePloMapping } from "./coursePloSync";
-import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "./contentSync";
+import { syncCourseContentToLinkedCourses } from "./contentSync";
 
 // Pushes an institute's own master curriculum (its edited copy) down into the real courses of its batches:
 // CLOs (statement, Bloom level, PLO by number), contribution % (shared equally per PLO), the course-to-PLO matrix,
@@ -60,6 +60,8 @@ export async function planMasterPush(user: Who, curriculumId: string, onlyIds?: 
     prisma.masterCourseClo.groupBy({ by: ["masterCourseId"], where: { masterCourseId: { in: matched.map((m) => m.masterCourseId) } }, _count: { _all: true } }),
     prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: ids } }, _count: { _all: true } }),
   ]);
+  // Courses that follow a base course, in one query rather than one per course.
+  const followers = new Set((await prisma.courseContentSyncMember.findMany({ where: { courseId: { in: ids.length ? ids : ["none"] }, isBase: false }, select: { courseId: true } })).map((m) => m.courseId));
   const rows: PlanRow[] = [];
   for (const { course, masterCourseId } of matched) {
     const courseClos = cloCounts.find((x) => x.courseId === course.id)?._count._all || 0;
@@ -69,7 +71,7 @@ export async function planMasterPush(user: Who, curriculumId: string, onlyIds?: 
     if (masterClos === 0) reason = "the master course has no CLOs";
     else if (course.templateStatus === "approved") reason = "approved by the OMC and locked";
     else if ((marks.find((x) => x.courseId === course.id)?._count._all || 0) > 0) reason = "students already have marks in it";
-    else { const blocked = await blockedAsNonBaseCourse(course.id); if (blocked) reason = "follows a base course (updated through it)"; }
+    else if (followers.has(course.id)) reason = "follows a base course (updated through it)";
     rows.push(reason ? { ...base, action: "skip", reason } : { ...base, action: courseClos === 0 ? "fill" : "update" });
   }
   return rows;

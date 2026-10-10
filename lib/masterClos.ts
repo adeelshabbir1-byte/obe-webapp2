@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 
 const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6"];
@@ -54,17 +55,14 @@ export async function importClosIntoMasterCurriculum(curriculumId: string, file:
   }
   if (byCourse.size === 0) return { ok: false, error: "no usable CLO rows found", errors: errors.slice(0, 10) };
 
-  let clos = 0;
-  for (const [code, list] of Array.from(byCourse.entries())) {
-    const courseId = courseByCode.get(code)!;
-    await prisma.$transaction([
-      prisma.masterCourseClo.deleteMany({ where: { masterCourseId: courseId } }),
-      prisma.masterCourseClo.createMany({
-        data: list.map((c, i) => ({ masterCourseId: courseId, statement: c.statement, bloomLevel: c.bloom, orderIndex: i, mappedPloId: c.ploId, ploMappingSource: c.ploId ? "MANUAL" : null })),
-      }),
-    ]);
-    clos += list.length;
-  }
+  // Two queries in one transaction for the whole file (one per course used to run past the time limit on large curricula).
+  const ids = Array.from(byCourse.keys()).map((code) => courseByCode.get(code)!);
+  const data = Array.from(byCourse.entries()).flatMap(([code, list]) => list.map((c, i) => ({ masterCourseId: courseByCode.get(code)!, statement: c.statement, bloomLevel: c.bloom, orderIndex: i, mappedPloId: c.ploId, ploMappingSource: c.ploId ? "MANUAL" : null })));
+  await prisma.$transaction([
+    prisma.masterCourseClo.deleteMany({ where: { masterCourseId: { in: ids } } }),
+    prisma.masterCourseClo.createMany({ data }),
+  ]);
+  const clos = data.length;
   return { ok: true, courses: byCourse.size, clos, errors: Array.from(new Set(errors)).slice(0, 15) };
 }
 
@@ -81,29 +79,45 @@ export async function copyMasterClos(fromId: string, toId: string, opts: { onlyE
   if (!from || !to) return null;
   const targetByCode = new Map(to.courses.map((c) => [norm(c.code), c]));
   const toPlo = new Map(to.plos.map((p) => [p.number, p.id]));
-  let courses = 0, clos = 0, keptOwn = 0, topicsCopied = 0;
+  let keptOwn = 0;
   const missing: string[] = [];
+  const pairs: { src: (typeof from.courses)[number]; tgt: (typeof to.courses)[number] }[] = [];
   for (const src of from.courses) {
     if (src.seedClos.length === 0) continue;
     const tgt = targetByCode.get(norm(src.code));
     if (!tgt) { missing.push(src.code); continue; }
     if (opts.onlyEmpty && tgt._count.seedClos > 0) { keptOwn++; continue; }
-    await prisma.$transaction([
-      prisma.masterCourseClo.deleteMany({ where: { masterCourseId: tgt.id } }),
-      prisma.masterCourseClo.createMany({
-        data: src.seedClos.map((c, i) => ({ masterCourseId: tgt.id, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: i, mappedPloId: c.mappedPlo ? toPlo.get(c.mappedPlo.number) || null : null, ploMappingSource: c.mappedPlo ? c.ploMappingSource || "MANUAL" : null })),
-      }),
-    ]);
-    const tgtTopics = await prisma.masterCourseTopic.count({ where: { masterCourseId: tgt.id } });
-    if (tgtTopics === 0) {
-      const topics = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: src.id } });
-      if (topics.length) { await prisma.masterCourseTopic.createMany({ data: topics.map((t) => ({ masterCourseId: tgt.id, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic })), skipDuplicates: true }); topicsCopied++; }
-    }
-    // Fill empty textbook/description/references from the source.
-    if (!tgt.textbook || !tgt.catalogDescription || !tgt.referenceMaterial) {
-      await prisma.masterCourse.update({ where: { id: tgt.id }, data: { textbook: tgt.textbook || src.textbook, catalogDescription: tgt.catalogDescription || src.catalogDescription, referenceMaterial: tgt.referenceMaterial || src.referenceMaterial } });
-    }
-    courses++; clos += src.seedClos.length;
+    pairs.push({ src, tgt });
   }
+  // Everything in a handful of bulk queries so even a 300-course curriculum finishes well inside the time limit.
+  const tgtIds = pairs.map((p) => p.tgt.id);
+  const cloData = pairs.flatMap(({ src, tgt }) => src.seedClos.map((c, i) => ({ masterCourseId: tgt.id, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: i, mappedPloId: c.mappedPlo ? toPlo.get(c.mappedPlo.number) || null : null, ploMappingSource: c.mappedPlo ? c.ploMappingSource || "MANUAL" : null })));
+  if (pairs.length) {
+    await prisma.$transaction([
+      prisma.masterCourseClo.deleteMany({ where: { masterCourseId: { in: tgtIds } } }),
+      prisma.masterCourseClo.createMany({ data: cloData }),
+    ]);
+  }
+  // Lecture topics only for target courses that have none.
+  const withTopics = new Set((await prisma.masterCourseTopic.groupBy({ by: ["masterCourseId"], where: { masterCourseId: { in: tgtIds.length ? tgtIds : ["none"] } } })).map((g) => g.masterCourseId));
+  const needTopics = pairs.filter((p) => !withTopics.has(p.tgt.id));
+  let topicsCopied = 0;
+  if (needTopics.length) {
+    const srcTopics = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: { in: needTopics.map((p) => p.src.id) } } });
+    const tgtOf = new Map(needTopics.map((p) => [p.src.id, p.tgt.id]));
+    const data = srcTopics.map((t) => ({ masterCourseId: tgtOf.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic }));
+    if (data.length) { await prisma.masterCourseTopic.createMany({ data, skipDuplicates: true }); topicsCopied = new Set(data.map((d) => d.masterCourseId)).size; }
+  }
+  // Empty textbook/description/references filled from the source, one bulk UPDATE per 200 courses.
+  const fills = pairs.filter(({ src, tgt }) => (!tgt.textbook && src.textbook) || (!tgt.catalogDescription && src.catalogDescription) || (!tgt.referenceMaterial && src.referenceMaterial));
+  for (let i = 0; i < fills.length; i += 200) {
+    const rows = fills.slice(i, i + 200).map(({ src, tgt }) => Prisma.sql`(${tgt.id}::text, ${src.textbook}::text, ${src.catalogDescription}::text, ${src.referenceMaterial}::text)`);
+    await prisma.$executeRaw`UPDATE "MasterCourse" AS m SET
+      "textbook" = COALESCE(NULLIF(m."textbook", ''), v.tb),
+      "catalogDescription" = COALESCE(NULLIF(m."catalogDescription", ''), v.cd),
+      "referenceMaterial" = COALESCE(NULLIF(m."referenceMaterial", ''), v.rm)
+      FROM (VALUES ${Prisma.join(rows)}) AS v(id, tb, cd, rm) WHERE m."id" = v.id`;
+  }
+  const courses = pairs.length, clos = cloData.length;
   return { courses, clos, keptOwn, topicsCopied, missing: missing.slice(0, 20) };
 }

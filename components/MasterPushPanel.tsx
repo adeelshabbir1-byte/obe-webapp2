@@ -28,12 +28,12 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
     setBusy(true); setError("");
     const sum: Totals = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, mappingsAdded: 0 };
     setProgress({ done: 0, total: todo.length });
-    for (let i = 0; i < todo.length; i += 10) {
-      const r = await fetch(`/api/omc/master-curriculum/${curriculumId}/push-to-courses`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseIds: todo.slice(i, i + 10) }) });
+    for (let i = 0; i < todo.length; i += 5) {
+      const r = await fetch(`/api/omc/master-curriculum/${curriculumId}/push-to-courses`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseIds: todo.slice(i, i + 5) }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setError(`${d.error || "Update stopped."} ${i} of ${todo.length} course(s) were done; press Update again to continue.`); break; }
       (Object.keys(sum) as (keyof Totals)[]).forEach((k) => { sum[k] += d[k] || 0; });
-      setProgress({ done: Math.min(i + 10, todo.length), total: todo.length });
+      setProgress({ done: Math.min(i + 5, todo.length), total: todo.length });
     }
     setTotals(sum); setBusy(false);
   }

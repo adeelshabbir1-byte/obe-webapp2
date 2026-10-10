@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { importClosIntoMasterCurriculum } from "../../../../../../lib/masterClos";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 // Loads CLOs (with their PLO mapping) into the courses of THIS institute's own master curriculum, from an Excel file
 // with the columns of the Export's "CLOs and PLO mapping" sheet. See lib/masterClos.ts.
