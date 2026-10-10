@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -67,6 +67,7 @@ export default function AppShell({
   const [query, setQuery] = useState("");
   const [hit, setHit] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
+  const [acctOpen, setAcctOpen] = useState(false);
 
   // The program picker updates at once when chosen, then follows whatever the server sends after the refresh.
   useEffect(() => { setDeptCoordinator(deptCoordinatorProp); }, [deptCoordinatorProp]);
@@ -341,40 +342,43 @@ export default function AppShell({
           })}
         </nav>
 
-        <div className="sb-foot">
-          <div className="sb-user">
-            <span className="avatar" aria-hidden="true">{initials(userName)}</span>
-            <div style={{ minWidth: 0 }}>
-              <div className="sb-user-name" title={userName}>{userName}</div>
-              <div className="sb-user-role">{roleLabel}</div>
+        {/* Account area kept to one slim row; its options open upward on demand so the menu keeps the space. */}
+        <div className="sb-foot" data-open={acctOpen ? "true" : "false"}>
+          {acctOpen && (
+            <div className="sb-actions" id="sb-account-menu">
+              {otherRoles.map((o) => (
+                <button key={o.role} type="button" onClick={() => switchRole(o.role)} className="sb-action" disabled={switching}>
+                  <Repeat size={14} /> {switching ? "Switching…" : `Switch to ${o.label}`}
+                </button>
+              ))}
+              {isAlumniCustodian && (
+                <>
+                  <Link prefetch={false} href="/faculty/alumni-review" className="sb-action"><HeartHandshake size={14} /> Review Alumni & Employer Data</Link>
+                  <Link prefetch={false} href="/coordinator/surveys" className="sb-action"><MessageSquareText size={14} /> Manage Feedback Surveys</Link>
+                </>
+              )}
+              <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={14} /> Security Settings</Link>
+              <button type="button" onClick={logout} className="sb-action sb-danger" disabled={loggingOut}>
+                <LogOut size={14} /> {loggingOut ? "Signing out…" : "Sign out"}
+              </button>
             </div>
-          </div>
+          )}
           {deptCoordinator && (
             <div className="sb-picker">
-              <div className="sb-picker-label">Working on program</div>
-              <select value={deptCoordinator.actingForId || ""} onChange={(e) => e.target.value && pickProgram(e.target.value)} aria-label="Working on program">
+              <select value={deptCoordinator.actingForId || ""} onChange={(e) => e.target.value && pickProgram(e.target.value)} aria-label="Working on program" title="Working on program">
                 {!deptCoordinator.actingForId && <option value="">— choose a program —</option>}
                 {deptCoordinator.programs.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
           )}
-          <div className="sb-actions">
-            <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={15} /> Security Settings</Link>
-            {otherRoles.map((o) => (
-              <button key={o.role} type="button" onClick={() => switchRole(o.role)} className="sb-action" disabled={switching}>
-                <Repeat size={15} /> {switching ? "Switching…" : `Switch to ${o.label}`}
-              </button>
-            ))}
-            {isAlumniCustodian && (
-              <>
-                <Link prefetch={false} href="/faculty/alumni-review" className="sb-action"><HeartHandshake size={15} /> Review Alumni & Employer Data</Link>
-                <Link prefetch={false} href="/coordinator/surveys" className="sb-action"><MessageSquareText size={15} /> Manage Feedback Surveys</Link>
-              </>
-            )}
-            <button type="button" onClick={logout} className="sb-action sb-danger" disabled={loggingOut}>
-              <LogOut size={15} /> {loggingOut ? "Signing out…" : "Sign out"}
-            </button>
-          </div>
+          <button type="button" className="sb-user" onClick={() => setAcctOpen((o) => !o)} aria-expanded={acctOpen} aria-controls="sb-account-menu" title="Account options">
+            <span className="avatar sb-avatar" aria-hidden="true">{initials(userName)}</span>
+            <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+              <span className="sb-user-name">{userName}</span>
+              <span className="sb-user-role">{roleLabel}{otherRoles.length > 0 ? ` · ${otherRoles.length} other role${otherRoles.length > 1 ? "s" : ""}` : ""}</span>
+            </span>
+            {acctOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+          </button>
         </div>
       </aside>
 
