@@ -50,7 +50,13 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const row = await prisma.lectureRow.findUnique({ where: { id: params.lectureId } });
   if (!row || row.courseId !== course.id || row.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  await prisma.lectureRow.delete({ where: { id: params.lectureId } });
+  const attendance = await prisma.attendanceRecord.count({ where: { lectureRowId: params.lectureId } });
+  if (attendance > 0) return NextResponse.json({ error: "Attendance has already been taken for this lecture, so it cannot be deleted." }, { status: 409 });
+  await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: params.lectureId } }),
+    prisma.paperDistributionItem.updateMany({ where: { lectureRowId: params.lectureId }, data: { lectureRowId: null } }),
+    prisma.lectureRow.delete({ where: { id: params.lectureId } }),
+  ]);
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_DELETED", entityType: "LectureRow", entityId: params.lectureId });
   await syncCourseContentToLinkedCourses(course.id);
 

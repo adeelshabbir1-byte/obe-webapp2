@@ -30,13 +30,17 @@ export async function POST(req: NextRequest) {
   const batch = await prisma.batch.findUnique({ where: { id: batchId } });
   if (!batch || batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
 
+  // A double-click or retry must not push the batch two semesters.
+  const recent = await prisma.auditLog.findFirst({ where: { action: "STUDENTS_SEMESTER_ADVANCED", entityId: batch.id, createdAt: { gt: new Date(Date.now() - 60_000) } } });
+  if (recent) return NextResponse.json({ error: "This batch was just advanced. Wait a minute before advancing it again." }, { status: 409 });
+
   const students = await prisma.student.findMany({ where: { batchId } });
   const heldBackSet = new Set(heldBackIds);
   const toAdvance = students.filter((s) => !heldBackSet.has(s.id));
 
   if (toAdvance.length > 0) {
     await prisma.$transaction(
-      toAdvance.map((s) => prisma.student.update({ where: { id: s.id }, data: { currentSemesterNumber: s.currentSemesterNumber + 1 } }))
+      toAdvance.map((s) => prisma.student.update({ where: { id: s.id }, data: { currentSemesterNumber: { increment: 1 } } }))
     );
   }
 

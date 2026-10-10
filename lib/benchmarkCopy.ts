@@ -99,8 +99,8 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
 
   const [ploMappings, clos, lectureRows, instruments, paperItems] = await Promise.all([
     prisma.coursePloMapping.findMany({ where: { courseId: source.id }, include: { plo: true } }),
-    prisma.cLO.findMany({ where: { courseId: source.id }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
-    prisma.lectureRow.findMany({ where: { courseId: source.id }, include: { instrumentLinks: true } }),
+    prisma.cLO.findMany({ where: { courseId: source.id, source: "SE" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
+    prisma.lectureRow.findMany({ where: { courseId: source.id, source: "SE" }, include: { instrumentLinks: true } }),
     // Only the Subject Expert's own template instruments — anything an
     // instructor added themselves for their own section shouldn't be
     // copied into a different course as if it were shared content.
@@ -200,6 +200,10 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
     data: {
       assignmentPct: source.assignmentPct, quizPct: source.quizPct, projectPct: source.projectPct,
       labPct: source.labPct, midtermPct: source.midtermPct, finalPct: source.finalPct,
+      // Counts and best-of travel with the instruments, or the copy would add up every quiz instead of the best K.
+      quizCount: source.quizCount, assignmentCount: source.assignmentCount,
+      quizBestOf: source.quizBestOf, assignmentBestOf: source.assignmentBestOf,
+      weightsConfirmedAt: source.weightsConfirmedAt,
       benchmarkSourceId: source.id,
       // Only fill these in if the new course doesn't already have its own
       // — a benchmark shouldn't clobber content someone already typed.

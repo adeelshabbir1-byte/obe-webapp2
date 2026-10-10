@@ -319,17 +319,25 @@ export async function syncCourseContentToLinkedCourses(sourceCourseId: string) {
     await Promise.all(chunk.map(async (targetId) => {
       if (gradedCourseIds.has(targetId)) { skippedGraded.push(targetId); return; }
 
-      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId } } });
+      // Attendance or uploaded evidence ties to the rows we are about to replace: leave such a section alone
+      // rather than fail halfway and leave it empty.
+      const [att, ev] = await Promise.all([
+        prisma.attendanceRecord.count({ where: { lectureRow: { courseId: targetId } } }),
+        prisma.instrumentEvidence.count({ where: { instrument: { courseId: targetId } } }),
+      ]);
+      if (att > 0 || ev > 0) { skippedGraded.push(targetId); return; }
+      // Replace only the Subject Expert's template copy; the instructor's own copy (source INSTRUCTOR) is not touched.
+      await prisma.lectureRowInstrument.deleteMany({ where: { lectureRow: { courseId: targetId, source: "SE" } } });
       // PaperDistributionItem references both LectureRow and CLO via FK,
       // so it must clear first. Then LectureRow itself references CLO
       // (via cloId), so it has to go before CLO too — only once both of
       // those are gone can CLO, AssessmentInstrument, and
       // CoursePloMapping (none of which anything else still points at)
       // safely run together.
-      await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId } });
-      await prisma.lectureRow.deleteMany({ where: { courseId: targetId } });
-      await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId } });
-      await prisma.cLO.deleteMany({ where: { courseId: targetId } });
+      await prisma.paperDistributionItem.deleteMany({ where: { courseId: targetId, source: "SE" } });
+      await prisma.lectureRow.deleteMany({ where: { courseId: targetId, source: "SE" } });
+      await prisma.assessmentInstrument.deleteMany({ where: { courseId: targetId, source: "SE" } });
+      await prisma.cLO.deleteMany({ where: { courseId: targetId, source: "SE" } });
       await prisma.coursePloMapping.deleteMany({ where: { courseId: targetId } });
 
       await copyCourseContent(sourceCourseId, targetId);

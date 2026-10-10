@@ -10,9 +10,20 @@ export async function DELETE(req: Request, { params }: { params: { studentId: st
   const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: true } });
   if (!student || student.batch.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  await prisma.studentMark.deleteMany({ where: { studentId: params.studentId } });
-  await prisma.studentEnrollment.deleteMany({ where: { studentId: params.studentId } });
-  await prisma.student.delete({ where: { id: params.studentId } });
+  // Everything that points at the student goes in one step, so a failure cannot leave a half-deleted student.
+  const sid = params.studentId;
+  await prisma.$transaction([
+    prisma.studentMark.deleteMany({ where: { studentId: sid } }),
+    prisma.studentEnrollment.deleteMany({ where: { studentId: sid } }),
+    prisma.attendanceRecord.deleteMany({ where: { studentId: sid } }),
+    prisma.studentSession.deleteMany({ where: { studentId: sid } }),
+    prisma.studentTranscriptRecord.deleteMany({ where: { studentId: sid } }),
+    prisma.degreePlanEntry.deleteMany({ where: { studentId: sid } }),
+    prisma.electiveChoice.deleteMany({ where: { studentId: sid } }),
+    prisma.outOfBatchRequest.deleteMany({ where: { studentId: sid } }),
+    prisma.registrationApprovalRequest.deleteMany({ where: { studentId: sid } }),
+    prisma.student.delete({ where: { id: sid } }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

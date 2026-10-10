@@ -21,8 +21,11 @@ export async function POST(req: NextRequest) {
   const rowOffset: number = typeof body?.rowOffset === "number" ? body.rowOffset : 0;
   if (!batchId || dataRows.length === 0) return NextResponse.json({ error: "batchId and rows are required" }, { status: 400 });
 
-  const batch = await prisma.batch.findUnique({ where: { id: batchId } });
+  const batch = await prisma.batch.findUnique({ where: { id: batchId }, include: { coordinator: { select: { managedById: true } } } });
   if (!batch) return NextResponse.json({ error: "batch not found" }, { status: 404 });
+  // An Institute Head or OMC member may only import into their own institute's batches.
+  const myInstitute = user.role === "CHAIRMAN" ? user.id : user.managedById;
+  if (user.role !== "PROGRAM_COORDINATOR" && batch.coordinator?.managedById !== myInstitute) return NextResponse.json({ error: "not your institute's batch" }, { status: 403 });
   if (user.role === "PROGRAM_COORDINATOR" && batch.coordinatorId !== user.id) return NextResponse.json({ error: "not your batch" }, { status: 403 });
 
   const gradingScale = await getGradingScaleForBatch(batch.coordinatorId, batch);

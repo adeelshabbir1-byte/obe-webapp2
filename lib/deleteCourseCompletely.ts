@@ -76,6 +76,7 @@ export async function deleteCourseCompletely(courseId: string) {
     // Mid-level: things that reference lecture rows / CLOs / instruments directly
     prisma.scheduleSection.deleteMany({ where: { courseId } }),
     prisma.lectureRow.deleteMany({ where: { courseId } }),
+    prisma.instrumentEvidence.deleteMany({ where: { instrument: { courseId } } }),
     prisma.assessmentInstrument.deleteMany({ where: { courseId } }),
     prisma.cLO.deleteMany({ where: { courseId } }),
     // Finally, the course itself

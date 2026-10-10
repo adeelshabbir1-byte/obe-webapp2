@@ -60,6 +60,9 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
   if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  const inUse = await prisma.lectureRow.count({ where: { cloId: params.cloId } });
+  if (inUse > 0) return NextResponse.json({ error: `This CLO is used by ${inUse} lecture topic(s). Move those topics to another CLO first.` }, { status: 409 });
+  await prisma.paperDistributionItem.updateMany({ where: { cloId: params.cloId }, data: { cloId: null } });
   await prisma.cLO.delete({ where: { id: params.cloId } });
   await renumberClos(course.id, "SE");
   await writeAuditLog({ actorUserId: user.id, action: "CLO_DELETED", entityType: "CLO", entityId: params.cloId });

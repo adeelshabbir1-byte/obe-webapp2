@@ -74,6 +74,7 @@ export async function deleteBatchCompletely(batchId: string) {
     prisma.course.updateMany({ where: { prerequisiteCourseId: { in: courseIds } }, data: { prerequisiteCourseId: null } }),
     prisma.scheduleSection.deleteMany({ where: { courseId: { in: courseIds } } }),
     prisma.lectureRow.deleteMany({ where: { courseId: { in: courseIds } } }),
+    prisma.instrumentEvidence.deleteMany({ where: { instrument: { courseId: { in: courseIds } } } }),
     prisma.assessmentInstrument.deleteMany({ where: { courseId: { in: courseIds } } }),
     prisma.cLO.deleteMany({ where: { courseId: { in: courseIds } } }),
 

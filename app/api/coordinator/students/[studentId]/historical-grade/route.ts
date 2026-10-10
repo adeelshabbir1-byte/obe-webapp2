@@ -13,8 +13,10 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
   const user = await getAuthenticatedUser();
   if (!user || !["PROGRAM_COORDINATOR", "CHAIRMAN", "OMC"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: true } });
+  const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: { include: { coordinator: { select: { managedById: true } } } } } });
   if (!student || !student.batch) return NextResponse.json({ error: "student not found" }, { status: 404 });
+  const myInstitute = user.role === "CHAIRMAN" ? user.id : user.managedById;
+  if (user.role !== "PROGRAM_COORDINATOR" && student.batch.coordinator?.managedById !== myInstitute) return NextResponse.json({ error: "not your institute's student" }, { status: 403 });
   if (user.role === "PROGRAM_COORDINATOR" && student.batch.coordinatorId !== user.id) return NextResponse.json({ error: "not your student" }, { status: 403 });
 
   const body = await req.json();

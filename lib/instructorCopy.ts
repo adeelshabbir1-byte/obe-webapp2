@@ -25,6 +25,7 @@ export async function ensureInstructorCopy(courseId: string) {
       data: {
         courseId, source: "INSTRUCTOR", code: c.code, statement: c.statement, bloomLevel: c.bloomLevel,
         mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct,
+        orderIndex: c.orderIndex, targetPct: c.targetPct, ploMappingSource: c.ploMappingSource,
       },
     });
     cloIdMap[c.id] = created.id;
@@ -33,7 +34,7 @@ export async function ensureInstructorCopy(courseId: string) {
   const instrumentIdMap: Record<string, string> = {};
   for (const i of seInstruments) {
     const created = await prisma.assessmentInstrument.create({
-      data: { courseId, source: "INSTRUCTOR", type: i.type, label: i.label, marksPct: i.marksPct },
+      data: { courseId, source: "INSTRUCTOR", type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore },
     });
     instrumentIdMap[i.id] = created.id;
   }
