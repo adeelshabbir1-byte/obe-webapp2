@@ -1,3 +1,4 @@
+import PloImportButton from "../../../components/PloImportButton";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -64,7 +65,10 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Learning Outcomes</h1>
-        <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {selectedBatchId && <PloImportButton batchId={selectedBatchId} />}
+          <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
+        </span>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         PLOs are defined separately per batch/cohort — even two intakes of the same degree can have different

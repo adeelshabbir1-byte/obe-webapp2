@@ -223,6 +223,18 @@ export default function MasterCurriculumEditor() {
                 <input value={bulkVersion} onChange={(e) => setBulkVersion(e.target.value)} placeholder="e.g. Fall 2024" style={{ fontSize: 12, padding: 4, width: 140 }} />
               </div>
             </div>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 11.5, color: "var(--slate)" }}>Or load the course list from an Excel/CSV file (same columns as Export): </label>
+              <input type="file" accept=".xlsx,.csv" onChange={async (e) => {
+                const f = e.target.files?.[0]; if (!f) return;
+                setError("");
+                const fd = new FormData(); fd.append("file", f);
+                const r = await fetch("/api/omc/master-curriculum/parse-excel", { method: "POST", body: fd });
+                const d = await r.json();
+                if (!r.ok) setError(d.error || "Could not read that file."); else { setBulkText(d.text); setNotice(`${d.count} course row(s) loaded below. Check them, then press Import.`); }
+                e.target.value = "";
+              }} />
+            </div>
             <textarea
               value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={10} placeholder="CS1101\tProgramming Fundamentals\t4\tMajor\t\t1"
               style={{ width: "100%", fontSize: 11.5, fontFamily: "monospace", padding: 6, border: "1px solid var(--line)" }}
