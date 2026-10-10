@@ -44,6 +44,8 @@ export async function PUT(req: NextRequest) {
     coursesReset = result.count;
   }
 
+  if (body.mode !== "rewrite") await prisma.course.updateMany({ where: { coordinatorId: user.id, isOffered: true, offeredTermName: null }, data: { offeredTermName: current.termName, offeredTermYear: current.year } });
+
   await writeAuditLog({
     actorUserId: user.id, action: body.mode === "rewrite" ? "CURRENT_TERM_REWRITTEN" : "CURRENT_TERM_SET",
     metadata: { termName: body.termName, year: body.year, previousTerm: previous ? `${previous.termName} ${previous.year}` : null, coursesReset },

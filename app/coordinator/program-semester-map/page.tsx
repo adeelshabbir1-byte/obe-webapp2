@@ -56,6 +56,8 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
   // term instead narrows to only courses genuinely running in that term,
   // for when Spring and Fall offerings need to be told apart cleanly.
   const currentTerm = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id }, select: { termName: true, year: true } });
+  // Offered courses that never got a term label are running now: stamp them with the current term once, so every page agrees.
+  if (currentTerm) await prisma.course.updateMany({ where: { coordinatorId: user.id, isOffered: true, offeredTermName: null }, data: { offeredTermName: currentTerm.termName, offeredTermYear: currentTerm.year } });
   const courses = batchIds.length > 0 && (showAllTerms || selectedTerm)
     ? await prisma.course.findMany({
         where: {
