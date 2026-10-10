@@ -34,7 +34,8 @@ export async function computeCoAttainment(courseId: string, criteria?: { cloPct:
   const rows: CoAttainmentRow[] = clos.map((clo) => {
     const max = cloMaxWeight[clo.code] || 0;
     const threshold = max * (passCriteria.cloPct / 100);
-    const passCount = result.rows.filter((r) => (r.byClo[clo.code] || 0) >= threshold).length;
+    // A CLO with no assessment linked to it cannot be attained: it must not read as 100%.
+    const passCount = max > 0 ? result.rows.filter((r) => (r.byClo[clo.code] || 0) >= threshold).length : 0;
     const actualPct = result.rows.length > 0 ? Math.round((passCount / result.rows.length) * 1000) / 10 : 0;
     return { code: clo.code, targetPct: clo.targetPct, actualPct, level: levelFor(actualPct, clo.targetPct) };
   });

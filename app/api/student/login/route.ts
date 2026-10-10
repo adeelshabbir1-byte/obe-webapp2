@@ -26,10 +26,13 @@ export async function POST(req: NextRequest) {
   const genericError = NextResponse.json({ error: "Incorrect roll number or password." }, { status: 401 });
 
   let matched = null;
+  let matches = 0;
   for (const c of candidates) {
     if (!c.passwordHash) continue; // never activated yet
-    if (await verifyPassword(c.passwordHash, password)) { matched = c; break; }
+    if (await verifyPassword(c.passwordHash, password)) { if (!matched) matched = c; matches++; }
   }
+  // Two students with the same roll number and the same password: never guess which one is signing in.
+  if (matches > 1) return NextResponse.json({ error: "More than one account matches these details. Please ask your Program Lead to fix the duplicate roll number." }, { status: 409 });
   if (!matched) {
     await writeAuditLog({ action: "STUDENT_LOGIN_FAILED", metadata: { rollNumber } });
     return genericError;

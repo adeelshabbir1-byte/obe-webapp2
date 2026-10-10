@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   // Finalize is the authoritative, first-come-first-served resolution
   // if the margin is genuinely contested.
   const existingChoice = await prisma.electiveChoice.findUnique({ where: { groupId_studentId: { groupId: group.id, studentId: student.id } } });
-  if (!existingChoice && option.capacity !== null && option.choices.length >= option.capacity) {
+  if ((!existingChoice || existingChoice.optionId !== option.id) && option.capacity !== null && option.choices.length >= option.capacity) {
     return NextResponse.json({ error: `${option.course.title} is currently full. Choose a different option, or check back — a Coordinator may adjust capacity.` }, { status: 400 });
   }
 

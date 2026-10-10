@@ -13,6 +13,8 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // Only activates students who don't already have a password set,
 // unless force=true is passed — never silently resets someone who's
 // already logged in and chosen their own password.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -27,11 +29,14 @@ export async function POST(req: NextRequest) {
     where: { batchId: batch.id, ...(body.force ? {} : { passwordHash: null }) },
   });
 
+  // Hashing is CPU work: do it several at a time instead of strictly one after another.
   let activated = 0;
-  for (const s of students) {
-    const hash = await hashPassword(s.rollNumber);
-    await prisma.student.update({ where: { id: s.id }, data: { passwordHash: hash, mustChangePassword: true } });
-    activated++;
+  for (let i = 0; i < students.length; i += 8) {
+    await Promise.all(students.slice(i, i + 8).map(async (s) => {
+      const hash = await hashPassword(s.rollNumber);
+      await prisma.student.update({ where: { id: s.id }, data: { passwordHash: hash, mustChangePassword: true } });
+      activated++;
+    }));
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "STUDENT_LOGINS_ACTIVATED", entityType: "Batch", entityId: batch.id, metadata: { activated, force: !!body.force } });

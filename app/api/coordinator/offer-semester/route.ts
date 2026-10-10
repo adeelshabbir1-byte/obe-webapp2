@@ -7,6 +7,8 @@ import { autoEnrollBatchStudents } from "../../../../lib/autoEnroll";
 import { carryOverFromMatchingSemester } from "../../../../lib/benchmarkCopy";
 import { snapshotCourseAssignmentsIfTermChanging, snapshotAttainmentAndResetIfTermChanging } from "../../../../lib/assignmentSnapshot";
 
+export const maxDuration = 60;
+
 export async function POST() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });

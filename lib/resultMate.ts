@@ -182,14 +182,14 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
   const cloStats = result.cloCodes.map((code) => {
     const max = cloMaxWeight[code] || 0;
     const threshold = max * (c.cloPct / 100);
-    const passCount = result.rows.filter((r) => (r.byClo[code] || 0) >= threshold).length;
+    const passCount = max > 0 ? result.rows.filter((r) => (r.byClo[code] || 0) >= threshold).length : 0;
     return { code, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount };
   });
 
   const ploStats = result.ploLabels.map((label) => {
     const max = ploMaxWeight[label] || 0;
     const threshold = max * (c.ploPct / 100);
-    const passCount = result.rows.filter((r) => (r.byPlo[label] || 0) >= threshold).length;
+    const passCount = max > 0 ? result.rows.filter((r) => (r.byPlo[label] || 0) >= threshold).length : 0;
     return { label, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount };
   });
 

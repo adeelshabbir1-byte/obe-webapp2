@@ -199,7 +199,7 @@ export async function getOmcActivityLog(user: ReportUser, filter?: ActivityLogFi
   if (omcIds.length === 0) return { rows: [], total: 0, pageSize };
 
   const nameById = new Map(omcMembers.map((m) => [m.id, m.name]));
-  const actorUserId = filter?.omcId ? { in: [filter.omcId] } : { in: omcIds };
+  const actorUserId = filter?.omcId && omcIds.includes(filter.omcId) ? { in: [filter.omcId] } : { in: omcIds };
 
   const createdAt: { gte?: Date; lte?: Date } = {};
   if (filter?.from) createdAt.gte = new Date(`${filter.from}T00:00:00`);

@@ -1,3 +1,4 @@
+import { canViewReport } from "../../../../../../lib/reportAcl";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { canViewReports } from "../../../../../../lib/reportScope";
@@ -7,6 +8,7 @@ import { buildExcelResponse } from "../../../../../../lib/excelExport";
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await canViewReport(user, "omc.reports.heatmap"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const programs = await getHeatmapReport(user);
   const rows: Record<string, any>[] = [];

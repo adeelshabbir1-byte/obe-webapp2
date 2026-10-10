@@ -20,6 +20,27 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.studentEnrollment.findUnique({ where: { studentId_courseId: { studentId: student.id, courseId: course.id } } });
   if (existing) return NextResponse.json({ error: "You're already registered for this course." }, { status: 400 });
 
+  // An elective that belongs to a slot group is chosen through that group's one-choice form, never registered directly.
+  const inSlotGroup = await prisma.electiveSlotOption.findFirst({ where: { courseId: course.id }, select: { id: true } });
+  if (inSlotGroup) return NextResponse.json({ error: "This elective is part of an elective choice group. Pick it through the choice form your Program Lead shared." }, { status: 400 });
+
+  // Prerequisite must be passed first.
+  if (course.prerequisiteCourseId) {
+    const pre = await prisma.course.findUnique({ where: { id: course.prerequisiteCourseId }, select: { code: true, title: true } });
+    if (pre) {
+      const done = await prisma.studentTranscriptRecord.findFirst({ where: { studentId: student.id, courseCode: pre.code, OR: [{ gpaPoints: { gt: 0 } }, { grade: "P" }] }, select: { id: true } });
+      if (!done) return NextResponse.json({ error: `You need to pass ${pre.code} ${pre.title} before registering for this course.` }, { status: 400 });
+    }
+  }
+
+  // Credit limit for the semester, when the Program Lead has set one.
+  const lead = await prisma.user.findUnique({ where: { id: batch.coordinatorId }, select: { maxCreditsPerSemester: true } });
+  if (lead?.maxCreditsPerSemester) {
+    const current = await prisma.studentEnrollment.findMany({ where: { studentId: student.id, course: { isOffered: true } }, select: { course: { select: { creditHours: true } } } });
+    const used = current.reduce((n, e) => n + (e.course?.creditHours || 0), 0);
+    if (used + course.creditHours > lead.maxCreditsPerSemester) return NextResponse.json({ error: `This would take you to ${used + course.creditHours} credit hours; the limit is ${lead.maxCreditsPerSemester}.` }, { status: 400 });
+  }
+
   // Gated instead of applied immediately if the student's academic
   // standing or this being an off-track course requires an Advisor's
   // sign-off first — see lib/academicStanding.ts for exactly when.

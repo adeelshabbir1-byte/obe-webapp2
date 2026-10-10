@@ -1,3 +1,4 @@
+import { canViewReport } from "../../../../../../lib/reportAcl";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { canViewReports } from "../../../../../../lib/reportScope";
@@ -8,6 +9,7 @@ import { buildExcelResponse } from "../../../../../../lib/excelExport";
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await canViewReport(user, "omc.reports.omc-activity-log"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   // Excel export ignores pagination — the whole filtered log, one sheet,

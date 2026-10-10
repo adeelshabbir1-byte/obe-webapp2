@@ -22,6 +22,8 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // This never resets anyone — there's no bulk-force option by design,
 // since a mass password reset across the whole institution is exactly
 // the kind of one-click action that shouldn't exist.
+export const maxDuration = 60;
+
 export async function POST(_req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
