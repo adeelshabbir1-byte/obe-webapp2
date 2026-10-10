@@ -243,8 +243,10 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   // rather than in parallel, since each one creates a new "<code>-L" course
   // and two at once racing on the same coordinator could hit unrelated
   // transient errors.
+  // A final year project is never split into theory + lab.
+  const isFyp = (c: { courseType: string; title: string; code: string }) => c.courseType === "Capstone Project" || /final[\s-]*year[\s-]*(design[\s-]*)?project|\bFYD?P\b/i.test(`${c.title} ${c.code}`);
   async function bulkSplit4CreditToLab() {
-    const targets = courses.filter((c) => c.creditHours === 4 && c.courseType !== "Lab");
+    const targets = courses.filter((c) => c.creditHours === 4 && c.courseType !== "Lab" && !isFyp(c));
     if (targets.length === 0) { setBulkSplitResult("No 4-credit-hour courses found to split (in the current view)."); return; }
     const proceed = confirm(`Split ${targets.length} course(s) with 4 credit hours into 3 (theory) + 1 (Lab)? Each one gets a new "<code>-L" Lab course created alongside it. This can't be undone automatically.`);
     if (!proceed) return;
@@ -484,7 +486,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
 
       <div className="card" data-tab="Courses">
         <button type="button" onClick={bulkSplit4CreditToLab} disabled={bulkSplitting} className="btn" style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>
-          {bulkSplitting ? "Splitting…" : "Split all 4-credit courses into 3 + 1 Lab"}
+          {bulkSplitting ? "Splitting…" : "Split all 4-credit courses into 3 + 1 Lab (not FYP)"}
         </button>
         <span style={{ fontSize: 11, color: "var(--slate)", marginLeft: 10 }}>
           Applies to every 4-credit-hour course currently shown below (not already a Lab course) — each becomes a
@@ -578,7 +580,7 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
                 </td>
                 <td>
                   <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Edit</button>
-                  {c.courseType !== "Lab" && (
+                  {c.courseType !== "Lab" && !isFyp(c) && (
                     <button onClick={() => splitIntoLab(c.id, c.creditHours)} disabled={loading} style={{ background: "none", border: "none", color: "var(--slate)", fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: 0, marginRight: 10 }}>Split into Lab</button>
                   )}
                   {c.courseType === "Elective" && c.fromHec && (

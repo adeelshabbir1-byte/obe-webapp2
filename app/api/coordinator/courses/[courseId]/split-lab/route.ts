@@ -11,6 +11,8 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (!course || course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (course.courseType === "Lab") return NextResponse.json({ error: "this course is already a Lab course" }, { status: 400 });
 
+  if (course.courseType === "Capstone Project" || /final[\s-]*year[\s-]*(design[\s-]*)?project|\bFYD?P\b/i.test(`${course.title} ${course.code}`)) return NextResponse.json({ error: "a final year project is not split into theory and lab" }, { status: 400 });
+
   const body = await req.json();
   const labCredit = parseInt(body.labCreditHours, 10);
   if (isNaN(labCredit) || labCredit < 1 || labCredit >= course.creditHours) {
