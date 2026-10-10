@@ -11,7 +11,7 @@ type Policy = {
   projectMin: number; projectMax: number; projectMinCount: number;
   labMin: number; labMax: number; labMinCount: number;
   midtermMin: number; midtermMax: number; midtermMinCount: number;
-  finalMin: number; finalMax: number; finalMinCount: number;
+  finalMin: number; finalMax: number; finalMinCount: number; finalBeforeMidtermPct?: number | null;
 };
 
 const COMPONENTS: { key: string; label: string; color: string }[] = [
@@ -40,6 +40,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       const count = (document.getElementById(`${courseType}-${c.key}-count`) as HTMLInputElement)?.value;
       body[`${c.key}Min`] = min; body[`${c.key}Max`] = max; body[`${c.key}MinCount`] = count;
     }
+    body.finalBeforeMidtermPct = (document.getElementById(`${courseType}-final-boundary`) as HTMLInputElement)?.value ?? "";
     try {
       const res = await fetch("/api/omc/weight-policy", {
         method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -65,6 +66,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
             {COMPONENTS.map((c) => (
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
+            <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "#96650F", color: "#fff", fontSize: 11 }} title="Share of the Final paper that should come from topics taught up to the midterm. The rest comes from after it. Leave blank for no guidance.">Final: % before midterm</th>
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}></th>
           </tr>
           <tr>
@@ -97,6 +99,9 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
                   </td>
                 </Fragment>
               ))}
+              <td style={{ border: "1px solid var(--line)", padding: "4px 6px", textAlign: "center", background: `${COUNT_BG}80` }}>
+                <input id={`${p.courseType}-final-boundary`} type="number" min={0} max={100} placeholder="—" defaultValue={p.finalBeforeMidtermPct ?? ""} style={{ width: 52, padding: "4px 5px", border: "1px solid var(--line)", fontSize: 12, textAlign: "center" }} />
+              </td>
               <td style={{ border: "1px solid var(--line)", padding: "4px 6px", whiteSpace: "nowrap" }}>
                 <button onClick={() => saveRow(p.courseType)} disabled={savingType === p.courseType} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11 }}>
                   {savingType === p.courseType ? "Saving…" : savedType === p.courseType ? "Saved ✓" : "Save"}
@@ -107,7 +112,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
         </tbody>
       </SortableTable>
       <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-        "# Min" is the minimum number of that assessment type to be conducted (e.g. 3 quizzes, 2 assignments).
+        "# Min" is the minimum number of that assessment type to be conducted (e.g. 3 quizzes, 2 assignments). "Final: % before midterm" is your suggested split of the Final paper — e.g. 30 means about 30% of its marks from topics taught up to the midterm and 70% from after it. Subject Experts see it on the Paper Distribution page and get a warning if their Final is far from it.
       </p>
     </div>
   );

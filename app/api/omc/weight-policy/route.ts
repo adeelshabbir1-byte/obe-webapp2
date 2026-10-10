@@ -24,7 +24,7 @@ export async function GET() {
     projectMin: 0, projectMax: 100, projectMinCount: 0,
     labMin: 0, labMax: 100, labMinCount: 0,
     midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
-    finalMin: 0, finalMax: 100, finalMinCount: 1,
+    finalMin: 0, finalMax: 100, finalMinCount: 1, finalBeforeMidtermPct: null,
   });
 
   return NextResponse.json({ policies });
@@ -43,7 +43,7 @@ export async function PUT(req: NextRequest) {
   const fields = ["assignmentMin", "assignmentMax", "assignmentMinCount", "quizMin", "quizMax", "quizMinCount",
     "projectMin", "projectMax", "projectMinCount", "labMin", "labMax", "labMinCount",
     "midtermMin", "midtermMax", "midtermMinCount", "finalMin", "finalMax", "finalMinCount"];
-  const data: Record<string, number> = {};
+  const data: Record<string, number | null> = {};
   for (const f of fields) {
     const v = parseInt(body[f], 10);
     const isCount = f.endsWith("MinCount");
@@ -56,6 +56,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: `${key} minimum cannot exceed its maximum` }, { status: 400 });
     }
   }
+
+  // Optional guidance for the Final paper: % of its marks that should come from topics up to the midterm (blank = no guidance).
+  const rawBoundary = body.finalBeforeMidtermPct;
+  const boundary = rawBoundary === undefined || rawBoundary === null || rawBoundary === "" ? null : parseInt(rawBoundary, 10);
+  if (boundary !== null && (isNaN(boundary) || boundary < 0 || boundary > 100)) return NextResponse.json({ error: "Final before-midterm % must be between 0 and 100 (or left blank)" }, { status: 400 });
+  (data as Record<string, number | null>).finalBeforeMidtermPct = boundary;
 
   const policy = await prisma.weightPolicy.upsert({
     where: { chairmanId_courseType: { chairmanId: user.managedById, courseType: body.courseType } },

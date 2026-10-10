@@ -423,6 +423,7 @@ model WeightPolicy {
   finalMin      Int      @default(0)
   finalMax      Int      @default(100)
   finalMinCount Int      @default(1)
+  finalBeforeMidtermPct Int? // OMC guidance: share (%) of the Final paper that should come from topics taught up to the midterm; null = no guidance
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1216,6 +1217,7 @@ model Course {
   isOffered           Boolean  @default(false) // whether this course has been activated for its current-semester offering
   offeredTermName     String?  // "Fall" | "Spring" — which term this was offered in, stamped when isOffered becomes true
   offeredTermYear     Int?
+  midtermWeek         Int?     // topics taught up to and including this week count as "before the midterm" (null = worked out from the lecture plan)
   midtermStartDate    DateTime? // set by Coordinator (override) — no lecture auto-fills within this range
   midtermEndDate      DateTime?
   finalStartDate      DateTime?

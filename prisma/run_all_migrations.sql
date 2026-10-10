@@ -4826,3 +4826,7 @@ CREATE TABLE IF NOT EXISTS "TemplateChangeRequest" (
 );
 CREATE INDEX IF NOT EXISTS "TemplateChangeRequest_courseId_idx" ON "TemplateChangeRequest"("courseId");
 CREATE INDEX IF NOT EXISTS "TemplateChangeRequest_status_idx" ON "TemplateChangeRequest"("status");
+
+-- OMC guidance on the Final paper split (before vs after midterm) and the course midterm week. Safe to run more than once.
+ALTER TABLE "WeightPolicy" ADD COLUMN IF NOT EXISTS "finalBeforeMidtermPct" INTEGER;
+ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "midtermWeek" INTEGER;

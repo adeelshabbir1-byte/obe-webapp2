@@ -25,7 +25,7 @@ export default async function WeightPolicyPage() {
     projectMin: 0, projectMax: 100, projectMinCount: 0,
     labMin: 0, labMax: 100, labMinCount: 0,
     midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
-    finalMin: 0, finalMax: 100, finalMinCount: 1,
+    finalMin: 0, finalMax: 100, finalMinCount: 1, finalBeforeMidtermPct: null,
   });
 
   return (
