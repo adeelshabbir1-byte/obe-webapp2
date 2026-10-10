@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SplitData } from "../lib/courseSplit";
 import IncomingRequests from "./IncomingRequests";
@@ -16,6 +16,7 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
   const changed = useMemo(() => data.rows.filter((r) => (owners[r.key] || "") !== (saved[r.key] || "")), [data.rows, owners, saved]);
   const undecided = data.rows.filter((r) => r.shared && !owners[r.key]);
   const shown = data.rows.filter((r) => !onlyShared || r.shared);
+  const [grouped, setGrouped] = useState(true);
 
   function giveAllUndecided() {
     if (!bulkLead) return;
@@ -60,6 +61,27 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
   );
   const leadName = (id: string) => data.leads.find((l) => l.id === id)?.name || "";
 
+  // Courses sectioned by the department that handles them (by the SAVED choice, so a row moves only after Save).
+  const sections = useMemo(() => {
+    const deptOfLead = new Map(data.leads.map((l) => [l.id, l.departmentName]));
+    const NOT_DECIDED = "Not decided yet";
+    const OWN = `Stays with its own program lead (${data.departmentName})`;
+    const by = new Map<string, typeof shown>();
+    for (const r of shown) {
+      const owner = saved[r.key];
+      const label = owner ? deptOfLead.get(owner) || "Other" : r.shared ? NOT_DECIDED : OWN;
+      by.set(label, [...(by.get(label) || []), r]);
+    }
+    const rank = (l: string) => (l === NOT_DECIDED ? 0 : l === data.departmentName ? 1 : l === OWN ? 2 : 3);
+    return Array.from(by.entries())
+      .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+      .map(([label, rows]) => ({
+        label, rows: rows.slice().sort((x, y) => (leadName(saved[x.key] || "") || "").localeCompare(leadName(saved[y.key] || "") || "") || x.code.localeCompare(y.code)),
+        outside: label !== data.departmentName && label !== NOT_DECIDED && label !== OWN,
+      }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, saved, data.leads, data.departmentName]);
+
   if (data.leads.length === 0) return <div className="card"><p style={{ fontSize: 13 }}>This department has no Program Leads yet. Add them under Departments first.</p></div>;
 
   return (
@@ -77,7 +99,8 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
             {leadOptions}
           </select>
           <button className="btn" onClick={giveAllUndecided} disabled={!bulkLead || undecided.length === 0}>Apply</button>
-          <label style={{ fontSize: 12.5, marginLeft: "auto" }}><input type="checkbox" checked={onlyShared} onChange={(e) => setOnlyShared(e.target.checked)} /> Show only common courses</label>
+          <label style={{ fontSize: 12.5, marginLeft: "auto" }}><input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> Group by handling department</label>
+          <label style={{ fontSize: 12.5 }}><input type="checkbox" checked={onlyShared} onChange={(e) => setOnlyShared(e.target.checked)} /> Show only common courses</label>
         </div>
       </div>
 
@@ -85,7 +108,16 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
         <table>
           <thead><tr><th>Course</th><th>Taught in</th><th>Handled by</th></tr></thead>
           <tbody>
-            {shown.map((r) => (
+            {(grouped ? sections : [{ label: "", rows: shown, outside: false }]).map((sec) => (
+              <Fragment key={sec.label || "all"}>
+                {grouped && (
+                  <tr>
+                    <td colSpan={3} style={{ background: sec.outside ? "#F3EBD6" : "#EFEADC", fontWeight: 700, fontSize: 13, padding: "8px 10px", borderTop: "2px solid var(--brass, #B08D57)" }}>
+                      {sec.outside ? "Handled by " : ""}{sec.label} <span style={{ fontWeight: 400, color: "var(--slate)" }}>· {sec.rows.length} course{sec.rows.length === 1 ? "" : "s"}</span>
+                    </td>
+                  </tr>
+                )}
+                {sec.rows.map((r) => (
               <tr key={r.key}>
                 <td><strong>{r.code}</strong><div style={{ fontSize: 12, color: "var(--slate)" }}>{r.title}{r.semester ? ` · Sem ${r.semester}` : ""}</div></td>
                 <td style={{ fontSize: 12 }}>{r.leads.map((l) => `${l.programs.join(", ") || "—"} (${l.name})`).join("; ")}{r.shared && <span style={{ color: "var(--brass-dark)" }}> · common</span>}{r.elective && <span style={{ color: "var(--slate)" }}> · elective, stays in its own program</span>}</td>
@@ -97,6 +129,8 @@ export default function CourseSplitManager({ data, departmentId }: { data: Split
                   {r.ownerStatus === "PENDING" && owners[r.key] === (r.ownerId || "") && <div style={{ fontSize: 11.5, color: "var(--rust)" }}>Waiting for {leadName(r.ownerId || "")}, his Chairman or his Dean to accept. Until then the course stays as it was.</div>}
                 </td>
               </tr>
+                ))}
+              </Fragment>
             ))}
             {shown.length === 0 && <tr><td colSpan={3} style={{ fontSize: 12.5, color: "var(--slate)" }}>No courses yet. Program Leads add courses under Degree Programs and Courses.</td></tr>}
           </tbody>
