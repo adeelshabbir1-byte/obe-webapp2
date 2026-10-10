@@ -465,6 +465,18 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             <button onClick={saveMappingChanges} disabled={!mappingDirty || saving} data-save-shortcut="true" className="btn btn-brass">{saving ? "Saving…" : "Save Mapping Changes"}</button>
           </div>
         </div>
+        {(["Quiz", "Assignment"] as const).map((t) => {
+          const items = instruments.filter((i) => i.type === t);
+          const k = usableBestOf(bestOf?.[t], items.length);
+          if (!k || items.length === 0) return null;
+          const each = items[0].marksPct;
+          return (
+            <p key={t} style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
+              <b>{t}s:</b> each one is worth {fmtPct(each)}% when it counts, but only the best {k} of {items.length} count. In this table every {t.toLowerCase()} therefore
+              covers {fmtPct(Math.round((each * k / items.length) * 10000) / 10000)}% of the course ({fmtPct(each)} × {k} ÷ {items.length}), so the {t.toLowerCase()}s together add up to {fmtPct(Math.round(each * k * 100) / 100)}%.
+            </p>
+          );
+        })}
         {ploGroups.length > 0 && cloList.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
             {ploGroups.map((g) => (
