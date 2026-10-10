@@ -18,7 +18,7 @@ export default function TabbedCards({ children, defaultTab, order }: { children:
       {items.map((c, i) => {
         const l = labelOf(c);
         return (
-          <div key={i} style={l && l !== tab ? { display: "none" } : undefined}>
+          <div key={i}>
             {i === firstIdx && (
               <div role="tablist" style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "2px solid var(--line)", marginBottom: 16, position: "sticky", top: 0, background: "var(--paper, #fff)", zIndex: 5 }}>
                 {labels.map((k) => (
@@ -29,7 +29,7 @@ export default function TabbedCards({ children, defaultTab, order }: { children:
                 ))}
               </div>
             )}
-            {c}
+            <div style={l && l !== tab ? { display: "none" } : undefined}>{c}</div>
           </div>
         );
       })}
