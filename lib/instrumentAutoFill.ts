@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { r4, usableBestOf } from "./assessmentWeights";
+import { r4, usableBestOf, splitEvenly } from "./assessmentWeights";
 import { recomputeCourseRows } from "./lectureWeights";
 
 /**
@@ -18,13 +18,7 @@ import { recomputeCourseRows } from "./lectureWeights";
  * already exist, this does nothing — it only ever adds, never removes,
  * so nothing the SE already customized is touched or deleted.
  */
-/** Splits a percentage evenly into n parts to two decimals (50 over 8 -> 6.25 each; 40 over 3 -> 13.34, 13.33, 13.33), summing exactly. */
-function splitHundredths(total: number, n: number): number[] {
-  if (n <= 0) return [];
-  const all = Math.round(total * 100);
-  const base = Math.floor(all / n), rem = all - base * n;
-  return Array.from({ length: n }, (_, i) => (base + (i < rem ? 1 : 0)) / 100);
-}
+const splitHundredths = splitEvenly;
 
 /**
  * If the SE lowers a count (6 quizzes -> 4), the extra items are removed, newest first, along with their topic links,
@@ -71,6 +65,18 @@ export async function ensureInstrumentCount(
   if (missing <= 0) {
     // Same count but the category weight changed (e.g. Midterm 30 -> 25): scale the items so they add to the new target again.
     const sum = existing.reduce((s, i) => s + i.marksPct, 0);
+    const ordered = [...existing].sort((a, b) => (a.createdAt as Date).getTime() - (b.createdAt as Date).getTime());
+    const marks = ordered.map((i) => i.marksPct);
+    // Items that were split evenly (all within a hundredth or a tenth of each other) are re-split with the current rule,
+    // so 3.34 / 3.33 / 3.33 becomes 3.3 / 3.3 / 3.4. Items the SE set by hand to different values are only scaled.
+    if (categoryTargetPct > 0 && ordered.length > 1 && Math.max(...marks) - Math.min(...marks) <= 0.11) {
+      const parts = splitEvenly(categoryTargetPct, ordered.length);
+      if (parts.some((p, i) => Math.abs(p - marks[i]) > 0.0001)) {
+        for (let i = 0; i < ordered.length; i++) await prisma.assessmentInstrument.update({ where: { id: ordered[i].id }, data: { marksPct: parts[i] } });
+        await recomputeCourseRows(courseId, source);
+      }
+      return;
+    }
     if (categoryTargetPct > 0 && existing.length > 0 && Math.abs(sum - categoryTargetPct) > 0.01) {
       const totalHund = Math.round(categoryTargetPct * 100);
       const scaled = existing.map((i) => Math.floor((i.marksPct / (sum || 1)) * totalHund));

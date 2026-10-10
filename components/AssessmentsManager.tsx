@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState, useEffect, useRef } from "react";
-import { effectiveSum, fmtPct, usableBestOf } from "../lib/assessmentWeights";
+import { effectiveSum, fmtPct, usableBestOf, splitEvenly } from "../lib/assessmentWeights";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
@@ -179,12 +179,15 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     const target = targets[TARGET_KEY[type]] || 0;
     const kBest = usableBestOf(bestOf?.[type], minCount);
     const perItem = Math.round((target / (kBest || minCount)) * 10000) / 10000 || 0;
+    // Without "best of", the new items share what is left of the category: 10 over 3 -> 3.3, 3.3, 3.4.
+    const left = Math.max(0, target - existing.reduce((sum, i) => sum + i.marksPct, 0));
+    const parts = kBest ? [] : splitEvenly(left, missing);
     try {
       for (let n = existing.length + 1; n <= minCount; n++) {
         const label = isNumbered ? String(n) : `${type} ${n}`;
         const res = await fetch(`${apiBase}/courses/${courseId}/instruments`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type, label, marksPct: perItem, maxScore: "10" }),
+          body: JSON.stringify({ type, label, marksPct: kBest ? perItem : parts[n - existing.length - 1] ?? 0, maxScore: "10" }),
         });
         const data = await res.json();
         if (!res.ok) { setError(data.error || "Something went wrong."); break; }

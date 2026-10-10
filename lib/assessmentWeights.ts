@@ -40,3 +40,23 @@ export async function closWithPlo(clos: { id: string; code: string; mappedPloId:
     .map((c) => ({ id: c.id, code: c.code, contribution: c.ploContributionPct ?? null, ploId: c.mappedPloId, ploNumber: c.mappedPloId ? byId.get(c.mappedPloId)?.number ?? null : null, ploTitle: c.mappedPloId ? byId.get(c.mappedPloId)?.title ?? "" : "" }))
     .sort((a, b) => (a.ploNumber ?? 9999) - (b.ploNumber ?? 9999) || cloOrder(a, b));
 }
+
+/**
+ * Splits a percentage evenly into n parts that add up to exactly the total.
+ * If it divides cleanly to two decimals it stays exact (10 over 4 -> 2.5 each; 50 over 8 -> 6.25 each);
+ * otherwise each part is rounded to one decimal and the last item(s) take the remainder
+ * (10 over 3 -> 3.3, 3.3, 3.4; 20 over 6 -> 3.3, 3.3, 3.3, 3.3, 3.4, 3.4).
+ */
+export function splitEvenly(total: number, n: number): number[] {
+  if (n <= 0) return [];
+  const hund = Math.round(total * 100);
+  if (hund % n === 0) return Array.from({ length: n }, () => hund / n / 100);
+  const tenthsTotal = Math.round(total * 10);
+  if (Math.abs(tenthsTotal * 10 - hund) > 0) {
+    // Total itself has two decimals (e.g. 12.25): fall back to hundredths, remainder on the last items.
+    const base = Math.floor(hund / n), rem = hund - base * n;
+    return Array.from({ length: n }, (_, i) => (base + (i >= n - rem ? 1 : 0)) / 100);
+  }
+  const base = Math.floor(tenthsTotal / n), rem = tenthsTotal - base * n;
+  return Array.from({ length: n }, (_, i) => (base + (i >= n - rem ? 1 : 0)) / 10);
+}
