@@ -135,20 +135,21 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
 
   async function saveInstrumentChanges() {
     const edits = Object.keys(pendingEditsRef.current).map((instrumentId) => ({ instrumentId, ...pendingEditsRef.current[instrumentId] }));
-    if (edits.length === 0) return;
+    if (edits.length === 0) return true;
     setSaving(true); setError("");
     try {
       const res = await fetch(`${apiBase}/courses/${courseId}/instruments/batch-save`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ edits }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return false; }
       setInstruments(data.instruments);
       pendingEditsRef.current = {};
       setDirtyInstrumentIds(new Set());
       setSaving(false);
       if (apiBase.includes("subjectexpert")) fetch(`${apiBase}/courses/${courseId}/sync-followers`, { method: "POST" }).catch(() => {});
-    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
+      return true;
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); return false; }
   }
 
   async function removeInstrument(id: string) {
@@ -259,13 +260,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         if (r.midtermQuestions !== saved.midtermQuestions) questions.push({ lectureRowId: r.id, type: "Midterm", numbers: r.midtermQuestions });
         if (r.finalQuestions !== saved.finalQuestions) questions.push({ lectureRowId: r.id, type: "Final", numbers: r.finalQuestions });
       }
-      if (toggles.length === 0 && questions.length === 0) { setSaving(false); return; }
+      if (toggles.length === 0 && questions.length === 0) { setSaving(false); return true; }
 
       const res = await fetch(`${apiBase}/courses/${courseId}/lecture-mapping/save`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toggles, questions }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return false; }
 
       const byId: Map<string, any> = new Map((data.rows || []).map((rr: any) => [rr.id, rr]));
       const reconciled = rows.map((r) => byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r);
@@ -274,8 +275,23 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       setSaving(false);
       // Followers of this course (other batches) are updated in the background; nothing to wait for.
       if (apiBase.includes("subjectexpert")) fetch(`${apiBase}/courses/${courseId}/sync-followers`, { method: "POST" }).catch(() => {});
-    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
+      return true;
+    } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); return false; }
   }
+
+  // Refresh: save anything not yet saved (ticks, question numbers, quiz/assignment details), then reload the page so every percentage, red flag and
+  // CLO/topic change made on other tabs is up to date. The current highlight is kept.
+  const focusKey = `assess-focus-${courseId}`;
+  async function refreshAll() {
+    if (instrumentsDirtyRef.current) { const ok = await saveInstrumentChanges(); if (!ok) return; }
+    if (mappingDirtyRef.current) { const ok = await saveMappingChanges(); if (!ok) return; }
+    try { sessionStorage.setItem(focusKey, JSON.stringify(focus)); } catch { /* ignore */ }
+    mappingDirtyRef.current = false; instrumentsDirtyRef.current = false;
+    window.location.reload();
+  }
+  useEffect(() => {
+    try { const f = JSON.parse(sessionStorage.getItem(focusKey) || "null"); if (f) setFocus(f); sessionStorage.removeItem(focusKey); } catch { /* ignore */ }
+  }, [focusKey]);
 
   const checkboxInstruments = instruments.filter((i) => i.type === "Quiz" || i.type === "Assignment");
   const hasMidterm = instruments.some((i) => i.type === "Midterm");
@@ -518,6 +534,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             <div style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 5 }}>
               Click a CLO or PLO to highlight the topics mapped to it, then tick quizzes/assignments or add question numbers for those topics. Click it again to stop.
               {" "}<span style={{ color: "var(--rust)" }}>Red = not hit enough.</span>
+              <button type="button" onClick={refreshAll} disabled={saving} className="btn" title="Save any unsaved ticks and reload the latest percentages"
+                style={{ marginLeft: 10, padding: "3px 12px", fontSize: 12 }}>{saving ? "Saving…" : "⟳ Refresh"}</button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {ploGroups.filter((g) => g.key !== "none").map((g) => {
