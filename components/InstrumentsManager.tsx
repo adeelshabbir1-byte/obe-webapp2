@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Fragment } from "react";
+import { fmtPct } from "../lib/assessmentWeights";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -89,7 +90,7 @@ export default function InstrumentsManager({ courseId, initialInstruments, targe
                 {items.map((i) => (
                   <Fragment key={i.id}>
                     <tr>
-                      <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
+                      <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{fmtPct(i.marksPct)}%</td>
                       <td>
                         {i.evidence.length === 0 ? (
                           <span style={{ fontSize: 11, color: "var(--slate)" }}>None attached</span>
@@ -153,7 +154,7 @@ function AddInstrumentRow({ type, nextLabel, loading, onAdd }: { type: string; n
       </div>
       <div>
         <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Marks %</label>
-        <input value={marksPct} onChange={(e) => setMarksPct(e.target.value)} type="number" min={0} max={100} required style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
+        <input value={marksPct} onChange={(e) => setMarksPct(e.target.value)} type="number" step="any" min={0} max={100} required style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
       </div>
       <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Add {isNumbered ? `Q${nextLabel}` : nextLabel}</button>
     </form>

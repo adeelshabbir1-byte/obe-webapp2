@@ -61,13 +61,13 @@ export function comparePlans(se: PlanData, ins: PlanData): PlanComparison {
   const insByKey = new Map(ins.assessments.map((a) => [key(a), a]));
   for (const [k, a] of seByKey) {
     const b = insByKey.get(k);
-    if (!b) { differences.push({ kind: "ASSESSMENT_REMOVED", text: `${a.label} (${a.marksPct}%) is in the Subject Expert's plan but not in the Instructor's.` }); seChanged.add("a:" + a.id); continue; }
-    if (a.marksPct !== b.marksPct) { differences.push({ kind: "WEIGHT", text: `${a.label}: Subject Expert ${a.marksPct}% vs Instructor ${b.marksPct}%.` }); seChanged.add("a:" + a.id); instructorChanged.add("a:" + b.id); }
+    if (!b) { differences.push({ kind: "ASSESSMENT_REMOVED", text: `${a.label} (${Math.round(a.marksPct * 100) / 100}%) is in the Subject Expert's plan but not in the Instructor's.` }); seChanged.add("a:" + a.id); continue; }
+    if (a.marksPct !== b.marksPct) { differences.push({ kind: "WEIGHT", text: `${a.label}: Subject Expert ${Math.round(a.marksPct * 100) / 100}% vs Instructor ${Math.round(b.marksPct * 100) / 100}%.` }); seChanged.add("a:" + a.id); instructorChanged.add("a:" + b.id); }
     const ca = cloCode(se, a.cloId), cb = cloCode(ins, b.cloId);
     if (ca !== cb) { differences.push({ kind: "CLO_LINK", text: `${a.label} feeds ${ca} in the Subject Expert's plan but ${cb} in the Instructor's.` }); seChanged.add("a:" + a.id); instructorChanged.add("a:" + b.id); }
   }
   for (const [k, b] of insByKey) {
-    if (!seByKey.has(k)) { differences.push({ kind: "ASSESSMENT_ADDED", text: `${b.label} (${b.marksPct}%) was added by the Instructor and is not in the Subject Expert's plan.` }); instructorChanged.add("a:" + b.id); }
+    if (!seByKey.has(k)) { differences.push({ kind: "ASSESSMENT_ADDED", text: `${b.label} (${Math.round(b.marksPct * 100) / 100}%) was added by the Instructor and is not in the Subject Expert's plan.` }); instructorChanged.add("a:" + b.id); }
   }
 
   const seClos = new Map(se.clos.map((c) => [c.code, c])), insClos = new Map(ins.clos.map((c) => [c.code, c]));

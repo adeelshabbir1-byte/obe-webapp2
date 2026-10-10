@@ -1,4 +1,21 @@
 import { prisma } from "./db";
+import { coverageWeight } from "./assessmentWeights";
+
+type Inst = { id: string; courseId: string; source: string; type: string; marksPct: number };
+type BestOf = { quizBestOf: number | null; assignmentBestOf: number | null };
+/** The weight an instrument adds to the lecture plan. Under best-of each item counts target / N, so the plan still adds to the category target. */
+function planWeight(i: Inst, all: Inst[], c: BestOf | null): number {
+  const k = i.type === "Quiz" ? c?.quizBestOf : i.type === "Assignment" ? c?.assignmentBestOf : null;
+  const count = all.filter((x) => x.courseId === i.courseId && x.source === i.source && x.type === i.type).length;
+  return coverageWeight(i.marksPct, k, count);
+}
+/** Split a weight over n rows in hundredths so the shares add back to exactly the weight. */
+function splitShares(weight: number, n: number): number[] {
+  const units = Math.round(weight * 100);
+  const base = Math.floor(units / n);
+  const rem = units - base * n;
+  return Array.from({ length: n }, (_, idx) => (base + (idx < rem ? 1 : 0)) / 100);
+}
 
 /**
  * An instrument's marksPct is split across however many lecture rows are
@@ -31,12 +48,15 @@ async function instrumentShares(instrumentId: string): Promise<Map<string, numbe
   if (!instrument || links.length === 0) return shares;
 
   const n = links.length;
-  const base = Math.floor(instrument.marksPct / n);
-  const remainder = instrument.marksPct - base * n; // whole points left to hand out, one each
+  const [siblings, course] = await Promise.all([
+    prisma.assessmentInstrument.findMany({ where: { courseId: instrument.courseId, source: instrument.source, type: instrument.type }, select: { id: true, courseId: true, source: true, type: true, marksPct: true } }),
+    prisma.course.findUnique({ where: { id: instrument.courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
+  ]);
+  const parts = splitShares(planWeight(instrument as unknown as Inst, siblings as unknown as Inst[], course as unknown as BestOf | null), n);
 
   const ordered = [...links].sort((a, b) => a.lectureRow.lectureNumber - b.lectureRow.lectureNumber);
   ordered.forEach((l, idx) => {
-    shares.set(l.lectureRowId, base + (idx < remainder ? 1 : 0));
+    shares.set(l.lectureRowId, parts[idx]);
   });
   return shares;
 }
@@ -108,7 +128,11 @@ export async function recomputeCourseRows(courseId: string, source: "SE" | "INST
 
   const instrumentIds = Array.from(new Set(links.map((l) => l.instrumentId)));
   const instruments = await prisma.assessmentInstrument.findMany({ where: { id: { in: instrumentIds } } });
-  const marksPctById = new Map(instruments.map((i) => [i.id, i.marksPct]));
+  const [courseInstruments, courseBest] = await Promise.all([
+    prisma.assessmentInstrument.findMany({ where: { courseId, source }, select: { id: true, courseId: true, source: true, type: true, marksPct: true } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
+  ]);
+  const marksPctById = new Map<string, number>(instruments.map((i) => [i.id as string, planWeight(i as unknown as Inst, courseInstruments as unknown as Inst[], courseBest as unknown as BestOf | null)]));
 
   const linksByInstrument = new Map<string, typeof links>();
   for (const l of links) {
@@ -126,17 +150,16 @@ export async function recomputeCourseRows(courseId: string, source: "SE" | "INST
     const marksPct = marksPctById.get(instrumentId);
     if (marksPct == null) continue;
     const n = instrumentLinks.length;
-    const base = Math.floor(marksPct / n);
-    const remainder = marksPct - base * n;
+    const parts = splitShares(marksPct, n);
     const ordered = [...instrumentLinks].sort((a, b) => a.lectureRow.lectureNumber - b.lectureRow.lectureNumber);
     ordered.forEach((l, idx) => {
-      const share = base + (idx < remainder ? 1 : 0);
+      const share = parts[idx];
       totalByRow.set(l.lectureRowId, (totalByRow.get(l.lectureRowId) || 0) + share);
     });
   }
 
   await prisma.$transaction(
-    rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: totalByRow.get(id) || 0 } }))
+    rowIds.map((id) => prisma.lectureRow.update({ where: { id }, data: { weightPct: Math.round((totalByRow.get(id) || 0) * 100) / 100 } }))
   );
 }
 
@@ -147,5 +170,5 @@ export async function recomputeRowWeight(lectureRowId: string) {
     const shares = await instrumentShares(link.instrumentId);
     total += shares.get(lectureRowId) || 0;
   }
-  await prisma.lectureRow.update({ where: { id: lectureRowId }, data: { weightPct: total } });
+  await prisma.lectureRow.update({ where: { id: lectureRowId }, data: { weightPct: Math.round(total * 100) / 100 } });
 }

@@ -1,3 +1,4 @@
+import { effectiveSum } from "./assessmentWeights";
 import { prisma } from "./db";
 import { completeness } from "./facultyProfile";
 import { fiscalYearNow, labRatio } from "./resources";
@@ -32,7 +33,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
 
   const courses = await prisma.course.findMany({
     where: { coordinatorId: user.id, ...(batchId ? { batchId } : {}) },
-    select: { id: true, code: true, title: true, isOffered: true, subjectExpertId: true, instructorId: true, batchId: true, isNonCredit: true },
+    select: { id: true, code: true, title: true, isOffered: true, subjectExpertId: true, instructorId: true, batchId: true, isNonCredit: true, quizBestOf: true, assignmentBestOf: true },
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });
   const courseIds = courses.map((c) => c.id);
@@ -45,7 +46,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
     prisma.cLO.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, mappedPloId: true } }),
     prisma.lectureRow.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, cloId: true, week: true } }),
     prisma.lectureRow.findMany({ where: { ...inCourses, source: "INSTRUCTOR" }, select: { courseId: true, actualDate: true } }),
-    prisma.assessmentInstrument.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, marksPct: true } }),
+    prisma.assessmentInstrument.findMany({ where: { ...inCourses, source: "SE" }, select: { courseId: true, marksPct: true, type: true } }),
     prisma.studentMark.groupBy({ by: ["courseId"], where: inCourses, _count: { _all: true } }),
     prisma.coursePloMapping.findMany({ where: inCourses, select: { ploId: true } }),
     prisma.paperSubmission.findMany({ where: { leadCourseId: { in: courseIds.length ? courseIds : ["none"] } }, select: { status: true } }),
@@ -87,7 +88,12 @@ export async function computeReadiness(user: { id: string; managedById: string |
   type Col = (typeof COLS)[number]["key"];
   const grid = courses.map((c) => {
     const cl = cloBy.get(c.id) || [], se = seBy.get(c.id) || [], ins = instBy.get(c.id) || [], as = insBy.get(c.id) || [];
-    const sumPct = as.reduce((s, a) => s + a.marksPct, 0);
+    // With "best K of N" quizzes or assignments only the best K count, so those categories add up to their share scaled by K / N.
+    const sumPct = Math.round(Array.from(new Set(as.map((a) => (a as unknown as { type: string }).type))).reduce((s, t) => {
+      const w = as.filter((a) => (a as unknown as { type: string }).type === t).map((a) => a.marksPct);
+      const k = t === "Quiz" ? (c as unknown as { quizBestOf: number | null }).quizBestOf : t === "Assignment" ? (c as unknown as { assignmentBestOf: number | null }).assignmentBestOf : null;
+      return s + effectiveSum(w, k);
+    }, 0) * 100) / 100;
     const delivered = ins.filter((r) => r.actualDate).length;
     const st: Record<Col, State> = {
       clos: cl.length > 0 ? "ok" : "missing",

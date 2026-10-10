@@ -4804,3 +4804,6 @@ CREATE INDEX IF NOT EXISTS "SurveyResult_chairmanId_idx" ON "SurveyResult"("chai
 CREATE TABLE IF NOT EXISTS "ReadinessSnapshot" ("id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "leadId" TEXT NOT NULL, "label" TEXT NOT NULL, "overall" INTEGER, "areas" TEXT NOT NULL, "takenById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS "ReadinessSnapshot_leadId_idx" ON "ReadinessSnapshot"("leadId");
 CREATE INDEX IF NOT EXISTS "ReadinessSnapshot_chairmanId_idx" ON "ReadinessSnapshot"("chairmanId");
+-- Assessment weights can be decimals (best 3 of 4 quizzes worth 10 = 3.3333 each). Safe to run more than once.
+ALTER TABLE "AssessmentInstrument" ALTER COLUMN "marksPct" TYPE DOUBLE PRECISION;
+ALTER TABLE "LectureRow" ALTER COLUMN "weightPct" TYPE DOUBLE PRECISION;

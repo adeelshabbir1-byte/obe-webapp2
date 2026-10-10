@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { fmtPct } from "../lib/assessmentWeights";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 
@@ -59,7 +60,7 @@ export default function InstructorInstrumentsManager({ courseId, initialInstrume
                 {items.length === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>None defined yet.</td></tr>}
                 {items.map((i) => (
                   <tr key={i.id}>
-                    <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{i.marksPct}%</td>
+                    <td>{isNumbered ? `Q${i.label}` : i.label}</td><td>{fmtPct(i.marksPct)}%</td>
                     <td><button onClick={() => removeInstrument(i.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button></td>
                   </tr>
                 ))}
@@ -87,7 +88,7 @@ function AddRow({ type, nextLabel, loading, onAdd }: { type: string; nextLabel: 
       <div style={{ fontSize: 12.5, color: "var(--slate)" }}>Next: <b style={{ color: "var(--ink)" }}>{isNumbered ? `Q${nextLabel}` : nextLabel}</b></div>
       <div>
         <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Marks %</label>
-        <input value={marksPct} onChange={(e) => setMarksPct(e.target.value)} type="number" min={0} max={100} required style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
+        <input value={marksPct} onChange={(e) => setMarksPct(e.target.value)} type="number" step="any" min={0} max={100} required style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 70 }} />
       </div>
       <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "6px 12px", fontSize: 12 }}>Add</button>
     </form>

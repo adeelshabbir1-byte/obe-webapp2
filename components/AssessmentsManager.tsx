@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useEffect, useRef } from "react";
+import { effectiveSum, fmtPct, usableBestOf } from "../lib/assessmentWeights";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
@@ -56,8 +57,8 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase }: {
-  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string;
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf }: {
+  courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string; bestOf?: Record<string, number | null>;
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
   // "rows" is the working copy the checkboxes/question-number boxes edit
@@ -150,7 +151,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     setLoading(true); setError("");
     const isNumbered = type === "Midterm" || type === "Final";
     const target = targets[TARGET_KEY[type]] || 0;
-    const perItem = Math.round(target / minCount) || 0;
+    const kBest = usableBestOf(bestOf?.[type], minCount);
+    const perItem = Math.round((target / (kBest || minCount)) * 10000) / 10000 || 0;
     try {
       for (let n = existing.length + 1; n <= minCount; n++) {
         const label = isNumbered ? String(n) : `${type} ${n}`;
@@ -300,10 +302,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
 
       {TYPES.map((type) => {
         const items = instruments.filter((i) => i.type === type);
-        const sum = items.reduce((s, i) => s + i.marksPct, 0);
+        const kBest = usableBestOf(bestOf?.[type], items.length);
+        const sum = Math.round(effectiveSum(items.map((i) => i.marksPct), bestOf?.[type]) * 100) / 100;
         const target = targets[TARGET_KEY[type]];
         const max = policyMax?.[POLICY_MAX_KEY[type]];
-        const overTarget = items.length > 0 && sum !== target;
+        const overTarget = items.length > 0 && Math.abs(sum - (target || 0)) > 0.02;
         const overPolicy = items.length > 0 && max !== undefined && sum > max;
         const isNumbered = type === "Midterm" || type === "Final";
         const nextLabel = isNumbered ? String(items.length + 1) : `${type} ${items.length + 1}`;
@@ -314,7 +317,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ fontSize: 14 }}>{type}</h3>
               <span style={{ fontSize: 11.5, color: overPolicy ? "var(--rust)" : overTarget ? "var(--brass-dark)" : "var(--slate)" }}>
-                {sum}% defined {target ? `(your target: ${target}%${max !== undefined ? `, OMC max: ${max}%` : ""})` : ""}
+                {fmtPct(sum)}% defined {kBest ? `(best ${kBest} of ${items.length} count, each worth ${fmtPct(items[0] ? items[0].marksPct : 0)}%) ` : ""}{target ? `(your target: ${target}%${max !== undefined ? `, OMC max: ${max}%` : ""})` : ""}
                 {minCount > 0 ? ` — OMC minimum: ${minCount} ${isNumbered ? "question(s)" : ""}` : ""}
               </span>
             </div>
@@ -354,8 +357,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     </td>
                     <td>
                       <input
-                        type="number" min={0} max={100} defaultValue={i.marksPct}
-                        onBlur={(e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n) && n !== i.marksPct) editInstrumentLocal(i.id, { marksPct: n }); }}
+                        type="number" step="any" min={0} max={100} defaultValue={fmtPct(i.marksPct)}
+                        onBlur={(e) => { const n = parseFloat(e.target.value); if (!isNaN(n) && Math.abs(n - i.marksPct) > 0.0001) editInstrumentLocal(i.id, { marksPct: n }); }}
                         style={{ width: 60, padding: "4px 6px", border: dirtyInstrumentIds.has(i.id) ? "1px solid var(--brass)" : "1px solid var(--line)", fontSize: 12.5 }}
                       />%
                     </td>
@@ -416,7 +419,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         </div>
         {cloImbalanced && (
           <p style={{ fontSize: 11.5, color: "var(--rust)", marginBottom: 10, fontWeight: 600 }}>
-            ⚠ CLOs are not equally distributed — {cloSpread}% spread between the highest and lowest CLO total
+            ⚠ CLOs are not equally distributed — {fmtPct(cloSpread)}% spread between the highest and lowest CLO total
             (a {CLO_BALANCE_TOLERANCE}% spread is the most that's normally allowed). Consider mapping more topics to the
             under-weighted CLO(s) so each CLO carries a similar share of the marks.
           </p>
@@ -451,8 +454,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                   {checkboxInstruments.map((i) => <td key={i.id}></td>)}
                   {hasMidterm && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 1,3</td>}
                   {hasFinal && <td style={{ fontSize: 10, fontWeight: 400, color: "var(--slate)", fontStyle: "italic" }}>e.g. 2</td>}
-                  <td style={{ fontSize: 12 }}>{grandTotal}%</td>
-                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{t}%</td>)}
+                  <td style={{ fontSize: 12 }}>{fmtPct(grandTotal)}%</td>
+                  {cloTotals.map((t, idx) => <td key={cloList[idx].id} style={{ textAlign: "center", fontSize: 12 }}>{fmtPct(t)}%</td>)}
                 </tr>
               )}
             </thead>
@@ -489,10 +492,10 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                         style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", fontSize: 12, background: first.finalQuestions.trim() ? "#FFF3D6" : undefined }} />
                     </td>
                   )}
-                  <td style={{ fontWeight: 600 }}>{groupWeight}%</td>
+                  <td style={{ fontWeight: 600 }}>{fmtPct(groupWeight)}%</td>
                   {cloList.map((c) => {
                     const t = g.rows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0);
-                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{t > 0 ? `${t}%` : ""}</td>;
+                    return <td key={c.id} style={{ textAlign: "center", fontSize: 12 }}>{t > 0 ? `${fmtPct(t)}%` : ""}</td>;
                   })}
                 </tr>
                 );

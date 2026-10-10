@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     if (!validIds.has(e.instrumentId)) continue;
     const data: any = {};
     if (e.marksPct !== undefined) {
-      const marksPct = Math.round(e.marksPct);
+      const marksPct = Math.round(Number(e.marksPct) * 10000) / 10000;
       if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) { badMarks.push(e.instrumentId); continue; }
       data.marksPct = marksPct;
     }

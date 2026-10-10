@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { fmtPct } from "../../../../lib/assessmentWeights";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -79,7 +80,7 @@ export default async function PeerPlanPage({ params }: { params: { courseId: str
           <thead><tr><th>Type</th><th>Item</th><th>% of course</th><th>Out of</th></tr></thead>
           <tbody>
             {instruments.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No assessments set yet.</td></tr>}
-            {instruments.map((i) => <tr key={i.id}><td>{i.type}</td><td>{i.label}</td><td>{i.marksPct}%</td><td>{i.maxScore}</td></tr>)}
+            {instruments.map((i) => <tr key={i.id}><td>{i.type}</td><td>{i.label}</td><td>{fmtPct(i.marksPct)}%</td><td>{i.maxScore}</td></tr>)}
           </tbody>
         </table>
       </div>

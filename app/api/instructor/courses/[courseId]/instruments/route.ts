@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (!body.type || !TYPES.includes(body.type) || !body.label || body.marksPct === undefined) {
     return NextResponse.json({ error: "type, label, marksPct are required" }, { status: 400 });
   }
-  const marksPct = parseInt(body.marksPct, 10);
+  const marksPct = Math.round(parseFloat(body.marksPct) * 10000) / 10000;
   if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });
 
   const instrument = await prisma.assessmentInstrument.create({

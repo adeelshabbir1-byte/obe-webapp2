@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   const body = await req.json();
   const data: any = {};
   if (body.marksPct !== undefined) {
-    const marksPct = parseInt(body.marksPct, 10);
+    const marksPct = Math.round(parseFloat(body.marksPct) * 10000) / 10000;
     if (isNaN(marksPct) || marksPct < 0 || marksPct > 100) return NextResponse.json({ error: "marksPct must be between 0 and 100" }, { status: 400 });
     data.marksPct = marksPct;
   }

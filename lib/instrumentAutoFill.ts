@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { r4, usableBestOf } from "./assessmentWeights";
 
 /**
  * Tops up one assessment type (Quiz, Assignment, Midterm, Final, Project,
@@ -52,11 +53,28 @@ const TYPES_WITH_TARGET_KEY: { type: string; targetKey: string; countKey: string
   { type: "Final", targetKey: "finalPct", countKey: "finalCount" },
 ];
 
+/**
+ * "Best K of N" categories (quizzes, assignments): every item carries target / K, so the best K add up to exactly the target
+ * (best 3 of 4 quizzes worth 10 -> 3.33 each). Creates missing items and re-sets the weight of all of them.
+ */
+async function ensureBestOf(courseId: string, source: "SE" | "INSTRUCTOR", type: string, count: number, target: number, k: number) {
+  const existing = await prisma.assessmentInstrument.findMany({ where: { courseId, source, type }, orderBy: { createdAt: "asc" } });
+  const each = r4(target / k);
+  for (let n = existing.length + 1; n <= count; n++) {
+    await prisma.assessmentInstrument.create({ data: { courseId, source, type, label: `${type} ${n}`, marksPct: each, maxScore: 10 } });
+  }
+  const ids = existing.map((i) => i.id);
+  if (ids.length) await prisma.assessmentInstrument.updateMany({ where: { id: { in: ids } }, data: { marksPct: each } });
+}
+
 /** Runs ensureInstrumentCount for every category at once, from a course's own saved %'s and counts. */
 export async function ensureAllInstrumentCounts(courseId: string, source: "SE" | "INSTRUCTOR", course: Record<string, any>) {
   for (const { type, targetKey, countKey } of TYPES_WITH_TARGET_KEY) {
     const desiredCount = course[countKey];
     if (!desiredCount) continue;
-    await ensureInstrumentCount(courseId, source, type, desiredCount, course[targetKey] || 0);
+    const bestOf = type === "Quiz" ? course.quizBestOf : type === "Assignment" ? course.assignmentBestOf : null;
+    const k = usableBestOf(bestOf, desiredCount);
+    if (k) await ensureBestOf(courseId, source, type, desiredCount, course[targetKey] || 0, k);
+    else await ensureInstrumentCount(courseId, source, type, desiredCount, course[targetKey] || 0);
   }
 }
