@@ -51,6 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const byCode = new Map(existing.map((c) => [c.code.toUpperCase(), c]));
   let count = existing.length, added = 0, updated = 0;
   const errors: string[] = [];
+  const blankPctPlos = new Set<string>(); // PLOs where a row left the contribution blank: split them equally afterwards
 
   for (let i = 0; i < rows.length; i++) {
     const [codeRaw, statement, bloomRaw, ploRaw, pctRaw, targetRaw] = rows[i];
@@ -65,12 +66,20 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
       if (!plo) { errors.push(`Row ${rowNo}: PLO ${ploRaw} does not exist for this batch`); continue; }
     }
     const pct = pctRaw ? Math.min(100, Math.max(0, parseInt(pctRaw, 10) || 0)) : plo ? 100 : null;
+    if (plo && !pctRaw) blankPctPlos.add(plo.id);
     const target = targetRaw ? Math.min(100, Math.max(1, parseInt(targetRaw, 10) || 60)) : undefined;
     const data = { statement, bloomLevel: bloom, mappedPloId: plo?.id || null, ploMappingSource: plo ? "MANUAL" : null, ploContributionPct: plo ? pct : null, ...(target ? { targetPct: target } : {}) };
     const match = codeRaw ? byCode.get(codeRaw.toUpperCase()) : undefined;
     if (match) { await prisma.cLO.update({ where: { id: match.id }, data }); updated++; }
     else { await prisma.cLO.create({ data: { courseId: course.id, source: "SE", code: `CLO-${count + 1}`, orderIndex: count, ...data } }); count++; added++; }
     if (plo) await ensureCoursePloMapping(course.id, plo.id, user.id, "MANUAL");
+  }
+
+  // CLOs sharing a PLO with no contribution given in the file share it equally (e.g. 3 CLOs -> 34, 33, 33).
+  for (const ploId of Array.from(blankPctPlos)) {
+    const on = await prisma.cLO.findMany({ where: { courseId: course.id, source: "SE", mappedPloId: ploId }, orderBy: { orderIndex: "asc" }, select: { id: true } });
+    const base = Math.floor(100 / on.length), extra = 100 - base * on.length;
+    for (let i = 0; i < on.length; i++) await prisma.cLO.update({ where: { id: on[i].id }, data: { ploContributionPct: base + (i < extra ? 1 : 0) } });
   }
 
   await writeAuditLog({ actorUserId: user.id, action: "CLOS_IMPORTED_FROM_FILE", entityType: "Course", entityId: course.id, metadata: { added, updated, errors: errors.length } });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SortableTable from "./SortableTable";
 
 type Plo = { id: string; number: number; title: string; status: string };
@@ -33,6 +33,13 @@ function contributionWarnings(clos: Clo[], plos: Plo[]) {
     });
 }
 
+// Splits 100% equally among n CLOs as whole numbers that add up to exactly 100 (e.g. 3 -> 34, 33, 33).
+function equalShares(n: number): number[] {
+  if (n <= 0) return [];
+  const base = Math.floor(100 / n), extra = 100 - base * n;
+  return Array.from({ length: n }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
 // Every action here updates local state directly from its own request,
 // instead of router.refresh() re-fetching this whole course's data
 // (CLOs, PLOs, everything) on every single small edit.
@@ -40,47 +47,96 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
   const [clos, setClos] = useState<Clo[]>(initialClos);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Every row is editable in place; changes are kept here until "Save changes".
+  type Draft = { statement: string; bloomLevel: string; mappedPloId: string | null; ploContributionPct: number | null; targetPct: number };
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [saved, setSaved] = useState("");
+  const baseOf = (c: Clo): Draft => ({ statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct, targetPct: c.targetPct });
+  const rowOf = (c: Clo): Draft => drafts[c.id] || baseOf(c);
+  const isDirty = (c: Clo) => {
+    const d = drafts[c.id];
+    return !!d && (d.statement !== c.statement || d.bloomLevel !== c.bloomLevel || (d.mappedPloId || null) !== (c.mappedPloId || null)
+      || (d.mappedPloId ? (d.ploContributionPct ?? 100) !== (c.ploContributionPct ?? 100) : false) || d.targetPct !== c.targetPct);
+  };
+  const dirtyClos = clos.filter(isDirty);
+
+  function edit(c: Clo, patch: Partial<Draft>) {
+    setSaved("");
+    setDrafts((prev) => {
+      const next: Record<string, Draft> = { ...prev, [c.id]: { ...(prev[c.id] || baseOf(c)), ...patch } };
+      // When a CLO moves onto (or off) a PLO, every CLO on the PLOs involved shares that PLO equally.
+      if ("mappedPloId" in patch) {
+        const before = (prev[c.id] || baseOf(c)).mappedPloId;
+        for (const ploId of [before, patch.mappedPloId]) {
+          if (!ploId) continue;
+          const on = clos.filter((x) => (next[x.id] || baseOf(x)).mappedPloId === ploId);
+          const shares = equalShares(on.length);
+          on.forEach((x, i) => { next[x.id] = { ...(next[x.id] || baseOf(x)), ploContributionPct: shares[i] }; });
+        }
+      }
+      return next;
+    });
+  }
+  useEffect(() => {
+    if (dirtyClos.length === 0) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirtyClos.length]);
+
+  async function patchClo(c: Clo, d: Draft): Promise<string | null> {
+    const payload = { ...d, statement: d.statement.trim(), ploContributionPct: d.mappedPloId ? (d.ploContributionPct ?? 100) : null, targetPct: d.targetPct || 60 };
+    try {
+      const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return `${c.code}: ${data.error || "Something went wrong."}`;
+      setClos((prev) => prev.map((x) => x.id === c.id ? { ...x, ...payload, ploMappingSource: payload.mappedPloId ? "MANUAL" : null } : x));
+      setDrafts((prev) => { const n = { ...prev }; delete n[c.id]; return n; });
+      return null;
+    } catch (err: any) { return `${c.code}: ${err.message}`; }
+  }
+
+  async function saveAll() {
+    setLoading(true); setError(""); setSaved("");
+    let ok = 0;
+    for (const c of dirtyClos) {
+      const d = rowOf(c);
+      if (!d.statement.trim()) { setError(`${c.code}: the outcome statement can't be empty.`); break; }
+      const err = await patchClo(c, d);
+      if (err) { setError(err); break; }
+      ok++;
+    }
+    if (ok) setSaved(`${ok} CLO${ok === 1 ? "" : "s"} saved.`);
+    setLoading(false);
+  }
 
   async function addClo(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
+    // A PLO that already has CLOs: the new one and those already on it share the PLO equally.
+    const ploId = (fd.get("mappedPloId") as string) || "";
+    const others = ploId ? clos.filter((x) => rowOf(x).mappedPloId === ploId) : [];
+    const shares = equalShares(others.length + 1);
+    const newShare = others.length ? shares[others.length] : null;
     try {
       const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           statement: fd.get("statement"), bloomLevel: fd.get("bloomLevel"),
-          mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: fd.get("ploContributionPct") || null,
+          mappedPloId: fd.get("mappedPloId") || null, ploContributionPct: newShare ?? (fd.get("ploContributionPct") || null),
           targetPct: fd.get("targetPct") || 60,
         }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setClos((prev) => [...prev, data.clo]);
+      for (let i = 0; i < others.length; i++) {
+        const err = await patchClo(others[i], { ...rowOf(others[i]), ploContributionPct: shares[i] });
+        if (err) { setError(err); break; }
+      }
       (e.target as HTMLFormElement).reset(); setLoading(false);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
-  }
-
-  async function saveEdit(e: React.FormEvent<HTMLFormElement>, cloId: string) {
-    e.preventDefault();
-    setLoading(true); setError("");
-    const fd = new FormData(e.currentTarget);
-    const payload = {
-      statement: fd.get("statement") as string, bloomLevel: fd.get("bloomLevel") as string,
-      mappedPloId: (fd.get("mappedPloId") as string) || null,
-      ploContributionPct: fd.get("ploContributionPct") ? Number(fd.get("ploContributionPct")) : null,
-      targetPct: Number(fd.get("targetPct") || 60),
-    };
-    try {
-      const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${cloId}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setClos((prev) => prev.map((c) => c.id === cloId ? { ...c, ...payload } : c));
-      setEditingId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -120,7 +176,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
     </>
   );
 
-  const warnings = contributionWarnings(clos, plos);
+  const warnings = contributionWarnings(clos.map((c) => ({ ...c, ...rowOf(c) })), plos);
 
   return (
     <>
@@ -148,59 +204,65 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
             {clos.length === 0 && (
               <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
             )}
-            {clos.map((c, i) => (
-              !readOnly && editingId === c.id ? (
+            {clos.map((c, i) => {
+              if (readOnly) return (
                 <tr key={c.id}>
-                  <td colSpan={7}>
-                    <form onSubmit={(e) => saveEdit(e, c.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
-                      <span style={{ fontWeight: 600 }}>{c.code}</span>
-                      <input name="statement" defaultValue={c.statement} style={{ flex: "1 1 220px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
-                      <select name="bloomLevel" defaultValue={c.bloomLevel} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
-                        {BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.v}</option>)}
-                      </select>
-                      <select name="mappedPloId" defaultValue={c.mappedPloId ?? ""} style={{ padding: "6px 8px", border: "1px solid var(--line)", maxWidth: 200 }}>
-                        {ploSelectOptions}
-                      </select>
-                      <input name="ploContributionPct" type="number" min={1} max={100} defaultValue={c.ploContributionPct ?? 100} placeholder="%" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
-                      <input name="targetPct" type="number" min={1} max={100} defaultValue={c.targetPct} title="Target % — expected % of students attaining this CO" style={{ width: 60, padding: "6px 8px", border: "1px solid var(--line)" }} />
-                      <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
-                      <button type="button" onClick={() => setEditingId(null)} className="btn" style={{ padding: "5px 10px", fontSize: 11.5, background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Cancel</button>
-                    </form>
-                  </td>
+                  <td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{ploLabel(plos, c.mappedPloId)}</td>
+                  <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td><td>{c.targetPct}%</td>
                 </tr>
-              ) : (
+              );
+              const d = rowOf(c);
+              const dirty = isDirty(c);
+              const box = { padding: "5px 7px", border: "1px solid var(--line)", fontSize: 12.5, background: dirty ? "#FFFBEA" : "#fff" } as const;
+              return (
                 <tr key={c.id}>
+                  <td style={{ whiteSpace: "nowrap", verticalAlign: "top" }}>
+                    {c.code}{dirty && <span title="Not saved yet" style={{ color: "#B7791F", marginLeft: 3 }}>●</span>}
+                    <div style={{ display: "flex", gap: 2, marginTop: 4 }}>
+                      <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+                      <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
+                    </div>
+                  </td>
+                  <td style={{ minWidth: 240 }}>
+                    <textarea value={d.statement} onChange={(e) => edit(c, { statement: e.target.value })} rows={2} style={{ ...box, width: "100%", resize: "vertical" }} />
+                  </td>
                   <td>
-                    {c.code}
-                    {!readOnly && (
-                      <div style={{ display: "inline-flex", gap: 2, marginLeft: 6 }}>
-                        <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
-                        <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
-                      </div>
+                    <select value={d.bloomLevel} onChange={(e) => edit(c, { bloomLevel: e.target.value })} style={box}>
+                      {BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.v}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select value={d.mappedPloId ?? ""} onChange={(e) => edit(c, { mappedPloId: e.target.value || null })} style={{ ...box, maxWidth: 230 }}>
+                      {ploSelectOptions}
+                    </select>
+                    {c.mappedPloId && c.ploMappingSource === "SYSTEM" && !dirty && (
+                      <div title="Suggested by keyword matching, not yet reviewed - save the row to confirm it" style={{ marginTop: 3, fontSize: 10, color: "#96650F" }}>⚠️ unverified suggestion</div>
                     )}
                   </td>
-                  <td>{c.statement}</td><td>{c.bloomLevel}</td>
                   <td>
-                    {ploLabel(plos, c.mappedPloId)}
-                    {c.mappedPloId && c.ploMappingSource === "SYSTEM" && (
-                      <span title="Suggested by keyword matching, not yet reviewed" style={{ marginLeft: 6, fontSize: 10, color: "#96650F", background: "#FBEED2", padding: "1px 5px", borderRadius: 3 }}>
-                        ⚠️ unverified
-                      </span>
-                    )}
+                    <input type="number" min={1} max={100} disabled={!d.mappedPloId} value={d.mappedPloId ? d.ploContributionPct ?? 100 : ""} onChange={(e) => edit(c, { ploContributionPct: e.target.value === "" ? null : Number(e.target.value) })} style={{ ...box, width: 64 }} />
                   </td>
-                  <td>{c.mappedPloId ? `${c.ploContributionPct ?? 100}%` : "—"}</td>
-                  <td>{c.targetPct}%</td>
-                  {!readOnly && (
-                    <td style={{ display: "flex", gap: 10 }}>
-                      <button onClick={() => setEditingId(c.id)} style={{ background: "none", border: "none", color: "var(--brass-dark)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Edit</button>
-                      <button onClick={() => removeClo(c.id)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
-                    </td>
-                  )}
+                  <td>
+                    <input type="number" min={1} max={100} value={d.targetPct} onChange={(e) => edit(c, { targetPct: Number(e.target.value) })} title="Expected % of students attaining this CLO" style={{ ...box, width: 64 }} />
+                  </td>
+                  <td>
+                    <button onClick={() => removeClo(c.id)} disabled={loading} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0 }}>Remove</button>
+                  </td>
                 </tr>
-              )
-            ))}
+              );
+            })}
           </tbody>
         </SortableTable>
+        {!readOnly && clos.length > 0 && (
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+            <button className="btn btn-brass" onClick={saveAll} disabled={loading || dirtyClos.length === 0}>
+              {loading ? "Saving…" : dirtyClos.length ? `Save changes (${dirtyClos.length} CLO${dirtyClos.length === 1 ? "" : "s"})` : "Save changes"}
+            </button>
+            {dirtyClos.length > 0 && <button className="btn" type="button" onClick={() => { setDrafts({}); setError(""); }} disabled={loading} style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Undo changes</button>}
+            {saved && <span style={{ color: "var(--sage)", fontSize: 13 }}>{saved}</span>}
+            {!saved && dirtyClos.length === 0 && <span style={{ color: "var(--slate)", fontSize: 12 }}>Edit any cell above, then save. CLOs on the same PLO share it equally by default; you can change the split before saving.</span>}
+          </div>
+        )}
       </div>
 
       {!readOnly && (
@@ -227,7 +289,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
               </div>
             </div>
             <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>
-              If more than one CLO in this course maps to the same PLO, their contribution percentages must add up to 100%.
+              If more than one CLO in this course maps to the same PLO, they share it equally (their contributions must add up to 100%).
             </p>
             <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
           </form>
