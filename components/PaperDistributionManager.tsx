@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type LectureRow = { id: string; topic: string; cloId: string | null; bloomLevel: string | null };
-type Clo = { id: string; code: string; statement: string };
+type Clo = { id: string; code: string; statement: string; plo?: string | null; ploTitle?: string | null };
 type Item = {
   id: string; examType: string | null; questionNo: number; lectureRowId: string | null; topicText: string;
   cloId: string | null; cognitiveLevel: string | null; marks: number;
@@ -159,6 +159,12 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
     return c ? c.code : "—";
   }
 
+  function ploLabel(id: string | null) {
+    if (!id) return "—";
+    const c = clos.find((x) => x.id === id);
+    return c?.plo || "—";
+  }
+
   function actualCoverageFor(topicText: string) {
     if (!coverageByTopic) return null;
     return coverageByTopic[topicText.trim().toLowerCase()] || null;
@@ -206,15 +212,17 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
           ))}
         </div>
 
+        {sectionItems.length > 0 && <HitSummary items={sectionItems} clos={clos} lectureRows={lectureRows} total={totalMarks} />}
+
         <div className="card" style={{ overflowX: "auto" }}>
           <table>
-            <thead><tr><th>Q. No.</th><th>Topic</th><th>CLO</th><th>Cognitive Level</th><th>Suggested Verbs</th><th>Marks</th>{coverageByTopic && <th>Actual Coverage</th>}<th></th></tr></thead>
+            <thead><tr><th>Q. No.</th><th>Topic</th><th>CLO</th><th>PLO</th><th>Cognitive Level</th><th>Suggested Verbs</th><th>Marks</th>{coverageByTopic && <th>Actual Coverage</th>}<th></th></tr></thead>
             <tbody>
-              {sectionItems.length === 0 && <tr><td colSpan={coverageByTopic ? 8 : 7} style={{ color: "var(--slate)" }}>No questions added yet.</td></tr>}
+              {sectionItems.length === 0 && <tr><td colSpan={coverageByTopic ? 9 : 8} style={{ color: "var(--slate)" }}>No questions added yet.</td></tr>}
               {sectionItems.map((it, i) => (
                 editingId === it.id ? (
                   <tr key={it.id}>
-                    <td colSpan={coverageByTopic ? 8 : 7}>
+                    <td colSpan={coverageByTopic ? 9 : 8}>
                       <form onSubmit={(e) => saveEdit(e, it.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
                         <span style={{ fontWeight: 600 }}>Q{it.questionNo}</span>
                         <input name="topicText" defaultValue={it.topicText} style={{ flex: "1 1 200px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
@@ -239,6 +247,7 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
                     </td>
                     <td>{it.topicText}</td>
                     <td>{cloLabel(it.cloId)}</td>
+                    <td title={clos.find((c) => c.id === it.cloId)?.ploTitle || ""}>{ploLabel(it.cloId)}</td>
                     <td>{it.cognitiveLevel || "—"}</td>
                     <td style={{ fontSize: 11, color: "var(--slate)" }}>{it.cognitiveLevel ? BLOOM_VERBS[it.cognitiveLevel] : "—"}</td>
                     <td>{it.marks}</td>
@@ -291,5 +300,60 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
       {EXAM_TYPES.map((et) => renderSection(et, `${et} Paper`))}
       {legacyItems.length > 0 && renderSection(null, "Not Sorted Into an Exam Yet")}
     </>
+  );
+}
+
+/** Which CLOs, PLOs and topics this paper hits, and what share of its marks each gets. */
+function HitSummary({ items, clos, lectureRows, total }: { items: Item[]; clos: Clo[]; lectureRows: LectureRow[]; total: number }) {
+  const add = (m: Map<string, { marks: number; qs: number[]; title?: string }>, k: string, it: Item, title?: string) => {
+    const e = m.get(k) || { marks: 0, qs: [], title };
+    e.marks += it.marks; e.qs.push(it.questionNo); m.set(k, e);
+  };
+  const byClo = new Map<string, { marks: number; qs: number[]; title?: string }>();
+  const byPlo = new Map<string, { marks: number; qs: number[]; title?: string }>();
+  const byTopic = new Map<string, { marks: number; qs: number[]; title?: string }>();
+  for (const it of items) {
+    const c = it.cloId ? clos.find((x) => x.id === it.cloId) : null;
+    add(byClo, c?.code || "No CLO", it, c?.statement);
+    add(byPlo, c?.plo || "No PLO", it, c?.ploTitle || undefined);
+    const row = it.lectureRowId ? lectureRows.find((r) => r.id === it.lectureRowId) : null;
+    add(byTopic, (row?.topic || it.topicText || "—").trim(), it);
+  }
+  const sorted = (m: Map<string, { marks: number; qs: number[]; title?: string }>) =>
+    Array.from(m.entries()).sort((a, b) => (a[0].startsWith("No ") ? 1 : 0) - (b[0].startsWith("No ") ? 1 : 0) || a[0].localeCompare(b[0], undefined, { numeric: true }));
+  const pctOf = (n: number) => (total ? Math.round((1000 * n) / total) / 10 : 0);
+  const unhit = clos.filter((c) => !byClo.has(c.code));
+  const block = (title: string, m: Map<string, { marks: number; qs: number[]; title?: string }>, byMarks = false) => (
+    <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+      <h4 style={{ fontSize: 12.5, margin: "0 0 6px", color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".04em" }}>{title}</h4>
+      <table style={{ fontSize: 12 }}>
+        <thead><tr><th></th><th style={{ textAlign: "center" }}>Marks</th><th style={{ textAlign: "center" }}>% of paper</th><th>Questions</th></tr></thead>
+        <tbody>
+          {(byMarks ? Array.from(m.entries()).sort((a, b) => b[1].marks - a[1].marks) : sorted(m)).map(([k, v]) => (
+            <tr key={k}>
+              <td title={v.title || ""} style={{ maxWidth: 220, color: k.startsWith("No ") ? "var(--rust)" : undefined }}><b>{k}</b></td>
+              <td style={{ textAlign: "center" }}>{Math.round(v.marks * 10) / 10}</td>
+              <td style={{ textAlign: "center", minWidth: 90 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ height: 6, width: `${Math.max(3, pctOf(v.marks) * 0.6)}px`, background: "var(--brass)", borderRadius: 3 }} />{pctOf(v.marks)}%
+                </div>
+              </td>
+              <td style={{ fontSize: 11, color: "var(--slate)" }}>{v.qs.sort((a, b) => a - b).map((q) => `Q${q}`).join(", ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  return (
+    <div className="card">
+      <h3 style={{ fontSize: 14, marginBottom: 10 }}>What this paper tests</h3>
+      <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+        {block("PLOs hit", byPlo)}
+        {block("CLOs hit", byClo)}
+      </div>
+      {unhit.length > 0 && <p style={{ fontSize: 11.5, color: "var(--rust)", marginTop: 8 }}>Not tested in this paper: {unhit.map((c) => c.code + (c.plo ? ` (${c.plo})` : "")).join(", ")}</p>}
+      <div style={{ marginTop: 14 }}>{block("Topics (% of paper)", byTopic, true)}</div>
+    </div>
   );
 }

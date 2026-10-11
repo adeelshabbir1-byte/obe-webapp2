@@ -4,6 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import GuidanceThread from "../../../../../components/GuidanceThread";
+import TeachingAnalysisReport from "../../../../../components/TeachingAnalysisReport";
+import { analyzeTeaching } from "../../../../../lib/teachingAnalysis";
 import { navForRole } from "../../../../../components/reportNav";
 
 export default async function DeliveryPage({ params }: { params: { courseId: string } }) {
@@ -48,6 +50,8 @@ export default async function DeliveryPage({ params }: { params: { courseId: str
           </>
         )}
       </div>
+
+      {course.instructor && <TeachingAnalysisReport a={await analyzeTeaching(course.id)} />}
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Delivery Feedback</h3>

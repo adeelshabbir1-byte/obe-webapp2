@@ -4,6 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import PaperDistributionManager from "../../../../../components/PaperDistributionManager";
+import TeachingAnalysisReport from "../../../../../components/TeachingAnalysisReport";
+import { analyzeTeaching } from "../../../../../lib/teachingAnalysis";
 import { navForRole } from "../../../../../components/reportNav";
 import FinalBoundaryPanel from "../../../../../components/FinalBoundaryPanel";
 import { computeFinalBoundary } from "../../../../../lib/finalBoundary";
@@ -22,7 +24,7 @@ export default async function SePaperDistributionPage({ params }: { params: { co
   const [items, lectureRows, clos] = await Promise.all([
     prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { orderIndex: "asc" } }),
     prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" } }),
-    prisma.cLO.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { orderIndex: "asc" } }),
+    prisma.cLO.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { orderIndex: "asc" }, include: { mappedPlo: { select: { number: true, title: true } } } }),
   ]);
 
   const coordinator = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });
@@ -50,9 +52,10 @@ export default async function SePaperDistributionPage({ params }: { params: { co
         apiBase={`/api/subjectexpert/courses/${course.id}/paper-distribution`}
         items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
         lectureRows={lectureRows.map((r) => ({ id: r.id, topic: r.topic, cloId: r.cloId, bloomLevel: r.bloomLevel }))}
-        clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement }))}
+        clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, plo: c.mappedPlo ? `PLO-${c.mappedPlo.number}` : null, ploTitle: c.mappedPlo?.title || null }))}
         canGenerate
       />
+      <TeachingAnalysisReport a={await analyzeTeaching(course.id)} />
     </Shell>
   );
 }
