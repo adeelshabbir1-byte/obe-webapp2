@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 
-// Drag-to-reorder for the lecture plan grids. A row only becomes draggable while its grip is held, so the text
-// inputs inside the row keep normal selection. With the grip focused, ↑ / ↓ move the lecture one slot (keyboard).
+// Drag-to-reorder for the lecture plan grids, driven by pointer events (works with mouse and touch) from the grip,
+// so the text inputs inside the row keep normal selection. With the grip focused, ↑ / ↓ move the lecture one slot (keyboard).
 
 export function GripIcon() {
   return (
@@ -16,11 +16,10 @@ export function GripIcon() {
 }
 
 export function useRowReorder(ids: string[], onMove: (fromId: string, toId: string) => void, disabled = false) {
-  const [armed, setArmed] = useState<string | null>(null);
+  // Pointer-based (mouse, pen and touch): press the grip, drag over the rows, release on the target slot.
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
-  const dragRef = useRef<string | null>(null);
-  const reset = () => { setArmed(null); setDrag(null); setOver(null); dragRef.current = null; };
+  const state = useRef<{ from: string; over: string | null; pointerId: number } | null>(null);
   const idx = (id: string) => ids.indexOf(id);
 
   const move = (from: string, to: string, refocus = false) => {
@@ -28,13 +27,18 @@ export function useRowReorder(ids: string[], onMove: (fromId: string, toId: stri
     onMove(from, to);
     if (refocus) requestAnimationFrame(() => (document.querySelector(`[data-grip-id="${to}"]`) as HTMLElement | null)?.focus());
   };
+  const rowAt = (x: number, y: number) => {
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    return (el?.closest("[data-row-id]") as HTMLElement | null)?.dataset.rowId || null;
+  };
+  const autoScroll = (y: number) => {
+    const edge = 60;
+    if (y < edge) window.scrollBy(0, -12);
+    else if (y > window.innerHeight - edge) window.scrollBy(0, 12);
+  };
 
   const rowProps = (id: string) => ({
-    draggable: !disabled && armed === id,
-    onDragStart: (e: React.DragEvent) => { dragRef.current = id; setDrag(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); },
-    onDragOver: (e: React.DragEvent) => { if (!dragRef.current) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (over !== id) setOver(id); },
-    onDrop: (e: React.DragEvent) => { e.preventDefault(); const from = dragRef.current; reset(); if (from) move(from, id); },
-    onDragEnd: reset,
+    "data-row-id": id,
     "data-dragging": drag === id ? "true" : undefined,
     "data-drop": drag && over === id && drag !== id ? (idx(drag) < idx(id) ? "after" : "before") : undefined,
   });
@@ -46,8 +50,36 @@ export function useRowReorder(ids: string[], onMove: (fromId: string, toId: stri
     disabled,
     "aria-label": `Reorder ${label}. Drag, or use the up and down arrow keys.`,
     title: "Drag to move this lecture (or focus and press ↑ / ↓)",
-    onMouseDown: () => setArmed(id),
-    onMouseUp: () => { if (!dragRef.current) setArmed(null); },
+    style: { touchAction: "none" as const },
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (disabled || e.button !== 0) return;
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      state.current = { from: id, over: null, pointerId: e.pointerId };
+      setDrag(id); setOver(null);
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLButtonElement>) => {
+      const st = state.current;
+      if (!st || st.pointerId !== e.pointerId) return;
+      autoScroll(e.clientY);
+      const target = rowAt(e.clientX, e.clientY);
+      if (target && target !== st.over) { st.over = target; setOver(target); }
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
+      const st = state.current;
+      state.current = null;
+      setDrag(null); setOver(null);
+      document.body.style.cursor = ""; document.body.style.userSelect = "";
+      if (!st || st.pointerId !== e.pointerId) return;
+      const target = rowAt(e.clientX, e.clientY) || st.over;
+      if (target && target !== st.from) move(st.from, target);
+    },
+    onPointerCancel: () => {
+      state.current = null; setDrag(null); setOver(null);
+      document.body.style.cursor = ""; document.body.style.userSelect = "";
+    },
     onKeyDown: (e: React.KeyboardEvent) => {
       const i = idx(id);
       if (e.key === "ArrowUp" && i > 0) { e.preventDefault(); move(id, ids[i - 1], true); }
