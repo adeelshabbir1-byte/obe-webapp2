@@ -29,11 +29,15 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
   const wb = new ExcelJS.Workbook();
   try { await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as any); } catch { return { error: "could not read that file - upload the .xlsx workbook" }; }
   const sheet = (re: RegExp) => readSheet(wb.worksheets.find((w) => re.test(norm(w.name))));
-  const meta = sheet(/^curriculum$/), ploS = sheet(/^plos?$/), courseS = sheet(/^courses$/), cloS = sheet(/^clos/), topicS = sheet(/^lecture topics|^topics$/);
+  const meta = sheet(/^curriculum$|^program$/), ploS = sheet(/^plos?$/), courseS = sheet(/^courses$/), cloS = sheet(/^clos/), topicS = sheet(/^lecture topics|^topics$/);
   if (!ploS || !courseS) return { error: "the workbook needs at least a \"PLOs\" sheet and a \"Courses\" sheet" };
 
   const info = new Map<string, string>();
-  if (meta) { const k = col(meta, /^item$/), v = col(meta, /^value$/); meta.rows.forEach((r) => info.set(norm(at(r, k)), at(r, v))); }
+  if (meta) {
+    // Either Item | Value rows, or a header row (Degree program | Authority | Version) with one value row.
+    if (meta.header.includes("degree program")) meta.header.forEach((h, i) => info.set(h, at(meta.rows[0] || [], i)));
+    else { const k = col(meta, /^item$/), v = col(meta, /^value$/); meta.rows.forEach((r) => info.set(norm(at(r, k >= 0 ? k : 0)), at(r, v >= 0 ? v : 1))); }
+  }
   const degreeProgram = info.get("degree program") || "";
   const authority = info.get("authority") || "Institute";
   const version = info.get("version") || String(new Date().getFullYear());

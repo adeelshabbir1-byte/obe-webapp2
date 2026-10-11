@@ -31,7 +31,7 @@ const get = (r: string[], i: number) => (i >= 0 ? (r[i] || "").trim() : "");
 
 export async function readProgramInfo(file: File) {
   const sheets = await readSheets(file);
-  const p = sheets.get("program");
+  const p = sheets.get("program") || sheets.get("curriculum");
   if (!p) return null;
   // Either a header row (Degree program | Authority | Version) with one value row, or key/value rows.
   const kv = new Map<string, string>();
@@ -48,7 +48,7 @@ export async function importFullCurriculum(curriculumId: string, file: File) {
   // PLOs
   const ploSheet = sheets.get("plos");
   if (ploSheet) {
-    const cN = colOf(ploSheet, /^(plo|number|no)$/), cT = colOf(ploSheet, /^title$/), cD = colOf(ploSheet, /^description$/);
+    const cN = colOf(ploSheet, /^(plo|plo number|number|no)$/), cT = colOf(ploSheet, /^title$/), cD = colOf(ploSheet, /^description$/);
     const existing = await prisma.masterPLO.findMany({ where: { masterCurriculumId: curriculumId } });
     for (const r of ploSheet.rows) {
       const n = parseInt(get(r, cN).replace(/\D+/g, ""), 10);

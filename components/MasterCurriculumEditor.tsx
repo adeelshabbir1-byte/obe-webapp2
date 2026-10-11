@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Fragment } from "react";
 import MasterPushPanel from "./MasterPushPanel";
-import CurriculumWorkbookImport from "./CurriculumWorkbookImport";
 
 type CurriculumSummary = { id: string; title: string; authority: string; version: string; status: string; isOwned: boolean; _count: { courses: number; plos: number } };
 type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number };
@@ -259,8 +258,6 @@ export default function MasterCurriculumEditor() {
       </div>
 
       {selectedId && detail?.isOwned && detail.id === selectedId && <MasterPushPanel key={selectedId} curriculumId={selectedId} />}
-
-      <CurriculumWorkbookImport official={false} />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
