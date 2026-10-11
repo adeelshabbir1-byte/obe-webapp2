@@ -44,7 +44,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   // merged "Assignment" heading over A1/A2/A3, instead of repeating the
   // type name on every single column) — keeps more results visible at once.
   const TYPE_COLOR: Record<string, string> = {
-    Assignment: "#2563EB", Quiz: "#16A34A", Project: "#7C3AED", Lab: "#EA580C", Midterm: "#DB2777", Final: "#CA8A04",
+    Assignment: "#2563EB", Quiz: "var(--sage)", Project: "#7C3AED", Lab: "#EA580C", Midterm: "#DB2777", Final: "#CA8A04",
   };
   const groupedInstrumentTypes: { type: string; instruments: any[] }[] = [];
   if (result) {
@@ -199,7 +199,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
 
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 4 }}>CLO Attainment, by Student</h3>
-            <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.cloPct}% pass threshold for that CLO.</p>
+            <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.cloPct}% pass threshold for that CLO.</p>
             <SortableTable paginate={false} searchable={false}>
               <thead><tr><th>Roll #</th><th>Name</th>{result.cloCodes.map((c) => {
                 const max = result.cloMaxWeight[c] || 0;
@@ -230,7 +230,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                       const max = result.cloMaxWeight[c] || 0;
                       const threshold = max * (passCriteria.cloPct / 100);
                       const failed = max > 0 && (r.byClo[c] || 0) < threshold;
-                      return <td key={c} style={failed ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.cloPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byClo[c] || 0}</td>;
+                      return <td key={c} style={failed ? { background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.cloPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byClo[c] || 0}</td>;
                     })}
                     <td style={{ fontWeight: 600 }}>{r.totalPct}%</td>
                     <td><span className={`badge ${gradeBadge[r.grade]}`}>{r.grade}</span></td>
@@ -243,7 +243,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           {result.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLO Attainment, by Student</h3>
-              <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "#FFE4DC", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
+              <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
               <SortableTable paginate={false} searchable={false}>
                 <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => {
                   const max = result.ploMaxWeight[p] || 0;
@@ -272,7 +272,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
                         const max = result.ploMaxWeight[p] || 0;
                         const threshold = max * (passCriteria.ploPct / 100);
                         const failed = max > 0 && (r.byPlo[p] || 0) < threshold;
-                        return <td key={p} style={failed ? { background: "#FFE4DC", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.ploPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byPlo[p] || 0}</td>;
+                        return <td key={p} style={failed ? { background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700 } : undefined} title={failed ? `Below the ${passCriteria.ploPct}% pass threshold (${threshold.toFixed(1)} of ${max})` : undefined}>{r.byPlo[p] || 0}</td>;
                       })}
                     </tr>
                   ))}

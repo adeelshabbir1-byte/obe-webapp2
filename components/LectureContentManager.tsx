@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import SortableTable from "./SortableTable";
-import { colorForTopic } from "../lib/topicColor";
+import { GripIcon, useRowReorder, shiftContent, topicTone, isExamRow } from "./lectureDrag";
 
 type Clo = { id: string; code: string };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number };
@@ -20,19 +19,24 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
   const [loading, setLoading] = useState(false);
   const [busyRow, setBusyRow] = useState<string | null>(null);
 
-  async function moveLecture(lectureId: string, direction: "up" | "down") {
-    setBusyRow(lectureId); setError("");
+  const [moving, setMoving] = useState(false);
+  const content = (r: Row) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct });
+  async function moveLecture(fromId: string, toId: string) {
+    const before = rows;
+    setRows((prev) => shiftContent(prev, fromId, toId, content)); // move straight away; the server confirms
+    setMoving(true); setError("");
     try {
-      const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${lectureId}/move`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ direction }),
+      const res = await fetch(`${apiBase}/courses/${courseId}/lecture/reorder`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setRows(before); setError(data.error || "Could not move the lecture."); return; }
       const byId: Map<string, Row> = new Map((data.rows as Row[]).map((r) => [r.id, r]));
-      setRows((prev) => prev.map((r) => (byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r)));
-      setBusyRow(null);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
+      setRows((prev) => prev.map((r) => (byId.has(r.id) ? { ...r, ...content(byId.get(r.id)!) } : r)));
+    } catch (err: any) { setRows(before); setError("Could not move the lecture: " + err.message); }
+    finally { setMoving(false); }
   }
+  const { rowProps, gripProps } = useRowReorder(rows.map((r) => r.id), moveLecture, moving);
 
   async function generate() {
     setLoading(true); setError("");
@@ -78,75 +82,62 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
   }
 
   const filledCount = rows.filter((r) => r.topic.trim().length > 0).length;
+  const pct = Math.round((filledCount / rows.length) * 100);
 
   return (
     <>
       {error && <div className="err">{error}</div>}
-      <div className="card" style={{ overflowX: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <h3 style={{ fontSize: 14 }}>Lecture Content</h3>
-          <span style={{ fontSize: 11.5, color: "var(--slate)" }}>{filledCount} / {rows.length} topics filled in — click any cell to edit</span>
+      <div className="card">
+        <div className="lp-toolbar">
+          <h3>Lecture plan</h3>
+          <span className="lp-meta">
+            {moving ? <span className="lp-saving">Saving order…</span> : <>{filledCount} of {rows.length} topics filled<span className="lp-progress"><span style={{ width: `${pct}%` }} /></span></>}
+          </span>
         </div>
-        <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
-          <thead>
-            <tr><th style={{ width: 40 }}>Wk</th><th style={{ width: 40 }}>Lec</th><th style={{ width: 46 }}></th><th style={{ width: "26%" }}>Topic</th><th style={{ width: "26%" }}>Sub Topic</th><th style={{ width: 90 }}>CLO</th><th style={{ width: 90 }}>Bloom</th><th style={{ width: 70 }}>Weight</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((r, idx) => (
-              <tr key={r.id}>
-                <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.week}</td>
-                <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.lectureNumber}</td>
-                <td style={{ padding: 0 }}>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <button onClick={() => moveLecture(r.id, "up")} disabled={busyRow === r.id || idx === 0} title="Move this topic up a slot"
-                      style={{ background: "none", border: "1px solid var(--line)", cursor: idx === 0 ? "default" : "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▲</button>
-                    <button onClick={() => moveLecture(r.id, "down")} disabled={busyRow === r.id || idx === rows.length - 1} title="Move this topic down a slot"
-                      style={{ background: "none", border: "1px solid var(--line)", cursor: idx === rows.length - 1 ? "default" : "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▼</button>
-                  </div>
-                </td>
-                <td style={{ background: colorForTopic(r.topic), padding: 0 }}>
-                  <input
-                    defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Topic..."
-                    onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, "topic", e.target.value); }}
-                    style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }}
-                  />
-                </td>
-                <td style={{ padding: 0 }}>
-                  <input
-                    defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder={r.topic ? `${r.topic} (defaults to topic if left blank)` : "Sub topic..."}
-                    onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, "subtopic", e.target.value); }}
-                    style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }}
-                  />
-                </td>
-                <td style={{ padding: 0 }}>
-                  <select
-                    defaultValue={r.cloId || ""} disabled={busyRow === r.id}
-                    onChange={(e) => saveField(r, "cloId", e.target.value)}
-                    style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}
-                  >
-                    <option value="">—</option>
-                    {clos.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
-                  </select>
-                </td>
-                <td style={{ padding: 0 }}>
-                  <select
-                    defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id}
-                    onChange={(e) => saveField(r, "bloomLevel", e.target.value)}
-                    style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}
-                  >
-                    {BLOOM_OPTIONS.map((b) => <option key={b} value={b}>{b || "—"}</option>)}
-                  </select>
-                </td>
-                <td style={{ fontWeight: 600, fontSize: 12 }}>{r.weightPct}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </SortableTable>
-        <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
-          Same-colored topics repeat across rows — a quick visual check that related lectures are grouped together.
-          Use the ▲▼ buttons to move a topic to a different week/lecture slot — it swaps places with whichever topic
-          is currently there. Set which quizzes/assignments/exam questions test each topic on the Assessments tab
-          (Weight column fills in from there).
+        <div className="lp-wrap"><div className="lp-scroll">
+          <table className="lp-table">
+            <colgroup><col style={{ width: 34 }} /><col style={{ width: 66 }} /><col style={{ width: 48 }} /><col /><col /><col style={{ width: 96 }} /><col style={{ width: 84 }} /><col style={{ width: 76 }} /></colgroup>
+            <thead><tr><th></th><th>Week</th><th>Lec</th><th>Topic</th><th>Sub-topic</th><th>CLO</th><th>Bloom</th><th style={{ textAlign: "right" }}>Weight</th></tr></thead>
+            <tbody>
+              {rows.map((r, idx) => {
+                const weekStart = idx === 0 || rows[idx - 1].week !== r.week;
+                const exam = isExamRow(r.topic);
+                return (
+                  <tr key={r.id} className={[weekStart ? "lp-week-start" : "", exam ? "lp-exam" : ""].join(" ")} {...rowProps(r.id)}>
+                    <td style={{ textAlign: "center" }}><button {...gripProps(r.id, `lecture ${r.lectureNumber}`)}><GripIcon /></button></td>
+                    <td className="lp-week">{weekStart ? r.week : ""}</td>
+                    <td className="lp-num">{r.lectureNumber}</td>
+                    <td className="lp-topic">
+                      <span className="lp-accent" style={{ background: topicTone(r.topic) }} />
+                      <input key={`t-${r.id}-${r.topic}`} className="lp-input" defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Add a topic"
+                        onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, "topic", e.target.value); }} />
+                    </td>
+                    <td>
+                      <input key={`s-${r.id}-${r.subtopic}`} className="lp-input" defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder={r.topic ? "Same as topic" : "Sub-topic"}
+                        onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, "subtopic", e.target.value); }} />
+                    </td>
+                    <td>
+                      <select key={`c-${r.id}-${r.cloId}`} className="lp-select" defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, "cloId", e.target.value)}>
+                        <option value="">—</option>
+                        {clos.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <select key={`b-${r.id}-${r.bloomLevel}`} className="lp-select" defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, "bloomLevel", e.target.value)}>
+                        {BLOOM_OPTIONS.map((b) => <option key={b} value={b}>{b || "—"}</option>)}
+                      </select>
+                    </td>
+                    <td className="lp-weight">{r.weightPct ? <b>{r.weightPct}%</b> : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div></div>
+        <p className="lp-hint">
+          Drag a lecture by its handle <span style={{ display: "inline-flex", verticalAlign: "middle", color: "var(--text-2)" }}><GripIcon /></span> to a new slot — the lectures in between shift by one, and the week and lecture numbers stay in place.
+          Keyboard: focus the handle and press ↑ or ↓. The thin coloured bar groups lectures that share a topic.
+          Weights fill in from the Assessments tab.
         </p>
       </div>
     </>

@@ -37,23 +37,23 @@ export default async function SchedulePage({ params }: { params: { courseId: str
 
       {course.clos.length > 0 && (
         <div className="card">
-          <h3 style={{ fontSize: 14, marginBottom: 10 }}>CLO Coverage</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div className="lp-toolbar" style={{ marginBottom: 10 }}>
+            <h3>CLO coverage</h3>
+            <span className="lp-meta">Each CLO needs at least 3 lectures</span>
+          </div>
+          <div className="lp-chips">
             {course.clos.map((c) => {
               const n = cloHitCounts[c.id] || 0;
               const ok = n >= 3;
               return (
-                <span key={c.id} style={{
-                  fontSize: 11.5, padding: "4px 10px", borderRadius: 6,
-                  background: ok ? "#CCFBF1" : "#FFE4DC", color: ok ? "var(--sage)" : "var(--rust)",
-                }}>
-                  {c.code}: {n} topic{n === 1 ? "" : "s"}{!ok ? ` (needs ${3 - n} more)` : ""}
+                <span key={c.id} className={`lp-chip ${ok ? "ok" : "short"}`} title={ok ? "Covered" : `Needs ${3 - n} more lecture${3 - n === 1 ? "" : "s"}`}>
+                  <i />{c.code}<small>{n} lecture{n === 1 ? "" : "s"}{!ok ? ` · ${3 - n} more needed` : ""}</small>
                 </span>
               );
             })}
           </div>
           {underCovered.length > 0 && (
-            <p style={{ fontSize: 11.5, color: "var(--rust)", marginTop: 10 }}>
+            <p className="lp-hint" style={{ color: "var(--amber-800)" }}>
               Every CLO must be covered by at least 3 lecture topics before this template can be submitted.
             </p>
           )}

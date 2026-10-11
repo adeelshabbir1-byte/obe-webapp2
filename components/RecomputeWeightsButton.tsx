@@ -40,12 +40,12 @@ export default function RecomputeWeightsButton() {
         {state === "loading" ? "Recomputing…" : "Recompute All Weights"}
       </button>
       {state === "done" && (
-        <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginTop: 10 }}>
+        <div style={{ background: "var(--emerald-50)", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginTop: 10 }}>
           Done — recomputed {count} lecture row(s) across every course.
         </div>
       )}
       {state === "error" && (
-        <div style={{ background: "#FEE2E2", color: "#B91C1C", padding: "8px 12px", fontSize: 12.5, marginTop: 10 }}>
+        <div style={{ background: "var(--crimson-50)", color: "#B91C1C", padding: "8px 12px", fontSize: 12.5, marginTop: 10 }}>
           Something went wrong — try again.
         </div>
       )}

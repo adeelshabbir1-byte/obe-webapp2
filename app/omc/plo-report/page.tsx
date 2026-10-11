@@ -98,7 +98,7 @@ export default async function OmcPloReportPage() {
                     </div>
                     <div style={{ fontSize: 11.5, color: "var(--slate)", flexShrink: 0 }}>
                       {r.count} course{r.count === 1 ? "" : "s"}
-                      {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
+                      {r.count === 0 && <span style={{ marginLeft: 6, background: "var(--crimson-50)", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
                     </div>
                   </div>
 

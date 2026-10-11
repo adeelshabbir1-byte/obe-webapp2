@@ -142,7 +142,7 @@ export default function EquivalenceManager() {
                     </>
                   )}
                 </td>
-                <td style={{ background: rowIndex < visibleGroups.length && !visibleGroups[rowIndex].masterCourse ? "#FEE2E2" : undefined }}>
+                <td style={{ background: rowIndex < visibleGroups.length && !visibleGroups[rowIndex].masterCourse ? "var(--crimson-50)" : undefined }}>
                   {rowIndex < visibleGroups.length && (() => {
                     const group = visibleGroups[rowIndex];
                     const isOpen = pickerOpenForGroup === group.id;

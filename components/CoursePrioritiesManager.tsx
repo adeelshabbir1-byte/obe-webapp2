@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 type Course = { code: string; title: string; priority: number | null };
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: "1 — Top priority", color: "#16A34A" },
+  1: { label: "1 — Top priority", color: "var(--sage)" },
   2: { label: "2 — Good", color: "#65A30D" },
   3: { label: "3 — 50/50", color: "#EAB308" },
   4: { label: "4 — Not interested", color: "#9CA3AF" },

@@ -90,12 +90,12 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
                         {r.status !== "approved" ? (
                           <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 6 }}>{r.status.replace("-", " ")}</span>
                         ) : (
-                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--sage)", background: "#CCFBF1", padding: "1px 6px", borderRadius: 6 }}>Approved</span>
+                          <span style={{ fontSize: 9, textTransform: "uppercase", color: "var(--sage)", background: "var(--emerald-50)", padding: "1px 6px", borderRadius: 6 }}>Approved</span>
                         )}
                       </td>
                       <td>
                         {r.count}
-                        {r.count === 0 && <span style={{ marginLeft: 6, background: "#FFE4DC", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
+                        {r.count === 0 && <span style={{ marginLeft: 6, background: "var(--crimson-50)", color: "var(--rust)", fontSize: 9.5, textTransform: "uppercase", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>Not Hit</span>}
                       </td>
                       <td>
                         {typeEntries.length === 0 ? "—" : (

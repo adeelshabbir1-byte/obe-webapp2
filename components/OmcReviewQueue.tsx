@@ -9,7 +9,7 @@ type OmcMember = { id: string; name: string };
 
 function statusBadge(status: string) {
   const map: Record<string, [string, string]> = {
-    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["#CCFBF1", "#4B7A63"], "changes-requested": ["#FFE4DC", "#B1512E"],
+    submitted: ["#E8E6FB", "#8A6B2E"], approved: ["var(--emerald-50)", "#4B7A63"], "changes-requested": ["var(--crimson-50)", "#B1512E"],
   };
   const [bg, fg] = map[status] || ["#EFECE3", "#5B6B7C"];
   return <span style={{ background: bg, color: fg, fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{status.replace("-", " ")}</span>;

@@ -20,7 +20,7 @@ export default function InstituteSettingsForm({ initialName }: { initialName: st
 
   return (
     <div className="card">
-      {ok && <div style={{ background: "#CCFBF1", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
+      {ok && <div style={{ background: "var(--emerald-50)", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>Saved.</div>}
       <form onSubmit={onSubmit}>
         <div className="field">
           <label>Institute Name</label>

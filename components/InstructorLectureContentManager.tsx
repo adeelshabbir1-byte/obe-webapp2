@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { colorForTopic } from "../lib/topicColor";
+import { GripIcon, useRowReorder, shiftContent, topicTone, isExamRow } from "./lectureDrag";
 
 type Clo = { id: string; code: string };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; cloCode?: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string; rescheduledNote: string | null; holidayConflict?: string | null };
@@ -69,14 +69,18 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
 
-  async function moveLecture(lectureId: string, direction: "up" | "down") {
-    setBusyRow(lectureId); setError("");
+  const [moving, setMoving] = useState(false);
+  const content = (r: Row) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, cloCode: r.cloCode, bloomLevel: r.bloomLevel, weightPct: r.weightPct });
+  async function moveLecture(fromId: string, toId: string) {
+    const before = rows;
+    setRows((prev) => shiftContent(prev, fromId, toId, content));
+    setMoving(true); setError("");
     try {
-      const res = await fetch(`/api/instructor/courses/${courseId}/lecture/${lectureId}/move`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ direction }),
+      const res = await fetch(`/api/instructor/courses/${courseId}/lecture/reorder`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, toId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setRows(before); setError(data.error || "Could not move the lecture."); return; }
       setRows((prev) => {
         const byId: Map<string, any> = new Map((data.rows || []).map((r: any) => [r.id, r]));
         return prev.map((r) => {
@@ -86,15 +90,16 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
           return { ...normalizeRow(raw, r), cloCode };
         });
       });
-      setBusyRow(null);
-    } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
+    } catch (err: any) { setRows(before); setError("Could not move the lecture: " + err.message); }
+    finally { setMoving(false); }
   }
+  const { rowProps, gripProps } = useRowReorder(rows.map((r) => r.id), moveLecture, moving);
 
   const filledCount = rows.filter((r) => r.actualDate).length;
 
   // A changed cell gets a small amber left-border flag — comparing against
   // the Subject Expert's corresponding value for that same lecture number.
-  const CHANGED_STYLE = { boxShadow: "inset 3px 0 0 0 #D97706" };
+  const CHANGED_STYLE = { boxShadow: "inset 3px 0 0 0 var(--amber-600)" };
 
   return (
     <>
@@ -124,83 +129,64 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
               Set lectures 1 and 2's dates below first, then click Auto-fill — the rest follow the same weekly pattern,
               skipping holidays and this course's exam dates. Any date you've already changed stays as you set it.
               A field with an amber edge means it's different from the Subject Expert's plan for that lecture.
-              Use the ▲▼ buttons next to a lecture number to move that topic to a different week/lecture slot —
-              its date stays with the slot, not the topic.
+              Drag a lecture by its handle to a new slot (or focus the handle and press ↑ / ↓) — the lectures in between
+              shift by one, and each date stays with its slot, not the topic.
             </p>
-            <SortableTable paginate={false} style={{ tableLayout: "fixed" }}>
+            <div className="lp-wrap"><div className="lp-scroll">
+            <table className="lp-table" style={{ minWidth: 1020 }}>
+              <colgroup><col style={{ width: 34 }} /><col style={{ width: 66 }} /><col style={{ width: 46 }} /><col style={{ width: "17%" }} /><col /><col /><col style={{ width: 128 }} /><col style={{ width: 84 }} /><col style={{ width: 76 }} /><col style={{ width: 70 }} /></colgroup>
               <thead>
-                <tr>
-                  <th style={{ width: 34 }} rowSpan={2}>Wk</th>
-                  <th style={{ width: 50 }} rowSpan={2}>Lec</th>
-                  <th colSpan={1} style={{ background: "#F4EFE1", textAlign: "center" }}>Subject Expert (Planned)</th>
-                  <th colSpan={6} style={{ background: "#F3E4E7", textAlign: "center" }}>Lecturer (Actual Delivery)</th>
-                </tr>
-                <tr>
-                  <th style={{ width: "16%", background: "#F4EFE1" }}>Topic</th>
-                  <th style={{ width: "20%" }}>Topic</th>
-                  <th style={{ width: "16%" }}>Sub Topic</th>
-                  <th style={{ width: 110 }}>Actual Date</th>
-                  <th style={{ width: 80 }}>CLO</th>
-                  <th style={{ width: 80 }}>Bloom</th>
-                  <th style={{ width: 60 }}>Weight</th>
-                </tr>
+                <tr><th></th><th>Week</th><th>Lec</th><th>Planned (SE)</th><th>Topic delivered</th><th>Sub-topic</th><th>Date</th><th>CLO</th><th>Bloom</th><th style={{ textAlign: "right" }}>Weight</th></tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {rows.map((r, idx) => {
                   const se = sePlanByLecture.get(r.lectureNumber);
                   const topicChanged = se && r.topic !== se.topic;
                   const subtopicChanged = se && (r.subtopic || "") !== (se.subtopic || "");
                   const cloChanged = se && (r.cloCode || null) !== (se.cloCode || null);
                   const bloomChanged = se && (r.bloomLevel || "") !== (se.bloomLevel || "");
+                  const weekStart = idx === 0 || rows[idx - 1].week !== r.week;
+                  const flagged = !!(r.rescheduledNote || r.holidayConflict);
                   return (
-                    <tr key={r.id}>
-                      <td style={{ color: "var(--slate)", fontSize: 12 }}>{r.week}</td>
-                      <td style={{ color: "var(--slate)", fontSize: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span>{r.lectureNumber}</span>
-                          <span style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <button onClick={() => moveLecture(r.id, "up")} disabled={busyRow === r.id} title="Move this topic up a slot" style={{ background: "none", border: "1px solid var(--line)", cursor: "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▲</button>
-                            <button onClick={() => moveLecture(r.id, "down")} disabled={busyRow === r.id} title="Move this topic down a slot" style={{ background: "none", border: "1px solid var(--line)", cursor: "pointer", fontSize: 8, lineHeight: 1, padding: "1px 3px" }}>▼</button>
-                          </span>
-                        </div>
+                    <tr key={r.id} className={[weekStart ? "lp-week-start" : "", isExamRow(r.topic) ? "lp-exam" : ""].join(" ")} {...rowProps(r.id)}>
+                      <td style={{ textAlign: "center" }}><button {...gripProps(r.id, `lecture ${r.lectureNumber}`)}><GripIcon /></button></td>
+                      <td className="lp-week">{weekStart ? r.week : ""}</td>
+                      <td className="lp-num">{r.lectureNumber}</td>
+                      <td style={{ color: "var(--text-2)", fontSize: 12, padding: "0 10px" }}>{r.seTopic || "—"}</td>
+                      <td className="lp-topic" style={topicChanged ? CHANGED_STYLE : undefined} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
+                        {!topicChanged && <span className="lp-accent" style={{ background: topicTone(r.topic) }} />}
+                        <input key={`topic-${r.id}-${r.topic}`} className="lp-input" defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Topic delivered"
+                          onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, { topic: e.target.value }); }} />
                       </td>
-                      <td style={{ color: "var(--ink)", fontSize: 11.5, background: "#F4EFE1", fontWeight: 500 }}>{r.seTopic || "—"}</td>
-                      <td style={{ background: colorForTopic(r.topic), padding: 0, ...(topicChanged ? CHANGED_STYLE : {}) }} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
-                        <input key={`topic-${r.id}-${r.topic}`} defaultValue={r.topic} disabled={busyRow === r.id} placeholder="Actual topic..."
-                          onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, { topic: e.target.value }); }}
-                          style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
+                      <td style={subtopicChanged ? CHANGED_STYLE : undefined} title={subtopicChanged ? `Subject Expert planned: "${se!.subtopic || "—"}"` : undefined}>
+                        <input key={`subtopic-${r.id}-${r.subtopic}`} className="lp-input" defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder="Sub-topic"
+                          onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }} />
                       </td>
-                      <td style={{ padding: 0, ...(subtopicChanged ? CHANGED_STYLE : {}) }} title={subtopicChanged ? `Subject Expert planned: "${se!.subtopic || "—"}"` : undefined}>
-                        <input key={`subtopic-${r.id}-${r.subtopic}`} defaultValue={r.subtopic || ""} disabled={busyRow === r.id} placeholder="Sub topic..."
-                          onBlur={(e) => { if (e.target.value !== (r.subtopic || "")) saveField(r, { subtopic: e.target.value }); }}
-                          style={{ width: "100%", padding: "8px 9px", border: "none", background: "transparent", fontSize: 12.5 }} />
-                      </td>
-                      <td style={{ padding: 0, background: (r.rescheduledNote || r.holidayConflict) ? "#FBE2DF" : undefined }} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
-                        <input key={`date-${r.id}-${r.actualDate}`} type="date" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
+                      <td style={flagged ? { boxShadow: "inset 3px 0 0 0 var(--rust)" } : undefined} title={r.rescheduledNote || (r.holidayConflict ? `Conflicts with holiday: ${r.holidayConflict}` : undefined)}>
+                        <input key={`date-${r.id}-${r.actualDate}`} type="date" className="lp-input" defaultValue={r.actualDate ? r.actualDate.slice(0, 10) : ""} disabled={busyRow === r.id}
                           onBlur={(e) => { const prev = r.actualDate ? r.actualDate.slice(0, 10) : ""; if (e.target.value !== prev) saveField(r, { actualDate: e.target.value }, e.target, prev); }}
-                          style={{ width: "100%", padding: "6px 6px", border: "none", background: "transparent", fontSize: 11.5 }} />
-                        {r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>Rescheduled</div>}
-                        {r.holidayConflict && !r.rescheduledNote && <div style={{ fontSize: 9.5, color: "var(--rust)", padding: "0 4px 3px" }}>⚠ Holiday: {r.holidayConflict}</div>}
+                          style={{ fontSize: 12, padding: "8px 6px" }} />
+                        {r.rescheduledNote && <div style={{ fontSize: 10.5, color: "var(--rust)", padding: "0 8px 4px" }}>Rescheduled</div>}
+                        {r.holidayConflict && !r.rescheduledNote && <div style={{ fontSize: 10.5, color: "var(--rust)", padding: "0 8px 4px" }}>Holiday: {r.holidayConflict}</div>}
                       </td>
-                      <td style={{ padding: 0, ...(cloChanged ? CHANGED_STYLE : {}) }} title={cloChanged ? `Subject Expert planned: ${se!.cloCode || "—"}` : undefined}>
-                        <select key={`clo-${r.id}-${r.cloId}`} defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}
-                          style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}>
+                      <td style={cloChanged ? CHANGED_STYLE : undefined} title={cloChanged ? `Subject Expert planned: ${se!.cloCode || "—"}` : undefined}>
+                        <select key={`clo-${r.id}-${r.cloId}`} className="lp-select" defaultValue={r.cloId || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { cloId: e.target.value })}>
                           <option value="">—</option>
                           {clos.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
                         </select>
                       </td>
-                      <td style={{ padding: 0, ...(bloomChanged ? CHANGED_STYLE : {}) }} title={bloomChanged ? `Subject Expert planned: ${se!.bloomLevel || "—"}` : undefined}>
-                        <select key={`bloom-${r.id}-${r.bloomLevel}`} defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { bloomLevel: e.target.value })}
-                          style={{ width: "100%", padding: "8px 6px", border: "none", background: "transparent", fontSize: 12 }}>
+                      <td style={bloomChanged ? CHANGED_STYLE : undefined} title={bloomChanged ? `Subject Expert planned: ${se!.bloomLevel || "—"}` : undefined}>
+                        <select key={`bloom-${r.id}-${r.bloomLevel}`} className="lp-select" defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id} onChange={(e) => saveField(r, { bloomLevel: e.target.value })}>
                           {BLOOM_OPTIONS.map((b) => <option key={b} value={b}>{b || "—"}</option>)}
                         </select>
                       </td>
-                      <td style={{ fontWeight: 600, fontSize: 12 }}>{r.weightPct}%</td>
+                      <td className="lp-weight">{r.weightPct ? <b>{r.weightPct}%</b> : "—"}</td>
                     </tr>
                   );
                 })}
               </tbody>
-            </SortableTable>
+            </table>
+            </div></div>
           </>
         )}
 

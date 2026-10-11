@@ -12,8 +12,8 @@ type Status = "none" | "draft" | "approved-unassigned" | "healthy";
 const STATUS_STYLE: Record<Status, { label: string; bg: string; color: string }> = {
   none: { label: "Not Defined", bg: "#F1F1F1", color: "#8A8A8A" },
   draft: { label: "Draft", bg: "#E8E6FB", color: "#4338CA" },
-  "approved-unassigned": { label: "Approved, No Course Assigned", bg: "#FFE4DC", color: "#F0653E" },
-  healthy: { label: "Approved & Assigned", bg: "#CCFBF1", color: "#0D9488" },
+  "approved-unassigned": { label: "Approved, No Course Assigned", bg: "var(--crimson-50)", color: "var(--rust)" },
+  healthy: { label: "Approved & Assigned", bg: "var(--emerald-50)", color: "var(--sage)" },
 };
 
 export default async function PloReadinessPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {

@@ -521,7 +521,7 @@ export default function ContentSyncManager() {
                         <div>{row.courseType}</div>
                         <div style={{ fontStyle: "italic" }}>{row.label}</div>
                       </td>
-                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse && !pendingLinks.has(row.groupId || "") ? "#FEE2E2" : undefined }}>
+                      <td style={{ padding: 4, verticalAlign: "top", background: row.kind === "group" && !groups.find((g) => g.id === row.groupId)?.masterCourse && !pendingLinks.has(row.groupId || "") ? "var(--crimson-50)" : undefined }}>
                         {row.kind === "group" && row.groupId && (() => {
                           const group = groups.find((g) => g.id === row.groupId);
                           if (!group) return null;
@@ -531,15 +531,15 @@ export default function ContentSyncManager() {
                           const isOpen = pickerOpenForGroup === group.id;
                           if (!isOpen) {
                             return (
-                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11, ...(hasPending ? { boxShadow: "inset 3px 0 0 0 #D97706" } : {}) }} title={hasPending ? "Not saved yet — click Save HEC Links" : undefined}>
+                              <div onClick={() => setPickerOpenForGroup(group.id)} style={{ cursor: "pointer", fontSize: 11, ...(hasPending ? { boxShadow: "inset 3px 0 0 0 var(--amber-600)" } : {}) }} title={hasPending ? "Not saved yet — click Save HEC Links" : undefined}>
                                 {hasPending ? (
                                   pendingOption ? (
                                     <>
-                                      <div style={{ fontWeight: 600 }}>{pendingOption.code} <span style={{ fontSize: 9.5, color: "#D97706", fontWeight: 400 }}>(unsaved)</span></div>
+                                      <div style={{ fontWeight: 600 }}>{pendingOption.code} <span style={{ fontSize: 9.5, color: "var(--amber-600)", fontWeight: 400 }}>(unsaved)</span></div>
                                       <div style={{ color: "var(--slate)" }}>{pendingOption.title}</div>
                                     </>
                                   ) : (
-                                    <span style={{ color: "#D97706", fontWeight: 600 }}>Cleared (unsaved)</span>
+                                    <span style={{ color: "var(--amber-600)", fontWeight: 600 }}>Cleared (unsaved)</span>
                                   )
                                 ) : group.masterCourse ? (
                                   <>
@@ -600,7 +600,7 @@ export default function ContentSyncManager() {
                                     title={`${c.code} — ${c.title}`}
                                     style={{
                                       cursor: "pointer", padding: "3px 6px", marginBottom: 2, fontSize: 11.5,
-                                      background: isSelected ? "#F3E4E7" : row.kind === "group" ? "#FEF3C7" : undefined,
+                                      background: isSelected ? "#F3E4E7" : row.kind === "group" ? "var(--amber-50)" : undefined,
                                       border: isSelected ? "1px solid var(--brass)" : "1px solid var(--line)",
                                       display: "flex", alignItems: "center", gap: 4,
                                     }}
