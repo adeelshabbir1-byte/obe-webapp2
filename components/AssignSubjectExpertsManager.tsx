@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SortableTable from "./SortableTable";
 import { withProgress } from "../lib/busy";
+import { putAssignSe } from "../lib/assignSeClient";
 
-type Section = { id: string; subjectExpertId: string | null; batchLabel: string };
+type Section = { id: string; subjectExpertId: string | null; batchLabel: string; seResponse?: string; seResponseNote?: string | null; templateStatus?: string };
 type CourseGroup = {
   code: string; title: string; courseType: string; semesterNumber: number | null;
   customCategoryName: string | null;
@@ -56,18 +57,19 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
     if (!group) return;
     setLoading(true); setError(""); setNotice("");
 
-    const outcomes = await withProgress(`Assigning Subject Expert to ${group.sections.length} section(s)…`, () => Promise.all(group.sections.map(async (s) => {
-      try {
-        const res = await fetch(`/api/coordinator/courses/${s.id}/assign-se`, {
-          method: "PUT", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
-        });
-        const data = await res.json().catch(() => ({}));
-        return { sectionId: s.id, ok: res.ok, error: data.error as string | undefined, labSibling: data.labSibling as { id: string; code: string; status: string; subjectExpertId: string | null; keptName?: string } | null | undefined };
-      } catch (err: any) {
-        return { sectionId: s.id, ok: false, error: err?.message, labSibling: undefined };
+    // One reason (asked at most once) covers every section that needs it.
+    const reasonBox: { reason?: string | null } = {};
+    const outcomes: { sectionId: string; ok: boolean; error?: string; labSibling?: { id: string; code: string; status: string; subjectExpertId: string | null; keptName?: string } | null }[] = [];
+    await withProgress(`Assigning Subject Expert to ${group.sections.length} section(s)…`, async () => {
+      for (const s of group.sections) {
+        try {
+          const { ok, data } = await putAssignSe(s.id, subjectExpertId || null, reasonBox);
+          outcomes.push({ sectionId: s.id, ok, error: data.error, labSibling: data.labSibling });
+        } catch (err: any) {
+          outcomes.push({ sectionId: s.id, ok: false, error: err?.message });
+        }
       }
-    })));
+    });
 
     const failures = outcomes.filter((o) => !o.ok);
     // The server also moves each section's Lab (<CODE>-L) along with it —
@@ -87,7 +89,7 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
       sections: g.sections.map((s) => {
         if (g.code === code) {
           const outcome = outcomes.find((o) => o.sectionId === s.id);
-          if (outcome?.ok) return { ...s, subjectExpertId: subjectExpertId || null };
+          if (outcome?.ok) return { ...s, subjectExpertId: subjectExpertId || null, seResponse: subjectExpertId ? "PENDING" : "NONE", seResponseNote: null };
         }
         return labChanges.has(s.id) ? { ...s, subjectExpertId: labChanges.get(s.id) ?? null } : s;
       }),
@@ -168,6 +170,19 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
       {error && <div className="err">{error}</div>}
       {notice && <div style={{ fontSize: 12.5, background: "#F0FBF4", border: "1px solid var(--sage)", padding: 8, marginBottom: 10 }}>{notice}</div>}
 
+      {(() => {
+        const declined = groups.flatMap((g) => g.sections.filter((s) => s.seResponse === "DECLINED" && !s.subjectExpertId).map((s) => ({ g, s })));
+        if (!declined.length) return null;
+        return (
+          <div className="card" style={{ borderLeft: "4px solid var(--rust)" }}>
+            <h3 style={{ fontSize: 14, marginBottom: 6 }}>Declined — needs a new Subject Expert ({declined.length})</h3>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5 }}>
+              {declined.map(({ g, s }) => <li key={s.id}><b>{g.code}</b> {g.title} <span style={{ color: "var(--slate)" }}>({s.batchLabel})</span> — {s.seResponseNote}</li>)}
+            </ul>
+          </div>
+        );
+      })()}
+
       {batches.length > 0 && (
         <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em" }}>Viewing batch</label>
@@ -211,6 +226,7 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
                       >
                         {renderSelectOptions(currentValue, isMixed, g)}
                       </select>
+                      <ResponseBadges sections={g.sections} />
                       {g.sections.length > 1 && (
                         <div style={{ fontSize: 10, color: "var(--slate)", marginTop: 2 }}>
                           Applies to all {g.sections.length} sections above.
@@ -228,5 +244,20 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
         <div className="card"><p style={{ fontSize: 11.5, color: "var(--slate)" }}>No Subject Experts onboarded yet — add one under Faculty Onboarding first.</p></div>
       )}
     </>
+  );
+}
+
+/** Whether the assigned Subject Expert has accepted, not answered yet, or declined (with their reason). */
+function ResponseBadges({ sections }: { sections: Section[] }) {
+  const pending = sections.filter((s) => s.subjectExpertId && s.seResponse === "PENDING").length;
+  const accepted = sections.filter((s) => s.subjectExpertId && s.seResponse === "ACCEPTED").length;
+  const declined = sections.filter((s) => !s.subjectExpertId && s.seResponse === "DECLINED");
+  if (!pending && !accepted && !declined.length) return null;
+  return (
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+      {accepted > 0 && <span className="badge badge-ok">Accepted{sections.length > 1 ? ` ×${accepted}` : ""}</span>}
+      {pending > 0 && <span className="badge badge-warn" title="The Subject Expert hasn't accepted or declined yet">Awaiting answer{sections.length > 1 ? ` ×${pending}` : ""}</span>}
+      {declined.map((s) => <span key={s.id} className="badge badge-no" title={s.seResponseNote || ""} style={{ whiteSpace: "normal" }}>Declined — {s.seResponseNote}</span>)}
+    </div>
   );
 }

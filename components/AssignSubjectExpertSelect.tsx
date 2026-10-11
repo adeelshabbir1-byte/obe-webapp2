@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { putAssignSe } from "../lib/assignSeClient";
 
 export default function AssignSubjectExpertSelect({ courseId, currentId, options }: {
   courseId: string; currentId: string | null; options: { id: string; name: string }[];
@@ -10,13 +11,11 @@ export default function AssignSubjectExpertSelect({ courseId, currentId, options
   const [loading, setLoading] = useState(false);
 
   async function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const el = e.target;
     setLoading(true);
-    await fetch(`/api/coordinator/courses/${courseId}/assign-se`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subjectExpertId: e.target.value || null }),
-    });
+    const { ok, data } = await putAssignSe(courseId, el.value || null, {});
     setLoading(false);
+    if (!ok) { el.value = currentId || ""; window.alert(data.error || "Couldn't assign."); return; }
     router.refresh();
   }
 

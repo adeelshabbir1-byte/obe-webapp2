@@ -13,7 +13,7 @@ export default function AssignmentResponses({ items }: { items: Item[] }) {
   async function answer(it: Item, decision: "ACCEPT" | "DECLINE") {
     let note = "";
     if (decision === "DECLINE") {
-      const n = window.prompt("Reason for declining (they will see this):");
+      const n = window.prompt("Reason for declining (whoever assigned it will see this):");
       if (!n || !n.trim()) return;
       note = n;
     }
@@ -28,11 +28,11 @@ export default function AssignmentResponses({ items }: { items: Item[] }) {
   if (items.length === 0) return null;
   return (
     <div className="card" style={{ borderLeft: "4px solid #96650F", marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Courses offered to you ({items.length})</h3>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>These courses were given to you by another department. Accept or decline each one.</p>
+      <h3 style={{ marginTop: 0 }}>Courses waiting for your answer ({items.length})</h3>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Accept each course you can take on. If you can&apos;t, decline it with a short reason: the course goes back to whoever assigned it, and they see your reason. You can start working on a course before answering.</p>
       {error && <div style={{ color: "#b3261e", marginBottom: 8 }}>{error}</div>}
       <table>
-        <thead><tr><th>Course</th><th>As</th><th>Batch</th><th>From</th><th></th></tr></thead>
+        <thead><tr><th>Course</th><th>As</th><th>Batch</th><th>Assigned by</th><th></th></tr></thead>
         <tbody>
           {items.map((it) => (
             <tr key={it.courseId + it.as}>

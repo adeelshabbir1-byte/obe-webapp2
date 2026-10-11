@@ -5,6 +5,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { handlingAccess } from "../../../../../../lib/courseOwners";
 import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
+import { pastTermError } from "../../../../../../lib/courseTerm";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -20,6 +21,25 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const subjectExpertId = body.subjectExpertId || null;
+
+  const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 400) : "";
+
+  // A course whose term is already over (e.g. Fall 2022 when it is now Fall 2026) can't be given to anyone.
+  if (subjectExpertId && subjectExpertId !== course.subjectExpertId) {
+    const past = await pastTermError(course.id, "Subject Expert");
+    if (past) return NextResponse.json({ error: past }, { status: 409 });
+  }
+
+  // Taking the course away from a Subject Expert who already submitted (or got approved) their plan needs a reason.
+  const removing = !!course.subjectExpertId && subjectExpertId !== course.subjectExpertId;
+  const settled = course.templateStatus === "submitted" || course.templateStatus === "approved";
+  if (removing && settled && reason.length < 5) {
+    const prev = await prisma.user.findUnique({ where: { id: course.subjectExpertId! }, select: { name: true } });
+    return NextResponse.json({
+      code: "REASON_REQUIRED",
+      error: `${prev?.name || "The Subject Expert"} has already ${course.templateStatus === "approved" ? "had the plan for" : "submitted the plan for"} ${course.code}. Taking the course away from them needs a reason.`,
+    }, { status: 409 });
+  }
 
   // Only actually ASSIGNING someone is blocked on a non-base course —
   // clearing an assignment (subjectExpertId: null) is always fine.
@@ -46,7 +66,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     }
   }
 
-  const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId, ...(subjectExpertId !== course.subjectExpertId ? { seResponse: borrowedSe ? "PENDING" : "NONE", seResponseNote: null } : {}) } });
+  const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId, ...(subjectExpertId !== course.subjectExpertId ? { seResponse: subjectExpertId ? "PENDING" : "NONE", seResponseNote: null } : {}) } });
 
   // A course linked in a content-sync group only shows the BASE on the
   // Assign Subject Experts page (followers are hidden — "inherits
@@ -57,8 +77,14 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   await writeAuditLog({
     actorUserId: user.id, action: "SUBJECT_EXPERT_ASSIGNED", entityType: "Course", entityId: course.id,
-    metadata: { subjectExpertId: subjectExpertId || "none" },
+    metadata: { subjectExpertId: subjectExpertId || "none", borrowed: borrowedSe },
   });
+  if (removing) {
+    await writeAuditLog({
+      actorUserId: user.id, action: "SUBJECT_EXPERT_REMOVED", entityType: "Course", entityId: course.id,
+      metadata: { previousSubjectExpertId: course.subjectExpertId, newSubjectExpertId: subjectExpertId || "none", courseCode: course.code, courseTitle: course.title, templateStatus: course.templateStatus, reason: reason || null },
+    });
+  }
 
   // A theory course's Lab (code "<CODE>-L", same batch) follows its theory
   // course's Subject Expert automatically, so the Coordinator doesn't have to
@@ -81,7 +107,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       } else if (subjectExpertId && (await blockedAsNonBaseCourse(lab.id))) {
         labSibling = { id: lab.id, code: lab.code, status: "blocked", subjectExpertId: lab.subjectExpertId };
       } else {
-        await prisma.course.update({ where: { id: lab.id }, data: { subjectExpertId } });
+        await prisma.course.update({ where: { id: lab.id }, data: { subjectExpertId, seResponse: subjectExpertId ? "PENDING" : "NONE", seResponseNote: null } });
         await syncSubjectExpertToLinkedCourses(lab.id, subjectExpertId);
         await writeAuditLog({
           actorUserId: user.id, action: "SUBJECT_EXPERT_ASSIGNED", entityType: "Course", entityId: lab.id,

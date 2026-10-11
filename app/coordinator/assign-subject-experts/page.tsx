@@ -7,6 +7,7 @@ import { loadOwnerMap, ownerFromMap, ownedElsewhereCourseIds } from "../../../li
 import Shell from "../../../components/Shell";
 import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpertsManager";
 import { navForRole } from "../../../components/reportNav";
+import { currentTermIndexFor, isPastTerm } from "../../../lib/courseTerm";
 
 
 export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -34,8 +35,13 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   // follower inherits its content (and its Subject Expert) from its
   // base, so assigning one directly is blocked server-side anyway; this
   // page only shows the courses that can actually take an assignment.
-  const courses = allCourses.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
-  const followerCount = allCourses.length - courses.length;
+  const assignable = allCourses.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
+  const followerCount = allCourses.length - assignable.length;
+  // Offerings whose term is already over (e.g. a Fall 2022 batch's course) can't be given to anyone any more.
+  const curIdx = new Map<string, number | null>();
+  for (const id of Array.from(new Set(assignable.map((c) => c.coordinatorId)))) curIdx.set(id, await currentTermIndexFor(id));
+  const courses = assignable.filter((c) => !isPastTerm(c, curIdx.get(c.coordinatorId) ?? null));
+  const pastCount = assignable.length - courses.length;
 
   // Multiple batches/sections often run the same course under the same
   // code without ever being explicitly content-linked together (that
@@ -65,7 +71,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
       homeDepartmentName: first.subjectHomeDepartmentId ? deptName.get(first.subjectHomeDepartmentId) || null : null,
       linkedFollowerCodes: Array.from(followerCodes),
       sections: members.map((m) => ({
-        id: m.id, subjectExpertId: m.subjectExpertId,
+        id: m.id, subjectExpertId: m.subjectExpertId, seResponse: m.seResponse, seResponseNote: m.seResponseNote, templateStatus: m.templateStatus,
         batchLabel: (m.batch ? `${m.batch.degreeProgram} — ${m.batch.batchName}` : "—") + (m.coordinatorId !== user.id ? ` (${m.coordinator.name})` : ""),
       })),
     };
@@ -101,6 +107,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
         (inheriting their Subject Expert automatically) aren't shown.
         {followerCount > 0 && ` (${followerCount} linked follower course${followerCount === 1 ? "" : "s"} hidden.)`}
         {elsewhereIds.length > 0 && ` ${elsewhereIds.length} course${elsewhereIds.length === 1 ? "" : "s"} of other programs are handled by you; their program lead is shown in brackets.`}
+        {pastCount > 0 && ` ${pastCount} course offering${pastCount === 1 ? "" : "s"} from terms that are already over ${pastCount === 1 ? "is" : "are"} not shown — only current and future courses can be assigned.`}
         {handledElsewhere.length > 0 && ` ${handledElsewhere.length} of your program's course${handledElsewhere.length === 1 ? " is" : "s are"} handled by another Program Lead (decided by the Chairman) and not shown.`}
       </p>
       <AssignSubjectExpertsManager

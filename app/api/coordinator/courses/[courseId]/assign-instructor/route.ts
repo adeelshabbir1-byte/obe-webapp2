@@ -6,6 +6,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 import { isHeadFaculty } from "../../../../../../lib/departments";
 import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
+import { pastTermError } from "../../../../../../lib/courseTerm";
 
 // Originally Course Assigner-only. Institute Head, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
@@ -42,6 +43,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   if (instructorId && !course.isOffered) {
     return NextResponse.json({ error: "this course must be offered before an instructor can be assigned to it" }, { status: 400 });
+  }
+
+  if (instructorId && instructorId !== course.instructorId) {
+    const past = await pastTermError(course.id, "Instructor");
+    if (past) return NextResponse.json({ error: past }, { status: 409 });
   }
 
   let borrowedAllowed = false;

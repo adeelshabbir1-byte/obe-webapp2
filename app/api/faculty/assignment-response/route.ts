@@ -4,8 +4,9 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { syncSubjectExpertToLinkedCourses } from "../../../../lib/contentSync";
 
-// A borrowed teacher / Subject Expert accepts or declines a course given to them from another department.
-// Declining takes them off the course again so it can be given to someone else.
+// A teacher accepts or declines a course given to them: a borrowed teacher (from another department), or any Subject
+// Expert (every new Subject Expert assignment waits for their answer). Declining takes them off the course again so
+// it can be given to someone else; the reason is shown to whoever assigns it next.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -22,14 +23,21 @@ export async function POST(req: NextRequest) {
 
   const accept = body.decision === "ACCEPT";
   if (as === "SUBJECT_EXPERT") {
-    await prisma.course.update({ where: { id: course.id }, data: accept ? { seResponse: "ACCEPTED", seResponseNote: note || null } : { seResponse: "DECLINED", seResponseNote: note, subjectExpertId: null } });
-    if (!accept) await syncSubjectExpertToLinkedCourses(course.id, null);
+    // Its Lab (<CODE>-L, same batch) followed this assignment automatically, so the answer covers it too.
+    const lab = course.courseType !== "Lab"
+      ? await prisma.course.findFirst({ where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: `${course.code}-L`, courseType: "Lab", subjectExpertId: user.id, seResponse: "PENDING" } })
+      : null;
+    const declineNote = `${user.name}: ${note}`;
+    for (const c of [course, ...(lab ? [lab] : [])]) {
+      await prisma.course.update({ where: { id: c.id }, data: accept ? { seResponse: "ACCEPTED", seResponseNote: note || null } : { seResponse: "DECLINED", seResponseNote: declineNote, subjectExpertId: null } });
+      if (!accept) await syncSubjectExpertToLinkedCourses(c.id, null);
+    }
   } else {
     await prisma.course.update({
       where: { id: course.id },
       data: accept ? { instructorResponse: "ACCEPTED", instructorResponseNote: note || null } : { instructorResponse: "DECLINED", instructorResponseNote: note, instructorId: null, instructorApproval: "NONE", instructorApprovalNote: null, instructorApprovedById: null, instructorApprovedAt: null },
     });
   }
-  await writeAuditLog({ actorUserId: user.id, action: accept ? "BORROWED_ASSIGNMENT_ACCEPTED" : "BORROWED_ASSIGNMENT_DECLINED", entityType: "Course", entityId: course.id, metadata: { as, note } });
+  await writeAuditLog({ actorUserId: user.id, action: accept ? (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_ACCEPTED" : "BORROWED_ASSIGNMENT_ACCEPTED") : (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_DECLINED" : "BORROWED_ASSIGNMENT_DECLINED"), entityType: "Course", entityId: course.id, metadata: { as, note } });
   return NextResponse.json({ ok: true });
 }

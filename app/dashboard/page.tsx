@@ -67,9 +67,22 @@ export default async function Dashboard() {
     const asSe = user.role === "SUBJECT_EXPERT";
     const rows = await prisma.course.findMany({
       where: asSe ? { subjectExpertId: user.id, seResponse: "PENDING" } : { instructorId: user.id, instructorResponse: "PENDING" },
-      select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { department_: { select: { name: true } } } } },
+      select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { name: true, department_: { select: { name: true } } } } },
     });
-    offered = rows.map((c) => ({ courseId: c.id, as: asSe ? "SUBJECT_EXPERT" : "INSTRUCTOR", course: `${c.code} — ${c.title}`, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", from: c.coordinator.department_?.name || "—" }));
+    offered = rows.map((c) => ({ courseId: c.id, as: asSe ? "SUBJECT_EXPERT" : "INSTRUCTOR", course: `${c.code} — ${c.title}`, batch: c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—", from: [c.coordinator.name, c.coordinator.department_?.name].filter(Boolean).join(" · ") || "—" }));
+  }
+
+  // Courses taken away from this Subject Expert in the last 60 days, with the reason when one was given.
+  let removed: { id: string; course: string; reason: string | null; by: string; at: Date }[] = [];
+  if (user.role === "SUBJECT_EXPERT") {
+    const logs = await prisma.auditLog.findMany({
+      where: { action: "SUBJECT_EXPERT_REMOVED", createdAt: { gte: new Date(Date.now() - 60 * 864e5) }, metadata: { path: ["previousSubjectExpertId"], equals: user.id } },
+      orderBy: { createdAt: "desc" }, take: 10, include: { actor: { select: { name: true } } },
+    });
+    removed = logs.map((l) => {
+      const m = (l.metadata || {}) as Record<string, string | null>;
+      return { id: l.id, course: `${m.courseCode || ""} — ${m.courseTitle || ""}`, reason: m.reason || null, by: l.actor?.name || "—", at: l.createdAt };
+    });
   }
 
   return (
@@ -99,6 +112,19 @@ export default async function Dashboard() {
       </section>
 
       <AssignmentResponses items={offered} />
+      {removed.length > 0 && (
+        <div className="card" style={{ borderLeft: "4px solid var(--slate-mute)", marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Courses taken off you recently</h3>
+          <table>
+            <thead><tr><th>Course</th><th>By</th><th>When</th><th>Reason</th></tr></thead>
+            <tbody>
+              {removed.map((r) => (
+                <tr key={r.id}><td><b>{r.course}</b></td><td>{r.by}</td><td>{r.at.toISOString().slice(0, 10)}</td><td>{r.reason || <span style={{ color: "var(--slate)" }}>No reason needed (plan was not submitted yet)</span>}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <OverviewStatGrid stats={stats} />
 
       {(breakdown || progress.length > 0) && (

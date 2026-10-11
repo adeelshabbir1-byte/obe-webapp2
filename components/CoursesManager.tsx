@@ -3,6 +3,7 @@
 import TabbedCards from "./TabbedCards";
 import { withProgress } from "../lib/busy";
 
+import { putAssignSe } from "../lib/assignSeClient";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
 import SortableTable from "./SortableTable";
@@ -255,12 +256,8 @@ export default function CoursesManager({ courses: initialCourses, subjectExperts
   async function assignSe(courseId: string, subjectExpertId: string, revertEl?: HTMLSelectElement, revertValue?: string) {
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/coordinator/courses/${courseId}/assign-se`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjectExpertId: subjectExpertId || null }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      const { ok, data } = await putAssignSe(courseId, subjectExpertId || null, {});
+      if (!ok) {
         setError(data.error || "Couldn't assign — the course still shows its previous Subject Expert.");
         if (revertEl) revertEl.value = revertValue || "";
         setLoading(false); return;
