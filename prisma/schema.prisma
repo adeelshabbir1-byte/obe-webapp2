@@ -2554,3 +2554,46 @@ model TemplateChangeRequest {
   @@index([courseId])
   @@index([status])
 }
+
+// Registration rules of an institute, set by the OMC (one row per Institute Head). Defaults apply until saved.
+model RegistrationPolicy {
+  id                    String   @id @default(cuid())
+  chairmanId            String   @unique
+  lowCgpaThreshold      Float    @default(2.0)  // below this a student is "low CGPA" for the limits below
+  minCreditsNormal      Int      @default(12)
+  maxCreditsNormal      Int      @default(18)
+  maxCreditsLowCgpa     Int      @default(15)
+  maxNewCoursesLowCgpa  Int      @default(2)    // courses never attempted before; retakes/repeats don't count
+  maxCreditsFinalYear   Int      @default(21)   // students in the last two semesters of the program
+  maxCreditsSummer      Int      @default(9)
+  allowConcurrentPrereq Boolean  @default(false) // may a course be taken in the same semester as its prerequisite
+  creditRules           String   @db.Text @default("[]") // JSON: [{ label, codes: ["SEN4996"], titleContains: "Final Year Project", minCredits: 95 }]
+  updatedById           String?
+  updatedAt             DateTime @updatedAt
+}
+
+// An exemption from one registration rule for one student, granted by the Institute Head.
+model RegistrationExemption {
+  id          String    @id @default(cuid())
+  chairmanId  String
+  studentId   String
+  rule        String    // CREDIT_REQUIREMENT | MAX_LOAD | NEW_COURSE_LIMIT | CONCURRENT_PREREQ | SELF_REGISTRATION
+  courseCode  String?   // for course-specific exemptions; empty = any course
+  value       Int?      // e.g. the allowed load for MAX_LOAD, or number of new courses for NEW_COURSE_LIMIT
+  reason      String    @db.Text
+  grantedById String
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@index([studentId])
+  @@index([chairmanId])
+}
+
+// The advisor's lock on a student's degree plan: the student can no longer change it, and registration follows it.
+model DegreePlanLock {
+  id         String   @id @default(cuid())
+  studentId  String   @unique
+  lockedById String
+  note       String?  @db.Text
+  lockedAt   DateTime @default(now())
+}

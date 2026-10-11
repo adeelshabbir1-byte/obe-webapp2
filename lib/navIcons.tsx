@@ -153,6 +153,8 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Program Semester Map": Map,
   "Semester Section Map": LayoutGrid,
   "Topic Workspace": Shuffle,
+  "Registration Rules": Stamp,
+  "Registration Rules & Exemptions": Stamp,
   "Back to Dashboard": ArrowLeft,
 };
 

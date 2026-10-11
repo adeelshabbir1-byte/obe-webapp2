@@ -24,7 +24,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
 
   { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h)
       || /^\/omc\/(course-repositioning|section-comparison|prerequisite-correlation)$/.test(h), section: "Curriculum Maps" },
-  { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h), section: "Policies & Rules" },
+  { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h) || h === "/registration-rules", section: "Policies & Rules" },
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
   { match: (h) => /^\/accreditation-overview$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },

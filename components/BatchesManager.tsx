@@ -52,7 +52,16 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       const res = await withProgress(`Enrolling students in ${batch.batchName}…`, () => fetch(`/api/coordinator/batches/${batch.id}/run-default-enrollment`, { method: "POST" }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyId(null); return; }
-      setEnrollResultMsg((prev) => ({ ...prev, [batch.id]: `${data.totalEnrolled} new enrollment(s) across ${data.studentsAffected} of ${data.totalStudents} student(s).` }));
+      const extra = [
+        data.fromPlan?.length ? `${data.fromPlan.length} registered from their advisor-locked plan` : "",
+        data.waitingForAdvisor?.length ? `${data.waitingForAdvisor.length} with low CGPA / warning / probation left for their advisor (no locked plan yet)` : "",
+        data.blockedByRules?.length ? `${data.blockedByRules.length} course(s) held back by registration rules` : "",
+      ].filter(Boolean).join("; ");
+      setEnrollResultMsg((prev) => ({ ...prev, [batch.id]: `${data.totalEnrolled} new enrollment(s) across ${data.studentsAffected} of ${data.totalStudents} student(s).${extra ? " " + extra + "." : ""}` }));
+      if (data.blockedByRules?.length || data.waitingForAdvisor?.length) alert([
+        data.waitingForAdvisor?.length ? `Left for the advisor (low CGPA / warning / probation, no locked plan):\n${data.waitingForAdvisor.join(", ")}` : "",
+        data.blockedByRules?.length ? `Held back by registration rules:\n${data.blockedByRules.join("\n")}` : "",
+      ].filter(Boolean).join("\n\n"));
       setBusyId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyId(null); }
   }

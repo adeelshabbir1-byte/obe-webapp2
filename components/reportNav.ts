@@ -25,6 +25,7 @@ export const OMC_ACTION_NAV = [
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/omc/section-comparison", label: "Section Comparison" },
   { href: "/omc/passing-criteria", label: "Passing Criteria" },
+  { href: "/registration-rules", label: "Registration Rules" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/omc/reports", label: "Reports" },
 ];
@@ -174,6 +175,7 @@ export const CHAIRMAN_NAV = [
   { href: "/resources", label: "Resources" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/registration-rules", label: "Registration Rules & Exemptions" },
   { href: "/chairman/institute-settings", label: "Institute Settings" },
   { href: "/chairman/ai-configuration", label: "AI Configuration" },
   { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },

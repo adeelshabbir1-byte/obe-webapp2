@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { studentContext, checkCourses } from "../../../../../../lib/registrationRules";
 
 // Approving actually performs the underlying register/withdraw right
 // now — the request was only ever a hold on the action, not the action
@@ -20,6 +21,12 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
 
   if (request.actionType === "REGISTER") {
     const existing = await prisma.studentEnrollment.findUnique({ where: { studentId_courseId: { studentId: request.studentId, courseId: request.courseId } } });
+    // The institute's registration rules still apply; only the Institute Head can exempt a student from them.
+    if (!existing) {
+      const ctx = await studentContext(request.studentId);
+      const check = ctx ? await checkCourses(ctx, [request.course]) : null;
+      if (check?.blocked.length) return NextResponse.json({ error: `Can't approve: ${check.blocked[0].reason} Ask the Institute Head for an exemption if this should be allowed.` }, { status: 400 });
+    }
     if (!existing) await prisma.studentEnrollment.create({ data: { studentId: request.studentId, courseId: request.courseId, isRepeat: false } });
   } else {
     const enrollment = await prisma.studentEnrollment.findUnique({ where: { studentId_courseId: { studentId: request.studentId, courseId: request.courseId } } });

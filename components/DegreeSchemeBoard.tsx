@@ -8,6 +8,9 @@ type Scheme = {
   student: { id: string; name: string; rollNumber: string; currentSemesterNumber: number; batch: string };
   programSemesters: number; maxSemester: number; minCredits: number; maxCredits: number;
   gradingScale: { letter: string; gpaValue: number }[]; completed: Done[]; planned: Plan[];
+  lock: { by: string; at: string; note: string | null } | null;
+  rules: { limit: { max: number; why: string }; selfBlocked: boolean; earned: number; maxNew: number; lowCgpa: boolean; threshold: number } | null;
+  editedBy: "student" | "staff";
 };
 
 // The whole degree, semester by semester: courses already taken (with grades) and courses still to take (movable),
@@ -20,6 +23,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const [extra, setExtra] = useState(0);
   const [target, setTarget] = useState<number | null>(null);
   const [scope, setScope] = useState<"next" | "degree">("next");
+  const [regResult, setRegResult] = useState<string>("");
   const q = studentId ? `?studentId=${studentId}` : "";
 
   async function load() {
@@ -108,6 +112,21 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
     if (!r.ok) setError((await r.json().catch(() => ({}))).error || "Could not apply the grades.");
     await load(); setBusy(""); onChange?.();
   }
+  async function staffAction(action: "lock" | "unlock" | "register") {
+    let note = "";
+    if (action === "lock") { const n = prompt("Lock this plan. Optional note for the student (e.g. why these courses):", ""); if (n === null) return; note = n; }
+    if (action === "register" && !confirm("Register this student now in the courses planned for the current semester (offered ones only, within the registration rules)?")) return;
+    setBusy(action); setError(""); setRegResult("");
+    const r = await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action, note }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) setError(d.error || "Could not do that.");
+    else if (action === "register") setRegResult([
+      d.registered?.length ? `Registered: ${d.registered.join(", ")} (${d.load} of ${d.limit?.max} credit hours, limit for ${d.limit?.why}).` : "Nothing new to register.",
+      d.blocked?.length ? `Not registered: ${d.blocked.map((x: { code: string; reason: string }) => `${x.code} — ${x.reason}`).join(" | ")}` : "",
+      d.notOffered?.length ? `Not offered this term: ${d.notOffered.join(", ")}.` : "",
+    ].filter(Boolean).join(" "));
+    await load(); setBusy(""); onChange?.();
+  }
   async function clearGrades() {
     setBusy("grades");
     await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action: "grades", grades: (data?.planned || []).filter((p) => p.hypotheticalGrade).map((p) => ({ courseId: p.courseId, grade: null })) }) });
@@ -140,6 +159,26 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
           </div>
         ))}
       </div>
+      {data.rules && (
+        <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 10px" }}>
+          This semester: up to <b>{data.rules.limit.max}</b> credit hours ({data.rules.limit.why}){data.rules.lowCgpa ? <> · at most <b>{data.rules.maxNew}</b> new course(s), retakes first</> : null} · <b>{data.rules.earned}</b> credit hours earned (courses such as FYP need a minimum).
+          {data.rules.selfBlocked ? " The student can't register themself; the advisor registers them from the locked plan." : ""}
+        </p>
+      )}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, padding: "8px 12px", border: "1px solid var(--line)", background: data.lock ? "#EEF2FA" : "#FAFAF8" }}>
+        <span style={{ fontSize: 13 }}>
+          {data.lock ? <>🔒 Plan locked by <b>{data.lock.by}</b> on {new Date(data.lock.at).toLocaleDateString("en-GB")}{data.lock.note ? <> — <i>{data.lock.note}</i></> : null}{data.editedBy === "student" ? ". Only your advisor can move courses now; registration follows this plan." : "."}</> : data.editedBy === "student" ? "Your advisor can lock this plan; registration then follows it." : "Plan not locked."}
+        </span>
+        {data.editedBy === "staff" && (
+          <span style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+            {data.lock
+              ? <button className="btn" style={{ fontSize: 12 }} disabled={!!busy} onClick={() => staffAction("unlock")}>Unlock plan</button>
+              : <button className="btn btn-brass" style={{ fontSize: 12 }} disabled={!!busy} onClick={() => staffAction("lock")}>Lock plan</button>}
+            <button className="btn btn-brass" style={{ fontSize: 12 }} disabled={!!busy} onClick={() => staffAction("register")} title="Register the courses planned for the current semester">{busy === "register" ? "Registering…" : `Register Semester ${data.student.currentSemesterNumber} from plan`}</button>
+          </span>
+        )}
+      </div>
+      {regResult && <p style={{ fontSize: 12.5, background: "#E8F3EC", padding: "8px 12px", marginTop: -4 }}>{regResult}</p>}
       {calc.real !== null && calc.real < 2 && (
         <p style={{ fontSize: 12.5, background: "#FBEAEA", color: "#8A1C1C", padding: "8px 12px", marginBottom: 12 }}>
           CGPA is below 2.00. Plan retakes of F courses and repeats of D-grade courses in coming semesters, set the grade you aim for, and watch the projected CGPA. Keep each semester within {data.minCredits}–{data.maxCredits} credit hours.
@@ -216,7 +255,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                     <td style={{ width: 95, fontSize: 11.5, color: "var(--slate)" }}>{c.termName} {c.termYear}</td>
                     <td style={{ width: 150, textAlign: "right" }}>
                       <b style={{ color: gradeColor(c), marginRight: 8 }}>{c.grade}</b>
-                      {c.lowGrade && c.courseId && !c.retakePlanned && (
+                      {c.lowGrade && c.courseId && !c.retakePlanned && !(data.lock && data.editedBy === "student") && (
                         <select disabled={busy === c.courseId} value="" onChange={(e) => e.target.value && act("retake", c.courseId!, { semesterNumber: Number(e.target.value) })} style={{ fontSize: 11, padding: "2px 4px" }}>
                           <option value="">Repeat in…</option>
                           {semOptions.map((n) => <option key={n} value={n}>Sem {n}</option>)}
@@ -237,7 +276,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                     <td style={{ fontSize: 12 }}>{p.creditHours} CH</td>
                     <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{p.currentlyEnrolled ? "this semester" : "planned"}</td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      <select value={p.plannedSemesterNumber} disabled={busy === p.courseId || p.currentlyEnrolled} onChange={(e) => act("move", p.courseId, { semesterNumber: Number(e.target.value) })} title="Move to semester" style={{ fontSize: 11, padding: "2px 4px", marginRight: 4 }}>
+                      <select value={p.plannedSemesterNumber} disabled={busy === p.courseId || p.currentlyEnrolled || (!!data.lock && data.editedBy === "student")} onChange={(e) => act("move", p.courseId, { semesterNumber: Number(e.target.value) })} title="Move to semester" style={{ fontSize: 11, padding: "2px 4px", marginRight: 4 }}>
                         {(semOptions.includes(p.plannedSemesterNumber) ? semOptions : [p.plannedSemesterNumber, ...semOptions]).map((n) => <option key={n} value={n}>Sem {n}</option>)}
                       </select>
                       <select value={p.hypotheticalGrade || ""} disabled={busy === p.courseId} onChange={(e) => act("grade", p.courseId, { grade: e.target.value || null })} title="Grade to aim for (what-if only)" style={{ fontSize: 11, padding: "2px 4px" }}>

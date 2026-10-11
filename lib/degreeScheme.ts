@@ -3,6 +3,7 @@ import { getAuthenticatedStudent } from "./studentSession";
 import { getAuthenticatedUser } from "./session";
 import { coordinatorIdsFor } from "./reportScope";
 import { getGradingScaleForBatch } from "./gradingScaleLookup";
+import { planLock, studentContext, loadLimit, selfRegistrationBlock } from "./registrationRules";
 
 // The full degree scheme of one student, semester by semester: what was already taken (with the grade, in the semester it
 // was taken) and every remaining course in the semester it is planned for. The student, the batch's advisor and the
@@ -75,7 +76,13 @@ export async function loadScheme(studentId: string) {
       };
     });
   const programSemesters = Math.max(8, ...courses.map((c) => c.semesterNumber || 0));
+  const lock = await planLock(studentId);
+  const locker = lock ? await prisma.user.findUnique({ where: { id: lock.lockedById }, select: { name: true } }) : null;
+  const ctx = await studentContext(studentId);
+  const rules = ctx ? { limit: loadLimit(ctx), selfBlocked: !!selfRegistrationBlock(ctx), earned: ctx.earned, maxNew: ctx.policy.maxNewCoursesLowCgpa, lowCgpa: ctx.cgpa !== null && ctx.cgpa < ctx.policy.lowCgpaThreshold, threshold: ctx.policy.lowCgpaThreshold } : null;
   return {
+    lock: lock ? { by: locker?.name || "the advisor", at: lock.lockedAt, note: lock.note } : null,
+    rules,
     student: { id: student.id, name: student.name, rollNumber: student.rollNumber, currentSemesterNumber: student.currentSemesterNumber, batch: `${batch.degreeProgram} — ${batch.batchName}` },
     programSemesters, maxSemester: Math.max(programSemesters + 4, ...planned.map((p) => p.plannedSemesterNumber), ...completed.map((c) => c.semesterNumber)),
     minCredits: lead?.minCreditsPerSemester ?? 12, maxCredits: lead?.maxCreditsPerSemester ?? 18,
