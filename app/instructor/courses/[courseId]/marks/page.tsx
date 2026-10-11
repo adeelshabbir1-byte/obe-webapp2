@@ -13,6 +13,9 @@ import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
 import { navForRole } from "../../../../../components/reportNav";
 import Link from "next/link";
+import ResultApprovalPanel from "../../../../../components/ResultApprovalPanel";
+import { db as resultDb, getCourseResult, type GradeChangeRow } from "../../../../../lib/resultApproval";
+import { getGradingScaleForBatch } from "../../../../../lib/gradingScaleLookup";
 
 
 export default async function MarksEntryPage({ params, searchParams }: { params: { courseId: string }; searchParams: { combined?: string } }) {
@@ -121,9 +124,34 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
     }
   }
 
+  // Result approval: where this course's result stands, and its grade change requests.
+  const courseResult = await getCourseResult(course.id);
+  let gradeRequests: GradeChangeRow[] = [];
+  try { gradeRequests = (await resultDb.gradeChangeRequest.findMany({ where: { courseId: course.id }, orderBy: { createdAt: "desc" } })) as GradeChangeRow[]; } catch { gradeRequests = []; }
+  const deciderIds = Array.from(new Set([courseResult?.decidedById, ...gradeRequests.map((g) => g.decidedById)].filter((x): x is string => !!x)));
+  const deciders = new Map((deciderIds.length ? await prisma.user.findMany({ where: { id: { in: deciderIds } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
+  const markedStudents = new Set(marks.map((m) => m.studentId));
+  const scale = course.batch ? await getGradingScaleForBatch(course.coordinatorId, course.batch) : [];
+  const dist: Record<string, number> = {};
+  for (const r of result.rows) dist[r.grade] = (dist[r.grade] || 0) + 1;
+  const failedN = result.rows.filter((r) => r.grade === "F").length;
+  const rowById = new Map(result.rows.map((r) => [r.studentId, r]));
+
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="marks" code={course.code} title={course.title} />
+      <ResultApprovalPanel
+        courseId={course.id}
+        status={courseResult?.status || "DRAFT"}
+        note={courseResult?.note || null}
+        submittedAt={courseResult?.submittedAt ? new Date(courseResult.submittedAt).toISOString() : null}
+        decidedAt={courseResult?.decidedAt ? new Date(courseResult.decidedAt).toISOString() : null}
+        decidedBy={courseResult?.decidedById ? deciders.get(courseResult.decidedById) || null : null}
+        live={{ students: result.rows.length, withMarks: result.rows.filter((r) => markedStudents.has(r.studentId)).length, mean: result.stats.mean, passRate: result.rows.length ? Math.round((100 * (result.rows.length - failedN)) / result.rows.length) : 0, distribution: dist, cutoffsSet: result.cutoffsAreSet }}
+        students={result.rows.map((r) => ({ studentId: r.studentId, roll: r.rollNumber, name: r.name, totalPct: r.totalPct, grade: r.grade, gradeChanged: !!r.gradeChanged }))}
+        letters={scale.length ? scale.map((g) => g.letter) : ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"]}
+        requests={gradeRequests.map((g) => ({ id: g.id, studentId: g.studentId, roll: rowById.get(g.studentId)?.rollNumber || "—", name: rowById.get(g.studentId)?.name || "—", oldGrade: g.oldGrade, newGrade: g.newGrade, reason: g.reason, status: g.status, decisionNote: g.decisionNote, createdAt: new Date(g.createdAt).toISOString(), decidedAt: g.decidedAt ? new Date(g.decidedAt).toISOString() : null, decidedBy: g.decidedById ? deciders.get(g.decidedById) || null : null }))}
+      />
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Marks Entry</h2>
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <p style={{ fontSize: 12.5, marginBottom: 8 }}>Once marks are entered, view computed grades, CLO/PLO attainment, and set grade cutoffs for this course.</p>

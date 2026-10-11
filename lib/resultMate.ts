@@ -100,7 +100,14 @@ export async function computeResultMate(courseId: string) {
     return match?.letter || savedCutoffs[savedCutoffs.length - 1]?.letter || suggestedGradeFor(pct);
   }
 
-  const graded = rows.map((r) => ({ ...r, grade: gradeFor(r.totalPct) })).sort((a, b) => b.totalPct - a.totalPct);
+  // An approved grade change (after the result was approved) overrides the computed grade for that student.
+  const { approvedGradeOverrides } = await import("./resultApproval");
+  const overrides = await approvedGradeOverrides(courseId);
+  const graded = rows.map((r) => {
+    const computedGrade = gradeFor(r.totalPct);
+    const o = overrides.get(r.studentId);
+    return { ...r, grade: o ? o.grade : computedGrade, computedGrade, gradeChanged: !!o && o.grade !== computedGrade };
+  }).sort((a, b) => b.totalPct - a.totalPct);
 
   // Per-assessment-item average & standard deviation, for the summary row.
   const instrumentStats = instruments.map((inst) => {

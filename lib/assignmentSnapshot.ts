@@ -99,6 +99,14 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
   await prisma.studentMark.deleteMany({ where: { courseId } });
   await prisma.labMark.deleteMany({ where: { courseId } });
   await prisma.studentEnrollment.deleteMany({ where: { courseId } });
+  // The next offering starts with a fresh result: close this offering's approval and grade changes (kept as history,
+  // but no longer applied, so a student who repeats the course is graded on the new marks).
+  try {
+    const { db } = await import("./resultApproval");
+    await db.gradeChangeRequest.updateMany({ where: { courseId, status: "APPROVED" }, data: { status: "APPLIED" } });
+    await db.gradeChangeRequest.updateMany({ where: { courseId, status: "PENDING" }, data: { status: "CLOSED" } });
+    await db.courseResult.deleteMany({ where: { courseId } });
+  } catch { /* result approval tables not created yet */ }
 }
 
 /** Snapshots each individual enrolled student's grade and CLO/PLO

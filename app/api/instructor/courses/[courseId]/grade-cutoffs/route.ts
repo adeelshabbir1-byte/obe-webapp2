@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resultLockMessage } from "../../../../../../lib/resultApproval";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
@@ -9,6 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const locked = await resultLockMessage(course.id); if (locked) return NextResponse.json({ error: locked }, { status: 409 }); }
   if (!(await canEditReport(user, "omc.reports.result-mate"))) return NextResponse.json({ error: "your Institute Head has restricted edit access to this report" }, { status: 403 });
 
   const body = await req.json();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resultLockMessage } from "../../../../../../../lib/resultApproval";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user || !course.batchId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const locked = await resultLockMessage(course.id); if (locked) return NextResponse.json({ error: locked }, { status: 409 }); }
 
   const body = await req.json();
   const rollNumbers: string[] = (body.rollNumbers || "")
@@ -54,6 +56,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const locked = await resultLockMessage(course.id); if (locked) return NextResponse.json({ error: locked }, { status: 409 }); }
 
   const body = await req.json();
   if (!body.studentId) return NextResponse.json({ error: "studentId is required" }, { status: 400 });

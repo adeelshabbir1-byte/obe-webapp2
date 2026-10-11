@@ -33,7 +33,7 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
             {courseRows.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No courses on record yet.</td></tr>}
             {courseRows.map((r, i) => (
               <tr key={i}>
-                <td>{r.termName} {r.termYear}{r.isCurrent && <span className="badge badge-neutral" style={{ marginLeft: 6 }}>In Progress</span>}</td>
+                <td>{r.termName} {r.termYear}{r.isCurrent && <span className="badge badge-neutral" style={{ marginLeft: 6 }} title={r.approved ? "Result approved" : "Not approved yet — the grade may still change"}>{r.approved ? "Result approved" : "In progress · provisional"}</span>}</td>
                 <td>{r.code}</td><td>{r.title}</td><td>{r.creditHours}</td>
                 <td>{r.totalPct.toFixed(1)}%</td><td style={{ fontWeight: 600 }}>{r.grade}</td><td>{r.gpaPoints?.toFixed(1) ?? "—"}</td>
               </tr>

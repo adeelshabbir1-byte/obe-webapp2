@@ -2605,3 +2605,41 @@ model DegreePlanLock {
   note       String?  @db.Text
   lockedAt   DateTime @default(now())
 }
+
+// A course offering's result: the Instructor submits it, the Chairman (Head of Department) or the Institute Head
+// approves it, and from then on marks and grade cutoffs are locked. Any later change goes through a GradeChangeRequest.
+model CourseResult {
+  id            String    @id @default(cuid())
+  courseId      String    @unique
+  status        String    @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | RETURNED
+  termName      String?
+  termYear      Int?
+  submittedById String?
+  submittedAt   DateTime?
+  decidedById   String?
+  decidedAt     DateTime?
+  note          String?   @db.Text // the approver's note when returning (or approving)
+  summaryJson   String?   @db.Text // grades as they stood when submitted / approved
+  updatedAt     DateTime  @default(now()) @updatedAt
+}
+
+// A change to one student's grade after the course result was approved: asked for by the Instructor with a reason,
+// decided by the Chairman (Head of Department) or the Institute Head. An approved change overrides the computed grade.
+model GradeChangeRequest {
+  id            String    @id @default(cuid())
+  courseId      String
+  studentId     String
+  oldGrade      String
+  newGrade      String
+  totalPct      Float?
+  reason        String    @db.Text
+  requestedById String
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  @@index([courseId])
+  @@index([studentId])
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resultLockMessage } from "../../../../lib/resultApproval";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { labAccessFor } from "../../../../lib/labAccess";
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   const access = await labAccessFor(user, body.labCourseId);
   if (!access || access.as !== "LEAD") return NextResponse.json({ error: "only the lab's course instructor can import lab marks" }, { status: 403 });
   if (!access.theory || access.theory.instructorId !== user.id) return NextResponse.json({ error: "you can only import into a theory course that you teach" }, { status: 403 });
+  { const locked = await resultLockMessage(access.theory.id); if (locked) return NextResponse.json({ error: locked }, { status: 409 }); }
 
   const instrument = await prisma.assessmentInstrument.findFirst({ where: { id: body.instrumentId, courseId: access.theory.id, type: "Lab", source: "INSTRUCTOR" } });
   if (!instrument) return NextResponse.json({ error: "choose one of the Lab items of your theory course" }, { status: 404 });

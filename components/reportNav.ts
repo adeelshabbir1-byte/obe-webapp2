@@ -146,6 +146,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/results-approval", label: "Result Approval" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/home", label: "Needs Attention" },
   { href: "/yearly-summary", label: "Yearly Summary" },
@@ -176,6 +177,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/dean/overview", label: "My Faculty" },
@@ -222,6 +224,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Split" },
   { href: "/move-program", label: "Move Program Data" },
   { href: "/program-moves", label: "Teacher Program Moves" },

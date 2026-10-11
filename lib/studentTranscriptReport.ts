@@ -1,12 +1,13 @@
 import { bestAttemptTotals } from "./cgpaMath";
 import { prisma } from "./db";
 import { computeResultMate } from "./resultMate";
+import { getCourseResult } from "./resultApproval";
 import { getGradingScaleForBatch } from "./gradingScaleLookup";
 import { getPassingCriteria } from "./passingCriteria";
 
 export type TranscriptCourseRow = {
   code: string; title: string; creditHours: number; grade: string; gpaPoints: number | null;
-  totalPct: number; termName: string; termYear: number; isCurrent: boolean;
+  totalPct: number; termName: string; termYear: number; isCurrent: boolean; approved?: boolean;
 };
 export type AttainmentAgg = { attempted: number; passed: number };
 export type RemediationEntry = { ploLabel: string; courses: { code: string; title: string }[] };
@@ -96,6 +97,7 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
     courseRows.push({
       code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: isDeficiency ? (row.totalPct >= (deficiencyPct ?? 40) ? "P" : "F") : row.grade, gpaPoints,
       totalPct: row.totalPct, termName: e.course.offeredTermName || "Current", termYear: e.course.offeredTermYear || new Date().getFullYear(), isCurrent: true,
+      approved: (await getCourseResult(e.courseId))?.status === "APPROVED",
     });
     attempts.push({ courseCode: e.course.code, creditHours: e.course.creditHours, gpaPoints });
     for (const code of result.cloCodes) {

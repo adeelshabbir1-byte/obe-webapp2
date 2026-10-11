@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resultLockMessage } from "../../../../../../lib/resultApproval";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
@@ -11,6 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { coordinator: true } });
   if (!course || course.coordinator.managedById !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  { const locked = await resultLockMessage(course.id); if (locked) return NextResponse.json({ error: locked }, { status: 409 }); }
 
   const body = await req.json();
   const cutoffs: { letter: string; minPercent: number }[] = body.cutoffs || [];
