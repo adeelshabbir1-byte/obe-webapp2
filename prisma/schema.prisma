@@ -2686,3 +2686,41 @@ model Notification {
   @@index([userId, readAt])
   @@index([userId, createdAt])
 }
+
+// An exam period (e.g. "Midterm Fall 2026"): its days, daily time slots and rules. Its papers are scheduled into it.
+model ExamSession {
+  id                  String   @id @default(cuid())
+  chairmanId          String
+  name                String
+  examType            String   // Midterm | Final
+  startDate           DateTime
+  endDate             DateTime
+  slotsJson           String   // ["09:00-11:00", "12:00-14:00"]
+  offDaysJson         String   @default("[0]") // weekdays with no exams (0 = Sunday)
+  maxPerDay           Int      @default(2)     // most papers one student may sit on one day
+  seatPercent         Int      @default(50)    // share of a room's capacity used for exam seating (spacing)
+  invigilatorsPerRoom Int      @default(1)
+  includeLabs         Boolean  @default(false)
+  status              String   @default("DRAFT") // DRAFT | PUBLISHED
+  createdById         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+
+  @@index([chairmanId])
+}
+
+// One course's paper in an exam session: when, and (after room allocation) which students sit in which room, and who invigilates.
+// Sections of the same course code sit the same paper at the same time; each section still has its own row.
+model ExamPaper {
+  id               String    @id @default(cuid())
+  sessionId        String
+  courseId         String
+  date             DateTime?
+  slot             Int?
+  pinned           Boolean   @default(false) // moved by hand: the generator keeps it where it is
+  roomsJson        String    @default("[]")  // [{ roomId, studentIds: [] }]
+  invigilatorsJson String    @default("[]")  // [{ roomId, userIds: [] }]
+
+  @@unique([sessionId, courseId])
+  @@index([sessionId])
+}

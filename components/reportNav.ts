@@ -62,6 +62,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/exams", label: "Exam Duties" },
   { href: "/instructor/courses", label: "My Semester Courses" },
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },
   { href: "/instructor/timetable", label: "My Timetable" },
@@ -91,6 +92,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
@@ -146,6 +148,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/home", label: "Needs Attention" },
@@ -177,6 +180,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
@@ -198,6 +202,7 @@ export const DEAN_NAV = [
 ];
 
 export const DEPT_COORDINATOR_NAV = [
+  { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/dept-coordinator/home", label: "My Programs" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" },
@@ -224,6 +229,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Split" },
   { href: "/move-program", label: "Move Program Data" },

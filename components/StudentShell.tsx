@@ -12,6 +12,7 @@ const NAV = [
   { href: "/student/degree-plan", label: "Degree Plan" },
   { href: "/student/dashboard", label: "Elective Choices" },
   { href: "/student/timetable", label: "My Timetable" },
+  { href: "/student/exams", label: "My Exams" },
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
 ];
