@@ -357,16 +357,17 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   // row's own CLO/checkbox/Q# state is assumed consistent across every
   // lecture in its group (Save always writes it that way), so the first
   // row's values represent the whole group for display purposes.
+  // Only lectures that follow one another are grouped, so the grid always reads in lecture order (a subtopic that
+  // comes back later in the course gets its own row at its own place instead of jumping up to its first lecture).
   type Group = { key: string; rows: Row[] };
   const groups: Group[] = [];
-  const groupByKey = new Map<string, Group>();
-  for (const r of filledRows) {
+  for (const r of [...filledRows].sort((a, b) => a.lectureNumber - b.lectureNumber)) {
     const key = effectiveSubtopic(r);
-    let g = groupByKey.get(key);
-    if (!g) { g = { key, rows: [] }; groupByKey.set(key, g); groups.push(g); }
-    g.rows.push(r);
+    const last = groups[groups.length - 1];
+    const prev = last?.rows[last.rows.length - 1];
+    if (last && last.key === key && prev && r.lectureNumber === prev.lectureNumber + 1) last.rows.push(r);
+    else groups.push({ key, rows: [r] });
   }
-  for (const g of groups) g.rows.sort((a, b) => a.lectureNumber - b.lectureNumber);
 
   return (
     <>
@@ -626,11 +627,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 const first = g.rows[0];
                 const lectureLabel = g.rows.length === 1
                   ? `Wk${first.week}·L${first.lectureNumber}`
-                  : `L${g.rows.map((r) => r.lectureNumber).join(",")}`;
+                  : `Wk${first.week}·L${first.lectureNumber}–${g.rows[g.rows.length - 1].lectureNumber}`;
                 const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
                 const hit = !!focus && g.rows.some((r) => r.cloId && focusCloIds.has(r.cloId));
                 return (
-                <tr key={g.key} style={focus ? (hit ? { outline: "2px solid #E0A526", outlineOffset: -2 } : { opacity: 0.4 }) : undefined}>
+                <tr key={first.id} style={focus ? (hit ? { outline: "2px solid #E0A526", outlineOffset: -2 } : { opacity: 0.4 }) : undefined}>
                   <td style={{ fontSize: 12, color: "var(--slate)", background: hit ? "#FFE58F" : undefined }}>{idx + 1}</td>
                   <td style={{ fontSize: 12, background: hit ? "#FFF1B8" : undefined, fontWeight: hit ? 600 : undefined }}>
                     {lectureLabel} — {g.key}
