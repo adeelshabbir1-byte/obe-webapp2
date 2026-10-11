@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { fitUnconfirmedWeightsToPolicy } from "../../../../lib/weightPolicy";
+
+export const maxDuration = 300;
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
@@ -25,6 +28,7 @@ export async function GET() {
     labMin: 0, labMax: 100, labMinCount: 0,
     midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
     finalMin: 0, finalMax: 100, finalMinCount: 1, finalBeforeMidtermPct: null,
+    ploMinPct: 0, ploMinItems: 0, cloSpreadMax: 7,
   });
 
   return NextResponse.json({ policies });
@@ -63,6 +67,19 @@ export async function PUT(req: NextRequest) {
   if (boundary !== null && (isNaN(boundary) || boundary < 0 || boundary > 100)) return NextResponse.json({ error: "Final before-midterm % must be between 0 and 100 (or left blank)" }, { status: 400 });
   (data as Record<string, number | null>).finalBeforeMidtermPct = boundary;
 
+  // Assessment-coverage rules (PLO is the goal): minimum % of marks and minimum number of assessment items per PLO,
+  // and the largest allowed gap between CLOs.
+  for (const [f, max, dflt] of [["ploMinPct", 100, 0], ["ploMinItems", 50, 0], ["cloSpreadMax", 100, 7]] as const) {
+    const raw = body[f];
+    const v = raw === undefined || raw === null || raw === "" ? dflt : parseInt(raw, 10);
+    if (isNaN(v) || v < 0 || v > max) return NextResponse.json({ error: `${f} must be between 0 and ${max}` }, { status: 400 });
+    (data as Record<string, number | null>)[f] = v;
+  }
+  const sumMin = ["assignment", "quiz", "project", "lab", "midterm", "final"].reduce((s, k) => s + (data[`${k}Min`] as number), 0);
+  const sumMax = ["assignment", "quiz", "project", "lab", "midterm", "final"].reduce((s, k) => s + (data[`${k}Max`] as number), 0);
+  if (sumMin > 100) return NextResponse.json({ error: `the minimums add up to ${sumMin}% - they must leave room to total 100%` }, { status: 400 });
+  if (sumMax < 100) return NextResponse.json({ error: `the maximums add up to only ${sumMax}% - courses could never reach 100%` }, { status: 400 });
+
   const policy = await prisma.weightPolicy.upsert({
     where: { chairmanId_courseType: { chairmanId: user.managedById, courseType: body.courseType } },
     create: { chairmanId: user.managedById, courseType: body.courseType, updatedById: user.id, ...data },
@@ -71,5 +88,7 @@ export async function PUT(req: NextRequest) {
 
   await writeAuditLog({ actorUserId: user.id, action: "WEIGHT_POLICY_SET", entityType: "WeightPolicy", entityId: policy.id, metadata: { courseType: body.courseType } });
 
-  return NextResponse.json({ policy });
+  // Courses whose Subject Expert has not confirmed weights yet are moved inside the new limits straight away.
+  const adjusted = await fitUnconfirmedWeightsToPolicy({ chairmanId: user.managedById });
+  return NextResponse.json({ policy, adjusted });
 }

@@ -5,6 +5,7 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import WeightsForm from "../../../../../components/WeightsForm";
 import { navForRole } from "../../../../../components/reportNav";
+import { fitUnconfirmedWeightsToPolicy } from "../../../../../lib/weightPolicy";
 
 
 export default async function WeightsPage({ params }: { params: { courseId: string } }) {
@@ -14,6 +15,8 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT") redirect("/dashboard");
 
+  // Weights not confirmed yet start inside the OMC's limits for this course type.
+  await fitUnconfirmedWeightsToPolicy({ courseId: params.courseId }).catch(() => 0);
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { coordinator: true } });
   if (!course || course.subjectExpertId !== user.id) notFound();
 

@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { snapshotTemplate, diffTemplates } from "../../../../../../lib/templateDiff";
+import { ploCoverageShortfalls } from "../../../../../../lib/ploCoverage";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -37,6 +38,12 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
     return NextResponse.json({
       error: `CLO contribution percentages must sum to 100% per PLO — ${badTotals.length} PLO(s) don't add up correctly yet`,
     }, { status: 400 });
+  }
+
+  // The OMC's coverage rules: every PLO the course serves needs enough marks and enough assessment items.
+  const coverage = await ploCoverageShortfalls(course.id, "SE");
+  if (coverage.short.length > 0) {
+    return NextResponse.json({ error: `Some PLOs are not assessed enough for the OMC's rules - ${coverage.short.join("; ")}` }, { status: 400 });
   }
 
   // An approved template is locked: it can only be reopened through an approved change request.

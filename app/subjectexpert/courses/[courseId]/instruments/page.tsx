@@ -9,6 +9,7 @@ import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
 import { navForRole } from "../../../../../components/reportNav";
 import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
+import { ploCoverageShortfalls } from "../../../../../lib/ploCoverage";
 
 
 export default async function InstrumentsPage({ params }: { params: { courseId: string } }) {
@@ -65,7 +66,8 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   }
   const badPloCount = Object.values(byPlo).filter((total) => total !== 100).length;
 
-  const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0;
+  const coverage = await ploCoverageShortfalls(course.id, "SE");
+  const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0 && coverage.short.length === 0;
 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
@@ -122,6 +124,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
         })}
         clos={await closWithPlo(course.clos.map((c) => ({ id: c.id, code: c.code, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct })))}
         apiBase="/api/subjectexpert"
+        coverage={coverage.rules}
       />}
 
       {course.templateStatus === "changes-requested" && course.omcComment && (
@@ -156,6 +159,12 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
             Not ready yet — {badPloCount} PLO(s) have CLO contribution percentages that don't add up to 100%
             (see the CLOs & PLO Mapping tab).
+          </p>
+        )}
+        {coverage.short.length > 0 && (
+          <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
+            Not ready yet — these PLOs are not assessed enough for the OMC&apos;s rules: {coverage.short.join("; ")}.
+            Tick more quizzes, assignments or exam questions for their topics above.
           </p>
         )}
         <SubmitTemplateButton courseId={course.id} disabled={!canSubmit || course.templateStatus === "submitted" || course.templateStatus === "approved"} />

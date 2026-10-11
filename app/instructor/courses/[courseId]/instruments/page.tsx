@@ -12,6 +12,7 @@ import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
 import { navForRole } from "../../../../../components/reportNav";
 import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
+import { coverageRules } from "../../../../../lib/weightPolicy";
 
 
 export default async function InstructorInstrumentsPage({ params }: { params: { courseId: string } }) {
@@ -62,6 +63,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
       <InstructorCourseSubNav courseId={updated.id} active="instruments" code={updated.code} title={updated.title} />
 
       <AssessmentsManager
+        coverage={coverageRules(policy as unknown as Record<string, unknown>)}
         counts={{ Quiz: (course as unknown as { quizCount: number | null }).quizCount, Assignment: (course as unknown as { assignmentCount: number | null }).assignmentCount }}
         bestOf={{ Quiz: (course as unknown as { quizBestOf: number | null }).quizBestOf, Assignment: (course as unknown as { assignmentBestOf: number | null }).assignmentBestOf }}
         courseId={updated.id}

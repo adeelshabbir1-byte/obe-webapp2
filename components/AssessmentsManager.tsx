@@ -73,8 +73,10 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf, counts }: {
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf, counts, coverage }: {
   courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string; counts?: Record<string, number | null>; bestOf?: Record<string, number | null>;
+  /** The OMC's coverage rules for this course type: every PLO must carry ploMinPct % of the marks through ploMinItems items. */
+  coverage?: { ploMinPct: number; ploMinItems: number; cloSpreadMax: number };
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
   // "rows" is the working copy the checkboxes/question-number boxes edit
@@ -335,18 +337,37 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     ploGroups.push({ key, label: c.ploNumber != null ? `PLO-${c.ploNumber}` : "No PLO", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], weighted: cloTotals[idx] * ((c.contribution ?? 0) / 100), tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
   });
   const cloTint = (c: Clo) => ploGroups.find((g) => g.key === (c.ploId || "none"))?.tint;
+  // Per PLO: % of the marks it carries and how many different assessment items (quizzes, assignments, midterm, final) test it.
+  const ploStats = new Map<string, { pct: number; items: number }>();
+  for (const key of Array.from(new Set(cloList.map((c) => c.ploId || "none")))) {
+    const cloIds = new Set(cloList.filter((c) => (c.ploId || "none") === key).map((c) => c.id));
+    const its = new Set<string>();
+    let pct = 0;
+    for (const r of filledRows) if (r.cloId && cloIds.has(r.cloId)) { pct += r.weightPct; r.linkedInstrumentIds.forEach((id) => its.add(id)); }
+    ploStats.set(key, { pct, items: its.size });
+  }
+  const rules = coverage || { ploMinPct: 0, ploMinItems: 0, cloSpreadMax: 7 };
+  const ploShort = (key: string) => {
+    if (key === "none") return [];
+    const st = ploStats.get(key) || { pct: 0, items: 0 };
+    const why: string[] = [];
+    if (st.pct === 0) why.push("no marks");
+    else if (rules.ploMinPct > 0 && st.pct < rules.ploMinPct - 0.05) why.push(`${fmtPct(st.pct)}% of marks (OMC asks for ${rules.ploMinPct}%)`);
+    if (rules.ploMinItems > 0 && st.items < rules.ploMinItems) why.push(`${st.items} assessment item${st.items === 1 ? "" : "s"} (OMC asks for ${rules.ploMinItems})`);
+    return why;
+  };
 
   // CLOs should each carry roughly the same share of the total marks — one
   // CLO barely tested while another dominates the paper is a red flag for
   // OMC review. A small spread is normal (marks don't divide perfectly
   // evenly across CLOs); only flag it once the spread gets large.
-  const CLO_BALANCE_TOLERANCE = 7;
+  const CLO_BALANCE_TOLERANCE = rules.cloSpreadMax;
   const cloSpread = cloTotals.length > 1 ? Math.max(...cloTotals) - Math.min(...cloTotals) : 0;
   const cloImbalanced = cloTotals.length > 1 && cloSpread > CLO_BALANCE_TOLERANCE;
   // A CLO is "under-hit" when it gets no marks or clearly less than an even share; a PLO when it gets no marks at all.
   const cloAvg = cloTotals.length ? grandTotal / cloTotals.length : 0;
   const cloLow = (idx: number) => cloTotals[idx] === 0 || (cloTotals.length > 1 && cloTotals[idx] < cloAvg - CLO_BALANCE_TOLERANCE / 2);
-  const ploLow = (key: string) => key !== "none" && (ploGroups.find((g) => g.key === key)?.total || 0) === 0;
+  const ploLow = (key: string) => ploShort(key).length > 0;
   const focusCloIds = new Set<string>(!focus ? [] : focus.kind === "clo" ? [focus.id] : cloList.filter((c) => (c.ploId || "none") === focus.id).map((c) => c.id));
   const toggleFocus = (kind: "clo" | "plo", id: string) => setFocus((f) => (f && f.kind === kind && f.id === id ? null : { kind, id }));
   const focusLabel = !focus ? "" : focus.kind === "clo" ? cloList.find((c) => c.id === focus.id)?.code || "" : ploGroups.find((g) => g.key === focus.id)?.label || "";
@@ -513,6 +534,14 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             </p>
           );
         })}
+        {ploGroups.length > 0 && cloList.length > 0 && (rules.ploMinPct > 0 || rules.ploMinItems > 0) && (
+          <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 6px" }}>
+            OMC rule for this course type: every PLO needs {rules.ploMinPct > 0 ? <b>at least {rules.ploMinPct}% of the marks</b> : null}
+            {rules.ploMinPct > 0 && rules.ploMinItems > 0 ? " through " : null}
+            {rules.ploMinItems > 0 ? <b>at least {rules.ploMinItems} assessment item{rules.ploMinItems === 1 ? "" : "s"}</b> : null}.
+            {ploGroups.some((g) => ploLow(g.key)) ? <span style={{ color: "var(--rust)", fontWeight: 600 }}> PLOs in red fall short - click one to see its topics and tick more quizzes, assignments or exam questions for them.</span> : <span style={{ color: "var(--sage)", fontWeight: 600 }}> All PLOs meet it.</span>}
+          </p>
+        )}
         {ploGroups.length > 0 && cloList.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
             {ploGroups.map((g) => (
@@ -522,6 +551,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <div style={{ fontSize: 17, fontWeight: 700 }}>{fmtPct(g.total)}%</div>
                 <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of total marks · {g.cols} CLO{g.cols > 1 ? "s" : ""}</div>
                 {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }} title="Each CLO's marks multiplied by its contribution % to this PLO">{fmtPct(g.weighted)}% by CLO contribution</div>}
+                {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>tested by {ploStats.get(g.key)?.items || 0} item{(ploStats.get(g.key)?.items || 0) === 1 ? "" : "s"}{rules.ploMinItems ? ` (min ${rules.ploMinItems})` : ""}</div>}
+                {ploShort(g.key).length > 0 && <div style={{ fontSize: 10.5, color: "var(--rust)", fontWeight: 600 }}>Short: {ploShort(g.key).join("; ")}</div>}
               </div>
             ))}
           </div>

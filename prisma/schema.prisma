@@ -430,6 +430,9 @@ model WeightPolicy {
   finalMax      Int      @default(100)
   finalMinCount Int      @default(1)
   finalBeforeMidtermPct Int? // OMC guidance: share (%) of the Final paper that should come from topics taught up to the midterm; null = no guidance
+  ploMinPct     Int      @default(0)  // every PLO a course serves must carry at least this % of the course marks (0 = no rule)
+  ploMinItems   Int      @default(0)  // ...and be tested by at least this many assessment items (quizzes, assignments, exam papers)
+  cloSpreadMax  Int      @default(7)  // largest allowed gap (% of marks) between the most and least assessed CLO
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
