@@ -5,7 +5,10 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import DeadlineForm from "../../components/DeadlineForm";
 import DeadlineRowActions from "../../components/DeadlineRowActions";
-import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, stampDone, topUpStanding, reach, statusOf, type DlStatus } from "../../lib/deadlines";
+import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STATUS_TEXT, chairmanOf, stampDone, topUpStanding, reach, statusOf, workCourses, type DlStatus } from "../../lib/deadlines";
+import { seProgressFor, instructorProgressFor } from "../../lib/seProgress";
+import ProgressBar from "../../components/ProgressBar";
+import Link from "next/link";
 import { ROLE_TEXT } from "../../lib/institutePeople";
 import { hatsOf } from "../../lib/dualRoles";
 
@@ -25,10 +28,12 @@ export default async function DeadlinesPage() {
 
   const { people, leadIds } = isSetter ? await reach(user) : { people: [], leadIds: [] as string[] };
   const peopleIds = people.map((p) => p.id);
-  const [myCourses, scopeCourses] = await Promise.all([
-    prisma.course.findMany({ where: { isOffered: true, OR: [{ subjectExpertId: user.id }, { instructorId: user.id }, { coordinatorId: user.id }] }, select: { id: true } }),
-    isSetter && leadIds.length ? prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true, batch: { select: { batchName: true } } }, orderBy: { code: "asc" }, take: 800 }) : Promise.resolve([]),
+  // Live courses only: offered now, or already given to someone for a current / future term (past terms are left out).
+  const [myCourses, scopeWork] = await Promise.all([
+    workCourses({ OR: [{ subjectExpertId: user.id }, { instructorId: user.id }, { coordinatorId: user.id }] }),
+    isSetter && leadIds.length ? workCourses({ coordinatorId: { in: leadIds } }) : Promise.resolve([]),
   ]);
+  const scopeCourses = scopeWork.length ? await prisma.course.findMany({ where: { id: { in: scopeWork.map((c) => c.id) } }, select: { id: true, code: true, title: true, subjectExpertId: true, instructorId: true, batch: { select: { batchName: true } } }, orderBy: { code: "asc" }, take: 800 }) : [];
   const myCourseIds = myCourses.map((c) => c.id);
   const scopeIds = (scopeCourses as { id: string }[]).map((c) => c.id);
 
@@ -90,6 +95,30 @@ export default async function DeadlinesPage() {
   }
   const keyOf = (r: DlRow) => (r.courseId ? `${r.courseId}|${r.kind}` : `T|${r.assigneeId}|${r.title}`);
   const mineShown = mine.filter((x) => (!x.r.courseId && !x.r.assigneeId) || earliest.get(keyOf(x.r)) === x);
+
+  // "My work": every live course this person is Subject Expert or Instructor of, with where it stands and its next date.
+  const seIds = myCourses.filter((c) => c.subjectExpertId === user.id).map((c) => c.id);
+  const insIds = myCourses.filter((c) => c.instructorId === user.id).map((c) => c.id);
+  const workInfo = await prisma.course.findMany({
+    where: { id: { in: [...seIds, ...insIds].length ? [...seIds, ...insIds] : ["none"] } },
+    select: { id: true, code: true, title: true, courseType: true, coordinatorId: true, templateStatus: true, seResponse: true, instructorResponse: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { name: true } } },
+    orderBy: { code: "asc" },
+  });
+  const [seProg, insProg] = await Promise.all([
+    seProgressFor(workInfo.filter((c) => seIds.includes(c.id))),
+    instructorProgressFor(insIds),
+  ]);
+  const nextFor = (courseId: string, roles: string[]) => {
+    const open = mine.filter((x) => x.r.courseId === courseId && !x.r.completedAt && roles.includes(x.r.role || KIND_ROLE[x.r.kind] || "")).sort((a, b) => a.r.dueDate.getTime() - b.r.dueDate.getTime());
+    return open[0] || null;
+  };
+  const workRows = [
+    ...workInfo.filter((c) => seIds.includes(c.id)).map((c) => ({ c, as: "Subject Expert", steps: seProg.get(c.id) || [], next: nextFor(c.id, ["SUBJECT_EXPERT"]), href: `/subjectexpert/courses/${c.id}/clos`, pending: c.seResponse === "PENDING", status: c.templateStatus })),
+    ...workInfo.filter((c) => insIds.includes(c.id)).map((c) => ({ c, as: "Instructor", steps: insProg.get(c.id) || [], next: nextFor(c.id, ["INSTRUCTOR"]), href: `/instructor/courses/${c.id}/schedule`, pending: c.instructorResponse === "PENDING", status: null as string | null })),
+  ];
+  const openMine = mineShown.filter((x) => !x.r.completedAt);
+  const overdueN = openMine.filter((x) => x.s === "OVERDUE").length, soonN = openMine.filter((x) => x.s === "SOON").length;
+  const STATUS_WORD: Record<string, string> = { draft: "Draft", submitted: "Submitted to OMC", approved: "Approved", "changes-requested": "Changes requested", reopened: "Reopened for changes" };
 
   // Per-person summary, by whoever holds the work now. Work nobody holds is listed on its own.
   const per = new Map<string, Record<DlStatus, number>>();
@@ -167,8 +196,39 @@ export default async function DeadlinesPage() {
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 0 }}>Each deadline counts for whoever holds the role now. On-time rate = done on time ÷ (done on time + done late + overdue). Work saved in a course is stamped the first time it is seen, so a late discovery can read as later than it really was.</p>
         </div>
       )}
+      <div className="stat-grid">
+        <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{workRows.length}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Courses assigned to me</div></div>
+        <div className={`stat ${overdueN ? "stat-warn" : ""}`}><div style={{ fontSize: 24, fontWeight: 700, color: overdueN ? "#B3261E" : undefined }}>{overdueN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>My deadlines overdue</div></div>
+        <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Due in the next 3 days</div></div>
+        <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{openMine.length - overdueN - soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Later</div></div>
+      </div>
+
+      {workRows.length > 0 && (
+        <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
+          <h3 style={{ marginTop: 0 }}>My courses — where I stand</h3>
+          <table>
+            <thead><tr><th>Course</th><th>As</th><th>Progress</th><th>Status</th><th>Next deadline</th><th></th></tr></thead>
+            <tbody>{workRows.map((w) => (
+              <tr key={w.c.id + w.as}>
+                <td><b>{w.c.code}</b> {w.c.title}<div style={{ fontSize: 11.5, color: "var(--slate)" }}>{w.c.batch ? `${w.c.batch.degreeProgram} — ${w.c.batch.batchName}` : "—"} · assigned by {w.c.coordinator?.name || "—"}</div></td>
+                <td>{w.as}</td>
+                <td><ProgressBar steps={w.steps} showPending /></td>
+                <td style={{ fontSize: 12.5 }}>
+                  {w.pending ? <span className="badge badge-warn">Waiting for your answer</span> : w.status ? STATUS_WORD[w.status] || w.status : "—"}
+                </td>
+                <td style={{ fontSize: 12.5 }}>
+                  {w.next ? <><div style={{ whiteSpace: "nowrap" }}>{day(w.next.r.dueDate)} {badge(w.next.s)}</div><div style={{ fontSize: 11.5, color: "var(--slate)" }}>{w.next.r.title}</div></> : <span style={{ color: "var(--slate)" }}>No deadline set</span>}
+                </td>
+                <td><Link href={w.pending ? "/dashboard" : w.href} className="act act-primary">{w.pending ? "Answer" : "Open"}</Link></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 0 }}>Progress is worked out from the course itself, so it moves as soon as you save the work. Courses of terms that are already over are not listed.</p>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
-        <h3 style={{ marginTop: 0 }}>For me</h3>
+        <h3 style={{ marginTop: 0 }}>My deadlines</h3>
         {mineShown.length === 0 ? <p style={{ color: "var(--slate)" }}>Nothing is due from you.</p> : table(mineShown, false, finalOf)}
       </div>
       {isSetter && (

@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { buildSeProgress, teachingLectureCounts, ProgressStep } from "./courseProgress";
+import { buildSeProgress, buildInstructorProgress, teachingLectureCounts, ProgressStep } from "./courseProgress";
 import { coverageRules } from "./weightPolicy";
 import { normalizeCourseType } from "./courseTypeColors";
 import { evaluateCoverage } from "./ploCoverage";
@@ -38,6 +38,30 @@ export async function seProgressFor(courses: { id: string; courseType: string; c
       midtermPaperCount: cPaper.filter((p) => p.examType === "Midterm").length,
       finalPaperCount: cPaper.filter((p) => p.examType === "Final").length,
       templateStatus: c.templateStatus,
+    }));
+  }
+  return out;
+}
+
+/** The Instructor progress steps for many courses at once. */
+export async function instructorProgressFor(courseIds: string[]) {
+  const out = new Map<string, ProgressStep[]>();
+  if (!courseIds.length) return out;
+  const [lectures, marks, attendance, paper] = await Promise.all([
+    prisma.lectureRow.findMany({ where: { courseId: { in: courseIds }, source: "INSTRUCTOR" }, select: { courseId: true, actualDate: true } }),
+    prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: courseIds } }, _count: { _all: true } }),
+    prisma.attendanceRecord.groupBy({ by: ["courseId"], where: { courseId: { in: courseIds } }, _count: { _all: true } }),
+    prisma.paperDistributionItem.findMany({ where: { courseId: { in: courseIds }, source: "INSTRUCTOR" }, select: { courseId: true, examType: true } }),
+  ]);
+  for (const id of courseIds) {
+    const ls = lectures.filter((l) => l.courseId === id);
+    const ps = paper.filter((p) => p.courseId === id);
+    out.set(id, buildInstructorProgress({
+      lectureCount: ls.length, lectureDeliveredCount: ls.filter((l) => !!l.actualDate).length,
+      marksEnteredCount: marks.find((m) => m.courseId === id)?._count._all || 0,
+      attendanceRecordCount: attendance.find((a) => a.courseId === id)?._count._all || 0,
+      midtermPaperCount: ps.filter((p) => p.examType === "Midterm").length,
+      finalPaperCount: ps.filter((p) => p.examType === "Final").length,
     }));
   }
   return out;

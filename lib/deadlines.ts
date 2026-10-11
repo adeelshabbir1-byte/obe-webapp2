@@ -1,9 +1,45 @@
 import { prisma } from "./db";
 import { hatsOf } from "./dualRoles";
 import { autoTick } from "./planAuto";
+import { courseTermIndex, currentTermIndexFor } from "./courseTerm";
+import { termIndex } from "./termLogic";
+import { seProgressFor } from "./seProgress";
+
+/** "Fall 2026" / "Spring 2027 semester" -> term index; null when the name carries no term. */
+export function planTermIndex(planTerm: string | null | undefined): number | null {
+  const m = /\b(fall|spring)\b\D*(\d{4})/i.exec(planTerm || "");
+  return m ? termIndex(m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(), parseInt(m[2], 10)) : null;
+}
+
+export type WorkCourse = { id: string; code: string; title: string; coordinatorId: string; subjectExpertId: string | null; instructorId: string | null; isOffered: boolean; term: number | null; past: boolean };
+/**
+ * Courses whose work is still live: offered now, or not offered yet but already given to a Subject Expert for a current
+ * or future term (the plan has to be written before the course is offered). Past-term courses are left out.
+ */
+export async function workCourses(where: Record<string, unknown>): Promise<WorkCourse[]> {
+  const raw = await prisma.course.findMany({
+    where: { AND: [where, { OR: [{ isOffered: true }, { subjectExpertId: { not: null } }, { instructorId: { not: null } }] }] } as never,
+    select: { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true, isOffered: true, semesterNumber: true, offeredTermName: true, offeredTermYear: true, batch: { select: { startTerm: true, startYear: true } } },
+    take: 6000,
+  });
+  const cur = new Map<string, number | null>();
+  for (const id of Array.from(new Set(raw.map((c) => c.coordinatorId)))) cur.set(id, await currentTermIndexFor(id));
+  return raw.map((c) => {
+    const term = courseTermIndex(c);
+    const now = cur.get(c.coordinatorId) ?? null;
+    return { id: c.id, code: c.code, title: c.title, coordinatorId: c.coordinatorId, subjectExpertId: c.subjectExpertId, instructorId: c.instructorId, isOffered: c.isOffered, term, past: term !== null && now !== null && term < now };
+  }).filter((c) => c.isOffered || !c.past);
+}
+/** Does a course-work target apply to this course? A plan named for a term covers that term's courses; otherwise offered courses (and, for Subject Expert work, courses already given to an expert). */
+export function courseFitsTarget(c: WorkCourse, t: { planTerm: string | null; kind: string; role: string | null }) {
+  const idx = planTermIndex(t.planTerm);
+  if (idx !== null) return c.term === idx || (c.term === null && c.isOffered);
+  const role = t.role || KIND_ROLE[t.kind];
+  return c.isOffered || (role === "SUBJECT_EXPERT" && !!c.subjectExpertId && !c.past);
+}
 
 export const DEADLINE_KINDS: Record<string, string> = {
-  CUSTOM: "Any task", PLO_MAP: "Course mapped to PLOs", CLO_PLO: "CLOs mapped to PLOs", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan built and mapped to CLOs", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
+  CUSTOM: "Any task", PLO_MAP: "Course mapped to PLOs", CLO_PLO: "CLOs mapped to PLOs", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan meets the OMC minimum topics per CLO/PLO", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
   PAPERS: "Midterm and final paper distribution set", SUBMITTED: "Course submitted to OMC", MARKS: "Marks entered", MID_MARKS: "Midterm marks entered", FINAL_MARKS: "Final exam marks entered", ATTENDANCE: "Attendance recorded",
 };
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
@@ -63,15 +99,15 @@ export async function detectDone(kind: string, courseId: string, role: string | 
     }
     case "CLO_SET": return (await prisma.cLO.count({ where: { courseId, source: "SE" } })) > 0;
     case "LECTURE_PLAN": {
-      const [all, mapped] = await Promise.all([prisma.lectureRow.count({ where: { courseId, source: "SE" } }), prisma.lectureRow.count({ where: { courseId, source: "SE", cloId: { not: null } } })]);
-      return all > 0 && all === mapped;
+      const c = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, courseType: true, coordinatorId: true, templateStatus: true } });
+      return !!c && !!(await seProgressFor([c])).get(c.id)?.[1]?.done;
     }
     case "ASSESSMENT_PLAN": return (await prisma.assessmentInstrument.count({ where: { courseId, source: "SE" } })) > 0;
     case "PAPERS": {
       const [m, f] = await Promise.all([prisma.paperDistributionItem.count({ where: { courseId, source, examType: "Midterm" } }), prisma.paperDistributionItem.count({ where: { courseId, source, examType: "Final" } })]);
       return m > 0 && f > 0;
     }
-    case "SUBMITTED": return course.templateStatus !== "draft" && course.templateStatus !== "changes-requested";
+    case "SUBMITTED": return course.templateStatus !== "draft" && course.templateStatus !== "changes-requested" && course.templateStatus !== "reopened";
     case "MARKS": return (await prisma.studentMark.count({ where: { courseId } })) > 0;
     case "MID_MARKS": return (await prisma.studentMark.count({ where: { courseId, instrument: { type: "Midterm" } } as never })) > 0;
     case "FINAL_MARKS": return (await prisma.studentMark.count({ where: { courseId, instrument: { type: "Final" } } as never })) > 0;
@@ -108,7 +144,7 @@ export async function topUpStanding(chairmanId: string) {
     if (!setter || !SETTER_ROLES.includes(setter.role)) continue;
     const { leadIds, people } = await reach(setter);
     const needCourses = list.some((t) => !t.planKey);
-    const courses = needCourses && leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true }, take: 1500 }) : [];
+    const courses = needCourses && leadIds.length ? await workCourses({ coordinatorId: { in: leadIds } }) : [];
     const existing = (await prisma.deadline.findMany({ where: { chairmanId, setById, allCourses: false } as never, select: { title: true, dueDate: true, courseId: true, assigneeId: true } })) as unknown as { title: string; dueDate: Date; courseId: string | null; assigneeId: string | null }[];
     const have = new Set(existing.map((e) => `${e.title}|${e.dueDate.getTime()}|${e.courseId || ""}|${e.assigneeId || ""}`));
     const toMake: Record<string, unknown>[] = [];
@@ -123,7 +159,7 @@ export async function topUpStanding(chairmanId: string) {
           for (const h of people.filter((p) => t.role && p.hats.includes(t.role))) if (!have.has(k("", h.id))) toMake.push({ ...base, assigneeId: h.id, courseId: null });
         }
       } else {
-        for (const c of courses) if (!have.has(k(c.id, ""))) toMake.push({ ...base, assigneeId: null, courseId: c.id });
+        for (const c of courses) if (courseFitsTarget(c, t) && !have.has(k(c.id, ""))) toMake.push({ ...base, assigneeId: null, courseId: c.id });
       }
     }
     for (let i = 0; i < toMake.length; i += 500) await prisma.deadline.createMany({ data: toMake.slice(i, i + 500) as never });
@@ -222,9 +258,10 @@ async function doneSets(kinds: string[], courseIds: string[]) {
         out.set(kind, new Set(rows.filter((r) => !bad.has(r.courseId)).map((r) => r.courseId))); break;
       }
       case "LECTURE_PLAN": {
-        const rows = (await prisma.lectureRow.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true, cloId: true } } as never)) as unknown as { courseId: string; cloId: string | null }[];
-        const bad = new Set(rows.filter((r) => !r.cloId).map((r) => r.courseId));
-        out.set(kind, new Set(rows.filter((r) => !bad.has(r.courseId)).map((r) => r.courseId))); break;
+        // Done once the plan meets the OMC's minimum topics per CLO / PLO (same rule as the course progress steps).
+        const cs = await prisma.course.findMany({ where: { id: inList }, select: { id: true, courseType: true, coordinatorId: true, templateStatus: true } });
+        const prog = await seProgressFor(cs);
+        out.set(kind, new Set(cs.filter((c) => prog.get(c.id)?.[1]?.done).map((c) => c.id))); break;
       }
       case "ASSESSMENT_PLAN": out.set(kind, distinct(await prisma.assessmentInstrument.findMany({ where: { courseId: inList, source: "SE" }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
       case "PAPERS": {
@@ -237,7 +274,7 @@ async function doneSets(kinds: string[], courseIds: string[]) {
       }
       case "SUBMITTED": {
         const rows = (await prisma.course.findMany({ where: { id: inList }, select: { id: true, templateStatus: true } } as never)) as unknown as { id: string; templateStatus: string | null }[];
-        out.set(kind, new Set(rows.filter((r) => r.templateStatus !== "draft" && r.templateStatus !== "changes-requested").map((r) => r.id))); break;
+        out.set(kind, new Set(rows.filter((r) => r.templateStatus !== "draft" && r.templateStatus !== "changes-requested" && r.templateStatus !== "reopened").map((r) => r.id))); break;
       }
       case "MARKS": out.set(kind, distinct(await prisma.studentMark.findMany({ where: { courseId: inList }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
       case "MID_MARKS": case "FINAL_MARKS": out.set(kind, distinct(await prisma.studentMark.findMany({ where: { courseId: inList, instrument: { type: kind === "MID_MARKS" ? "Midterm" : "Final" } }, select: { courseId: true }, distinct: ["courseId"] } as never))); break;
@@ -281,7 +318,7 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
   const setters = new Map((await prisma.user.findMany({ where: { id: { in: Array.from(new Set(templates.map((t) => t.setById))) } }, select: { id: true, name: true, role: true } })).map((u) => [u.id as string, u as { id: string; name: string; role: string }]));
   const myRank = RANK[user.role] ?? 9;
   const visible = templates.filter((t) => t.setById === user.id || (RANK[setters.get(t.setById)?.role || ""] ?? 9) < myRank || user.role === "CHAIRMAN");
-  const courses = leadIds.length ? await prisma.course.findMany({ where: { coordinatorId: { in: leadIds }, isOffered: true }, select: { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true }, take: 1500 }) : [];
+  const courses = leadIds.length ? await workCourses({ coordinatorId: { in: leadIds } }) : [];
   const courseIds = courses.map((c) => c.id);
   const cMap = new Map(courses.map((c) => [c.id, c]));
   const now = new Date();
