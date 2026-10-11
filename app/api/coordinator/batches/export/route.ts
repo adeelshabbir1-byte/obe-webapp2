@@ -13,6 +13,11 @@ export async function GET() {
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 
+  const crRows = await prisma.course.groupBy({ by: ["batchId", "semesterNumber"], where: { batchId: { in: batches.map((b) => b.id) }, isNonCredit: false }, _sum: { creditHours: true } });
+  const cr = (batchId: string, sem?: number) => crRows.filter((r) => r.batchId === batchId && (sem === undefined || r.semesterNumber === sem)).reduce((n, r) => n + (r._sum.creditHours || 0), 0);
+  const maxSem = Math.max(8, ...crRows.map((r) => r.semesterNumber || 0));
+  const sems = Array.from({ length: maxSem }, (_, i) => i + 1);
+
   return buildExcelResponse("batches.xlsx", [{
     name: "Batches",
     columns: [
@@ -21,10 +26,13 @@ export async function GET() {
       { header: "Semester 1 Starts", key: "start", width: 16 },
       { header: "Students", key: "studentCount", width: 12 },
       { header: "Courses Imported", key: "courseCount", width: 16 },
+      { header: "Credit Hours", key: "credits", width: 12 },
+      ...sems.map((n) => ({ header: `Sem ${n} CH`, key: `s${n}`, width: 9 })),
     ],
     rows: batches.map((b) => ({
       degreeProgram: b.degreeProgram, batchName: b.batchName, start: `${b.startTerm} ${b.startYear}`,
-      studentCount: b.studentCount, courseCount: b._count.courses,
+      studentCount: b.studentCount, courseCount: b._count.courses, credits: cr(b.id),
+      ...Object.fromEntries(sems.map((n) => [`s${n}`, cr(b.id, n) || ""])),
     })),
   }]);
 }

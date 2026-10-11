@@ -7,6 +7,8 @@ import ReportPrintHeader from "../../../components/ReportPrintHeader";
 import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
 import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 import { navForRole } from "../../../components/reportNav";
+import { bestAttemptTotals } from "../../../lib/cgpaMath";
+import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
 
 
 export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; batchId?: string; q?: string } }) {
@@ -38,7 +40,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
 
   // Batch-level aggregate view (no specific student selected, but a batch is).
   const selectedBatchId = searchParams.batchId || "";
-  let batchSummary: { studentCount: number; avgCgpa: number | null; cloAgg: Map<string, { attempted: number; passed: number }>; ploAgg: Map<string, { attempted: number; passed: number }> } | null = null;
+  let batchSummary: { studentCount: number; avgCgpa: number | null; programCredits: number; semesterCredits: { sem: number; cr: number }[]; rows: { id: string; name: string; roll: string; cgpa: number | null; earned: number; attempted: number }[]; cloAgg: Map<string, { attempted: number; passed: number }>; ploAgg: Map<string, { attempted: number; passed: number }> } | null = null;
   if (!student && selectedBatchId && batchIds.includes(selectedBatchId)) {
     const studentsInBatch = await prisma.student.findMany({ where: { batchId: selectedBatchId } });
     const records = await prisma.studentTranscriptRecord.findMany({ where: { studentId: { in: studentsInBatch.map((s) => s.id) } } });
@@ -62,9 +64,21 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
         bPloAgg.set(p.label, e);
       }
     }
-    const gpas = Array.from(byStudentGpa.values()).filter((v) => v.credits > 0).map((v) => v.points / v.credits);
+    // CGPA per student on the best attempt of each course; credit hours passed (best attempt above zero) and attempted.
+    const rows = studentsInBatch.map((st) => {
+      const mine = records.filter((r) => r.studentId === st.id);
+      const t = bestAttemptTotals(mine);
+      const passedCodes = new Map<string, number>();
+      for (const r of mine) if ((r.gpaPoints !== null && r.gpaPoints > 0) || r.grade === "P") passedCodes.set(r.courseCode.trim().toUpperCase(), r.creditHours);
+      return { id: st.id, name: st.name, roll: st.rollNumber, cgpa: t.credits > 0 ? Math.round((t.points / t.credits) * 100) / 100 : null, earned: Array.from(passedCodes.values()).reduce((n, c) => n + c, 0), attempted: mine.reduce((n, r) => n + r.creditHours, 0) };
+    }).sort((a, b) => (a.cgpa ?? 9) - (b.cgpa ?? 9));
+    const semCr = await prisma.course.groupBy({ by: ["semesterNumber"], where: { batchId: selectedBatchId, isNonCredit: false }, _sum: { creditHours: true } });
+    const gpas = rows.map((r) => r.cgpa).filter((g): g is number => g !== null);
     batchSummary = {
       studentCount: studentsInBatch.length,
+      programCredits: semCr.reduce((n, r) => n + (r._sum.creditHours || 0), 0),
+      semesterCredits: semCr.filter((r) => r.semesterNumber).sort((a, b) => (a.semesterNumber || 0) - (b.semesterNumber || 0)).map((r) => ({ sem: r.semesterNumber as number, cr: r._sum.creditHours || 0 })),
+      rows,
       avgCgpa: gpas.length > 0 ? Math.round((gpas.reduce((s, g) => s + g, 0) / gpas.length) * 100) / 100 : null,
       cloAgg: bCloAgg, ploAgg: bPloAgg,
     };
@@ -105,7 +119,28 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
         <>
           <div className="card">
             <p style={{ fontSize: 13 }}><b>{batches.find((b) => b.id === selectedBatchId)?.degreeProgram} — {batches.find((b) => b.id === selectedBatchId)?.batchName}</b></p>
-            <p style={{ fontSize: 13, marginTop: 6 }}><b>{batchSummary.studentCount} students</b>{batchSummary.avgCgpa !== null && <> — Average CGPA: <b>{batchSummary.avgCgpa.toFixed(2)}</b></>}</p>
+            <p style={{ fontSize: 13, marginTop: 6 }}><b>{batchSummary.studentCount} students</b>{batchSummary.avgCgpa !== null && <> — Average CGPA: <b>{batchSummary.avgCgpa.toFixed(2)}</b></>}
+              {" "}— Program credit hours: <b>{batchSummary.programCredits}</b>
+              {batchSummary.rows.some((r) => r.cgpa !== null && r.cgpa < 2) && <> — <b style={{ color: "#B3261E" }}>{batchSummary.rows.filter((r) => r.cgpa !== null && r.cgpa < 2).length} below 2.00</b></>}</p>
+            {batchSummary.semesterCredits.length > 0 && (
+              <p style={{ fontSize: 12, color: "var(--slate)", marginTop: 4 }}>Credit hours per semester: {batchSummary.semesterCredits.map((x) => `S${x.sem} ${x.cr}`).join(" · ")}</p>
+            )}
+          </div>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Students — CGPA and credit hours</h3>
+            <table>
+              <thead><tr><th>Roll no.</th><th>Name</th><th>CGPA</th><th>Credit hours passed</th><th>Credit hours attempted</th><th>Still to pass</th><th></th></tr></thead>
+              <tbody>
+                {batchSummary.rows.map((r) => (
+                  <tr key={r.id} style={r.cgpa !== null && r.cgpa < 2 ? { background: "#FBEAEA" } : undefined}>
+                    <td>{r.roll}</td><td>{r.name}</td>
+                    <td><b style={{ color: r.cgpa !== null && r.cgpa < 2 ? "#B3261E" : undefined }}>{r.cgpa !== null ? r.cgpa.toFixed(2) : "—"}</b></td>
+                    <td>{r.earned}</td><td>{r.attempted}</td><td>{Math.max(0, batchSummary!.programCredits - r.earned)}</td>
+                    <td><a href={`/coordinator/student-transcript?studentId=${r.id}#degree-plan`} className="act act-primary">Transcript &amp; plan</a></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>CLO-Wise Attainment — Whole Batch</h3>
@@ -144,6 +179,15 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
           courseRows={courseRows} cgpa={cgpa} totalCredits={totalCredits}
           cloAgg={cloAgg} ploAgg={ploAgg} remediation={remediation} remaining={remaining}
         />
+      )}
+      {student && belongsToCoordinator && (
+        <div className="card no-print" id="degree-plan">
+          <h3 style={{ fontSize: 15, marginTop: 0 }}>Full degree plan — every semester, taken and still to take</h3>
+          <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -4 }}>
+            Move any remaining course to another semester, plan a retake of an F or a repeat of a D, and set target grades to see the projected CGPA. The student and the batch advisor see and can change the same plan.
+          </p>
+          <DegreeSchemeBoard studentId={student.id} />
+        </div>
       )}
     </Shell>
   );

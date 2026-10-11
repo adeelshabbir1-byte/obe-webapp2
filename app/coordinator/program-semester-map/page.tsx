@@ -126,11 +126,22 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
         if (semCourses.length === 0) return null;
         return (
           <div key={sem} className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Semester {sem}</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>
+              Semester {sem}
+              {(() => {
+                // Credit hours of this semester, per batch (non-credit deficiency courses excluded).
+                const per = new Map<string, number>();
+                for (const c of semCourses) if (!c.isNonCredit) { const k = c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"; per.set(k, (per.get(k) || 0) + c.creditHours); }
+                const list = Array.from(per.entries());
+                return <span style={{ fontSize: 12, fontWeight: 500, color: "var(--slate)", marginLeft: 10 }}>
+                  {list.length === 1 ? `${list[0][1]} credit hours` : list.map(([k, v]) => `${k}: ${v} cr`).join(" · ")}
+                </span>;
+              })()}
+            </h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {semCourses.map((c) => (
                 <div key={c.id} style={{ minWidth: 200, maxWidth: 240, border: "1px solid var(--line)", borderLeft: `4px solid ${courseTypeColor(c.courseType, c.code)}`, padding: "8px 10px", borderRadius: 6 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.code} — {c.title} <span style={{ fontWeight: 400, color: "var(--slate)" }}>({c.isNonCredit ? "non-credit" : `${c.creditHours} cr`})</span></div>
                   <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 4 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</div>
                   {c.offeredTermName && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.offeredTermName} {c.offeredTermYear}</div>}
                   <InstructorAssignCell

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import DegreeSchemeBoard from "./DegreeSchemeBoard";
 
 type Planned = {
   courseId: string; code: string; title: string; creditHours: number; courseType: string;
@@ -157,44 +158,8 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
       )}
 
-      <h4 style={{ fontSize: 12.5, marginBottom: 6 }}>Future plan</h4>
-      {semesterNumbers.map((semNum) => {
-        const coursesHere = data.planned.filter((p) => p.plannedSemesterNumber === semNum);
-        return (
-          <div key={semNum} style={{ marginBottom: 10 }}>
-            <p style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 4 }}>Semester {semNum}{semNum === data.currentSemesterNumber ? " (current)" : ""}</p>
-            {coursesHere.map((c) => (
-              <div key={c.courseId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid var(--line)", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12 }}>
-                  {c.isCriticalChain && <span title="Critical chain — no room to slip without delaying graduation" style={{ color: "var(--rust)", marginRight: 4 }}>⚠</span>}
-                  {c.code} — {c.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({c.creditHours} cr, {c.courseType})</span>
-                  {c.currentlyEnrolled && <span className="badge badge-ok" style={{ marginLeft: 6, fontSize: 9.5 }}>Enrolled</span>}
-                  {takenCodes.has(c.code) && <span className="badge badge-warn" style={{ marginLeft: 6, fontSize: 9.5 }}>Retake/Improvement</span>}
-                </span>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select
-                    value={c.plannedSemesterNumber} disabled={busyId === c.courseId || c.currentlyEnrolled}
-                    onChange={(e) => moveCourse(c.courseId, parseInt(e.target.value, 10))}
-                    style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--line)" }}
-                  >
-                    {Array.from({ length: 8 }, (_, i) => i + 1).filter((n) => n >= data.currentSemesterNumber).map((n) => (
-                      <option key={n} value={n}>Sem {n}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={c.hypotheticalGrade || ""} disabled={busyId === c.courseId}
-                    onChange={(e) => setHypotheticalGrade(c.courseId, e.target.value)}
-                    style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--line)" }}
-                  >
-                    <option value="">Grade?</option>
-                    {data.gradingScale.map((g) => <option key={g.letter} value={g.letter}>{g.letter}</option>)}
-                  </select>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })}
+      <h4 style={{ fontSize: 12.5, margin: "12px 0 6px" }}>Full degree plan (every semester — taken and still to take)</h4>
+      <DegreeSchemeBoard studentId={studentId} onChange={load} />
     </div>
   );
 }

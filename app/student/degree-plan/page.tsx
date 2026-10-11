@@ -10,7 +10,7 @@ export default async function DegreePlanPage() {
 
   return (
     <StudentShell studentName={student.name}>
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
           <h1 style={{ fontSize: 22 }}>Degree Plan</h1>
         </div>

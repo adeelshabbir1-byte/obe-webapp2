@@ -6,7 +6,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import Link from "next/link";
 
-type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; enrolledCount: number; courseCount: number; registrationOpen: boolean; advisorId: string | null };
+type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; enrolledCount: number; courseCount: number; credits?: { total: number; bySemester: { sem: number; cr: number }[] }; registrationOpen: boolean; advisorId: string | null };
 type Faculty = { id: string; name: string };
 
 export default function BatchesManager({ initialBatches, faculty }: { initialBatches: Batch[]; faculty: Faculty[] }) {
@@ -158,9 +158,9 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       )}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Planned Intake</th><th>Enrolled</th><th>Courses Imported</th><th>Registration</th><th>Advisor</th><th></th></tr></thead>
+          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Planned Intake</th><th>Enrolled</th><th>Courses Imported</th><th>Credit Hours</th><th>Registration</th><th>Advisor</th><th></th></tr></thead>
           <tbody>
-            {batches.length === 0 && <tr><td colSpan={9} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
+            {batches.length === 0 && <tr><td colSpan={10} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {batches.map((b) => (
               <tr key={b.id}>
                 <td>{b.degreeProgram}</td><td>{b.batchName}</td><td>{b.startTerm} {b.startYear}</td>
@@ -188,6 +188,14 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                   )}
                 </td>
                 <td>{b.courseCount}</td>
+                <td>
+                  <b>{b.credits?.total ?? 0}</b>
+                  {b.credits && b.credits.bySemester.length > 0 && (
+                    <div style={{ fontSize: 10.5, color: "var(--slate)", lineHeight: 1.5, minWidth: 120 }}>
+                      {b.credits.bySemester.map((x) => `S${x.sem}: ${x.cr}`).join(" · ")}
+                    </div>
+                  )}
+                </td>
                 <td>
                   <button onClick={() => toggleRegistration(b)} disabled={busyId === b.id} className={b.registrationOpen ? "badge badge-ok" : "badge badge-warn"} style={{ border: "none", cursor: "pointer" }}>
                     {b.registrationOpen ? "Open" : "Closed"}
