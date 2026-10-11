@@ -9,10 +9,12 @@ import { DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, STATUS_COLOUR, STA
 import { seProgressFor, instructorProgressFor } from "../../lib/seProgress";
 import ProgressBar from "../../components/ProgressBar";
 import Link from "next/link";
+import MyTasksGantt, { type GanttTask } from "../../components/MyTasksGantt";
+import { blockedByMe, taskDays } from "../../lib/taskDeps";
 import { ROLE_TEXT } from "../../lib/institutePeople";
 import { hatsOf } from "../../lib/dualRoles";
 
-type DlRow = { id: string; assigneeId: string | null; role: string | null; setById: string; kind: string; title: string; description: string | null; courseId: string | null; dueDate: Date; completedAt: Date | null };
+type DlRow = { id: string; assigneeId: string | null; role: string | null; setById: string; kind: string; title: string; description: string | null; courseId: string | null; dueDate: Date; completedAt: Date | null; planKey: string | null; planTerm: string | null };
 type Person = { id: string; name: string };
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -120,6 +122,24 @@ export default async function DeadlinesPage() {
   const overdueN = openMine.filter((x) => x.s === "OVERDUE").length, soonN = openMine.filter((x) => x.s === "SOON").length;
   const STATUS_WORD: Record<string, string> = { draft: "Draft", submitted: "Submitted to OMC", approved: "Approved", "changes-requested": "Changes requested", reopened: "Reopened for changes" };
 
+  // Gantt of my tasks, and which of my unfinished tasks are holding up the next person's work.
+  const now = new Date();
+  const blocking = await blockedByMe(chairmanId, user.id, mineShown.map((x) => x.r), now);
+  const DAYMS = 86400000;
+  const stripTerm = (t: string) => t.replace(/ \((Fall|Spring)[^)]*\)$/i, "");
+  const ganttTasks: GanttTask[] = mineShown.slice().sort((a, b) => a.r.dueDate.getTime() - b.r.dueDate.getTime()).slice(0, 80).map(({ r, s: st }) => {
+    const b = blocking.get(r.id);
+    const others = b ? [...b.held.filter((h) => !h.mineToo), ...b.held.filter((h) => h.mineToo)] : [];
+    const c = r.courseId ? courseOf.get(r.courseId) : null;
+    return {
+      id: r.id, label: stripTerm(r.title), sub: c ? `${c.code} ${c.title}` : r.planTerm || (names.get(r.setById) ? `set by ${names.get(r.setById)}` : ""),
+      from: new Date(r.dueDate.getTime() - taskDays(r) * DAYMS), to: r.dueDate, status: st,
+      blocking: b?.severity, waiting: others.slice(0, 3).map((h) => ({ label: h.course ? `${h.title} (${h.course})` : h.title, who: h.who, from: h.startDate, to: h.dueDate })),
+      waitingMore: Math.max(0, others.length - 3),
+    };
+  });
+  const blockList = mineShown.filter((x) => blocking.has(x.r.id)).map((x) => ({ x, b: blocking.get(x.r.id)! })).sort((a, b) => (a.b.severity === b.b.severity ? a.x.r.dueDate.getTime() - b.x.r.dueDate.getTime() : a.b.severity === "now" ? -1 : 1));
+
   // Per-person summary, by whoever holds the work now. Work nobody holds is listed on its own.
   const per = new Map<string, Record<DlStatus, number>>();
   let unheld = 0;
@@ -202,6 +222,45 @@ export default async function DeadlinesPage() {
         <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Due in the next 3 days</div></div>
         <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{openMine.length - overdueN - soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Later</div></div>
       </div>
+
+      {blockList.length > 0 && (
+        <div className="card" style={{ marginBottom: 14, borderLeft: `4px solid ${blockList.some((b) => b.b.severity === "now") ? "#B3261E" : "#B7791F"}` }}>
+          <h3 style={{ marginTop: 0, color: blockList.some((b) => b.b.severity === "now") ? "#B3261E" : "#95650F" }}>
+            {blockList.some((b) => b.b.severity === "now") ? "Your delay is holding up other work" : "Due soon — other work is waiting on it"}
+          </h3>
+          <div style={{ display: "grid", gap: 10 }}>
+            {blockList.map(({ x, b }) => {
+              const c = x.r.courseId ? courseOf.get(x.r.courseId) : null;
+              const lateDays = Math.floor((now.getTime() - (x.r.dueDate.getTime() + DAYMS - 1)) / DAYMS) + 1;
+              const others = b.held.filter((h) => !h.mineToo);
+              const own = b.held.filter((h) => h.mineToo);
+              return (
+                <div key={x.r.id} style={{ fontSize: 12.5 }}>
+                  <b>{stripTerm(x.r.title)}</b>{c ? ` — ${c.code} ${c.title}` : ""}{" "}
+                  {b.severity === "now" ? <span className="badge badge-no">{lateDays} day{lateDays === 1 ? "" : "s"} overdue</span> : <span className="badge badge-warn">due {day(x.r.dueDate)}</span>}
+                  {others.length > 0 && (
+                    <div style={{ marginTop: 3 }}>
+                      <span style={{ color: "var(--slate)" }}>Waiting for it:</span>{" "}
+                      {others.slice(0, 6).map((h, i) => (
+                        <span key={h.id}>{i ? "; " : ""}<b>{h.who}</b> — {h.title}{h.course ? ` (${h.course})` : ""}, due {day(h.dueDate)}{h.startDate <= now ? <span style={{ color: "#B3261E" }}> (should have started)</span> : ""}</span>
+                      ))}
+                      {others.length > 6 && <span> and {others.length - 6} more</span>}
+                    </div>
+                  )}
+                  {own.length > 0 && <div style={{ color: "var(--slate)", marginTop: 2 }}>Your own next steps waiting: {own.slice(0, 4).map((h) => h.title + (h.course ? ` (${h.course})` : "")).join("; ")}{own.length > 4 ? ` and ${own.length - 4} more` : ""}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {ganttTasks.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h3 style={{ marginTop: 0 }}>My tasks on a timeline</h3>
+          <MyTasksGantt tasks={ganttTasks} now={now} />
+        </div>
+      )}
 
       {workRows.length > 0 && (
         <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
