@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import TabbedCards from "./TabbedCards";
-import { BLOOD_GROUPS, DESIGNATIONS, EMPLOYMENT_TYPES, KINDS, type KindDef } from "../lib/facultyProfile";
+import { BLOOD_GROUPS, DESIGNATIONS, EMPLOYMENT_TYPES, KINDS, MONTHS, periodText, type KindDef } from "../lib/facultyProfile";
 
 type Profile = { photo?: string | null; designation?: string | null; employmentType?: string | null; dateOfJoining?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null; phone?: string | null; address?: string | null; nextOfKinName?: string | null; nextOfKinRelation?: string | null; nextOfKinPhone?: string | null; nextOfKinAddress?: string | null; officeHours?: string | null };
-type Rec = { id: string; kind: string; title: string; organisation?: string | null; role?: string | null; startYear?: number | null; endYear?: number | null; amount?: string | null; status?: string | null; link?: string | null; details?: string | null; photo?: string | null };
+type Rec = { id: string; kind: string; title: string; organisation?: string | null; role?: string | null; startYear?: number | null; startMonth?: number | null; endYear?: number | null; endMonth?: number | null; amount?: string | null; status?: string | null; link?: string | null; details?: string | null; photo?: string | null };
 
 // Shrinks a picture in the browser so it stays small enough to keep with the profile.
 function shrink(file: File, max: number): Promise<string> {
@@ -141,6 +141,7 @@ function RecordSection({ def, items, onDone }: { def: KindDef; items: Rec[]; onD
               <div className="field" key={fl.key} style={fl.type === "area" ? { gridColumn: "1 / -1" } : undefined}>
                 <label>{fl.label}{fl.required ? " *" : ""}</label>
                 {fl.type === "area" ? <textarea name={fl.key} rows={3} defaultValue={String(cur[fl.key] ?? "")} style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)" }} />
+                  : fl.type === "month" ? <select name={fl.key} defaultValue={String(cur[fl.key] ?? "")} style={{ padding: "6px 8px", border: "1px solid var(--line)", width: "100%" }}><option value="">— month —</option>{MONTHS.map((mo, i) => <option key={mo} value={i + 1}>{mo}</option>)}</select>
                   : fl.type === "select" ? <select name={fl.key} defaultValue={String(cur[fl.key] ?? "")} style={{ padding: "6px 8px", border: "1px solid var(--line)", width: "100%" }}><option value="">— choose —</option>{fl.options!.map((o) => <option key={o}>{o}</option>)}</select>
                   : <input name={fl.key} type={fl.type === "year" ? "number" : "text"} min={fl.type === "year" ? 1950 : undefined} max={fl.type === "year" ? 2100 : undefined} required={fl.required} defaultValue={String(cur[fl.key] ?? "")} style={{ padding: "6px 8px", border: "1px solid var(--line)", width: "100%" }} />}
               </div>
@@ -168,7 +169,7 @@ function RecordSection({ def, items, onDone }: { def: KindDef; items: Rec[]; onD
             <div style={{ flex: 1, fontSize: 13 }}>
               <b>{r.title}</b>
               <div style={{ color: "var(--slate)" }}>
-                {[r.organisation, r.role, r.startYear ? `${r.startYear}${r.endYear ? `–${r.endYear}` : ""}` : null, r.amount, r.status].filter(Boolean).join(" · ")}
+                {[r.organisation, r.role, periodText(r), r.amount, r.status].filter(Boolean).join(" · ")}
               </div>
               {r.details && <div style={{ marginTop: 3 }}>{r.details}</div>}
               {r.link && <div style={{ marginTop: 3, wordBreak: "break-all" }}>{r.link}</div>}

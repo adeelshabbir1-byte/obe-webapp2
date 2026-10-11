@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import PrintButton from "../../../components/PrintButton";
-import { KINDS, REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary, EXPERIENCE_HEADS } from "../../../lib/facultyProfile";
+import { KINDS, REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary, EXPERIENCE_HEADS, periodText, ymText } from "../../../lib/facultyProfile";
 
 const day = (d?: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "—");
 
@@ -53,12 +53,12 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {EXPERIENCE_HEADS.map((h) => (
             <div key={h.key} style={{ border: "1px solid var(--line)", padding: "8px 14px", minWidth: 120 }}>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{exp[h.key] || 0}</div>
-              <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{h.label} (years)</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{ymText(exp[h.key])}</div>
+              <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{h.label}</div>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 6 }}>Worked out from the date of joining and the Work experience entries; overlapping periods are counted once.</div>
+        <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 6 }}>Worked out to the month from the date of joining and the Work experience entries; overlapping periods are counted once.</div>
       </div>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Next of kin</h3>
@@ -75,7 +75,7 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
                 {r.photo && <img src={r.photo} alt="" style={{ width: 110, height: 78, objectFit: "cover", border: "1px solid var(--line)" }} />}
                 <div>
                   <b>{r.title}</b>
-                  <div style={{ color: "var(--slate)" }}>{[r.organisation, r.role, r.startYear ? `${r.startYear}${r.endYear ? `–${r.endYear}` : ""}` : null, r.amount, r.status].filter(Boolean).join(" · ")}</div>
+                  <div style={{ color: "var(--slate)" }}>{[r.organisation, r.role, periodText(r as never), r.amount, r.status].filter(Boolean).join(" · ")}</div>
                   {r.details && <div>{r.details}</div>}
                   {r.link && <div style={{ wordBreak: "break-all" }}>{r.link}</div>}
                 </div>

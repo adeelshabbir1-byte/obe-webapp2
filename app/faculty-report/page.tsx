@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
-import { REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary } from "../../lib/facultyProfile";
+import { REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary, ymText } from "../../lib/facultyProfile";
 
 const LABEL: Record<string, string> = { HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", CHAIRMAN: "Institute Head" };
 const colour = (p: number) => (p >= 80 ? "#2E7D4F" : p >= 50 ? "#C58A12" : "#B3261E");
@@ -19,7 +19,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
   const ids = people.map((p) => p.id);
   const [profiles, records] = await Promise.all([
     prisma.facultyProfile.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } }, select: { userId: true, photo: true, designation: true, dateOfJoining: true, bloodGroup: true, phone: true, nextOfKinName: true, nextOfKinPhone: true, employmentType: true } }),
-    prisma.facultyRecord.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } }, select: { userId: true, kind: true, title: true, role: true, startYear: true, endYear: true } }),
+    prisma.facultyRecord.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } } }),
   ]);
   const prof = new Map(profiles.map((p) => [p.userId, p]));
   const rows = people.map((p) => {
@@ -51,7 +51,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
       </form>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        {[["Faculty", shown.length], ["Research papers", sum((r) => r.pubs)], ["Grants", sum((r) => r.grants)], ["Projects", sum((r) => r.projects)], ["Events", sum((r) => r.events)], ["Avg. overall experience (yrs)", shown.length ? Math.round((sum((r) => r.exp.total) / shown.length) * 10) / 10 : 0], ["Profiles complete (avg)", `${avgComp}%`]].map(([l, v]) => (
+        {[["Faculty", shown.length], ["Research papers", sum((r) => r.pubs)], ["Grants", sum((r) => r.grants)], ["Projects", sum((r) => r.projects)], ["Events", sum((r) => r.events)], ["Avg. overall experience", shown.length ? ymText(sum((r) => r.exp.total) / shown.length) : "—"], ["Profiles complete (avg)", `${avgComp}%`]].map(([l, v]) => (
           <div key={String(l)} style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "12px 18px", minWidth: 130 }}>
             <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "Georgia, serif" }}>{v}</div>
             <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{l}</div>
@@ -84,7 +84,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
                 <td>{p.department_?.name || "—"}</td>
                 <td>{pr?.designation || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td>{pr?.dateOfJoining ? new Date(pr.dateOfJoining).toISOString().slice(0, 10) : "—"}</td>
-                <td>{yrs ?? "—"}</td><td>{exp.teaching || "—"}</td><td>{exp.industry || "—"}</td><td><b>{exp.total || "—"}</b></td>
+                <td>{ymText(exp.institute)}</td><td>{ymText(exp.teaching)}</td><td>{ymText(exp.industry)}</td><td><b>{ymText(exp.total)}</b></td>
                 <td>{degree || "—"}</td>
                 <td>{pr?.bloodGroup || "—"}</td>
                 <td>{pubs}</td><td>{grants}</td><td>{projects}</td><td>{events}</td>

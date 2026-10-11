@@ -2205,7 +2205,9 @@ model FacultyRecord {
   organisation String?
   role         String?
   startYear    Int?
+  startMonth   Int?     // 1-12, work experience only
   endYear      Int?
+  endMonth     Int?     // 1-12, work experience only
   amount       String?
   status       String?
   link         String?

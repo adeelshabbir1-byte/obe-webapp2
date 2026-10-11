@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import FacultyProfileForm from "../../../components/FacultyProfileForm";
-import { completeness, experienceSummary, EXPERIENCE_HEADS } from "../../../lib/facultyProfile";
+import { completeness, experienceSummary, EXPERIENCE_HEADS, ymText } from "../../../lib/facultyProfile";
 
 const LABEL: Record<string, string> = { INSTRUCTOR: "Course Instructor", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", CHAIRMAN: "Institute Head" };
 
@@ -28,17 +28,17 @@ export default async function FacultyProfilePage() {
         Profile complete: <b>{score}%</b>
       </p>
       <div className="card" style={{ padding: "10px 14px" }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>Your experience (years)</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>Your experience</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {EXPERIENCE_HEADS.map((h) => (
             <div key={h.key} style={{ border: "1px solid var(--line)", padding: "6px 12px", minWidth: 110 }}>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>{exp[h.key] || 0}</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{ymText(exp[h.key])}</div>
               <div style={{ fontSize: 11, color: "var(--slate)" }}>{h.label}</div>
             </div>
           ))}
         </div>
         <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 6 }}>
-          Calculated from your Date of joining and each job under Experience (choose its Type: Teaching, Industry, Research or Administration; leave To year blank if you are still there). Overlapping periods count once.
+          Calculated from your Date of joining and each job under Experience (choose its Type: Teaching, Industry, Research or Administration; leave To month and To year blank if you are still there). Overlapping periods count once.
         </div>
       </div>
       <FacultyProfileForm

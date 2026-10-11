@@ -4,7 +4,7 @@ export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 export const DESIGNATIONS = ["Professor", "Associate Professor", "Assistant Professor", "Senior Lecturer", "Lecturer", "Lab Engineer", "Visiting Faculty", "Other"];
 export const EMPLOYMENT_TYPES = ["Permanent", "Contract", "Visiting", "Part-time"];
 
-export type Field = { key: "title" | "organisation" | "role" | "startYear" | "endYear" | "amount" | "status" | "link" | "details"; label: string; type?: "text" | "year" | "area" | "select"; options?: string[]; required?: boolean };
+export type Field = { key: "title" | "organisation" | "role" | "startMonth" | "startYear" | "endMonth" | "endYear" | "amount" | "status" | "link" | "details"; label: string; type?: "text" | "year" | "month" | "area" | "select"; options?: string[]; required?: boolean };
 export type KindDef = { kind: string; tab: string; heading: string; addLabel: string; fields: Field[]; photo?: boolean };
 
 export const KINDS: KindDef[] = [
@@ -15,7 +15,8 @@ export const KINDS: KindDef[] = [
   { kind: "EXPERIENCE", tab: "Experience", heading: "Work experience", addLabel: "Add a job", fields: [
     { key: "title", label: "Position", required: true }, { key: "organisation", label: "Organisation" },
     { key: "role", label: "Type", type: "select", options: ["Teaching", "Industry", "Research", "Administration", "Other"] },
-    { key: "startYear", label: "From year", type: "year" }, { key: "endYear", label: "To year (blank = current)", type: "year" }, { key: "details", label: "What you did", type: "area" } ] },
+    { key: "startMonth", label: "From month", type: "month" }, { key: "startYear", label: "From year", type: "year" },
+    { key: "endMonth", label: "To month", type: "month" }, { key: "endYear", label: "To year (blank = still working here)", type: "year" }, { key: "details", label: "What you did", type: "area" } ] },
   { kind: "PUBLICATION", tab: "Research papers", heading: "Research papers and publications", addLabel: "Add a paper", fields: [
     { key: "title", label: "Title of the paper", required: true }, { key: "organisation", label: "Journal / conference" },
     { key: "role", label: "Type", type: "select", options: ["Journal article", "Conference paper", "Book / chapter", "Patent", "Other"] },
@@ -60,7 +61,7 @@ function mergedYears(spans: Span[]) {
     else cur[1] = Math.max(cur[1], sp[1]);
   }
   if (cur) total += cur[1] - cur[0];
-  return Math.round(total * 10) / 10;
+  return Math.round(total * 100) / 100;
 }
 
 export const EXPERIENCE_HEADS = [
@@ -78,14 +79,18 @@ export type ExperienceSummary = Record<(typeof EXPERIENCE_HEADS)[number]["key"],
  * To year means still there). Overlapping periods are counted once, so two part-time jobs in the same years do not
  * double the total. Service at this institute (from the joining date) counts as teaching/academic experience too.
  */
-export function experienceSummary(joining: Date | string | null | undefined, records: { kind: string; role?: string | null; startYear?: number | null; endYear?: number | null }[], now = new Date()): ExperienceSummary {
+export function experienceSummary(joining: Date | string | null | undefined, records: { kind: string; role?: string | null; startYear?: number | null; startMonth?: number | null; endYear?: number | null; endMonth?: number | null }[], now = new Date()): ExperienceSummary {
   const today = fracYear(now);
   const spans: Record<string, Span[]> = { teaching: [], industry: [], research: [], administration: [], other: [] };
   for (const r of records) {
     if (r.kind !== "EXPERIENCE" || !r.startYear) continue;
-    const start = r.startYear;
-    let end = r.endYear ? r.endYear : today;
-    if (end <= start) end = start + 0.5; // a job that started and ended in the same year counts as half a year
+    // From the first day of the start month to the last day of the end month (Jan 2015 - Dec 2017 = 3 years).
+    // Without a month: start of the start year; end year counted as in "2015-2018 = 3 years".
+    const m = (v: number | null | undefined) => (v && v >= 1 && v <= 12 ? v : null);
+    const sm = (r as { startMonth?: number | null }).startMonth, em = (r as { endMonth?: number | null }).endMonth;
+    const start = r.startYear + ((m(sm) || 1) - 1) / 12;
+    let end = r.endYear ? r.endYear + (m(em) ? m(em)! / 12 : 0) : today;
+    if (end <= start) end = m(sm) || m(em) ? start + 1 / 12 : start + 0.5; // same-year job with no months: half a year
     const type = (r.role || "").toLowerCase();
     const k = type.startsWith("teach") ? "teaching" : type.startsWith("indus") ? "industry" : type.startsWith("research") ? "research" : type.startsWith("admin") ? "administration" : "other";
     spans[k].push([start, Math.min(end, today)]);
@@ -100,6 +105,21 @@ export function experienceSummary(joining: Date | string | null | undefined, rec
     administration: mergedYears(spans.administration),
     total: mergedYears(all),
   };
+}
+export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "Mar 2015 – Jun 2018", "2015 – present" … for a record's dates. */
+export function periodText(r: { kind?: string; startYear?: number | null; startMonth?: number | null; endYear?: number | null; endMonth?: number | null }) {
+  if (!r.startYear) return null;
+  const one = (y: number, mo?: number | null) => `${mo && mo >= 1 && mo <= 12 ? MONTHS[mo - 1] + " " : ""}${y}`;
+  const end = r.endYear ? one(r.endYear, r.endMonth) : r.kind === "EXPERIENCE" ? "present" : "";
+  return `${one(r.startYear, r.startMonth)}${end ? ` – ${end}` : ""}`;
+}
+/** 6.83 -> "6 y 10 m"; 0 -> "—" */
+export function ymText(years: number) {
+  const months = Math.round(years * 12);
+  if (months <= 0) return "—";
+  const y = Math.floor(months / 12), m = months % 12;
+  return [y ? `${y} y` : "", m ? `${m} m` : ""].filter(Boolean).join(" ");
 }
 /** "4.5 yrs" or "—" */
 export const yrsText = (n: number) => (n > 0 ? `${n} yr${n === 1 ? "" : "s"}` : "—");
