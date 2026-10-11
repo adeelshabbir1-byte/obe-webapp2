@@ -32,13 +32,13 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const body = await req.json();
 
   const clos: { statement: string; bloomLevel: string; mappedPloId: string | null }[] = Array.isArray(body.clos) ? body.clos : [];
-  const topics: { lectureNumber: number; topic: string; subtopic: string | null }[] = Array.isArray(body.topics) ? body.topics : [];
+  const topics: { lectureNumber: number; topic: string; subtopic: string | null; cloNumber?: number | null }[] = Array.isArray(body.topics) ? body.topics : [];
   const plos = await prisma.masterPLO.findMany({ where: { masterCurriculumId: course.masterCurriculumId }, select: { id: true } });
   const ploIds = new Set(plos.map((p) => p.id));
 
   const cleanClos = clos.map((c) => ({ statement: String(c.statement || "").trim(), bloomLevel: BLOOM.includes(c.bloomLevel) ? c.bloomLevel : "C2", mappedPloId: c.mappedPloId && ploIds.has(c.mappedPloId) ? c.mappedPloId : null })).filter((c) => c.statement);
   const seen = new Set<number>();
-  const cleanTopics = topics.map((t) => ({ lectureNumber: Math.trunc(Number(t.lectureNumber)), topic: String(t.topic || "").trim(), subtopic: t.subtopic ? String(t.subtopic).trim() : null }))
+  const cleanTopics = topics.map((t) => ({ lectureNumber: Math.trunc(Number(t.lectureNumber)), topic: String(t.topic || "").trim(), subtopic: t.subtopic ? String(t.subtopic).trim() : null, cloNumber: Number(t.cloNumber) >= 1 && Number(t.cloNumber) <= cleanClos.length ? Math.trunc(Number(t.cloNumber)) : null }))
     .filter((t) => t.topic && t.lectureNumber >= 1 && t.lectureNumber <= 32 && !seen.has(t.lectureNumber) && (seen.add(t.lectureNumber), true));
 
   await prisma.$transaction([
@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     prisma.masterCourseClo.deleteMany({ where: { masterCourseId: course.id } }),
     prisma.masterCourseTopic.deleteMany({ where: { masterCourseId: course.id } }),
     prisma.masterCourseClo.createMany({ data: cleanClos.map((c, i) => ({ masterCourseId: course.id, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: i, mappedPloId: c.mappedPloId, ploMappingSource: c.mappedPloId ? "MANUAL" : null })) }),
-    prisma.masterCourseTopic.createMany({ data: cleanTopics.map((t) => ({ masterCourseId: course.id, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic })) }),
+    prisma.masterCourseTopic.createMany({ data: cleanTopics.map((t) => ({ masterCourseId: course.id, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic, cloNumber: t.cloNumber })) as never }),
   ]);
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_DESIGNED", entityType: "MasterCourse", entityId: course.id, metadata: { clos: cleanClos.length, topics: cleanTopics.length } });
   return NextResponse.json({ ok: true, clos: cleanClos.length, topics: cleanTopics.length });

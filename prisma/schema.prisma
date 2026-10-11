@@ -1830,6 +1830,7 @@ model MasterCourseTopic {
   lectureNumber  Int    // 1..32
   topic          String
   subtopic       String?
+  cloNumber      Int?   // which of the course's CLOs this lecture serves (1 = CLO-1, in CLO order)
 
   @@unique([masterCourseId, lectureNumber])
   @@index([masterCourseId])

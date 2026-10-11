@@ -28,6 +28,9 @@ export async function POST(req: NextRequest) {
   const verified = await prisma.masterCourse.findMany({ where: { id: { in: courses.map((c: any) => c.courseId) } } });
   if (verified.length !== courses.length) return NextResponse.json({ error: "one or more courses not found" }, { status: 404 });
 
+  // A topic keeps its CLO link while it stays in its own course; one moved in from another course has none.
+  const before = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: { in: courses.map((c: any) => c.courseId) } } });
+  const cloOf = new Map(before.map((t) => [`${t.masterCourseId}|${t.topic.trim()}|${(t.subtopic || "").trim()}`, (t as { cloNumber?: number | null }).cloNumber ?? null]));
   await prisma.$transaction(async (tx) => {
     for (const c of courses) {
       await tx.masterCourseTopic.deleteMany({ where: { masterCourseId: c.courseId } });
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
         const t = c.topics[i];
         if (!t.topic?.trim()) continue;
         await tx.masterCourseTopic.create({
-          data: { masterCourseId: c.courseId, lectureNumber: i + 1, topic: t.topic.trim(), subtopic: t.subtopic?.trim() || null },
+          data: { masterCourseId: c.courseId, lectureNumber: i + 1, topic: t.topic.trim(), subtopic: t.subtopic?.trim() || null, cloNumber: cloOf.get(`${c.courseId}|${t.topic.trim()}|${(t.subtopic || "").trim()}`) ?? null } as never,
         });
       }
     }

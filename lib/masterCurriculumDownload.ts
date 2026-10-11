@@ -35,6 +35,7 @@ type Curriculum = NonNullable<Awaited<ReturnType<typeof loadCurriculumForDownloa
 
 export const fileBase = (c: Curriculum) => `${c.authority}-${c.title}-${c.version}`.replace(/[^A-Za-z0-9._-]+/g, "_");
 const semLabel = (n: number | null) => (n ? `Semester ${n}` : "Electives / not placed in a semester");
+const cloOf = (t: object) => ((t as { cloNumber?: number | null }).cloNumber ? `CLO-${(t as { cloNumber: number }).cloNumber}` : "");
 const coursePlos = (k: Curriculum["courses"][number]) => Array.from(new Set(k.seedClos.map((l) => l.mappedPlo?.number).filter((n): n is number => n != null))).sort((a, b) => a - b);
 
 export function curriculumSheets(c: Curriculum): SheetSpec[] {
@@ -54,8 +55,8 @@ export function curriculumSheets(c: Curriculum): SheetSpec[] {
     ], rows: c.courses.map((k) => { const ps = coursePlos(k); return { code: k.code, title: k.title, sem: k.semesterNumber ?? "", ...Object.fromEntries(c.plos.map((p) => [`p${p.number}`, ps.includes(p.number) ? "X" : ""])) }; }) },
     { name: "Lecture topics", columns: [
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "Week", key: "wk", width: 7 }, { header: "Lecture", key: "lec", width: 8 },
-      { header: "Topic", key: "topic", width: 60 }, { header: "Subtopic", key: "sub", width: 50 },
-    ], rows: c.courses.flatMap((k) => k.seedTopics.map((t) => ({ code: k.code, title: k.title, wk: Math.ceil(t.lectureNumber / 2), lec: t.lectureNumber, topic: t.topic, sub: t.subtopic || "" }))) },
+      { header: "Topic", key: "topic", width: 60 }, { header: "Subtopic", key: "sub", width: 50 }, { header: "CLO", key: "clo", width: 8 },
+    ], rows: c.courses.flatMap((k) => k.seedTopics.map((t) => ({ code: k.code, title: k.title, wk: Math.ceil(t.lectureNumber / 2), lec: t.lectureNumber, topic: t.topic, sub: t.subtopic || "", clo: cloOf(t) }))) },
     { name: "PLOs", columns: [{ header: "PLO", key: "n", width: 8 }, { header: "Title", key: "t", width: 40 }, { header: "Description", key: "d", width: 90 }], rows: c.plos.map((p) => ({ n: `PLO-${p.number}`, t: p.title, d: p.description })) },
   ];
 }
@@ -108,7 +109,7 @@ export function curriculumDocument(c: Curriculum) {
     }
     if (k.seedTopics.length) {
       body.push(p("Weekly topics", { bold: true }));
-      body.push(table(["Week", "Lecture", "Topic"], [900, 1100, CONTENT - 2000], k.seedTopics.map((t) => [String(Math.ceil(t.lectureNumber / 2)), String(t.lectureNumber), t.topic + (t.subtopic ? ` — ${t.subtopic}` : "")])));
+      body.push(table(["Week", "Lecture", "Topic", "CLO"], [900, 1100, CONTENT - 2900, 900], k.seedTopics.map((t) => [String(Math.ceil(t.lectureNumber / 2)), String(t.lectureNumber), t.topic + (t.subtopic ? ` — ${t.subtopic}` : ""), cloOf(t)])));
     }
     if (k.textbook) { body.push(p("Textbook", { bold: true })); body.push(p(k.textbook)); }
     if (k.referenceMaterial) { body.push(p("Reference material", { bold: true })); body.push(p(k.referenceMaterial)); }

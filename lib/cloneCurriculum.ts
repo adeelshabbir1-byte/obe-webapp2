@@ -77,7 +77,7 @@ export async function cloneGrandCurriculumForChairman(grand: { id: string; autho
     }
     if (topics.length > 0) {
       await prisma.masterCourseTopic.createMany({
-        data: topics.map((t) => ({ masterCourseId: courseIdMap.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic })),
+        data: topics.map((t) => ({ masterCourseId: courseIdMap.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic, cloNumber: (t as { cloNumber?: number | null }).cloNumber ?? null })) as never,
       });
     }
 

@@ -4961,3 +4961,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "DegreePlanLock_studentId_key" ON "DegreePlanL
 -- Months on work-experience entries, so years of experience are worked out to the month.
 ALTER TABLE "FacultyRecord" ADD COLUMN IF NOT EXISTS "startMonth" INTEGER;
 ALTER TABLE "FacultyRecord" ADD COLUMN IF NOT EXISTS "endMonth" INTEGER;
+
+-- Lecture -> CLO link in the master curriculum.
+ALTER TABLE "MasterCourseTopic" ADD COLUMN IF NOT EXISTS "cloNumber" INTEGER;

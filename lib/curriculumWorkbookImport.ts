@@ -7,7 +7,7 @@ import { prisma } from "./db";
 //   PLOs        : PLO number | Title | Description
 //   Courses     : Code | Title | Credit hours | Category | Domain | Semester | Placeholder | Description | Textbook | Reference material
 //   CLOs and PLO mapping : Course code | CLO | Statement | Bloom level | Mapped PLO
-//   Lecture topics       : Course code | Lecture | Topic | Subtopic
+//   Lecture topics       : Course code | Lecture | Topic | Subtopic | CLO (e.g. CLO-2)
 // Everything is written with a few bulk inserts, so a 100-course program takes seconds.
 
 const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6"];
@@ -90,16 +90,17 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
   }
 
   // Lecture topics
-  const topics: { masterCourseId: string; lectureNumber: number; topic: string; subtopic: string | null }[] = [];
+  const topics: { masterCourseId: string; lectureNumber: number; topic: string; subtopic: string | null; cloNumber: number | null }[] = [];
   if (topicS) {
-    const T = { code: col(topicS, /^course code$|^code$/), lec: col(topicS, /^lecture$/), topic: col(topicS, /^topic$/), sub: col(topicS, /^subtopic$/) };
+    const T = { code: col(topicS, /^course code$|^code$/), lec: col(topicS, /^lecture$/), topic: col(topicS, /^topic$/), sub: col(topicS, /^sub ?topic$/), clo: col(topicS, /^(mapped )?clo$/) };
     const seen = new Set<string>();
     for (const r of topicS.rows) {
       const cid = courseByCode.get(code(at(r, T.code)));
       const lec = parseInt(at(r, T.lec), 10), t = at(r, T.topic);
       if (!cid || !Number.isFinite(lec) || !t || seen.has(`${cid}:${lec}`)) continue;
       seen.add(`${cid}:${lec}`);
-      topics.push({ masterCourseId: cid, lectureNumber: lec, topic: t, subtopic: at(r, T.sub) || null });
+      const cn = parseInt(at(r, T.clo).replace(/\D+/g, ""), 10);
+      topics.push({ masterCourseId: cid, lectureNumber: lec, topic: t, subtopic: at(r, T.sub) || null, cloNumber: Number.isFinite(cn) && cn > 0 ? cn : null });
     }
   }
 
@@ -111,7 +112,7 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
     prisma.masterCourse.createMany({ data: courses.map((c) => ({ ...c, masterCurriculumId: curriculum.id })) }),
   ]);
   for (let i = 0; i < clos.length; i += 2000) await prisma.masterCourseClo.createMany({ data: clos.slice(i, i + 2000) });
-  for (let i = 0; i < topics.length; i += 3000) await prisma.masterCourseTopic.createMany({ data: topics.slice(i, i + 3000), skipDuplicates: true });
+  for (let i = 0; i < topics.length; i += 3000) await prisma.masterCourseTopic.createMany({ data: topics.slice(i, i + 3000) as never, skipDuplicates: true });
 
   return { ok: true as const, id: curriculum.id, title: degreeProgram, plos: plos.length, courses: courses.length, clos: clos.length, topics: topics.length, warnings: warnings.slice(0, 20) };
 }

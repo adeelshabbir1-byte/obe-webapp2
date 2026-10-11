@@ -6,7 +6,7 @@ import { prisma } from "./db";
 //   PLOs     (PLO | Title | Description)
 //   Courses  (Semester | Code | Title | Credit hours | Category | Domain | Prerequisite | Description | Textbook | Reference material)
 //   CLOs and PLO mapping (Course code | CLO | Statement | Bloom level | Mapped PLO)
-//   Lecture topics (Course code | Lecture | Topic | Subtopic)
+//   Lecture topics (Course code | Lecture | Topic | Subtopic | CLO)
 // PLOs are matched by number, courses by code (updated, never duplicated). For every course that has rows in the CLO or
 // topic sheet, its CLOs / topics are replaced by the file's. Everything is written in a few bulk queries.
 
@@ -121,18 +121,19 @@ export async function importFullCurriculum(curriculumId: string, file: File) {
   // Lecture topics
   const tp = sheets.get("lecture topics") || sheets.get("topics");
   if (tp) {
-    const c = { code: colOf(tp, /^course code$/), lec: colOf(tp, /^lecture$/), topic: colOf(tp, /^topic$/), sub: colOf(tp, /^subtopic$/) };
-    const byCourse = new Map<string, Map<number, { topic: string; subtopic: string | null }>>();
+    const c = { code: colOf(tp, /^course code$/), lec: colOf(tp, /^lecture$/), topic: colOf(tp, /^topic$/), sub: colOf(tp, /^sub ?topic$/), clo: colOf(tp, /^(mapped )?clo$/) };
+    const byCourse = new Map<string, Map<number, { topic: string; subtopic: string | null; cloNumber: number | null }>>();
     for (const r of tp.rows) {
       const id = courseByCode.get(up(get(r, c.code)));
       const lec = parseInt(get(r, c.lec), 10), topic = get(r, c.topic);
       if (!id || !Number.isFinite(lec) || lec < 1 || !topic) continue;
       if (!byCourse.has(id)) byCourse.set(id, new Map());
-      byCourse.get(id)!.set(lec, { topic, subtopic: get(r, c.sub) || null });
+      const cn = parseInt(get(r, c.clo).replace(/\D+/g, ""), 10);
+      byCourse.get(id)!.set(lec, { topic, subtopic: get(r, c.sub) || null, cloNumber: Number.isFinite(cn) && cn > 0 ? cn : null });
     }
     const ids = Array.from(byCourse.keys());
     const data = ids.flatMap((id) => Array.from(byCourse.get(id)!.entries()).map(([lectureNumber, t]) => ({ masterCourseId: id, lectureNumber, ...t })));
-    if (ids.length) await prisma.$transaction([prisma.masterCourseTopic.deleteMany({ where: { masterCourseId: { in: ids } } }), prisma.masterCourseTopic.createMany({ data })]);
+    if (ids.length) await prisma.$transaction([prisma.masterCourseTopic.deleteMany({ where: { masterCourseId: { in: ids } } }), prisma.masterCourseTopic.createMany({ data: data as never })]);
     counts.topics = data.length;
   }
   return { ...counts, errors: errors.slice(0, 20) };

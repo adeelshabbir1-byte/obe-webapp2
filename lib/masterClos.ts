@@ -105,8 +105,8 @@ export async function copyMasterClos(fromId: string, toId: string, opts: { onlyE
   if (needTopics.length) {
     const srcTopics = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: { in: needTopics.map((p) => p.src.id) } } });
     const tgtOf = new Map(needTopics.map((p) => [p.src.id, p.tgt.id]));
-    const data = srcTopics.map((t) => ({ masterCourseId: tgtOf.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic }));
-    if (data.length) { await prisma.masterCourseTopic.createMany({ data, skipDuplicates: true }); topicsCopied = new Set(data.map((d) => d.masterCourseId)).size; }
+    const data = srcTopics.map((t) => ({ masterCourseId: tgtOf.get(t.masterCourseId)!, lectureNumber: t.lectureNumber, topic: t.topic, subtopic: t.subtopic, cloNumber: (t as { cloNumber?: number | null }).cloNumber ?? null }));
+    if (data.length) { await prisma.masterCourseTopic.createMany({ data: data as never, skipDuplicates: true }); topicsCopied = new Set(data.map((d) => d.masterCourseId)).size; }
   }
   // Empty textbook/description/references filled from the source, one bulk UPDATE per 200 courses.
   const fills = pairs.filter(({ src, tgt }) => (!tgt.textbook && src.textbook) || (!tgt.catalogDescription && src.catalogDescription) || (!tgt.referenceMaterial && src.referenceMaterial));

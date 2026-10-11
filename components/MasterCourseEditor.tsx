@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Clo = { statement: string; bloomLevel: string; mappedPloId: string | null };
-type Topic = { lectureNumber: number; topic: string; subtopic: string };
+type Topic = { lectureNumber: number; topic: string; subtopic: string; cloNumber: number | null };
 type Plo = { id: string; number: number; title: string };
 
 export default function MasterCourseEditor({ courseId }: { courseId: string }) {
@@ -28,7 +28,7 @@ export default function MasterCourseEditor({ courseId }: { courseId: string }) {
       setCatalogDescription(d.course.catalogDescription || ""); setTextbook(d.course.textbook || ""); setReferenceMaterial(d.course.referenceMaterial || "");
       setClos(d.clos.map((c: any) => ({ statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId })));
       const byNumber = new Map<number, any>(d.topics.map((t: any) => [t.lectureNumber, t]));
-      setTopics(Array.from({ length: 32 }, (_, i) => ({ lectureNumber: i + 1, topic: byNumber.get(i + 1)?.topic || "", subtopic: byNumber.get(i + 1)?.subtopic || "" })));
+      setTopics(Array.from({ length: 32 }, (_, i) => ({ lectureNumber: i + 1, topic: byNumber.get(i + 1)?.topic || "", subtopic: byNumber.get(i + 1)?.subtopic || "", cloNumber: byNumber.get(i + 1)?.cloNumber ?? null })));
       setLoaded(true);
     })();
   }, [courseId]);
@@ -83,13 +83,14 @@ export default function MasterCourseEditor({ courseId }: { courseId: string }) {
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 8 }}>Lecture plan (32 lectures)</h3>
         <table>
-          <thead><tr><th style={{ width: 40 }}>#</th><th>Topic</th><th>Subtopics</th></tr></thead>
+          <thead><tr><th style={{ width: 40 }}>#</th><th>Topic</th><th>Subtopics</th><th style={{ width: 96 }}>CLO</th></tr></thead>
           <tbody>
             {topics.map((t, i) => (
               <tr key={t.lectureNumber}>
                 <td>{t.lectureNumber}</td>
                 <td><input value={t.topic} onChange={(e) => upTopic(i, { topic: e.target.value })} style={input} /></td>
                 <td><input value={t.subtopic} onChange={(e) => upTopic(i, { subtopic: e.target.value })} style={input} /></td>
+                <td><select value={t.cloNumber ?? ""} onChange={(e) => upTopic(i, { cloNumber: e.target.value ? Number(e.target.value) : null })} style={input}><option value="">—</option>{clos.map((_, k) => <option key={k} value={k + 1}>CLO-{k + 1}</option>)}</select></td>
               </tr>
             ))}
           </tbody>

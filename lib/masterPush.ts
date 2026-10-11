@@ -87,7 +87,7 @@ export async function applyMasterPush(user: Who, curriculumId: string, courseIds
   const matched = await matchCourses(user, curriculumId);
   if (!matched) return null;
   const plan = (await planMasterPush(user, curriculumId, courseIds))!;
-  const out = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, mappingsAdded: 0 };
+  const out = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, cloLinks: 0, mappingsAdded: 0 };
   for (const id of courseIds) {
     const row = plan.find((p) => p.courseId === id);
     const m = matched.find((x) => x.course.id === id);
@@ -125,16 +125,28 @@ export async function applyMasterPush(user: Who, curriculumId: string, courseIds
       out.closRemoved++;
     }
 
-    // Lecture topics only where the course has none written yet.
-    const rows = await prisma.lectureRow.findMany({ where: { courseId: id, source: "SE" }, select: { id: true, lectureNumber: true, topic: true } });
+    // Lecture topics only where the course has none written yet - each with the CLO it serves (and that CLO's Bloom
+    // level). Where the topics are already there (an earlier push), a lecture still without a CLO gets the master's
+    // link if its topic is the master's topic for that lecture.
+    const courseClos = await prisma.cLO.findMany({ where: { courseId: id, source: "SE" }, orderBy: { orderIndex: "asc" }, select: { id: true, bloomLevel: true } });
+    const cloFor = (t: { cloNumber?: number | null } | undefined) => { const n = t?.cloNumber; const c = n ? courseClos[n - 1] : undefined; return c ? { cloId: c.id, bloomLevel: c.bloomLevel } : { cloId: null, bloomLevel: null }; };
+    const rows = await prisma.lectureRow.findMany({ where: { courseId: id, source: "SE" }, select: { id: true, lectureNumber: true, topic: true, cloId: true } });
+    const byLecture = new Map(mTopics.map((t) => [t.lectureNumber, t as typeof t & { cloNumber?: number | null }]));
     if (mTopics.length > 0 && rows.every((r) => !r.topic.trim())) {
-      const byLecture = new Map(mTopics.map((t) => [t.lectureNumber, t]));
       if (rows.length === 0) {
-        await prisma.lectureRow.createMany({ data: Array.from({ length: 32 }, (_, k) => ({ courseId: id, source: "SE", lectureNumber: k + 1, week: Math.ceil((k + 1) / 2), topic: byLecture.get(k + 1)?.topic || "", subtopic: byLecture.get(k + 1)?.subtopic || null, cloId: null, bloomLevel: null, weightPct: 0 })) });
+        await prisma.lectureRow.createMany({ data: Array.from({ length: 32 }, (_, k) => { const t = byLecture.get(k + 1); return { courseId: id, source: "SE", lectureNumber: k + 1, week: Math.ceil((k + 1) / 2), topic: t?.topic || "", subtopic: t?.subtopic || null, ...cloFor(t), weightPct: 0 }; }) });
       } else {
-        for (const r of rows) { const t = byLecture.get(r.lectureNumber); if (t) await prisma.lectureRow.update({ where: { id: r.id }, data: { topic: t.topic, subtopic: t.subtopic || null } }); }
+        for (const r of rows) { const t = byLecture.get(r.lectureNumber); if (t) await prisma.lectureRow.update({ where: { id: r.id }, data: { topic: t.topic, subtopic: t.subtopic || null, ...cloFor(t) } }); }
       }
       out.topicsFilled++;
+      out.cloLinks += mTopics.filter((t) => cloFor(t as never).cloId).length;
+    } else {
+      for (const r of rows) {
+        if (r.cloId) continue;
+        const t = byLecture.get(r.lectureNumber);
+        const link = cloFor(t);
+        if (t && link.cloId && t.topic.trim().toLowerCase() === r.topic.trim().toLowerCase()) { await prisma.lectureRow.update({ where: { id: r.id }, data: link }); out.cloLinks++; }
+      }
     }
     if (master) {
       await prisma.course.update({ where: { id }, data: {

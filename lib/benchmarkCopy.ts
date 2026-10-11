@@ -63,21 +63,24 @@ export async function seedFromMasterCourseIfAvailable(newCourseId: string, maste
 
   if (seedClos.length === 0 && seedTopics.length === 0) return null;
 
+  const created: { id: string; bloomLevel: string }[] = [];
   for (const [i, c] of seedClos.entries()) {
-    await prisma.cLO.create({
+    created.push(await prisma.cLO.create({
       data: { courseId: newCourseId, source: "SE", code: `CLO-${i + 1}`, statement: c.statement, bloomLevel: c.bloomLevel },
-    });
+      select: { id: true, bloomLevel: true },
+    }));
   }
 
   if (seedTopics.length > 0) {
-    // Fill in a full 32-row template — Week/Lecture# fixed as usual — using
-    // the seeded topic for whichever lecture numbers we have content for.
-    const topicByLecture = new Map(seedTopics.map((t) => [t.lectureNumber, t.topic]));
+    // Fill in a full 32-row template — Week/Lecture# fixed as usual — using the seeded topic (and the CLO it
+    // serves, with that CLO's Bloom level) for whichever lecture numbers we have content for.
+    const byLecture = new Map(seedTopics.map((t) => [t.lectureNumber, t as typeof t & { cloNumber?: number | null }]));
     await prisma.lectureRow.createMany({
-      data: Array.from({ length: 32 }, (_, i) => ({
-        courseId: newCourseId, source: "SE", lectureNumber: i + 1, week: Math.ceil((i + 1) / 2),
-        topic: topicByLecture.get(i + 1) || "", subtopic: null, cloId: null, bloomLevel: null, weightPct: 0,
-      })),
+      data: Array.from({ length: 32 }, (_, i) => {
+        const t = byLecture.get(i + 1);
+        const clo = t?.cloNumber ? created[t.cloNumber - 1] : undefined;
+        return { courseId: newCourseId, source: "SE", lectureNumber: i + 1, week: Math.ceil((i + 1) / 2), topic: t?.topic || "", subtopic: t?.subtopic || null, cloId: clo?.id || null, bloomLevel: clo?.bloomLevel || null, weightPct: 0 };
+      }),
     });
   }
 

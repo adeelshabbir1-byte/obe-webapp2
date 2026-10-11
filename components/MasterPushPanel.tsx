@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type PlanRow = { courseId: string; code: string; title: string; batch: string; action: "fill" | "update" | "skip"; reason?: string; masterClos: number; courseClos: number };
-type Totals = { courses: number; closAdded: number; closUpdated: number; closRemoved: number; closKept: number; topicsFilled: number; mappingsAdded: number };
+type Totals = { courses: number; closAdded: number; closUpdated: number; closRemoved: number; closKept: number; topicsFilled: number; cloLinks: number; mappingsAdded: number };
 
 // "Update my courses from this curriculum": preview first, then apply in small groups with a progress bar.
 export default function MasterPushPanel({ curriculumId }: { curriculumId: string }) {
@@ -26,7 +26,7 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
     const todo = plan.filter((p) => p.action !== "skip").map((p) => p.courseId);
     if (!confirm(`Update ${todo.length} course(s) from this curriculum? CLOs are replaced by the curriculum's CLOs (in the same order) with their PLOs.`)) return;
     setBusy(true); setError("");
-    const sum: Totals = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, mappingsAdded: 0 };
+    const sum: Totals = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, cloLinks: 0, mappingsAdded: 0 };
     setProgress({ done: 0, total: todo.length });
     for (let i = 0; i < todo.length; i += 5) {
       const r = await fetch(`/api/omc/master-curriculum/${curriculumId}/push-to-courses`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseIds: todo.slice(i, i + 5) }) });
@@ -69,7 +69,7 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
       {totals && (
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--sage)" }}>
           Done: {totals.courses} course(s) updated — {totals.closAdded} CLO(s) added, {totals.closUpdated} updated, {totals.closRemoved} removed
-          {totals.closKept ? `, ${totals.closKept} extra CLO(s) kept because lecture topics use them` : ""}; lecture topics filled in {totals.topicsFilled} course(s); {totals.mappingsAdded} new course-to-PLO link(s).
+          {totals.closKept ? `, ${totals.closKept} extra CLO(s) kept because lecture topics use them` : ""}; lecture topics filled in {totals.topicsFilled} course(s); {totals.cloLinks} lecture(s) linked to their CLO; {totals.mappingsAdded} new course-to-PLO link(s).
         </p>
       )}
     </div>
