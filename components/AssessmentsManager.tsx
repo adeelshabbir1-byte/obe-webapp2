@@ -38,7 +38,7 @@ const POLICY_MIN_COUNT_KEY: Record<string, keyof PolicyMinCount> = {
 // used on the columns that actually multiply (instruments, CLOs); the
 // fixed ones (Topic, Weight, Q#) stay normal horizontal headers.
 const verticalHeaderStyle = {
-  textAlign: "center", fontSize: 11, padding: "6px 2px", verticalAlign: "bottom",
+  textAlign: "center", fontSize: 11, padding: "8px 4px", verticalAlign: "middle",
 } as const;
 // One tint per assessment type, used down the whole column so you can tell where you are while scrolling a long lecture list.
 const TYPE_SHADES: Record<string, [string, string]> = {
@@ -50,7 +50,7 @@ const TYPE_TINT: Record<string, string> = { Quiz: TYPE_SHADES.Quiz[0], Assignmen
 const GROUP_EDGE = "2px solid #5E5A4B";
 const verticalTextStyle = {
   display: "inline-block", writingMode: "vertical-rl", transform: "rotate(180deg)",
-  whiteSpace: "nowrap", maxHeight: 140,
+  whiteSpace: "nowrap", maxHeight: 140, textAlign: "center", margin: "0 auto",
 } as const;
 
 /** "Assignment 1" is enough — only prefix the type when the label doesn't already start with it. */
@@ -572,7 +572,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Define at least one instrument above first.</p>
         ) : (
           <div className="mapgrid">
-          <style>{`.mapgrid th, .mapgrid td { border: 1px solid #BDB8A8; }`}</style>
+          <style>{`.mapgrid th, .mapgrid td { border: 1px solid #BDB8A8; } .mapgrid thead th, .mapgrid thead td { text-align: center !important; vertical-align: middle !important; } .mapgrid thead th.sortable-th { padding: 16px 4px !important; } .mapgrid thead th.sortable-th::after { right: auto; left: 50%; margin-left: -3px; top: auto; bottom: 3px; margin-top: 0; }`}</style>
           <SortableTable paginate={false}>
             <thead>
               {cloList.length > 0 && (
@@ -586,8 +586,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 </tr>
               )}
               <tr>
-                <th style={{ verticalAlign: "bottom" }}>Sr#</th>
-                <th style={{ verticalAlign: "bottom" }}>Topic</th>
+                <th style={{ verticalAlign: "middle", textAlign: "center" }}>Sr#</th>
+                <th style={{ verticalAlign: "middle", textAlign: "center" }}>Topic</th>
                 {checkboxInstruments.map((i) => (
                   <th key={i.id} style={{ ...verticalHeaderStyle, background: colBg(i), ...colEdge(i) }} title={headingFor(i)}><span style={verticalTextStyle}>{headingFor(i)}</span></th>
                 ))}
