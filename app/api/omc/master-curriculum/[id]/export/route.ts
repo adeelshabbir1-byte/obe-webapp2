@@ -4,7 +4,8 @@ import { prisma } from "../../../../../../lib/db";
 import { officialCurriculumIsAssigned } from "../../../../../../lib/curriculumAccess";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
 
-// Excel download of one master curriculum: its PLOs, its courses, and every course's CLOs with the PLO each is tagged to.
+// Excel download of one master curriculum: its PLOs, its courses, every course's CLOs with the PLO each is tagged to,
+// and the lecture-by-lecture topics with the CLO each lecture serves.
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -13,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     include: {
       plos: { orderBy: { number: "asc" } },
-      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" }, include: { mappedPlo: true } }, prerequisiteCourse: { select: { code: true } } } },
+      courses: { orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], include: { seedClos: { orderBy: { orderIndex: "asc" }, include: { mappedPlo: true } }, seedTopics: { orderBy: { lectureNumber: "asc" } }, prerequisiteCourse: { select: { code: true } } } },
     },
   });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -37,6 +38,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       code: c.code, title: c.title, clo: `CLO-${i + 1}`, statement: l.statement, bloom: l.bloomLevel,
       plo: l.mappedPlo ? `PLO-${l.mappedPlo.number}` : "", source: l.ploMappingSource === "HEC" ? "HEC document" : l.ploMappingSource === "SYSTEM" ? "System suggestion" : "",
     })));
+  const topicRows = curriculum.courses.flatMap((c) =>
+    c.seedTopics.map((t) => {
+      const n = (t as { cloNumber?: number | null }).cloNumber;
+      return { code: c.code, title: c.title, week: Math.ceil(t.lectureNumber / 2), lecture: t.lectureNumber, topic: t.topic, subtopic: t.subtopic || "", clo: n ? `CLO-${n}` : "" };
+    }));
   const ploRows = curriculum.plos.map((p) => ({ number: `PLO-${p.number}`, title: p.title, description: p.description }));
 
   const safe = `${curriculum.title}-${curriculum.version}`.replace(/[^A-Za-z0-9._-]+/g, "_");
@@ -50,6 +56,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "CLO", key: "clo", width: 8 },
       { header: "Statement", key: "statement", width: 70 }, { header: "Bloom level", key: "bloom", width: 10 }, { header: "Mapped PLO", key: "plo", width: 11 }, { header: "Mapping source", key: "source", width: 18 },
     ], rows: cloRows },
+    { name: "Lecture topics", columns: [
+      { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "Week", key: "week", width: 7 }, { header: "Lecture", key: "lecture", width: 8 },
+      { header: "Topic", key: "topic", width: 60 }, { header: "Subtopic", key: "subtopic", width: 50 }, { header: "CLO", key: "clo", width: 8 },
+    ], rows: topicRows },
     { name: "PLOs", columns: [{ header: "PLO", key: "number", width: 8 }, { header: "Title", key: "title", width: 40 }, { header: "Description", key: "description", width: 90 }], rows: ploRows },
   ]);
 }
