@@ -26,7 +26,9 @@ export default async function DeadlinesPage() {
   const isSetter = SETTER_ROLES.includes(user.role);
   const chairmanId = chairmanOf(user);
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true } });
-  const myHats = me ? hatsOf({ rawRole: me.role, secondaryRole: me.secondaryRole, tertiaryRole: me.tertiaryRole, extraRoles: me.extraRoles }) : [user.role];
+  const allHats = me ? hatsOf({ rawRole: me.role, secondaryRole: me.secondaryRole, tertiaryRole: me.tertiaryRole, extraRoles: me.extraRoles }) : [user.role];
+  // Only the role the person is working in right now: a Subject Expert who also teaches sees Instructor tasks after switching role.
+  const myHats = [user.role];
 
   const { people, leadIds } = isSetter ? await reach(user) : { people: [], leadIds: [] as string[] };
   const peopleIds = people.map((p) => p.id);
@@ -42,7 +44,7 @@ export default async function DeadlinesPage() {
   await topUpStanding(chairmanId);
   const rows = (await prisma.deadline.findMany({
     where: { chairmanId, allCourses: false, OR: [
-      { assigneeId: user.id }, { setById: user.id }, { role: { in: myHats }, courseId: null },
+      { assigneeId: user.id }, { setById: user.id }, { role: { in: allHats }, courseId: null },
       { courseId: { in: myCourseIds.length ? myCourseIds : ["none"] } },
       ...(isSetter ? [{ assigneeId: { in: peopleIds.length ? peopleIds : ["none"] } }, { courseId: { in: scopeIds.length ? scopeIds : ["none"] } }] : []),
     ] },
@@ -83,8 +85,13 @@ export default async function DeadlinesPage() {
   const allIds = Array.from(new Set([...rows.flatMap((r) => [r.setById, ...(holders.get(r.id) || [])])]));
   const names = new Map<string, string>((await prisma.user.findMany({ where: { id: { in: allIds.length ? allIds : ["none"] } }, select: { id: true, name: true } })).map((u) => [u.id as string, u.name as string]));
   const withStatus = rows.map((r) => ({ r, s: statusOf(r), who: holders.get(r.id) || [] }));
-  const mine = withStatus.filter((x) => x.who.includes(user.id) || (!x.r.courseId && !!x.r.role && myHats.includes(x.r.role) && x.r.assigneeId === null && x.r.setById !== user.id));
-  const mineIds = new Set(mine.map((x) => x.r.id));
+  const roleOf = (r: DlRow) => r.role || KIND_ROLE[r.kind] || null;
+  const forActiveRole = (r: DlRow) => { const role = roleOf(r); return !role || role === user.role; };
+  const mineAll = withStatus.filter((x) => x.who.includes(user.id) || (!x.r.courseId && !!x.r.role && allHats.includes(x.r.role) && x.r.assigneeId === null && x.r.setById !== user.id));
+  const mine = mineAll.filter((x) => forActiveRole(x.r));
+  const hiddenOther = mineAll.filter((x) => !forActiveRole(x.r) && !x.r.completedAt);
+  const hiddenRoles = Array.from(new Set(hiddenOther.map((x) => roleOf(x.r)).filter((r): r is string => !!r)));
+  const mineIds = new Set(mineAll.map((x) => x.r.id));
   const team = withStatus.filter((x) => !mineIds.has(x.r.id));
   // The same course task can carry several dates (the Institute Head's final date, then a Dean's earlier one). Show the earliest and note the final.
   const finalOf = new Map<string, Date>();
@@ -99,8 +106,8 @@ export default async function DeadlinesPage() {
   const mineShown = mine.filter((x) => (!x.r.courseId && !x.r.assigneeId) || earliest.get(keyOf(x.r)) === x);
 
   // "My work": every live course this person is Subject Expert or Instructor of, with where it stands and its next date.
-  const seIds = myCourses.filter((c) => c.subjectExpertId === user.id).map((c) => c.id);
-  const insIds = myCourses.filter((c) => c.instructorId === user.id).map((c) => c.id);
+  const seIds = user.role === "SUBJECT_EXPERT" ? myCourses.filter((c) => c.subjectExpertId === user.id).map((c) => c.id) : [];
+  const insIds = user.role === "INSTRUCTOR" ? myCourses.filter((c) => c.instructorId === user.id).map((c) => c.id) : [];
   const workInfo = await prisma.course.findMany({
     where: { id: { in: [...seIds, ...insIds].length ? [...seIds, ...insIds] : ["none"] } },
     select: { id: true, code: true, title: true, courseType: true, coordinatorId: true, templateStatus: true, seResponse: true, instructorResponse: true, batch: { select: { degreeProgram: true, batchName: true } }, coordinator: { select: { name: true } } },
@@ -222,6 +229,12 @@ export default async function DeadlinesPage() {
         <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Due in the next 3 days</div></div>
         <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{openMine.length - overdueN - soonN}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Later</div></div>
       </div>
+
+      {hiddenOther.length > 0 && (
+        <p style={{ fontSize: 12.5, background: "#EEF2FA", color: "#1B4F8A", padding: "8px 12px", marginBottom: 14 }}>
+          Showing your tasks as <b>{ROLE_LABEL[user.role] || user.role}</b>. {hiddenOther.length} open task{hiddenOther.length === 1 ? "" : "s"} belong{hiddenOther.length === 1 ? "s" : ""} to your other role{hiddenRoles.length === 1 ? "" : "s"} ({hiddenRoles.map((r) => ROLE_LABEL[r] || r).join(", ")}) — switch role to see {hiddenOther.length === 1 ? "it" : "them"}.
+        </p>
+      )}
 
       {blockList.length > 0 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: `4px solid ${blockList.some((b) => b.b.severity === "now") ? "#B3261E" : "#B7791F"}` }}>
