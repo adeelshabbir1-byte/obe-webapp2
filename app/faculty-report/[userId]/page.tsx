@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import PrintButton from "../../../components/PrintButton";
-import { KINDS, REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService } from "../../../lib/facultyProfile";
+import { KINDS, REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary, EXPERIENCE_HEADS } from "../../../lib/facultyProfile";
 
 const day = (d?: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "—");
 
@@ -22,6 +22,7 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
     prisma.facultyRecord.findMany({ where: { userId: person.id }, orderBy: [{ startYear: "desc" }, { createdAt: "desc" }] }),
   ]);
   const yrs = yearsOfService(pr?.dateOfJoining);
+  const exp = experienceSummary(pr?.dateOfJoining, records);
   const row = (l: string, v: React.ReactNode) => <tr><td style={{ width: 170, color: "var(--slate)" }}>{l}</td><td>{v || "—"}</td></tr>;
 
   return (
@@ -46,6 +47,18 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
             </tbody></table>
           </div>
         </div>
+      </div>
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Experience</h3>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {EXPERIENCE_HEADS.map((h) => (
+            <div key={h.key} style={{ border: "1px solid var(--line)", padding: "8px 14px", minWidth: 120 }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{exp[h.key] || 0}</div>
+              <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{h.label} (years)</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 6 }}>Worked out from the date of joining and the Work experience entries; overlapping periods are counted once.</div>
       </div>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Next of kin</h3>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { buildExcelResponse } from "../../../../lib/excelExport";
-import { KINDS, completeness, reportPeople, yearsOfService } from "../../../../lib/facultyProfile";
+import { KINDS, completeness, reportPeople, yearsOfService, experienceSummary } from "../../../../lib/facultyProfile";
 
 const d = (x: Date | null | undefined) => (x ? new Date(x).toISOString().slice(0, 10) : "");
 
@@ -22,7 +22,7 @@ export async function GET() {
     name: "Faculty",
     columns: [
       { header: "Name", key: "name", width: 26 }, { header: "Department", key: "dept", width: 24 }, { header: "Designation", key: "designation", width: 22 }, { header: "Employment", key: "emp", width: 14 },
-      { header: "Date of joining", key: "join", width: 14 }, { header: "Years of service", key: "yrs", width: 12 }, { header: "Highest degree", key: "deg", width: 28 }, { header: "Blood group", key: "blood", width: 10 },
+      { header: "Date of joining", key: "join", width: 14 }, { header: "Years at this institute", key: "yrs", width: 12 }, { header: "Teaching / academic experience (yrs)", key: "xTeach", width: 14 }, { header: "Industry experience (yrs)", key: "xInd", width: 12 }, { header: "Research experience (yrs)", key: "xRes", width: 12 }, { header: "Administration experience (yrs)", key: "xAdm", width: 12 }, { header: "Overall experience (yrs)", key: "xTot", width: 12 }, { header: "Highest degree", key: "deg", width: 28 }, { header: "Blood group", key: "blood", width: 10 },
       { header: "Phone", key: "phone", width: 16 }, { header: "Email", key: "email", width: 28 }, { header: "Next of kin", key: "kin", width: 24 }, { header: "Next of kin phone", key: "kinPhone", width: 16 },
       { header: "Research papers", key: "pubs", width: 10 }, { header: "Grants", key: "grants", width: 8 }, { header: "Projects", key: "projects", width: 8 }, { header: "Events", key: "events", width: 8 }, { header: "Profile complete %", key: "comp", width: 12 },
     ],
@@ -30,7 +30,9 @@ export async function GET() {
       const pr = prof.get(p.id) || null;
       const mine = records.filter((r) => r.userId === p.id);
       const edu = mine.filter((r) => r.kind === "EDUCATION");
+      const x = experienceSummary(pr?.dateOfJoining, mine);
       return {
+        xTeach: x.teaching, xInd: x.industry, xRes: x.research, xAdm: x.administration, xTot: x.total,
         name: p.name, dept: p.department_?.name || "", designation: pr?.designation || "", emp: pr?.employmentType || "", join: d(pr?.dateOfJoining), yrs: yearsOfService(pr?.dateOfJoining) ?? "",
         deg: edu[0]?.title || "", blood: pr?.bloodGroup || "", phone: pr?.phone || "", email: p.email, kin: pr?.nextOfKinName ? `${pr.nextOfKinName}${pr.nextOfKinRelation ? ` (${pr.nextOfKinRelation})` : ""}` : "", kinPhone: pr?.nextOfKinPhone || "",
         pubs: mine.filter((r) => r.kind === "PUBLICATION").length, grants: mine.filter((r) => r.kind === "GRANT").length, projects: mine.filter((r) => r.kind === "PROJECT").length, events: mine.filter((r) => r.kind === "EVENT").length,

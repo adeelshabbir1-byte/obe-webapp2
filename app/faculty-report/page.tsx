@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
-import { REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService } from "../../lib/facultyProfile";
+import { REPORT_VIEWER_ROLES, completeness, reportPeople, yearsOfService, experienceSummary } from "../../lib/facultyProfile";
 
 const LABEL: Record<string, string> = { HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", CHAIRMAN: "Institute Head" };
 const colour = (p: number) => (p >= 80 ? "#2E7D4F" : p >= 50 ? "#C58A12" : "#B3261E");
@@ -19,7 +19,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
   const ids = people.map((p) => p.id);
   const [profiles, records] = await Promise.all([
     prisma.facultyProfile.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } }, select: { userId: true, photo: true, designation: true, dateOfJoining: true, bloodGroup: true, phone: true, nextOfKinName: true, nextOfKinPhone: true, employmentType: true } }),
-    prisma.facultyRecord.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } }, select: { userId: true, kind: true, title: true, startYear: true } }),
+    prisma.facultyRecord.findMany({ where: { userId: { in: ids.length ? ids : ["none"] } }, select: { userId: true, kind: true, title: true, role: true, startYear: true, endYear: true } }),
   ]);
   const prof = new Map(profiles.map((p) => [p.userId, p]));
   const rows = people.map((p) => {
@@ -27,7 +27,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
     const mine = records.filter((r) => r.userId === p.id);
     const edu = mine.filter((r) => r.kind === "EDUCATION");
     const count = (k: string) => mine.filter((r) => r.kind === k).length;
-    return { p, pr, degree: edu[0]?.title || "", pubs: count("PUBLICATION"), grants: count("GRANT"), projects: count("PROJECT"), events: count("EVENT"), comp: completeness(pr, edu.length), yrs: yearsOfService(pr?.dateOfJoining) };
+    return { p, pr, degree: edu[0]?.title || "", pubs: count("PUBLICATION"), grants: count("GRANT"), projects: count("PROJECT"), events: count("EVENT"), comp: completeness(pr, edu.length), yrs: yearsOfService(pr?.dateOfJoining), exp: experienceSummary(pr?.dateOfJoining, mine) };
   });
   const depts = Array.from(new Set(rows.map((r) => r.p.department_?.name || "—"))).sort();
   const designations = Array.from(new Set(rows.map((r) => r.pr?.designation || "Not entered"))).sort();
@@ -51,7 +51,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
       </form>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        {[["Faculty", shown.length], ["Research papers", sum((r) => r.pubs)], ["Grants", sum((r) => r.grants)], ["Projects", sum((r) => r.projects)], ["Events", sum((r) => r.events)], ["Profiles complete (avg)", `${avgComp}%`]].map(([l, v]) => (
+        {[["Faculty", shown.length], ["Research papers", sum((r) => r.pubs)], ["Grants", sum((r) => r.grants)], ["Projects", sum((r) => r.projects)], ["Events", sum((r) => r.events)], ["Avg. overall experience (yrs)", shown.length ? Math.round((sum((r) => r.exp.total) / shown.length) * 10) / 10 : 0], ["Profiles complete (avg)", `${avgComp}%`]].map(([l, v]) => (
           <div key={String(l)} style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "12px 18px", minWidth: 130 }}>
             <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "Georgia, serif" }}>{v}</div>
             <div style={{ fontSize: 11.5, color: "var(--slate)" }}>{l}</div>
@@ -74,17 +74,17 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th></th><th>Name</th><th>Department</th><th>Designation</th><th>Joined</th><th>Years</th><th>Highest degree</th><th>Blood</th><th>Papers</th><th>Grants</th><th>Projects</th><th>Events</th><th>Profile</th></tr></thead>
+          <thead><tr><th></th><th>Name</th><th>Department</th><th>Designation</th><th>Joined</th><th title="Years at this institute, from the joining date">Here</th><th title="Teaching / academic years, all institutions">Teaching</th><th>Industry</th><th title="All experience, overlaps counted once">Overall</th><th>Highest degree</th><th>Blood</th><th>Papers</th><th>Grants</th><th>Projects</th><th>Events</th><th>Profile</th></tr></thead>
           <tbody>
-            {shown.length === 0 && <tr><td colSpan={13} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
-            {shown.map(({ p, pr, degree, pubs, grants, projects, events, comp, yrs }) => (
+            {shown.length === 0 && <tr><td colSpan={16} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
+            {shown.map(({ p, pr, degree, pubs, grants, projects, events, comp, yrs, exp }) => (
               <tr key={p.id}>
                 <td>{pr?.photo ? <img src={pr.photo} alt="" style={{ width: 34, height: 42, objectFit: "cover", border: "1px solid var(--line)" }} /> : <span style={{ display: "inline-block", width: 34, height: 42, background: "#EEE9DD" }} />}</td>
                 <td><a href={`/faculty-report/${p.id}`}><b>{p.name}</b></a></td>
                 <td>{p.department_?.name || "—"}</td>
                 <td>{pr?.designation || <span style={{ color: "var(--slate)" }}>—</span>}</td>
                 <td>{pr?.dateOfJoining ? new Date(pr.dateOfJoining).toISOString().slice(0, 10) : "—"}</td>
-                <td>{yrs ?? "—"}</td>
+                <td>{yrs ?? "—"}</td><td>{exp.teaching || "—"}</td><td>{exp.industry || "—"}</td><td><b>{exp.total || "—"}</b></td>
                 <td>{degree || "—"}</td>
                 <td>{pr?.bloodGroup || "—"}</td>
                 <td>{pubs}</td><td>{grants}</td><td>{projects}</td><td>{events}</td>

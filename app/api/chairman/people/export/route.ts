@@ -14,7 +14,7 @@ export async function GET() {
     { header: "Role", key: "role", width: 22 }, { header: "Also works as", key: "also", width: 30 }, { header: "Department", key: "department", width: 24 },
     { header: "Program", key: "program", width: 22 }, { header: "Login status", key: "status", width: 20 },
   ];
-  people.forEach((p) => ws.addRow(p));
+  people.forEach(({ username, name, email, role, also, department, program, status }) => ws.addRow({ username, name, email, role, also, department, program, status }));
   ws.getRow(1).font = { bold: true };
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="institute-users.xlsx"' } });

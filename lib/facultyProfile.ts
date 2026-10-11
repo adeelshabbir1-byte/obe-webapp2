@@ -49,6 +49,61 @@ export function yearsOfService(joining: Date | string | null | undefined) {
   return ms < 0 ? 0 : Math.round((ms / (365.25 * 24 * 3600 * 1000)) * 10) / 10;
 }
 
+/** A date as a fractional year, e.g. 1 July 2020 -> 2020.5 */
+const fracYear = (d: Date) => d.getFullYear() + (d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / (365.25 * 24 * 3600 * 1000);
+type Span = [number, number];
+function mergedYears(spans: Span[]) {
+  const s = spans.filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b) && b > a).sort((x, y) => x[0] - y[0]);
+  let total = 0, cur: Span | null = null;
+  for (const sp of s) {
+    if (!cur || sp[0] > cur[1]) { if (cur) total += cur[1] - cur[0]; cur = [sp[0], sp[1]]; }
+    else cur[1] = Math.max(cur[1], sp[1]);
+  }
+  if (cur) total += cur[1] - cur[0];
+  return Math.round(total * 10) / 10;
+}
+
+export const EXPERIENCE_HEADS = [
+  { key: "institute", label: "At this institute" },
+  { key: "teaching", label: "Teaching / academic (all places)" },
+  { key: "industry", label: "Industry" },
+  { key: "research", label: "Research" },
+  { key: "administration", label: "Administration" },
+  { key: "total", label: "Overall experience" },
+] as const;
+export type ExperienceSummary = Record<(typeof EXPERIENCE_HEADS)[number]["key"], number>;
+
+/**
+ * Years of experience worked out from the joining date and the "Work experience" entries (From year - To year; a blank
+ * To year means still there). Overlapping periods are counted once, so two part-time jobs in the same years do not
+ * double the total. Service at this institute (from the joining date) counts as teaching/academic experience too.
+ */
+export function experienceSummary(joining: Date | string | null | undefined, records: { kind: string; role?: string | null; startYear?: number | null; endYear?: number | null }[], now = new Date()): ExperienceSummary {
+  const today = fracYear(now);
+  const spans: Record<string, Span[]> = { teaching: [], industry: [], research: [], administration: [], other: [] };
+  for (const r of records) {
+    if (r.kind !== "EXPERIENCE" || !r.startYear) continue;
+    const start = r.startYear;
+    let end = r.endYear ? r.endYear : today;
+    if (end <= start) end = start + 0.5; // a job that started and ended in the same year counts as half a year
+    const type = (r.role || "").toLowerCase();
+    const k = type.startsWith("teach") ? "teaching" : type.startsWith("indus") ? "industry" : type.startsWith("research") ? "research" : type.startsWith("admin") ? "administration" : "other";
+    spans[k].push([start, Math.min(end, today)]);
+  }
+  const inst: Span[] = joining && !Number.isNaN(new Date(joining).getTime()) ? [[fracYear(new Date(joining)), today]] : [];
+  const all = [...inst, ...Object.values(spans).flat()];
+  return {
+    institute: mergedYears(inst),
+    teaching: mergedYears([...inst, ...spans.teaching]),
+    industry: mergedYears(spans.industry),
+    research: mergedYears(spans.research),
+    administration: mergedYears(spans.administration),
+    total: mergedYears(all),
+  };
+}
+/** "4.5 yrs" or "—" */
+export const yrsText = (n: number) => (n > 0 ? `${n} yr${n === 1 ? "" : "s"}` : "—");
+
 type Viewer = { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null };
 export const REPORT_VIEWER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 const STAFF = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "LAB_MANAGER", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;

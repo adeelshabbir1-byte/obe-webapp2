@@ -6,7 +6,8 @@ export const ROLE_TEXT: Record<string, string> = {
 };
 const ORDER = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 
-export type PersonRow = { id: string; username: string; name: string; email: string; role: string; also: string; department: string; program: string; status: string };
+export type PersonRow = { id: string; username: string; name: string; email: string; role: string; also: string; department: string; program: string; status: string;
+  rawRole: string; held: string[]; departmentId: string | null; isActive: boolean; omcHat: boolean; assignerTerm: string | null; leadProgram: string | null };
 
 /** Everyone who works in this institute, with their login name, role and the extra roles they can also work as. */
 export async function institutePeople(chairmanId: string): Promise<PersonRow[]> {
@@ -32,6 +33,8 @@ export async function institutePeople(chairmanId: string): Promise<PersonRow[]> 
         department: deptName(u.departmentId || (isTeaching ? parent?.departmentId : null)),
         program: u.role === "PROGRAM_COORDINATOR" ? u.leadProgram || "no program yet" : isTeaching ? parent?.leadProgram || "—" : "—",
         status: !u.isActive ? "Switched off" : u.mustChangePassword ? "Temporary password" : "Active",
+        rawRole: u.role, held: [u.role, u.secondaryRole, u.tertiaryRole, ...u.extraRoles].filter((r): r is string => !!r), departmentId: u.departmentId || (isTeaching ? parent?.departmentId || null : null),
+        isActive: u.isActive, omcHat: !!u.omcHat, assignerTerm: u.assignerTerm || null, leadProgram: u.leadProgram || null,
         _o: ORDER.indexOf(u.role),
       };
     })
