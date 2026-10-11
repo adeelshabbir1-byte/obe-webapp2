@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import { courseScopeFor } from "../../../lib/reportScope";
 import Shell from "../../../components/Shell";
 import Link from "next/link";
-import { buildSeProgress, buildInstructorProgress, progressPct, ProgressStep } from "../../../lib/courseProgress";
+import { teachingLectureCounts, buildSeProgress, buildInstructorProgress, progressPct, ProgressStep } from "../../../lib/courseProgress";
 import ProgressBar from "../../../components/ProgressBar";
 import { navForRole } from "../../../components/reportNav";
 
@@ -77,8 +77,7 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
     const cPaperItems = sePaperItems.filter((x) => x.courseId === c.id);
     seProgressByCourse.set(c.id, buildSeProgress({
       cloCount: cClos.length,
-      lectureCount: cLectures.length,
-      lectureMappedCount: cLectures.filter((r) => !!r.cloId).length,
+      ...teachingLectureCounts(cLectures),
       instrumentCount: cInstruments.length,
       instrumentsWithNoLink,
       midtermPaperCount: cPaperItems.filter((p) => p.examType === "Midterm").length,

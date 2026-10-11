@@ -5,6 +5,14 @@
 
 export type ProgressStep = { label: string; done: boolean };
 
+const EXAM_RE = /\b(mid[- ]?term|final)\b.*\b(exam|examination|review)\b|\bexam(ination)?\b/i;
+const REVIEW_RE = /\b(revision|recap|course review|review session|review of|review and|review &)\b|^\s*review\b/i;
+/** Lecture counts for the "mapped to CLOs" step: Midterm/Final exam or review slots and empty rows don't need a CLO. */
+export function teachingLectureCounts(rows: { topic: string; cloId: string | null }[]) {
+  const teaching = rows.filter((r) => (r.topic || "").trim() && !EXAM_RE.test(r.topic) && !REVIEW_RE.test(r.topic));
+  return { lectureCount: teaching.length, lectureMappedCount: teaching.filter((r) => !!r.cloId).length };
+}
+
 export function buildSeProgress(opts: {
   cloCount: number;
   lectureCount: number; lectureMappedCount: number;

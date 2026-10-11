@@ -5,7 +5,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
-import { buildSeProgress, ProgressStep } from "../../../lib/courseProgress";
+import { teachingLectureCounts, buildSeProgress, ProgressStep } from "../../../lib/courseProgress";
 import ProgressBar from "../../../components/ProgressBar";
 
 
@@ -59,8 +59,7 @@ export default async function SubjectExpertCoursesPage() {
     const cPaperItems = paperItems.filter((x) => x.courseId === c.id);
     progressByCourse.set(c.id, buildSeProgress({
       cloCount: cClos.length,
-      lectureCount: cLectures.length,
-      lectureMappedCount: cLectures.filter((r) => !!r.cloId).length,
+      ...teachingLectureCounts(cLectures),
       instrumentCount: cInstruments.length,
       instrumentsWithNoLink,
       midtermPaperCount: cPaperItems.filter((p) => p.examType === "Midterm").length,
@@ -89,7 +88,7 @@ export default async function SubjectExpertCoursesPage() {
                   <td>{c.code}</td>
                   <td>{c.title}</td>
                   <td style={{ fontSize: 12.5 }}>{batchLabel}</td>
-                  <td><ProgressBar steps={steps} /></td>
+                  <td><ProgressBar steps={steps} showPending /></td>
                   <td>{statusLabel(c.templateStatus)}</td>
                   <td><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link></td>
                 </tr>
