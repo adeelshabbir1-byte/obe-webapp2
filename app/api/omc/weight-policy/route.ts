@@ -28,7 +28,7 @@ export async function GET() {
     labMin: 0, labMax: 100, labMinCount: 0,
     midtermMin: 0, midtermMax: 100, midtermMinCount: 1,
     finalMin: 0, finalMax: 100, finalMinCount: 1, finalBeforeMidtermPct: null,
-    ploMinPct: 0, ploMinItems: 0, cloSpreadMax: 7,
+    ploMinPct: 0, ploMinItems: 0, cloSpreadMax: 7, cloMinTopics: 3, ploMinTopics: 0,
   });
 
   return NextResponse.json({ policies });
@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest) {
 
   // Assessment-coverage rules (PLO is the goal): minimum % of marks and minimum number of assessment items per PLO,
   // and the largest allowed gap between CLOs.
-  for (const [f, max, dflt] of [["ploMinPct", 100, 0], ["ploMinItems", 50, 0], ["cloSpreadMax", 100, 7]] as const) {
+  for (const [f, max, dflt] of [["ploMinPct", 100, 0], ["ploMinItems", 50, 0], ["cloSpreadMax", 100, 7], ["cloMinTopics", 50, 3], ["ploMinTopics", 100, 0]] as const) {
     const raw = body[f];
     const v = raw === undefined || raw === null || raw === "" ? dflt : parseInt(raw, 10);
     if (isNaN(v) || v < 0 || v > max) return NextResponse.json({ error: `${f} must be between 0 and ${max}` }, { status: 400 });

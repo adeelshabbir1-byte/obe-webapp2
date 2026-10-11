@@ -4,7 +4,8 @@ import { prisma } from "../../../lib/db";
 import { courseScopeFor } from "../../../lib/reportScope";
 import Shell from "../../../components/Shell";
 import Link from "next/link";
-import { teachingLectureCounts, buildSeProgress, buildInstructorProgress, progressPct, ProgressStep } from "../../../lib/courseProgress";
+import { seProgressFor } from "../../../lib/seProgress";
+import { buildInstructorProgress, progressPct, ProgressStep } from "../../../lib/courseProgress";
 import ProgressBar from "../../../components/ProgressBar";
 import { navForRole } from "../../../components/reportNav";
 
@@ -52,14 +53,7 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
   const instrCourses = allCourses.filter((c) => c.instructorId);
   const instrCourseIds = instrCourses.map((c) => c.id);
 
-  const [seClos, seLectures, seInstruments, seLinks, sePaperItems] = await Promise.all([
-    prisma.cLO.findMany({ where: { courseId: { in: seCourseIds }, source: "SE" } }),
-    prisma.lectureRow.findMany({ where: { courseId: { in: seCourseIds }, source: "SE" } }),
-    prisma.assessmentInstrument.findMany({ where: { courseId: { in: seCourseIds }, source: "SE" } }),
-    prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId: { in: seCourseIds }, source: "SE" } }, select: { instrumentId: true } }),
-    prisma.paperDistributionItem.findMany({ where: { courseId: { in: seCourseIds }, source: "SE" }, select: { courseId: true, examType: true } }),
-  ]);
-  const seLinkedInstrumentIds = new Set(seLinks.map((l) => l.instrumentId));
+  const seProgressByCourse = await seProgressFor(seCourses);
 
   const [instrLectures, instrMarks, instrAttendance, instrPaperItems] = await Promise.all([
     prisma.lectureRow.findMany({ where: { courseId: { in: instrCourseIds }, source: "INSTRUCTOR" }, select: { courseId: true, actualDate: true } }),
@@ -67,24 +61,6 @@ export default async function FacultyWorkloadPage({ searchParams }: { searchPara
     prisma.attendanceRecord.findMany({ where: { courseId: { in: instrCourseIds } }, select: { courseId: true } }),
     prisma.paperDistributionItem.findMany({ where: { courseId: { in: instrCourseIds }, source: "INSTRUCTOR" }, select: { courseId: true, examType: true } }),
   ]);
-
-  const seProgressByCourse = new Map<string, ProgressStep[]>();
-  for (const c of seCourses) {
-    const cClos = seClos.filter((x) => x.courseId === c.id);
-    const cLectures = seLectures.filter((x) => x.courseId === c.id);
-    const cInstruments = seInstruments.filter((x) => x.courseId === c.id);
-    const instrumentsWithNoLink = cInstruments.filter((i) => !seLinkedInstrumentIds.has(i.id)).length;
-    const cPaperItems = sePaperItems.filter((x) => x.courseId === c.id);
-    seProgressByCourse.set(c.id, buildSeProgress({
-      cloCount: cClos.length,
-      ...teachingLectureCounts(cLectures),
-      instrumentCount: cInstruments.length,
-      instrumentsWithNoLink,
-      midtermPaperCount: cPaperItems.filter((p) => p.examType === "Midterm").length,
-      finalPaperCount: cPaperItems.filter((p) => p.examType === "Final").length,
-      templateStatus: c.templateStatus,
-    }));
-  }
 
   const instrProgressByCourse = new Map<string, ProgressStep[]>();
   for (const c of instrCourses) {

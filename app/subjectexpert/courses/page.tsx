@@ -5,7 +5,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
-import { teachingLectureCounts, buildSeProgress, ProgressStep } from "../../../lib/courseProgress";
+import { seProgressFor } from "../../../lib/seProgress";
 import ProgressBar from "../../../components/ProgressBar";
 
 
@@ -40,33 +40,7 @@ export default async function SubjectExpertCoursesPage() {
   const courses = allAssigned.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
   const courseIds = courses.map((c) => c.id);
 
-  const [clos, lectureRows, instruments, links, paperItems] = await Promise.all([
-    prisma.cLO.findMany({ where: { courseId: { in: courseIds }, source: "SE" } }),
-    prisma.lectureRow.findMany({ where: { courseId: { in: courseIds }, source: "SE" } }),
-    prisma.assessmentInstrument.findMany({ where: { courseId: { in: courseIds }, source: "SE" } }),
-    prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId: { in: courseIds }, source: "SE" } }, select: { instrumentId: true } }),
-    prisma.paperDistributionItem.findMany({ where: { courseId: { in: courseIds }, source: "SE" }, select: { courseId: true, examType: true } }),
-  ]);
-
-  const linkedInstrumentIds = new Set(links.map((l) => l.instrumentId));
-
-  const progressByCourse = new Map<string, ProgressStep[]>();
-  for (const c of courses) {
-    const cClos = clos.filter((x) => x.courseId === c.id);
-    const cLectures = lectureRows.filter((x) => x.courseId === c.id);
-    const cInstruments = instruments.filter((x) => x.courseId === c.id);
-    const instrumentsWithNoLink = cInstruments.filter((i) => !linkedInstrumentIds.has(i.id)).length;
-    const cPaperItems = paperItems.filter((x) => x.courseId === c.id);
-    progressByCourse.set(c.id, buildSeProgress({
-      cloCount: cClos.length,
-      ...teachingLectureCounts(cLectures),
-      instrumentCount: cInstruments.length,
-      instrumentsWithNoLink,
-      midtermPaperCount: cPaperItems.filter((p) => p.examType === "Midterm").length,
-      finalPaperCount: cPaperItems.filter((p) => p.examType === "Final").length,
-      templateStatus: c.templateStatus,
-    }));
-  }
+  const progressByCourse = await seProgressFor(courses);
 
   const pending = courses.filter((c) => c.templateStatus === "draft" || c.templateStatus === "changes-requested" || c.templateStatus === "reopened");
   const submitted = courses.filter((c) => c.templateStatus === "submitted" || c.templateStatus === "approved");

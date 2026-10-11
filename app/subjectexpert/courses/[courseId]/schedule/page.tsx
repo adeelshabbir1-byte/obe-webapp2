@@ -5,6 +5,8 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import LectureContentManager from "../../../../../components/LectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
+import { ploCoverageShortfalls } from "../../../../../lib/ploCoverage";
+import { isTeachingTopic } from "../../../../../lib/courseProgress";
 
 
 export default async function SchedulePage({ params }: { params: { courseId: string } }) {
@@ -23,10 +25,12 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   });
   if (!course || course.subjectExpertId !== user.id) notFound();
 
+  // The OMC decides the minimum lecture topics per CLO and per PLO (exam / review slots don't count).
+  const coverage = await ploCoverageShortfalls(course.id, "SE");
+  const minClo = coverage.rules.cloMinTopics;
   const cloHitCounts: Record<string, number> = {};
   for (const c of course.clos) cloHitCounts[c.id] = 0;
-  for (const r of course.lectureRows) if (r.cloId) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
-  const underCovered = course.clos.filter((c) => (cloHitCounts[c.id] || 0) < 3);
+  for (const r of course.lectureRows) if (r.cloId && isTeachingTopic(r.topic)) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
@@ -39,23 +43,25 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         <div className="card">
           <div className="lp-toolbar" style={{ marginBottom: 10 }}>
             <h3>CLO coverage</h3>
-            <span className="lp-meta">Each CLO needs at least 3 lectures</span>
+            <span className="lp-meta">{minClo > 0 ? `OMC minimum: ${minClo} lecture topic${minClo === 1 ? "" : "s"} per CLO` : "No OMC minimum per CLO"}{coverage.rules.ploMinTopics > 0 ? ` · ${coverage.rules.ploMinTopics} per PLO` : ""}</span>
           </div>
           <div className="lp-chips">
             {course.clos.map((c) => {
               const n = cloHitCounts[c.id] || 0;
-              const ok = n >= 3;
+              const ok = n >= minClo;
               return (
-                <span key={c.id} className={`lp-chip ${ok ? "ok" : "short"}`} title={ok ? "Covered" : `Needs ${3 - n} more lecture${3 - n === 1 ? "" : "s"}`}>
-                  <i />{c.code}<small>{n} lecture{n === 1 ? "" : "s"}{!ok ? ` · ${3 - n} more needed` : ""}</small>
+                <span key={c.id} className={`lp-chip ${ok ? "ok" : "short"}`} title={ok ? "Meets the OMC minimum" : `Needs ${minClo - n} more lecture${minClo - n === 1 ? "" : "s"}`}>
+                  <i />{c.code}<small>{n} lecture{n === 1 ? "" : "s"}{!ok ? ` · ${minClo - n} more needed` : ""}</small>
                 </span>
               );
             })}
           </div>
-          {underCovered.length > 0 && (
+          {coverage.topicShort.length > 0 ? (
             <p className="lp-hint" style={{ color: "var(--amber-800)" }}>
-              Every CLO must be covered by at least 3 lecture topics before this template can be submitted.
+              Below the OMC&apos;s minimum, so this template can&apos;t be submitted yet: {coverage.topicShort.join("; ")}.
             </p>
+          ) : (
+            <p className="lp-hint">The OMC&apos;s minimums are met. Lectures without a CLO (or not tested by an assessment) are fine.</p>
           )}
         </div>
       )}

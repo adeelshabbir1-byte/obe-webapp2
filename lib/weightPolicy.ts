@@ -102,5 +102,7 @@ export function coverageRules(policy: PolicyLike) {
     ploMinPct: Number(policy?.ploMinPct ?? 0) || 0,
     ploMinItems: Number(policy?.ploMinItems ?? 0) || 0,
     cloSpreadMax: policy && policy.cloSpreadMax != null ? Number(policy.cloSpreadMax) : 7,
+    cloMinTopics: policy && policy.cloMinTopics != null ? Number(policy.cloMinTopics) : 3,
+    ploMinTopics: Number(policy?.ploMinTopics ?? 0) || 0,
   };
 }

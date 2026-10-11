@@ -55,10 +55,6 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
     where: { courseId_source: { courseId: course.id, source: "SE" } },
   });
 
-  const cloHitCounts: Record<string, number> = {};
-  for (const c of course.clos) cloHitCounts[c.id] = 0;
-  for (const r of course.lectureRows) if (r.cloId) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
-  const underCovered = course.clos.filter((c) => (cloHitCounts[c.id] || 0) < 3);
 
   const byPlo: Record<string, number> = {};
   for (const c of course.clos) {
@@ -67,7 +63,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   const badPloCount = Object.values(byPlo).filter((total) => total !== 100).length;
 
   const coverage = await ploCoverageShortfalls(course.id, "SE");
-  const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && underCovered.length === 0 && badPloCount === 0 && coverage.short.length === 0;
+  const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && badPloCount === 0 && coverage.short.length === 0;
 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
@@ -150,9 +146,9 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
             Not ready yet — Assessment Weights (step 3) aren't confirmed yet.
           </p>
         )}
-        {underCovered.length > 0 && (
+        {coverage.topicShort.length > 0 && (
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
-            Not ready yet — these CLOs need at least 3 lecture topics each: {underCovered.map((c) => c.code).join(", ")}
+            Not ready yet — the lecture plan is below the OMC&apos;s minimum topics: {coverage.topicShort.join("; ")}.
           </p>
         )}
         {badPloCount > 0 && (
@@ -161,9 +157,9 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
             (see the CLOs & PLO Mapping tab).
           </p>
         )}
-        {coverage.short.length > 0 && (
+        {coverage.assessShort.length > 0 && (
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
-            Not ready yet — these PLOs are not assessed enough for the OMC&apos;s rules: {coverage.short.join("; ")}.
+            Not ready yet — these PLOs are not assessed enough for the OMC&apos;s rules: {coverage.assessShort.join("; ")}.
             Tick more quizzes, assignments or exam questions for their topics above.
           </p>
         )}
