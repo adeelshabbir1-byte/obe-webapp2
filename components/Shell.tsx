@@ -2,6 +2,7 @@ import { getSignedInUser } from "../lib/session";
 import { getBrandingFor } from "../lib/branding";
 import { getRequestsCount, getSessionInfo, getSidebarCurrentTerm } from "../lib/shellData";
 import AppShell from "./AppShell";
+import { unreadCount } from "../lib/notifications";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -26,13 +27,14 @@ export default async function Shell({
   // The person themselves (as the sign-in API routes see them), not the Program Lead a department coordinator may be working as.
   const user = await getSignedInUser();
 
-  const [branding, sessionInfo, requestsCount, currentTerm] = await Promise.all([
+  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications] = await Promise.all([
     getBrandingFor(user),
     user ? getSessionInfo(user) : null,
     user ? getRequestsCount(user) : 0,
     // Shown as a standing reminder on every Program Lead / Program Coordinator page — several screens
     // (reports, the registration window, degree planning) depend on which term is "current".
     user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
+    user ? unreadCount(user.id) : 0,
   ]);
 
   return (
@@ -46,6 +48,7 @@ export default async function Shell({
       isAlumniCustodian={!!sessionInfo?.isAlumniCustodian}
       currentTerm={currentTerm}
       requestsCount={requestsCount}
+      unreadNotifications={unreadNotifications}
     >
       {children}
     </AppShell>

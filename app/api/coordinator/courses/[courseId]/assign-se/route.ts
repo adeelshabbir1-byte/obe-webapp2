@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyUsers } from "../../../../../../lib/notifications";
 import { hasSubjectExpertHat } from "../../../../../../lib/dualRoles";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
@@ -79,7 +80,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     actorUserId: user.id, action: "SUBJECT_EXPERT_ASSIGNED", entityType: "Course", entityId: course.id,
     metadata: { subjectExpertId: subjectExpertId || "none", borrowed: borrowedSe },
   });
+  if (subjectExpertId && subjectExpertId !== course.subjectExpertId) {
+    await notifyUsers([subjectExpertId], { kind: "ASSIGNMENT", title: `New course to build: ${course.code} ${course.title}`, body: `${user.name} assigned you as Subject Expert of ${course.code} ${course.title}. Accept or decline it on your dashboard.`, href: "/dashboard" });
+  }
   if (removing) {
+    await notifyUsers([course.subjectExpertId], { kind: "ASSIGNMENT", title: `${course.code} was taken off you`, body: `${user.name} removed you as Subject Expert of ${course.code} ${course.title}${reason ? `. Reason: ${reason}` : "."}`, href: "/dashboard" });
     await writeAuditLog({
       actorUserId: user.id, action: "SUBJECT_EXPERT_REMOVED", entityType: "Course", entityId: course.id,
       metadata: { previousSubjectExpertId: course.subjectExpertId, newSubjectExpertId: subjectExpertId || "none", courseCode: course.code, courseTitle: course.title, templateStatus: course.templateStatus, reason: reason || null },

@@ -7,6 +7,7 @@ import { isHeadFaculty } from "../../../../../../lib/departments";
 import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 import { pastTermError } from "../../../../../../lib/courseTerm";
+import { notifyUsers } from "../../../../../../lib/notifications";
 
 // Originally Course Assigner-only. Institute Head, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
@@ -78,5 +79,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     metadata: { instructorId: instructorId || "none" },
   });
 
+  if (instructorId && instructorId !== course.instructorId) {
+    await notifyUsers([instructorId], { kind: "ASSIGNMENT", title: `You will teach ${course.code} ${course.title}`, body: `${user.name} assigned you to teach ${course.code} ${course.title}${borrowedAllowed ? ". Accept or decline it on your dashboard." : "."}`, href: borrowedAllowed ? "/dashboard" : "/instructor/courses", exceptId: user.id });
+  }
+  if (course.instructorId && instructorId !== course.instructorId) {
+    await notifyUsers([course.instructorId], { kind: "ASSIGNMENT", title: `${course.code} was given to another teacher`, body: `${user.name} changed the instructor of ${course.code} ${course.title}.`, href: "/instructor/courses", exceptId: user.id });
+  }
   return NextResponse.json({ course: updated });
 }

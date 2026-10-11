@@ -2671,3 +2671,18 @@ model RubricScore {
   @@unique([rubricId, studentId])
   @@index([rubricId])
 }
+
+// In-app notifications (the bell in the top bar): something happened that this person should know or act on.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String    // e.g. RESULT, GRADE_CHANGE, ASSIGNMENT, TEMPLATE, DEADLINE, REQUEST
+  title     String
+  body      String?   @db.Text
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}

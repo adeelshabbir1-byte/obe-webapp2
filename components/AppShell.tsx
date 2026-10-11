@@ -12,6 +12,7 @@ import { BRAND, sized } from "../lib/brandAssets";
 import type { Branding } from "../lib/branding";
 import type { SessionInfo } from "../lib/shellData";
 import BusyBanner from "./BusyBanner";
+import NotificationBell from "./NotificationBell";
 
 type NavLink = { href: string; label: string };
 
@@ -42,6 +43,7 @@ export default function AppShell({
   isAlumniCustodian,
   currentTerm,
   requestsCount,
+  unreadNotifications = 0,
   children,
 }: {
   roleLabel: string;
@@ -53,6 +55,7 @@ export default function AppShell({
   isAlumniCustodian: boolean;
   currentTerm: { termName: string; year: number } | null;
   requestsCount: number;
+  unreadNotifications?: number;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -395,6 +398,7 @@ export default function AppShell({
             <div className="tb-crumb">{crumb}</div>
           </div>
           <div className="tb-right">
+            <NotificationBell initialUnread={unreadNotifications} />
             <span className="tb-hello">Hello, <b>{greetingName(userName)}</b></span>
             <span className="avatar" title={userName} aria-hidden="true">{initials(userName)}</span>
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={loggingOut} aria-label="Sign out" title="Sign out">

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
+import { notifyUsers } from "../../../../lib/notifications";
+import { KIND_ROLE } from "../../../../lib/deadlines";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +23,9 @@ export async function GET(req: NextRequest) {
     if (r.dueDate < now) e.late++; else e.soon++;
     per.set(r.assigneeId, e);
   }
+  const bell = await bellReminders(now, soon);
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0 });
+  if (!ids.length) return NextResponse.json({ sent: 0, bell });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -37,7 +40,7 @@ export async function GET(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, emailed });
+  return NextResponse.json({ sent: data.length, emailed, bell });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.
@@ -59,4 +62,52 @@ async function emailDigest(items: { toId: string; subject: string; body: string 
     }));
   }
   return sent;
+}
+
+// The bell: every person with work overdue or due within 3 days — named deadlines AND course deadlines that belong to
+// whoever holds the course's role (Subject Expert, Instructor, Program Lead). Once a day in the app; by email at most
+// once a week (kind DEADLINE emails, DEADLINE_DAILY does not).
+async function bellReminders(now: Date, soon: Date) {
+  const rows = (await prisma.deadline.findMany({
+    where: { completedAt: null, allCourses: false, dueDate: { lt: soon } } as never,
+    select: { title: true, dueDate: true, assigneeId: true, courseId: true, role: true, kind: true },
+    take: 20000,
+  })) as unknown as { title: string; dueDate: Date; assigneeId: string | null; courseId: string | null; role: string | null; kind: string }[];
+  const courseIds = Array.from(new Set(rows.map((r) => r.courseId).filter((x): x is string => !!x)));
+  const courses = courseIds.length ? await prisma.course.findMany({ where: { id: { in: courseIds } }, select: { id: true, code: true, subjectExpertId: true, instructorId: true, coordinatorId: true } }) : [];
+  const cOf = new Map(courses.map((c) => [c.id, c]));
+  const per = new Map<string, { late: string[]; soon: string[] }>();
+  for (const r of rows) {
+    let who = r.assigneeId;
+    if (!who && r.courseId) {
+      const c = cOf.get(r.courseId); const role = r.role || KIND_ROLE[r.kind];
+      who = (role === "INSTRUCTOR" ? c?.instructorId : role === "PROGRAM_COORDINATOR" ? c?.coordinatorId : c?.subjectExpertId) || null;
+    }
+    if (!who) continue;
+    const e = per.get(who) || { late: [], soon: [] };
+    const label = `${r.title.replace(/ \((Fall|Spring)[^)]*\)$/i, "")}${r.courseId && cOf.get(r.courseId) ? ` (${cOf.get(r.courseId)!.code})` : ""}`;
+    (r.dueDate < now ? e.late : e.soon).push(label);
+    per.set(who, e);
+  }
+  const ids = Array.from(per.keys());
+  if (!ids.length) return 0;
+  const ndb = prisma as unknown as Record<string, any>;
+  let recentDay: { userId: string }[] = [], recentWeek: { userId: string }[] = [];
+  try {
+    [recentDay, recentWeek] = await Promise.all([
+      ndb.notification.findMany({ where: { userId: { in: ids }, kind: { in: ["DEADLINE", "DEADLINE_DAILY"] }, createdAt: { gte: new Date(now.getTime() - 20 * 3600000) } }, select: { userId: true } }),
+      ndb.notification.findMany({ where: { userId: { in: ids }, kind: "DEADLINE", createdAt: { gte: new Date(now.getTime() - 7 * 86400000) } }, select: { userId: true } }),
+    ]);
+  } catch { return 0; }
+  const skip = new Set(recentDay.map((r) => r.userId)), weekly = new Set(recentWeek.map((r) => r.userId));
+  let n = 0;
+  for (const id of ids) {
+    if (skip.has(id)) continue;
+    const e = per.get(id)!;
+    const parts = [e.late.length ? `${e.late.length} overdue` : "", e.soon.length ? `${e.soon.length} due within 3 days` : ""].filter(Boolean).join(" and ");
+    const list = [...e.late, ...e.soon];
+    await notifyUsers([id], { kind: weekly.has(id) ? "DEADLINE_DAILY" : "DEADLINE", title: `You have ${parts}`, body: `${list.slice(0, 4).join("; ")}${list.length > 4 ? ` and ${list.length - 4} more` : ""}.`, href: "/deadlines" });
+    n++;
+  }
+  return n;
 }

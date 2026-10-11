@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyUsers } from "../../../../lib/notifications";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
       data: accept ? { instructorResponse: "ACCEPTED", instructorResponseNote: note || null } : { instructorResponse: "DECLINED", instructorResponseNote: note, instructorId: null, instructorApproval: "NONE", instructorApprovalNote: null, instructorApprovedById: null, instructorApprovedAt: null },
     });
   }
+  await notifyUsers([course.coordinatorId], { kind: "ASSIGNMENT", title: `${user.name} ${accept ? "accepted" : "declined"} ${course.code}`, body: accept ? `${user.name} accepted ${course.code} ${course.title} as ${as === "SUBJECT_EXPERT" ? "Subject Expert" : "Instructor"}.` : `${user.name} declined ${course.code} ${course.title}: ${note}. Assign someone else.`, href: as === "SUBJECT_EXPERT" ? "/coordinator/assign-subject-experts" : "/coordinator/courses" });
   await writeAuditLog({ actorUserId: user.id, action: accept ? (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_ACCEPTED" : "BORROWED_ASSIGNMENT_ACCEPTED") : (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_DECLINED" : "BORROWED_ASSIGNMENT_DECLINED"), entityType: "Course", entityId: course.id, metadata: { as, note } });
   return NextResponse.json({ ok: true });
 }

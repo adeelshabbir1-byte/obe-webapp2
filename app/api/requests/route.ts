@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyUsers } from "../../../lib/notifications";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
   if (due && isNaN(due.getTime())) return NextResponse.json({ error: "That date is not valid" }, { status: 400 });
   const href = typeof b.href === "string" && b.href.startsWith("/") ? b.href.slice(0, 300) : null;
   const row = await prisma.taskRequest.create({ data: { chairmanId, fromId: user.id, toId: String(b.toId), leadId: lead.id, subject, area: txt(b.area, 200) || null, href, body, dueDate: due } as never });
+  await notifyUsers([String(b.toId)], { kind: "REQUEST", title: `Request from ${user.name}: ${subject}`, body, href: "/requests" });
   await writeAuditLog({ actorUserId: user.id, action: "TASK_REQUEST_SENT", entityType: "TaskRequest", entityId: row.id });
   return NextResponse.json({ ok: true }, { status: 201 });
 }

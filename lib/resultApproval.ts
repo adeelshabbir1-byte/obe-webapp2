@@ -66,12 +66,12 @@ export async function canDecide(user: { id: string; role: string; managedById: s
   return course.coordinator?.managedById === user.managedById && !!user.departmentId && course.coordinator?.departmentId === user.departmentId;
 }
 
-/** An in-app message (shows under Requests) so the other side knows something needs them. */
+/** A notification (the bell, and email when configured) so the other side knows something needs them. */
 export async function notify(chairmanId: string | null, fromId: string, toIds: string[], subject: string, body: string, href: string) {
-  if (!chairmanId || !toIds.length) return;
-  try {
-    await prisma.taskRequest.createMany({ data: toIds.filter((t) => t !== fromId).map((toId) => ({ chairmanId, fromId, toId, subject, body, href, area: "Results" })) as never });
-  } catch { /* messages are a courtesy; never block the action */ }
+  if (!toIds.length) return;
+  void chairmanId;
+  const { notifyUsers } = await import("./notifications");
+  await notifyUsers(toIds, { kind: /grade/i.test(subject) ? "GRADE_CHANGE" : "RESULT", title: subject, body, href, exceptId: fromId });
 }
 
 export async function logResult(actorUserId: string, action: string, courseId: string, metadata: Record<string, string | number | null> = {}) {

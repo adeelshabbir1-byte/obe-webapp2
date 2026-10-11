@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyUsers } from "../../../../../lib/notifications";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
@@ -27,5 +28,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     entityType: "Course", entityId: course.id,
   });
 
+  await notifyUsers([course.subjectExpertId], {
+    kind: "TEMPLATE", title: body.status === "approved" ? `${course.code} plan approved by the OMC` : `${course.code} plan needs changes`,
+    body: body.status === "approved" ? `${user.name} approved your plan of ${course.code} ${course.title}.` : `${user.name} asked for changes to ${course.code} ${course.title}${body.comment ? `: ${body.comment}` : "."}`,
+    href: `/subjectexpert/courses/${course.id}/clos`,
+  });
   return NextResponse.json({ course: updated });
 }
