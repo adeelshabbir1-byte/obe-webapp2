@@ -27,6 +27,20 @@ export default function MasterCurriculumEditor() {
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourse, setNewCourse] = useState({ code: "", title: "", creditHours: "3", category: "Major", semesterNumber: "" });
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [renaming, setRenaming] = useState<{ title: string; version: string } | null>(null);
+
+  async function saveRename() {
+    if (!renaming || !selectedId) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch(`/api/omc/master-curriculum/${selectedId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(renaming) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || "Could not rename."); setBusy(false); return; }
+      setCurricula((list) => list.map((c) => (c.id === selectedId ? { ...c, title: renaming.title.trim(), version: renaming.version.trim() } : c)));
+      setRenaming(null); await loadDetail(selectedId); setNotice("Curriculum renamed.");
+    } catch { setError("Could not rename."); }
+    setBusy(false);
+  }
   const [bulkDegreeProgram, setBulkDegreeProgram] = useState("");
   const [bulkAuthority, setBulkAuthority] = useState("Institution");
   const [bulkVersion, setBulkVersion] = useState("");
@@ -38,6 +52,7 @@ export default function MasterCurriculumEditor() {
   }, []);
 
   async function loadDetail(id: string) {
+    if (id !== selectedId) setRenaming(null);
     setSelectedId(id); setExpandedCourseId(null); setError(""); setNotice("");
     if (!id) { setDetail(null); return; }
     const res = await fetch(`/api/omc/master-curriculum/${id}`);
@@ -185,6 +200,25 @@ export default function MasterCurriculumEditor() {
             <option key={c.id} value={c.id}>{c.title} ({c.authority} {c.version}) — {c._count.courses} courses {c.isOwned ? "— your copy" : ""}</option>
           ))}
         </select>
+        {selectedId && detail?.isOwned && !renaming && (
+          <button className="btn" type="button" disabled={busy} style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10 }}
+            onClick={() => setRenaming({ title: detail.title, version: detail.version })} title="Change the name or version of your institute's copy">Rename</button>
+        )}
+        {renaming && (
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", margin: "10px 0", padding: 10, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-2)" }}>
+            <label style={{ display: "grid", gap: 3, fontSize: 12, color: "var(--slate)" }}>Name
+              <input value={renaming.title} onChange={(e) => setRenaming({ ...renaming, title: e.target.value })} style={{ minWidth: 320, padding: "5px 8px" }} autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }} />
+            </label>
+            <label style={{ display: "grid", gap: 3, fontSize: 12, color: "var(--slate)" }}>Version
+              <input value={renaming.version} onChange={(e) => setRenaming({ ...renaming, version: e.target.value })} style={{ minWidth: 180, padding: "5px 8px" }}
+                onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }} />
+            </label>
+            <button className="btn btn-brass" type="button" disabled={busy || !renaming.title.trim()} onClick={saveRename}>Save name</button>
+            <button className="btn" type="button" onClick={() => setRenaming(null)}>Cancel</button>
+            <span style={{ fontSize: 11.5, color: "var(--slate)", flexBasis: "100%" }}>Only the name changes — courses already linked to this curriculum stay linked.</span>
+          </div>
+        )}
         {selectedId && (
           <>
             <a href={`/api/master-curriculum/${selectedId}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }} title="Courses, CLOs with PLOs, Course–PLO matrix, lecture topics and PLOs">

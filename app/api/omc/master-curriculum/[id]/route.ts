@@ -57,11 +57,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   const body = await req.json();
-  const { title, authority, version, status, sourceReference } = body;
+  const { authority, status, sourceReference } = body;
+  const title = typeof body.title === "string" ? body.title.trim() : undefined;
+  const version = typeof body.version === "string" ? body.version.trim() : undefined;
+  if (title !== undefined && !title) return NextResponse.json({ error: "the name cannot be empty" }, { status: 400 });
+  if (title !== undefined || version !== undefined) {
+    const clash = await prisma.masterCurriculum.findFirst({ where: { chairmanId: existing.chairmanId, title: title ?? existing.title, version: version ?? existing.version, id: { not: existing.id } } });
+    if (clash) return NextResponse.json({ error: "another curriculum of your institute already has this name and version" }, { status: 409 });
+  }
+  // Courses are linked to a curriculum through its degree program (falling back to the title). Keep the program fixed
+  // when the name changes, so renaming never disconnects the courses or the Excel re-import.
+  const keepProgram = title !== undefined && title !== existing.title && !existing.degreeProgram ? { degreeProgram: existing.title } : {};
 
   await prisma.masterCurriculum.update({
     where: { id: params.id },
     data: {
+      ...keepProgram,
       ...(title !== undefined && { title }),
       ...(authority !== undefined && { authority }),
       ...(version !== undefined && { version }),
