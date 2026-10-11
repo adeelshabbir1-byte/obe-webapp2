@@ -16,6 +16,14 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const access = await schemeAccess(b.studentId ? String(b.studentId) : null);
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
+  // Several target grades at once ("apply suggested grades").
+  if (b.action === "grades" && Array.isArray(b.grades)) {
+    for (const g of b.grades.slice(0, 80)) {
+      const x = await changeScheme(access.studentId, "grade", String(g.courseId || ""), { grade: g.grade ?? null });
+      if ("error" in x) return NextResponse.json({ error: x.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
   const r = await changeScheme(access.studentId, String(b.action || ""), String(b.courseId || ""), { semesterNumber: b.semesterNumber, grade: b.grade ?? null });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
   if (access.by === "staff") await writeAuditLog({ actorUserId: access.actorId, action: `DEGREE_PLAN_${String(b.action).toUpperCase()}`, entityType: "Student", entityId: access.studentId, metadata: { courseId: String(b.courseId), semester: Number(b.semesterNumber) || 0 } });

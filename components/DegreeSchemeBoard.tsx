@@ -18,6 +18,8 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [extra, setExtra] = useState(0);
+  const [target, setTarget] = useState<number | null>(null);
+  const [scope, setScope] = useState<"next" | "degree">("next");
   const q = studentId ? `?studentId=${studentId}` : "";
 
   async function load() {
@@ -58,6 +60,60 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
     return { real, projected: C2 ? P2 / C2 : null, earned: Array.from(best.values()).filter((b) => b.p > 0).reduce((n, b) => n + b.cr, 0) };
   }, [data]);
 
+  // What average grade the coming semester(s) need for a CGPA target. Best attempt counts, so a retake replaces the
+  // earlier grade (its credit hours are not added again) while a new course adds its credit hours.
+  const targetPlan = useMemo(() => {
+    if (!data || !calc) return null;
+    const scaleAsc = [...data.gradingScale].sort((a, b) => a.gpaValue - b.gpaValue);
+    const maxGp = scaleAsc.length ? scaleAsc[scaleAsc.length - 1].gpaValue : 4;
+    const lowestPass = scaleAsc.find((g) => g.gpaValue > 0);
+    const best = new Map<string, { p: number; cr: number }>();
+    for (const c of data.completed) {
+      if (c.gpaPoints === null) continue;
+      const k = c.courseCode.toUpperCase(); const b = best.get(k);
+      if (!b || c.gpaPoints > b.p) best.set(k, { p: c.gpaPoints, cr: c.creditHours });
+    }
+    let P = 0, C = 0; best.forEach((b) => { P += b.p * b.cr; C += b.cr; });
+    const now = C ? P / C : null;
+    const milestones = [2, 2.5, 3, 3.5, 4];
+    const goal = target ?? (now === null || now < 2 ? 2 : milestones.find((m) => m > now + 0.001) ?? 4);
+    const cur = data.student.currentSemesterNumber;
+    const sems = Array.from(new Set(data.planned.filter((p) => p.plannedSemesterNumber >= cur && p.creditHours > 0).map((p) => p.plannedSemesterNumber))).sort((a, b) => a - b);
+    const need = (courses: Plan[]) => {
+      let newCr = 0, allCr = 0, oldPts = 0;
+      for (const p of courses) {
+        const prev = best.get(p.code.toUpperCase());
+        allCr += p.creditHours;
+        if (prev) oldPts += prev.p * prev.cr; else newCr += p.creditHours;
+      }
+      if (!allCr) return null;
+      return { avg: (goal * (C + newCr) - P + oldPts) / allCr, credits: allCr };
+    };
+    const letterFor = (x: number) => scaleAsc.find((g) => g.gpaValue > 0 && g.gpaValue >= x - 1e-9) || null;
+    const coursesUpTo = (n: number) => data.planned.filter((p) => p.plannedSemesterNumber >= cur && p.plannedSemesterNumber <= n && p.creditHours > 0);
+    const firstSem = sems[0];
+    const scopeCourses = scope === "next" ? (firstSem ? coursesUpTo(firstSem) : []) : coursesUpTo(Math.max(...sems, cur));
+    const r = need(scopeCourses);
+    // Earliest semester by which the goal is still reachable (average needed no higher than the top grade).
+    let earliest: { sem: number; avg: number } | null = null;
+    for (const n of sems) { const x = need(coursesUpTo(n)); if (x && x.avg <= maxGp + 1e-9) { earliest = { sem: n, avg: x.avg }; break; } }
+    return { now, goal, firstSem, scopeCourses, r, letter: r ? letterFor(r.avg) : null, maxGp, lowestPass, earliest, letterFor };
+  }, [data, calc, target, scope]);
+
+  async function applySuggested() {
+    if (!targetPlan?.r || !targetPlan.letter) return;
+    const grade = targetPlan.r.avg <= (targetPlan.lowestPass?.gpaValue ?? 0) ? targetPlan.lowestPass?.letter : targetPlan.letter.letter;
+    setBusy("grades"); setError("");
+    const r = await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action: "grades", grades: targetPlan.scopeCourses.map((p) => ({ courseId: p.courseId, grade })) }) });
+    if (!r.ok) setError((await r.json().catch(() => ({}))).error || "Could not apply the grades.");
+    await load(); setBusy(""); onChange?.();
+  }
+  async function clearGrades() {
+    setBusy("grades");
+    await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action: "grades", grades: (data?.planned || []).filter((p) => p.hypotheticalGrade).map((p) => ({ courseId: p.courseId, grade: null })) }) });
+    await load(); setBusy(""); onChange?.();
+  }
+
   if (error && !data) return <div className="err">{error}</div>;
   if (!data || !calc) return <p style={{ fontSize: 13, color: "var(--slate)" }}>Loading the degree plan…</p>;
 
@@ -88,6 +144,46 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
         <p style={{ fontSize: 12.5, background: "#FBEAEA", color: "#8A1C1C", padding: "8px 12px", marginBottom: 12 }}>
           CGPA is below 2.00. Plan retakes of F courses and repeats of D-grade courses in coming semesters, set the grade you aim for, and watch the projected CGPA. Keep each semester within {data.minCredits}–{data.maxCredits} credit hours.
         </p>
+      )}
+
+      {targetPlan && targetPlan.firstSem && (
+        <div className="card" style={{ borderColor: "var(--brass)", padding: "12px 14px" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <b style={{ fontSize: 14 }}>CGPA target</b>
+            <select value={targetPlan.goal} onChange={(e) => setTarget(Number(e.target.value))} style={{ padding: "4px 8px" }}>
+              {[2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4].map((g) => <option key={g} value={g}>{g.toFixed(2)}</option>)}
+            </select>
+            <span style={{ fontSize: 13 }}>in</span>
+            <select value={scope} onChange={(e) => setScope(e.target.value as "next" | "degree")} style={{ padding: "4px 8px" }}>
+              <option value="next">the next semester (Semester {targetPlan.firstSem})</option>
+              <option value="degree">all remaining semesters</option>
+            </select>
+          </div>
+          {targetPlan.r && (() => {
+            const avg = targetPlan.r.avg, cr = targetPlan.r.credits, L = targetPlan.letter;
+            const where = scope === "next" ? `Semester ${targetPlan.firstSem}'s ${cr} credit hours` : `the remaining ${cr} credit hours`;
+            if (avg <= (targetPlan.lowestPass?.gpaValue ?? 0)) return <p style={{ fontSize: 13, margin: "8px 0 0", color: "var(--sage)" }}>Passing every course in {where} (grade {targetPlan.lowestPass?.letter} or better) is enough to reach {targetPlan.goal.toFixed(2)}.</p>;
+            if (avg > targetPlan.maxGp + 1e-9) return (
+              <p style={{ fontSize: 13, margin: "8px 0 0", color: "#B3261E" }}>
+                Not reachable in {where}: it would need an average of {avg.toFixed(2)} grade points, above the top grade.
+                {targetPlan.earliest ? <> The earliest it can be reached is by the end of <b>Semester {targetPlan.earliest.sem}</b>, with an average of <b>{targetPlan.earliest.avg.toFixed(2)}</b> ({targetPlan.letterFor(targetPlan.earliest.avg)?.letter ?? "—"} or better) in every course until then. Choose &quot;all remaining semesters&quot;, move retakes earlier, or lower the target.</> : <> Even the whole remaining degree is not enough — plan more repeats of low grades.</>}
+              </p>
+            );
+            return (
+              <div style={{ marginTop: 8 }}>
+                <p style={{ fontSize: 13, margin: 0 }}>
+                  To reach <b>{targetPlan.goal.toFixed(2)}</b>{targetPlan.now !== null ? <> (now {targetPlan.now.toFixed(2)})</> : null}, {where} need an average of <b>{avg.toFixed(2)}</b> grade points —
+                  {" "}<b>{L?.letter}</b> or better in every course{targetPlan.scopeCourses.some((p) => p.kind !== "new") ? ", counting the retakes as replacing their earlier grades" : ""}.
+                </p>
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  <button className="btn btn-brass" style={{ fontSize: 12 }} disabled={busy === "grades"} onClick={applySuggested}>Fill in {L?.letter} for these {targetPlan.scopeCourses.length} course(s)</button>
+                  <button className="btn" style={{ fontSize: 12 }} disabled={busy === "grades"} onClick={clearGrades}>Clear all target grades</button>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--slate)", margin: "6px 0 0" }}>Then change any single grade in the &quot;Grade?&quot; boxes below — a higher grade in one course allows a lower one in another; the projected CGPA above shows the result.</p>
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {Array.from({ length: last }, (_, i) => i + 1).map((sem) => {
