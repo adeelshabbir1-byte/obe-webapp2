@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from "./session";
 import { coordinatorIdsFor } from "./reportScope";
 import { getGradingScaleForBatch } from "./gradingScaleLookup";
 import { planLock, studentContext, loadLimit, selfRegistrationBlock } from "./registrationRules";
+import { termIndex } from "./termLogic";
+import { courseTermIndex, termLabel } from "./courseTerm";
 
 // The full degree scheme of one student, semester by semester: what was already taken (with the grade, in the semester it
 // was taken) and every remaining course in the semester it is planned for. The student, the batch's advisor and the
@@ -76,6 +78,28 @@ export async function loadScheme(studentId: string) {
       };
     });
   const programSemesters = Math.max(8, ...courses.map((c) => c.semesterNumber || 0));
+
+  // Which batch studies each planned course in which term, so a course moved to another semester shows the batch the
+  // student would sit with (same institute; same degree program first).
+  const baseTerm = termIndex(batch.startTerm, batch.startYear);
+  const chairmanId = (await prisma.user.findUnique({ where: { id: batch.coordinatorId }, select: { managedById: true } }))?.managedById || null;
+  const codes = Array.from(new Set(planned.map((p) => key(p.code))));
+  const others = codes.length ? await prisma.course.findMany({
+    where: { code: { in: Array.from(new Set(planned.map((p) => p.code))) }, batch: chairmanId ? { coordinator: { managedById: chairmanId } } : { coordinatorId: batch.coordinatorId } },
+    select: { code: true, semesterNumber: true, offeredTermName: true, offeredTermYear: true, batchId: true, batch: { select: { startTerm: true, startYear: true, degreeProgram: true, batchName: true, studentCount: true } } },
+    take: 3000,
+  }) : [];
+  const offerings: Record<string, { term: number; batch: string; semester: number; ownBatch: boolean; sameProgram: boolean; students: number }[]> = {};
+  for (const o of others) {
+    const t = courseTermIndex(o);
+    if (t === null || !o.batch) continue;
+    (offerings[key(o.code)] = offerings[key(o.code)] || []).push({
+      term: t, batch: `${o.batch.degreeProgram} — ${o.batch.batchName}`, semester: o.semesterNumber || 0,
+      ownBatch: o.batchId === batch.id, sameProgram: o.batch.degreeProgram === batch.degreeProgram, students: o.batch.studentCount || 0,
+    });
+  }
+  const terms: Record<number, string> = {};
+  for (let n = 1; n <= Math.max(programSemesters + 6, 16); n++) terms[n] = termLabel(baseTerm + n - 1);
   const lock = await planLock(studentId);
   const locker = lock ? await prisma.user.findUnique({ where: { id: lock.lockedById }, select: { name: true } }) : null;
   const ctx = await studentContext(studentId);
@@ -87,6 +111,7 @@ export async function loadScheme(studentId: string) {
     programSemesters, maxSemester: Math.max(programSemesters + 4, ...planned.map((p) => p.plannedSemesterNumber), ...completed.map((c) => c.semesterNumber)),
     minCredits: lead?.minCreditsPerSemester ?? 12, maxCredits: lead?.maxCreditsPerSemester ?? 18,
     gradingScale: scale.map((g) => ({ letter: g.letter, gpaValue: g.gpaValue })), completed, planned,
+    baseTerm, terms, offerings,
   };
 }
 

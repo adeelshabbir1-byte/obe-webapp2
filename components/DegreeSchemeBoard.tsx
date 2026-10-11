@@ -11,6 +11,8 @@ type Scheme = {
   lock: { by: string; at: string; note: string | null } | null;
   rules: { limit: { max: number; why: string }; selfBlocked: boolean; earned: number; maxNew: number; lowCgpa: boolean; threshold: number } | null;
   editedBy: "student" | "staff";
+  baseTerm?: number; terms?: Record<number, string>;
+  offerings?: Record<string, { term: number; batch: string; semester: number; ownBatch: boolean; sameProgram: boolean; students: number }[]>;
 };
 
 // The whole degree, semester by semester: courses already taken (with grades) and courses still to take (movable),
@@ -24,6 +26,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const [target, setTarget] = useState<number | null>(null);
   const [scope, setScope] = useState<"next" | "degree">("next");
   const [regResult, setRegResult] = useState<string>("");
+  const [moveNote, setMoveNote] = useState<string>("");
   const q = studentId ? `?studentId=${studentId}` : "";
 
   async function load() {
@@ -34,7 +37,15 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   useEffect(() => { load(); }, [studentId]);
 
   async function act(action: string, courseId: string, more: Record<string, unknown> = {}) {
-    setBusy(courseId); setError("");
+    setBusy(courseId); setError(""); setMoveNote("");
+    // Show the result straight away (GPA / CGPA recalculate at once); the saved plan is reloaded after.
+    if (data && (action === "grade" || action === "move")) {
+      setData({ ...data, planned: data.planned.map((p) => p.courseId !== courseId ? p : action === "grade" ? { ...p, hypotheticalGrade: (more.grade as string | null) ?? null } : { ...p, plannedSemesterNumber: Number(more.semesterNumber) }) });
+      if (action === "move") {
+        const p = data.planned.find((x) => x.courseId === courseId);
+        if (p) setMoveNote(`${p.code} → Semester ${more.semesterNumber}${data.terms?.[Number(more.semesterNumber)] ? ` (${data.terms[Number(more.semesterNumber)]})` : ""}: ${joinText({ ...p, plannedSemesterNumber: Number(more.semesterNumber) })}`);
+      }
+    }
     const r = await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action, courseId, ...more }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) setError(d.error || "Could not save.");
@@ -133,6 +144,23 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
     await load(); setBusy(""); onChange?.();
   }
 
+  /** The batch a planned course would be studied with, in the term the student plans to take it. */
+  function joins(p: Plan) {
+    if (!data?.offerings || data.baseTerm === undefined) return null;
+    const term = data.baseTerm + p.plannedSemesterNumber - 1;
+    const list = (data.offerings[p.code.trim().toUpperCase()] || []).filter((o) => o.term === term);
+    const own = list.find((o) => o.ownBatch);
+    const others = list.filter((o) => !o.ownBatch).sort((a, b) => Number(b.sameProgram) - Number(a.sameProgram));
+    return { term, own: !!own, others };
+  }
+  function joinText(p: Plan) {
+    const j = joins(p);
+    if (!j) return "";
+    if (j.own) return "studied with your own batch.";
+    if (j.others.length) return `you would join ${j.others.map((o) => `${o.batch} (their Semester ${o.semester})`).join(" or ")}.`;
+    return "no batch has this course that term — it would need a special section. Check with your advisor.";
+  }
+
   if (error && !data) return <div className="err">{error}</div>;
   if (!data || !calc) return <p style={{ fontSize: 13, color: "var(--slate)" }}>Loading the degree plan…</p>;
 
@@ -225,77 +253,140 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
         </div>
       )}
 
-      {Array.from({ length: last }, (_, i) => i + 1).map((sem) => {
-        const done = data.completed.filter((c) => c.semesterNumber === sem);
-        const todo = data.planned.filter((p) => p.plannedSemesterNumber === sem);
-        const plannedCr = todo.reduce((n, p) => n + p.creditHours, 0);
-        const doneCr = done.reduce((n, c) => n + c.creditHours, 0);
-        const over = sem >= cur && plannedCr > data.maxCredits;
-        if (!done.length && !todo.length && sem > data.programSemesters && sem !== last) return null;
-        return (
-          <div key={sem} className="card" style={{ padding: "10px 14px", borderLeft: sem === cur ? "4px solid var(--brass)" : undefined }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-              <h3 style={{ fontSize: 14, margin: 0 }}>Semester {sem}{sem === cur ? " (current)" : sem < cur ? " (completed)" : sem > data.programSemesters ? " (extra semester)" : ""}</h3>
-              <span style={{ fontSize: 12, color: over ? "#B3261E" : "var(--slate)" }}>
-                {doneCr > 0 && `${doneCr} CH taken`}{doneCr > 0 && plannedCr > 0 && " · "}{plannedCr > 0 && `${plannedCr} CH planned`}{over && ` — over the ${data.maxCredits} CH limit`}
-              </span>
-            </div>
-            <table style={{ width: "100%" }}>
-              <tbody>
-                {done.map((c, i) => (
-                  <tr key={`d${i}`} style={{ opacity: c.superseded ? 0.6 : 1 }}>
-                    <td style={{ width: 90, fontSize: 12.5 }}>{c.courseCode}</td>
-                    <td style={{ fontSize: 12.5 }}>{c.courseTitle}
-                      {c.failed && tag("Failed — retake needed", "#FBEAEA", "#B3261E")}
-                      {c.lowGrade && !c.retakePlanned && tag("Low grade — can be repeated", "#FBEED2", "#96650F")}
-                      {c.retakePlanned && tag("Repeat planned", "#EEF2FA", "#1B4F8A")}
-                      {c.superseded && tag("replaced by a later attempt", "#F1F1EE", "var(--slate)")}
-                    </td>
-                    <td style={{ width: 50, fontSize: 12 }}>{c.creditHours} CH</td>
-                    <td style={{ width: 95, fontSize: 11.5, color: "var(--slate)" }}>{c.termName} {c.termYear}</td>
-                    <td style={{ width: 150, textAlign: "right" }}>
-                      <b style={{ color: gradeColor(c), marginRight: 8 }}>{c.grade}</b>
-                      {c.lowGrade && c.courseId && !c.retakePlanned && !(data.lock && data.editedBy === "student") && (
-                        <select disabled={busy === c.courseId} value="" onChange={(e) => e.target.value && act("retake", c.courseId!, { semesterNumber: Number(e.target.value) })} style={{ fontSize: 11, padding: "2px 4px" }}>
-                          <option value="">Repeat in…</option>
-                          {semOptions.map((n) => <option key={n} value={n}>Sem {n}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {todo.map((p) => (
-                  <tr key={p.courseId} style={{ background: "#FAFAF8" }}>
-                    <td style={{ fontSize: 12.5 }}>{p.code}</td>
-                    <td style={{ fontSize: 12.5 }}>{p.title}
-                      {p.kind === "retake" && tag(`Retake (was ${p.previousGrade})`, "#FBEAEA", "#B3261E")}
-                      {p.kind === "improvement" && tag(`Repeat to improve ${p.previousGrade}`, "#FBEED2", "#96650F")}
-                      {p.currentlyEnrolled && tag("Enrolled now", "#E8F3EC", "#2E7D4F")}
-                      {p.kind === "new" && p.nativeSemesterNumber && p.plannedSemesterNumber !== p.nativeSemesterNumber && tag(`moved from Sem ${p.nativeSemesterNumber}`, "#F1F1EE", "var(--slate)")}
-                    </td>
-                    <td style={{ fontSize: 12 }}>{p.creditHours} CH</td>
-                    <td style={{ fontSize: 11.5, color: "var(--slate)" }}>{p.currentlyEnrolled ? "this semester" : "planned"}</td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      <select value={p.plannedSemesterNumber} disabled={busy === p.courseId || p.currentlyEnrolled || (!!data.lock && data.editedBy === "student")} onChange={(e) => act("move", p.courseId, { semesterNumber: Number(e.target.value) })} title="Move to semester" style={{ fontSize: 11, padding: "2px 4px", marginRight: 4 }}>
-                        {(semOptions.includes(p.plannedSemesterNumber) ? semOptions : [p.plannedSemesterNumber, ...semOptions]).map((n) => <option key={n} value={n}>Sem {n}</option>)}
-                      </select>
-                      <select value={p.hypotheticalGrade || ""} disabled={busy === p.courseId} onChange={(e) => act("grade", p.courseId, { grade: e.target.value || null })} title="Grade to aim for (what-if only)" style={{ fontSize: 11, padding: "2px 4px" }}>
-                        <option value="">Grade?</option>
-                        {data.gradingScale.map((g) => <option key={g.letter} value={g.letter}>{g.letter}</option>)}
-                      </select>
-                      {p.kind === "improvement" && <button onClick={() => act("cancel", p.courseId)} disabled={busy === p.courseId} title="Don't repeat this course" style={{ marginLeft: 4, fontSize: 11, border: 0, background: "none", color: "var(--rust)", cursor: "pointer" }}>✕</button>}
-                    </td>
-                  </tr>
-                ))}
-                {!done.length && !todo.length && <tr><td colSpan={5} style={{ fontSize: 12, color: "var(--slate)" }}>Nothing here yet — move courses into this semester with the &quot;Sem&quot; boxes.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
+      {moveNote && <p style={{ fontSize: 12.5, background: "#EEF2FA", color: "#1B4F8A", padding: "8px 12px", margin: "0 0 12px" }}>{moveNote}</p>}
+
+      <div className="tr-sheet">
+        <div className="tr-head">
+          <div><div className="tr-title">Academic Record &amp; Degree Plan</div><div className="tr-sub">{data.student.name} · {data.student.rollNumber} · {data.student.batch}</div></div>
+          <div className="tr-legend"><span className="tr-key done" /> Completed <span className="tr-key cur" /> Current <span className="tr-key plan" /> Planned · <i>italic = projected from &quot;what-if&quot; grades</i></div>
+        </div>
+        {(() => {
+          // Running totals, semester by semester, the way a transcript prints them. Best attempt counts for CGPA.
+          const pts = (l: string | null) => (l ? data.gradingScale.find((g) => g.letter === l)?.gpaValue : undefined);
+          const best = new Map<string, { p: number; cr: number }>();
+          let projectedSoFar = false;
+          const blocks: JSX.Element[] = [];
+          for (let sem = 1; sem <= last; sem++) {
+            const done = data.completed.filter((c) => c.semesterNumber === sem);
+            const todo = data.planned.filter((p) => p.plannedSemesterNumber === sem);
+            if (!done.length && !todo.length && sem > data.programSemesters && sem !== last) continue;
+            let sP = 0, sC = 0, ungraded = 0, hypo = false;
+            for (const c of done) {
+              if (c.gpaPoints === null) continue;
+              sP += c.gpaPoints * c.creditHours; sC += c.creditHours;
+              const k = c.courseCode.toUpperCase(); const bb = best.get(k);
+              if (!bb || c.gpaPoints > bb.p) best.set(k, { p: c.gpaPoints, cr: c.creditHours });
+            }
+            for (const p of todo) {
+              const v = pts(p.hypotheticalGrade);
+              if (v === undefined) { if (p.creditHours > 0) ungraded += p.creditHours; continue; }
+              if (p.creditHours === 0) continue;
+              hypo = true; sP += v * p.creditHours; sC += p.creditHours;
+              const k = p.code.toUpperCase(); const bb = best.get(k);
+              if (!bb || v > bb.p) best.set(k, { p: v, cr: p.creditHours });
+            }
+            if (hypo) projectedSoFar = true;
+            let cP = 0, cC = 0; best.forEach((x) => { cP += x.p * x.cr; cC += x.cr; });
+            const sgpa = sC ? sP / sC : null, cgpa = cC ? cP / cC : null;
+            const earned = Array.from(best.values()).filter((x) => x.p > 0).reduce((n, x) => n + x.cr, 0);
+            const plannedCr = todo.reduce((n, p) => n + p.creditHours, 0);
+            const doneCr = done.reduce((n, c) => n + c.creditHours, 0);
+            const over = sem >= cur && plannedCr > data.maxCredits;
+            const state = sem < cur ? "done" : sem === cur ? "cur" : "plan";
+            const term = data.terms?.[sem];
+            const proj = hypo || (projectedSoFar && sem >= cur);
+            blocks.push(
+              <section key={sem} className={`tr-term ${state}`}>
+                <header>
+                  <b>Semester {sem}</b>{term && <span className="tr-termname">{term}</span>}
+                  <span className={`tr-chip ${state}`}>{state === "done" ? "Completed" : state === "cur" ? "Current" : sem > data.programSemesters ? "Extra semester" : "Planned"}</span>
+                  <span className="tr-load" style={{ color: over ? "#B3261E" : undefined }}>{doneCr > 0 && `${doneCr} CH taken`}{doneCr > 0 && plannedCr > 0 && " · "}{plannedCr > 0 && `${plannedCr} CH planned`}{over && ` — over the ${data.maxCredits} CH limit`}</span>
+                </header>
+                {!done.length && !todo.length ? <p style={{ fontSize: 12, color: "var(--slate)", margin: 0, padding: "8px 18px" }}>Nothing here yet — move courses into this semester with the &quot;Sem&quot; boxes.</p> : <>
+                <table className="tr-table">
+                  <colgroup><col style={{ width: 88 }} /><col /><col style={{ width: 44 }} /><col style={{ width: 70 }} /><col style={{ width: 52 }} /><col style={{ width: 58 }} /><col style={{ width: "26%" }} /><col style={{ width: 172 }} /></colgroup>
+                  <thead><tr><th>Code</th><th>Course title</th><th className="n">CH</th><th className="n">Grade</th><th className="n">GP</th><th className="n">QP</th><th>Notes</th><th className="tr-act">Semester</th></tr></thead>
+                  <tbody>
+                    {done.map((c, i) => (
+                      <tr key={`d${i}`} className={c.superseded ? "sup" : ""}>
+                        <td className="code">{c.courseCode}</td>
+                        <td>{c.courseTitle}</td>
+                        <td className="n">{c.creditHours}</td>
+                        <td className="n"><b style={{ color: gradeColor(c) }}>{c.grade}</b></td>
+                        <td className="n">{c.gpaPoints !== null ? c.gpaPoints.toFixed(2) : "—"}</td>
+                        <td className="n">{c.gpaPoints !== null ? (c.gpaPoints * c.creditHours).toFixed(2) : "—"}</td>
+                        <td className="notes">
+                          {c.failed && tag("Failed — retake needed", "#FBEAEA", "#B3261E")}
+                          {c.lowGrade && !c.retakePlanned && tag("Low grade — can be repeated", "#FBEED2", "#96650F")}
+                          {c.retakePlanned && tag("Repeat planned", "#EEF2FA", "#1B4F8A")}
+                          {c.superseded && tag("replaced by a later attempt", "#F1F1EE", "var(--slate)")}
+                        </td>
+                        <td className="tr-act">
+                          {c.lowGrade && c.courseId && !c.retakePlanned && !(data.lock && data.editedBy === "student") && (
+                            <select disabled={busy === c.courseId} value="" onChange={(e) => e.target.value && act("retake", c.courseId!, { semesterNumber: Number(e.target.value) })}>
+                              <option value="">Repeat in…</option>
+                              {semOptions.map((n) => <option key={n} value={n}>Sem {n}{data.terms?.[n] ? ` · ${data.terms[n]}` : ""}</option>)}
+                            </select>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {todo.map((p) => {
+                      const v = pts(p.hypotheticalGrade);
+                      const j = joins(p);
+                      return (
+                        <tr key={p.courseId} className="plan">
+                          <td className="code">{p.code}</td>
+                          <td>{p.title}</td>
+                          <td className="n">{p.creditHours}</td>
+                          <td className="n">
+                            <select className="tr-grade" value={p.hypotheticalGrade || ""} disabled={busy === p.courseId} onChange={(e) => act("grade", p.courseId, { grade: e.target.value || null })} title="What-if grade — changes the GPA and CGPA below at once">
+                              <option value="">—</option>
+                              {data.gradingScale.map((g) => <option key={g.letter} value={g.letter}>{g.letter}</option>)}
+                            </select>
+                          </td>
+                          <td className="n"><i>{v !== undefined ? v.toFixed(2) : ""}</i></td>
+                          <td className="n"><i>{v !== undefined ? (v * p.creditHours).toFixed(2) : ""}</i></td>
+                          <td className="notes">
+                            {p.kind === "retake" && tag(`Retake (was ${p.previousGrade})`, "#FBEAEA", "#B3261E")}
+                            {p.kind === "improvement" && tag(`Repeat to improve ${p.previousGrade}`, "#FBEED2", "#96650F")}
+                            {p.currentlyEnrolled && tag("Enrolled now", "#E8F3EC", "#2E7D4F")}
+                            {p.kind === "new" && p.nativeSemesterNumber && p.plannedSemesterNumber !== p.nativeSemesterNumber && tag(`moved from Sem ${p.nativeSemesterNumber}`, "#F1F1EE", "var(--slate)")}
+                            {j && !j.own && (j.others.length
+                              ? tag(`Joins ${j.others[0].batch} (their Sem ${j.others[0].semester})${j.others.length > 1 ? ` +${j.others.length - 1}` : ""}`, "#E8F3EC", "#2E7D4F")
+                              : tag("No batch takes it this term", "#FBEAEA", "#B3261E"))}
+                          </td>
+                          <td className="tr-act">
+                            <select value={p.plannedSemesterNumber} disabled={busy === p.courseId || p.currentlyEnrolled || (!!data.lock && data.editedBy === "student")} onChange={(e) => act("move", p.courseId, { semesterNumber: Number(e.target.value) })} title="Move to another semester — shows which batch you would join">
+                              {(semOptions.includes(p.plannedSemesterNumber) ? semOptions : [p.plannedSemesterNumber, ...semOptions]).map((n) => {
+                                const t = data.baseTerm !== undefined ? data.baseTerm + n - 1 : null;
+                                const offered = t !== null && (data.offerings?.[p.code.trim().toUpperCase()] || []).some((o) => o.term === t);
+                                return <option key={n} value={n}>Sem {n}{data.terms?.[n] ? ` · ${data.terms[n]}` : ""}{data.offerings ? (offered ? " ✓" : " ✗") : ""}</option>;
+                              })}
+                            </select>
+                            {p.kind === "improvement" && <button onClick={() => act("cancel", p.courseId)} disabled={busy === p.courseId} title="Don't repeat this course" className="tr-x">✕</button>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <footer>
+                  <span>Semester: <b>{sC}</b> CH graded{ungraded ? <span className="tr-muted"> ({ungraded} CH without a grade yet)</span> : null}</span>
+                  <span className={hypo ? "tr-proj" : ""}>GPA <b>{sgpa !== null ? sgpa.toFixed(2) : "—"}</b></span>
+                  <span>Cumulative: <b>{earned}</b> CH passed</span>
+                  <span className={proj ? "tr-proj" : ""} style={{ color: cgpa !== null && cgpa < 2 ? "#B3261E" : undefined }}>CGPA <b>{cgpa !== null ? cgpa.toFixed(2) : "—"}</b>{proj ? " (projected)" : ""}</span>
+                </footer>
+                </>}
+              </section>,
+            );
+          }
+          return blocks;
+        })()}
+      </div>
       <button className="btn" style={{ fontSize: 12 }} onClick={() => setExtra((x) => x + 1)}>+ Add another semester</button>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 8 }}>
-        Grades and the &quot;Grade?&quot; boxes are a what-if: nothing here changes real results or registration. The plan is shared — the student, the advisor and the Program Lead all see and can change the same plan.
+        ✓ / ✗ in the semester box: whether any batch studies that course in that term. GP = grade points, QP = quality points (CH × GP); GPA = QP ÷ CH of the semester, CGPA counts the best attempt of every course. Grades in the boxes are a what-if: nothing here changes real results or registration. The plan is shared — the student, the advisor and the Program Lead all see and can change the same plan.
       </p>
     </div>
   );

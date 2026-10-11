@@ -635,3 +635,41 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
 .lp-count{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:600;color:var(--text-2);background:rgba(255,255,255,.75);border:1px solid var(--border);border-radius:999px;padding:1px 7px;pointer-events:none;white-space:nowrap;}
 .lp-table tr.lp-match td{background:var(--royal-50);}
 .lp-table tr.lp-match td.lp-topic{box-shadow:inset 0 0 0 1px var(--border-strong);}
+
+/* ---- Degree plan as a transcript ---- */
+.tr-sheet{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px;}
+.tr-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:2px solid var(--ink);background:#FDFBFA;}
+.tr-title{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;}
+.tr-sub{font-size:12.5px;color:var(--slate);margin-top:2px;}
+.tr-legend{font-size:11px;color:var(--slate);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.tr-key{display:inline-block;width:10px;height:10px;border-radius:2px;}
+.tr-key.done{background:#5B6B60;} .tr-key.cur{background:var(--brass);} .tr-key.plan{background:#B9B1B4;}
+.tr-term{border-bottom:1px solid var(--line);}
+.tr-term > header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 18px;background:#F6F2F1;border-left:4px solid #B9B1B4;}
+.tr-term.done > header{border-left-color:#5B6B60;} .tr-term.cur > header{border-left-color:var(--brass);background:#F8ECEE;}
+.tr-term > header b{font-size:13.5px;}
+.tr-termname{font-size:12.5px;color:var(--slate);}
+.tr-chip{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#E9E4E2;color:var(--slate);}
+.tr-chip.done{background:#E3ECE5;color:#3F5A47;} .tr-chip.cur{background:var(--brass);color:#fff;}
+.tr-load{margin-left:auto;font-size:12px;color:var(--slate);}
+.tr-table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;border:0;border-radius:0;background:transparent;}
+.tr-table th,.tr-table td{border-radius:0!important;}
+.tr-table tbody tr:nth-child(even){background:transparent;}
+.tr-table .tr-act select{min-width:150px;max-width:100%;}
+.tr-table .notes span{white-space:normal!important;display:inline-block;margin:1px 4px 1px 0!important;line-height:1.3;}
+.tr-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--slate);text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);background:#fff;font-weight:600;}
+.tr-table td{padding:5px 10px;border-bottom:1px dashed #EEE8E6;vertical-align:middle;}
+.tr-table .n{text-align:center;font-variant-numeric:tabular-nums;}
+.tr-table .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:nowrap;}
+.tr-table .notes{font-size:11px;}
+.tr-table .tr-act{text-align:right;white-space:nowrap;}
+.tr-table .tr-act select{font-size:11px;padding:2px 4px;}
+.tr-table tr.plan td{background:#FCFAF9;}
+.tr-table tr.sup td{opacity:.55;}
+.tr-grade{font-size:12px;padding:2px 4px;min-width:52px;text-align:center;font-weight:700;border:1px solid var(--border-strong);border-radius:4px;background:#fff;}
+.tr-x{margin-left:4px;font-size:11px;border:0;background:none;color:var(--rust);cursor:pointer;}
+.tr-term > footer{display:flex;gap:22px;flex-wrap:wrap;justify-content:flex-end;padding:7px 18px 9px;font-size:12px;color:var(--slate);border-top:1px solid var(--line);background:#FDFBFA;}
+.tr-term > footer b{color:var(--ink);font-size:13px;}
+.tr-proj{font-style:italic;}
+.tr-muted{color:var(--slate-mute);}
+@media (max-width:720px){.tr-table .notes{display:none;}.tr-load{margin-left:0;}}
