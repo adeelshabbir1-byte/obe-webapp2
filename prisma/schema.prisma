@@ -2643,3 +2643,31 @@ model GradeChangeRequest {
   @@index([courseId])
   @@index([studentId])
 }
+
+// A marking rubric for one assessment item (assignment, project, lab, presentation, quiz...). Each criterion carries a
+// share of the item's marks, an optional CLO, and performance levels with points and a description:
+// criteriaJson = [{ id, title, cloId, weight, levels: [{ label, points, descriptor }] }]
+model Rubric {
+  id           String   @id @default(cuid())
+  instrumentId String   @unique
+  courseId     String
+  title        String
+  criteriaJson String   @db.Text
+  createdById  String
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([courseId])
+}
+
+// One student's rubric marking: levelsJson = { criterionId: levelIndex }. The item's mark (StudentMark) is worked out from it.
+model RubricScore {
+  id         String   @id @default(cuid())
+  rubricId   String
+  studentId  String
+  levelsJson String   @db.Text
+  comment    String?  @db.Text
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([rubricId, studentId])
+  @@index([rubricId])
+}

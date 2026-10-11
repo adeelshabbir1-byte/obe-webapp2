@@ -673,3 +673,5 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
 .tr-proj{font-style:italic;}
 .tr-muted{color:var(--slate-mute);}
 @media (max-width:720px){.tr-table .notes{display:none;}.tr-load{margin-left:0;}}
+.print-only{display:none;}
+@media print{.print-only{display:block !important;}}
