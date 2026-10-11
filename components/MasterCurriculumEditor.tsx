@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment } from "react";
 import MasterPushPanel from "./MasterPushPanel";
+import CurriculumWorkbookImport from "./CurriculumWorkbookImport";
 
 type CurriculumSummary = { id: string; title: string; authority: string; version: string; status: string; isOwned: boolean; _count: { courses: number; plos: number } };
 type Clo = { id: string; statement: string; bloomLevel: string; orderIndex: number };
@@ -229,7 +230,37 @@ export default function MasterCurriculumEditor() {
         )}
       </div>
 
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, marginTop: 0 }}>Import a full curriculum from Excel</h3>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -4 }}>
+          One file with sheets <b>Program</b> (Degree program, Authority, Version), <b>PLOs</b>, <b>Courses</b>, <b>CLOs and PLO mapping</b> and <b>Lecture topics</b> — the same layout as &quot;Download full curriculum&quot;.
+          It goes into your institute&apos;s own curriculum for that degree program (created if needed); courses are matched by code, and the CLOs and topics of every course in the file are replaced.
+        </p>
+        <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", cursor: "pointer", display: "inline-block" }}>
+          {busy ? "Working…" : "Choose file and import"}
+          <input type="file" accept=".xlsx" style={{ display: "none" }} disabled={busy} onChange={async (e) => {
+            const f = e.target.files?.[0]; if (!f) return;
+            setBusy(true); setError(""); setNotice("");
+            const fd = new FormData(); fd.append("file", f);
+            try {
+              const r = await fetch("/api/master-curriculum/import-full", { method: "POST", body: fd });
+              const d = await r.json();
+              if (!r.ok) setError(d.error || "Import failed.");
+              else {
+                setNotice(`Imported: ${d.plos} PLO(s), ${d.coursesCreated} new and ${d.coursesUpdated} updated course(s), ${d.clos} CLO(s), ${d.topics} lecture topic(s).${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`);
+                const refreshed = await fetch("/api/omc/master-curriculum").then((x) => x.json());
+                if (refreshed.curricula) setCurricula(refreshed.curricula);
+                await loadDetail(d.curriculumId);
+              }
+            } catch { setError("Import failed."); }
+            setBusy(false); e.target.value = "";
+          }} />
+        </label>
+      </div>
+
       {selectedId && detail?.isOwned && detail.id === selectedId && <MasterPushPanel key={selectedId} curriculumId={selectedId} />}
+
+      <CurriculumWorkbookImport official={false} />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
