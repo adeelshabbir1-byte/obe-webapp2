@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SortableTable from "./SortableTable";
-import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicTone, isExamRow } from "./lectureDrag";
+import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicGroups, isExamRow } from "./lectureDrag";
 
 type Clo = { id: string; code: string };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; cloCode?: string | null; bloomLevel: string | null; weightPct: number; actualDate: string | null; seTopic: string; rescheduledNote: string | null; holidayConflict?: string | null };
@@ -74,6 +74,8 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
     rows, setRows, content, url: `/api/instructor/courses/${courseId}/lecture/reorder`,
     merge: (r, raw) => ({ ...normalizeRow(raw, r), cloCode: raw.cloId ? clos.find((c) => c.id === raw.cloId)?.code || null : null }),
   });
+  const [hoverTopic, setHoverTopic] = useState("");
+  const groups = topicGroups(rows);
   const { rowProps, gripProps } = useRowReorder(rows.map((r) => r.id), draft.move, draft.saving);
 
   const filledCount = rows.filter((r) => r.actualDate).length;
@@ -130,14 +132,16 @@ export default function InstructorLectureContentManager({ courseId, initialRows,
                   const weekStart = idx === 0 || rows[idx - 1].week !== r.week;
                   const flagged = !!(r.rescheduledNote || r.holidayConflict);
                   return (
-                    <tr key={r.id} className={[weekStart ? "lp-week-start" : "", isExamRow(r.topic) ? "lp-exam" : "", draft.isMoved(r.id) ? "lp-moved" : ""].join(" ")} {...rowProps(r.id)}>
+                    <tr key={r.id} className={[weekStart ? "lp-week-start" : "", isExamRow(r.topic) ? "lp-exam" : "", draft.isMoved(r.id) ? "lp-moved" : "", hoverTopic && groups[idx].key === hoverTopic && groups[idx].total > 1 ? "lp-match" : ""].join(" ")} {...rowProps(r.id)}
+                    onMouseEnter={() => setHoverTopic(groups[idx].key)} onMouseLeave={() => setHoverTopic("")}>
                       <td style={{ textAlign: "center" }}><button {...gripProps(r.id, `lecture ${r.lectureNumber}`)}><GripIcon /></button></td>
                       <td className="lp-week">{weekStart ? r.week : ""}</td>
                       <td className="lp-num">{r.lectureNumber}</td>
                       <td style={{ color: "var(--text-2)", fontSize: 12, padding: "0 10px" }}>{r.seTopic || "—"}</td>
-                      <td className="lp-topic" style={topicChanged ? CHANGED_STYLE : undefined} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
-                        {!topicChanged && <span className="lp-accent" style={{ background: topicTone(r.topic) }} />}
-                        <input key={`topic-${r.id}-${r.topic}`} className="lp-input" defaultValue={r.topic} disabled={busyRow === r.id || draft.dirty} placeholder="Topic delivered"
+                      <td className="lp-topic" style={{ background: groups[idx].tint, ...(topicChanged ? CHANGED_STYLE : {}) }} title={topicChanged ? `Subject Expert planned: "${se!.topic}"` : undefined}>
+                        {!topicChanged && <span className={`lp-accent${groups[idx].first ? "" : " lp-join-top"}${groups[idx].last ? "" : " lp-join-bottom"}`} style={{ background: groups[idx].tone }} />}
+                        {groups[idx].first && groups[idx].total > 1 && <span className="lp-count" title={`${groups[idx].total} lectures in the plan have this topic`}>{groups[idx].run > 1 && groups[idx].run === groups[idx].total ? `${groups[idx].run} lectures` : `${groups[idx].run} of ${groups[idx].total}`}</span>}
+                        <input key={`topic-${r.id}-${r.topic}`} className={`lp-input${groups[idx].first ? "" : " lp-cont"}`} defaultValue={r.topic} disabled={busyRow === r.id || draft.dirty} placeholder="Topic delivered"
                           onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, { topic: e.target.value }); }} />
                       </td>
                       <td style={subtopicChanged ? CHANGED_STYLE : undefined} title={subtopicChanged ? `Subject Expert planned: "${se!.subtopic || "—"}"` : undefined}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicTone, isExamRow } from "./lectureDrag";
+import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicGroups, isExamRow } from "./lectureDrag";
 
 type Clo = { id: string; code: string };
 type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number };
@@ -21,6 +21,8 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
 
   const content = (r: Row) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct });
   const draft = useDraftOrder({ rows, setRows, content, url: `${apiBase}/courses/${courseId}/lecture/reorder`, merge: (r, raw) => ({ ...r, ...content(raw) }) });
+  const [hoverTopic, setHoverTopic] = useState("");
+  const groups = topicGroups(rows);
   const { rowProps, gripProps } = useRowReorder(rows.map((r) => r.id), draft.move, draft.saving);
 
   async function generate() {
@@ -89,13 +91,15 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
                 const weekStart = idx === 0 || rows[idx - 1].week !== r.week;
                 const exam = isExamRow(r.topic);
                 return (
-                  <tr key={r.id} className={[weekStart ? "lp-week-start" : "", exam ? "lp-exam" : "", draft.isMoved(r.id) ? "lp-moved" : ""].join(" ")} {...rowProps(r.id)}>
+                  <tr key={r.id} className={[weekStart ? "lp-week-start" : "", exam ? "lp-exam" : "", draft.isMoved(r.id) ? "lp-moved" : "", hoverTopic && groups[idx].key === hoverTopic && groups[idx].total > 1 ? "lp-match" : ""].join(" ")} {...rowProps(r.id)}
+                    onMouseEnter={() => setHoverTopic(groups[idx].key)} onMouseLeave={() => setHoverTopic("")}>
                     <td style={{ textAlign: "center" }}><button {...gripProps(r.id, `lecture ${r.lectureNumber}`)}><GripIcon /></button></td>
                     <td className="lp-week">{weekStart ? r.week : ""}</td>
                     <td className="lp-num">{r.lectureNumber}</td>
-                    <td className="lp-topic">
-                      <span className="lp-accent" style={{ background: topicTone(r.topic) }} />
-                      <input key={`t-${r.id}-${r.topic}`} className="lp-input" defaultValue={r.topic} disabled={busyRow === r.id || draft.dirty} placeholder="Add a topic"
+                    <td className="lp-topic" style={{ background: groups[idx].tint }}>
+                      <span className={`lp-accent${groups[idx].first ? "" : " lp-join-top"}${groups[idx].last ? "" : " lp-join-bottom"}`} style={{ background: groups[idx].tone }} />
+                      {groups[idx].first && groups[idx].total > 1 && <span className="lp-count" title={`${groups[idx].total} lectures in the plan have this topic`}>{groups[idx].run > 1 && groups[idx].run === groups[idx].total ? `${groups[idx].run} lectures` : `${groups[idx].run} of ${groups[idx].total}`}</span>}
+                      <input key={`t-${r.id}-${r.topic}`} className={`lp-input${groups[idx].first ? "" : " lp-cont"}`} defaultValue={r.topic} disabled={busyRow === r.id || draft.dirty} placeholder="Add a topic"
                         onBlur={(e) => { if (e.target.value !== r.topic) saveField(r, "topic", e.target.value); }} />
                     </td>
                     <td>
@@ -123,7 +127,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
         <p className="lp-hint">
           Drag lectures by their handle <span style={{ display: "inline-flex", verticalAlign: "middle", color: "var(--text-2)" }}><GripIcon /></span> to new slots — the lectures in between shift by one, and the week and lecture numbers stay in place.
           Moves are kept on the page until you press Save order (editing cells is paused until then).
-          Keyboard: focus the handle and press ↑ or ↓. The thin coloured bar groups lectures that share a topic.
+          Keyboard: focus the handle and press ↑ or ↓. Each topic has its own colour; lectures on the same topic are joined by one bar, and pointing at a lecture highlights every other lecture with that topic.
           Weights fill in from the Assessments tab.
         </p>
       </div>

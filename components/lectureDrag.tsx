@@ -100,14 +100,6 @@ export function shiftContent<T extends { id: string }>(rows: T[], fromId: string
   return rows.map((r, k) => ({ ...r, ...c[k] }));
 }
 
-/** Topic accent: a quiet tone per topic, so lectures that continue a topic read as one group. */
-const TONES = ["#8C6A5D", "#6F7F6A", "#5F7488", "#8A7A55", "#7A6283", "#5E7F7A", "#8B5E6B", "#6B6F78"];
-export function topicTone(topic: string) {
-  if (!topic || !topic.trim()) return "transparent";
-  let h = 0;
-  for (let i = 0; i < topic.length; i++) h = (h * 31 + topic.charCodeAt(i)) >>> 0;
-  return TONES[h % TONES.length];
-}
 export const isExamRow = (topic: string) => /\b(mid[- ]?term|final)\b.*\b(exam|examination|review)\b|\bexam(ination)?\b/i.test(topic || "");
 
 /**
@@ -176,3 +168,35 @@ export function DraftOrderBar({ moved, saving, error, onSave, onDiscard }: { mov
     </div>
   );
 }
+
+const PLAN_TONES = ["#4C78A8", "#3E8E85", "#B07D2B", "#8C5BA6", "#5B8C3A", "#B5643A", "#5560A8", "#A54E75", "#7F8A2E", "#A84B4B"];
+const topicKey = (t: string) => (t || "").trim().toLowerCase();
+/**
+ * For each row: its topic colour (assigned in order of first appearance, so neighbouring topics never share one;
+ * exam rows stay grey), whether it starts / ends a run of consecutive lectures on the same topic, the run length,
+ * and how many lectures in the whole plan share the topic.
+ */
+export function topicGroups(rows: { topic: string }[]) {
+  const total = new Map<string, number>();
+  const tone = new Map<string, string>();
+  let next = 0, prevKey = "";
+  rows.forEach((r) => {
+    const k = topicKey(r.topic);
+    if (!k) return;
+    total.set(k, (total.get(k) || 0) + 1);
+    if (!tone.has(k)) {
+      let t = PLAN_TONES[next++ % PLAN_TONES.length];
+      if (t === tone.get(prevKey)) t = PLAN_TONES[next++ % PLAN_TONES.length];
+      tone.set(k, isExamRow(r.topic) ? "#9A9094" : t);
+    }
+    prevKey = k;
+  });
+  return rows.map((r, i) => {
+    const k = topicKey(r.topic);
+    const same = (j: number) => !!k && j >= 0 && j < rows.length && topicKey(rows[j].topic) === k;
+    let run = 1; for (let j = i + 1; same(j); j++) run++;
+    const c = k ? tone.get(k)! : "transparent";
+    return { key: k, first: !same(i - 1), last: !same(i + 1), run, total: k ? total.get(k) || 0 : 0, tone: c, tint: k ? c + "24" : "transparent" };
+  });
+}
+export { topicKey };
