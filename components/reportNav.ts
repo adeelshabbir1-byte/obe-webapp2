@@ -78,21 +78,16 @@ export const INSTRUCTOR_NAV = [
   { href: "/deadlines", label: "Deadlines" },
 ];
 
+// A Subject Expert may be someone from industry who only builds courses, so this menu holds course-building work only.
+// Teaching, advising, scheduling and program-management pages live under the Instructor / Program Lead roles; a
+// Subject Expert who also teaches switches role to reach them.
 export const SUBJECT_EXPERT_NAV = [
-  { href: "/subjectexpert/courses", label: "My Assigned Courses" },
-  { href: "/faculty/topic-workspace", label: "Topic Workspace" },
-  // Teaching items (timetable, availability, course priorities) live under the Instructor role — a Subject Expert who
-  // also teaches switches role for them.
-  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
-  { href: "/omc/course-repositioning", label: "Course Repositioning" },
-  { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
-  { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
-  { href: "/advisor/dashboard", label: "Advisor Dashboard" },
-  { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
-  { href: "/omc/reports", label: "Reports" },
-  { href: "/public-library", label: "Public Course Library" },
-  { href: "/faculty/profile", label: "My Profile" },
-  { href: "/deadlines", label: "Deadlines" },
+  { href: "/subjectexpert/courses", label: "My Assigned Courses" },   // build each course: CLOs, lecture plan, assessments, papers, submit
+  { href: "/faculty/topic-workspace", label: "Topic Workspace" },     // move topics between two or three of my assigned courses
+  { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, // what students already know before my course (view only)
+  { href: "/public-library", label: "Public Course Library" },        // other institutes' course outlines, for reference
+  { href: "/deadlines", label: "Deadlines" },                         // my tasks, dates and who waits on me
+  { href: "/faculty/profile", label: "My Profile" },                  // qualifications shown on the course documents
 ];
 
 export const COORDINATOR_NAV = [
