@@ -30,3 +30,28 @@ export async function reorderLectureContent(courseId: string, source: "SE" | "IN
   await prisma.$transaction(ops);
   return { rows: await prisma.lectureRow.findMany({ where: { id: { in: slots.map((s) => s.id) } } }) };
 }
+
+/**
+ * Saves a whole new order in one go. `order[k]` is the id of the row whose current content should end up in the
+ * k-th slot (slots in lecture-number order). Must be a permutation of the course's rows.
+ */
+export async function applyLectureOrder(courseId: string, source: "SE" | "INSTRUCTOR", order: string[]) {
+  const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, orderBy: { lectureNumber: "asc" } });
+  if (order.length !== rows.length || new Set(order).size !== rows.length || order.some((id) => !rows.find((r) => r.id === id))) {
+    return { error: "The lecture list changed since you opened the page. Reload and try again." as const };
+  }
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const changed = rows.map((slot, k) => ({ slot, src: byId.get(order[k])! })).filter((x) => x.slot.id !== x.src.id);
+  if (!changed.length) return { rows: [] };
+
+  const links = await prisma.lectureRowInstrument.findMany({ where: { lectureRowId: { in: changed.map((x) => x.src.id) } } });
+  const linksOf = new Map<string, string[]>();
+  for (const l of links) linksOf.set(l.lectureRowId, [...(linksOf.get(l.lectureRowId) || []), l.instrumentId]);
+
+  await prisma.$transaction([
+    prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: changed.map((x) => x.slot.id) } } }),
+    ...changed.map(({ slot, src }) => prisma.lectureRow.update({ where: { id: slot.id }, data: { topic: src.topic, subtopic: src.subtopic, cloId: src.cloId, bloomLevel: src.bloomLevel, weightPct: src.weightPct } })),
+    prisma.lectureRowInstrument.createMany({ data: changed.flatMap(({ slot, src }) => (linksOf.get(src.id) || []).map((instrumentId) => ({ lectureRowId: slot.id, instrumentId }))), skipDuplicates: true }),
+  ]);
+  return { rows: await prisma.lectureRow.findMany({ where: { courseId, source }, orderBy: { lectureNumber: "asc" } }) };
+}

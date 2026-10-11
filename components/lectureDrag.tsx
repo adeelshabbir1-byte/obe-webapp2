@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Drag-to-reorder for the lecture plan grids, driven by pointer events (works with mouse and touch) from the grip,
 // so the text inputs inside the row keep normal selection. With the grip focused, ↑ / ↓ move the lecture one slot (keyboard).
@@ -109,3 +109,70 @@ export function topicTone(topic: string) {
   return TONES[h % TONES.length];
 }
 export const isExamRow = (topic: string) => /\b(mid[- ]?term|final)\b.*\b(exam|examination|review)\b|\bexam(ination)?\b/i.test(topic || "");
+
+/**
+ * Keeps lecture moves as a draft on the page: every drag only changes what you see, and nothing reaches the server
+ * until save() — which sends the whole new order in one request. discard() puts everything back.
+ */
+export function useDraftOrder<T extends { id: string }>(opts: {
+  rows: T[]; setRows: React.Dispatch<React.SetStateAction<T[]>>; content: (r: T) => Partial<T>;
+  url: string; merge: (prev: T, raw: any) => T;
+}) {
+  const { rows, setRows, content, url, merge } = opts;
+  // src[k] = the row whose saved content now sits in slot k; null = nothing moved (the saved order).
+  const [srcState, setSrc] = useState<string[] | null>(null);
+  const src = srcState && srcState.length === rows.length ? srcState : rows.map((r) => r.id);
+  const [snapshot, setSnapshot] = useState<T[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const moved = src.filter((s, k) => s !== rows[k]?.id).length;
+  const dirty = moved > 0;
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  function move(fromId: string, toId: string) {
+    const i = rows.findIndex((r) => r.id === fromId), j = rows.findIndex((r) => r.id === toId);
+    if (i < 0 || j < 0 || i === j) return;
+    if (!snapshot) setSnapshot(rows);
+    setError("");
+    setRows((prev) => shiftContent(prev, fromId, toId, content));
+    const a = [...src]; const [m] = a.splice(i, 1); a.splice(j, 0, m);
+    setSrc(a);
+  }
+  function discard() {
+    if (snapshot) setRows(snapshot);
+    setSrc(null); setSnapshot(null); setError("");
+  }
+  async function save() {
+    setSaving(true); setError("");
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: src }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Could not save the new order."); return; }
+      const byId = new Map<string, any>((data.rows || []).map((r: any) => [r.id, r]));
+      setRows((prev) => prev.map((r) => (byId.has(r.id) ? merge(r, byId.get(r.id)) : r)));
+      setSrc(null); setSnapshot(null);
+    } catch (e: any) { setError("Could not save the new order: " + (e?.message || e)); }
+    finally { setSaving(false); }
+  }
+  const isMoved = (id: string) => { const k = rows.findIndex((r) => r.id === id); return k >= 0 && src[k] !== id; };
+  return { move, save, discard, dirty, moved, saving, error, isMoved };
+}
+
+/** The bar that appears while there are unsaved moves. */
+export function DraftOrderBar({ moved, saving, error, onSave, onDiscard }: { moved: number; saving: boolean; error: string; onSave: () => void; onDiscard: () => void }) {
+  return (
+    <div className="lp-draftbar" role="status">
+      <span><b>New order not saved yet</b> · {moved} lecture slot{moved === 1 ? "" : "s"} changed. Keep moving lectures, then save once.{error && <span className="lp-draftbar-err"> {error}</span>}</span>
+      <span style={{ display: "flex", gap: 8 }}>
+        <button type="button" className="btn btn-secondary" onClick={onDiscard} disabled={saving}>Discard</button>
+        <button type="button" className="btn btn-brass" onClick={onSave} disabled={saving}>{saving ? "Saving…" : "Save order"}</button>
+      </span>
+    </div>
+  );
+}
