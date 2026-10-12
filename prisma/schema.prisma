@@ -2860,3 +2860,34 @@ model RecognitionGoal {
 
   @@index([chairmanId])
 }
+
+// Sign-in watch (lib/inactivity.ts): when each person last used the app, each boss's limit, and alerts already sent.
+model UserActivity {
+  userId     String   @id
+  lastSeenAt DateTime
+}
+
+model InactivityPolicy {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  bossId      String   @unique // the Institute Head's own row is the institute default (and holds the weekly days off)
+  workingDays Int      @default(3) // 0 = no alerts
+  offDaysJson String   @default("[0,6]") // weekdays that are not working days (0 = Sunday)
+  exemptIds   String[] @default([])
+  updatedAt   DateTime @updatedAt
+
+  @@index([chairmanId])
+}
+
+model InactivityAlert {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  bossId      String
+  userId      String
+  lastSeenAt  DateTime // the absence this alert is about: one alert per boss, person and absence
+  workingDays Int
+  createdAt   DateTime @default(now())
+
+  @@unique([bossId, userId, lastSeenAt])
+  @@index([userId])
+}

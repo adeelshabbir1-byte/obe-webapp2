@@ -6,7 +6,7 @@ import { prisma } from "./db";
 
 const ndb = prisma as unknown as Record<string, any>;
 export type NotificationRow = { id: string; userId: string; kind: string; title: string; body: string | null; href: string | null; readAt: Date | null; createdAt: Date };
-const EMAIL_KINDS = new Set(["ASSIGNMENT", "RESULT", "GRADE_CHANGE", "TEMPLATE", "DEADLINE"]);
+const EMAIL_KINDS = new Set(["ASSIGNMENT", "RESULT", "GRADE_CHANGE", "TEMPLATE", "DEADLINE", "INACTIVITY"]);
 
 export async function notifyUsers(userIds: (string | null | undefined)[], n: { kind: string; title: string; body?: string; href?: string; exceptId?: string | null }) {
   const ids = Array.from(new Set(userIds.filter((x): x is string => !!x && x !== n.exceptId)));

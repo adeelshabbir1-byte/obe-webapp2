@@ -96,6 +96,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/course-split", label: "Course Requests" },
@@ -152,6 +153,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
@@ -244,6 +246,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },

@@ -1,3 +1,4 @@
+import { touchActivity } from "./activity";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { isDeptCoordinatorPath } from "./deptCoordinator";
@@ -75,6 +76,8 @@ const resolveSelf = cache(async () => {
   }
 
   const { passwordHash, ...safeUser } = session.user;
+  // Sign-in watch: remember that this person used the app today (throttled; never blocks the request).
+  if (session.mfaVerified) touchActivity(safeUser.id);
   // A dual-capable Subject Expert's chosen role for this session overrides
   // their stored role everywhere else in the app checks `user.role` —
   // rawRole/secondaryRole stay available for the few places (onboarding,

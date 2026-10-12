@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { notifyUsers } from "../../../../lib/notifications";
 import { KIND_ROLE } from "../../../../lib/deadlines";
+import { runInactivityCheck } from "../../../../lib/inactivity";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,10 @@ export async function GET(req: NextRequest) {
     per.set(r.assigneeId, e);
   }
   const bell = await bellReminders(now, soon);
+  // Sign-in watch: bosses hear about people who haven't opened the app for their limit of working days.
+  const inactive = await runInactivityCheck(now).catch(() => 0);
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, bell });
+  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -40,7 +43,7 @@ export async function GET(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, emailed, bell });
+  return NextResponse.json({ sent: data.length, emailed, bell, inactive });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.
