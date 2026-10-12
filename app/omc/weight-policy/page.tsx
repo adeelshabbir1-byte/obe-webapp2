@@ -4,6 +4,8 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import WeightPolicyManager from "../../../components/WeightPolicyManager";
+import ExamQuestionPolicyEditor from "../../../components/ExamQuestionPolicyEditor";
+import { allQuestionRules } from "../../../lib/examQuestions";
 
 
 
@@ -28,6 +30,9 @@ export default async function WeightPolicyPage() {
     finalMin: 0, finalMax: 100, finalMinCount: 1, finalBeforeMidtermPct: null,
   });
 
+  const q = await allQuestionRules(user.managedById || "");
+  const qRows = COURSE_TYPES.map((t) => { const r = q.rows.find((x) => x.courseType === t); return { courseType: t, midterm: r?.midtermMinQuestions ?? 0, final: r?.finalMinQuestions ?? 0 }; });
+
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
@@ -40,6 +45,7 @@ export default async function WeightPolicyPage() {
         weights come to you as an exception request.
       </p>
       <WeightPolicyManager initialPolicies={policies as any} />
+      <ExamQuestionPolicyEditor initial={qRows} missing={q.missing} />
     </Shell>
   );
 }

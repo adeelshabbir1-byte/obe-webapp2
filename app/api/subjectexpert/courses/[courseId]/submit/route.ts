@@ -6,6 +6,7 @@ import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { snapshotTemplate, diffTemplates } from "../../../../../../lib/templateDiff";
 import { ploCoverageShortfalls } from "../../../../../../lib/ploCoverage";
+import { questionShortfalls } from "../../../../../../lib/examQuestions";
 
 export async function POST(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -34,6 +35,12 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const coverage = await ploCoverageShortfalls(course.id, "SE");
   if (coverage.short.length > 0) {
     return NextResponse.json({ error: `The plan doesn't meet the OMC's minimums yet - ${coverage.short.join("; ")}` }, { status: 400 });
+  }
+
+  // The OMC's minimum number of questions in the Midterm and Final papers.
+  const questions = await questionShortfalls(course.id, "SE");
+  if (questions.short.length > 0) {
+    return NextResponse.json({ error: `The paper distribution doesn't meet the OMC's minimums yet - ${questions.short.join("; ")}. Add questions on the Paper Distribution tab.` }, { status: 400 });
   }
 
   // An approved template is locked: it can only be reopened through an approved change request.

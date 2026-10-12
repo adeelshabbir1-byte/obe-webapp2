@@ -9,6 +9,8 @@ import { analyzeTeaching } from "../../../../../lib/teachingAnalysis";
 import { navForRole } from "../../../../../components/reportNav";
 import FinalBoundaryPanel from "../../../../../components/FinalBoundaryPanel";
 import { computeFinalBoundary } from "../../../../../lib/finalBoundary";
+import { questionShortfalls } from "../../../../../lib/examQuestions";
+import ExamQuestionCheck from "../../../../../components/ExamQuestionCheck";
 
 
 export default async function SePaperDistributionPage({ params }: { params: { courseId: string } }) {
@@ -32,6 +34,7 @@ export default async function SePaperDistributionPage({ params }: { params: { co
     ? await prisma.weightPolicy.findUnique({ where: { chairmanId_courseType: { chairmanId: coordinator.managedById, courseType: course.courseType } } })
     : null;
   const boundary = await computeFinalBoundary(course.id, "SE");
+  const qs = await questionShortfalls(course.id, "SE");
   const suggestedBefore = (policy as unknown as { finalBeforeMidtermPct: number | null } | null)?.finalBeforeMidtermPct ?? null;
 
   return (
@@ -48,6 +51,7 @@ export default async function SePaperDistributionPage({ params }: { params: { co
         <FinalBoundaryPanel courseId={course.id} midtermWeek={boundary.midtermWeek} defaultWeek={boundary.defaultWeek} maxWeek={boundary.maxWeek}
           beforePct={boundary.beforePct} afterPct={boundary.afterPct} unlinked={boundary.unlinked} suggestedBefore={suggestedBefore} />
       )}
+      <ExamQuestionCheck midterm={qs.midterm} final={qs.final} rules={qs.rules} blocking />
       <PaperDistributionManager
         apiBase={`/api/subjectexpert/courses/${course.id}/paper-distribution`}
         items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}

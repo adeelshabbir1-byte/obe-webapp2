@@ -4,6 +4,8 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import PaperDistributionManager from "../../../../../components/PaperDistributionManager";
+import { questionShortfalls } from "../../../../../lib/examQuestions";
+import ExamQuestionCheck from "../../../../../components/ExamQuestionCheck";
 import TeachingAnalysisReport from "../../../../../components/TeachingAnalysisReport";
 import { analyzeTeaching } from "../../../../../lib/teachingAnalysis";
 import { navForRole } from "../../../../../components/reportNav";
@@ -18,6 +20,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course || course.instructorId !== user.id) notFound();
+  const qs = await questionShortfalls(course.id, "INSTRUCTOR");
 
   const [items, lectureRows, clos] = await Promise.all([
     prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { orderIndex: "asc" } }),
@@ -51,6 +54,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
         auto-fill it, or type a custom one by hand. Each question is checked against what was actually covered in
         class.
       </p>
+      <ExamQuestionCheck midterm={qs.midterm} final={qs.final} rules={qs.rules} blocking={false} />
       <PaperDistributionManager
         apiBase={`/api/instructor/courses/${course.id}/paper-distribution`}
         items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}

@@ -2913,3 +2913,16 @@ model PloChangeRequest {
   @@index([chairmanId, status])
   @@index([courseId])
 }
+
+// The OMC's minimum number of questions in the Midterm and Final papers, per course type (lib/examQuestions.ts).
+model ExamQuestionPolicy {
+  id                  String   @id @default(cuid())
+  chairmanId          String
+  courseType          String
+  midtermMinQuestions Int      @default(0) // 0 = no rule
+  finalMinQuestions   Int      @default(0)
+  updatedById         String?
+  updatedAt           DateTime @updatedAt
+
+  @@unique([chairmanId, courseType])
+}
