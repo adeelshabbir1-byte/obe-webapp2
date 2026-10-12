@@ -5,7 +5,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !["INSTRUCTOR", "SUBJECT_EXPERT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const request = await prisma.registrationApprovalRequest.findUnique({ where: { id: params.requestId }, include: { student: { include: { batch: true } } } });

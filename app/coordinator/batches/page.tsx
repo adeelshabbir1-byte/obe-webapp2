@@ -1,3 +1,4 @@
+import { advisorCandidatesWhere } from "../../../lib/advisors";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -26,7 +27,9 @@ export default async function BatchesPage() {
     return { total: rows.reduce((n, r) => n + (r._sum.creditHours || 0), 0), bySemester: rows.filter((r) => r.semesterNumber).sort((a, b) => (a.semesterNumber || 0) - (b.semesterNumber || 0)).map((r) => ({ sem: r.semesterNumber as number, cr: r._sum.creditHours || 0 })) };
   };
   const degreePrograms = await prisma.degreeProgram.findMany({ where: { coordinatorId: user.id }, orderBy: { name: "asc" } });
-  const faculty = await prisma.user.findMany({ where: { managedById: user.id, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] } }, orderBy: { name: "asc" } });
+  // Any teacher can advise a batch: the people this Program Lead manages, the Lead themself, and teachers of the same
+  // department (Chairman, other Program Leads, Instructors) — not only plain Instructors / Subject Experts.
+  const faculty = await prisma.user.findMany({ where: advisorCandidatesWhere(user), orderBy: { name: "asc" } });
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>

@@ -14,7 +14,7 @@ const DEFAULT_MAX_CREDITS = 18;
 // drop-enrollment endpoints do the actual changes.
 export async function GET(req: Request, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !["INSTRUCTOR", "SUBJECT_EXPERT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: true } });
   if (!student || !student.batch || student.batch.advisorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });

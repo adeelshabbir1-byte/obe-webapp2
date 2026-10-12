@@ -3,6 +3,7 @@ import { getBrandingFor } from "../lib/branding";
 import { getRequestsCount, getSessionInfo, getSidebarCurrentTerm } from "../lib/shellData";
 import AppShell from "./AppShell";
 import { unreadCount } from "../lib/notifications";
+import { prisma } from "../lib/db";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -36,12 +37,15 @@ export default async function Shell({
     user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
     user ? unreadCount(user.id) : 0,
   ]);
+  // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
+  const advises = user && !navLinks.some((l) => l.href === "/advisor/dashboard") ? (await prisma.batch.count({ where: { advisorId: user.id } }).catch(() => 0)) > 0 : false;
+  const links = advises ? [...navLinks, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : navLinks;
 
   return (
     <AppShell
       roleLabel={roleLabel}
       userName={userName}
-      navLinks={navLinks}
+      navLinks={links}
       branding={branding}
       roleSwitch={sessionInfo?.dualCapable ? sessionInfo : null}
       deptCoordinator={sessionInfo?.deptCoordinator || null}

@@ -5,7 +5,7 @@ import { computeCgpa, standingFromCgpa } from "../../../../lib/academicStanding"
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user || !["INSTRUCTOR", "SUBJECT_EXPERT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const advisedBatches = await prisma.batch.findMany({ where: { advisorId: user.id } });
   if (advisedBatches.length === 0) return NextResponse.json({ advisedBatches: [], students: [], pendingRequests: [] });
