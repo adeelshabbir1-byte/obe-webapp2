@@ -143,3 +143,46 @@ export async function appraiseesFor(user: { id: string; role: string; managedByI
   });
   return { chairmanId, people: people.map((p) => ({ id: p.id, name: p.name, department: p.department_?.name || null })) };
 }
+
+export type Summary = { courses: number; creditHours: number; students: number; planned: number; delivered: number; deadlineRate: number | null; resultsApproved: number; designCourses: number; designApproved: number; publications: number };
+
+/** The list page's columns for many teachers at once — a handful of queries in total instead of a full scorecard per
+ * teacher (which, for a whole institute, took longer than the page is allowed to run). Same rules as computeScorecard. */
+export async function summariesFor(userIds: string[], year: number): Promise<Map<string, Summary>> {
+  const out = new Map<string, Summary>();
+  if (!userIds.length) return out;
+  const from = new Date(Date.UTC(year, 0, 1)), to = new Date(Date.UTC(year + 1, 0, 1));
+  const [teaching, seCourses, records, named] = await Promise.all([
+    prisma.course.findMany({ where: { instructorId: { in: userIds }, offeredTermYear: year }, select: { id: true, instructorId: true, creditHours: true, _count: { select: { studentEnrollments: true } } } }),
+    prisma.course.findMany({ where: { subjectExpertId: { in: userIds } }, select: { id: true, subjectExpertId: true, templateStatus: true } }),
+    prisma.facultyRecord.findMany({ where: { userId: { in: userIds }, kind: "PUBLICATION" } as never, select: { userId: true, startYear: true, endYear: true } }) as unknown as Promise<{ userId: string; startYear: number | null; endYear: number | null }[]>,
+    prisma.deadline.findMany({ where: { assigneeId: { in: userIds }, allCourses: false, dueDate: { gte: from, lt: to } } as never, select: { assigneeId: true, dueDate: true, completedAt: true } }) as unknown as Promise<{ assigneeId: string; dueDate: Date; completedAt: Date | null }[]>,
+  ]);
+  const teachIds = teaching.map((c) => c.id);
+  const roleIds = Array.from(new Set([...teachIds, ...seCourses.map((c) => c.id)]));
+  const [lectures, results, courseDl] = await Promise.all([
+    teachIds.length ? prisma.lectureRow.findMany({ where: { courseId: { in: teachIds }, source: "INSTRUCTOR" }, select: { courseId: true, actualDate: true, topic: true } }) : Promise.resolve([]),
+    teachIds.length ? (adb.courseResult.findMany({ where: { courseId: { in: teachIds } }, select: { courseId: true, status: true } }).catch(() => []) as Promise<{ courseId: string; status: string }[]>) : Promise.resolve([]),
+    roleIds.length ? (prisma.deadline.findMany({ where: { courseId: { in: roleIds }, allCourses: false, dueDate: { gte: from, lt: to } } as never, select: { dueDate: true, completedAt: true, courseId: true, role: true, kind: true } }) as unknown as Promise<{ dueDate: Date; completedAt: Date | null; courseId: string; role: string | null; kind: string }[]>) : Promise.resolve([]),
+  ]);
+  const teacherOf = new Map(teaching.map((c) => [c.id, c.instructorId as string]));
+  const expertOf = new Map(seCourses.map((c) => [c.id, c.subjectExpertId as string]));
+  const get = (id: string) => { let s = out.get(id); if (!s) { s = { courses: 0, creditHours: 0, students: 0, planned: 0, delivered: 0, deadlineRate: null, resultsApproved: 0, designCourses: 0, designApproved: 0, publications: 0 }; out.set(id, s); } return s; };
+  for (const id of userIds) get(id);
+  for (const c of teaching) { const s = get(c.instructorId as string); s.courses++; s.creditHours += c.creditHours; s.students += c._count.studentEnrollments; }
+  for (const c of seCourses) { const s = get(c.subjectExpertId as string); s.designCourses++; if (c.templateStatus === "approved") s.designApproved++; }
+  for (const l of lectures) { if (!(l.topic || "").trim()) continue; const s = get(teacherOf.get(l.courseId)!); s.planned++; if (l.actualDate) s.delivered++; }
+  for (const r of results) if (r.status === "APPROVED") get(teacherOf.get(r.courseId)!).resultsApproved++;
+  for (const r of records) if (r.startYear === year || r.endYear === year) get(r.userId).publications++;
+  const dl = new Map<string, { on: number; judged: number }>();
+  const count = (id: string | undefined, d: { dueDate: Date; completedAt: Date | null }) => {
+    if (!id) return;
+    const st = statusOf(d);
+    if (st !== "ON_TIME" && st !== "LATE_DONE" && st !== "OVERDUE") return;
+    const e = dl.get(id) || { on: 0, judged: 0 }; e.judged++; if (st === "ON_TIME") e.on++; dl.set(id, e);
+  };
+  for (const d of named) count(d.assigneeId, d);
+  for (const d of courseDl) { const r = d.role || KIND_ROLE[d.kind]; count(r === "INSTRUCTOR" ? teacherOf.get(d.courseId) : r === "SUBJECT_EXPERT" ? expertOf.get(d.courseId) : undefined, d); }
+  for (const [id, e] of Array.from(dl.entries())) get(id).deadlineRate = pct(e.on, e.judged);
+  return out;
+}

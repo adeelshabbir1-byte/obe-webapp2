@@ -8,7 +8,7 @@ import { OVERVIEW_ROLES } from "../../lib/readinessScope";
 import { riskRegister, type ProgramRow } from "../../lib/riskRegister";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 60;
 const SEV = { high: ["High", "badge-no"], medium: ["Medium", "badge-warn"], low: ["Low", "badge-neutral"] } as const;
 
 function Cell({ n, href, bad = true }: { n: number; href: string; bad?: boolean }) {
