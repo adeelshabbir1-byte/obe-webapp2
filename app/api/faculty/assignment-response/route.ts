@@ -17,16 +17,26 @@ export async function POST(req: NextRequest) {
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 300) : "";
   if (body.decision === "DECLINE" && !note) return NextResponse.json({ error: "please give a short reason for declining" }, { status: 400 });
 
+  // A Subject Expert may also give back a course they had already accepted (or that was assigned before answers were
+  // asked for), as long as its plan has not gone to the OMC — after that, the person who assigned it decides.
+  const seDecline = as === "SUBJECT_EXPERT" && body.decision === "DECLINE";
   const course = await prisma.course.findFirst({
-    where: as === "SUBJECT_EXPERT" ? { id: body.courseId, subjectExpertId: user.id, seResponse: "PENDING" } : { id: body.courseId, instructorId: user.id, instructorResponse: "PENDING" },
-  });
-  if (!course) return NextResponse.json({ error: "nothing waiting for your answer on this course" }, { status: 404 });
+    where: as === "SUBJECT_EXPERT"
+      ? { id: body.courseId, subjectExpertId: user.id, ...(seDecline ? { seResponse: { in: ["PENDING", "NONE", "ACCEPTED"] }, templateStatus: { in: ["draft", "changes-requested", "reopened"] } } : { seResponse: "PENDING" }) }
+      : { id: body.courseId, instructorId: user.id, instructorResponse: "PENDING" },
+  } as never) as Awaited<ReturnType<typeof prisma.course.findFirst>>;
+  if (!course) {
+    if (seDecline && (await prisma.course.findFirst({ where: { id: body.courseId, subjectExpertId: user.id, templateStatus: { in: ["submitted", "approved"] } } }))) {
+      return NextResponse.json({ error: "Its plan is already with the OMC, so it can't be declined here. Ask whoever assigned it to take it off you." }, { status: 400 });
+    }
+    return NextResponse.json({ error: "nothing waiting for your answer on this course" }, { status: 404 });
+  }
 
   const accept = body.decision === "ACCEPT";
   if (as === "SUBJECT_EXPERT") {
     // Its Lab (<CODE>-L, same batch) followed this assignment automatically, so the answer covers it too.
     const lab = course.courseType !== "Lab"
-      ? await prisma.course.findFirst({ where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: `${course.code}-L`, courseType: "Lab", subjectExpertId: user.id, seResponse: "PENDING" } })
+      ? await prisma.course.findFirst({ where: { coordinatorId: course.coordinatorId, batchId: course.batchId, code: `${course.code}-L`, courseType: "Lab", subjectExpertId: user.id, seResponse: seDecline ? { in: ["PENDING", "NONE", "ACCEPTED"] } : "PENDING" } as never })
       : null;
     const declineNote = `${user.name}: ${note}`;
     for (const c of [course, ...(lab ? [lab] : [])]) {

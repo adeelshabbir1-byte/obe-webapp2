@@ -8,6 +8,7 @@ import Link from "next/link";
 import { seProgressFor } from "../../../lib/seProgress";
 import { currentTermIndexFor, isPastTerm, courseTermIndex, termLabel } from "../../../lib/courseTerm";
 import ProgressBar from "../../../components/ProgressBar";
+import HandBackCourse from "../../../components/HandBackCourse";
 
 
 function statusLabel(status: string) {
@@ -70,7 +71,7 @@ export default async function SubjectExpertCoursesPage() {
                   <td style={{ fontSize: 12.5 }}>{batchLabel}</td>
                   <td><ProgressBar steps={steps} showPending /></td>
                   <td>{statusLabel(c.templateStatus)}</td>
-                  <td><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link></td>
+                  <td style={{ whiteSpace: "nowrap" }}><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link>{(c.templateStatus === "draft" || c.templateStatus === "changes-requested" || c.templateStatus === "reopened") && <HandBackCourse courseId={c.id} code={c.code} />}</td>
                 </tr>
               );
             })}
@@ -86,7 +87,8 @@ export default async function SubjectExpertCoursesPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Build the gold-standard template for each course: CLOs, the 30-lecture schedule, and assessment weights.
         Courses that just copy their content from a linked base course elsewhere aren't listed here — there's
-        nothing to edit on them.
+        nothing to edit on them. If a course is outside your specialisation, press Decline next to it and give a reason: it goes back
+        to whoever assigned it. Once you have submitted a plan to the OMC, ask the person who assigned it instead.
       </p>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Pending ({pending.length})</h2>
