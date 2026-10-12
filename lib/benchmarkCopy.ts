@@ -40,7 +40,7 @@ export async function seedFromMasterCourseIfAvailable(newCourseId: string, maste
 
   const [masterCourse, seedClos, seedTopics] = await Promise.all([
     prisma.masterCourse.findUnique({ where: { id: masterCourseId } }),
-    prisma.masterCourseClo.findMany({ where: { masterCourseId }, orderBy: { orderIndex: "asc" } }),
+    prisma.masterCourseClo.findMany({ where: { masterCourseId }, orderBy: { orderIndex: "asc" }, include: { mappedPlo: { select: { number: true } } } }),
     prisma.masterCourseTopic.findMany({ where: { masterCourseId }, orderBy: { lectureNumber: "asc" } }),
   ]);
 
@@ -63,10 +63,28 @@ export async function seedFromMasterCourseIfAvailable(newCourseId: string, maste
 
   if (seedClos.length === 0 && seedTopics.length === 0) return null;
 
+  // Each seeded CLO also gets a PLO: the one the HEC document tagged it with (same PLO number in this batch), else
+  // the course's own PLO (as set by the OMC) whose title its wording points to. Marked SYSTEM, so the CLO editor shows
+  // it as a suggestion to confirm. A CLO nothing fits stays unmapped.
+  const target = await prisma.course.findUnique({ where: { id: newCourseId }, select: { batchId: true, ploMappings: { select: { plo: { select: { id: true, number: true, title: true } } } } } });
+  const batchPlos = target?.batchId ? await prisma.pLO.findMany({ where: { batchId: target.batchId }, select: { id: true, number: true, title: true } }) : [];
+  const coursePlos = target?.ploMappings.map((m) => m.plo) || [];
+  const ploFor = (c: (typeof seedClos)[number]) => {
+    const n = c.mappedPlo?.number;
+    if (n) { const p = batchPlos.find((x) => x.number === n); if (p) return p.id; }
+    return guessPloByWording(c.statement, coursePlos);
+  };
+  const plosOf = seedClos.map(ploFor);
+  const share = new Map<string, number>();
+  for (const id of plosOf) if (id) share.set(id, (share.get(id) || 0) + 1);
+  const seen = new Map<string, number>();
   const created: { id: string; bloomLevel: string }[] = [];
   for (const [i, c] of seedClos.entries()) {
+    const ploId = plosOf[i];
+    let pct: number | null = null;
+    if (ploId) { const k = share.get(ploId)!; const r = (seen.get(ploId) || 0) + 1; seen.set(ploId, r); pct = Math.floor(100 / k) + (r === 1 ? 100 % k : 0); }
     created.push(await prisma.cLO.create({
-      data: { courseId: newCourseId, source: "SE", code: `CLO-${i + 1}`, statement: c.statement, bloomLevel: c.bloomLevel },
+      data: { courseId: newCourseId, source: "SE", code: `CLO-${i + 1}`, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: ploId, ploContributionPct: pct, ploMappingSource: ploId ? "SYSTEM" : null },
       select: { id: true, bloomLevel: true },
     }));
   }
@@ -282,4 +300,26 @@ export async function carryOverFromMatchingSemester(courseId: string) {
     matchedCourseId: match.id, matchedTerm: `${match.offeredTermName} ${match.offeredTermYear}`,
     sameTermType: !!sameTermMatch, instructorCarriedOver: !!updates.instructorId, contentCopied,
   };
+}
+
+
+// Which of the course's PLOs a CLO's wording points to (the NCEAC/Washington-Accord PLO titles). null when nothing fits.
+const PLO_HINTS: [RegExp, RegExp][] = [
+  [/communicat|present|pitch|report|writ|oral/i, /communicat/i],
+  [/team|group|collaborat/i, /team/i],
+  [/ethic|responsib|integrity/i, /ethic/i],
+  [/life-?long|self-?directed|independent learning|keep up/i, /life-?long/i],
+  [/tool|software|platform|technolog/i, /tool/i],
+  [/design|develop|build|implement|construct/i, /design|development/i],
+  [/analy[sz]|evaluat|investigat|identify/i, /analysis/i],
+  [/societ|professional|legal|econom|entrepreneur|sustainab/i, /professionalism|society/i],
+  [/concept|principle|fundamental|theor|knowledge|explain|describe/i, /knowledge|academic/i],
+];
+export function guessPloByWording(statement: string, plos: { id: string; title: string }[]): string | null {
+  for (const [clo, plo] of PLO_HINTS) {
+    if (!clo.test(statement)) continue;
+    const hit = plos.find((p) => plo.test(p.title));
+    if (hit) return hit.id;
+  }
+  return null;
 }
