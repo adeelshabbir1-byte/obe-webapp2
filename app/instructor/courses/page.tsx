@@ -14,17 +14,28 @@ export default async function InstructorCoursesPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "INSTRUCTOR") redirect("/dashboard");
 
-  const [directCourses, sectionAssignments] = await Promise.all([
+  const [directCourses, courseAssignments, groupAssignments] = await Promise.all([
     prisma.course.findMany({
       where: { instructorId: user.id, isOffered: true },
       orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
       include: { batch: true, subjectExpert: true },
     }),
+    // A course that is part of a combined class is assigned through the combined row; an old per-course count left
+    // from before it was combined is ignored, so this list matches what the Course Assigner sees.
     prisma.courseSectionAssignment.findMany({
-      where: { instructorId: user.id, course: { isOffered: true } },
+      where: { instructorId: user.id, course: { isOffered: true, equivalenceMember: null } },
       include: { course: { include: { batch: true, subjectExpert: true } } },
     }),
+    // Sections of a combined class: every member course of that class counts.
+    prisma.groupSectionAssignment.findMany({
+      where: { instructorId: user.id },
+      include: { group: { include: { members: { where: { course: { isOffered: true } }, include: { course: { include: { batch: true, subjectExpert: true } } } } } } },
+    }),
   ]);
+  const sectionAssignments = [
+    ...courseAssignments,
+    ...groupAssignments.flatMap((g) => g.group.members.map((m) => ({ course: m.course, sectionCount: g.sectionCount }))),
+  ];
 
   // isOffered alone isn't enough — a course keeps that flag from whenever
   // it was last offered, even for a batch whose intake term hasn't arrived

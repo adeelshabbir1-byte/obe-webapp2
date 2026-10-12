@@ -106,6 +106,13 @@ export async function GET() {
   });
   const visitingUser = await getOrCreateVisitingFaculty(user.managedById || "");
   instructors.unshift({ ...visitingUser, customCategory: null } as (typeof instructors)[number]);
+  // Anyone who already holds sections in these rows gets a column too, even if they are no longer in the teaching
+  // pool (e.g. their role changed, or "can teach" was switched off). Otherwise their courses are invisible here while
+  // their own profile still lists them, and nobody can take them off.
+  const shown = new Set(instructors.map((i) => i.id));
+  const hiddenIds = Array.from(new Set(rows.flatMap((r) => Object.keys(r.assignments)))).filter((id) => !shown.has(id));
+  const outOfPool = new Set(hiddenIds);
+  if (hiddenIds.length) instructors.push(...(await prisma.user.findMany({ where: { id: { in: hiddenIds } }, include: { customCategory: true } })));
 
   // Every faculty member's own stated priority for the course codes
   // actually in this matrix — the color-coded hint, and the basis for
@@ -167,11 +174,13 @@ export async function GET() {
 
   const instructorRows = instructors
     .map((i) => ({
-      id: i.id, name: i.name, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
+      id: i.id, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
       externalLoadNote: i.externalLoadNote, specialization: i.specialization,
       customCategoryName: i.customCategory?.name || null,
       dominantType: dominantTypeFor(i.id),
       isVisiting: i.isVisitingPlaceholder,
+      outOfPool: outOfPool.has(i.id),
+      name: outOfPool.has(i.id) ? `${i.name} (not in teaching pool)` : i.name,
     }))
     .sort((a, b) => {
       if (a.isVisiting !== b.isVisiting) return a.isVisiting ? -1 : 1; // visiting option always first
