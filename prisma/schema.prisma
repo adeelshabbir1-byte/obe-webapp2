@@ -2783,3 +2783,48 @@ model CourseHandover {
 
   @@index([courseId])
 }
+
+// A few days' leave asked by a teacher. Once approved, each class that falls in it is covered: a substitute teacher,
+// a make-up class later, or cancelled.
+model ShortLeave {
+  id           String    @id @default(cuid())
+  userId       String
+  chairmanId   String
+  fromDate     DateTime
+  toDate       DateTime
+  reason       String    @db.Text
+  status       String    @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  approverId   String?
+  decidedAt    DateTime?
+  decisionNote String?
+  createdAt    DateTime  @default(now())
+
+  @@index([chairmanId])
+  @@index([userId])
+}
+
+// One class meeting during a short leave and how it is covered.
+model SubstituteClass {
+  id           String    @id @default(cuid())
+  leaveId      String
+  chairmanId   String
+  date         DateTime
+  entryId      String    // the timetable entry (day / time / room / section)
+  courseCode   String
+  courseTitle  String
+  sectionLabel String
+  timeLabel    String
+  roomName     String
+  originalId   String
+  plan         String    @default("SUBSTITUTE") // SUBSTITUTE | MAKEUP | CANCEL
+  substituteId String?
+  status       String    @default("NEEDED") // NEEDED | ASSIGNED | ACCEPTED | DECLINED | DONE | MAKEUP_SET | CANCELLED
+  makeupDate   DateTime?
+  topic        String?
+  note         String?
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@unique([leaveId, entryId, date])
+  @@index([chairmanId, date])
+  @@index([substituteId])
+}

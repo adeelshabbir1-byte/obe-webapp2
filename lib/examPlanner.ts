@@ -93,12 +93,12 @@ export function allocateRooms(groupsInSlot: { courseId: string; students: string
 
 /** Invigilators for every (slot, room) in use: fewest duties first, never two rooms at once, preferably not the
  * instructor of a paper being written in that room. */
-export function assignInvigilators(slots: { key: string; rooms: { roomId: string; instructorIds: string[] }[] }[], pool: string[], perRoom: number) {
+export function assignInvigilators(slots: { key: string; rooms: { roomId: string; instructorIds: string[] }[] }[], pool: string[], perRoom: number, unavailable?: (slotKey: string) => Set<string>) {
   const duties = new Map(pool.map((p) => [p, 0]));
   const out = new Map<string, Map<string, string[]>>(); // slotKey -> roomId -> userIds
   let unfilled = 0;
   for (const s of slots) {
-    const busy = new Set<string>();
+    const busy = new Set<string>(unavailable ? Array.from(unavailable(s.key)) : []);
     const m = new Map<string, string[]>();
     for (const r of s.rooms) {
       const pick: string[] = [];

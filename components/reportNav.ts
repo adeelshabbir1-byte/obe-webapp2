@@ -62,6 +62,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/my-leave", label: "Short Leave" },
   { href: "/appraisals", label: "My Appraisal" },
   { href: "/exams", label: "Exam Duties" },
   { href: "/instructor/courses", label: "My Semester Courses" },
@@ -150,6 +151,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
@@ -185,6 +187,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
@@ -238,6 +241,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
