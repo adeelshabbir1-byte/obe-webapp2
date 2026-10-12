@@ -53,7 +53,10 @@ export async function GET() {
         customCategoryName: c.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
-        assignments: Object.fromEntries(c.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
+        // A teacher put on the course directly (by the Program Lead) also teaches it, so they show here too —
+        // otherwise their profile lists a course this matrix says they don't have.
+        assignments: withDirect(Object.fromEntries(c.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])), [c.instructorId]),
+        directInstructorIds: c.instructorId && !c.sectionAssignments.some((a) => a.instructorId === c.instructorId) ? [c.instructorId] : [],
       };
     }),
     ...groups.map((g) => {
@@ -89,7 +92,8 @@ export async function GET() {
         customCategoryName: senior?.course.customCategory?.name || g.members[0]?.course.customCategory?.name || null,
         studentCount,
         sectionsNeeded: Math.max(1, Math.ceil(studentCount / 50)),
-        assignments: Object.fromEntries(g.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])),
+        assignments: withDirect(Object.fromEntries(g.sectionAssignments.map((a) => [a.instructorId, a.sectionCount])), g.members.map((m) => m.course.instructorId)),
+        directInstructorIds: Array.from(new Set(g.members.map((m) => m.course.instructorId).filter((id): id is string => !!id && !g.sectionAssignments.some((a) => a.instructorId === id)))),
       };
     }),
   ];
@@ -177,4 +181,12 @@ export async function GET() {
     });
 
   return NextResponse.json({ rows, instructors: instructorRows, priorities, uncoveredCodes, strongCodes, shortNames });
+}
+
+
+/** Section counts plus teachers set on the course directly (counted as one section when the matrix has none for them). */
+function withDirect(assignments: Record<string, number>, direct: (string | null)[]) {
+  const out = { ...assignments };
+  for (const id of direct) if (id && !(id in out)) out[id] = 1;
+  return out;
 }

@@ -26,6 +26,8 @@ export async function PUT(req: NextRequest) {
     }
     if (count <= 0) {
       await prisma.courseSectionAssignment.deleteMany({ where: { courseId: id, instructorId } });
+      // Taking a teacher off here also clears a direct assignment, so their profile no longer lists the course.
+      if (course.instructorId === instructorId) await prisma.course.update({ where: { id }, data: { instructorId: null, instructorResponse: "NONE", instructorResponseNote: null } as never });
     } else {
       await prisma.courseSectionAssignment.upsert({
         where: { courseId_instructorId: { courseId: id, instructorId } },
@@ -45,6 +47,7 @@ export async function PUT(req: NextRequest) {
     }
     if (count <= 0) {
       await prisma.groupSectionAssignment.deleteMany({ where: { groupId: id, instructorId } });
+      await prisma.course.updateMany({ where: { instructorId, equivalenceMember: { groupId: id } }, data: { instructorId: null } });
     } else {
       await prisma.groupSectionAssignment.upsert({
         where: { groupId_instructorId: { groupId: id, instructorId } },
