@@ -26,7 +26,7 @@ export async function GET() {
     const standing = standingFromCgpa(cgpa);
     const modifiedPlanCount = s.degreePlanEntries.filter((e) => e.plannedSemesterNumber !== e.course.semesterNumber).length;
     return {
-      id: s.id, name: s.name, rollNumber: s.rollNumber, batchLabel: `${s.batch.degreeProgram} — ${s.batch.batchName}`,
+      id: s.id, name: s.name, rollNumber: s.rollNumber, batchId: s.batchId, batchLabel: `${s.batch.degreeProgram} — ${s.batch.batchName}`,
       currentSemesterNumber: s.currentSemesterNumber, cgpa, standing, modifiedPlanCount,
       currentCourses: s.enrollments.map((e) => `${e.course.code}`),
     };
@@ -43,7 +43,7 @@ export async function GET() {
     students: studentsOut,
     pendingRequests: pendingRequests.map((r) => ({
       id: r.id, actionType: r.actionType, reasonCode: r.reasonCode, createdAt: r.createdAt.toISOString(),
-      studentName: r.student.name, studentRollNumber: r.student.rollNumber, courseCode: r.course.code, courseTitle: r.course.title,
+      studentId: r.studentId, studentName: r.student.name, studentRollNumber: r.student.rollNumber, courseCode: r.course.code, courseTitle: r.course.title,
     })),
   });
 }
