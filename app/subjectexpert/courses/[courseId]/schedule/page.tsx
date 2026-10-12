@@ -5,7 +5,8 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import LectureContentManager from "../../../../../components/LectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
-import { ploCoverageShortfalls } from "../../../../../lib/ploCoverage";
+import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
+import PloCoverageCard from "../../../../../components/PloCoverageCard";
 import { isTeachingTopic } from "../../../../../lib/courseProgress";
 
 
@@ -28,6 +29,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   // The OMC decides the minimum lecture topics per CLO and per PLO (exam / review slots don't count).
   const coverage = await ploCoverageShortfalls(course.id, "SE");
   const minClo = coverage.rules.cloMinTopics;
+  const ploRows = await ploCoverageRows(course.id, "SE");
   const cloHitCounts: Record<string, number> = {};
   for (const c of course.clos) cloHitCounts[c.id] = 0;
   for (const r of course.lectureRows) if (r.cloId && isTeachingTopic(r.topic)) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
@@ -65,6 +67,8 @@ export default async function SchedulePage({ params }: { params: { courseId: str
           )}
         </div>
       )}
+
+      <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
 
       <LectureContentManager
         courseId={course.id}

@@ -65,3 +65,36 @@ export async function ploCoverageShortfalls(courseId: string, source: "SE" | "IN
   });
   return { rules, ...res };
 }
+
+export type PloCoverageRow = { id: string; number: number; title: string; onCourse: boolean; clos: string[]; lectures: number; sharePct: number; marksPct: number; items: number };
+
+/** Per PLO of the course: which CLOs feed it, how many lecture topics reach it (through their CLO), its share of the
+ * teaching lectures, and the marks / assessment items that test it. Includes PLOs the OMC put on the course that no CLO
+ * reaches yet (0 lectures), and any PLO a CLO points to that is not on the course. */
+export async function ploCoverageRows(courseId: string, source: "SE" | "INSTRUCTOR" = "SE"): Promise<PloCoverageRow[]> {
+  const [mapped, clos, rows] = await Promise.all([
+    prisma.coursePloMapping.findMany({ where: { courseId }, select: { plo: { select: { id: true, number: true, title: true } } } }),
+    prisma.cLO.findMany({ where: { courseId, source }, select: { id: true, code: true, mappedPlo: { select: { id: true, number: true, title: true } } }, orderBy: { code: "asc" } }),
+    prisma.lectureRow.findMany({ where: { courseId, source }, select: { cloId: true, weightPct: true, topic: true, instrumentLinks: { select: { instrumentId: true } } } }),
+  ]);
+  const out = new Map<string, PloCoverageRow & { itemSet: Set<string> }>();
+  const add = (p: { id: string; number: number; title: string }, onCourse: boolean) => {
+    const e = out.get(p.id);
+    if (e) { e.onCourse = e.onCourse || onCourse; return e; }
+    const n = { ...p, onCourse, clos: [] as string[], lectures: 0, sharePct: 0, marksPct: 0, items: 0, itemSet: new Set<string>() };
+    out.set(p.id, n); return n;
+  };
+  for (const m of mapped) add(m.plo, true);
+  const ploOfClo = new Map<string, string>();
+  for (const c of clos) if (c.mappedPlo) { add(c.mappedPlo, false).clos.push(c.code); ploOfClo.set(c.id, c.mappedPlo.id); }
+  const teaching = rows.filter((r) => isTeachingTopic(r.topic)).length || 1;
+  for (const r of rows) {
+    const pid = r.cloId ? ploOfClo.get(r.cloId) : undefined;
+    if (!pid || !(r.topic || "").trim()) continue;
+    const e = out.get(pid)!;
+    if (isTeachingTopic(r.topic)) e.lectures++;
+    e.marksPct += r.weightPct;
+    r.instrumentLinks.forEach((l) => e.itemSet.add(l.instrumentId));
+  }
+  return Array.from(out.values()).map(({ itemSet, ...e }) => ({ ...e, items: itemSet.size, sharePct: Math.round((100 * e.lectures) / teaching), marksPct: Math.round(e.marksPct * 10) / 10 })).sort((a, b) => a.number - b.number);
+}

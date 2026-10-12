@@ -7,6 +7,8 @@ import InstructorCourseSubNav from "../../../../../components/InstructorCourseSu
 import CourseEvaluationSection from "../../../../../components/CourseEvaluationSection";
 import InstructorLectureContentManager from "../../../../../components/InstructorLectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
+import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
+import PloCoverageCard from "../../../../../components/PloCoverageCard";
 
 
 export default async function InstructorSchedulePage({ params }: { params: { courseId: string } }) {
@@ -34,6 +36,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
     topic: r.topic, subtopic: r.subtopic, cloCode: r.cloId ? seCloCodeById.get(r.cloId) || null : null,
     bloomLevel: r.bloomLevel, weightPct: r.weightPct, week: r.week,
   }]));
+  const [coverage, ploRows] = await Promise.all([ploCoverageShortfalls(course.id, "INSTRUCTOR"), ploCoverageRows(course.id, "INSTRUCTOR")]);
   const holidayLabelByDate = new Map(holidays.map((h) => [h.date.toISOString().slice(0, 10), h.label]));
 
   return (
@@ -43,6 +46,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
         <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>
       </div>
       <CourseEvaluationSection courseId={course.id} initialObservations={course.instructorObservations || ""} />
+      <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
       <InstructorLectureContentManager
         courseId={course.id}
         initialRows={instructorRows.map((r) => {
