@@ -41,9 +41,16 @@ export default async function SubjectExpertCoursesPage() {
   // standalone (non-synced) courses are actual work items.
   const own = allAssigned.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
   // Courses of terms that are already over (already taught) leave the working list; they stay on record below.
+  // A sync group's base course stands for every copy that follows it: it only counts as "already taught" when every
+  // copy of it assigned to you is too (otherwise the later batches' work, and the Decline button, would disappear).
   const curIdx = new Map<string, number | null>();
-  for (const id of Array.from(new Set(own.map((c) => c.coordinatorId)))) curIdx.set(id, await currentTermIndexFor(id));
-  const pastCourses = own.filter((c) => isPastTerm(c, curIdx.get(c.coordinatorId) ?? null));
+  for (const id of Array.from(new Set(allAssigned.map((c) => c.coordinatorId)))) curIdx.set(id, await currentTermIndexFor(id));
+  const past = (c: (typeof allAssigned)[number]) => isPastTerm(c, curIdx.get(c.coordinatorId) ?? null);
+  const pastCourses = own.filter((c) => {
+    if (!past(c)) return false;
+    const gid = c.contentSyncMember?.groupId;
+    return !gid || allAssigned.filter((x) => x.contentSyncMember?.groupId === gid).every(past);
+  });
   const courses = own.filter((c) => !pastCourses.includes(c));
   const courseIds = courses.map((c) => c.id);
 
