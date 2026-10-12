@@ -308,7 +308,7 @@ const PLO_HINTS: [RegExp, RegExp][] = [
   [/communicat|present|pitch|report|writ|oral/i, /communicat/i],
   [/team|group|collaborat/i, /team/i],
   [/ethic|responsib|integrity/i, /ethic/i],
-  [/life-?long|self-?directed|independent learning|keep up/i, /life-?long/i],
+  [/life-?long|self-?directed|independent learning|keep up|research/i, /life-?long/i],
   [/tool|software|platform|technolog/i, /tool/i],
   [/design|develop|build|implement|construct/i, /design|development/i],
   [/analy[sz]|evaluat|investigat|identify/i, /analysis/i],
