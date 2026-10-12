@@ -399,8 +399,12 @@ async function superUserStats(): Promise<Overview> {
     prisma.user.count({ where: { role: "CHAIRMAN" } }),
   ]);
   const pendingRequests = requestsByStatus.find((g) => g.status === "PENDING")?._count._all || 0;
+  // System Health: database changes the app needs that haven't been run yet.
+  const { checkDatabase } = await import("../../lib/systemHealth");
+  const dbProblems = await checkDatabase().then((r) => r.issues.filter((i) => i.sql).length).catch(() => null);
   return {
     stats: [
+      ...(dbProblems !== null ? [{ label: "Database changes not yet run", value: dbProblems, href: "/admin/system-health", tone: (dbProblems > 0 ? "warn" : "ok") as "warn" | "ok", icon: "requests" as const }] : []),
       { label: "Pending account requests", value: pendingRequests, href: "/admin/account-requests", tone: pendingRequests > 0 ? "warn" : "ok", icon: "requests" },
       { label: "Institutions (Institute Heads)", value: chairmen, href: "/admin/users", tone: "neutral", icon: "institution" },
     ],
