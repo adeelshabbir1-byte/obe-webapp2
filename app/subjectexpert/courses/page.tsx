@@ -6,6 +6,7 @@ import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
 import { seProgressFor } from "../../../lib/seProgress";
+import { currentTermIndexFor, isPastTerm, courseTermIndex, termLabel } from "../../../lib/courseTerm";
 import ProgressBar from "../../../components/ProgressBar";
 
 
@@ -37,7 +38,12 @@ export default async function SubjectExpertCoursesPage() {
   // their base course and are read-only for the SE — there is nothing to
   // do on them, so they no longer clutter this list at all. Only base or
   // standalone (non-synced) courses are actual work items.
-  const courses = allAssigned.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
+  const own = allAssigned.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
+  // Courses of terms that are already over (already taught) leave the working list; they stay on record below.
+  const curIdx = new Map<string, number | null>();
+  for (const id of Array.from(new Set(own.map((c) => c.coordinatorId)))) curIdx.set(id, await currentTermIndexFor(id));
+  const pastCourses = own.filter((c) => isPastTerm(c, curIdx.get(c.coordinatorId) ?? null));
+  const courses = own.filter((c) => !pastCourses.includes(c));
   const courseIds = courses.map((c) => c.id);
 
   const progressByCourse = await seProgressFor(courses);
@@ -88,6 +94,19 @@ export default async function SubjectExpertCoursesPage() {
 
       <h2 style={{ fontSize: 15, margin: "24px 0 8px" }}>Submitted to OMC ({submitted.length})</h2>
       {renderTable(submitted)}
+
+      {pastCourses.length > 0 && (
+        <details className="card" style={{ marginTop: 24 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700 }}>Already taught — past terms ({pastCourses.length})</summary>
+          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>These offerings are over, so they are no longer on your list of work. Your plans for them stay on record.</p>
+          <table style={{ fontSize: 12.5 }}>
+            <thead><tr><th>Code</th><th>Title</th><th>Batch</th><th>Term</th><th>Plan</th><th></th></tr></thead>
+            <tbody>{pastCourses.map((c) => { const t = courseTermIndex(c); return (
+              <tr key={c.id}><td>{c.code}</td><td>{c.title}</td><td>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td><td>{t !== null ? termLabel(t) : "—"}</td><td>{statusLabel(c.templateStatus)}</td><td><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act">View</Link></td></tr>
+            ); })}</tbody>
+          </table>
+        </details>
+      )}
     </Shell>
   );
 }

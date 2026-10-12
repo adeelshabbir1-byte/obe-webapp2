@@ -10,6 +10,7 @@ import { ArrowRight, CircleAlert, CircleCheckBig, ShieldCheck } from "lucide-rea
 import { isDualCapable } from "../../lib/dualRoles";
 import AssignmentResponses from "../../components/AssignmentResponses";
 import { greetingName } from "../../lib/names";
+import { currentTermIndexFor, isPastTerm } from "../../lib/courseTerm";
 import { BRAND, sized } from "../../lib/brandAssets";
 
 export const metadata = { title: "Overview" };
@@ -281,11 +282,15 @@ async function omcStats(user: { id: string; role: string; managedById: string | 
 async function subjectExpertStats(subjectExpertId: string): Promise<Overview> {
   const all = await prisma.course.findMany({
     where: { subjectExpertId },
-    include: { contentSyncMember: { select: { isBase: true } }, _count: { select: { clos: { where: { source: "SE" } }, lectureRows: { where: { source: "SE" } } } } },
+    include: { batch: { select: { startTerm: true, startYear: true } }, contentSyncMember: { select: { isBase: true } }, _count: { select: { clos: { where: { source: "SE" } }, lectureRows: { where: { source: "SE" } } } } },
   });
   // A follower course copies its content from its base course, so there is nothing to do on it. Only base and standalone courses are work.
-  const courses = all.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
-  const followers = all.length - courses.length;
+  // Courses of terms already over are history, not work, so they are left out too.
+  const own = all.filter((c) => !c.contentSyncMember || c.contentSyncMember.isBase);
+  const curIdx = new Map<string, number | null>();
+  for (const id of Array.from(new Set(own.map((c) => c.coordinatorId)))) curIdx.set(id, await currentTermIndexFor(id));
+  const courses = own.filter((c) => !isPastTerm(c, curIdx.get(c.coordinatorId) ?? null));
+  const followers = all.length - own.length;
   const noClos = courses.filter((c) => c._count.clos === 0).length;
   const incompletePlan = courses.filter((c) => c._count.lectureRows < 32).length;
   const byStatus = new Map<string, number>();
