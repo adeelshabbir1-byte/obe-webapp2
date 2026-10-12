@@ -6,6 +6,8 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import InstructorClosManager from "../../../../../components/InstructorClosManager";
 import { navForRole } from "../../../../../components/reportNav";
+import { ploPanel } from "../../../../../lib/ploRequests";
+import { CoursePloRequests } from "../../../../../components/PloRequestControls";
 
 
 export default async function InstructorClosPage({ params }: { params: { courseId: string } }) {
@@ -26,6 +28,7 @@ export default async function InstructorClosPage({ params }: { params: { courseI
     prisma.coursePloMapping.findMany({ where: { courseId: course.id }, include: { plo: true }, orderBy: { plo: { number: "asc" } } }),
   ]);
   const plos = mappings.map((m) => m.plo);
+  const panel = await ploPanel(course.id);
 
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
@@ -36,6 +39,7 @@ export default async function InstructorClosPage({ params }: { params: { courseI
         seClos={seClos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct }))}
         plos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status }))}
       />
+      <CoursePloRequests courseId={course.id} plos={panel.plos} requests={panel.requests} meId={user.id} missing={panel.missing} />
     </Shell>
   );
 }

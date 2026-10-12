@@ -9,6 +9,8 @@ import LoadHecContentButton from "../../../../../components/LoadHecContentButton
 import ImportContentFromCourseButton from "../../../../../components/ImportContentFromCourseButton";
 import CloExcelButtons from "../../../../../components/CloExcelButtons";
 import { navForRole } from "../../../../../components/reportNav";
+import { ploPanel } from "../../../../../lib/ploRequests";
+import { CoursePloRequests } from "../../../../../components/PloRequestControls";
 
 
 export default async function ClosPage({ params }: { params: { courseId: string } }) {
@@ -44,6 +46,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
     orderBy: { plo: { number: "asc" } },
   });
   const plos = mappings.map((m) => m.plo);
+  const panel = await ploPanel(course.id);
 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
@@ -74,6 +77,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
         plos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, status: p.status }))}
         readOnly={isFollower}
       />
+      <CoursePloRequests courseId={course.id} plos={panel.plos} requests={panel.requests} meId={user.id} readOnly={isFollower} missing={panel.missing} />
       {!isFollower && (
         <CourseDescriptionFieldsForm
           courseId={course.id}

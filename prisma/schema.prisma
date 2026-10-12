@@ -2891,3 +2891,25 @@ model InactivityAlert {
   @@unique([bossId, userId, lastSeenAt])
   @@index([userId])
 }
+
+// A Subject Expert or Instructor asks the OMC to add a PLO to their course, or take one off (lib/ploRequests.ts).
+// The PLO–Course matrix itself only changes when the OMC approves.
+model PloChangeRequest {
+  id            String    @id @default(cuid())
+  chairmanId    String
+  courseId      String
+  ploId         String
+  action        String    // ADD | REMOVE
+  reason        String    @db.Text
+  requestedById String
+  requestedAs   String    // SUBJECT_EXPERT | INSTRUCTOR
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  closUnmapped  Int       @default(0) // on an approved removal: how many CLOs of the course lost this PLO
+  createdAt     DateTime  @default(now())
+
+  @@index([chairmanId, status])
+  @@index([courseId])
+}
