@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { classStats, gradeWithCutoffs } from "./grading";
 
 export async function computeResultMate(courseId: string) {
   const [enrollments, instruments, clos, course] = await Promise.all([
@@ -78,27 +79,13 @@ export async function computeResultMate(courseId: string) {
   // Pakistani HEC-affiliated universities. Falls back gracefully with too
   // few students (SD undefined / class of 1) by just using the mean.
   const totals = rows.map((r) => r.totalPct);
-  const mean = totals.length > 0 ? totals.reduce((a, b) => a + b, 0) / totals.length : 0;
-  const variance = totals.length > 1 ? totals.reduce((s, t) => s + (t - mean) ** 2, 0) / (totals.length - 1) : 0;
-  const sd = Math.sqrt(variance);
-
-  function suggestedGradeFor(pct: number): string {
-    if (pct >= mean + sd) return "A";
-    if (pct >= mean) return "B";
-    if (pct >= mean - sd) return "C";
-    if (pct >= mean - 2 * sd) return "D";
-    return "F";
-  }
+  const { mean, sd } = classStats(totals);
 
   // If the Instructor (or Institute Head override) has saved actual cutoffs for
   // this course, those take priority over the live-computed suggestion.
   const savedCutoffs = await prisma.courseGradeCutoff.findMany({ where: { courseId }, orderBy: { minPercent: "desc" } });
   const cutoffsAreSet = savedCutoffs.length > 0;
-  function gradeFor(pct: number): string {
-    if (!cutoffsAreSet) return suggestedGradeFor(pct);
-    const match = savedCutoffs.find((c) => pct >= c.minPercent);
-    return match?.letter || savedCutoffs[savedCutoffs.length - 1]?.letter || suggestedGradeFor(pct);
-  }
+  const gradeFor = (pct: number) => gradeWithCutoffs(pct, savedCutoffs, mean, sd);
 
   // An approved grade change (after the result was approved) overrides the computed grade for that student.
   const { approvedGradeOverrides } = await import("./resultApproval");

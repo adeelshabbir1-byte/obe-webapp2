@@ -1,0 +1,16 @@
+# Runs the calculation tests (tests/*.test.ts) on every push. No database needed: they cover the pure logic -
+# grading, CGPA, terms, exam scheduling, OMC coverage rules, rubrics, sign-in watch. A red X on the commit in GitHub
+# means a calculation changed behaviour; Vercel still deploys, so check before relying on that change.
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
