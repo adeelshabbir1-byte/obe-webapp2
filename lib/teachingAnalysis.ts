@@ -41,6 +41,7 @@ export type Finding = { level: "bad" | "warn" | "good" | "info"; text: string };
 export type TeachingAnalysis = {
   instructorName: string | null; basis: "delivered" | "plan"; topics: TopicRow[]; clos: OutcomeRow[]; plos: OutcomeRow[];
   se: SideSummary; ins: SideSummary; findings: Finding[]; hasInstructorData: boolean;
+  handovers?: { from: string; lectures: number; lastLecture: number | null; date: string; reason: string | null }[];
 };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -262,7 +263,16 @@ export async function analyzeTeaching(courseId: string): Promise<TeachingAnalysi
   if (seUnder.length) findings.push({ level: "info", text: `In the SE's own plan, ${seUnder.length} topic${seUnder.length === 1 ? "'s" : "s'"} lecture time and marks don't agree: ${seUnder.map((t) => t.topic).join("; ")}.` });
   if (se.summary.unlinkedMarks > 0) findings.push({ level: "info", text: `${round1(se.summary.unlinkedMarks)}% of the SE's marks are not linked to any lecture.` });
 
+  // Earlier instructors of this offering (leave / leaving): who taught the first lectures.
+  let handovers: TeachingAnalysis["handovers"] = [];
+  try {
+    const hs = (await (prisma as unknown as Record<string, any>).courseHandover.findMany({ where: { courseId }, orderBy: { createdAt: "asc" } })) as { fromUserId: string; lecturesDelivered: number; lastLectureNumber: number | null; createdAt: Date; reason: string | null }[];
+    const nm = new Map((hs.length ? await prisma.user.findMany({ where: { id: { in: hs.map((h) => h.fromUserId) } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
+    handovers = hs.map((h) => ({ from: nm.get(h.fromUserId) || "—", lectures: h.lecturesDelivered, lastLecture: h.lastLectureNumber, date: h.createdAt.toISOString().slice(0, 10), reason: h.reason }));
+    for (const h of handovers) findings.unshift({ level: "info", text: `${h.from} taught this course until ${h.date}${h.lastLecture ? ` (lectures up to no. ${h.lastLecture}, ${h.lectures} logged)` : ""}${h.reason ? ` — ${h.reason}` : ""}. Delivery counts include their lectures.` });
+  } catch { /* table not created yet */ }
   return {
+    handovers,
     instructorName: course?.instructor?.name || null, basis, topics: topicRows, clos: cloRows, plos: ploRows,
     se: se.summary, ins: ins.summary, findings, hasInstructorData,
   };

@@ -8,6 +8,7 @@ import Shell from "../../../components/Shell";
 import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpertsManager";
 import { navForRole } from "../../../components/reportNav";
 import { currentTermIndexFor, isPastTerm } from "../../../lib/courseTerm";
+import { leavesOf, leaveText } from "../../../lib/facultyLeave";
 
 
 export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string } }) {
@@ -89,6 +90,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
   // rather than scattered alphabetically among everyone else.
   subjectExperts.sort((a, b) => (a.customCategory?.name || "\uffff").localeCompare(b.customCategory?.name || "\uffff") || a.name.localeCompare(b.name));
 
+  const seLeaves = (await leavesOf(subjectExperts.map((x) => x.id))).filter((l) => !l.allowDesign || l.kind === "LEFT");
   const homeExperts = await homeExpertsFor(user.managedById || "", user.id, courseGroups.map((g) => g.homeDepartmentId || ""));
 
   const batches = await prisma.batch.findMany({
@@ -114,7 +116,7 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
         key={selectedBatchId || "all"}
         courseGroups={courseGroups}
         homeExperts={homeExperts}
-        subjectExperts={subjectExperts.map((se) => ({ id: se.id, name: se.name, customCategoryName: se.customCategory?.name || null }))}
+        subjectExperts={subjectExperts.map((se) => { const l = seLeaves.find((x) => x.userId === se.id); return { id: se.id, name: l ? `${se.name} — away: ${leaveText(l)}` : se.name, customCategoryName: se.customCategory?.name || null }; })}
         batches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))}
         selectedBatchId={selectedBatchId}
       />

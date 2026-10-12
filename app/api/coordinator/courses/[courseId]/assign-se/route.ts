@@ -7,6 +7,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 import { handlingAccess } from "../../../../../../lib/courseOwners";
 import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
 import { pastTermError } from "../../../../../../lib/courseTerm";
+import { leaveBlock } from "../../../../../../lib/facultyLeave";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -29,6 +30,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (subjectExpertId && subjectExpertId !== course.subjectExpertId) {
     const past = await pastTermError(course.id, "Subject Expert");
     if (past) return NextResponse.json({ error: past }, { status: 409 });
+    const away = await leaveBlock(subjectExpertId, course.id, "SUBJECT_EXPERT");
+    if (away) return NextResponse.json({ error: away }, { status: 409 });
   }
 
   // Taking the course away from a Subject Expert who already submitted (or got approved) their plan needs a reason.

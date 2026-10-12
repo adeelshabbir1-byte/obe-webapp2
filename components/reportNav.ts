@@ -150,6 +150,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
@@ -184,6 +185,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
@@ -236,6 +238,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },

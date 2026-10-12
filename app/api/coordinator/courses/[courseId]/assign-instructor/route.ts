@@ -8,6 +8,7 @@ import { approvalFieldsFor } from "../../../../../../lib/approvals";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 import { pastTermError } from "../../../../../../lib/courseTerm";
 import { notifyUsers } from "../../../../../../lib/notifications";
+import { leaveBlock } from "../../../../../../lib/facultyLeave";
 
 // Originally Course Assigner-only. Institute Head, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
@@ -49,6 +50,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (instructorId && instructorId !== course.instructorId) {
     const past = await pastTermError(course.id, "Instructor");
     if (past) return NextResponse.json({ error: past }, { status: 409 });
+    const away = await leaveBlock(instructorId, course.id, "INSTRUCTOR");
+    if (away) return NextResponse.json({ error: away }, { status: 409 });
   }
 
   let borrowedAllowed = false;

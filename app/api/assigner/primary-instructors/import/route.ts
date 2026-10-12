@@ -1,3 +1,4 @@
+import { leaveBlock } from "../../../../../lib/facultyLeave";
 import { assignerDept } from "../../../../../lib/assignerScope";
 import ExcelJS from "exceljs";
 import { NextRequest, NextResponse } from "next/server";
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
 
     const currentInstructorId = validCourseIds.get(id) || null;
     if (newInstructorId === currentInstructorId) { unchanged++; continue; }
+    if (newInstructorId && (await leaveBlock(newInstructorId, id, "INSTRUCTOR"))) { unrecognizedNames.add(`${name} (on leave that term)`); rowsSkipped++; skippedRowIds.push(id); continue; }
 
     await prisma.course.update({ where: { id }, data: { instructorId: newInstructorId, ...(await approvalFieldsFor(id, newInstructorId)) } });
     await writeAuditLog({

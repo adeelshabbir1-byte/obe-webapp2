@@ -109,7 +109,12 @@ export async function allocate(sessionId: string) {
   if (!s) return;
   const { papers, cOf } = await paperData(sessionId);
   const rooms = await examRooms(s);
-  const pool = (await invigilatorPool(s.chairmanId)).map((u) => u.id);
+  const { awayInTerm } = await import("./facultyLeave");
+  const { termIndex } = await import("./termLogic");
+  const st = new Date(s.startDate); const t = st.getUTCMonth() >= 7 ? termIndex("Fall", st.getUTCFullYear()) : termIndex("Spring", st.getUTCFullYear());
+  const all = (await invigilatorPool(s.chairmanId)).map((u) => u.id);
+  const away = await awayInTerm(all, t);
+  const pool = all.filter((id) => !away.has(id));
   const bySlot = new Map<string, ExamPaperRow[]>();
   for (const p of papers) if (p.date && p.slot !== null) { const k = `${iso(new Date(p.date))}:${p.slot}`; bySlot.set(k, [...(bySlot.get(k) || []), p]); }
   const roomPlan = new Map<string, Map<string, { roomId: string; studentIds: string[] }[]>>(); // slot -> paperId -> rooms

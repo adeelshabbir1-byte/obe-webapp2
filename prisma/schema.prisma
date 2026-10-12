@@ -2748,3 +2748,38 @@ model FacultyAppraisal {
   @@unique([userId, year])
   @@index([chairmanId, year])
 }
+
+// A teacher away for one or more semesters (semester / study leave, sabbatical, long medical leave) or gone for good
+// (LEFT). Their records stay; they just can't be given courses in the terms the leave covers.
+// fromTerm / toTerm are term indexes (see lib/termLogic.termIndex); toTerm null = open-ended (always for LEFT).
+model FacultyLeave {
+  id          String    @id @default(cuid())
+  userId      String
+  chairmanId  String
+  kind        String    // SEMESTER_LEAVE | STUDY_LEAVE | SABBATICAL | MEDICAL | LEFT
+  fromTerm    Int
+  toTerm      Int?
+  allowDesign Boolean   @default(false) // may still build course plans as a Subject Expert while away
+  note        String?   @db.Text
+  createdById String
+  createdAt   DateTime  @default(now())
+  endedAt     DateTime? // ended early (came back)
+
+  @@index([chairmanId])
+  @@index([userId])
+}
+
+// A course handed from one instructor to another mid-way (leave, leaving): who taught which lectures stays on record.
+model CourseHandover {
+  id                 String   @id @default(cuid())
+  courseId           String
+  fromUserId         String
+  toUserId           String?
+  lecturesDelivered  Int      @default(0)
+  lastLectureNumber  Int?
+  reason             String?
+  createdById        String
+  createdAt          DateTime @default(now())
+
+  @@index([courseId])
+}
