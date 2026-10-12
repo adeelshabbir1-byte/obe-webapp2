@@ -86,6 +86,9 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
     balance = avg(bal); coverage = avg(cov); cloPass = avg(clo);
   }
 
+  // Recognition badges from the year's semesters.
+  let recognition: { title: string; term: string; reason: string | null }[] = [];
+  try { recognition = ((await adb.recognitionBadge.findMany({ where: { userId, term: { endsWith: String(year) } }, orderBy: { createdAt: "asc" } })) as { title: string; term: string; reason: string | null }[]).map((b) => ({ title: b.title, term: b.term, reason: b.reason })); } catch { recognition = []; }
   const inYear = (r: { startYear: number | null; endYear: number | null }) => r.startYear === year || r.endYear === year;
   const dev = {
     publications: records.filter((r) => r.kind === "PUBLICATION" && inYear(r)).length,
@@ -124,7 +127,7 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
     },
     delivery: { planned: teachingLectures.length, delivered, attendanceSessions: attendance.length, flagged },
     deadlines: { ...dl, judged, rate: pct(dl.ON_TIME, judged) },
-    results: res, design, development: dev, service: { invigilations },
+    results: res, design, development: dev, service: { invigilations }, recognition,
     indicators, systemScore: scored.length ? Math.round(scored.reduce((n, i) => n + i.score, 0) / scored.length) : null,
   };
 }

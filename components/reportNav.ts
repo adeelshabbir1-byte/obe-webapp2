@@ -62,6 +62,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/my-obe", label: "My OBE Progress" },
   { href: "/my-leave", label: "Short Leave" },
   { href: "/appraisals", label: "My Appraisal" },
   { href: "/exams", label: "Exam Duties" },
@@ -151,6 +152,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
@@ -187,6 +189,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
@@ -241,6 +244,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },

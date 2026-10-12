@@ -86,6 +86,7 @@ export default async function AppraisalPage({ params, searchParams }: { params: 
           <h3 style={{ marginTop: 0 }}>Development and service</h3>
           <p style={{ fontSize: 13, margin: 0 }}>Publications {c.development.publications} · grants {c.development.grants} · projects {c.development.projects} · events / trainings {c.development.events}</p>
           <p style={{ fontSize: 13 }}>Exam invigilation duties {c.service.invigilations} · deadlines: {c.deadlines.ON_TIME} on time, {c.deadlines.LATE_DONE} late, {c.deadlines.OVERDUE} overdue</p>
+          {(c.recognition || []).length > 0 && <p style={{ fontSize: 13 }}>Recognition: {(c.recognition || []).map((b) => `${b.title} (${b.term})`).join(", ")}</p>}
           {self && <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 0 }}>Publications and projects come from <Link href="/faculty/profile">your profile</Link> — keep it current.</p>}
         </div>
       </div>

@@ -2828,3 +2828,35 @@ model SubstituteClass {
   @@index([chairmanId, date])
   @@index([substituteId])
 }
+
+// Recognition (not a points game): badges a teacher earned in a semester — given automatically from their OBE record
+// when the semester's badges are awarded, or by the Chairman / Institute Head for work the system can't see.
+model RecognitionBadge {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  userId      String
+  term        String   // "Fall 2026"
+  badgeKey    String   // ALWAYS_ON_TIME | OBE_CHAMPION | CQI_CLOSER | COURSE_FILE_COMPLETE | CUSTOM
+  title       String
+  reason      String?  @db.Text
+  awardedById String?  // null = awarded automatically
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, term, badgeKey, title])
+  @@index([chairmanId, term])
+}
+
+// A department (or institute) goal everyone can see, e.g. "100% course files by week 6".
+model RecognitionGoal {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  departmentId String?  // null = whole institute
+  title        String
+  metric       String   // COURSE_FILES | RESULTS_APPROVED | CLOS_MAPPED | MARKS_COMPLETE | CQI_DONE
+  targetPct    Int      @default(100)
+  dueDate      DateTime
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([chairmanId])
+}
