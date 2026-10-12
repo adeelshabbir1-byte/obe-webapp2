@@ -65,7 +65,7 @@ export default async function HomePage() {
   return (
     <Shell roleLabel="Home" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Needs your attention</h1>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>What is late, waiting for you, or waiting on others, as of today. Green means nothing to do.</p>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>What is late, waiting for you, or waiting on others, as of today. Green means nothing to do. For every program&apos;s risks in one table, open the <Link href="/risk">Risk Register</Link>.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10, marginBottom: 18 }}>
         <Tile n={behind.length} label="plan tasks behind" href="/semester-plan" bad />
         <Tile n={risk.length} label="plan tasks at risk" href="/semester-plan" />

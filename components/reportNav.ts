@@ -148,6 +148,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
@@ -180,6 +181,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Requests" },
@@ -202,6 +204,7 @@ export const DEAN_NAV = [
 ];
 
 export const DEPT_COORDINATOR_NAV = [
+  { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/dept-coordinator/home", label: "My Programs" },
@@ -229,6 +232,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
   { href: "/course-split", label: "Course Split" },
