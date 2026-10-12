@@ -2724,3 +2724,27 @@ model ExamPaper {
   @@unique([sessionId, courseId])
   @@index([sessionId])
 }
+
+// A teacher's annual appraisal: the system's figures for the year (frozen when shared) plus the reviewer's ratings and
+// remarks. DRAFT (reviewer working) -> SHARED (the teacher can read it and reply) -> FINAL (signed off).
+model FacultyAppraisal {
+  id              String    @id @default(cuid())
+  userId          String
+  year            Int
+  chairmanId      String
+  reviewerId      String?
+  status          String    @default("DRAFT") // DRAFT | SHARED | FINAL
+  ratingsJson     String    @default("{}")    // { teaching: 1-5, research: 1-5, service: 1-5, conduct: 1-5 }
+  studentFeedback Float?    // average student evaluation score (1-5), entered from the course evaluation forms
+  overall         String?   // OUTSTANDING | VERY_GOOD | GOOD | NEEDS_IMPROVEMENT | UNSATISFACTORY
+  strengths       String?   @db.Text
+  improve         String?   @db.Text
+  goals           String?   @db.Text
+  metricsJson     String?   @db.Text // the scorecard as it stood when shared / finalised
+  facultyComment  String?   @db.Text
+  acknowledgedAt  DateTime?
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  @@unique([userId, year])
+  @@index([chairmanId, year])
+}

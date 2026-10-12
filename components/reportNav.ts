@@ -62,6 +62,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/appraisals", label: "My Appraisal" },
   { href: "/exams", label: "Exam Duties" },
   { href: "/instructor/courses", label: "My Semester Courses" },
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },
@@ -89,6 +90,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/public-library", label: "Public Course Library" },        // other institutes' course outlines, for reference
   { href: "/deadlines", label: "Deadlines" },                         // my tasks, dates and who waits on me
   { href: "/faculty/profile", label: "My Profile" },                  // qualifications shown on the course documents
+  { href: "/appraisals", label: "My Appraisal" },                     // the yearly appraisal, once the reviewer shares it
 ];
 
 export const COORDINATOR_NAV = [
@@ -148,6 +150,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
@@ -181,6 +184,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
@@ -232,6 +236,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/appraisals", label: "Faculty Appraisal" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/results-approval", label: "Result Approval" },
