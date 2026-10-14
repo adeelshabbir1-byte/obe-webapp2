@@ -7,6 +7,7 @@ import { navForRole } from "../../../../components/reportNav";
 import Shell from "../../../../components/Shell";
 import AdvisorStudentPlanner from "../../../../components/AdvisorStudentPlanner";
 import { computeCgpa, standingFromCgpa } from "../../../../lib/academicStanding";
+import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export default async function AdvisorStudentPage({ params }: { params: { student
   if (!s || s.batch?.advisorId !== user.id) notFound();
   const cgpa = await computeCgpa(s.id);
   const [label, tone] = STANDING[standingFromCgpa(cgpa)] || ["—", "badge-neutral"];
+  const ct = s.batch ? await prisma.currentTerm.findUnique({ where: { coordinatorId: s.batch.coordinatorId } }) : null;
+  const expected = s.batch && ct ? computeCurrentSemesterNumber(s.batch, ct) : null;
   const pending = await prisma.registrationApprovalRequest.count({ where: { studentId: s.id, status: "PENDING" } });
 
   return (
@@ -45,6 +48,12 @@ export default async function AdvisorStudentPage({ params }: { params: { student
           <b>This semester:</b> {s.enrollments.length ? s.enrollments.map((e) => `${e.course.code} ${e.course.title} (${e.course.creditHours})`).join(" · ") : <span style={{ color: "var(--slate)" }}>not enrolled in any course</span>}
         </div>
       </div>
+      {expected !== null && expected > 0 && expected !== s.currentSemesterNumber && (
+        <div className="err" style={{ background: "#FFF8EC", color: "#7A5208" }}>
+          The student&apos;s record says <b>semester {s.currentSemesterNumber}</b>, but by the calendar ({ct!.termName} {ct!.year}) this batch is in <b>semester {expected}</b>.
+          {s.currentSemesterNumber < expected ? " If the student is not held back, the Program Lead should advance the batch (Students → Advance semester); the degree plan below uses the recorded semester." : ""}
+        </div>
+      )}
       <h2 style={{ fontSize: 16, margin: "18px 0 8px" }}>Degree plan</h2>
       <AdvisorStudentPlanner studentId={s.id} />
     </Shell>
