@@ -2926,3 +2926,20 @@ model ExamQuestionPolicy {
 
   @@unique([chairmanId, courseType])
 }
+
+// How much each course counts toward a PLO of its batch (lib/ploWeights.ts). Per PLO the weights of its courses total
+// 100. No rows for a PLO = equal split among the courses the OMC mapped to it.
+model CoursePloWeight {
+  id          String   @id @default(cuid())
+  batchId     String
+  ploId       String
+  courseId    String
+  weightPct   Float
+  source      String   @default("MANUAL") // MANUAL | SUGGESTED | EQUAL
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([courseId, ploId])
+  @@index([batchId])
+  @@index([ploId])
+}

@@ -12,6 +12,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/plo-requests", label: "PLO Change Requests" },
+  { href: "/omc/plo-weights", label: "PLO Weights" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/template-changes", label: "Template Changes" },
