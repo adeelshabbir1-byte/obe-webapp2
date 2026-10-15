@@ -7,7 +7,7 @@ const ORDER = ["My work", "Review & Approval", "Semester & Timetable", "Programs
 
 const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
-      || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h), section: "My work" },
+      || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h) || h === "/fyp", section: "My work" },
 
   { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups", section: "Review & Approval" },
 
@@ -17,7 +17,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/coordinator\/(batches|courses|assign-subject-experts|plos|grading-scale|elective-options|custom-categories|program-profile|required-books)$/.test(h)
       || /^\/dean\/curricula$/.test(h) || h === "/clo-bulk-import", section: "Programs & Courses" },
 
-  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || h === "/outcomes", section: "Students" },
+  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h), section: "Students" },
 
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },

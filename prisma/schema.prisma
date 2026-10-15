@@ -3175,3 +3175,286 @@ model ScholarshipRecord {
 
   @@index([chairmanId, fiscalYear])
 }
+
+// ---------------------------------------------------------------------------
+// Final Year Projects (FYP). A department's Chairman names the FYP Head (any faculty member) and the FYP Committee;
+// the Head runs one cycle per session: proposals, groups, milestones, panels, rubric evaluation, results,
+// extensions. Results go to the Chairman for sign-off and then to the Examination Department and the transcript.
+model FypStaff {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  departmentId String
+  userId       String
+  role         String // HEAD | COMMITTEE
+  assignedById String
+  createdAt    DateTime @default(now())
+
+  @@unique([departmentId, userId])
+  @@index([userId])
+}
+
+model FypCycle {
+  id              String   @id @default(cuid())
+  chairmanId      String
+  departmentId    String
+  title           String
+  termName        String
+  termYear        Int
+  status          String   @default("OPEN") // OPEN | CLOSED
+  courseCode      String   @default("FYP")
+  courseTitle     String   @default("Final Year Project")
+  creditHours     Int      @default(6)
+  supervisorPct   Float    @default(30)
+  internalPct     Float    @default(40)
+  externalPct     Float    @default(30)
+  minGroupSize    Int      @default(2)
+  maxGroupSize    Int      @default(4)
+  minCgpa         Float    @default(2)
+  minCreditHours  Int      @default(95)
+  maxApplications Int      @default(3)
+  cutoffsJson     String   @db.Text
+  createdById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([departmentId])
+}
+
+model FypMilestone {
+  id         String   @id @default(cuid())
+  cycleId    String
+  kind       String // PROPOSAL_DEFENSE | MID_TERM | FINAL | THESIS | OTHER
+  title      String
+  dueDate    DateTime
+  weightPct  Float    @default(0)
+  orderIndex Int      @default(0)
+
+  @@index([cycleId])
+}
+
+model FypRubricCriterion {
+  id          String  @id @default(cuid())
+  cycleId     String
+  name        String
+  description String?
+  bloomLevel  String?
+  ploNumber   Int?
+  maxScore    Float   @default(10)
+  appliesTo   String  @default("INDIVIDUAL") // INDIVIDUAL | GROUP
+  orderIndex  Int     @default(0)
+
+  @@index([cycleId])
+}
+
+model FypProposal {
+  id           String    @id @default(cuid())
+  cycleId      String
+  proposerId   String
+  title        String
+  domain       String?
+  abstract     String    @db.Text
+  scope        String?   @db.Text
+  skills       String?
+  hardware     String?
+  software     String?
+  outcomes     String?   @db.Text
+  ploNumbers   Int[]     @default([])
+  maxGroups    Int       @default(1)
+  status       String    @default("SUBMITTED") // SUBMITTED | APPROVED | REVISION | REJECTED | WITHDRAWN
+  reviewNote   String?   @db.Text
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([cycleId, status])
+  @@index([proposerId])
+}
+
+model FypGroup {
+  id              String   @id @default(cuid())
+  cycleId         String
+  name            String
+  leaderId        String
+  proposalId      String?
+  supervisorId    String?
+  panelId         String?
+  status          String   @default("FORMING") // FORMING | ACTIVE | COMPLETED
+  atRisk          Boolean  @default(false)
+  riskNote        String?  @db.Text
+  extendedUntil   DateTime?
+  publicationFlag Boolean  @default(false)
+  patentFlag      Boolean  @default(false)
+  incubatorFlag   Boolean  @default(false)
+  flagNote        String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([cycleId])
+  @@index([supervisorId])
+  @@index([panelId])
+}
+
+model FypGroupMember {
+  id        String   @id @default(cuid())
+  cycleId   String
+  groupId   String
+  studentId String
+  status    String   @default("INVITED") // INVITED | JOINED
+  createdAt DateTime @default(now())
+
+  @@unique([cycleId, studentId])
+  @@index([groupId])
+}
+
+model FypApplication {
+  id          String    @id @default(cuid())
+  groupId     String
+  proposalId  String
+  message     String?   @db.Text
+  status      String    @default("PENDING") // PENDING | ACCEPTED | DECLINED | WITHDRAWN
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([groupId, proposalId])
+  @@index([proposalId, status])
+}
+
+model FypPanel {
+  id        String    @id @default(cuid())
+  cycleId   String
+  name      String
+  domain    String?
+  venue     String?
+  sessionAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([cycleId])
+}
+
+model FypPanelMember {
+  id         String  @id @default(cuid())
+  panelId    String
+  userId     String?
+  externalId String?
+  role       String // CHAIR | INTERNAL | EXTERNAL
+
+  @@index([panelId])
+  @@index([userId])
+  @@index([externalId])
+}
+
+model FypExternal {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  cycleId      String
+  name         String
+  email        String
+  organization String?
+  designation  String?
+  expertise    String?
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([cycleId])
+}
+
+model FypScore {
+  id            String   @id @default(cuid())
+  groupId       String
+  milestoneId   String
+  criterionId   String
+  studentId     String
+  evaluatorKey  String // a user id, or "ext:<FypExternal id>"
+  evaluatorRole String // SUPERVISOR | INTERNAL | EXTERNAL
+  score         Float
+  updatedAt     DateTime @updatedAt
+
+  @@unique([milestoneId, criterionId, studentId, evaluatorKey])
+  @@index([groupId])
+}
+
+model FypEvaluation {
+  id             String   @id @default(cuid())
+  groupId        String
+  milestoneId    String
+  evaluatorKey   String
+  evaluatorRole  String
+  evaluatorName  String
+  comments       String?  @db.Text
+  recommendation String   @default("ON_TRACK") // ON_TRACK | AT_RISK
+  updatedAt      DateTime @updatedAt
+
+  @@unique([groupId, milestoneId, evaluatorKey])
+}
+
+model FypResult {
+  id               String    @id @default(cuid())
+  cycleId          String
+  groupId          String
+  studentId        String
+  totalPct         Float
+  grade            String
+  gpaPoints        Float?
+  ploJson          String    @db.Text
+  breakdownJson    String    @db.Text
+  status           String    @default("CONSOLIDATED") // CONSOLIDATED | APPROVED | RETURNED | HELD
+  note             String?   @db.Text
+  consolidatedById String
+  consolidatedAt   DateTime  @default(now())
+  approvedById     String?
+  approvedAt       DateTime?
+  submittedAt      DateTime?
+
+  @@unique([cycleId, studentId])
+  @@index([groupId])
+}
+
+model FypExtension {
+  id          String    @id @default(cuid())
+  groupId     String
+  kind        String // TWO_WEEKS | FOUR_WEEKS | SEMESTER
+  previousDue DateTime?
+  newDueDate  DateTime
+  reason      String    @db.Text
+  followUpAt  DateTime?
+  grantedById String
+  createdAt   DateTime  @default(now())
+
+  @@index([groupId])
+}
+
+model FypRequisition {
+  id          String    @id @default(cuid())
+  groupId     String
+  kind        String // FUNDING | HARDWARE | LAB_EQUIPMENT | REIMBURSEMENT
+  item        String
+  details     String?   @db.Text
+  amount      Float?
+  sponsor     String?
+  status      String    @default("REQUESTED") // REQUESTED | APPROVED | REJECTED | ISSUED | REIMBURSED
+  requestedBy String
+  decidedById String?
+  decidedAt   DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([groupId])
+}
+
+model FypArtifact {
+  id            String   @id @default(cuid())
+  groupId       String
+  kind          String // THESIS_DRAFT | SIMILARITY_REPORT | REPOSITORY | DEMO_VIDEO | OTHER
+  url           String
+  similarityPct Float?
+  note          String?
+  addedBy       String
+  createdAt     DateTime @default(now())
+
+  @@index([groupId])
+}
