@@ -2955,6 +2955,14 @@ model TopicPrerequisite {
   note                 String?
   createdById          String
   createdAt            DateTime @default(now())
+  // STRONG: the dependent course can't be registered until the prerequisite course is passed and the topic attained
+  // (or cleared through remediation). MILD / WEAK: registration is allowed and the dependent course's teacher plans
+  // a review of the topic (MILD: a full review; WEAK: a short recap).
+  strength             String    @default("MILD")
+  // Set when the topic on either side is no longer in the course's lecture plan: the link then has no effect until
+  // it is pointed at the renamed topic or removed.
+  orphanedAt           DateTime?
+  updatedAt            DateTime  @default(now()) @updatedAt
 
   @@unique([coordinatorId, prereqCourseCode, prereqTopic, dependentCourseCode, dependentTopic])
   @@index([chairmanId])
@@ -3137,6 +3145,18 @@ model SocietyEvent {
   budget       Float?
   createdById  String
   createdAt    DateTime @default(now())
+  // Events proposed by a society's office bearers from the student portal go through the coordinator's approval
+  // (room, equipment, budget). Events entered by staff are approved as they are entered.
+  status              String    @default("APPROVED") // PROPOSED | APPROVED | REJECTED | COMPLETED | CANCELLED
+  proposedByStudentId String?
+  roomId              String?
+  startTime           String? // "14:00"
+  endTime             String?
+  equipment           String?
+  budgetRequested     Float?
+  decisionNote        String?
+  decidedById         String?
+  decidedAt           DateTime?
 
   @@index([societyId])
   @@index([chairmanId, eventDate])
@@ -3457,4 +3477,178 @@ model FypArtifact {
   createdAt     DateTime @default(now())
 
   @@index([groupId])
+}
+
+// ---------------------------------------------------------------------------
+// Prerequisite review modules, remediation, course tools, the textbook pool and engagement points.
+
+// A MILD / WEAK topic prerequisite asks the dependent course's teacher to review the prerequisite topic; this records
+// where in their plan they do it.
+model PrereqReviewPlan {
+  id            String   @id @default(cuid())
+  linkId        String
+  courseId      String // the dependent course offering
+  lectureNumber Int?
+  status        String   @default("PLANNED") // PLANNED | DONE
+  note          String?
+  byId          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@unique([linkId, courseId])
+  @@index([courseId])
+}
+
+// Remediation the OMC plans for students who did not attain topics / CLOs of a course: a dedicated tutorial, or
+// sitting the relevant lectures of a junior offering. A micro-assessment afterwards updates their attainment.
+// Students pay a small fee instead of retaking the course; the instructor is paid a share of the fees collected.
+model RemediationPlan {
+  id                 String    @id @default(cuid())
+  chairmanId         String
+  coordinatorId      String
+  courseCode         String
+  courseTitle        String
+  topics             String[]
+  cloCodes           String[]
+  kind               String // TUTORIAL | JUNIOR_SITTING
+  title              String
+  instructorId       String?
+  hostCourseId       String? // JUNIOR_SITTING: the junior offering whose lectures are attended
+  lectureNumbers     Int[]
+  schedule           String?   @db.Text
+  startDate          DateTime?
+  feePerStudent      Float     @default(0)
+  instructorSharePct Float     @default(70)
+  assessmentTitle    String?
+  status             String    @default("PLANNED") // PLANNED | RUNNING | COMPLETED | CANCELLED
+  payoutAmount       Float?
+  payoutAt           DateTime?
+  payoutById         String?
+  createdById        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, status])
+  @@index([instructorId])
+}
+
+model RemediationEnrollment {
+  id             String    @id @default(cuid())
+  planId         String
+  studentId      String
+  sourceCourseId String? // the student's attempt of the course
+  status         String    @default("ENROLLED") // ENROLLED | CLEARED | NOT_CLEARED | WITHDRAWN
+  feeAmount      Float     @default(0)
+  feeStatus      String    @default("UNPAID") // UNPAID | PAID | WAIVED
+  receiptNo      String?
+  paidAt         DateTime?
+  feeById        String?
+  scorePct       Float?
+  assessedAt     DateTime?
+  assessedById   String?
+  beforeJson     String?   @db.Text // transcript attainment before the micro-assessment updated it
+  createdAt      DateTime  @default(now())
+
+  @@unique([planId, studentId])
+  @@index([studentId])
+}
+
+// Software, languages, environments and tools an instructor uses in a course.
+model CourseTool {
+  id        String   @id @default(cuid())
+  courseId  String
+  name      String
+  category  String // LANGUAGE | IDE | SOFTWARE | LIBRARY | PLATFORM | HARDWARE | OTHER
+  version   String?
+  addedById String
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, name])
+  @@index([courseId])
+}
+
+// The shared textbook pool: books used for HEC-standard courses by the institutes on the platform (and in the HEC
+// curriculum documents), matched to courses by their standard title.
+model Textbook {
+  id          String   @id @default(cuid())
+  title       String
+  authors     String?
+  edition     String?
+  publisher   String?
+  year        Int?
+  isbn        String?
+  normKey     String   @unique
+  subjects    String[]
+  fromHec     Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+model CourseTextbook {
+  id         String   @id @default(cuid())
+  courseId   String
+  textbookId String
+  kind       String   @default("TEXT") // TEXT | REFERENCE
+  addedById  String
+  createdAt  DateTime @default(now())
+
+  @@unique([courseId, textbookId])
+  @@index([textbookId])
+}
+
+// The librarian's procurement record for one book in one term.
+model LibraryRequisition {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  term        String
+  textbookId  String
+  inStock     Int      @default(0)
+  ordered     Int      @default(0)
+  received    Int      @default(0)
+  status      String   @default("PENDING") // PENDING | ORDERED | RECEIVED | NOT_NEEDED
+  note        String?
+  updatedById String?
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([chairmanId, term, textbookId])
+}
+
+// Co-curricular engagement points: attending, taking part in, organizing or winning society events, and holding a
+// society office. dedupeKey stops the same award being given twice.
+model EngagementRecord {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  studentId   String
+  societyId   String?
+  eventId     String?
+  kind        String // ATTENDED | PARTICIPATED | ORGANIZED | WON | LEADERSHIP | OTHER
+  points      Int
+  term        String?
+  note        String?
+  dedupeKey   String   @unique
+  awardedById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+  @@index([studentId])
+  @@index([eventId])
+}
+
+// A topic taught in two courses of a program, judged by the curriculum team: an intentional progression (the later
+// course builds on it) or an accidental duplication (to be removed from one of them).
+model TopicOverlapReview {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  codeA         String
+  codeB         String
+  topicKey      String
+  topicA        String
+  topicB        String
+  verdict       String // PROGRESSION | DUPLICATION
+  note          String?
+  byId          String
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@unique([coordinatorId, codeA, codeB, topicKey])
+  @@index([coordinatorId])
 }

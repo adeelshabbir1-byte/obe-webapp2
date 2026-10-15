@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import ObeAnalytics from "../../../components/ObeAnalytics";
+import StudentMakeUpPlan from "../../../components/StudentMakeUpPlan";
 import StudentShell from "../../../components/StudentShell";
 
 export default async function ObeAnalyticsPage() {
@@ -18,6 +19,7 @@ export default async function ObeAnalyticsPage() {
           How your actual coursework has mapped to your program's learning outcomes so far, and what's ahead.
         </p>
         <ObeAnalytics />
+        <StudentMakeUpPlan student={{ id: student.id, batchId: student.batchId, currentSemesterNumber: student.currentSemesterNumber }} />
       </div>
     </StudentShell>
   );

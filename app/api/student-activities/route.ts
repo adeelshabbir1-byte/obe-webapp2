@@ -4,6 +4,8 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { activitiesScope, canEditSociety, EVENT_CATEGORIES, POSITIONS, SOCIETY_CATEGORIES } from "../../../lib/studentActivities";
 import { chairmanIdFor } from "../../../lib/reportScope";
+import { notifyUsers } from "../../../lib/notifications";
+import { awardEvent, awardLeadership, roomClashes } from "../../../lib/engagement";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const int = (v: unknown) => { if (v === "" || v === null || v === undefined) return null; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 ? n : null; };
@@ -55,11 +57,50 @@ export async function POST(req: NextRequest) {
       await writeAuditLog({ actorUserId: user.id, action: id ? "SOCIETY_EVENT_UPDATED" : "SOCIETY_EVENT_ADDED", entityType: "SocietyEvent", entityId: row.id });
       return NextResponse.json({ event: row });
     }
+    if (b.entity === "decision") {
+      // The Student Activities coordinator approves a proposed event with a room, equipment and a budget, or declines it.
+      if (!scope.manageAll) return NextResponse.json({ error: "Only Student Affairs or the Institute Head approves events." }, { status: 403 });
+      const ev = await prisma.societyEvent.findFirst({ where: { id: str(b.eventId, 60), societyId: society.id } });
+      if (!ev) return NextResponse.json({ error: "event not found" }, { status: 404 });
+      const approve = b.decision === "APPROVE";
+      const note = str(b.note, 500) || null;
+      if (!approve && !note) return NextResponse.json({ error: "Say why it is not approved." }, { status: 400 });
+      let roomId: string | null = null;
+      if (approve && str(b.roomId, 60)) {
+        const room = await prisma.room.findFirst({ where: { id: str(b.roomId, 60), chairmanId: scope.chairmanId }, select: { id: true, name: true } });
+        if (!room) return NextResponse.json({ error: "room not found" }, { status: 404 });
+        const clash = await roomClashes(scope.chairmanId, room.id, ev.eventDate, ev.startTime, ev.endTime, ev.id);
+        if (clash.length) return NextResponse.json({ error: `${room.name} is booked then for "${clash[0].title}". Choose another room.` }, { status: 400 });
+        roomId = room.id;
+      }
+      const budget = approve && b.budget !== "" && b.budget !== null && b.budget !== undefined ? Math.max(0, Number(b.budget) || 0) : approve ? ev.budgetRequested : null;
+      const row = await prisma.societyEvent.update({ where: { id: ev.id }, data: { status: approve ? "APPROVED" : "REJECTED", roomId, budget, equipment: approve ? str(b.equipment, 500) || ev.equipment : ev.equipment, decisionNote: note, decidedById: user.id, decidedAt: new Date() } });
+      await notifyUsers([society.advisorId], { kind: "SOCIETY", title: `${society.name}: "${ev.title}" ${approve ? "approved" : "not approved"}`, body: note || "", href: `/student-activities?society=${society.id}`, exceptId: user.id });
+      await writeAuditLog({ actorUserId: user.id, action: approve ? "SOCIETY_EVENT_APPROVED" : "SOCIETY_EVENT_REJECTED", entityType: "SocietyEvent", entityId: ev.id });
+      return NextResponse.json({ event: row });
+    }
+    if (b.entity === "attendance") {
+      const ev = await prisma.societyEvent.findFirst({ where: { id: str(b.eventId, 60), societyId: society.id } });
+      if (!ev) return NextResponse.json({ error: "event not found" }, { status: 404 });
+      if (!["APPROVED", "COMPLETED"].includes(ev.status)) return NextResponse.json({ error: "Only an approved event can have attendance." }, { status: 400 });
+      if (ev.eventDate.getTime() > Date.now() + 86400000) return NextResponse.json({ error: "Take attendance on or after the day of the event." }, { status: 400 });
+      const rolls = String(b.rollNumbers || "").split(/[\s,;]+/);
+      const r = await awardEvent(ev, rolls, String(b.kind || "ATTENDED"), user.id);
+      if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
+      await writeAuditLog({ actorUserId: user.id, action: "SOCIETY_ATTENDANCE", entityType: "SocietyEvent", entityId: ev.id, metadata: { added: r.added } });
+      return NextResponse.json(r);
+    }
+    if (b.entity === "leadership") {
+      const term = str(b.term, 20);
+      if (!term) return NextResponse.json({ error: "Choose the session." }, { status: 400 });
+      const r = await awardLeadership(scope.chairmanId, society.id, term, user.id);
+      return NextResponse.json(r);
+    }
     return NextResponse.json({ error: "unknown entity" }, { status: 400 });
   } catch (e) {
     const msg = String((e as Error)?.message || "");
     if (msg.includes("Unique constraint")) return NextResponse.json({ error: "A society with that name already exists." }, { status: 400 });
-    if (msg.includes("does not exist")) return NextResponse.json({ error: "The student society tables are not in the database yet — run prisma/migration_oct2026_features.sql in Supabase." }, { status: 500 });
+    if (msg.includes("does not exist")) return NextResponse.json({ error: "The student society tables are not up to date — run prisma/migration_oct2026_features.sql and prisma/migration_master_spec.sql in Supabase." }, { status: 500 });
     return NextResponse.json({ error: "Could not save." }, { status: 500 });
   }
 }

@@ -81,6 +81,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Approved, No Course Assigned": ClipboardList,
   // Pages added later: same rule, one icon per kind of thing.
   "Prerequisite Topics": GitMerge,
+  "Topic Overlap Matrix": Grid3x3,
   "Topic Follow-ups": ClipboardCheck,
   "System Feedback": MessageSquareText,
   "Facilities": Building2,
@@ -88,6 +89,9 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Final Year Projects": Presentation,
   "FYP Results": FileBadge,
   "Final Year Project": Presentation,
+  "Remediation": Repeat,
+  "Textbook Requisitions": BookPlus,
+  "Tutorial Fees & Pay": Wallet,
   "Home": Home,
   "Needs Attention": BellRing,
   "Requests": Inbox,

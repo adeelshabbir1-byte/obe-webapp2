@@ -5,6 +5,7 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
+import CourseResourcesSection from "../../../../../components/CourseResourcesSection";
 import LoadHecContentButton from "../../../../../components/LoadHecContentButton";
 import ImportContentFromCourseButton from "../../../../../components/ImportContentFromCourseButton";
 import CloExcelButtons from "../../../../../components/CloExcelButtons";
@@ -88,6 +89,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
           }}
         />
       )}
+      {!isFollower && <CourseResourcesSection courseId={course.id} user={user} />}
     </Shell>
   );
 }

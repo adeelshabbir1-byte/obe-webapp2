@@ -17,18 +17,18 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/coordinator\/(batches|courses|assign-subject-experts|plos|grading-scale|elective-options|custom-categories|program-profile|required-books)$/.test(h)
       || /^\/dean\/curricula$/.test(h) || h === "/clo-bulk-import", section: "Programs & Courses" },
 
-  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h), section: "Students" },
+  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation", section: "Students" },
 
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },
 
-  { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || h === "/topic-prerequisites"
+  { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || h === "/topic-prerequisites" || h === "/topic-overlaps"
       || /^\/omc\/(course-repositioning|section-comparison|prerequisite-correlation)$/.test(h), section: "Curriculum Maps" },
   { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h) || h === "/registration-rules", section: "Policies & Rules" },
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
   { match: (h) => /^\/accreditation-overview$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },
-  { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h), section: "Facilities & Calendar" },
+  { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h) || h === "/library/requisitions", section: "Facilities & Calendar" },
 
   { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)
       || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h) || h === "/yearly-summary", section: "Reports & Analytics" },

@@ -30,7 +30,8 @@ export async function societiesOf(chairmanId: string) {
   const ids = societies.map((s) => s.id).concat(["none"]);
   const [members, events] = await Promise.all([
     prisma.societyMember.groupBy({ by: ["societyId"], where: { societyId: { in: ids } }, _count: { _all: true } }),
-    prisma.societyEvent.findMany({ where: { societyId: { in: ids } }, select: { societyId: true, eventDate: true, participants: true, category: true } }),
+    // Events that happened or are approved; proposals still waiting (or declined) are not counted.
+    prisma.societyEvent.findMany({ where: { societyId: { in: ids }, status: { in: ["APPROVED", "COMPLETED"] } }, select: { societyId: true, eventDate: true, participants: true, category: true } }),
   ]);
   return { societies, members, events };
 }

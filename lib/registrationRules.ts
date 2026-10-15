@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { computeCgpa, standingFromCgpa } from "./academicStanding";
+import { strongPrereqIssues } from "./prereqCascade";
 
 // Registration rules of an institute (set by the OMC on the Registration Rules page) and the exemptions the Institute
 // Head grants. Every place that registers a student checks a course here first.
@@ -130,6 +131,13 @@ export async function checkCourses(ctx: Ctx, courses: { id: string; code: string
         }
       }
     }
+    // 2b. STRONG topic prerequisites: the prerequisite course passed and its strong topics attained (or cleared through remediation).
+    const strong = await strongPrereqIssues({
+      studentId: ctx.student.id, batchId: ctx.student.batchId, chairmanId: ctx.chairmanId, courseId: c.id, passed: ctx.passed,
+      takenTogether: (codes) => ctx.current.some((x) => codes.includes(up(x.code))) || courses.some((x) => ok.includes(x.id) && codes.includes(up(x.code))),
+      allowTogether: p.allowConcurrentPrereq || !!exempt(ctx, "CONCURRENT_PREREQ", c.code),
+    }).catch(() => [] as string[]);
+    if (strong.length) { blocked.push({ courseId: c.id, code: c.code, reason: strong[0] }); continue; }
     // 3. New-course limit while CGPA is low (retakes and repeats don't count).
     const isNew = !ctx.attempted.has(code);
     if (low && isNew && newCount >= newLimit) {

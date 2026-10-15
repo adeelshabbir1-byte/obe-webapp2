@@ -8,6 +8,7 @@ import CourseEvaluationSection from "../../../../../components/CourseEvaluationS
 import InstructorLectureContentManager from "../../../../../components/InstructorLectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
 import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
+import PrereqReviewCard from "../../../../../components/PrereqReviewCard";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
 
@@ -44,6 +45,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} />
       <PrereqTopicChecks courseId={course.id} source="INSTRUCTOR" />
+      <PrereqReviewCard courseId={course.id} canEdit />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
         <a href={`/api/instructor/courses/${course.id}/course-log-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Course Log (Word)</a>
       </div>

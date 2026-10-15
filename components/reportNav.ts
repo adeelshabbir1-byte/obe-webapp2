@@ -22,7 +22,9 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/master-curriculum", label: "Master Curriculum" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
   { href: "/follow-ups", label: "Topic Follow-ups" },
+  { href: "/remediation", label: "Remediation" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
@@ -51,6 +53,7 @@ export const LAB_MANAGER_NAV = [
 
 export const LIBRARIAN_NAV = [
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 export const STUDENT_AFFAIRS_NAV = [
@@ -67,6 +70,7 @@ export const FACILITIES_NAV = [
 ];
 export const FINANCE_NAV = [
   { href: "/chairman/finance", label: "Finance" },
+  { href: "/remediation", label: "Tutorial Fees & Pay" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
 ];
@@ -80,7 +84,9 @@ export const INSTRUCTOR_NAV = [
   { href: "/fyp", label: "Final Year Projects" },
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
   { href: "/follow-ups", label: "Topic Follow-ups" },
+  { href: "/remediation", label: "Remediation" },
   { href: "/instructor/timetable", label: "My Timetable" },
   { href: "/instructor/course-team", label: "Course Teams" },
   { href: "/instructor/labs", label: "My Labs" },
@@ -102,6 +108,7 @@ export const INSTRUCTOR_NAV = [
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },   // build each course: CLOs, lecture plan, assessments, papers, submit
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },     // link my topics to the topics of later courses that need them
+  { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
   { href: "/follow-ups", label: "Topic Follow-ups" },            // what earlier courses ask of my courses, and what was done
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },     // move topics between two or three of my assigned courses
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, // what students already know before my course (view only)
@@ -148,7 +155,9 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
   { href: "/follow-ups", label: "Topic Follow-ups" },
+  { href: "/remediation", label: "Remediation" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
@@ -177,6 +186,7 @@ export const CHAIRMAN_NAV = [
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/fyp/manage", label: "Final Year Projects" },
   { href: "/fyp/exams", label: "FYP Results" },
+  { href: "/remediation", label: "Remediation" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
   { href: "/appraisals", label: "Faculty Appraisal" },
@@ -212,6 +222,7 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/ai-configuration", label: "AI Configuration" },
   { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
   { href: "/facilities", label: "Facilities" },
+  { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/student-activities", label: "Student Societies" },
 ];
 
@@ -293,7 +304,9 @@ export const HOD_NAV = [
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
   { href: "/follow-ups", label: "Topic Follow-ups" },
+  { href: "/remediation", label: "Remediation" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },

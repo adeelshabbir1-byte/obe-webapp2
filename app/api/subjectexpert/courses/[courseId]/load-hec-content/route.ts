@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reconcileLinks } from "../../../../../../lib/prereqCascade";
 import { templateLockResponse } from "../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
@@ -53,6 +54,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
 
   await writeAuditLog({ actorUserId: user.id, action: "HEC_CONTENT_LOADED_RETROACTIVELY", entityType: "Course", entityId: course.id, metadata: result });
   await syncCourseContentToLinkedCourses(course.id);
+  await reconcileLinks(course.id, user ? { id: user.id, name: user.name } : null).catch(() => null);
 
   return NextResponse.json({ ok: true, ...result });
 }

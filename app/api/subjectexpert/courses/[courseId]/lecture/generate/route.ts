@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reconcileLinks } from "../../../../../../../lib/prereqCascade";
 import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
@@ -37,6 +38,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   await prisma.lectureRow.createMany({ data: rows });
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_TEMPLATE_GENERATED", entityType: "Course", entityId: course.id });
   await syncCourseContentToLinkedCourses(course.id);
+  await reconcileLinks(course.id, user ? { id: user.id, name: user.name } : null).catch(() => null);
 
   const created = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" } });
   return NextResponse.json({ rows: created }, { status: 201 });

@@ -9,6 +9,8 @@ import { prisma } from "./db";
 export async function ensureInstructorCopy(courseId: string) {
   const existingCount = await prisma.cLO.count({ where: { courseId, source: "INSTRUCTOR" } });
   if (existingCount > 0) return; // already copied
+  // A plan with no CLOs leaves no INSTRUCTOR CLOs behind, so the lecture rows tell too (copying them again would fail).
+  if (await prisma.lectureRow.count({ where: { courseId, source: "INSTRUCTOR" } })) return;
 
   const course = await prisma.course.findUnique({ where: { id: courseId } });
   if (!course) return;

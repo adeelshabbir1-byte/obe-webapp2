@@ -4,6 +4,7 @@ import { omcCourseScope } from "./omcScope";
 import { getPassingCriteria } from "./passingCriteria";
 import { analyzeTeaching, isExamTopic, norm, similarity } from "./teachingAnalysis";
 import { holdersOf, notifyUsers } from "./notifications";
+import { keyOf, keysOf } from "./courseKeys";
 
 // Topic-level prerequisites and what follows from them.
 //
@@ -53,7 +54,7 @@ export async function canEditLinks(user: Who, a: { coordinatorId: string; subjec
 
 /** Courses this person may look at in the prerequisite-topic view. */
 export async function visibleCourses(user: Who) {
-  const select = { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true, batchId: true, semesterNumber: true, prerequisiteCourseId: true, isOffered: true, batch: { select: { degreeProgram: true, batchName: true } } } as const;
+  const select = { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true, batchId: true, semesterNumber: true, prerequisiteCourseId: true, isOffered: true, batch: { select: { degreeProgram: true, batchName: true } }, contentSyncMember: { select: { isBase: true } } } as const;
   if (user.role === "PROGRAM_COORDINATOR") return prisma.course.findMany({ where: { coordinatorId: user.id }, select, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] });
   if (user.role === "OMC") return prisma.course.findMany({ where: { coordinator: { managedById: user.managedById || "" }, ...omcCourseScope(user) }, select, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] });
   if (user.role === "SUBJECT_EXPERT" || user.role === "INSTRUCTOR") {
@@ -67,7 +68,7 @@ export async function visibleCourses(user: Who) {
   return [];
 }
 
-export type LinkRow = { id: string; prereqCourseCode: string; prereqCourseTitle: string; prereqTopic: string; dependentCourseCode: string; dependentCourseTitle: string; dependentTopic: string; note: string | null; createdById: string; createdAt: Date };
+export type LinkRow = { id: string; coordinatorId: string; prereqCourseCode: string; prereqCourseTitle: string; prereqTopic: string; dependentCourseCode: string; dependentCourseTitle: string; dependentTopic: string; note: string | null; strength: string; createdById: string; createdAt: Date };
 
 /** Links that involve a course code in a program, in both directions. */
 export async function linksForCode(coordinatorId: string, code: string) {
@@ -89,9 +90,9 @@ export type PrereqCheck = { topic: string; dependents: { code: string; title: st
 
 /** For each topic of this course that a later course depends on: is it in the plan, and is it assessed? */
 export async function prereqAssessmentCheck(courseId: string, source: Src): Promise<PrereqCheck[]> {
-  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { code: true, coordinatorId: true } });
-  if (!course) return [];
-  const { asPrereq } = await linksForCode(course.coordinatorId, course.code);
+  const key = await keyOf(courseId);
+  if (!key) return [];
+  const { asPrereq } = await linksForCode(key.coordinatorId, key.code);
   if (!asPrereq.length) return [];
   const rows = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { id: true, topic: true, lectureNumber: true, instrumentLinks: { select: { instrument: { select: { type: true, label: true } } } } } });
   const papers = await prisma.paperDistributionItem.findMany({ where: { courseId, source }, select: { lectureRowId: true, topicText: true, examType: true, questionNo: true } });
@@ -123,11 +124,14 @@ export type OrderIssue = { prereqCode: string; prereqTopic: string; prereqWeek: 
 export async function corequisiteOrderIssues(courseId: string, source: Src): Promise<{ issues: OrderIssue[]; checked: number }> {
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, code: true, coordinatorId: true, batchId: true, semesterNumber: true, isOffered: true } });
   if (!course || !course.batchId) return { issues: [], checked: 0 };
-  const { asPrereq, asDependent } = await linksForCode(course.coordinatorId, course.code);
+  const key = (await keyOf(course.id))!;
+  const { asPrereq, asDependent } = await linksForCode(key.coordinatorId, key.code);
   const otherCodes = Array.from(new Set([...asPrereq.map((l) => l.dependentCourseCode), ...asDependent.map((l) => l.prereqCourseCode)]));
   if (!otherCodes.length) return { issues: [], checked: 0 };
-  // Same batch, same semester: taught side by side.
-  const others = await prisma.course.findMany({ where: { batchId: course.batchId, code: { in: otherCodes }, semesterNumber: course.semesterNumber, id: { not: course.id } }, select: { id: true, code: true } });
+  // Same batch, same semester: taught side by side. Courses are matched by the code their links are kept under.
+  const sameTerm = await prisma.course.findMany({ where: { batchId: course.batchId, semesterNumber: course.semesterNumber, id: { not: course.id } }, select: { id: true, code: true } });
+  const sameTermKeys = await keysOf(sameTerm.map((c) => c.id));
+  const others = sameTerm.map((c) => ({ id: c.id, code: sameTermKeys.get(c.id)?.code || c.code })).filter((c) => otherCodes.includes(c.code));
   if (!others.length) return { issues: [], checked: 0 };
   const weekOf = async (cid: string) => {
     const rows = await prisma.lectureRow.findMany({ where: { courseId: cid, source }, select: { topic: true, week: true, lectureNumber: true } });
@@ -222,14 +226,15 @@ export async function proposeFollowUps(courseId: string, viewer: Who): Promise<{
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, code: true, title: true, coordinatorId: true, batchId: true } });
   if (!course) return { results: [], proposals: [], passPct: 50, missedTopics: [] };
   const passPct = (await getPassingCriteria(await chairmanIdFor(viewer))).cloPct;
-  const [results, analysis, links] = await Promise.all([topicResults(courseId, passPct), analyzeTeaching(courseId).catch(() => null), linksForCode(course.coordinatorId, course.code)]);
+  const key = (await keyOf(course.id))!;
+  const [results, analysis, links] = await Promise.all([topicResults(courseId, passPct), analyzeTeaching(courseId).catch(() => null), linksForCode(key.coordinatorId, key.code)]);
   const missedTopics = analysis ? analysis.topics.filter((t) => t.status === "missed" && t.se).map((t) => t.topic) : [];
-  // The dependent course taken by the same students (same batch), if it exists yet.
+  // The dependent course taken by the same students (same batch), if it exists yet, matched by the code its links use.
   const depCodes = Array.from(new Set(links.asPrereq.map((l) => l.dependentCourseCode)));
-  const sameBatch = course.batchId && depCodes.length
-    ? await prisma.course.findMany({ where: { batchId: course.batchId, code: { in: depCodes } }, select: { id: true, code: true, title: true } })
-    : [];
-  const depCourse = (code: string) => sameBatch.find((c) => c.code === code) || null;
+  const batchCourses = course.batchId && depCodes.length ? await prisma.course.findMany({ where: { batchId: course.batchId }, select: { id: true, code: true, title: true } }) : [];
+  const batchKeys = await keysOf(batchCourses.map((c) => c.id));
+  const sameBatch = batchCourses.filter((c) => depCodes.includes(batchKeys.get(c.id)?.code || c.code));
+  const depCourse = (code: string) => sameBatch.find((c) => (batchKeys.get(c.id)?.code || c.code) === code) || null;
   const proposals: ProposedFollowUp[] = [];
   const seen = new Set<string>();
   const add = (p: ProposedFollowUp) => { const k = `${p.kind}|${norm(p.topic)}|${p.targetCourseCode}`; if (!seen.has(k)) { seen.add(k); proposals.push(p); } };

@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
+import { cascadeTopicRename, reconcileLinks } from "../../../../../../../lib/prereqCascade";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
@@ -34,6 +35,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_UPDATED", entityType: "LectureRow", entityId: params.lectureId });
   await syncCourseContentToLinkedCourses(course.id);
+  // Topic links follow a renamed topic; links to a topic that is gone stop having effect (and teachers are told).
+  await cascadeTopicRename(course.id, row.topic, String(body.topic), { id: user.id, name: user.name }).catch(() => 0);
+  await reconcileLinks(course.id, { id: user.id, name: user.name }).catch(() => null);
 
   return NextResponse.json({ row: updated });
 }
@@ -59,6 +63,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   ]);
   await writeAuditLog({ actorUserId: user.id, action: "LECTURE_ROW_DELETED", entityType: "LectureRow", entityId: params.lectureId });
   await syncCourseContentToLinkedCourses(course.id);
+  await reconcileLinks(course.id, { id: user.id, name: user.name }).catch(() => null);
 
   return NextResponse.json({ ok: true });
 }
