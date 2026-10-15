@@ -57,8 +57,8 @@ export default async function RiskPage() {
                 <Cell n={r.noSe} href="/coordinator/assign-subject-experts" />
                 <Cell n={r.seWaiting} href="/coordinator/assign-subject-experts" bad={false} />
                 <Cell n={r.noInstructor} href="/coordinator/courses" />
-                <Cell n={r.plansNotReady} href="/omc/templates" bad={false} />
-                <Cell n={r.plansBelowOmc} href="/omc/templates" bad={false} />
+                <Cell n={r.plansNotReady} href="/omc/queue" bad={false} />
+                <Cell n={r.plansBelowOmc} href="/omc/queue" bad={false} />
                 <Cell n={r.overdue} href="/semester-plan" />
                 <Cell n={r.resultsPending} href="/results-approval" bad={false} />
                 <Cell n={r.teachingFlags} href="/omc/reports/planned-vs-taught" bad={false} />

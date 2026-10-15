@@ -3,16 +3,18 @@ import Link from "next/link";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance"; code: string; title: string;
 }) {
+  // Order follows the work: plan the assessments, keep attendance (which dates the log), then rubrics, and the result last.
   const tabs = [
     { key: "clos", label: "1. CLOs & PLO Mapping", href: `/instructor/courses/${courseId}/clos` },
-    { key: "schedule", label: "2. Lecture Content (Actual)", href: `/instructor/courses/${courseId}/schedule` },
-    { key: "weights", label: "3. Assessment Weights", href: `/instructor/courses/${courseId}/weights` },
-    { key: "instruments", label: "4. Assessments", href: `/instructor/courses/${courseId}/instruments` },
-    { key: "rubrics", label: "5. Rubrics", href: `/instructor/courses/${courseId}/rubrics` },
-    { key: "marks", label: "6. Marks Entry", href: `/instructor/courses/${courseId}/marks` },
-    { key: "paper-distribution", label: "7. Paper Distribution", href: `/instructor/courses/${courseId}/paper-distribution` },
-    { key: "attendance", label: "8. Attendance", href: `/instructor/courses/${courseId}/attendance` },
+    { key: "weights", label: "2. Assessment Weights", href: `/instructor/courses/${courseId}/weights` },
+    { key: "instruments", label: "3. Assessments", href: `/instructor/courses/${courseId}/instruments` },
+    { key: "paper-distribution", label: "4. Paper Distribution", href: `/instructor/courses/${courseId}/paper-distribution` },
+    { key: "attendance", label: "5. Attendance", href: `/instructor/courses/${courseId}/attendance` },
+    { key: "schedule", label: "6. Lecture Log (Actual)", href: `/instructor/courses/${courseId}/schedule` },
+    { key: "rubrics", label: "7. Rubrics", href: `/instructor/courses/${courseId}/rubrics` },
+    { key: "marks", label: "8. Marks Entry & Result", href: `/instructor/courses/${courseId}/marks` },
   ];
+
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>

@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { coverageWeight } from "./assessmentWeights";
+import { coverageWeight, PLAN_SELECT, planFor } from "./assessmentWeights";
 
 type Inst = { id: string; courseId: string; source: string; type: string; marksPct: number };
 type BestOf = { quizBestOf: number | null; assignmentBestOf: number | null };
@@ -50,9 +50,9 @@ async function instrumentShares(instrumentId: string): Promise<Map<string, numbe
   const n = links.length;
   const [siblings, course] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId: instrument.courseId, source: instrument.source, type: instrument.type }, select: { id: true, courseId: true, source: true, type: true, marksPct: true } }),
-    prisma.course.findUnique({ where: { id: instrument.courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
+    prisma.course.findUnique({ where: { id: instrument.courseId }, select: PLAN_SELECT }),
   ]);
-  const parts = splitShares(planWeight(instrument as unknown as Inst, siblings as unknown as Inst[], course as unknown as BestOf | null), n);
+  const parts = splitShares(planWeight(instrument as unknown as Inst, siblings as unknown as Inst[], planFor(course, instrument.source)), n);
 
   const ordered = [...links].sort((a, b) => a.lectureRow.lectureNumber - b.lectureRow.lectureNumber);
   ordered.forEach((l, idx) => {
@@ -150,9 +150,9 @@ export async function recomputeCourseRows(courseId: string, source: "SE" | "INST
   const instruments = await prisma.assessmentInstrument.findMany({ where: { id: { in: instrumentIds } } });
   const [courseInstruments, courseBest] = await Promise.all([
     prisma.assessmentInstrument.findMany({ where: { courseId, source }, select: { id: true, courseId: true, source: true, type: true, marksPct: true } }),
-    prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: PLAN_SELECT }),
   ]);
-  const marksPctById = new Map<string, number>(instruments.map((i) => [i.id as string, planWeight(i as unknown as Inst, courseInstruments as unknown as Inst[], courseBest as unknown as BestOf | null)]));
+  const marksPctById = new Map<string, number>(instruments.map((i) => [i.id as string, planWeight(i as unknown as Inst, courseInstruments as unknown as Inst[], planFor(courseBest, source))]));
 
   const linksByInstrument = new Map<string, typeof links>();
   for (const l of links) {

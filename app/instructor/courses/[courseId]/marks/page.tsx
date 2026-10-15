@@ -14,6 +14,7 @@ import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEn
 import { navForRole } from "../../../../../components/reportNav";
 import Link from "next/link";
 import ResultApprovalPanel from "../../../../../components/ResultApprovalPanel";
+import TopicFollowUpsCard from "../../../../../components/TopicFollowUpsCard";
 import { db as resultDb, getCourseResult, type GradeChangeRow } from "../../../../../lib/resultApproval";
 import { getGradingScaleForBatch } from "../../../../../lib/gradingScaleLookup";
 
@@ -208,6 +209,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
           hasUnenrolledBatchStudents={batchStudentCount > enrollments.length}
         />
       )}
+      <TopicFollowUpsCard courseId={course.id} viewer={user} />
     </Shell>
   );
 }

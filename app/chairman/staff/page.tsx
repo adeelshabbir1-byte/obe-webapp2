@@ -12,7 +12,7 @@ export default async function StaffPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "CHAIRMAN") redirect("/dashboard");
   const [staff, lib, fin] = await Promise.all([
-    prisma.user.findMany({ where: { managedById: user.id, role: { in: ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"] as never } }, select: { id: true, name: true, username: true, email: true, role: true, isActive: true, mustChangePassword: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { managedById: user.id, role: { in: ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"] as never } }, select: { id: true, name: true, username: true, email: true, role: true, isActive: true, mustChangePassword: true }, orderBy: { name: "asc" } }),
     prisma.libraryInfo.findUnique({ where: { chairmanId: user.id }, select: { updatedAt: true, updatedById: true } }),
     prisma.financeEntry.findFirst({ where: { chairmanId: user.id }, orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
   ]);
@@ -30,7 +30,7 @@ export default async function StaffPage() {
           <table>
             <thead><tr><th>Name</th><th>Role</th><th>Username</th><th>Email</th><th>Status</th></tr></thead>
             <tbody>{staff.map((s) => (
-              <tr key={s.id}><td><b>{s.name}</b></td><td>{({ LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs" } as Record<string, string>)[String(s.role)]}</td><td>{s.username}</td><td>{s.email}</td><td>{!s.isActive ? "Switched off" : s.mustChangePassword ? "Temporary password" : "Active"}</td></tr>
+              <tr key={s.id}><td><b>{s.name}</b></td><td>{({ LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager" } as Record<string, string>)[String(s.role)]}</td><td>{s.username}</td><td>{s.email}</td><td>{!s.isActive ? "Switched off" : s.mustChangePassword ? "Temporary password" : "Active"}</td></tr>
             ))}</tbody>
           </table>
         )}

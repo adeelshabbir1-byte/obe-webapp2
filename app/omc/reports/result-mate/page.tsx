@@ -15,6 +15,9 @@ import ReportPrintHeader from "../../../../components/ReportPrintHeader";
 import GradeCutoffsForm from "../../../../components/GradeCutoffsForm";
 import GradeBoundaryEditor from "../../../../components/GradeBoundaryEditor";
 import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
+import { resultLockMessage } from "../../../../lib/resultApproval";
+import ResultMateMarks from "../../../../components/ResultMateMarks";
+import MarksGrid from "../../../../components/MarksGrid";
 
 export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -66,6 +69,10 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     : "";
 
   const gradeBadge: Record<string, string> = { A: "badge-ok", B: "badge-ok", C: "badge-warn", D: "badge-warn", F: "badge-no" };
+  // The course's own instructor can enter and correct marks right here, until the result is submitted for approval.
+  const isOwnInstructor = !!course && user.role === "INSTRUCTOR" && course.instructorId === user.id;
+  const lockMessage = isOwnInstructor && course ? await resultLockMessage(course.id) : null;
+  const canEnterMarks = isOwnInstructor && !lockMessage;
 
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
@@ -162,38 +169,23 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
           </>
           )}
 
-          {result.instruments.length > 0 && (
-            <div className="card" style={{ overflowX: "auto" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 10 }}>Per-Assessment-Item Scores</h3>
-              <SortableTable paginate={false} searchable={false} style={{ tableLayout: "fixed" }}>
-                <thead>
-                  <tr>
-                    <th rowSpan={2} style={{ width: 70 }}>Roll #</th><th rowSpan={2} style={{ width: 130 }}>Name</th>
-                    {groupedInstrumentTypes.map((g) => (
-                      <th key={g.type} colSpan={g.instruments.length} style={{ textAlign: "center", background: TYPE_COLOR[g.type] || "#94A3B8", color: "#fff" }}>{g.type}</th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {result.instruments.map((i) => <th key={i.id} style={{ width: 56 }}>{i.label}<br /><span style={{ fontWeight: 400 }}>/{i.maxScore}</span></th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.rows.map((r) => (
-                    <tr key={r.studentId}>
-                      <td>{r.rollNumber}</td><td>{r.name}</td>
-                      {result.instruments.map((i) => <td key={i.id}>{r.rawScores[i.id] ?? "—"}</td>)}
-                    </tr>
-                  ))}
-                  <tr style={{ fontWeight: 700, borderTop: "2px solid var(--line)" }}>
-                    <td colSpan={2}>Average</td>
-                    {result.instruments.map((i) => <td key={i.id}>{i.average ?? "—"}</td>)}
-                  </tr>
-                  <tr style={{ fontWeight: 700 }}>
-                    <td colSpan={2}>Std. Deviation</td>
-                    {result.instruments.map((i) => <td key={i.id}>{i.sd ?? "—"}</td>)}
-                  </tr>
-                </tbody>
-              </SortableTable>
+          {result.instruments.length > 0 && course && (
+            <div className="card">
+              <h3 style={{ fontSize: 14, marginBottom: 6 }}>Per-Assessment-Item Scores</h3>
+              {isOwnInstructor && lockMessage && <p className="small-note">{lockMessage}</p>}
+              {canEnterMarks && <p className="small-note" style={{ marginTop: 0 }}>Enter or correct marks here — totals, grades and the charts on this page update a moment after you stop typing.</p>}
+              {(() => {
+                const gridProps = {
+                  courseId: course.id,
+                  items: result.instruments.map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore })),
+                  students: result.rows.map((r) => ({ id: r.studentId, name: r.name, rollNumber: r.rollNumber, marks: Object.fromEntries(Object.entries(r.rawScores).filter(([, v]) => v !== null && v !== undefined)) as Record<string, number> })),
+                  footer: [
+                    { label: "Average", values: Object.fromEntries(result.instruments.map((i) => [i.id, i.average ?? null])) },
+                    { label: "Std. Deviation", values: Object.fromEntries(result.instruments.map((i) => [i.id, i.sd ?? null])) },
+                  ],
+                };
+                return canEnterMarks ? <ResultMateMarks {...gridProps} /> : <MarksGrid {...gridProps} editable={false} />;
+              })()}
             </div>
           )}
 

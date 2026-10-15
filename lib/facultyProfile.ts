@@ -129,7 +129,8 @@ export const REPORT_VIEWER_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "D
 const STAFF = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "LAB_MANAGER", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;
 
 /** The staff this viewer may see in the faculty details report. */
-export async function reportPeople(viewer: Viewer) {
+export type ReportPerson = { id: string; name: string; email: string; role: string; secondaryRole: string | null; departmentId: string | null; specialization: string | null; leadProgram: string | null; department_: { name: string } | null };
+export async function reportPeople(viewer: Viewer): Promise<ReportPerson[]> {
   if (!REPORT_VIEWER_ROLES.includes(viewer.role)) return [];
   const chairmanId = viewer.role === "CHAIRMAN" ? viewer.id : viewer.managedById || "none";
   const institute = { OR: [{ managedById: chairmanId }, { managedBy: { managedById: chairmanId } }], isVisitingPlaceholder: false, isActive: true, role: { in: STAFF as unknown as string[] } };
@@ -139,8 +140,13 @@ export async function reportPeople(viewer: Viewer) {
   else if (viewer.role === "PROGRAM_COORDINATOR") extra = { OR: [{ managedById: viewer.id }, { id: viewer.id }] };
   const people = await prisma.user.findMany({
     where: { AND: [institute as never, extra as never] } as never,
-    select: { id: true, name: true, email: true, role: true, secondaryRole: true, departmentId: true, specialization: true, leadProgram: true, department_: { select: { name: true } } },
+    select: { id: true, name: true, email: true, role: true, secondaryRole: true, departmentId: true, specialization: true, leadProgram: true, department_: { select: { name: true } }, managedBy: { select: { departmentId: true, department_: { select: { name: true } } } } },
     orderBy: { name: "asc" },
   });
-  return people as { id: string; name: string; email: string; role: string; secondaryRole: string | null; departmentId: string | null; specialization: string | null; leadProgram: string | null; department_: { name: string } | null }[];
+  // A teacher added under a Program Lead often has no department of their own: they belong to the lead's department.
+  return (people as unknown as (Omit<ReportPerson, "department_"> & { department_: { name: string } | null; managedBy: { departmentId: string | null; department_: { name: string } | null } | null })[]).map(({ managedBy, ...p }) => ({
+    ...p,
+    departmentId: p.departmentId || managedBy?.departmentId || null,
+    department_: p.department_ || managedBy?.department_ || null,
+  })) as ReportPerson[];
 }

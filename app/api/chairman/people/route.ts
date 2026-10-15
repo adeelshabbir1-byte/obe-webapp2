@@ -11,7 +11,7 @@ import { heldSet, packRoles } from "../../../../lib/dualRoles";
 const LEADERS = ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"];
 const DEPT_BOUND = ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"];
 const TEACHING = ["SUBJECT_EXPERT", "INSTRUCTOR"];
-const STAFF = ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
+const STAFF = ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 
 export async function PATCH(req: NextRequest) {
   const user = await getAuthenticatedUser();

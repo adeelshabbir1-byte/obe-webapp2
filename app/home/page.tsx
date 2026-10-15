@@ -18,7 +18,7 @@ function Tile({ n, label, href, bad }: { n: number; label: string; href: string;
   );
 }
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: { dept?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -35,7 +35,12 @@ export default async function HomePage() {
     prisma.libraryInfo.findUnique({ where: { chairmanId }, select: { updatedAt: true } }),
     prisma.changeLog.findMany({ where: { chairmanId } as never, orderBy: { createdAt: "desc" }, take: 5 }),
   ]) as unknown as [Awaited<ReturnType<typeof planProgress>>, number, number, number, { id: string; title: string; dueDate: Date }[], { updatedAt: Date } | null, { id: string; area: string; summary: string; createdAt: Date }[]];
-  const { leads } = await leadsInScope(user);
+  const { leads: allLeads } = await leadsInScope(user);
+  // Departments are tracked separately: the tabs at the top narrow every figure on the page to one department.
+  const deptTabs = Array.from(new Map(allLeads.map((l) => [l.departmentId || "none", l.department_?.name || "No department"])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  const dept = searchParams.dept && deptTabs.some(([id]) => id === searchParams.dept) ? searchParams.dept : "";
+  const leads = dept ? allLeads.filter((l) => (l.departmentId || "none") === dept) : allLeads;
+  const deptName = new Map(deptTabs);
   const offered = (await prisma.course.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) }, isOffered: true, isNonCredit: false } as never, select: { id: true, coordinatorId: true, instructorId: true, subjectExpertId: true }, take: 3000 })) as unknown as { id: string; coordinatorId: string; instructorId: string | null; subjectExpertId: string | null }[];
   const offeredIds = offered.map((c) => c.id).concat(["none"]);
   const staleCut = new Date(Date.now() - 14 * 86400000);
@@ -56,16 +61,33 @@ export default async function HomePage() {
   const hasClo = new Set(cloRows.map((r) => r.courseId)), hasPlan = new Set(lectureRows.map((r) => r.courseId)), hasMarks = new Set(markRows.map((r) => r.courseId));
   const perLead = leads.map((l) => {
     const cs = offered.filter((c) => c.coordinatorId === l.id);
-    return { id: l.id, program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length, noAtt: cs.filter((c) => { const d = lastAtt.get(c.id); return !d || d < staleCut; }).length, students: studentsOf.get(l.id) || 0, fig: outFigs.find((f) => f.leadId === l.id) || null };
+    return { id: l.id, dept: l.departmentId || "none", program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length, noAtt: cs.filter((c) => { const d = lastAtt.get(c.id); return !d || d < staleCut; }).length, students: studentsOf.get(l.id) || 0, fig: outFigs.find((f) => f.leadId === l.id) || null };
   }).filter((r) => r.total > 0);
   const sumOf = (k: "total" | "noInstr" | "noSe" | "noClo" | "noPlan" | "noMarks" | "noAtt" | "students") => perLead.reduce((n, r) => n + r[k], 0);
-  const behind = lines.filter((l) => l.state === "BEHIND").sort((a, b) => b.behind - a.behind);
-  const risk = lines.filter((l) => l.state === "AT_RISK");
+  // With one department chosen, a plan task counts only through that department's courses.
+  const deptCourses = new Set(offered.map((c) => c.id));
+  const inDept = (l: (typeof lines)[number]) => !dept || l.notDone.some((n) => deptCourses.has(n.courseId));
+  const behindHere = (l: (typeof lines)[number]) => (dept ? l.notDone.filter((n) => deptCourses.has(n.courseId)).length : l.behind);
+  const behind = lines.filter((l) => l.state === "BEHIND" && inDept(l)).sort((a, b) => behindHere(b) - behindHere(a));
+  const risk = lines.filter((l) => l.state === "AT_RISK" && inDept(l));
+  // Per-department totals for the "All departments" view.
+  const byDept = deptTabs.map(([id, name]) => {
+    const rows = perLead.filter((r) => r.dept === id);
+    const sum = (k: "total" | "noInstr" | "noSe" | "noClo" | "noPlan" | "noMarks" | "noAtt" | "students") => rows.reduce((n, r) => n + r[k], 0);
+    return { id, name, programs: rows.length, total: sum("total"), noInstr: sum("noInstr"), noSe: sum("noSe"), noClo: sum("noClo"), noPlan: sum("noPlan"), noMarks: sum("noMarks"), noAtt: sum("noAtt"), students: sum("students") };
+  }).filter((d) => d.programs > 0);
   const staleDays = staleLib ? Math.floor((now.getTime() - staleLib.updatedAt.getTime()) / 86400000) : null;
   return (
     <Shell roleLabel="Home" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Needs your attention</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>What is late, waiting for you, or waiting on others, as of today. Green means nothing to do. For every program&apos;s risks in one table, open the <Link href="/risk">Risk Register</Link>.</p>
+      {deptTabs.length > 1 && (
+        <nav className="tabs no-print" aria-label="Departments" style={{ marginBottom: 14 }}>
+          <Link href="/home" className="tab" aria-current={!dept ? "page" : undefined}>All departments</Link>
+          {deptTabs.map(([id, name]) => <Link key={id} href={`/home?dept=${id}`} className="tab" aria-current={dept === id ? "page" : undefined}>{name}</Link>)}
+        </nav>
+      )}
+      {dept && <p className="small-note" style={{ marginTop: -6 }}>Showing <b>{deptName.get(dept)}</b> only. Your own tasks and requests are always shown.</p>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10, marginBottom: 18 }}>
         <Tile n={behind.length} label="plan tasks behind" href="/semester-plan" bad />
         <Tile n={risk.length} label="plan tasks at risk" href="/semester-plan" />
@@ -74,6 +96,23 @@ export default async function HomePage() {
         <Tile n={answered} label="replies to read" href="/requests" />
         <Tile n={splitWaiting} label="course requests to accept" href="/course-split" />
       </div>
+      {!dept && byDept.length > 1 && (
+        <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
+          <h3 style={{ marginTop: 0 }}>By department</h3>
+          <table>
+            <thead><tr><th>Department</th><th>Programs</th><th>Offered</th><th>No instructor</th><th>No Subject Expert</th><th>No CLOs</th><th>No lecture plan</th><th>No marks yet</th><th>Attendance not marked in 14 days</th><th>Students</th></tr></thead>
+            <tbody>
+              {byDept.map((d) => (
+                <tr key={d.id}>
+                  <td><Link href={`/home?dept=${d.id}`}><b>{d.name}</b></Link></td><td>{d.programs}</td><td>{d.total}</td>
+                  {[d.noInstr, d.noSe, d.noClo, d.noPlan, d.noMarks, d.noAtt].map((n, i) => <td key={i} style={{ color: n ? "#B3261E" : "#2E7D4F", fontWeight: n ? 700 : 400 }}>{n}</td>)}
+                  <td>{d.students}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>Courses offered this semester: {sumOf("total")}</h3>
         {perLead.length === 0 ? <p style={{ margin: 0, color: "var(--slate)" }}>No course is marked as offered yet. Program Leads mark them under Courses.</p> : (
@@ -99,7 +138,7 @@ export default async function HomePage() {
         <h3 style={{ marginTop: 0 }}>Most behind</h3>
         {behind.length === 0 ? <p style={{ margin: 0, color: "var(--slate)" }}>Nothing is behind the plan.</p> : (
           <table><thead><tr><th>Task</th><th>Role</th><th>Was due</th><th>Not done</th></tr></thead>
-            <tbody>{behind.slice(0, 8).map((l) => <tr key={l.id}><td><b>{l.title}</b></td><td>{l.role || ""}</td><td>{day(l.dueDate)}</td><td style={{ color: "#B3261E" }}>{l.behind} of {l.total}</td></tr>)}</tbody></table>
+            <tbody>{behind.slice(0, 8).map((l) => <tr key={l.id}><td><b>{l.title}</b></td><td>{l.role || ""}</td><td>{day(l.dueDate)}</td><td style={{ color: "#B3261E" }}>{dept ? `${behindHere(l)} in this department` : `${l.behind} of ${l.total}`}</td></tr>)}</tbody></table>
         )}
         <p style={{ marginBottom: 0, fontSize: 12.5 }}><Link href="/semester-plan">Open the full semester plan and send reminders →</Link></p>
       </div>

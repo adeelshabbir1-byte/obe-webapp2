@@ -9,7 +9,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h), section: "My work" },
 
-  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h), section: "Review & Approval" },
+  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups", section: "Review & Approval" },
 
   { match: (h) => /^\/coordinator\/(semester|repeat-offering|calendar|timetable|out-of-batch-requests|assignment-history|elective-instructor-report)$/.test(h)
       || /^\/instructor\/course-team$/.test(h) || /^\/assigner\/(matrix|course-short-names)$/.test(h), section: "Semester & Timetable" },
@@ -22,13 +22,13 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },
 
-  { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h)
+  { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || h === "/topic-prerequisites"
       || /^\/omc\/(course-repositioning|section-comparison|prerequisite-correlation)$/.test(h), section: "Curriculum Maps" },
   { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h) || h === "/registration-rules", section: "Policies & Rules" },
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
   { match: (h) => /^\/accreditation-overview$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },
-  { match: (h) => /^\/(resources|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h), section: "Facilities & Calendar" },
+  { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h), section: "Facilities & Calendar" },
 
   { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)
       || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h) || h === "/yearly-summary", section: "Reports & Analytics" },

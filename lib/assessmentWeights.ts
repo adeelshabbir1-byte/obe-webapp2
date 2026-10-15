@@ -60,3 +60,26 @@ export function splitEvenly(total: number, n: number): number[] {
   const base = Math.floor(tenthsTotal / n), rem = tenthsTotal - base * n;
   return Array.from({ length: n }, (_, i) => (base + (i >= n - rem ? 1 : 0)) / 10);
 }
+
+// ---- The assessment plan: the Subject Expert's, or the Instructor's own copy ----
+const PLAN_KEYS = [
+  "assignmentPct", "quizPct", "projectPct", "labPct", "midtermPct", "finalPct",
+  "assignmentCount", "quizCount", "projectCount", "labCount", "midtermCount", "finalCount",
+  "quizBestOf", "assignmentBestOf",
+] as const;
+type PlanKey = (typeof PLAN_KEYS)[number];
+export type Plan = Record<PlanKey, number | null>;
+const instructorKey = (k: string) => "instructor" + k[0].toUpperCase() + k.slice(1);
+/** Every Course column the plan is read from (both copies), for a Prisma select. */
+export const PLAN_SELECT = Object.fromEntries(PLAN_KEYS.flatMap((k) => [[k, true], [instructorKey(k), true]])) as Record<string, true>;
+/**
+ * Percentages, number of items and "best of" for one side of a course. The Instructor's copy starts as the Subject
+ * Expert's plan: any value the Instructor has not set yet is read from the plan.
+ */
+export function planFor(course: object | null | undefined, source: string): Plan {
+  const c = (course || {}) as Record<string, number | null | undefined>;
+  return Object.fromEntries(PLAN_KEYS.map((k) => {
+    const own = source === "INSTRUCTOR" ? c[instructorKey(k)] : undefined;
+    return [k, own ?? c[k] ?? null];
+  })) as Plan;
+}

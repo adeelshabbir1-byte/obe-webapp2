@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
-import { deptScope } from "../../../lib/omcScope";
+import { omcLeadScope, omcCourseScope } from "../../../lib/omcScope";
 import { pdb, type PloRequestRow } from "../../../lib/ploRequests";
 import { PloRequestDecision } from "../../../components/PloRequestControls";
 
@@ -16,11 +16,11 @@ export default async function PloRequestsPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const coordinatorIds = (await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } })).map((c) => c.id);
+  const coordinatorIds = (await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...omcLeadScope(user) }, select: { id: true } })).map((c) => c.id);
   let rows: PloRequestRow[] = [], missing = false;
   try { rows = (await pdb.ploChangeRequest.findMany({ where: { chairmanId: user.managedById || "" }, orderBy: { createdAt: "desc" }, take: 300 })) as PloRequestRow[]; } catch { missing = true; }
   const courses = rows.length ? await prisma.course.findMany({
-    where: { id: { in: Array.from(new Set(rows.map((r) => r.courseId))) }, coordinatorId: { in: coordinatorIds } },
+    where: { id: { in: Array.from(new Set(rows.map((r) => r.courseId))) }, coordinatorId: { in: coordinatorIds }, ...omcCourseScope(user) },
     select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } }, clos: { select: { code: true, statement: true, source: true, mappedPloId: true }, orderBy: { code: "asc" } }, ploMappings: { select: { plo: { select: { number: true } } } } },
   }) : [];
   const cOf = new Map(courses.map((c) => [c.id, c]));

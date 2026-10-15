@@ -29,6 +29,7 @@ enum UserRole {
   LIBRARIAN
   FINANCE_OFFICER
   STUDENT_AFFAIRS
+  FACILITIES_MANAGER
 }
 
 model User {
@@ -1322,6 +1323,16 @@ model Course {
   instructorFinalPct      Int?
   // Same idea as weightsConfirmedAt above, for the Instructor's own copy.
   instructorWeightsConfirmedAt DateTime?
+  // The Instructor's own number of items per category and "best of" choice (same meaning as assignmentCount /
+  // quizBestOf above, for the delivery copy). Null = not set yet: the Subject Expert's plan is used.
+  instructorAssignmentCount   Int?
+  instructorQuizCount         Int?
+  instructorProjectCount      Int?
+  instructorLabCount          Int?
+  instructorMidtermCount      Int?
+  instructorFinalCount        Int?
+  instructorQuizBestOf        Int?
+  instructorAssignmentBestOf  Int?
 
   clos                CLO[]
   lectureRows         LectureRow[]
@@ -2925,4 +2936,242 @@ model ExamQuestionPolicy {
   updatedAt           DateTime @updatedAt
 
   @@unique([chairmanId, courseType])
+}
+
+// ---------------------------------------------------------------------------
+// Topic-level prerequisites: "Functions" in PF is needed for "Methods" in OOP.
+// Kept per program (the Program Lead who owns both courses) by course code and
+// topic text, so the link applies to every batch's copy of the two courses.
+model TopicPrerequisite {
+  id                   String   @id @default(cuid())
+  chairmanId           String
+  coordinatorId        String
+  prereqCourseCode     String
+  prereqCourseTitle    String
+  prereqTopic          String
+  dependentCourseCode  String
+  dependentCourseTitle String
+  dependentTopic       String
+  note                 String?
+  createdById          String
+  createdAt            DateTime @default(now())
+
+  @@unique([coordinatorId, prereqCourseCode, prereqTopic, dependentCourseCode, dependentTopic])
+  @@index([chairmanId])
+  @@index([coordinatorId, dependentCourseCode])
+}
+
+// A follow-up raised from a course's results: a prerequisite topic most students
+// did not master, a planned topic that was never taught, or a topic taught and
+// assessed but failed by most students. It names the course that must act (the
+// dependent course, or the next offering of the same course) and records what
+// was done about it (continuous quality improvement).
+model TopicFollowUp {
+  id               String    @id @default(cuid())
+  chairmanId       String
+  coordinatorId    String
+  sourceCourseId   String
+  sourceCourseCode String
+  topic            String
+  kind             String // WEAK_PREREQ | MISSED | WEAK
+  studentsBelow    Int?
+  studentsTotal    Int?
+  targetCourseId   String?
+  targetCourseCode String
+  targetTopic      String?
+  recommendation   String    @db.Text
+  status           String    @default("OPEN") // OPEN | IN_PROGRESS | DONE | DISMISSED
+  assignedToId     String?
+  actionTaken      String?   @db.Text
+  actionById       String?
+  actionAt         DateTime?
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([sourceCourseId, kind, topic, targetCourseCode])
+  @@index([chairmanId, status])
+  @@index([coordinatorId, targetCourseCode])
+  @@index([assignedToId])
+}
+
+// Topic Workspace: a teacher proposes a topic to a course they do not own.
+model TopicSuggestion {
+  id            String    @id @default(cuid())
+  chairmanId    String
+  fromUserId    String
+  fromCourseId  String?
+  toCourseId    String
+  topic         String
+  subtopic      String?
+  note          String?   @db.Text
+  status        String    @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  respondedById String?
+  respondedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([toCourseId, status])
+  @@index([fromUserId])
+}
+
+// Ideas and problems sent by any user to the platform owner (Super User).
+model SystemFeedback {
+  id         String   @id @default(cuid())
+  userId     String
+  chairmanId String?
+  role       String
+  category   String // IDEA | PROBLEM | USABILITY | OTHER
+  title      String
+  body       String   @db.Text
+  pageUrl    String?
+  status     String   @default("NEW") // NEW | UNDER_REVIEW | PLANNED | DONE | DECLINED
+  adminReply String?  @db.Text
+  recognized Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+// Buildings, rooms and campus services, kept by the Facilities Manager (what PEC / NCEAC / NBEAC visits ask about).
+model FacilityBuilding {
+  id              String   @id @default(cuid())
+  chairmanId      String
+  name            String
+  campus          String?
+  totalAreaSqft   Float?
+  coveredAreaSqft Float?
+  floors          Int?
+  yearBuilt       Int?
+  ownership       String? // OWNED | RENTED | LEASED
+  notes           String?  @db.Text
+  updatedById     String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([chairmanId, name])
+}
+
+model FacilityRoom {
+  id             String   @id @default(cuid())
+  chairmanId     String
+  buildingId     String
+  name           String
+  roomType       String // CLASSROOM | LAB | LECTURE_HALL | AUDITORIUM | SEMINAR | CONFERENCE | FACULTY_OFFICE | LIBRARY | ADMIN | WASHROOM | STORE | OTHER
+  floor          String?
+  lengthFt       Float?
+  widthFt        Float?
+  capacity       Int?
+  multimedia     Boolean  @default(false)
+  airConditioned Boolean  @default(false)
+  departmentId   String?
+  notes          String?
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@unique([buildingId, name])
+  @@index([chairmanId])
+}
+
+model FacilityService {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  kind        String // DISPENSARY | HOSTEL | TRANSPORT | CAFETERIA | SPORTS | PRAYER | PARKING | POWER_BACKUP | INTERNET | SECURITY | FIRE_SAFETY | ACCESSIBILITY | DAY_CARE | BANK | BOOKSHOP | OTHER
+  name        String
+  available   Boolean  @default(true)
+  quantity    Int?
+  capacity    Int?
+  staff       Int?
+  details     String?  @db.Text
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, kind])
+}
+
+// Student clubs and societies, their office bearers and their events (Student Affairs; each society's faculty advisor keeps their own).
+model StudentSociety {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  departmentId String?
+  name         String
+  category     String // TECHNICAL | SPORTS | LITERARY | CULTURAL | COMMUNITY | RELIGIOUS | OTHER
+  advisorId    String?
+  description  String?  @db.Text
+  foundedYear  Int?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([chairmanId, name])
+  @@index([advisorId])
+}
+
+model SocietyMember {
+  id         String   @id @default(cuid())
+  societyId  String
+  studentId  String?
+  name       String
+  rollNumber String?
+  position   String
+  term       String
+  createdAt  DateTime @default(now())
+
+  @@index([societyId])
+}
+
+model SocietyEvent {
+  id           String   @id @default(cuid())
+  societyId    String
+  chairmanId   String
+  title        String
+  category     String
+  eventDate    DateTime
+  venue        String?
+  participants Int?
+  guests       String?
+  description  String?  @db.Text
+  outcome      String?  @db.Text
+  budget       Float?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([societyId])
+  @@index([chairmanId, eventDate])
+}
+
+// Accounts: fee structure per program and intake session, and scholarships / financial aid given each year.
+model FeeStructure {
+  id                 String   @id @default(cuid())
+  chairmanId         String
+  degreeProgram      String
+  session            String
+  admissionFee       Float    @default(0)
+  tuitionPerSemester Float    @default(0)
+  perCreditHour      Float?
+  labFee             Float    @default(0)
+  examFee            Float    @default(0)
+  otherFee           Float    @default(0)
+  notes              String?
+  updatedById        String?
+  updatedAt          DateTime @updatedAt
+
+  @@unique([chairmanId, degreeProgram, session])
+}
+
+model ScholarshipRecord {
+  id            String   @id @default(cuid())
+  chairmanId    String
+  fiscalYear    String
+  scheme        String
+  degreeProgram String?
+  students      Int      @default(0)
+  amount        Float    @default(0)
+  notes         String?
+  updatedById   String?
+  updatedAt     DateTime @updatedAt
+
+  @@index([chairmanId, fiscalYear])
 }

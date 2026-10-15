@@ -70,7 +70,7 @@ export default function ReweightingSuggestions({ courseId, suggestions: initialS
       </div>
       {error && <div className="err">{error}</div>}
       {suggestions.map((s) => (
-        <div key={s.cloCode} style={{ marginBottom: 16 }}>
+        <div key={s.cloCode} style={{ marginBottom: 16, overflowX: "auto" }}>
           <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>{s.cloCode} — total {s.totalWeight}%</div>
           <table>
             <thead><tr><th>Item</th><th>Class Avg</th><th>Current Weight</th><th>Suggested Weight</th><th></th></tr></thead>

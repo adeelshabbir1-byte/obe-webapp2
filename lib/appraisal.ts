@@ -136,12 +136,17 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
 export async function appraiseesFor(user: { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null }) {
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "none";
   const leads = await prisma.user.findMany({ where: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" as never }, select: { id: true } });
-  const scope = user.role === "HEAD_OF_DEPARTMENT" ? { departmentId: user.departmentId || "none" } : user.role === "DEAN" ? { department_: { facultyId: user.facultyId || "none" } } : {};
+  // A teacher belongs to a department directly, or through the Program Lead who manages them (same rule as the Faculty Details Report).
+  const scope = user.role === "HEAD_OF_DEPARTMENT"
+    ? { AND: [{ OR: [{ departmentId: user.departmentId || "none" }, { managedBy: { departmentId: user.departmentId || "none" } }] }] }
+    : user.role === "DEAN"
+      ? { AND: [{ OR: [{ department_: { facultyId: user.facultyId || "none" } }, { managedBy: { department_: { facultyId: user.facultyId || "none" } } }] }] }
+      : {};
   const people = await prisma.user.findMany({
     where: { isActive: true, isVisitingPlaceholder: false, managedById: { in: [chairmanId, ...leads.map((l) => l.id)] }, OR: [{ role: "INSTRUCTOR" }, { secondaryRole: "INSTRUCTOR" }, { tertiaryRole: "INSTRUCTOR" }, { role: "SUBJECT_EXPERT" }], ...scope } as never,
-    select: { id: true, name: true, department_: { select: { name: true } } }, orderBy: { name: "asc" },
+    select: { id: true, name: true, department_: { select: { name: true } }, managedBy: { select: { department_: { select: { name: true } } } } }, orderBy: { name: "asc" },
   });
-  return { chairmanId, people: people.map((p) => ({ id: p.id, name: p.name, department: p.department_?.name || null })) };
+  return { chairmanId, people: people.map((p) => ({ id: p.id, name: p.name, department: p.department_?.name || p.managedBy?.department_?.name || null })) };
 }
 
 export type Summary = { courses: number; creditHours: number; students: number; planned: number; delivered: number; deadlineRate: number | null; resultsApproved: number; designCourses: number; designApproved: number; publications: number };

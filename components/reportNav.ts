@@ -21,6 +21,8 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/prerequisite-correlation", label: "Prerequisite Correlation" },
   { href: "/omc/master-curriculum", label: "Master Curriculum" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
@@ -42,6 +44,7 @@ export const LAB_MANAGER_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/facilities", label: "Facilities" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
 ];
@@ -52,8 +55,14 @@ export const LIBRARIAN_NAV = [
 ];
 export const STUDENT_AFFAIRS_NAV = [
   { href: "/admission-criteria", label: "Admission Criteria" },
+  { href: "/student-activities", label: "Student Societies" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/academic-calendar", label: "Academic Calendar" },
+  { href: "/deadlines", label: "Deadlines" },
+];
+export const FACILITIES_NAV = [
+  { href: "/facilities", label: "Facilities" },
+  { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
 ];
 export const FINANCE_NAV = [
@@ -69,11 +78,14 @@ export const INSTRUCTOR_NAV = [
   { href: "/exams", label: "Exam Duties" },
   { href: "/instructor/courses", label: "My Semester Courses" },
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },
+  { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/instructor/timetable", label: "My Timetable" },
   { href: "/instructor/course-team", label: "Course Teams" },
   { href: "/instructor/labs", label: "My Labs" },
   { href: "/instructor/peers", label: "Colleagues’ Plans" },
   { href: "/advisor/dashboard", label: "Advisor Dashboard" },
+  { href: "/student-activities", label: "Student Societies" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
@@ -88,6 +100,8 @@ export const INSTRUCTOR_NAV = [
 // Subject Expert who also teaches switches role to reach them.
 export const SUBJECT_EXPERT_NAV = [
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },   // build each course: CLOs, lecture plan, assessments, papers, submit
+  { href: "/topic-prerequisites", label: "Prerequisite Topics" },     // link my topics to the topics of later courses that need them
+  { href: "/follow-ups", label: "Topic Follow-ups" },            // what earlier courses ask of my courses, and what was done
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },     // move topics between two or three of my assigned courses
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, // what students already know before my course (view only)
   { href: "/public-library", label: "Public Course Library" },        // other institutes' course outlines, for reference
@@ -131,6 +145,8 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
+  { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
@@ -139,6 +155,7 @@ export const COORDINATOR_NAV = [
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/coordinator/activities", label: "Extra-curricular Activities" },
+  { href: "/student-activities", label: "Student Societies" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
@@ -173,6 +190,7 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/people", label: "People & Roles" },
   
   { href: "/chairman/cqi", label: "CQI Records" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/chairman/audit-log", label: "Audit Log" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
@@ -189,6 +207,8 @@ export const CHAIRMAN_NAV = [
   { href: "/chairman/institute-settings", label: "Institute Settings" },
   { href: "/chairman/ai-configuration", label: "AI Configuration" },
   { href: "/chairman/alumni-custodian", label: "Alumni Data Custodian" },
+  { href: "/facilities", label: "Facilities" },
+  { href: "/student-activities", label: "Student Societies" },
 ];
 
 export const DEAN_NAV = [
@@ -206,10 +226,13 @@ export const DEAN_NAV = [
   { href: "/dean/curricula", label: "Curricula" },
   { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/facilities", label: "Facilities" },
+  { href: "/student-activities", label: "Student Societies" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
@@ -234,6 +257,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/coordinator/repeat-offering", label: "Repeat/Summer Offering" },
   { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
@@ -261,10 +285,14 @@ export const HOD_NAV = [
   { href: "/hod/department", label: "My Department" },
   { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/topic-prerequisites", label: "Prerequisite Topics" },
+  { href: "/follow-ups", label: "Topic Follow-ups" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
+  { href: "/facilities", label: "Facilities" },
+  { href: "/student-activities", label: "Student Societies" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
@@ -284,6 +312,7 @@ export function navForRole(role: string) {
     case "LAB_MANAGER": return LAB_MANAGER_NAV;
     case "LIBRARIAN": return LIBRARIAN_NAV;
     case "FINANCE_OFFICER": return FINANCE_NAV;
+    case "FACILITIES_MANAGER": return FACILITIES_NAV;
     case "STUDENT_AFFAIRS": return STUDENT_AFFAIRS_NAV;
     case "SUBJECT_EXPERT": return SUBJECT_EXPERT_NAV;
     case "PROGRAM_COORDINATOR": return COORDINATOR_NAV;

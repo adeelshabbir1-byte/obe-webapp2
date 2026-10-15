@@ -6,7 +6,7 @@ import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import TemplateChangeReview from "../../../components/TemplateChangeReview";
 import TemplateChangeHistory from "../../../components/TemplateChangeHistory";
 import { loadChangeItems } from "../../../lib/templateChangeItems";
-import { deptScope } from "../../../lib/omcScope";
+import { omcLeadScope, omcCourseScope } from "../../../lib/omcScope";
 
 export default async function TemplateChangesPage() {
   const user = await getAuthenticatedUser();
@@ -15,8 +15,8 @@ export default async function TemplateChangesPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
-  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinators.map((c: { id: string }) => c.id) } }, select: { id: true } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...omcLeadScope(user) }, select: { id: true } });
+  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinators.map((c: { id: string }) => c.id) }, ...omcCourseScope(user) }, select: { id: true } });
   const ids = courses.map((c: { id: string }) => c.id);
   const all = await loadChangeItems({ courseId: { in: ids } });
   const pending = all.filter((i) => i.status === "pending");

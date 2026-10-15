@@ -5,6 +5,7 @@ import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import { fiscalYearNow, labRatio } from "../../lib/resources";
+import { loadFacilities, summarize } from "../../lib/facilities";
 
 const when = (d?: Date | null) => (d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never");
 const money = (n: number) => `PKR ${Math.round(n).toLocaleString("en-US")}`;
@@ -29,7 +30,7 @@ export default async function ResourcesPage() {
     prisma.financeEntry.findMany({ where: { chairmanId: id, fiscalYear: year } }),
     prisma.financeEntry.findFirst({ where: { chairmanId: id }, orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
     prisma.admissionCriteria.findMany({ where: { chairmanId: id }, select: { updatedAt: true, updatedById: true, minPercentage: true } }),
-    prisma.user.findMany({ where: { managedById: id, role: { in: ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"] as never }, isActive: true }, select: { name: true, role: true } }),
+    prisma.user.findMany({ where: { managedById: id, role: { in: ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"] as never }, isActive: true }, select: { name: true, role: true } }),
     prisma.departmentProgram.count({ where: { department: { chairmanId: id } } }),
   ]);
   const ids = Array.from(new Set([labLast?.updatedById, lib?.updatedById, ...(crit as unknown as { updatedById: string | null }[]).map((c) => c.updatedById)].filter((x): x is string => !!x)));
@@ -42,6 +43,8 @@ export default async function ResourcesPage() {
   const critLast = newest ? newest.updatedAt : null;
   const critBy = newest?.updatedById;
 
+  // Facilities (Facilities Manager): read softly, the tables may not be in the database yet.
+  const fac = await loadFacilities(id).then((d) => ({ s: summarize(d), last: [...d.buildings, ...d.services].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0]?.updatedAt || null })).catch(() => null);
   const tile = (l: string, v: string | number) => (
     <div key={l}><div style={{ fontSize: 20, fontWeight: 700, fontFamily: "Georgia, serif" }}>{v}</div><div style={{ fontSize: 11.5, color: "var(--slate)" }}>{l}</div></div>
   );
@@ -62,13 +65,15 @@ export default async function ResourcesPage() {
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Resources</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
-        Labs, library, finance and admissions in one place. Each is kept up to date by its own department; open any of them to correct a figure.
+        Labs, library, facilities, finance and admissions in one place. Each is kept up to date by its own department; open any of them to correct a figure.
       </p>
       <div style={{ display: "grid", gap: 14 }}>
         {section("Computer labs", "Kept by the Lab Manager", holders("LAB_MANAGER"), `${when(labLast?.updatedAt)}${by(labLast?.updatedById)}`,
           [["Labs", ratio.labs], ["Computers", ratio.computers], ["Working", ratio.working], ["Students", ratio.students], ["Students per working computer", ratio.perComputer ?? "—"]], "/lab-inventory", "Open lab inventory")}
         {section("Library", "Kept by the Librarian", holders("LIBRARIAN"), `${when(lib?.updatedAt)}${by(lib?.updatedById)}`,
           [["Book titles", lib?.totalTitles ?? 0], ["Computing titles", lib?.computingTitles ?? 0], ["Volumes", lib?.totalVolumes ?? 0], ["Reading seats", lib?.seats ?? 0], ["Print journals", lib?.printJournals ?? 0], ["E-books", lib?.ebooks ?? 0]], "/library-inventory", "Open library record")}
+        {section("Facilities", "Kept by the Facilities Manager", holders("FACILITIES_MANAGER"), when(fac?.last),
+          [["Buildings", fac?.s.buildings ?? 0], ["Covered area (sq ft)", (fac?.s.coveredArea ?? 0).toLocaleString("en-US")], ["Classrooms", fac?.s.classrooms ?? 0], ["Classroom seats", fac?.s.classroomSeats ?? 0], ["Hostel beds", fac?.s.hostelBeds ?? 0], ["Transport seats", fac?.s.transportSeats ?? 0]], "/facilities", "Open facilities")}
         {section(`Finance ${year}`, "Kept by the Finance Officer", holders("FINANCE_OFFICER"), when(finLast?.updatedAt),
           [["Budget", money(sum("BUDGET"))], ["Spent", money(sum("SPENT"))], ["Income", money(sum("INCOME"))]], "/chairman/finance", "Open finance")}
         {section("Admission criteria", "Kept by Student Affairs", holders("STUDENT_AFFAIRS"), `${when(critLast)}${by(critBy)}`,

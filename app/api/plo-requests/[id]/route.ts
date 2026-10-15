@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
-import { deptScope } from "../../../../lib/omcScope";
+import { omcCourseScope } from "../../../../lib/omcScope";
 import { pdb, decide, type PloRequestRow } from "../../../../lib/ploRequests";
 
 // PATCH { decision: APPROVE | REJECT | CANCEL, note } — the OMC decides; the person who asked may withdraw it.
@@ -20,9 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   }
   if (user.role !== "OMC") return NextResponse.json({ error: "Only the OMC decides PLO changes." }, { status: 403 });
-  const c = await prisma.course.findUnique({ where: { id: r.courseId }, select: { coordinator: { select: { managedById: true, departmentId: true } } } });
-  const scope = deptScope(user);
-  if (!c || c.coordinator.managedById !== user.managedById || (scope.departmentId && c.coordinator.departmentId !== scope.departmentId)) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // Only an OMC member whose department looks after this course (see omcCourseScope) decides on it.
+  const c = await prisma.course.findFirst({ where: { id: r.courseId, coordinator: { managedById: user.managedById || "" }, ...omcCourseScope(user) }, select: { id: true } });
+  if (!c) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (b.decision === "REJECT" && note.length < 3) return NextResponse.json({ error: "Say why, so they know what to change." }, { status: 400 });
   try {
     const unmapped = await decide(r, b.decision === "APPROVE", note, { id: user.id, name: user.name });

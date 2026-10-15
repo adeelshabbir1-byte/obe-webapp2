@@ -1,17 +1,20 @@
 import { prisma } from "./db";
 import { classStats, gradeWithCutoffs } from "./grading";
+import { PLAN_SELECT, planFor } from "./assessmentWeights";
 
 export async function computeResultMate(courseId: string) {
   const [enrollments, instruments, clos, course] = await Promise.all([
     prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, include: { student: true } }),
     prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
     prisma.cLO.findMany({ where: { courseId, source: "INSTRUCTOR" }, include: { mappedPlo: true }, orderBy: { orderIndex: "asc" } }),
-    prisma.course.findUnique({ where: { id: courseId }, select: { quizBestOf: true, assignmentBestOf: true } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: PLAN_SELECT }),
   ]);
   // "Best of N" — drop the lowest-scoring Quiz/Assignment items from the
   // GRADE total only (see schema comment on Course.quizBestOf). CLO/PLO
   // attainment below is computed from the full instrument set regardless.
-  const bestOfByType: Record<string, number | null> = { Quiz: course?.quizBestOf ?? null, Assignment: course?.assignmentBestOf ?? null };
+  // Marks are entered on the Instructor's items, so the Instructor's own best-of applies (the plan's until they set one).
+  const plan = planFor(course, "INSTRUCTOR");
+  const bestOfByType: Record<string, number | null> = { Quiz: plan.quizBestOf, Assignment: plan.assignmentBestOf };
   function topKSum(values: number[], k: number | null | undefined): number {
     if (k === null || k === undefined || k <= 0 || k >= values.length) return values.reduce((s, v) => s + v, 0);
     return [...values].sort((a, b) => b - a).slice(0, k).reduce((s, v) => s + v, 0);

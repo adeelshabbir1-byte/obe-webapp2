@@ -7,7 +7,7 @@ export const CRITERIA: Record<number, string> = {
   6: "Facilities and Infrastructure", 7: "Institutional Support and Financial Resources", 8: "Steps to Improve the Program", 9: "Industrial Linkages",
 };
 export const MEETING_KINDS: Record<string, string> = { OMC: "OMC meeting", BOS: "BOS meeting", BPF: "BPF meeting", FACULTY: "Faculty meeting", IAB: "Industrial advisory board", OTHER: "Other meeting" };
-export const FILE_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
+export const FILE_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 export const MEETING_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 export const MAX_FILE_BYTES = 3 * 1024 * 1024;
 export const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "text/plain", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];

@@ -6,9 +6,14 @@ type LectureRow = { id: string; week: number; lectureNumber: number; topic: stri
 type RosterStudent = { id: string; name: string; rollNumber: string; status: string | null };
 type SummaryRow = { studentId: string; name: string; rollNumber: string; present: number; absent: number; leave: number; percentage: number | null; flagged: boolean };
 
-export default function AttendanceManager({ courseId, lectureRows }: { courseId: string; lectureRows: LectureRow[] }) {
-  const deliveredLectures = lectureRows.filter((r) => r.actualDate);
-  const [selectedLectureId, setSelectedLectureId] = useState(deliveredLectures[0]?.id || "");
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+export default function AttendanceManager({ courseId, lectureRows: initialRows }: { courseId: string; lectureRows: LectureRow[] }) {
+  // Attendance is what dates the course log: whichever lecture it is taken for gets the attendance date.
+  const [lectureRows, setLectureRows] = useState<LectureRow[]>(initialRows);
+  const firstOpen = initialRows.find((r) => !r.actualDate) || initialRows[initialRows.length - 1];
+  const [selectedLectureId, setSelectedLectureId] = useState(firstOpen?.id || "");
+  const [date, setDate] = useState(firstOpen?.actualDate || today());
   const [roster, setRoster] = useState<RosterStudent[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,10 +59,11 @@ export default function AttendanceManager({ courseId, lectureRows }: { courseId:
     try {
       const res = await fetch(`/api/instructor/courses/${courseId}/attendance/${selectedLectureId}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: roster.filter((s) => s.status).map((s) => ({ studentId: s.id, status: s.status })) }),
+        body: JSON.stringify({ date, entries: roster.filter((s) => s.status).map((s) => ({ studentId: s.id, status: s.status })) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      setLectureRows((prev) => prev.map((r) => (r.id === selectedLectureId ? { ...r, actualDate: data.actualDate || date } : r)));
       setSaved(true); setSaving(false); loadSummary();
     } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }
   }
@@ -67,16 +73,24 @@ export default function AttendanceManager({ courseId, lectureRows }: { courseId:
       {error && <div className="err">{error}</div>}
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Mark Attendance for a Lecture</h3>
-        {deliveredLectures.length === 0 ? (
-          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No delivered lectures yet — mark a lecture's actual date on the Lecture Content tab first.</p>
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Mark Attendance for a Lecture</h3>
+        <p style={{ fontSize: 12, color: "var(--slate)", marginTop: 0, marginBottom: 10 }}>
+          The date you take attendance on becomes that lecture&apos;s date in the Lecture Log and the Course Log File.
+        </p>
+        {lectureRows.length === 0 ? (
+          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No lectures in your plan yet — add them on the Lecture Log tab first.</p>
         ) : (
           <>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
-              <select value={selectedLectureId} onChange={(e) => { setSelectedLectureId(e.target.value); loadRoster(e.target.value); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5, minWidth: 300 }}>
-                {deliveredLectures.map((r) => <option key={r.id} value={r.id}>Week {r.week}, Lec {r.lectureNumber} — {r.topic} ({r.actualDate})</option>)}
-              </select>
-              <button onClick={() => markAll("PRESENT")} style={{ background: "none", border: "1px solid var(--line)", padding: "5px 10px", fontSize: 11.5, cursor: "pointer" }}>Mark All Present</button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 12 }}>Lecture{" "}
+                <select value={selectedLectureId} onChange={(e) => { const r = lectureRows.find((x) => x.id === e.target.value); setSelectedLectureId(e.target.value); setDate(r?.actualDate || today()); loadRoster(e.target.value); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5, minWidth: 300 }}>
+                  {lectureRows.map((r) => <option key={r.id} value={r.id}>Week {r.week}, Lec {r.lectureNumber} — {r.topic} ({r.actualDate || "not held yet"})</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: 12 }}>Date{" "}
+                <input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} style={{ padding: "5px 8px" }} />
+              </label>
+              <button onClick={() => markAll("PRESENT")} className="btn btn-secondary btn-sm">Mark All Present</button>
             </div>
 
             {loadingRoster ? (
@@ -102,7 +116,7 @@ export default function AttendanceManager({ courseId, lectureRows }: { courseId:
                 </table>
                 <div style={{ marginTop: 12 }}>
                   {saved && <span style={{ color: "var(--sage)", fontSize: 12, marginRight: 10 }}>Saved.</span>}
-                  <button onClick={save} disabled={saving} className="btn btn-brass">{saving ? "Saving…" : "Save Attendance"}</button>
+                  <button onClick={save} disabled={saving || !date} className="btn btn-brass">{saving ? "Saving…" : "Save Attendance"}</button>
                 </div>
               </>
             )}

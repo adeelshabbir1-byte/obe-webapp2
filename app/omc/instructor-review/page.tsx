@@ -5,7 +5,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import Link from "next/link";
-import { deptScope } from "../../../lib/omcScope";
+import { omcLeadScope, omcCourseScope } from "../../../lib/omcScope";
 
 
 
@@ -16,11 +16,11 @@ export default async function InstructorReviewListPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...omcLeadScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const courses = await prisma.course.findMany({
-    where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: { not: null } },
+    where: { coordinatorId: { in: coordinatorIds }, isOffered: true, instructorId: { not: null }, ...omcCourseScope(user) },
     include: { batch: true, instructor: true },
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });

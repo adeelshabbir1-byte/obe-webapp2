@@ -10,7 +10,8 @@ type Who = { id: string; role: string; managedById: string | null };
 
 /** The curriculum, if this person may see it: Super User any; Institute Head / OMC their own copy or an official one assigned to their institute. */
 export async function loadCurriculumForDownload(user: Who, id: string) {
-  if (!["SUPER_USER", "CHAIRMAN", "OMC"].includes(user.role)) return null;
+  // The Dean opens the institute's curricula to review them before signing off.
+  if (!["SUPER_USER", "CHAIRMAN", "OMC", "DEAN"].includes(user.role)) return null;
   const c = await prisma.masterCurriculum.findUnique({
     where: { id },
     include: {

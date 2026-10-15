@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import WeightExceptionsManager from "../../../components/WeightExceptionsManager";
-import { deptScope } from "../../../lib/omcScope";
+import { omcLeadScope, omcCourseScope } from "../../../lib/omcScope";
 
 
 
@@ -15,11 +15,11 @@ export default async function WeightExceptionsPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "OMC") redirect("/dashboard");
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...omcLeadScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const requests = await prisma.weightExceptionRequest.findMany({
-    where: { status: "pending", course: { coordinatorId: { in: coordinatorIds } } },
+    where: { status: "pending", course: { coordinatorId: { in: coordinatorIds }, ...omcCourseScope(user) } },
     include: { course: { include: { subjectExpert: true, instructor: true } } },
     orderBy: { createdAt: "desc" },
   });

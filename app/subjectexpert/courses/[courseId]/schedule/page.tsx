@@ -5,6 +5,7 @@ import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import LectureContentManager from "../../../../../components/LectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
+import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
 import { isTeachingTopic } from "../../../../../lib/courseProgress";
@@ -37,6 +38,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} status={course.templateStatus} />
+      <PrereqTopicChecks courseId={course.id} source="SE" />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>
         <a href={`/api/subjectexpert/courses/${course.id}/weekly-plan-document`} className="btn btn-brass" style={{ textDecoration: "none" }}>Download Tentative Weekly Plan (Word)</a>
       </div>

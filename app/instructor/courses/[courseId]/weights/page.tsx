@@ -9,6 +9,7 @@ import InstructorCourseSubNav from "../../../../../components/InstructorCourseSu
 import InstructorWeightsForm from "../../../../../components/InstructorWeightsForm";
 import LinkedSectionsBanner from "../../../../../components/LinkedSectionsBanner";
 import { navForRole } from "../../../../../components/reportNav";
+import { planFor } from "../../../../../lib/assessmentWeights";
 
 
 export default async function InstructorWeightsPage({ params }: { params: { courseId: string } }) {
@@ -47,6 +48,10 @@ export default async function InstructorWeightsPage({ params }: { params: { cour
         }}
         sePlanned={{ assignmentPct: updated.assignmentPct, quizPct: updated.quizPct, projectPct: updated.projectPct, labPct: updated.labPct, midtermPct: updated.midtermPct, finalPct: updated.finalPct }}
         hasLab={updated.hasLab}
+        currentCounts={(() => { const p = planFor(updated, "INSTRUCTOR"); return { assignmentCount: p.assignmentCount, quizCount: p.quizCount, projectCount: p.projectCount, labCount: p.labCount, midtermCount: p.midtermCount, finalCount: p.finalCount }; })()}
+        currentBestOf={{ quizBestOf: planFor(updated, "INSTRUCTOR").quizBestOf, assignmentBestOf: planFor(updated, "INSTRUCTOR").assignmentBestOf }}
+        seCounts={{ assignmentCount: updated.assignmentCount, quizCount: updated.quizCount, projectCount: updated.projectCount, labCount: updated.labCount, midtermCount: updated.midtermCount, finalCount: updated.finalCount }}
+        policyMinCount={policy ? { assignmentMinCount: policy.assignmentMinCount, quizMinCount: policy.quizMinCount, projectMinCount: policy.projectMinCount, labMinCount: policy.labMinCount, midtermMinCount: policy.midtermMinCount, finalMinCount: policy.finalMinCount } : null}
         policy={policy ? {
           assignmentMin: policy.assignmentMin, assignmentMax: policy.assignmentMax,
           quizMin: policy.quizMin, quizMax: policy.quizMax,

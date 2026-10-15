@@ -9,6 +9,7 @@ import ExamQuestionCheck from "../../../../../components/ExamQuestionCheck";
 import TeachingAnalysisReport from "../../../../../components/TeachingAnalysisReport";
 import { analyzeTeaching } from "../../../../../lib/teachingAnalysis";
 import { navForRole } from "../../../../../components/reportNav";
+import SubjectExpertPaperView from "../../../../../components/SubjectExpertPaperView";
 
 
 export default async function InstructorPaperDistributionPage({ params }: { params: { courseId: string } }) {
@@ -55,6 +56,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
         class.
       </p>
       <ExamQuestionCheck midterm={qs.midterm} final={qs.final} rules={qs.rules} blocking={false} />
+      <SubjectExpertPaperView courseId={course.id} />
       <PaperDistributionManager
         apiBase={`/api/instructor/courses/${course.id}/paper-distribution`}
         items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}

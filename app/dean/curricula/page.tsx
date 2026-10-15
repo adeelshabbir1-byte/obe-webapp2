@@ -15,7 +15,7 @@ export default async function DeanCurriculaPage() {
     <Shell roleLabel="Dean" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Curricula</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Your sign-off on the institute’s curricula for your faculty. Approval is recorded and shown to the Institute Head; returning one asks for changes. It does not lock the curriculum.
+        Your sign-off on the institute’s curricula for your faculty. Open a curriculum to read its PLOs, courses, CLOs and lecture topics; the approve and return buttons are at the end of that page. Approval is recorded and shown to the Institute Head; returning one asks for changes. It does not lock the curriculum.
       </p>
       <div className="card">
         <DeanCurriculumDecisions items={curricula.map((c) => ({ id: c.id, title: c.title, authority: c.authority, version: c.version, status: by.get(c.id)?.status || null, note: by.get(c.id)?.note || null }))} />

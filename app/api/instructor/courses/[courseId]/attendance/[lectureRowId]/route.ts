@@ -34,6 +34,15 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const entries: { studentId: string; status: string }[] = body.entries || [];
   const validStatuses = ["PRESENT", "ABSENT", "LEAVE"];
 
+  // The date attendance was taken is the date the lecture happened: it becomes the lecture's date in the course log.
+  let actualDate: Date | null = null;
+  if (body.date !== undefined && body.date !== null && body.date !== "") {
+    if (typeof body.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || isNaN(Date.parse(body.date + "T00:00:00Z"))) {
+      return NextResponse.json({ error: "Choose a valid date for this lecture." }, { status: 400 });
+    }
+    actualDate = new Date(body.date + "T00:00:00.000Z");
+  }
+
   for (const e of entries) {
     if (!validStatuses.includes(e.status)) continue;
     await prisma.attendanceRecord.upsert({
@@ -43,5 +52,9 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     });
   }
 
-  return NextResponse.json({ ok: true });
+  if (actualDate && (!lectureRow.actualDate || lectureRow.actualDate.getTime() !== actualDate.getTime())) {
+    await prisma.lectureRow.update({ where: { id: lectureRow.id }, data: { actualDate } });
+  }
+
+  return NextResponse.json({ ok: true, actualDate: actualDate ? actualDate.toISOString().slice(0, 10) : lectureRow.actualDate?.toISOString().slice(0, 10) || null });
 }

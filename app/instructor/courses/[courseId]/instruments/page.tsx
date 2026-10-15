@@ -11,6 +11,7 @@ import ReweightingSuggestions from "../../../../../components/ReweightingSuggest
 import FeedForwardNotes from "../../../../../components/FeedForwardNotes";
 import GuidanceThread from "../../../../../components/GuidanceThread";
 import { navForRole } from "../../../../../components/reportNav";
+import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
 import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
 import { coverageRules } from "../../../../../lib/weightPolicy";
 
@@ -61,6 +62,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={updated.id} active="instruments" code={updated.code} title={updated.title} />
+      <PrereqTopicChecks courseId={updated.id} source="INSTRUCTOR" />
 
       <AssessmentsManager
         coverage={coverageRules(policy as unknown as Record<string, unknown>)}

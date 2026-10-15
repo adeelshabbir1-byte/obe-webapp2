@@ -1,5 +1,6 @@
 "use client";
 
+import { fullName, shortCode } from "../lib/assessmentCodes";
 import { useState } from "react";
 
 type Instrument = { id: string; type: string; label: string; maxScore: number }; // id here is the SLOT key (type::label)
@@ -53,7 +54,7 @@ export default function CombinedMarksEntryManager({ instruments, sections: initi
           <thead>
             <tr>
               <th style={{ width: 90 }}>Roll #</th><th style={{ width: 140 }}>Name</th><th style={{ width: 70 }}>Section</th>
-              {instruments.map((i) => <th key={i.id} style={{ textAlign: "center", fontSize: 10.5 }}>{i.type} {i.label}<br /><span style={{ fontWeight: 400, color: "var(--slate)" }}>/{i.maxScore}</span></th>)}
+              {instruments.map((i, idx) => <th key={i.id} title={fullName(i.type, i.label)} style={{ textAlign: "center", fontSize: 10.5 }}>{shortCode(i.type, i.label, instruments.slice(0, idx + 1).filter((x) => x.type === i.type).length)}<br /><span style={{ fontWeight: 400, color: "var(--slate)" }}>/{i.maxScore}</span></th>)}
             </tr>
           </thead>
           <tbody>

@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
-import { deptScope } from "../../../../lib/omcScope";
+import { omcLeadScope, omcCourseScope } from "../../../../lib/omcScope";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) } });
+  const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...omcLeadScope(user) } });
   const coordinatorIds = coordinators.map((c) => c.id);
 
   const requests = await prisma.weightExceptionRequest.findMany({
-    where: { status: "pending", course: { coordinatorId: { in: coordinatorIds } } },
+    where: { status: "pending", course: { coordinatorId: { in: coordinatorIds }, ...omcCourseScope(user) } },
     include: { course: { include: { subjectExpert: true } } },
     orderBy: { createdAt: "desc" },
   });

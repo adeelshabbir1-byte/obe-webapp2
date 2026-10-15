@@ -80,6 +80,11 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Approved & Assigned": ClipboardCheck,
   "Approved, No Course Assigned": ClipboardList,
   // Pages added later: same rule, one icon per kind of thing.
+  "Prerequisite Topics": GitMerge,
+  "Topic Follow-ups": ClipboardCheck,
+  "System Feedback": MessageSquareText,
+  "Facilities": Building2,
+  "Student Societies": Trophy,
   "Home": Home,
   "Needs Attention": BellRing,
   "Requests": Inbox,

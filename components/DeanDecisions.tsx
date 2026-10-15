@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type LoanItem = { id: string; kind: string; course: string; from: string; to: string; asked: string | null; note: string | null; side: string };
 type CurrItem = { id: string; title: string; authority: string; version: string; status: string | null; note: string | null };
@@ -56,38 +57,57 @@ export function DeanLoanDecisions({ items }: { items: LoanItem[] }) {
   );
 }
 
+const STATUS_TEXT = (status: string | null) => (status === "APPROVED" ? "APPROVED" : status === "RETURNED" ? "RETURNED" : "not yet");
+const STATUS_COLOR = (status: string | null) => (status === "APPROVED" ? "var(--sage)" : status === "RETURNED" ? "#b3261e" : "var(--slate)");
+
+/** The Dean's list of curricula. A decision is taken only after opening the curriculum (see DeanCurriculumDecisionPanel). */
 export function DeanCurriculumDecisions({ items }: { items: CurrItem[] }) {
-  const { busy, error, send } = useSender();
-  function decide(id: string, status: "APPROVED" | "RETURNED") {
-    let note = "";
-    if (status === "RETURNED") {
-      const n = window.prompt("What needs to change?");
-      if (!n || !n.trim()) return;
-      note = n;
-    }
-    send(id, "/api/dean/curricula", { curriculumId: id, status, note });
-  }
   return (
-    <>
-      {error && <div style={{ color: "#b3261e", marginBottom: 8 }}>{error}</div>}
-      <table>
-        <thead><tr><th>Curriculum</th><th>Authority</th><th>Version</th><th>Your sign-off</th><th></th></tr></thead>
-        <tbody>
-          {items.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>The institute has no curricula yet.</td></tr>}
-          {items.map((i) => (
-            <tr key={i.id}>
-              <td>{i.title}</td><td>{i.authority}</td><td>{i.version}</td>
-              <td style={{ color: i.status === "APPROVED" ? "var(--sage)" : i.status === "RETURNED" ? "#b3261e" : "var(--slate)" }}>
-                <b>{i.status === "APPROVED" ? "APPROVED" : i.status === "RETURNED" ? "RETURNED" : "not yet"}</b>{i.note ? ` — ${i.note}` : ""}
-              </td>
-              <td style={{ whiteSpace: "nowrap" }}>
-                <button className="btn btn-brass" disabled={busy === i.id} onClick={() => decide(i.id, "APPROVED")}>Approve</button>{" "}
-                <button className="btn" disabled={busy === i.id} onClick={() => decide(i.id, "RETURNED")}>Return for changes</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+    <table>
+      <thead><tr><th>Curriculum</th><th>Authority</th><th>Version</th><th>Your sign-off</th><th></th></tr></thead>
+      <tbody>
+        {items.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>The institute has no curricula yet.</td></tr>}
+        {items.map((i) => (
+          <tr key={i.id}>
+            <td>{i.title}</td><td>{i.authority}</td><td>{i.version}</td>
+            <td style={{ color: STATUS_COLOR(i.status) }}><b>{STATUS_TEXT(i.status)}</b>{i.note ? ` — ${i.note}` : ""}</td>
+            <td style={{ whiteSpace: "nowrap" }}>
+              <Link href={`/dean/curricula/${i.id}`} className="btn btn-brass btn-sm">{i.status ? "Open" : "Open to review"}</Link>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Approve / return, shown at the end of the opened curriculum. */
+export function DeanCurriculumDecisionPanel({ curriculumId, status, note, decidedAt }: { curriculumId: string; status: string | null; note: string | null; decidedAt: string | null }) {
+  const { busy, error, send } = useSender();
+  const [returning, setReturning] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <div className="card" style={{ borderColor: "var(--brass)" }}>
+      <h3 style={{ marginTop: 0 }}>Your decision</h3>
+      <p style={{ fontSize: 13, marginTop: 0 }}>
+        Current sign-off: <b style={{ color: STATUS_COLOR(status) }}>{STATUS_TEXT(status)}</b>{decidedAt ? ` (${decidedAt})` : ""}{note ? ` — ${note}` : ""}
+      </p>
+      {error && <div className="err">{error}</div>}
+      {returning ? (
+        <div style={{ display: "grid", gap: 8, maxWidth: 640 }}>
+          <label style={{ fontSize: 12.5 }}>What needs to change? (the Institute Head and the curriculum owners will see this)</label>
+          <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-danger" disabled={busy === curriculumId || !reason.trim()} onClick={() => send(curriculumId, "/api/dean/curricula", { curriculumId, status: "RETURNED", note: reason })}>Return for changes</button>
+            <button className="btn btn-secondary" onClick={() => setReturning(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn btn-brass" disabled={busy === curriculumId} onClick={() => send(curriculumId, "/api/dean/curricula", { curriculumId, status: "APPROVED", note: "" })}>Approve this curriculum</button>
+          <button className="btn btn-secondary" onClick={() => setReturning(true)}>Return for changes…</button>
+        </div>
+      )}
+    </div>
   );
 }

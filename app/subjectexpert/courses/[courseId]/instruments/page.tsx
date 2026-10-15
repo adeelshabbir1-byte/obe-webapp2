@@ -8,6 +8,7 @@ import CourseSubNav from "../../../../../components/CourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
 import { navForRole } from "../../../../../components/reportNav";
+import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
 import { recomputeCourseRows } from "../../../../../lib/lectureWeights";
 import { ploCoverageShortfalls } from "../../../../../lib/ploCoverage";
 
@@ -68,6 +69,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
+      <PrereqTopicChecks courseId={course.id} source="SE" />
 
       {!weightsComplete && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>

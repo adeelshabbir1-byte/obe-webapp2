@@ -59,7 +59,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_SUBMITTED", entityType: "Course", entityId: course.id });
   {
     const lead = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });
-    if (lead?.managedById) await notifyUsers(await holdersOf(lead.managedById, "OMC"), { kind: "TEMPLATE", title: `Course plan to review: ${course.code} ${course.title}`, body: `${user.name} submitted the plan of ${course.code} ${course.title} to the OMC.`, href: "/omc/templates", exceptId: user.id });
+    if (lead?.managedById) await notifyUsers(await holdersOf(lead.managedById, "OMC"), { kind: "TEMPLATE", title: `Course plan to review: ${course.code} ${course.title}`, body: `${user.name} submitted the plan of ${course.code} ${course.title} to the OMC.`, href: "/omc/queue", exceptId: user.id });
   }
 
   return NextResponse.json({ course: updated });

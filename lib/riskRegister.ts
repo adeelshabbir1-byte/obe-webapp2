@@ -118,8 +118,8 @@ export async function riskRegister(user: Who, opts: { teaching?: boolean } = {})
     add("high", "Teaching", `${noInstr.length} offered course(s) have no instructor: ${noInstr.slice(0, 6).map((c) => c.code).join(", ")}${noInstr.length > 6 ? "…" : ""}.`, "/coordinator/courses", noInstr.length);
     add("medium", "Ownership", `${seWaiting.length} Subject Expert assignment(s) not yet accepted.`, "/coordinator/assign-subject-experts", seWaiting.length);
     add(overdue.length > 5 ? "high" : "medium", "Deadlines", `${overdue.length} course deadline(s) are overdue (e.g. ${overdue.slice(0, 2).map((d) => d.title.replace(/ \((Fall|Spring)[^)]*\)$/i, "")).join("; ")}).`, "/deadlines", overdue.length);
-    add("medium", "Course plans", `${notReady.length} course plan(s) not submitted to the OMC yet.`, "/omc/templates", notReady.length);
-    add("medium", "Course plans", `${belowOmc.length} course plan(s) are below the OMC's minimums (topics per CLO/PLO or PLO assessment).`, "/omc/templates", belowOmc.length);
+    add("medium", "Course plans", `${notReady.length} course plan(s) not submitted to the OMC yet.`, "/omc/queue", notReady.length);
+    add("medium", "Course plans", `${belowOmc.length} course plan(s) are below the OMC's minimums (topics per CLO/PLO or PLO assessment).`, "/omc/queue", belowOmc.length);
     add("medium", "Results", `${resultsPending.length} course result(s) waiting for approval.`, "/results-approval", resultsPending.length);
     add("medium", "Results", `${returned.length} result(s) were returned to the instructor and not resubmitted.`, "/results-approval", returned.length);
     add("low", "Results", `${gc.length} grade change request(s) waiting.`, "/results-approval", gc.length);

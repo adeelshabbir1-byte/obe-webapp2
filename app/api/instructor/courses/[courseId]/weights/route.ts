@@ -5,6 +5,18 @@ import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { ensureInstructorCopy } from "../../../../../../lib/instructorCopy";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { getPolicyForCourse, checkPolicyCompliance } from "../../../../../../lib/weightPolicy";
+import { ensureAllInstrumentCounts } from "../../../../../../lib/instrumentAutoFill";
+import { planFor } from "../../../../../../lib/assessmentWeights";
+
+// The Instructor's own number of items per category (never below the OMC's minimum) and "best of" for quizzes / assignments.
+const COUNT_FIELDS: { field: string; column: string; policyMinKey: string }[] = [
+  { field: "assignmentCount", column: "instructorAssignmentCount", policyMinKey: "assignmentMinCount" },
+  { field: "quizCount", column: "instructorQuizCount", policyMinKey: "quizMinCount" },
+  { field: "projectCount", column: "instructorProjectCount", policyMinKey: "projectMinCount" },
+  { field: "labCount", column: "instructorLabCount", policyMinKey: "labMinCount" },
+  { field: "midtermCount", column: "instructorMidtermCount", policyMinKey: "midtermMinCount" },
+  { field: "finalCount", column: "instructorFinalCount", policyMinKey: "finalMinCount" },
+];
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -28,7 +40,28 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     || (!!course.weightsConfirmedAt && fields.every((f) => (course as any)[f] === vals[f]));
   const violations = alreadyApproved ? [] : checkPolicyCompliance(vals as any, policy, course.hasLab);
 
+  // Counts and best-of are only changed when the form sends them (older clients sent percentages only).
+  const counts: Record<string, number> = {};
+  const hasCounts = COUNT_FIELDS.some(({ field }) => body[field] !== undefined);
+  if (hasCounts) {
+    for (const { field, column, policyMinKey } of COUNT_FIELDS) {
+      const raw = parseInt(body[field] ?? 0, 10) || 0;
+      const min = policy ? (policy as any)[policyMinKey] || 0 : 0;
+      counts[column] = Math.max(raw, min);
+    }
+    for (const [field, column, countColumn] of [["quizBestOf", "instructorQuizBestOf", "instructorQuizCount"], ["assignmentBestOf", "instructorAssignmentBestOf", "instructorAssignmentCount"]] as const) {
+      const raw = body[field];
+      const n = raw === undefined || raw === null || raw === "" ? NaN : parseInt(raw, 10);
+      (counts as Record<string, number | null>)[column] = isNaN(n) ? null : Math.max(1, Math.min(n, counts[countColumn] || n));
+    }
+  }
+
   if (violations.length > 0) {
+    // Counts are not subject to the percentage policy: keep them, and build the items with the percentages already in force.
+    if (hasCounts) {
+      const saved = await prisma.course.update({ where: { id: course.id }, data: counts });
+      await ensureAllInstrumentCounts(course.id, "INSTRUCTOR", planFor(saved, "INSTRUCTOR"));
+    }
     // Out of policy range — don't apply directly, same as the SE's flow.
     // The current live (Course description forms etc.) weights stay
     // unchanged until the OMC approves this.
@@ -61,8 +94,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
       instructorAssignmentPct: vals.assignmentPct, instructorQuizPct: vals.quizPct, instructorProjectPct: vals.projectPct,
       instructorLabPct: vals.labPct, instructorMidtermPct: vals.midtermPct, instructorFinalPct: vals.finalPct,
       instructorWeightsConfirmedAt: new Date(),
+      ...counts,
     },
   });
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_WEIGHTS_UPDATED", entityType: "Course", entityId: course.id });
+  // Same as the Subject Expert's page: the Assessments tab gets exactly the chosen number of quizzes, assignments and exam questions.
+  if (hasCounts) await ensureAllInstrumentCounts(course.id, "INSTRUCTOR", planFor(updated, "INSTRUCTOR"));
   return NextResponse.json({ course: updated, pendingApproval: false });
 }

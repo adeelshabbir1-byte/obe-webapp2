@@ -20,8 +20,10 @@ export async function GET() {
   // "domain" (the specialization track, e.g. "Artificial Intelligence")
   // lives on MasterCourse, not on Course itself — Course only carries a
   // masterCourseId link, so it has to be fetched through that relation.
+  // Base courses only: a course that follows a base course in a content-sync group is taught from that base, so the
+  // priority is given once, on the base (standalone courses count as their own base).
   const allCourses = await prisma.course.findMany({
-    where: { coordinatorId: user.managedById || "" },
+    where: { coordinatorId: user.managedById || "", OR: [{ contentSyncMember: null }, { contentSyncMember: { isBase: true } }] },
     select: { code: true, title: true, courseType: true, masterCourse: { select: { domain: true } } },
     orderBy: { createdAt: "desc" }, // so the first one kept per code is the most recently offered
   });
