@@ -25,7 +25,11 @@ export const word = (p: number | null) => rate(p).name;
 export const STATE_COLOUR: Record<State, string> = { ok: "#2E7D4F", partial: "#C58A12", missing: "#B3261E", na: "#D5D8DC" };
 export const STATE_TEXT: Record<State, string> = { ok: "Done", partial: "Partly done", missing: "Missing", na: "Not applicable yet" };
 
-export async function computeReadiness(user: { id: string; managedById: string | null; departmentId: string | null }, batchIdParam: string) {
+/** NCEAC thresholds this engine checks against; the institute can tune them (Accreditation governance › Standards). */
+export type ReadinessStandards = { minCreditHours: number; maxStudentsPerComputer: number; minFullTimeFaculty: number; minPhdFaculty: number; maxFacultyLoadCh: number; maxClassSize: number };
+export const NCEAC_DEFAULTS: ReadinessStandards = { minCreditHours: 130, maxStudentsPerComputer: 3, minFullTimeFaculty: 7, minPhdFaculty: 1, maxFacultyLoadCh: 9, maxClassSize: 50 };
+
+export async function computeReadiness(user: { id: string; managedById: string | null; departmentId: string | null }, batchIdParam: string, std: ReadinessStandards = NCEAC_DEFAULTS) {
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const batchId = batchIdParam && batches.some((b) => b.id === batchIdParam) ? batchIdParam : "";
   const scopeBatches = batchId ? batches.filter((b) => b.id === batchId) : batches;
@@ -190,13 +194,13 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const visiting = faculty.filter((f) => profOf.get(f.id)?.employmentType === "Visiting").length;
   const fte = fullTime + Math.min(visiting * 0.25, 1);
   const phd = faculty.filter((f) => eduOf(f.id).some((e) => /ph\.?\s?d|doctor/i.test(e.title))).length;
-  const loadWithinNine = faculty.filter((f) => offeredList.filter((c) => c.instructorId === f.id && !c.isNonCredit).reduce((n, c) => n + c.creditHours, 0) <= 9).length;
+  const loadWithinNine = faculty.filter((f) => offeredList.filter((c) => c.instructorId === f.id && !c.isNonCredit).reduce((n, c) => n + c.creditHours, 0) <= std.maxFacultyLoadCh).length;
   const researchers = new Set(facRecords.map((r) => r.userId)).size;
   const recentPapers = facRecords.filter((r) => r.kind === "PUBLICATION" && (r.startYear || 0) >= thisYear - 2).length;
   const sectionsOf = new Map<string, number>();
   sections.forEach((s) => sectionsOf.set(s.courseId, (sectionsOf.get(s.courseId) || 0) + s.sectionCount));
   const sized = offeredList.map((c) => ({ secs: sectionsOf.get(c.id) || 0, students: scopeBatches.find((b) => b.id === c.batchId)?.studentCount || 0 })).filter((x) => x.secs > 0 && x.students > 0);
-  const classOk = sized.filter((x) => x.students / x.secs <= 50).length;
+  const classOk = sized.filter((x) => x.students / x.secs <= std.maxClassSize).length;
   const semLoads = scopeBatches.map((b) => {
     const cs = courseMeta.filter((c) => c.batchId === b.id && !c.isNonCredit);
     return Array.from({ length: 8 }, (_, i) => cs.filter((c) => c.semesterNumber === i + 1).reduce((n, c) => n + c.creditHours, 0));
@@ -206,7 +210,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const curBudgetTotal = finance.reduce((n, x) => n + x.amount, 0), prevBudgetTotal = prevBudget.reduce((n, x) => n + x.amount, 0);
   const studentsAll = Math.max(ratio.students, teachingStudents);
   const roomsNeeded = Math.max(Math.ceil(studentsAll / 200) * 3, 1);
-  const stationsNeeded = Math.max(Math.ceil(ratio.students / 3), 1);
+  const stationsNeeded = Math.max(Math.ceil(ratio.students / std.maxStudentsPerComputer), 1);
   const q = (kind: string) => ev("QUALITY", kind);
   const hecCoverage = hec.empty ? null : hec.coverage;
   const minAdmission = admissionRows.filter((r) => r.minPercentage !== null && (r.minPercentage as number) >= 50).length;
@@ -236,7 +240,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Student survey answered (indirect assessment)", done: surveyOf("STUDENT") > 0 ? 1 : 0, total: 1, hint: "Send the student survey.", href: "/coordinator/surveys" },
     ] },
     { no: 3, title: "Curriculum and Learning Process", manual: ["Adequate exposure to complex computing problems, design projects, problem-based learning and open-ended labs (3.b, 3.i)", "Lab work and its assessment support the skills required (3.d); lab manuals for every experiment", "Direct and indirect methods used to assess CLOs and GAs (3.j)", "FYDP covers complex problems and has well-defined grading of deliverables and reports (3.k, 3.l)", "Minimum CGPA of 2.0 for the degree"], checks: [
-      { label: "Batches with at least 130 credit hours (3.a)", done: perBatch.filter((b) => b.credits >= 130).length, total: perBatch.length, hint: "NCEAC requires at least 130 credit hours.", href: "/coordinator/courses" },
+      { label: `Batches with at least ${std.minCreditHours} credit hours (3.a)`, done: perBatch.filter((b) => b.credits >= std.minCreditHours).length, total: perBatch.length, hint: `NCEAC requires at least ${std.minCreditHours} credit hours.`, href: "/coordinator/courses" },
       { label: "Batches spread over 8 semesters", done: perBatch.filter((b) => b.semesters >= 8).length, total: perBatch.length, hint: "Place courses in all 8 semesters.", href: "/coordinator/program-semester-map" },
       { label: "Required HEC courses present in the curriculum (see Curriculum vs HEC)", done: hecCoverage ?? 0, total: hecCoverage === null ? 0 : 100, hint: "Add the missing HEC courses or explain the differences.", href: "/coordinator/hec-comparison" },
       { label: "Batches with a final year design project of at least 6 credit hours", done: capstoneOk, total: scopeBatches.length, hint: "Add the FYDP course (type: Capstone Project) with 6 credit hours over semesters 7 and 8.", href: "/coordinator/courses" },
@@ -257,8 +261,8 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Designated student counsellor or orientation session recorded (4.d)", done: Math.min(ev("COUNSELLING", "Designated student counsellor").length + ev("COUNSELLING", "Orientation session").length, 1), total: 1, hint: "Record the counsellor appointed or the orientation session held.", href: EV },
       { label: "Counselling sessions in the last 12 months (your target: 4)", done: Math.min(ev("COUNSELLING").filter(recent).length, 4), total: 4, hint: "Record the sessions you held.", href: EV },
       { label: "Batches with an advisor", done: scopeBatches.filter((b) => b.advisorId).length, total: scopeBatches.length, hint: "Appoint an advisor for each batch.", href: "/coordinator/batches" },
-      { label: "Offered courses with at most 50 students per section (4.e)", done: classOk, total: sized.length, hint: "Open more sections, or reduce the batch size. Needs section counts under Teacher Load.", href: "/coordinator/load-report" },
-      { label: `Lab seats: at most 3 students per working computer (now ${ratio.perComputer ?? "—"}) (4.e)`, done: Math.min(ratio.working, stationsNeeded), total: stationsNeeded, hint: "NCEAC expects 1 station for 3 students (1 for 5 is accepted where students bring laptops).", href: "/lab-inventory" },
+      { label: `Offered courses with at most ${std.maxClassSize} students per section (4.e)`, done: classOk, total: sized.length, hint: "Open more sections, or reduce the batch size. Needs section counts under Teacher Load.", href: "/coordinator/load-report" },
+      { label: `Lab seats: at most ${std.maxStudentsPerComputer} students per working computer (now ${ratio.perComputer ?? "—"}) (4.e)`, done: Math.min(ratio.working, stationsNeeded), total: stationsNeeded, hint: "NCEAC expects 1 station for 3 students (1 for 5 is accepted where students bring laptops).", href: "/lab-inventory" },
       { label: "Semesters carrying 15 to 18 credit hours (4.f)", done: semInRange, total: scopeBatches.length * 8, hint: "Even out the credit hours across the 8 semesters.", href: "/coordinator/program-semester-map" },
       colCheck("deliv", "Offered courses with lectures logged: course completion (4.g)", "Instructors must log each lecture as it happens.", "/omc/delivery-completion"),
       { label: "Courses planned for 15 weeks", done: coursesWith15, total: courses.length, hint: "The lecture plan should cover 15 teaching weeks.", href: "/omc/reports/weekly-plan" },
@@ -268,10 +272,10 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Other extra-curricular activities (your target: 4 in the year)", done: Math.min(activities.length, 4), total: 4, hint: "Log sports, societies, workshops and trips.", href: "/coordinator/activities" },
     ] },
     { no: 5, title: "Faculty and Support Staff", manual: ["Formal mechanism for faculty training and mentoring in outcome-based teaching (5.c)", "Effectiveness of the faculty development program and retention (5.d)", "Offer or contract letters of permanent faculty on file", "Each full-time faculty member teaches at least 9 credit hours a year (6 for those in administrative posts)"], checks: [
-      { label: `Full-time faculty strength: NCEAC asks for 7 (you have ${fullTime} full-time and ${visiting} visiting; a visiting teacher counts as 0.25) (5.a)`, done: Math.min(fte, 7), total: 7, hint: "Hire or record more full-time faculty. Record each person's employment type under My Profile.", href: "/coordinator/faculty" },
-      { label: "At least one full-time faculty member with a PhD (5.b)", done: Math.min(phd, 1), total: 1, hint: "Faculty should record their degrees under My Profile.", href: "/faculty-report" },
+      { label: `Full-time faculty strength: NCEAC asks for ${std.minFullTimeFaculty} (you have ${fullTime} full-time and ${visiting} visiting; a visiting teacher counts as 0.25) (5.a)`, done: Math.min(fte, std.minFullTimeFaculty), total: std.minFullTimeFaculty, hint: "Hire or record more full-time faculty. Record each person's employment type under My Profile.", href: "/coordinator/faculty" },
+      { label: std.minPhdFaculty === 1 ? "At least one full-time faculty member with a PhD (5.b)" : `At least ${std.minPhdFaculty} full-time faculty members with a PhD (5.b)`, done: Math.min(phd, std.minPhdFaculty), total: std.minPhdFaculty, hint: "Faculty should record their degrees under My Profile.", href: "/faculty-report" },
       { label: "Faculty with an 18-year degree (MS / MPhil / PhD) recorded", done: terminal, total: faculty.length, hint: "NCEAC expects full-time faculty to hold 18 years of education.", href: "/faculty-report" },
-      { label: "Faculty within the maximum load of 9 credit hours a semester (5.e)", done: loadWithinNine, total: faculty.length, hint: "Some teachers carry more than 9 credit hours.", href: "/coordinator/load-report" },
+      { label: `Faculty within the maximum load of ${std.maxFacultyLoadCh} credit hours a semester (5.e)`, done: loadWithinNine, total: faculty.length, hint: `Some teachers carry more than ${std.maxFacultyLoadCh} credit hours.`, href: "/coordinator/load-report" },
       { label: "Offered courses with a course folder kept (5.f)", done: foldersKept, total: offeredIds.size, hint: "Tick the courses whose folders are kept.", href: "/coordinator/course-folders" },
       { label: "Faculty development activities recorded in the last 12 months (5.c, 5.d)", done: Math.min(q("Faculty development activity").filter(recent).length, 1), total: 1, hint: "Record trainings and workshops under Accreditation Evidence, Quality.", href: EV },
       { label: "Faculty with a paper, grant or project recorded (5.g)", done: researchers, total: faculty.length, hint: "Ask faculty to add their research under My Profile.", href: "/faculty-report" },
@@ -325,9 +329,9 @@ export async function computeReadiness(user: { id: string; managedById: string |
 
   // The five qualifying requirements (Manual 2.3): failing any one can stop the assessment.
   const qualifying: Check[] = [
-    { label: "130 credit hours over 8 semesters", done: perBatch.filter((b) => b.credits >= 130 && b.semesters >= 8).length, total: perBatch.length, hint: "Complete the curriculum to 130 credit hours across 8 semesters.", href: "/coordinator/courses" },
+    { label: `${std.minCreditHours} credit hours over 8 semesters`, done: perBatch.filter((b) => b.credits >= std.minCreditHours && b.semesters >= 8).length, total: perBatch.length, hint: `Complete the curriculum to ${std.minCreditHours} credit hours across 8 semesters.`, href: "/coordinator/courses" },
     { label: "Final year project of at least 6 credit hours", done: capstoneOk, total: scopeBatches.length, hint: "Add the FYDP course with 6 credit hours.", href: "/coordinator/courses" },
-    { label: "Full-time computing faculty to the standard: 7, including a PhD", done: (fte >= 7 ? 1 : 0) + (phd >= 1 ? 1 : 0), total: 2, hint: "Hire or record the faculty.", href: "/coordinator/faculty" },
+    { label: `Full-time computing faculty to the standard: ${std.minFullTimeFaculty}, including a PhD`, done: (fte >= std.minFullTimeFaculty ? 1 : 0) + (phd >= std.minPhdFaculty ? 1 : 0), total: 2, hint: "Hire or record the faculty.", href: "/coordinator/faculty" },
     { label: "Compliance report on the last NCEAC visit", done: Math.min(q("Compliance report submitted").length, 1), total: 1, hint: "Record that the compliance report was submitted (not needed for a first visit).", href: EV },
   ];
   const qualifyingManual = ["Legal status of the institution (charter, degree awarding institute, constituent or affiliated)"];

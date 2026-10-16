@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import ProgramLeads from "./ProgramLeads";
 import GiveRole, { TakeRoleBack } from "./GiveRole";
 import { useRouter } from "next/navigation";
+import { BODY_KEYS, inferBody } from "../lib/accreditation/bodyInfer";
 
 type Dept = { id: string; name: string; timetableMode: string };
 type RoomRow = { id: string; name: string; type: string; departmentId: string | null };
@@ -16,8 +17,10 @@ const ROLE_NAME: Record<string, string> = {
 
 const TABS: [string, string][] = [["depts", "Departments"], ["rooms", "Rooms"], ["people", "People"], ["leads", "Program Leads"], ["roles", "Give a role"], ["accounts", "Add accounts"]];
 
-export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [] }: {
+export default function DepartmentsManager({ departments, rooms, programsByDept, allPrograms, people, faculties = [], councils = {} }: {
   departments: Dept[]; rooms: RoomRow[]; programsByDept: Record<string, string[]>; allPrograms: string[]; people: Person[]; faculties?: { id: string; name: string }[];
+  /** Programs whose accreditation council the Institute Head has set; the others' is read from the name. */
+  councils?: Record<string, string>;
 }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
@@ -25,6 +28,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
   const [headDept, setHeadDept] = useState(departments[0]?.id || "");
   const [leadDept, setLeadDept] = useState(departments[0]?.id || "");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [draft, setDraft] = useState<Record<string, { name: string; council: string }>>({});
   const [tab, setTab] = useState<string>(() => { try { const h = window.location.hash.slice(1); return TABS.some(([k]) => k === h) ? h : "depts"; } catch { return "depts"; } });
 
   async function call(url: string, method: string, body?: unknown) {
@@ -36,10 +40,10 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
     return true;
   }
 
-  async function toggleProgram(deptId: string, program: string, on: boolean) {
+  async function toggleProgram(deptId: string, program: string, on: boolean, council?: string) {
     const current = programsByDept[deptId] || [];
     const next = on ? [...current, program] : current.filter((p) => p !== program);
-    await call(`/api/chairman/departments/${deptId}/programs`, "PUT", { programs: next });
+    return call(`/api/chairman/departments/${deptId}/programs`, "PUT", { programs: next, ...(council ? { councils: { [program]: council } } : {}) });
   }
 
   const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
@@ -83,16 +87,19 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", fontSize: 13 }}>
                 {allPrograms.length === 0 && <span style={{ color: "var(--slate)" }}>No programs exist yet.</span>}
-                <form style={{ display: "flex", gap: 6, alignItems: "center", width: "100%" }} onSubmit={(e) => {
+                <form style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", flexWrap: "wrap" }} onSubmit={async (e) => {
                   e.preventDefault();
-                  const input = (e.currentTarget.elements.namedItem("newProgram") as HTMLInputElement);
-                  const name = input.value.trim();
+                  const dr = draft[d.id] || { name: "", council: "" };
+                  const name = dr.name.trim();
                   if (!name) return;
                   const exists = allPrograms.find((p) => p.toLowerCase() === name.toLowerCase());
-                  input.value = "";
-                  toggleProgram(d.id, exists || name, true);
+                  if (await toggleProgram(d.id, exists || name, true, dr.council || inferBody(name))) setDraft({ ...draft, [d.id]: { name: "", council: "" } });
                 }}>
-                  <input name="newProgram" placeholder={`New program for ${d.name}, e.g. BBA`} style={{ padding: "5px 8px", minWidth: 220 }} />
+                  <input name="newProgram" value={draft[d.id]?.name || ""} onChange={(e) => setDraft({ ...draft, [d.id]: { name: e.target.value, council: draft[d.id]?.council || "" } })} placeholder={`New program for ${d.name}, e.g. BBA`} style={{ padding: "5px 8px", minWidth: 220 }} />
+                  <select aria-label="Accreditation council" value={draft[d.id]?.council || ""} onChange={(e) => setDraft({ ...draft, [d.id]: { name: draft[d.id]?.name || "", council: e.target.value } })} title="The council whose forms and thresholds apply to the program">
+                    <option value="">Council: {draft[d.id]?.name.trim() ? `${inferBody(draft[d.id]!.name)} (from the name)` : "from the name"}</option>
+                    {BODY_KEYS.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </select>
                   <button className="btn btn-brass" type="submit">Add program</button>
                 </form>
                 {allPrograms.map((p) => {
@@ -100,6 +107,7 @@ export default function DepartmentsManager({ departments, rooms, programsByDept,
                   return (
                     <label key={p} title={owner && owner.id !== d.id ? `Currently in ${owner.name} — ticking moves it here` : ""}>
                       <input type="checkbox" checked={(programsByDept[d.id] || []).includes(p)} onChange={(e) => toggleProgram(d.id, p, e.target.checked)} /> {p}
+                      <span style={{ color: "var(--slate)", fontSize: 11.5 }} title={councils[p] ? "Accreditation council" : "Accreditation council, read from the name — confirm it under Visit Readiness › Programs"}> · {councils[p] || `${inferBody(p)}?`}</span>
                       {owner && owner.id !== d.id && <span style={{ color: "var(--slate)" }}> (in {owner.name})</span>}
                     </label>
                   );

@@ -78,6 +78,14 @@ export default async function NbeacSarPage({ searchParams }: { searchParams: { d
       )}
       {!dept && <div className="card"><p className="small-note" style={{ margin: 0 }}>No department to report on.</p></div>}
       {failed && <div className="err">The SAR could not be put together — run prisma/migration_nbeac_sar.sql in Supabase if you haven&apos;t yet.</div>}
+      {doc && doc.programs.length === 0 && (
+        <div className="err">No program of {doc.department.name} is bound to NBEAC, so there is nothing for an NBEAC SAR to report. Programs are bound to their council under Visit readiness › Programs, councils &amp; standards.</div>
+      )}
+      {doc && doc.otherCouncil.length > 0 && (
+        <p className="small-note" style={{ margin: "8px 0" }}>
+          Covers the NBEAC programs only ({doc.programs.join(", ") || "none"}). Left out, as they belong to another council: {doc.otherCouncil.map((o) => `${o.program} (${o.body})`).join(", ")}.
+        </p>
+      )}
       {doc && (
         <>
           <div className="card">

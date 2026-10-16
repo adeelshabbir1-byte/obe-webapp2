@@ -94,7 +94,7 @@ export default async function AccreditationAreaPage({ params, searchParams }: { 
                 def={{ kind: k.kind, label: k.label, sar: k.sar, titleLabel: k.titleLabel, titleOptions: k.titleOptions, dateLabel: k.dateLabel, yearLabel: k.yearLabel, fields: k.fields, file: k.file, hint: k.hint, confidential: k.confidential }}
                 rows={rows.map((r) => ({ id: r.id, departmentId: r.departmentId, title: r.title, recordDate: r.recordDate ? r.recordDate.toISOString().slice(0, 10) : null, year: r.year, data: r.data as Record<string, string | number | boolean | null>, fileName: r.fileName, mine: r.createdById === user.id }))}
                 departments={scope.departments} defaultDepartment={dept?.id || null}
-                canEdit={scope.canEditKind(k)} canAddOwn={scope.canSelfServe(k)} canPickInstitute={scope.instituteWide}
+                canEdit={scope.canEditKind(k) || (!!dept && scope.grantedKindDepts(k).includes(dept.id))} canAddOwn={scope.canSelfServe(k)} canPickInstitute={scope.instituteWide}
               />
             </div>
           </div>

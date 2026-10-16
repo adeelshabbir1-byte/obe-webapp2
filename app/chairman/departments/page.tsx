@@ -6,6 +6,7 @@ import Shell from "../../../components/Shell";
 import PeopleTabs from "../../../components/PeopleTabs";
 import DepartmentsManager from "../../../components/DepartmentsManager";
 import { ensureDefaultDepartment } from "../../../lib/departments";
+import { isBody } from "../../../lib/accreditation/bodyInfer";
 
 export default async function ChairmanDepartmentsPage() {
   const user = await getAuthenticatedUser();
@@ -53,6 +54,7 @@ export default async function ChairmanDepartmentsPage() {
         rooms={rooms.map((r) => ({ id: r.id, name: r.name, type: r.type, departmentId: r.departmentId }))}
         programsByDept={Object.fromEntries(departments.map((d) => [d.id, deptPrograms.filter((p) => p.departmentId === d.id).map((p) => p.degreeProgram)]))}
         allPrograms={allPrograms}
+        councils={Object.fromEntries(deptPrograms.filter((d) => isBody(d.accreditationBody)).map((d) => [d.degreeProgram, d.accreditationBody as string]))}
         people={[...directStaff, ...faculty].map((p) => ({ id: p.id, name: p.name, role: p.role, departmentId: p.departmentId || coordinators.find((c) => c.id === (p as { managedById?: string | null }).managedById)?.departmentId || null, alsoFaculty: (p as { secondaryRole?: string | null }).secondaryRole === "INSTRUCTOR" || (p as { tertiaryRole?: string | null }).tertiaryRole === "INSTRUCTOR" || ((p as { extraRoles?: string[] }).extraRoles || []).includes("INSTRUCTOR"), hats: [(p as { secondaryRole?: string | null }).secondaryRole, (p as { tertiaryRole?: string | null }).tertiaryRole, ...((p as { extraRoles?: string[] }).extraRoles || [])].filter((r): r is string => !!r), leadProgram: (p as { leadProgram?: string | null }).leadProgram || null, managerId: (p as { managedById?: string | null }).managedById || null }))}
       />
     </Shell>

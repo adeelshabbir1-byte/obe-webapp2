@@ -59,11 +59,16 @@ export async function POST(req: NextRequest) {
         const existing = b.id ? await prisma.accreditationRecord.findFirst({ where: { id: str(b.id, 60), chairmanId: scope.chairmanId, kind: def.kind } }) : null;
         if (b.id && !existing) return bad("not found", 404);
         const manager = scope.canEditKind(def);
+        const granted = scope.grantedKindDepts(def);
         const own = scope.canSelfServe(def) && (!existing || existing.createdById === user.id);
-        if (!manager && !own) return bad("You can't change these records.", 403);
-        // Department: managers choose (institute-wide offices may leave it blank); faculty keeping their own records use their department.
+        if (!manager && !own && !granted.length) return bad("You can't change these records.", 403);
+        // Department: managers choose (institute-wide offices may leave it blank); faculty keeping their own records use their
+        // department; someone holding an accreditation task only the task's department.
         let departmentId: string | null = str(b.departmentId, 60) || null;
-        if (!manager) departmentId = (await departmentsOf(user.id))[0] || null;
+        if (!manager && granted.length && !own) {
+          departmentId = departmentId && granted.includes(departmentId) ? departmentId : granted[0];
+          if (existing && (!existing.departmentId || !granted.includes(existing.departmentId))) return bad("Your accreditation task covers another department's records.", 403);
+        } else if (!manager) departmentId = (await departmentsOf(user.id))[0] || null;
         else if (departmentId && !(scope.departments.some((d) => d.id === departmentId))) return bad("Choose one of your departments.", 403);
         else if (!departmentId && !scope.instituteWide) departmentId = scope.departments[0]?.id || null;
         if (existing && !scope.seesDept(existing.departmentId)) return bad("forbidden", 403);
@@ -94,7 +99,8 @@ export async function POST(req: NextRequest) {
         const row = await prisma.accreditationRecord.findFirst({ where: { id: str(b.id, 60), chairmanId: scope.chairmanId } });
         const def = row ? kindDef(row.kind) : null;
         if (!row || !def || !scope.seesDept(row.departmentId)) return bad("not found", 404);
-        if (!scope.canEditKind(def) && !(scope.canSelfServe(def) && row.createdById === user.id)) return bad("You can't remove this record.", 403);
+        const ownRow = row.createdById === user.id && (scope.canSelfServe(def) || (!!row.departmentId && scope.grantedKindDepts(def).includes(row.departmentId)));
+        if (!scope.canEditKind(def) && !ownRow) return bad("You can't remove this record.", 403);
         await prisma.accreditationRecord.delete({ where: { id: row.id } });
         await writeAuditLog({ actorUserId: user.id, action: "SAR_RECORD_REMOVED", entityType: "AccreditationRecord", entityId: row.id, metadata: { kind: row.kind } });
         return NextResponse.json({ ok: true });

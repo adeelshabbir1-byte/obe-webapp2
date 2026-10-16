@@ -4,6 +4,7 @@ import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import { computeReadiness, rate } from "../../lib/readiness";
 import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
+import { programBindings, standardsFor, type BodyKey } from "../../lib/accreditation/bodies";
 
 const SHORT: Record<number, string> = { 1: "Objectives (POs)", 2: "Graduate Attributes", 3: "Curriculum & Learning", 4: "Students", 5: "Faculty & Staff", 6: "Facilities", 7: "Finance & Support", 8: "Improvement", 9: "Industry Links" };
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator" };
@@ -16,11 +17,21 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
   if (!OVERVIEW_ROLES.includes(user.role)) redirect("/dashboard");
 
   const { chairmanId, leads } = await leadsInScope(user);
+  // Each program is reported against its own council: NBEAC and HEC programs have their own forms.
+  const bindings = new Map((await programBindings(chairmanId).catch(() => [])).map((b) => [b.program, b]));
+  const councilOf = (l: (typeof leads)[number]): { body: BodyKey; explicit: boolean } => (l.leadProgram ? bindings.get(l.leadProgram) || { body: "NCEAC", explicit: false } : { body: "NCEAC", explicit: false });
+  const nceacLeads = leads.filter((l) => councilOf(l).body === "NCEAC");
+  const otherLeads = leads.filter((l) => councilOf(l).body !== "NCEAC");
+  const nceac = await standardsFor(chairmanId, "NCEAC");
+  const openHref = (l: (typeof leads)[number]) => {
+    const b = councilOf(l).body;
+    return b === "NCEAC" ? `/accreditation-overview/${l.id}` : b === "NBEAC" && l.departmentId ? `/accreditation/nbeac?dept=${l.departmentId}` : "/accreditation/readiness";
+  };
   // One program at a time: each report already runs many queries, and the database pool is small.
   const rows: { l: (typeof leads)[number]; d: Awaited<ReturnType<typeof computeReadiness>>; weakest: { a: { no: number; title: string }; s: number | null } | undefined }[] = [];
   const compareAll = searchParams.all === "1";
-  for (const l of compareAll ? leads.slice(0, 40) : []) {
-    const d = await computeReadiness({ id: l.id, managedById: chairmanId, departmentId: l.departmentId }, "");
+  for (const l of compareAll ? nceacLeads.slice(0, 40) : []) {
+    const d = await computeReadiness({ id: l.id, managedById: chairmanId, departmentId: l.departmentId }, "", nceac);
     const weakest = d.scored.filter((x) => x.s !== null).sort((a, b) => (a.s as number) - (b.s as number))[0];
     rows.push({ l, d, weakest });
   }
@@ -34,24 +45,27 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Overview</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
         Visit preparation for every program, side by side. Each cell is one of the nine NCEAC criteria: the letter is the rating (G Good, S Satisfactory, C Concern, W Weakness, D Deficient, X not measured here) and the number is the score.
-        Click a program for its full report and the list of what to fix.
+        Click a program for its full report and the list of what to fix. Programs accredited by NBEAC or HEC are measured against their own council&apos;s forms under <a href="/accreditation/readiness">Visit readiness</a>.
       </p>
       {!compareAll && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h3 style={{ marginTop: 0 }}>Choose a program</h3>
           {leads.length === 0 ? <p style={{ color: "var(--slate)" }}>No Program Leads in your area yet.</p> : (
             <table>
-              <thead><tr><th>Program</th><th>Department</th><th>Program Lead</th><th></th></tr></thead>
+              <thead><tr><th>Program</th><th>Council</th><th>Department</th><th>Program Lead</th><th></th></tr></thead>
               <tbody>{leads.map((l) => (
-                <tr key={l.id}><td><b>{l.leadProgram || "Program"}</b></td><td>{l.department_?.name || "—"}</td><td>{l.name}</td>
-                  <td><a className="btn" style={{ fontSize: 12 }} href={`/accreditation-overview/${l.id}`}>View readiness</a></td></tr>
+                <tr key={l.id}><td><b>{l.leadProgram || "Program"}</b></td>
+                  <td>{councilOf(l).body}{!councilOf(l).explicit && l.leadProgram && <span style={{ fontSize: 11, color: "var(--slate)" }} title="Inferred from the program's name — confirm it under Visit readiness › Programs"> (inferred)</span>}</td>
+                  <td>{l.department_?.name || "—"}</td><td>{l.name}</td>
+                  <td><a className="btn" style={{ fontSize: 12 }} href={openHref(l)}>{councilOf(l).body === "NCEAC" ? "View readiness" : councilOf(l).body === "NBEAC" ? "NBEAC SAR" : "HEC readiness"}</a></td></tr>
               ))}</tbody>
             </table>
           )}
-          {leads.length > 1 && <p style={{ marginTop: 12 }}><a className="btn" href="/accreditation-overview?all=1">Compare all programs side by side</a> <span style={{ fontSize: 12, color: "var(--slate)" }}>(slower: checks every program)</span></p>}
+          {nceacLeads.length > 1 && <p style={{ marginTop: 12 }}><a className="btn" href="/accreditation-overview?all=1">Compare all NCEAC programs side by side</a> <span style={{ fontSize: 12, color: "var(--slate)" }}>(slower: checks every program)</span></p>}
         </div>
       )}
       {compareAll && <a className="btn" href="/accreditation-overview" style={{ marginBottom: 10, display: "inline-block" }}>← Back to program list</a>}
+      {compareAll && otherLeads.length > 0 && <p style={{ fontSize: 12.5, color: "var(--slate)", margin: "0 0 10px" }}>Left out, as another council accredits them: {otherLeads.map((l) => `${l.leadProgram} (${councilOf(l).body})`).join(", ")}.</p>}
       {compareAll && (<>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         {[["Programs", rows.length], ["Average readiness", avg === null ? "—" : `${avg}%`], ["Below 60% (need attention)", needAttention]].map(([l, v]) => (
@@ -62,7 +76,7 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
         ))}
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
-        {rows.length === 0 ? <p style={{ color: "var(--slate)" }}>No Program Leads in your area yet.</p> : (
+        {rows.length === 0 ? <p style={{ color: "var(--slate)" }}>{leads.length ? "None of the programs in your area is accredited by NCEAC." : "No Program Leads in your area yet."}</p> : (
           <table>
             <thead><tr>
               <th>Program</th><th>Overall</th>

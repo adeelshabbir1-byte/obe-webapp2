@@ -34,7 +34,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
 
   // Histograms — grade distribution and CLO attainment, visible right here
   // while entering/reviewing marks, not just later in Result Mate.
-  const passCriteria = await getPassingCriteria(await chairmanIdFor(user));
+  const passCriteria = await getPassingCriteria(await chairmanIdFor(user), undefined, { degreeProgram: course.batch?.degreeProgram });
   const result = await computeResultMate(course.id);
   const gradeBuckets = new Map<string, number>();
   for (const r of result.rows) gradeBuckets.set(r.grade, (gradeBuckets.get(r.grade) || 0) + 1);

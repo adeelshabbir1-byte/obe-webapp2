@@ -9,6 +9,8 @@ import { prisma } from "../../../lib/db";
 import SnapshotButton from "../../../components/SnapshotButton";
 import RemoveButton from "../../../components/RemoveButton";
 import { requestRecipients } from "../../../lib/requests";
+import CouncilNotice from "../../../components/accreditation/CouncilNotice";
+import { leadCouncil, standardsFor } from "../../../lib/accreditation/bodies";
 
 export default async function ProgramReadinessPage({ params, searchParams }: { params: { leadId: string }; searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -19,7 +21,14 @@ export default async function ProgramReadinessPage({ params, searchParams }: { p
   const { chairmanId, leads } = await leadsInScope(user);
   const lead = leads.find((l) => l.id === params.leadId);
   if (!lead) notFound();
-  const data = await computeReadiness({ id: lead.id, managedById: chairmanId, departmentId: lead.departmentId }, searchParams.batchId || "");
+  const council = await leadCouncil(chairmanId, lead.leadProgram);
+  if (council.body !== "NCEAC") return (
+    <Shell roleLabel="Accreditation" userName={user.name} navLinks={navForRole(user.role)}>
+      <a className="btn" href="/accreditation-overview" style={{ marginBottom: 10, display: "inline-block" }}>← All programs</a>
+      <CouncilNotice program={lead.leadProgram || lead.name} body={council.body} explicit={council.explicit} departmentId={lead.departmentId} form="NCEAC readiness report" />
+    </Shell>
+  );
+  const data = await computeReadiness({ id: lead.id, managedById: chairmanId, departmentId: lead.departmentId }, searchParams.batchId || "", await standardsFor(chairmanId, "NCEAC"));
   const snaps = (await prisma.readinessSnapshot.findMany({ where: { leadId: lead.id } as never, orderBy: { createdAt: "desc" }, take: 12 })) as unknown as { id: string; label: string; overall: number | null; areas: string; createdAt: Date }[];
   const now = data.scored.map((x: { a: { no: number }; s: number | null }) => [x.a.no, x.s] as [number, number | null]);
   const recipients = await requestRecipients(chairmanId, lead);

@@ -20,7 +20,7 @@ export async function GET() {
   const [transcriptRecords, realPlos, criteria] = await Promise.all([
     prisma.studentTranscriptRecord.findMany({ where: { studentId: student.id }, orderBy: [{ termYear: "asc" }, { termName: "asc" }] }),
     prisma.pLO.findMany({ where: { batchId: batch.id } }),
-    getPassingCriteria(batch.coordinator.managedById),
+    getPassingCriteria(batch.coordinator.managedById, undefined, { degreeProgram: batch.degreeProgram }),
   ]);
 
   const realPloByNumber = new Map(realPlos.map((p) => [p.number, p]));

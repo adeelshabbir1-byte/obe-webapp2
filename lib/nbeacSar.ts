@@ -1,4 +1,6 @@
 import { prisma } from "./db";
+import { programBindings } from "./accreditation/bodies";
+import { inferBody } from "./accreditation/bodyInfer";
 import { facultyOf } from "./fyp";
 import { getPolicy } from "./registrationRules";
 import { courseTermIndex, termLabel } from "./courseTerm";
@@ -22,7 +24,8 @@ export type Item = {
   status: Status; fill?: string; note?: string;
 };
 export type FormDoc = { key: string; title: string; weight: string; items: Item[] };
-export type SarDoc = { department: { id: string; name: string }; school: string; generatedAt: string; forms: FormDoc[] };
+/** `programs`: the department's NBEAC programs this SAR covers; `otherCouncil`: its programs governed by another council (left out). */
+export type SarDoc = { department: { id: string; name: string }; school: string; generatedAt: string; forms: FormDoc[]; programs: string[]; otherCouncil: { program: string; body: string }[] };
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : "");
 const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -40,7 +43,16 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
   const fiscal = (y: number) => `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
 
   // ---- What the business school is made of
-  const leads = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: dept.id }, select: { id: true, name: true, leadProgram: true } });
+  // Only programs bound to NBEAC: a computing or general program of the same department belongs to another council's forms.
+  const bindings = await programBindings(chairmanId).catch(() => []);
+  const councilOf = (name: string) => bindings.find((b) => b.program === name)?.body || inferBody(name);
+  const allLeads = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: dept.id }, select: { id: true, name: true, leadProgram: true } });
+  const leads = allLeads.filter((l) => councilOf(l.leadProgram || l.name) === "NBEAC");
+  const deptPrograms = bindings.filter((b) => b.departmentId === dept.id);
+  const otherCouncil = [
+    ...allLeads.filter((l) => !leads.includes(l)).map((l) => ({ program: l.leadProgram || l.name, body: councilOf(l.leadProgram || l.name) })),
+    ...deptPrograms.filter((b) => b.body !== "NBEAC" && !allLeads.some((l) => l.leadProgram === b.program)).map((b) => ({ program: b.program, body: b.body })),
+  ];
   const leadIds = leads.map((l) => l.id).concat(["none"]);
   const [programs, profiles, batches, hei, school] = await Promise.all([
     prisma.degreeProgram.findMany({ where: { coordinatorId: { in: leadIds } }, select: { name: true, coordinatorId: true, createdAt: true } }),
@@ -49,7 +61,8 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
     loadProfile(chairmanId, "HEI").catch(() => ({} as Record<string, Record<string, unknown>>)),
     loadProfile(chairmanId, dept.id).catch(() => ({} as Record<string, Record<string, unknown>>)),
   ]);
-  const programNames = Array.from(new Set([...programs.map((p) => p.name), ...batches.map((b) => b.degreeProgram)]));
+  // A program counts once it is registered to the department or has a lead — before its first batch is admitted too.
+  const programNames = Array.from(new Set([...deptPrograms.map((b) => b.program), ...leads.map((l) => l.leadProgram).filter((x): x is string => !!x), ...programs.map((p) => p.name), ...batches.map((b) => b.degreeProgram)])).filter((name) => councilOf(name) === "NBEAC");
   const profileOf = (name: string) => profiles.find((p) => p.degreeProgram === name) || null;
   const levelOf = (name: string) => profileOf(name)?.programLevel || (/^(ms|mphil|mba|m\.)/i.test(name) ? "GRAD18" : /phd/i.test(name) ? "PHD" : "UG16");
   const batchIds = batches.map((b) => b.id).concat(["none"]);
@@ -584,6 +597,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
 
   void MEETING_KINDS;
   return {
+    programs: programNames, otherCouncil,
     department: { id: dept.id, name: dept.name }, school: s(SCHOOL.title) || dept.name, generatedAt: new Date().toISOString(),
     forms: [
       { key: "1", title: "Form 1: Strategic Management", weight: "15%", items: f1 },

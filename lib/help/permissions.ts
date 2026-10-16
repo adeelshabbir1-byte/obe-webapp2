@@ -22,6 +22,7 @@ export const PSEUDO_ROLES: Record<string, string> = {
   FYP_HEAD: "FYP Head / Committee",
   COURSE_SE: "Subject Expert of the course",
   STUDENT: "Student",
+  TASK_ASSIGNEE: "Person given an accreditation task",
 };
 
 export const CAPABILITIES: Capability[] = [
@@ -97,6 +98,20 @@ export const CAPABILITIES: Capability[] = [
   { key: "attendance-report", category: "quality", task: "See attendance shortages across programs", roles: ["PROGRAM_COORDINATOR", "CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "OMC"], scope: "Their own programs; batch advisors see their batches.",
     where: { href: "/coordinator/attendance", label: "Attendance Report" }, article: "attendance-report",
     enforcedIn: [{ file: "app/coordinator/attendance/page.tsx", contains: ['user.role === "PROGRAM_COORDINATOR"', "OVERVIEW_ROLES.includes(user.role)", "advisorId"] }] },
+  // Accreditation governance
+  { key: "accreditation-bind", category: "quality", task: "Bind each program to its accreditation council (NCEAC, NBEAC, HEC)", roles: ["CHAIRMAN"], where: { href: "/accreditation/readiness/programs", label: "Visit Readiness › Programs, councils & standards" }, article: "accreditation-councils",
+    enforcedIn: [{ file: "app/api/accreditation/governance/route.ts", contains: ["if (!s.canBind)", "Close it before changing the council."] }, { file: "lib/accreditation/governance.ts", contains: ['canBind: user.role === "CHAIRMAN"'] }] },
+  { key: "accreditation-standards", category: "quality", task: "Set each council's thresholds (CLO/PLO pass marks, ratios, faculty)", roles: ["CHAIRMAN", "OMC"], where: { href: "/accreditation/readiness/programs", label: "Visit Readiness › Programs, councils & standards" }, article: "accreditation-standards",
+    enforcedIn: [{ file: "app/api/accreditation/governance/route.ts", contains: ["if (!s.canSetStandards)"] }, { file: "lib/accreditation/governance.ts", contains: ['canSetStandards: user.role === "CHAIRMAN" || user.role === "OMC"'] }] },
+  { key: "accreditation-visits", category: "quality", task: "Plan accreditation visits; assign, reassign, withdraw, return and approve their tasks", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], scope: "Deans their faculty's departments; Chairmen their own department.",
+    where: { href: "/accreditation/readiness", label: "Visit Readiness" }, article: "assign-accreditation-tasks",
+    enforcedIn: [{ file: "lib/accreditation/governance.ts", contains: ['export const MANAGERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"]', "canManage: MANAGERS.includes(user.role)"] }, { file: "app/api/accreditation/cycles/route.ts", contains: ["!s?.canManage"] }, { file: "app/api/accreditation/tasks/[id]/route.ts", contains: ["!!s?.canManage && inScope(s, cycle)", "Only the Institute Head, the Dean or the Chairman can do this."] }] },
+  { key: "accreditation-readiness-view", category: "quality", task: "See visit readiness and gaps, and download the dossier", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "OMC"], scope: "Their own departments; a Program Lead their own program.",
+    where: { href: "/accreditation/readiness", label: "Visit Readiness" }, article: "visit-readiness",
+    enforcedIn: [{ file: "lib/accreditation/governance.ts", contains: ['"DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "OMC"]', "if (!VIEWERS.includes(user.role)) return null;"] }, { file: "app/api/accreditation/cycles/[id]/dossier/route.ts", contains: ["!inScope(s, c)"] }] },
+  { key: "accreditation-task-work", category: "quality", task: "Fill in, verify and sign off an accreditation task", roles: ["TASK_ASSIGNEE"], scope: "Only the task given to them, until they sign off, it is withdrawn or its access date passes.",
+    where: { href: "/accreditation/tasks", label: "Accreditation Tasks" }, article: "accreditation-task-work",
+    enforcedIn: [{ file: "lib/accreditation/governance.ts", contains: ['t.assigneeId === userId && (t.status === "ASSIGNED" || t.status === "RETURNED")', "t.accessUntil > new Date()"] }, { file: "app/api/accreditation/tasks/[id]/route.ts", contains: ["Your access to this task has ended."] }, { file: "lib/sarAccess.ts", contains: ["activeGrants"] }] },
   // Quality & help
   { key: "cqi", category: "quality", task: "Log CQI findings and close the loop", roles: ["CHAIRMAN", "OMC"], where: { href: "/chairman/cqi", label: "CQI Records" }, article: "run-cqi",
     enforcedIn: [{ file: "app/api/chairman/cqi/route.ts", contains: ['["CHAIRMAN", "OMC"].includes(user.role)'] }] },

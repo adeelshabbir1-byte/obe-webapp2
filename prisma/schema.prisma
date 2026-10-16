@@ -1788,6 +1788,10 @@ model DepartmentProgram {
   department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   chairmanId    String   // denormalised so one program can belong to only one department per institute
   degreeProgram String
+  // The accreditation council whose rules and forms govern the program (NCEAC | NBEAC | HEC), set by the Institute Head.
+  accreditationBody String?
+  bodySetAt         DateTime?
+  bodySetById       String?
 
   @@unique([chairmanId, degreeProgram])
   @@index([departmentId])
@@ -2237,6 +2241,10 @@ model FacultyProfile {
   cnic              String?
   specialization    String?
   affiliation       String?  // visiting / adjunct faculty: their organisation
+  // Checked against the documents for an accreditation visit (qualifications, experience).
+  verifiedAt        DateTime?
+  verifiedById      String?
+  verifiedNote      String?
   updatedAt         DateTime @updatedAt
 }
 
@@ -3895,4 +3903,100 @@ model AttendanceFlag {
   @@unique([studentId, courseId])
   @@index([courseId])
   @@index([chairmanId, status])
+}
+
+// ---------------------------------------------------------------------------------------------------- Accreditation governance
+// Each program is bound to one council (DepartmentProgram.accreditationBody). An accreditation visit (cycle) turns that
+// council's requirements into tasks (lib/accreditation/catalogue.ts) that a Dean or Chairman assigns; the assignee
+// verifies the data the system fills in, adds what is missing and signs off.
+
+/// The thresholds an institute applies to the programs of one council (null = the default, or the institute's own setting).
+model AccreditationStandard {
+  id                     String   @id @default(cuid())
+  chairmanId             String
+  body                   String // NCEAC | NBEAC | HEC
+  cloPassPct             Int?
+  ploPassPct             Int?
+  ploTargetPct           Int?
+  maxStudentsPerComputer Float?
+  maxStudentFacultyRatio Int?
+  minFullTimeFaculty     Int?
+  minPhdFaculty          Int?
+  minCreditHours         Int?
+  maxFacultyLoadCh       Int?
+  maxClassSize           Int?
+  updatedById            String?
+  updatedAt              DateTime @default(now()) @updatedAt
+
+  @@unique([chairmanId, body])
+}
+
+/// An accreditation visit being prepared for one program.
+model AccreditationCycle {
+  id           String    @id @default(cuid())
+  chairmanId   String
+  departmentId String?
+  leadId       String
+  program      String
+  body         String
+  title        String
+  visitDate    DateTime?
+  status       String    @default("OPEN") // OPEN | CLOSED
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, status])
+  @@index([leadId])
+}
+
+/// One requirement of the council for that visit, assigned to one person at a time.
+model AccreditationTask {
+  id            String    @id @default(cuid())
+  cycleId       String
+  code          String
+  status        String    @default("OPEN") // OPEN | ASSIGNED | SUBMITTED | RETURNED | APPROVED
+  assigneeId    String?
+  assignedById  String?
+  assignedAt    DateTime?
+  dueDate       DateTime?
+  accessUntil   DateTime?
+  dataJson      String    @default("{}") @db.Text
+  submittedAt   DateTime?
+  submittedById String?
+  reviewedAt    DateTime?
+  reviewedById  String?
+  reviewNote    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@unique([cycleId, code])
+  @@index([assigneeId, status])
+}
+
+model AccreditationTaskFile {
+  id           String   @id @default(cuid())
+  taskId       String
+  title        String
+  fileName     String
+  mimeType     String
+  size         Int
+  data         String   @db.Text
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([taskId])
+}
+
+/// Who assigned, reassigned, revoked, submitted, returned or approved a task, and when.
+model AccreditationTaskEvent {
+  id        String   @id @default(cuid())
+  taskId    String
+  action    String
+  byId      String
+  toId      String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
 }

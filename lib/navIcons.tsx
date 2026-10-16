@@ -117,6 +117,8 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Account Requests": UserRoundPlus,
   "Accreditation Evidence": FolderCheck,
   "Accreditation Overview": BadgeCheck,
+  "Visit Readiness": Gauge,
+  "Accreditation Tasks": ClipboardCheck,
   "Accreditation Status": BadgeCheck,
   "Evidence Files": Files,
   "Course Folders": Folders,

@@ -46,7 +46,7 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
   if (enrollmentCount === 0) return; // nothing to snapshot or reset
 
   const coordinator = await prisma.user.findUnique({ where: { id: course.coordinatorId } });
-  const criteria = await getPassingCriteria(coordinator?.managedById);
+  const criteria = await getPassingCriteria(coordinator?.managedById, undefined, { degreeProgram: course.batch?.degreeProgram });
 
   const { computeCloPloPassRates } = await import("./resultMate");
   const stats = await computeCloPloPassRates(courseId, criteria);

@@ -34,6 +34,8 @@ export const OMC_ACTION_NAV = [
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/coordinator/attendance", label: "Attendance Report" },
+  { href: "/accreditation/readiness", label: "Visit Readiness" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 export const LAB_ENGINEER_NAV = [
@@ -41,6 +43,7 @@ export const LAB_ENGINEER_NAV = [
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 export const LAB_MANAGER_NAV = [
@@ -50,6 +53,7 @@ export const LAB_MANAGER_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 export const LIBRARIAN_NAV = [
@@ -57,6 +61,7 @@ export const LIBRARIAN_NAV = [
   { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 export const STUDENT_AFFAIRS_NAV = [
   { href: "/admission-criteria", label: "Admission Criteria" },
@@ -65,12 +70,14 @@ export const STUDENT_AFFAIRS_NAV = [
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 export const FACILITIES_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 export const FINANCE_NAV = [
   { href: "/chairman/finance", label: "Finance" },
@@ -78,6 +85,7 @@ export const FINANCE_NAV = [
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -106,6 +114,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 // A Subject Expert may be someone from industry who only builds courses, so this menu holds course-building work only.
@@ -123,6 +132,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/faculty/profile", label: "My Profile" },                  // qualifications shown on the course documents
   { href: "/appraisals", label: "My Appraisal" },                     // the yearly appraisal, once the reviewer shares it
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -158,7 +168,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/program-semester-map", label: "Program Semester Map" },
   { href: "/coordinator/semester-section-map", label: "Semester Section Map" },
   { href: "/coordinator/curriculum-readiness-matrix", label: "Curriculum Readiness Matrix" },
-  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
+  { href: "/coordinator/accreditation-status", label: "Accreditation Status" }, { href: "/accreditation/readiness", label: "Visit Readiness" }, { href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/coordinator/semester-health", label: "Semester Health" },
   { href: "/coordinator/batch-comparison", label: "Batch Comparison" },
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
@@ -187,6 +197,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
   { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
@@ -223,6 +234,7 @@ export const CHAIRMAN_NAV = [
   { href: "/omc/reports", label: "Reports" },
   { href: "/faculty-report", label: "Faculty Details Report" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/accreditation/readiness", label: "Visit Readiness" },
   { href: "/resources", label: "Resources" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
@@ -261,6 +273,7 @@ export const DEAN_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/student-activities", label: "Student Societies" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/accreditation/readiness", label: "Visit Readiness" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/evidence-files", label: "Evidence Files" },
@@ -293,12 +306,14 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/lab-inventory", label: "Lab Inventory" },
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/accreditation/readiness", label: "Visit Readiness" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
   { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
@@ -329,12 +344,14 @@ export const HOD_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/student-activities", label: "Student Societies" },
   { href: "/accreditation-overview", label: "Accreditation Overview" },
+  { href: "/accreditation/readiness", label: "Visit Readiness" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/admission-criteria", label: "Admission Criteria" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/accreditation/tasks", label: "Accreditation Tasks" },
   { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 

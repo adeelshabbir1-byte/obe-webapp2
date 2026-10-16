@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { termIndex } from "./termLogic";
+import { inferBody, isBody } from "./accreditation/bodyInfer";
 
 export type PassingCriteria = { cloPct: number; ploPct: number; deficiencyPct: number };
 
@@ -13,7 +14,18 @@ const DEFAULT_CRITERIA: PassingCriteria = { cloPct: 50, ploPct: 50, deficiencyPc
 // been updated to pass a specific term keeps working exactly as before,
 // just now against whichever version is current rather than a single,
 // unversioned row.
-export async function getPassingCriteria(chairmanId: string | null | undefined, term?: { termName: string; year: number }): Promise<PassingCriteria> {
+export async function getPassingCriteria(chairmanId: string | null | undefined, term?: { termName: string; year: number }, opts?: { degreeProgram?: string | null }): Promise<PassingCriteria> {
+  const base = await institutePassingCriteria(chairmanId, term);
+  if (!chairmanId || !opts?.degreeProgram) return base;
+  // A program's accreditation council may carry its own CLO / PLO passing marks (Accreditation governance › Standards);
+  // where the institute hasn't set them, its Passing Criteria apply as before.
+  const program = await prisma.departmentProgram.findUnique({ where: { chairmanId_degreeProgram: { chairmanId, degreeProgram: opts.degreeProgram } }, select: { accreditationBody: true } }).catch(() => null);
+  const body = isBody(program?.accreditationBody) ? program!.accreditationBody! : inferBody(opts.degreeProgram);
+  const std = await prisma.accreditationStandard.findUnique({ where: { chairmanId_body: { chairmanId, body } }, select: { cloPassPct: true, ploPassPct: true } }).catch(() => null);
+  return { ...base, cloPct: std?.cloPassPct ?? base.cloPct, ploPct: std?.ploPassPct ?? base.ploPct };
+}
+
+async function institutePassingCriteria(chairmanId: string | null | undefined, term?: { termName: string; year: number }): Promise<PassingCriteria> {
   if (!chairmanId) return DEFAULT_CRITERIA;
   const allVersions = await prisma.passingCriteria.findMany({ where: { chairmanId } });
   if (allVersions.length === 0) return DEFAULT_CRITERIA;
