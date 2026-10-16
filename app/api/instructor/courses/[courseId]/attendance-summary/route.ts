@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
-import { getAttendanceThreshold } from "../../../../../../lib/attendanceThreshold";
+import { attendancePolicy, courseAttendance } from "../../../../../../lib/attendance";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
@@ -10,32 +10,18 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const [enrollments, deliveredLectures, records, threshold] = await Promise.all([
-    prisma.studentEnrollment.findMany({ where: { courseId: course.id }, include: { student: true } }),
+  const p = await attendancePolicy(await chairmanIdFor(user));
+  const [deliveredLectures, att] = await Promise.all([
     prisma.lectureRow.count({ where: { courseId: course.id, source: "INSTRUCTOR", actualDate: { not: null } } }),
-    prisma.attendanceRecord.findMany({ where: { courseId: course.id } }),
-    getAttendanceThreshold(await chairmanIdFor(user)),
+    courseAttendance(course.id, p),
   ]);
+  // Same rule everywhere (lib/attendance.ts): late counts as attended unless the OMC says otherwise; excused leave
+  // counts against the student unless the OMC leaves it out.
+  const summary = att.students.map((s) => ({
+    studentId: s.studentId, name: s.name, rollNumber: s.rollNumber,
+    present: s.tally.present, late: s.tally.late, absent: s.tally.absent, leave: s.tally.excused, percentage: s.pct,
+    flagged: s.pct !== null && s.pct < p.minPct, standing: s.standing, canMiss: s.canMiss,
+  }));
 
-  const byStudent = new Map<string, { present: number; absent: number; leave: number }>();
-  for (const r of records) {
-    const e = byStudent.get(r.studentId) || { present: 0, absent: 0, leave: 0 };
-    if (r.status === "PRESENT") e.present++;
-    else if (r.status === "ABSENT") e.absent++;
-    else if (r.status === "LEAVE") e.leave++;
-    byStudent.set(r.studentId, e);
-  }
-
-  const summary = enrollments.map((en) => {
-    const s = byStudent.get(en.studentId) || { present: 0, absent: 0, leave: 0 };
-    const marked = s.present + s.absent + s.leave;
-    const pct = marked > 0 ? Math.round((s.present / marked) * 1000) / 10 : null;
-    return {
-      studentId: en.studentId, name: en.student.name, rollNumber: en.student.rollNumber,
-      present: s.present, absent: s.absent, leave: s.leave, percentage: pct,
-      flagged: pct !== null && pct < threshold,
-    };
-  });
-
-  return NextResponse.json({ deliveredLectures, threshold, summary });
+  return NextResponse.json({ deliveredLectures, threshold: p.minPct, summary, remaining: att.remaining });
 }

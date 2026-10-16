@@ -36,6 +36,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Feedback Surveys": MessageSquareText,
   "Teacher Load Report": BarChart3,
   "Semester Health": Activity,
+  "Attendance Report": UserCheck,
   "Batch Comparison": GitCompare,
   "Prerequisite Map": Map,
   "Prerequisite Correlation": Map,

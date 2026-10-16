@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
+import Link from "next/link";
+import { attendancePolicy, coursesAttendance } from "../../../lib/attendance";
 
 
 function StatCard({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
@@ -38,6 +40,14 @@ export default async function SemesterHealthPage() {
   const overLoaded = faculty.filter((f) => (loadByFaculty[f.id] || 0) + f.externalLoadCount > f.normalLoad).length;
 
   const pendingExceptions = await prisma.weightExceptionRequest.count({ where: { status: "pending", course: { coordinatorId: user.id } } });
+  // Attendance against the institute's minimum (the same figures as the Attendance report).
+  const policy = await attendancePolicy(user.managedById);
+  const att = await coursesAttendance(offeredCourses.map((c) => c.id), policy).catch(() => ({ courses: [], shortages: [] }));
+  const attAvgs = att.courses.map((c) => c.average).filter((x): x is number => x !== null);
+  const attAverage = attAvgs.length ? Math.round((attAvgs.reduce((a, b) => a + b, 0) / attAvgs.length) * 10) / 10 : null;
+  const attShort = new Set(att.shortages.map((x) => x.studentId)).size;
+  const attCannot = att.shortages.filter((x) => x.standing === "CANNOT_RECOVER").length;
+  const attStale = att.courses.filter((c) => c.enrolled > 0 && (!c.lastMarked || Date.now() - c.lastMarked.getTime() > 14 * 864e5)).length;
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
@@ -71,6 +81,16 @@ export default async function SemesterHealthPage() {
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>Governance</h3>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           <StatCard label="Pending Weight Exceptions" value={pendingExceptions} warn={pendingExceptions > 0} />
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Attendance <Link href="/coordinator/attendance" style={{ fontSize: 12, fontWeight: 400, marginLeft: 8 }}>Attendance report →</Link></h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <StatCard label="Average Attendance" value={attAverage === null ? "—" : `${attAverage}%`} warn={attAverage !== null && attAverage < policy.minPct} />
+          <StatCard label={`Students Below ${policy.minPct}%`} value={attShort} warn={attShort > 0} />
+          <StatCard label="Can No Longer Reach the Minimum" value={attCannot} warn={attCannot > 0} />
+          <StatCard label="Courses With No Attendance in 14 Days" value={attStale} warn={attStale > 0} />
         </div>
       </div>
     </Shell>

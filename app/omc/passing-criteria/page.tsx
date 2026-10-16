@@ -22,7 +22,10 @@ export default async function PassingCriteriaPage() {
         Set institution-wide thresholds used across reports and grading.
       </p>
       <PassingCriteriaForm />
-      <AttendanceThresholdForm initial={attendanceThreshold?.minPercentage ?? 75} />
+      <AttendanceThresholdForm initial={{
+        minPercentage: attendanceThreshold?.minPercentage ?? 75, lateCountsPresent: attendanceThreshold?.lateCountsPresent ?? true, excusedExcluded: attendanceThreshold?.excusedExcluded ?? false,
+        warnMarginPct: attendanceThreshold?.warnMarginPct ?? 5, qrPresentMinutes: attendanceThreshold?.qrPresentMinutes ?? 10, qrLateMinutes: attendanceThreshold?.qrLateMinutes ?? 25, qrRotateSeconds: attendanceThreshold?.qrRotateSeconds ?? 12,
+      }} />
     </Shell>
   );
 }

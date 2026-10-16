@@ -246,7 +246,7 @@ model AttendanceRecord {
   lectureRow   LectureRow @relation(fields: [lectureRowId], references: [id])
   studentId    String
   student      Student  @relation(fields: [studentId], references: [id])
-  status       String   // "PRESENT" | "ABSENT" | "LEAVE"
+  status       String   // "PRESENT" | "LATE" | "ABSENT" | "LEAVE" (LEAVE = excused)
   markedById   String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -262,6 +262,13 @@ model AttendanceThreshold {
   id            String @id @default(cuid())
   chairmanId    String @unique
   minPercentage Int    @default(75)
+  // How the percentage is worked out, and the defaults of a QR attendance session (set by the OMC).
+  lateCountsPresent Boolean @default(true)
+  excusedExcluded   Boolean @default(false)
+  warnMarginPct     Int     @default(5)
+  qrPresentMinutes  Int     @default(10)
+  qrLateMinutes     Int     @default(25)
+  qrRotateSeconds   Int     @default(12)
 }
 
 // ===== Timetable Module =====
@@ -3813,4 +3820,79 @@ model HelpSearchLog {
   createdAt  DateTime @default(now())
 
   @@index([chairmanId, createdAt])
+}
+
+// ---------------------------------------------------------------------------------------------------- QR attendance
+// A live attendance session for one lecture: the instructor's screen shows a QR code that changes every few seconds
+// (an AES-GCM token made with the session's own key, which never leaves the server). Students scan it to check in;
+// the result is written to AttendanceRecord like hand-marked attendance.
+
+model AttendanceSession {
+  id             String    @id @default(cuid())
+  courseId       String
+  lectureRowId   String
+  instructorId   String
+  chairmanId     String?
+  keyHex         String
+  rotateSeconds  Int       @default(12)
+  presentMinutes Int       @default(10)
+  lateMinutes    Int       @default(25)
+  requireLogin   Boolean   @default(true)
+  sameNetwork    Boolean   @default(false)
+  networkKey     String?
+  checkLocation  Boolean   @default(false)
+  lat            Float?
+  lng            Float?
+  radiusM        Int       @default(150)
+  status         String    @default("OPEN") // OPEN | CLOSED
+  startedAt      DateTime  @default(now())
+  closesAt       DateTime
+  closedAt       DateTime?
+  closedById     String?
+  absentMarked   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+
+  @@index([courseId])
+  @@index([instructorId, status])
+  @@index([status, closesAt])
+}
+
+/// One student in one session: how and when they were marked, and from which device.
+model AttendanceCheckin {
+  id                String   @id @default(cuid())
+  sessionId         String
+  studentId         String
+  status            String // PRESENT | LATE | ABSENT | LEAVE
+  method            String // QR | ROLL | MANUAL | AUTO_ABSENT
+  at                DateTime @default(now())
+  ip                String?
+  deviceId          String?
+  userAgent         String?
+  distanceM         Int?
+  note              String?
+  byUserId          String?
+  duplicateAttempts Int      @default(0)
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId, deviceId])
+}
+
+/// A student below the institute's minimum attendance in a course (kept so the Program Lead and advisor are told once).
+model AttendanceFlag {
+  id             String    @id @default(cuid())
+  studentId      String
+  courseId       String
+  chairmanId     String?
+  status         String // SHORT | RECOVERED
+  percentage     Float
+  firstFlaggedAt DateTime  @default(now())
+  lastCheckedAt  DateTime  @default(now())
+  notifiedAt     DateTime?
+  clearedAt      DateTime?
+
+  @@unique([studentId, courseId])
+  @@index([courseId])
+  @@index([chairmanId, status])
 }

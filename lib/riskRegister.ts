@@ -14,7 +14,7 @@ export type Risk = { severity: Severity; program: string; area: string; text: st
 export type ProgramRow = {
   id: string; program: string; department: string | null; score: number;
   noSe: number; seWaiting: number; plansNotReady: number; plansBelowOmc: number; noInstructor: number;
-  overdue: number; resultsPending: number; gradeChanges: number; teachingFlags: number; ploLow: string[]; attendanceStale: number;
+  overdue: number; resultsPending: number; gradeChanges: number; teachingFlags: number; ploLow: string[]; attendanceStale: number; attendanceShort: number;
 };
 type Who = { id: string; role: string; managedById: string | null; departmentId?: string | null; facultyId?: string | null };
 const db = prisma as unknown as Record<string, any>;
@@ -59,6 +59,9 @@ export async function riskRegister(user: Who, opts: { teaching?: boolean } = {})
   const prog = await seProgressFor(full.filter((c) => c.subjectExpertId).map((c) => ({ id: c.id, courseType: c.courseType, coordinatorId: c.coordinatorId, templateStatus: c.templateStatus }))).catch(() => progress);
   const resultOf = new Map(results.map((r) => [r.courseId, r.status]));
   const lastAtt = new Map(attendance.map((a) => [a.courseId, a._max.updatedAt]));
+  // Students below the minimum attendance, from the shortage flags kept up to date as attendance is marked.
+  const shortFlags = offered.length ? await prisma.attendanceFlag.groupBy({ by: ["courseId"], where: { courseId: { in: offered.map((c) => c.id) }, status: "SHORT" }, _count: { _all: true } }).catch(() => []) : [];
+  const shortOf = new Map(shortFlags.map((f) => [f.courseId, f._count._all]));
   const staleCut = new Date(now.getTime() - 14 * 864e5);
 
   // Teaching vs plan (Planned vs Taught): only courses with lectures logged; capped so the page stays quick.
@@ -112,6 +115,8 @@ export async function riskRegister(user: Who, opts: { teaching?: boolean } = {})
     const flagged = off.filter((c) => (teach.get(c.id)?.flags || 0) >= 2 || (teach.get(c.id)?.missed || 0) >= 2);
     const stale = off.filter((c) => c.instructorId && (!lastAtt.get(c.id) || lastAtt.get(c.id)! < staleCut));
     const low = ploLow.get(l.id) || [];
+    const shortCourses = off.filter((c) => (shortOf.get(c.id) || 0) > 0);
+    const shortStudents = shortCourses.reduce((n, c) => n + (shortOf.get(c.id) || 0), 0);
     const add = (severity: Severity, area: string, text: string, href: string, count: number) => { if (count > 0) risks.push({ severity, program: p, area, text, href, count }); };
     add("high", "Ownership", `${noSe.length} course(s) of ${terms(noSe) || "this or a coming term"} have no Subject Expert: ${noSe.slice(0, 6).map((c) => c.code).join(", ")}${noSe.length > 6 ? "…" : ""}.`, "/coordinator/assign-subject-experts", noSe.length);
     add("high", "Ownership", `${declined.length} course(s) were declined by the Subject Expert and need someone else: ${declined.map((c) => c.code).join(", ")}.`, "/coordinator/assign-subject-experts", declined.length);
@@ -126,11 +131,12 @@ export async function riskRegister(user: Who, opts: { teaching?: boolean } = {})
     add("medium", "Teaching quality", `${flagged.length} course(s) where teaching time and assessment don't match or planned topics were dropped: ${flagged.slice(0, 5).map((c) => c.code).join(", ")}.`, "/omc/reports/planned-vs-taught", flagged.length);
     add("high", "Outcomes", `PLOs attained by fewer than 60% of students last term: ${low.join(", ")}.`, "/omc/reports/attainment-analytics", low.length);
     add("low", "Attendance", `${stale.length} course(s) have no attendance marked in the last 14 days.`, "/omc/delivery-completion", stale.length);
+    add(shortStudents >= 10 ? "high" : "medium", "Attendance", `${shortStudents} attendance shortage(s) below the minimum in ${shortCourses.length} course(s): ${shortCourses.slice(0, 5).map((c) => c.code).join(", ")}${shortCourses.length > 5 ? "…" : ""}.`, "/coordinator/attendance", shortStudents);
     const mine = risks.filter((r) => r.program === p);
     return {
       id: l.id, program: p, department: dept.get(l.id) || null, score: mine.reduce((n, r) => n + SEV_POINTS[r.severity] * Math.min(5, r.count), 0),
       noSe: noSe.length + declined.length, seWaiting: seWaiting.length, plansNotReady: notReady.length, plansBelowOmc: belowOmc.length, noInstructor: noInstr.length,
-      overdue: overdue.length, resultsPending: resultsPending.length + returned.length, gradeChanges: gc.length, teachingFlags: flagged.length, ploLow: low, attendanceStale: stale.length,
+      overdue: overdue.length, resultsPending: resultsPending.length + returned.length, gradeChanges: gc.length, teachingFlags: flagged.length, ploLow: low, attendanceStale: stale.length, attendanceShort: shortStudents,
     };
   });
   const order: Record<Severity, number> = { high: 0, medium: 1, low: 2 };

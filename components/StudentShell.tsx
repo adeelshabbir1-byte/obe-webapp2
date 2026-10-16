@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { greetingName } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
 import HelpButton from "./help/HelpButton";
+import { AttendanceWarning } from "./attendance/StudentAttendance";
 
 const NAV = [
   { href: "/student/registration", label: "Course Registration" },
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/student/activities", label: "Societies & Activities" },
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
+  { href: "/student/attendance", label: "My Attendance" },
   { href: "/student/help", label: "Help" },
 ];
 
@@ -59,7 +61,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
           </div>
         </div>
       </header>
-      <main className="st-main">{children}</main>
+      <main className="st-main">{pathname !== "/student/attendance" && <AttendanceWarning />}{children}</main>
     </div>
   );
 }

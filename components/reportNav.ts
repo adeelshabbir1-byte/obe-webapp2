@@ -33,6 +33,7 @@ export const OMC_ACTION_NAV = [
   { href: "/registration-rules", label: "Registration Rules" },
   { href: "/chairman/cqi", label: "CQI Records" },
   { href: "/omc/reports", label: "Reports" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export const LAB_ENGINEER_NAV = [
@@ -186,6 +187,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -232,6 +234,7 @@ export const CHAIRMAN_NAV = [
   { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/student-activities", label: "Student Societies" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export const DEAN_NAV = [
@@ -264,6 +267,7 @@ export const DEAN_NAV = [
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -295,6 +299,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export const HOD_NAV = [
@@ -330,6 +335,7 @@ export const HOD_NAV = [
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
+  { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
 export function navForRole(role: string) {

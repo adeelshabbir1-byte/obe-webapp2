@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
+import { refreshShortageFlags } from "../../../../../../../lib/attendance";
+import { chairmanIdFor } from "../../../../../../../lib/reportScope";
 
 export async function GET(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
   const user = await getAuthenticatedUser();
@@ -32,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const entries: { studentId: string; status: string }[] = body.entries || [];
-  const validStatuses = ["PRESENT", "ABSENT", "LEAVE"];
+  const validStatuses = ["PRESENT", "LATE", "ABSENT", "LEAVE"];
 
   // The date attendance was taken is the date the lecture happened: it becomes the lecture's date in the course log.
   let actualDate: Date | null = null;
@@ -55,6 +57,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (actualDate && (!lectureRow.actualDate || lectureRow.actualDate.getTime() !== actualDate.getTime())) {
     await prisma.lectureRow.update({ where: { id: lectureRow.id }, data: { actualDate } });
   }
+  // Students who fell below (or climbed back above) the minimum are flagged for their Program Lead and advisor.
+  await refreshShortageFlags(course.id, (await chairmanIdFor(user)) || null).catch(() => null);
 
   return NextResponse.json({ ok: true, actualDate: actualDate ? actualDate.toISOString().slice(0, 10) : lectureRow.actualDate?.toISOString().slice(0, 10) || null });
 }

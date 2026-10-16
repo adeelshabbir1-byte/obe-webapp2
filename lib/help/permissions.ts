@@ -88,6 +88,15 @@ export const CAPABILITIES: Capability[] = [
     enforcedIn: [{ file: "app/api/fyp/admin/route.ts", contains: ['case "assignPanel"', 'case "autoAssign"', "Only the FYP Head or Committee"] }] },
   { key: "fyp-signoff", category: "fyp", task: "Sign off FYP results", roles: ["HEAD_OF_DEPARTMENT"], scope: "The department's own Chairman.", where: { href: "/fyp/manage", label: "Final Year Projects" }, article: "fyp-who-does-what",
     enforcedIn: [{ file: "app/api/fyp/admin/route.ts", contains: ["Only the department's Chairman signs off FYP results."] }] },
+  // Attendance
+  { key: "qr-attendance", category: "teaching", task: "Take attendance with a QR code, and mark students by hand", roles: ["INSTRUCTOR"], scope: "Their own courses.",
+    where: { href: "/instructor/courses", label: "My Semester Courses › Attendance" }, article: "qr-attendance",
+    enforcedIn: [{ file: "lib/instructorGuard.ts", contains: ['user.role !== "INSTRUCTOR"', "course.instructorId !== user.id"] }, { file: "app/api/attendance/sessions/route.ts", contains: ["requireInstructorCourse"] }] },
+  { key: "attendance-policy", category: "registration", task: "Set the attendance policy (minimum %, late, excused, QR timing)", roles: ["OMC"], where: { href: "/omc/passing-criteria", label: "Passing Criteria & Attendance" }, article: "attendance-policy",
+    enforcedIn: [{ file: "app/api/omc/attendance-threshold/route.ts", contains: ['user.role !== "OMC"'] }] },
+  { key: "attendance-report", category: "quality", task: "See attendance shortages across programs", roles: ["PROGRAM_COORDINATOR", "CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "OMC"], scope: "Their own programs; batch advisors see their batches.",
+    where: { href: "/coordinator/attendance", label: "Attendance Report" }, article: "attendance-report",
+    enforcedIn: [{ file: "app/coordinator/attendance/page.tsx", contains: ['user.role === "PROGRAM_COORDINATOR"', "OVERVIEW_ROLES.includes(user.role)", "advisorId"] }] },
   // Quality & help
   { key: "cqi", category: "quality", task: "Log CQI findings and close the loop", roles: ["CHAIRMAN", "OMC"], where: { href: "/chairman/cqi", label: "CQI Records" }, article: "run-cqi",
     enforcedIn: [{ file: "app/api/chairman/cqi/route.ts", contains: ['["CHAIRMAN", "OMC"].includes(user.role)'] }] },

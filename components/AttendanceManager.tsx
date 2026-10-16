@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 
 type LectureRow = { id: string; week: number; lectureNumber: number; topic: string; actualDate: string | null };
 type RosterStudent = { id: string; name: string; rollNumber: string; status: string | null };
-type SummaryRow = { studentId: string; name: string; rollNumber: string; present: number; absent: number; leave: number; percentage: number | null; flagged: boolean };
+type SummaryRow = { studentId: string; name: string; rollNumber: string; present: number; late: number; absent: number; leave: number; percentage: number | null; flagged: boolean; standing?: string; canMiss?: number | null };
+const MARKS = [["PRESENT", "Present"], ["LATE", "Late"], ["ABSENT", "Absent"], ["LEAVE", "Excused"]] as const;
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
@@ -100,14 +101,14 @@ export default function AttendanceManager({ courseId, lectureRows: initialRows }
             ) : (
               <>
                 <table>
-                  <thead><tr><th>Roll #</th><th>Name</th><th>Present</th><th>Absent</th><th>Leave</th></tr></thead>
+                  <thead><tr><th>Roll #</th><th>Name</th>{MARKS.map(([, l]) => <th key={l}>{l}</th>)}</tr></thead>
                   <tbody>
                     {roster.map((s) => (
                       <tr key={s.id}>
                         <td>{s.rollNumber}</td><td>{s.name}</td>
-                        {["PRESENT", "ABSENT", "LEAVE"].map((st) => (
+                        {MARKS.map(([st]) => (
                           <td key={st} style={{ textAlign: "center" }}>
-                            <input type="radio" name={`att-${s.id}`} checked={s.status === st} onChange={() => setStatus(s.id, st)} />
+                            <input type="radio" name={`att-${s.id}`} checked={s.status === st} onChange={() => setStatus(s.id, st)} aria-label={`${s.name}: ${MARKS.find((m) => m[0] === st)![1]}`} />
                           </td>
                         ))}
                       </tr>
@@ -131,14 +132,14 @@ export default function AttendanceManager({ courseId, lectureRows: initialRows }
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Loading…</p>
         ) : (
           <table>
-            <thead><tr><th>Roll #</th><th>Name</th><th>Present</th><th>Absent</th><th>Leave</th><th>%</th><th></th></tr></thead>
+            <thead><tr><th>Roll #</th><th>Name</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>%</th><th></th></tr></thead>
             <tbody>
-              {(!summary || summary.summary.length === 0) && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No attendance marked yet.</td></tr>}
+              {(!summary || summary.summary.length === 0) && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>No attendance marked yet.</td></tr>}
               {summary?.summary.map((s) => (
                 <tr key={s.studentId} style={s.flagged ? { background: "#FBE2DF" } : undefined}>
-                  <td>{s.rollNumber}</td><td>{s.name}</td><td>{s.present}</td><td>{s.absent}</td><td>{s.leave}</td>
+                  <td>{s.rollNumber}</td><td>{s.name}</td><td>{s.present}</td><td>{s.late ?? 0}</td><td>{s.absent}</td><td>{s.leave}</td>
                   <td style={{ fontWeight: 700, color: s.flagged ? "var(--rust)" : "var(--sage)" }}>{s.percentage !== null ? `${s.percentage}%` : "—"}</td>
-                  <td>{s.flagged && <span className="badge badge-no">Below Threshold</span>}</td>
+                  <td>{s.standing === "CANNOT_RECOVER" ? <span className="badge badge-no">Can no longer reach the minimum</span> : s.flagged ? <span className="badge badge-no">Below Threshold</span> : s.standing === "AT_RISK" ? <span className="badge badge-neutral">Close to the minimum</span> : null}</td>
                 </tr>
               ))}
             </tbody>
