@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound , MessageSquarePlus } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound , MessageSquarePlus, LifeBuoy } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -13,6 +13,7 @@ import type { Branding } from "../lib/branding";
 import type { SessionInfo } from "../lib/shellData";
 import BusyBanner from "./BusyBanner";
 import NotificationBell from "./NotificationBell";
+import HelpButton from "./help/HelpButton";
 
 type NavLink = { href: string; label: string };
 
@@ -360,6 +361,7 @@ export default function AppShell({
                   <Link prefetch={false} href="/coordinator/surveys" className="sb-action"><MessageSquareText size={14} /> Manage Feedback Surveys</Link>
                 </>
               )}
+              <Link prefetch={false} href="/help" className="sb-action"><LifeBuoy size={14} /> Help &amp; Support</Link>
               <Link prefetch={false} href={`/feedback?page=${encodeURIComponent(pathname)}`} className="sb-action"><MessageSquarePlus size={14} /> Send Feedback</Link>
               <Link prefetch={false} href="/change-password" className="sb-action"><KeyRound size={14} /> Change Password</Link>
               <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={14} /> Security Settings</Link>
@@ -399,6 +401,7 @@ export default function AppShell({
             <div className="tb-crumb">{crumb}</div>
           </div>
           <div className="tb-right">
+            <HelpButton />
             <NotificationBell initialUnread={unreadNotifications} />
             <span className="tb-hello">Hello, <b>{greetingName(userName)}</b></span>
             <span className="avatar" title={userName} aria-hidden="true">{initials(userName)}</span>

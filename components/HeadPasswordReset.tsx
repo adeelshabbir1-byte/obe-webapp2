@@ -7,15 +7,16 @@ export default function HeadPasswordReset({ heads }: { heads: { id: string; labe
   const [id, setId] = useState(heads[0]?.id || "");
   const [pw, setPw] = useState("");
   const [mustChange, setMustChange] = useState(true);
+  const [turnOffTwoStep, setTurnOffTwoStep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
-    const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newPassword: pw, mustChange }) });
+    const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newPassword: pw, mustChange, turnOffTwoStep }) });
     const d = await res.json().catch(() => ({}));
-    setMsg(res.ok ? { ok: true, text: `Password changed. Give it to ${heads.find((h) => h.id === id)?.label || "them"}; they are signed out everywhere${mustChange ? " and must choose their own password at next sign-in" : ""}.` } : { ok: false, text: d.error || "Something went wrong." });
-    if (res.ok) setPw("");
+    setMsg(res.ok ? { ok: true, text: `Password changed${turnOffTwoStep ? " and two-step sign-in turned off" : ""}. Give it to ${heads.find((h) => h.id === id)?.label || "them"}; they are signed out everywhere${mustChange ? " and must choose their own password at next sign-in" : ""}.` } : { ok: false, text: d.error || "Something went wrong." });
+    if (res.ok) { setPw(""); setTurnOffTwoStep(false); }
     setBusy(false);
   }
   if (heads.length === 0) return null;
@@ -30,6 +31,7 @@ export default function HeadPasswordReset({ heads }: { heads: { id: string; labe
         <button className="btn btn-brass" disabled={busy || pw.length < 8}>{busy ? "Saving…" : "Set new password"}</button>
       </div>
       <label style={{ display: "block", fontSize: 12.5, marginTop: 8 }}><input type="checkbox" checked={mustChange} onChange={(e) => setMustChange(e.target.checked)} /> Make them choose their own password at next sign-in</label>
+      <label style={{ display: "block", fontSize: 12.5, marginTop: 4 }}><input type="checkbox" checked={turnOffTwoStep} onChange={(e) => setTurnOffTwoStep(e.target.checked)} /> Also turn off two-step sign-in (they lost their phone and backup codes)</label>
       {msg && <div style={{ marginTop: 8, fontSize: 13, color: msg.ok ? "var(--sage)" : "#b3261e" }}>{msg.text}</div>}
     </form>
   );

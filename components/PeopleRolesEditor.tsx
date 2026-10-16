@@ -74,6 +74,14 @@ function EditPanel({ p, departments, faculties, programs }: { p: PersonRow; depa
     if (r.ok) router.refresh();
   }
   const save = () => run(() => post("/api/chairman/people", { userId: p.id, name, email, departmentId: dept || null, isActive: active, roles: isStaff ? [staffRole] : [...teach] }, "PATCH"));
+  // Forgotten password or lost phone: a temporary password they must change, and/or two-step sign-in turned off.
+  const [tempPw, setTempPw] = useState("");
+  const [twoStepOff, setTwoStepOff] = useState(false);
+  const resetAccess = () => run(async () => {
+    const r = await post("/api/chairman/people/reset-password", { userId: p.id, newPassword: tempPw, turnOffTwoStep: twoStepOff });
+    if (r.ok) { setTempPw(""); setTwoStepOff(false); }
+    return r;
+  });
   const toggleTeach = (r: string) => setTeach((t) => (t.includes(r) ? t.filter((x) => x !== r) : r === "LAB_ENGINEER" ? ["LAB_ENGINEER"] : [...t.filter((x) => x !== "LAB_ENGINEER"), r]));
 
   // add a leader role
@@ -123,6 +131,16 @@ function EditPanel({ p, departments, faculties, programs }: { p: PersonRow; depa
         <div style={{ marginTop: 10 }}>
           <button className="btn btn-brass" type="button" onClick={save} disabled={busy}>Save details and roles</button>
         </div>
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--line)", paddingTop: 10, display: "grid", gap: 8 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 600 }}>Password and two-step sign-in <span style={{ fontWeight: 400, color: "var(--slate)" }}>(forgotten password or lost phone)</span></div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
+          <input type="text" value={tempPw} onChange={(e) => setTempPw(e.target.value)} placeholder="Temporary password (8+ characters)" autoComplete="new-password" aria-label={`Temporary password for ${p.name}`} style={{ padding: "5px 8px", minWidth: 240 }} />
+          <label style={{ display: "flex", gap: 5, alignItems: "center" }}><input type="checkbox" checked={twoStepOff} onChange={(e) => setTwoStepOff(e.target.checked)} /> Also turn off two-step sign-in</label>
+          <button className="btn" type="button" onClick={resetAccess} disabled={busy || (!twoStepOff && tempPw.length < 8)}>{tempPw ? (twoStepOff ? "Reset password and turn off two-step" : "Reset password") : twoStepOff ? "Turn off two-step sign-in" : "Reset password"}</button>
+        </div>
+        <span style={{ fontSize: 12, color: "var(--slate)" }}>They are signed out everywhere and must choose their own password at the next sign-in. Give them the temporary password in person or by phone.</span>
       </div>
 
       {canHaveHats && (

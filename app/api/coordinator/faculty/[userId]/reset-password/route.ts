@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { userId: stri
   const passwordHash = await hashPassword(body.newPassword);
   await prisma.user.update({
     where: { id: params.userId },
-    data: { passwordHash, mustChangePassword: true },
+    data: { passwordHash, mustChangePassword: true, failedLoginCount: 0, lockedUntil: null },
   });
 
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_PASSWORD_RESET", entityType: "User", entityId: params.userId });

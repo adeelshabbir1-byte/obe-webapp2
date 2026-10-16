@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Lock, ArrowRight } from "lucide-react";
 import AuthInput from "./AuthInput";
@@ -48,7 +49,7 @@ export default function LoginForm() {
       {error && <div className="err" role="alert">{error}</div>}
       <AuthInput id="username" name="username" label="Username or Email" icon={User} placeholder="Enter your username or email" autoComplete="username" autoFocus />
       <AuthInput id="password" name="password" label="Password" icon={Lock} type="password" placeholder="Enter your password" autoComplete="current-password" />
-      <p className="auth-hint">Forgot your password? Ask your Program Coordinator or administrator to reset it.</p>
+      <p className="auth-hint"><Link href="/forgot-password">Forgot your password?</Link></p>
       <button className="btn btn-brass btn-full auth-submit" type="submit" disabled={loading}>
         {loading && <span className="spinner" />}
         {loading ? "Signing in…" : <>Sign in <ArrowRight size={18} /></>}

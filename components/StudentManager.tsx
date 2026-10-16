@@ -111,6 +111,16 @@ export default function StudentManager({ batches, initialBatchId, students: init
     setLoading(false);
   }
 
+  // One student who forgot their password: back to their roll number, everyone else untouched.
+  async function resetLogin(s: Student) {
+    if (!confirm(`Reset ${s.name}'s login? Their password becomes their roll number (${s.rollNumber}) and they choose a new one at their next sign-in.`)) return;
+    setError(""); setResult("");
+    const res = await fetch(`/api/coordinator/students/${s.id}/reset-password`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(data.error || "Couldn't reset that student's login."); return; }
+    setResult(`${s.name} can now sign in with their roll number (${data.rollNumber || s.rollNumber}) and will be asked to choose a new password.`);
+  }
+
   async function activateLogins(force: boolean) {
     if (force && !confirm("This resets EVERY student's login in this batch back to their roll number, even ones who already set their own password. Continue?")) return;
     setActivatingLogins(true); setLoginActivationResult(""); setError("");
@@ -216,7 +226,10 @@ export default function StudentManager({ batches, initialBatchId, students: init
                   {s.statusReason && <div className="small-note">{s.statusReason}</div>}
                 </td>
                 <td><input type="checkbox" checked={heldBack.has(s.id)} onChange={() => toggleHeldBack(s.id)} /></td>
-                <td><button onClick={() => removeStudent(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  <button onClick={() => resetLogin(s)} disabled={loading} className="act" title="Forgotten password: back to the roll number">Reset login</button>{" "}
+                  <button onClick={() => removeStudent(s.id)} disabled={loading} className="act act-danger">Remove</button>
+                </td>
               </tr>
             ))}
           </tbody>

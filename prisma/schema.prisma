@@ -3719,3 +3719,98 @@ model AccreditationRecord {
   @@index([chairmanId, kind])
   @@index([departmentId])
 }
+
+// ---------------------------------------------------------------------------------------------------- Help center
+// The built-in manual and FAQ live in code (lib/help/content.ts). These tables hold what an institute adds itself,
+// the help-desk requests people raise when the answers don't cover their problem, and the signals used to improve it.
+
+/// An institute's own guide or FAQ entry (chairmanId null = written by the platform team for every institute).
+model HelpArticle {
+  id             String   @id @default(cuid())
+  chairmanId     String?
+  kind           String // GUIDE | FAQ
+  category       String
+  title          String
+  summary        String   @db.Text
+  stepsJson      String?  @db.Text // JSON string[]
+  whoCan         String?  @db.Text
+  affects        String?  @db.Text
+  roles          String   @default("") // comma-separated audience roles; "" = all staff, STUDENT = the student portal
+  pages          String   @default("") // comma-separated page prefixes where it is suggested
+  keywords       String   @default("")
+  href           String?
+  published      Boolean  @default(true)
+  sourceTicketId String?
+  createdById    String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([chairmanId])
+}
+
+/// A help-desk request, routed to the people who can answer it (recipientIds, a JSON array of user ids).
+model HelpTicket {
+  id                 String    @id @default(cuid())
+  chairmanId         String?
+  desk               String
+  subject            String
+  body               String    @db.Text
+  query              String?
+  page               String?
+  status             String    @default("OPEN") // OPEN | ANSWERED | RESOLVED | CLOSED
+  requesterUserId    String?
+  requesterStudentId String?
+  requesterName      String
+  requesterRole      String
+  recipientIds       String    @db.Text
+  assignedToId       String?
+  lastActivityAt     DateTime  @default(now())
+  resolvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, status])
+  @@index([requesterUserId])
+  @@index([requesterStudentId])
+}
+
+model HelpTicketMessage {
+  id              String   @id @default(cuid())
+  ticketId        String
+  authorUserId    String?
+  authorStudentId String?
+  authorName      String
+  body            String   @db.Text
+  createdAt       DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+/// "Was this helpful?" — one vote per person per article, changeable.
+model HelpFeedback {
+  id         String   @id @default(cuid())
+  chairmanId String?
+  articleKey String
+  helpful    Boolean
+  role       String
+  voterKey   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([articleKey, voterKey])
+  @@index([chairmanId])
+}
+
+/// Searches that found nothing, so the Institute Head can see which answers are missing (no person is recorded).
+model HelpSearchLog {
+  id         String   @id @default(cuid())
+  chairmanId String?
+  role       String
+  query      String
+  results    Int
+  page       String?
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId, createdAt])
+}

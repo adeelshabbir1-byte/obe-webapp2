@@ -41,6 +41,7 @@ export default function StudentLoginForm() {
       {error && <div className="err" role="alert">{error}</div>}
       <AuthInput id="rollNumber" name="rollNumber" label="Roll Number" icon={SquareUser} placeholder="e.g. BSCS-F23-042" autoComplete="username" autoFocus />
       <AuthInput id="password" name="password" label="Password" icon={Lock} type="password" placeholder="Enter your password" autoComplete="current-password" />
+      <p className="auth-hint">First time, or forgot it? Your first password is your roll number. Forgotten passwords are reset by your Program Lead.</p>
       <button className="btn btn-brass btn-full auth-submit" type="submit" disabled={loading}>
         {loading && <span className="spinner" />}
         {loading ? "Signing in…" : <>Sign in <ArrowRight size={18} /></>}

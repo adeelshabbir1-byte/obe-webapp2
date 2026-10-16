@@ -13,8 +13,11 @@ export async function PUT(req: NextRequest, { params }: { params: { chairmanId: 
   const b = await req.json().catch(() => ({}));
   const pw = String(b.newPassword || "");
   if (pw.length < 8) return NextResponse.json({ error: "the new password needs at least 8 characters" }, { status: 400 });
-  await prisma.user.update({ where: { id: head.id }, data: { passwordHash: await hashPassword(pw), mustChangePassword: b.mustChange !== false } });
+  // A lost phone without backup codes: the Super User can also turn off the head's two-step sign-in.
+  const turnOff = b.turnOffTwoStep === true;
+  await prisma.user.update({ where: { id: head.id }, data: { passwordHash: await hashPassword(pw), mustChangePassword: b.mustChange !== false, failedLoginCount: 0, lockedUntil: null, ...(turnOff ? { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null } : {}) } });
   await prisma.session.updateMany({ where: { userId: head.id, revokedAt: null }, data: { revokedAt: new Date() } });
   await writeAuditLog({ actorUserId: user.id, action: "INSTITUTE_HEAD_PASSWORD_RESET", entityType: "User", entityId: head.id });
+  if (turnOff) await writeAuditLog({ actorUserId: user.id, action: "MFA_TURNED_OFF_FOR_USER", entityType: "User", entityId: head.id });
   return NextResponse.json({ ok: true });
 }

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { greetingName } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
+import HelpButton from "./help/HelpButton";
 
 const NAV = [
   { href: "/student/registration", label: "Course Registration" },
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/student/activities", label: "Societies & Activities" },
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
+  { href: "/student/help", label: "Help" },
 ];
 
 /** Header + tab navigation shared by every student-portal page. */
@@ -49,6 +51,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
             ))}
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <HelpButton audience="student" />
             {studentName && <span className="tb-hello">Hello, <b>{greetingName(studentName)}</b></span>}
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={leaving} aria-label="Sign out" title="Sign out">
               <LogOut size={17} />
