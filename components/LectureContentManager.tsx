@@ -4,9 +4,11 @@ import { useState } from "react";
 import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicGroups, isExamRow } from "./lectureDrag";
 
 type Clo = { id: string; code: string };
-type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number };
+type Row = { id: string; week: number; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number; teachingMethod?: string | null; teachingMaterials?: string | null };
 
 const BLOOM_OPTIONS = ["", "C1", "C2", "C3", "C4", "C5", "C6"];
+// How a session is taught (the NBEAC course outline asks for it per session).
+const METHODS = ["", "Lecture", "Case study", "Discussion", "Group activity", "Role play", "Simulation", "Video clip", "Presentation", "Lab / practical", "Guest speaker", "Field visit"];
 
 // Each cell edit updates only its own row's local state from the PATCH
 // response, instead of router.refresh() re-fetching all 32 rows (plus
@@ -19,7 +21,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
   const [loading, setLoading] = useState(false);
   const [busyRow, setBusyRow] = useState<string | null>(null);
 
-  const content = (r: Row) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct });
+  const content = (r: Row) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod ?? null, teachingMaterials: r.teachingMaterials ?? null });
   const draft = useDraftOrder({ rows, setRows, content, url: `${apiBase}/courses/${courseId}/lecture/reorder`, merge: (r, raw) => ({ ...r, ...content(raw) }) });
   const [hoverTopic, setHoverTopic] = useState("");
   const groups = topicGroups(rows);
@@ -36,7 +38,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
-  async function saveField(row: Row, field: "topic" | "subtopic" | "cloId" | "bloomLevel", value: string) {
+  async function saveField(row: Row, field: "topic" | "subtopic" | "cloId" | "bloomLevel" | "teachingMethod" | "teachingMaterials", value: string) {
     setBusyRow(row.id); setError("");
     try {
       const res = await fetch(`${apiBase}/courses/${courseId}/lecture/${row.id}`, {
@@ -46,11 +48,13 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
           subtopic: field === "subtopic" ? value : row.subtopic,
           cloId: (field === "cloId" ? value : row.cloId) || null,
           bloomLevel: (field === "bloomLevel" ? value : row.bloomLevel) || null,
+          teachingMethod: (field === "teachingMethod" ? value : row.teachingMethod) || null,
+          teachingMaterials: (field === "teachingMaterials" ? value : row.teachingMaterials) || null,
         }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setBusyRow(null); return; }
-      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, topic: data.row.topic, subtopic: data.row.subtopic, cloId: data.row.cloId, bloomLevel: data.row.bloomLevel } : r));
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, topic: data.row.topic, subtopic: data.row.subtopic, cloId: data.row.cloId, bloomLevel: data.row.bloomLevel, teachingMethod: data.row.teachingMethod, teachingMaterials: data.row.teachingMaterials } : r));
       setBusyRow(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setBusyRow(null); }
   }
@@ -84,8 +88,8 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
         </div>
         <div className="lp-wrap"><div className="lp-scroll">
           <table className="lp-table">
-            <colgroup><col style={{ width: 34 }} /><col style={{ width: 66 }} /><col style={{ width: 48 }} /><col /><col /><col style={{ width: 96 }} /><col style={{ width: 84 }} /><col style={{ width: 76 }} /></colgroup>
-            <thead><tr><th></th><th>Week</th><th>Lec</th><th>Topic</th><th>Sub-topic</th><th>CLO</th><th>Bloom</th><th style={{ textAlign: "right" }}>Weight</th></tr></thead>
+            <colgroup><col style={{ width: 34 }} /><col style={{ width: 66 }} /><col style={{ width: 48 }} /><col /><col /><col style={{ width: 96 }} /><col style={{ width: 84 }} /><col style={{ width: 130 }} /><col style={{ width: 150 }} /><col style={{ width: 76 }} /></colgroup>
+            <thead><tr><th></th><th>Week</th><th>Lec</th><th>Topic</th><th>Sub-topic</th><th>CLO</th><th>Bloom</th><th>Method</th><th>Materials</th><th style={{ textAlign: "right" }}>Weight</th></tr></thead>
             <tbody>
               {rows.map((r, idx) => {
                 const weekStart = idx === 0 || rows[idx - 1].week !== r.week;
@@ -116,6 +120,15 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
                       <select key={`b-${r.id}-${r.bloomLevel}`} className="lp-select" defaultValue={r.bloomLevel || ""} disabled={busyRow === r.id || draft.dirty} onChange={(e) => saveField(r, "bloomLevel", e.target.value)}>
                         {BLOOM_OPTIONS.map((b) => <option key={b} value={b}>{b || "—"}</option>)}
                       </select>
+                    </td>
+                    <td>
+                      <select key={`m-${r.id}-${r.teachingMethod}`} className="lp-select" defaultValue={r.teachingMethod || ""} disabled={busyRow === r.id || draft.dirty} onChange={(e) => saveField(r, "teachingMethod", e.target.value)} aria-label={`Teaching method, lecture ${r.lectureNumber}`}>
+                        {Array.from(new Set([...METHODS, r.teachingMethod || ""])).map((m) => <option key={m} value={m}>{m || "—"}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <input key={`x-${r.id}-${r.teachingMaterials}`} className="lp-input" defaultValue={r.teachingMaterials || ""} disabled={busyRow === r.id || draft.dirty} placeholder="Readings, case, video…" aria-label={`Teaching materials, lecture ${r.lectureNumber}`}
+                        onBlur={(e) => { if (e.target.value !== (r.teachingMaterials || "")) saveField(r, "teachingMaterials", e.target.value); }} />
                     </td>
                     <td className="lp-weight">{r.weightPct ? <b>{r.weightPct}%</b> : "—"}</td>
                   </tr>

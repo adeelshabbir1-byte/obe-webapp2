@@ -6,7 +6,12 @@ export const CRITERIA: Record<number, string> = {
   1: "Program Objectives (POs)", 2: "Graduate Attributes (GAs)", 3: "Curriculum and Learning Process", 4: "Students", 5: "Faculty and Support Staff",
   6: "Facilities and Infrastructure", 7: "Institutional Support and Financial Resources", 8: "Steps to Improve the Program", 9: "Industrial Linkages",
 };
-export const MEETING_KINDS: Record<string, string> = { OMC: "OMC meeting", BOS: "BOS meeting", BPF: "BPF meeting", FACULTY: "Faculty meeting", IAB: "Industrial advisory board", OTHER: "Other meeting" };
+export const MEETING_KINDS: Record<string, string> = {
+  OMC: "OMC meeting", BOS: "BOS meeting", BPF: "BPF meeting", FACULTY: "Faculty meeting", IAB: "Industrial advisory board",
+  // Statutory bodies the NBEAC SAR asks about (Table 1.4).
+  SENATE: "Senate", SYNDICATE: "Syndicate / Board of Governors", ACADEMIC_COUNCIL: "Academic Council", SELECTION_BOARD: "Selection Board", BASR: "BASR", FINANCE_PLANNING: "Finance & Planning Committee",
+  OTHER: "Other meeting",
+};
 export const FILE_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 export const MEETING_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 export const MAX_FILE_BYTES = 3 * 1024 * 1024;

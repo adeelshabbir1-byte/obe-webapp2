@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
         const a = await prisma.user.findUnique({ where: { id: advisorId }, select: { id: true, role: true, managedById: true } });
         if (!a || (await chairmanIdFor(a)) !== scope.chairmanId) advisorId = null;
       }
-      const data = { name, category: SOCIETY_CATEGORIES[b.category] ? b.category : "OTHER", advisorId, departmentId: str(b.departmentId, 60) || null, description: str(b.description, 3000) || null, foundedYear: int(b.foundedYear), isActive: b.isActive !== false };
+      const data = { name, category: SOCIETY_CATEGORIES[b.category] ? b.category : "OTHER", advisorId, departmentId: str(b.departmentId, 60) || null, description: str(b.description, 3000) || null, foundedYear: int(b.foundedYear), isActive: b.isActive !== false,
+        societyType: b.societyType === "ACADEMIC_SOCIETY" || b.societyType === "CAMPUS_CLUB" ? b.societyType : null,
+        constitutedOn: /^\d{4}-\d{2}-\d{2}$/.test(str(b.constitutedOn, 10)) ? new Date(str(b.constitutedOn, 10) + "T00:00:00Z") : null, memberCount: int(b.memberCount) };
       const row = id ? await prisma.studentSociety.update({ where: { id, chairmanId: scope.chairmanId }, data }) : await prisma.studentSociety.create({ data: { chairmanId: scope.chairmanId, ...data } });
       await writeAuditLog({ actorUserId: user.id, action: id ? "SOCIETY_UPDATED" : "SOCIETY_ADDED", entityType: "StudentSociety", entityId: row.id });
       return NextResponse.json({ society: row });

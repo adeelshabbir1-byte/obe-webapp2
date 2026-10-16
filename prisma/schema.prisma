@@ -659,6 +659,7 @@ model Employer {
   contactEmail    String?
   companySize     String?  // e.g. "1-10", "11-50", "51-200", "201-500", "500+"
   industryType    String?  // e.g. "Software Development", "Banking", "Telecom"
+  scope            String?  // NATIONAL | MULTINATIONAL — for the employment of graduates (NBEAC SAR)
   addedById       String?  // which faculty member added this record — any faculty can add, but not duplicate an existing one
   status          String   @default("PENDING")
   reviewedById    String?
@@ -799,6 +800,10 @@ model Student {
   mustChangePassword Boolean  @default(true)
   track      String   @default("Non-Medical") // which curriculum track this student follows — drives which track-specific courses (and deficiency courses) they are enrolled in
   currentSemesterNumber Int   @default(1) // the Coordinator advances this each term; drives which semester's courses are this student's own default enrollment
+  // Where the student stands: still studying, graduated, left (non-academic reasons) or dropped (academic reasons).
+  status         String    @default("ACTIVE") // ACTIVE | GRADUATED | LEFT | DROPPED
+  statusDate     DateTime?
+  statusReason   String?
   sessions           StudentSession[]
 
   enrollments StudentEnrollment[]
@@ -1204,6 +1209,12 @@ model ProgramProfile {
   departmentVision   String? @db.Text
   departmentMission  String? @db.Text
   peos               String? @db.Text // JSON array of strings
+  // NBEAC SAR: the program's level, launch, approvals and the PEO-PLO alignment.
+  programLevel       String? // UG16 | GRAD18 | PHD
+  launchDate         DateTime?
+  academicCouncilDate DateTime?
+  hecNocDate         DateTime?
+  peoPloJson         String? @db.Text // JSON: { "PEO1": [1, 3], ... } — the PLO numbers each PEO is served by
 
   @@unique([coordinatorId, degreeProgram])
 }
@@ -1309,6 +1320,10 @@ model Course {
   textbook            String?  @db.Text
   referenceMaterial   String?  @db.Text
   catalogDescription  String?  @db.Text
+  // NBEAC SAR: courses designed for corporate needs, addressing indigenous issues, and how the course is taught.
+  corporateRelevance  String?  @db.Text
+  indigenousFocus     String?  @db.Text
+  teachingMethods     String? // comma-separated: Lecturing, Case studies, Simulations, ...
   programmingAssignmentsNote String? @db.Text
   labInstructorName   String?
   instructorObservations String? @db.Text // free-text notes for the Course Evaluation Form ("Instructors Observations")
@@ -1573,6 +1588,8 @@ model LectureRow {
   weightPct     Float    @default(0) // auto-computed: sum of linked instruments' marksPct
   actualDate    DateTime? // Instructor-only: the real calendar date this lecture happened
   rescheduledNote String? // set by auto-fill when a holiday/exam date pushed this lecture off its natural weekly slot
+  teachingMethod  String? // how this session is taught (lecture, case study, role play, ...)
+  teachingMaterials String? // what is used: readings, case, video, software
 
   instrumentLinks LectureRowInstrument[]
   paperDistributionItems PaperDistributionItem[]
@@ -2210,6 +2227,9 @@ model FacultyProfile {
   nextOfKinPhone    String?
   nextOfKinAddress  String?  @db.Text
   officeHours       String?  // e.g. "Mon & Wed 2-4 pm, Room B-12"
+  cnic              String?
+  specialization    String?
+  affiliation       String?  // visiting / adjunct faculty: their organisation
   updatedAt         DateTime @updatedAt
 }
 
@@ -2229,6 +2249,9 @@ model FacultyRecord {
   status       String?
   link         String?
   details      String?  @db.Text
+  category     String?  // PUBLICATION: HEC category (Impact factor, W, X, Y, Other); EXPERIENCE: Academic | Industry
+  authorship   String?  // PUBLICATION: First author | Co-author
+  citations    Int?     // PUBLICATION: citation count
   photo        String?  @db.Text
   createdAt    DateTime @default(now())
 
@@ -3109,6 +3132,9 @@ model StudentSociety {
   advisorId    String?
   description  String?  @db.Text
   foundedYear  Int?
+  societyType  String?  // ACADEMIC_SOCIETY (co-curricular) | CAMPUS_CLUB (extracurricular)
+  constitutedOn DateTime?
+  memberCount  Int?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -3279,6 +3305,7 @@ model FypProposal {
   software     String?
   outcomes     String?   @db.Text
   ploNumbers   Int[]     @default([])
+  societalIssue String?   @db.Text // the corporate or societal issue the project addresses
   maxGroups    Int       @default(1)
   status       String    @default("SUBMITTED") // SUBMITTED | APPROVED | REVISION | REJECTED | WITHDRAWN
   reviewNote   String?   @db.Text
@@ -3651,4 +3678,44 @@ model TopicOverlapReview {
 
   @@unique([coordinatorId, codeA, codeB, topicKey])
   @@index([coordinatorId])
+}
+
+// ---------------------------------------------------------------------------
+// Accreditation (NBEAC SAR) data that has no other home in the system.
+//
+// SarProfile: the institute's ("HEI") or a business school's (department id) profile, kept as one JSON document edited
+// section by section (general information, contacts, vision & mission, QEC, ORIC, workload policy, facility details,
+// SAR narratives). AccreditationRecord: a register of typed records — policies and manuals, statutory bodies, strategic
+// plans, audits, cases, counselling, MOUs, research centres, … The fields of each section and record kind are defined
+// in lib/sarRegistry.ts.
+model SarProfile {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  scopeKey    String // "HEI" or a department id
+  dataJson    String   @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([chairmanId, scopeKey])
+}
+
+model AccreditationRecord {
+  id           String    @id @default(cuid())
+  chairmanId   String
+  departmentId String? // null = the whole institute
+  kind         String
+  title        String
+  recordDate   DateTime?
+  year         String? // "2025", "2025-26", "Fall 2025"
+  dataJson     String    @db.Text
+  fileName     String?
+  mimeType     String?
+  fileData     String?   @db.Text // base64, optional
+  createdById  String
+  updatedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, kind])
+  @@index([departmentId])
 }

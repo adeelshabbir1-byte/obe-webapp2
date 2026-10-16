@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import ProgramProfileForm from "../../../components/ProgramProfileForm";
 import PeoAlignmentCheck from "../../../components/PeoAlignmentCheck";
+import ProgramSarDetails from "../../../components/ProgramSarDetails";
 import { navForRole } from "../../../components/reportNav";
 
 
@@ -58,6 +59,17 @@ export default async function ProgramProfilePage({ searchParams }: { searchParam
             initial={{
               departmentIntro: profile?.departmentIntro || null, departmentVision: profile?.departmentVision || null,
               departmentMission: profile?.departmentMission || null, peos: profile?.peos ? JSON.parse(profile.peos) : [],
+            }}
+          />
+          <ProgramSarDetails
+            key={`${selectedDegree}-${selectedBatchId}`}
+            degreeProgram={selectedDegree}
+            peos={profile?.peos ? JSON.parse(profile.peos) : []}
+            plos={selectedBatchId ? (await prisma.pLO.findMany({ where: { batchId: selectedBatchId }, select: { number: true, title: true }, orderBy: { number: "asc" } })) : []}
+            initial={{
+              programLevel: profile?.programLevel || null, launchDate: profile?.launchDate ? profile.launchDate.toISOString().slice(0, 10) : null,
+              academicCouncilDate: profile?.academicCouncilDate ? profile.academicCouncilDate.toISOString().slice(0, 10) : null, hecNocDate: profile?.hecNocDate ? profile.hecNocDate.toISOString().slice(0, 10) : null,
+              peoPlo: (() => { try { return profile?.peoPloJson ? JSON.parse(profile.peoPloJson) : {}; } catch { return {}; } })(),
             }}
           />
           {selectedBatchId && (

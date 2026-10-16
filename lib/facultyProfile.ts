@@ -2,9 +2,11 @@ import { prisma } from "./db";
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 export const DESIGNATIONS = ["Professor", "Associate Professor", "Assistant Professor", "Senior Lecturer", "Lecturer", "Lab Engineer", "Visiting Faculty", "Other"];
-export const EMPLOYMENT_TYPES = ["Permanent", "Contract", "Visiting", "Part-time"];
+export const EMPLOYMENT_TYPES = ["Permanent", "Contract", "Adjunct", "Visiting", "Part-time"];
+// How accreditation (NBEAC / HEC) counts a publication.
+export const PUBLICATION_CATEGORIES = ["Impact factor journal", "HEC W category", "HEC X category", "HEC Y category", "Other listing", "Not applicable"];
 
-export type Field = { key: "title" | "organisation" | "role" | "startMonth" | "startYear" | "endMonth" | "endYear" | "amount" | "status" | "link" | "details"; label: string; type?: "text" | "year" | "month" | "area" | "select"; options?: string[]; required?: boolean };
+export type Field = { key: "title" | "organisation" | "role" | "startMonth" | "startYear" | "endMonth" | "endYear" | "amount" | "status" | "link" | "details" | "category" | "authorship" | "citations"; label: string; type?: "text" | "year" | "month" | "area" | "select"; options?: string[]; required?: boolean };
 export type KindDef = { kind: string; tab: string; heading: string; addLabel: string; fields: Field[]; photo?: boolean };
 
 export const KINDS: KindDef[] = [
@@ -21,7 +23,9 @@ export const KINDS: KindDef[] = [
     { key: "title", label: "Title of the paper", required: true }, { key: "organisation", label: "Journal / conference" },
     { key: "role", label: "Type", type: "select", options: ["Journal article", "Conference paper", "Book / chapter", "Patent", "Other"] },
     { key: "startYear", label: "Year", type: "year" }, { key: "status", label: "Status", type: "select", options: ["Published", "Accepted", "Under review"] },
-    { key: "link", label: "Link / DOI" }, { key: "details", label: "Authors, indexing (Scopus, HEC category …)", type: "area" } ] },
+    { key: "category", label: "Journal category (HEC / impact factor)", type: "select", options: PUBLICATION_CATEGORIES },
+    { key: "authorship", label: "You are", type: "select", options: ["First author", "Co-author"] }, { key: "citations", label: "Citations so far" },
+    { key: "link", label: "Link / DOI" }, { key: "details", label: "Authors, indexing (Scopus …)", type: "area" } ] },
   { kind: "GRANT", tab: "Grants", heading: "Grants and awards", addLabel: "Add a grant", fields: [
     { key: "title", label: "Grant / award title", required: true }, { key: "organisation", label: "Funding agency" },
     { key: "role", label: "Your role", type: "select", options: ["Principal investigator", "Co-investigator", "Member", "Recipient"] },

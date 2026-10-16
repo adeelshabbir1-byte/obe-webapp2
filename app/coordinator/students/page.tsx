@@ -27,7 +27,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
         <StudentManager
           batches={batches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))}
           initialBatchId={batchId}
-          students={students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber, track: s.track }))}
+          students={students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber, track: s.track, status: s.status, statusReason: s.statusReason }))}
         />
       )}
     </Shell>

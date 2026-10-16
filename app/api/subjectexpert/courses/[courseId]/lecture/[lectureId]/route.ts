@@ -30,6 +30,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     data: {
       topic: body.topic, subtopic: body.subtopic || null,
       cloId: body.cloId || null, bloomLevel: body.bloomLevel || null,
+      ...("teachingMethod" in body ? { teachingMethod: String(body.teachingMethod || "").trim().slice(0, 80) || null } : {}),
+      ...("teachingMaterials" in body ? { teachingMaterials: String(body.teachingMaterials || "").trim().slice(0, 300) || null } : {}),
     },
   });
 

@@ -55,6 +55,7 @@ export const LIBRARIAN_NAV = [
   { href: "/library-inventory", label: "Library Inventory" },
   { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 export const STUDENT_AFFAIRS_NAV = [
   { href: "/admission-criteria", label: "Admission Criteria" },
@@ -62,17 +63,20 @@ export const STUDENT_AFFAIRS_NAV = [
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/academic-calendar", label: "Academic Calendar" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 export const FACILITIES_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 export const FINANCE_NAV = [
   { href: "/chairman/finance", label: "Finance" },
   { href: "/remediation", label: "Tutorial Fees & Pay" },
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const INSTRUCTOR_NAV = [
@@ -100,6 +104,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/public-library", label: "Public Course Library" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 // A Subject Expert may be someone from industry who only builds courses, so this menu holds course-building work only.
@@ -116,6 +121,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/deadlines", label: "Deadlines" },                         // my tasks, dates and who waits on me
   { href: "/faculty/profile", label: "My Profile" },                  // qualifications shown on the course documents
   { href: "/appraisals", label: "My Appraisal" },                     // the yearly appraisal, once the reviewer shares it
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const COORDINATOR_NAV = [
@@ -179,6 +185,7 @@ export const COORDINATOR_NAV = [
   { href: "/coordinator/required-books", label: "Required Textbooks" },
   { href: "/coordinator/stakeholders", label: "Alumni & Employers" },
   { href: "/coordinator/surveys", label: "Feedback Surveys" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const CHAIRMAN_NAV = [
@@ -224,6 +231,7 @@ export const CHAIRMAN_NAV = [
   { href: "/facilities", label: "Facilities" },
   { href: "/library/requisitions", label: "Textbook Requisitions" },
   { href: "/student-activities", label: "Student Societies" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const DEAN_NAV = [
@@ -255,6 +263,7 @@ export const DEAN_NAV = [
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const DEPT_COORDINATOR_NAV = [
@@ -285,6 +294,7 @@ export const DEPT_COORDINATOR_NAV = [
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export const HOD_NAV = [
@@ -319,6 +329,7 @@ export const HOD_NAV = [
   { href: "/evidence-files", label: "Evidence Files" },
   { href: "/meetings", label: "Meetings & Minutes" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/accreditation", label: "Accreditation Data" },
 ];
 
 export function navForRole(role: string) {

@@ -135,7 +135,7 @@ export default async function StudentActivitiesPage({ searchParams }: { searchPa
             </div>
             <Link className="btn btn-secondary btn-sm" href="/student-activities">← All societies</Link>
           </div>
-          {scope.manageAll && <SocietyForm society={{ id: selected.id, name: selected.name, category: selected.category, advisorId: selected.advisorId, departmentId: selected.departmentId, description: selected.description, foundedYear: selected.foundedYear, isActive: selected.isActive }} people={people} categories={SOCIETY_CATEGORIES} departments={departments} />}
+          {scope.manageAll && <SocietyForm society={{ id: selected.id, name: selected.name, category: selected.category, advisorId: selected.advisorId, departmentId: selected.departmentId, description: selected.description, foundedYear: selected.foundedYear, isActive: selected.isActive, societyType: selected.societyType, constitutedOn: selected.constitutedOn ? selected.constitutedOn.toISOString().slice(0, 10) : null, memberCount: selected.memberCount }} people={people} categories={SOCIETY_CATEGORIES} departments={departments} />}
           <SocietyRecords
             societyId={selected.id} canEdit={canEditSociety(user, scope.manageAll, selected)} session={session} positions={POSITIONS} eventCategories={EVENT_CATEGORIES}
             members={members.map((m) => ({ id: m.id, name: m.name, rollNumber: m.rollNumber, position: m.position, term: m.term }))}

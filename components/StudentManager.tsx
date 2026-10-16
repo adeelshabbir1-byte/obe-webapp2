@@ -6,7 +6,8 @@ import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import { TRACKS } from "../lib/tracks";
 
-type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number; track?: string };
+type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number; track?: string; status?: string; statusReason?: string | null };
+const STATUS_LABEL: Record<string, string> = { ACTIVE: "Studying", GRADUATED: "Graduated", LEFT: "Left (non-academic)", DROPPED: "Dropped (academic)" };
 type Batch = { id: string; label: string };
 
 export default function StudentManager({ batches, initialBatchId, students: initialStudents }: { batches: Batch[]; initialBatchId: string; students: Student[] }) {
@@ -56,6 +57,15 @@ export default function StudentManager({ batches, initialBatchId, students: init
     const res = await fetch(`/api/coordinator/students/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ track }) });
     if (!res.ok) { setError("Couldn't change that student's track."); return; }
     setStudents((prev) => prev.map((s) => s.id === id ? { ...s, track } : s));
+  }
+
+  async function changeStatus(s: Student, status: string) {
+    // Leaving or being dropped needs a reason (the accreditation dropout table asks for it).
+    const reason = status === "LEFT" || status === "DROPPED" ? prompt(`Reason ${s.name} ${status === "LEFT" ? "left" : "was dropped"}:`, s.statusReason || "") : "";
+    if (reason === null) return;
+    const res = await fetch(`/api/coordinator/students/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reason }) });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || "Couldn't change that student's status."); return; }
+    setStudents((prev) => prev.map((x) => x.id === s.id ? { ...x, status, statusReason: reason || null } : x));
   }
 
   function switchBatch(id: string) {
@@ -192,13 +202,19 @@ export default function StudentManager({ batches, initialBatchId, students: init
 
       <div className="card" data-tab="Students">
         <SortableTable>
-          <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Track</th><th>Hold Back</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Roll Number</th><th>Current Sem.</th><th>Track</th><th>Status</th><th>Hold Back</th><th></th></tr></thead>
           <tbody>
-            {students.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
+            {students.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No students in this batch yet.</td></tr>}
             {students.map((s) => (
               <tr key={s.id}>
                 <td>{s.name}</td><td>{s.rollNumber}</td><td>{s.currentSemesterNumber}</td>
                 <td><select value={s.track || "Non-Medical"} onChange={(e) => changeTrack(s.id, e.target.value)} style={{ padding: "3px 6px", border: "1px solid var(--line)", fontSize: 12 }}>{TRACKS.map((t) => <option key={t} value={t}>{t}</option>)}</select></td>
+                <td>
+                  <select value={s.status || "ACTIVE"} onChange={(e) => changeStatus(s, e.target.value)} aria-label={`Status of ${s.name}`} style={{ padding: "3px 6px", border: "1px solid var(--line)", fontSize: 12 }}>
+                    {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  {s.statusReason && <div className="small-note">{s.statusReason}</div>}
+                </td>
                 <td><input type="checkbox" checked={heldBack.has(s.id)} onChange={() => toggleHeldBack(s.id)} /></td>
                 <td><button onClick={() => removeStudent(s.id)} disabled={loading} className="act act-danger">Remove</button></td>
               </tr>

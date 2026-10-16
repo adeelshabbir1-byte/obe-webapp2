@@ -190,7 +190,7 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
       data: lectureRows.map((r) => ({
         id: lectureRowIdMap[r.id], courseId: newCourseId, week: r.week, lectureNumber: r.lectureNumber,
         topic: r.topic, subtopic: r.subtopic, cloId: r.cloId ? cloIdMap[r.cloId] || null : null,
-        bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+        bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials,
       })),
     });
   }

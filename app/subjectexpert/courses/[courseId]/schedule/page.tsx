@@ -76,7 +76,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         courseId={course.id}
         initialRows={course.lectureRows.map((r) => ({
           id: r.id, week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
-          cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+          cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials,
         }))}
         clos={course.clos.map((c) => ({ id: c.id, code: c.code }))}
         apiBase="/api/subjectexpert"

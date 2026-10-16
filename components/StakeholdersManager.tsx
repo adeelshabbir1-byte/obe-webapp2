@@ -48,7 +48,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           organizationName: fd.get("organizationName"), contactName: fd.get("contactName"), contactEmail: fd.get("contactEmail"),
-          companySize: fd.get("companySize"), industryType: fd.get("industryType"),
+          companySize: fd.get("companySize"), industryType: fd.get("industryType"), scope: fd.get("scope"),
         }),
       });
       const data = await res.json();
@@ -189,6 +189,7 @@ export default function StakeholdersManager({ alumni: initialAlumni, employers: 
             </select>
           </div>
           <div className="field" style={{ margin: 0 }}><label>Industry / Kind of Work (optional)</label><input name="industryType" placeholder="e.g. Software Development" /></div>
+          <div className="field" style={{ margin: 0 }}><label>National or multinational (optional)</label><select name="scope" defaultValue=""><option value="">—</option><option value="NATIONAL">National</option><option value="MULTINATIONAL">Multinational</option></select></div>
           <button className="btn btn-brass" type="submit" disabled={loading}>Add Employer</button>
         </form>
       </div>

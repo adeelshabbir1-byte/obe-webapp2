@@ -91,6 +91,7 @@ const ICONS_BY_LABEL: Record<string, LucideIcon> = {
   "Final Year Project": Presentation,
   "Remediation": Repeat,
   "Textbook Requisitions": BookPlus,
+  "Accreditation Data": FolderCheck,
   "Tutorial Fees & Pay": Wallet,
   "Home": Home,
   "Needs Attention": BellRing,

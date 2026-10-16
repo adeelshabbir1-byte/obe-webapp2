@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         const plos = Array.isArray(b.ploNumbers) ? b.ploNumbers.map((n: unknown) => Math.round(Number(n))).filter((n: number) => n >= 1 && n <= 20) : [];
         const data = {
           title, abstract, domain: str(b.domain, 160) || null, scope: str(b.scope, 5000) || null, skills: str(b.skills, 500) || null,
-          hardware: str(b.hardware, 500) || null, software: str(b.software, 500) || null, outcomes: str(b.outcomes, 3000) || null,
+          hardware: str(b.hardware, 500) || null, software: str(b.software, 500) || null, outcomes: str(b.outcomes, 3000) || null, societalIssue: str(b.societalIssue, 2000) || null,
           ploNumbers: Array.from(new Set<number>(plos)).sort((x, y) => x - y), maxGroups: Math.max(1, Math.min(5, Math.round(Number(b.maxGroups) || 1))), status: "SUBMITTED",
         };
         const row = existing ? await prisma.fypProposal.update({ where: { id: existing.id }, data }) : await prisma.fypProposal.create({ data: { cycleId: cycle.id, proposerId: user.id, ...data } });

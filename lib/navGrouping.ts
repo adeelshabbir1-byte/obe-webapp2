@@ -27,7 +27,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h) || h === "/registration-rules", section: "Policies & Rules" },
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
-  { match: (h) => /^\/accreditation-overview$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },
+  { match: (h) => /^\/accreditation(-overview)?$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },
   { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h) || h === "/library/requisitions", section: "Facilities & Calendar" },
 
   { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)

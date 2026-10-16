@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
     designation: str(b.designation, 80), employmentType: str(b.employmentType, 40), dateOfJoining: date(b.dateOfJoining), dateOfBirth: date(b.dateOfBirth),
     gender: str(b.gender, 20), bloodGroup: str(b.bloodGroup, 5), phone: str(b.phone, 40), address: str(b.address, 500),
     nextOfKinName: str(b.nextOfKinName, 120), nextOfKinRelation: str(b.nextOfKinRelation, 60), nextOfKinPhone: str(b.nextOfKinPhone, 40), nextOfKinAddress: str(b.nextOfKinAddress, 500),
-    officeHours: str(b.officeHours, 300),
+    officeHours: str(b.officeHours, 300), cnic: str(b.cnic, 20), specialization: str(b.specialization, 200), affiliation: str(b.affiliation, 200),
   } as Record<string, unknown>;
   // Each tab of the form sends only its own fields: leave the others as they were.
   const data = Object.fromEntries(Object.entries(all).filter(([k]) => k in b)) as Record<string, never>;

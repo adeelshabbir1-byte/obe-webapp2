@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     data: {
       chairmanId, organizationName: body.organizationName, contactName: body.contactName || null, contactEmail: body.contactEmail || null,
       companySize: body.companySize || null, industryType: body.industryType || null, addedById: user.id, status: "PENDING",
+      scope: body.scope === "NATIONAL" || body.scope === "MULTINATIONAL" ? body.scope : null,
     },
   });
 

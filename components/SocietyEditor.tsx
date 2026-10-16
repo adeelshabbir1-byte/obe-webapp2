@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Person = { id: string; name: string; department: string | null };
-type Society = { id: string; name: string; category: string; advisorId: string | null; departmentId: string | null; description: string | null; foundedYear: number | null; isActive: boolean };
+type Society = { id: string; name: string; category: string; advisorId: string | null; departmentId: string | null; description: string | null; foundedYear: number | null; isActive: boolean; societyType?: string | null; constitutedOn?: string | null; memberCount?: number | null };
 type Member = { id: string; name: string; rollNumber: string | null; position: string; term: string };
 type Event = { id: string; title: string; category: string; eventDate: string; venue: string | null; participants: number | null; guests: string | null; description: string | null; outcome: string | null; budget: number | null };
 
@@ -34,6 +34,9 @@ export function SocietyForm({ society, people, categories, departments }: { soci
       <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Faculty advisor<select value={f.advisorId || ""} onChange={(e) => setF({ ...f, advisorId: e.target.value || null })} style={{ maxWidth: 240 }}><option value="">— none yet —</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}{p.department ? ` (${p.department})` : ""}</option>)}</select></label>
       <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Department<select value={f.departmentId || ""} onChange={(e) => setF({ ...f, departmentId: e.target.value || null })}><option value="">Institute-wide</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
       <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Founded<input type="number" value={f.foundedYear ?? ""} onChange={(e) => setF({ ...f, foundedYear: e.target.value ? Number(e.target.value) : null })} style={{ width: 90 }} /></label>
+      <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Kind (for accreditation)<select value={f.societyType || ""} onChange={(e) => setF({ ...f, societyType: e.target.value || null })}><option value="">—</option><option value="ACADEMIC_SOCIETY">Academic society (co-curricular)</option><option value="CAMPUS_CLUB">Campus club (extracurricular)</option></select></label>
+      <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Constituted on<input type="date" value={f.constitutedOn || ""} onChange={(e) => setF({ ...f, constitutedOn: e.target.value || null })} /></label>
+      <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Total members<input type="number" min={0} value={f.memberCount ?? ""} onChange={(e) => setF({ ...f, memberCount: e.target.value ? Number(e.target.value) : null })} style={{ width: 90 }} /></label>
       <label style={{ fontSize: 12, display: "flex", gap: 5, alignItems: "center" }}><input type="checkbox" checked={f.isActive !== false} onChange={(e) => setF({ ...f, isActive: e.target.checked })} /> Active</label>
       <label style={{ fontSize: 12, display: "grid", gap: 3, flex: "1 1 280px" }}>About<textarea rows={2} value={f.description || ""} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
       <button type="button" className="btn btn-brass btn-sm" disabled={busy} onClick={async () => { setBusy(true); const e = await post({ entity: "society", ...f }); setBusy(false); if (e) setErr(e); else { setOpen(false); router.refresh(); } }}>Save</button>

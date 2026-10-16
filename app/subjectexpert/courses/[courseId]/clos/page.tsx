@@ -86,6 +86,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
             textbook: course.textbook || "", referenceMaterial: course.referenceMaterial || "",
             catalogDescription: course.catalogDescription || "", programmingAssignmentsNote: course.programmingAssignmentsNote || "",
             labInstructorName: course.labInstructorName || "",
+            corporateRelevance: course.corporateRelevance || "", indigenousFocus: course.indigenousFocus || "", teachingMethods: course.teachingMethods || "",
           }}
         />
       )}

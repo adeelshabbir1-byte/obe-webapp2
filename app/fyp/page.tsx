@@ -89,7 +89,7 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
                   { name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain (e.g. Machine Learning, IoT)", width: 220 }, { name: "maxGroups", label: "Groups it can take", type: "number", width: 90 },
                   { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope and deliverables", type: "textarea" },
                   { name: "skills", label: "Domain skills needed", width: 300 }, { name: "hardware", label: "Hardware needed", width: 220 }, { name: "software", label: "Software needed", width: 220 },
-                  { name: "outcomes", label: "Learning outcomes (CLOs) this project serves", type: "textarea" }, { name: "ploNumbers", label: "PLOs it maps to", type: "plos", width: 140 },
+                  { name: "outcomes", label: "Learning outcomes (CLOs) this project serves", type: "textarea" }, { name: "societalIssue", label: "Corporate or societal issue it addresses (if any)", type: "textarea" }, { name: "ploNumbers", label: "PLOs it maps to", type: "plos", width: 140 },
                 ]} />
             )}
           </div>
@@ -107,8 +107,8 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
                   {p.reviewNote && <p style={{ fontSize: 12.5, margin: "4px 0", color: p.status === "APPROVED" ? "var(--sage)" : "var(--rust)" }}><b>FYP Head:</b> {p.reviewNote}</p>}
                   {(p.status === "REVISION" || p.status === "SUBMITTED") && (
                     <ActionForm url="/api/fyp/faculty" fixed={{ action: "submitProposal", proposalId: p.id }} submit={p.status === "REVISION" ? "Resubmit" : "Save changes"} collapsed openLabel={p.status === "REVISION" ? "Revise and resubmit" : "Edit"}
-                      initial={{ title: p.title, domain: p.domain || "", abstract: p.abstract, scope: p.scope || "", skills: p.skills || "", hardware: p.hardware || "", software: p.software || "", outcomes: p.outcomes || "", ploNumbers: p.ploNumbers, maxGroups: p.maxGroups }}
-                      fields={[{ name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain", width: 220 }, { name: "maxGroups", label: "Groups", type: "number", width: 80 }, { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "skills", label: "Skills", width: 300 }, { name: "hardware", label: "Hardware", width: 220 }, { name: "software", label: "Software", width: 220 }, { name: "outcomes", label: "Learning outcomes", type: "textarea" }, { name: "ploNumbers", label: "PLOs", type: "plos", width: 140 }]} />
+                      initial={{ title: p.title, domain: p.domain || "", abstract: p.abstract, scope: p.scope || "", skills: p.skills || "", hardware: p.hardware || "", software: p.software || "", outcomes: p.outcomes || "", societalIssue: p.societalIssue || "", ploNumbers: p.ploNumbers, maxGroups: p.maxGroups }}
+                      fields={[{ name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain", width: 220 }, { name: "maxGroups", label: "Groups", type: "number", width: 80 }, { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "skills", label: "Skills", width: 300 }, { name: "hardware", label: "Hardware", width: 220 }, { name: "software", label: "Software", width: 220 }, { name: "outcomes", label: "Learning outcomes", type: "textarea" }, { name: "societalIssue", label: "Corporate / societal issue", type: "textarea" }, { name: "ploNumbers", label: "PLOs", type: "plos", width: 140 }]} />
                   )}
                 </div>
               );

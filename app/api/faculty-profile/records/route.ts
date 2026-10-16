@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     title, organisation: str(b.organisation, 250), role: str(b.role, 120), startYear: year(b.startYear), endYear: year(b.endYear),
     ...(b.kind === "EXPERIENCE" ? { startMonth: month(b.startMonth), endMonth: month(b.endMonth) } : {}),
     amount: str(b.amount, 80), status: str(b.status, 40), link: str(b.link, 400), details: str(b.details, 2000),
+    ...(b.kind === "PUBLICATION" ? { category: str(b.category, 60), authorship: str(b.authorship, 30), citations: (() => { const n = parseInt(String(b.citations ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : null; })() } : {}),
     ...(b.photo !== undefined ? { photo: b.photo || null } : {}),
   };
   if (data.startYear && data.endYear && (data.endYear < data.startYear || (data.endYear === data.startYear && (data as { startMonth?: number | null }).startMonth && (data as { endMonth?: number | null }).endMonth && (data as { endMonth: number }).endMonth < (data as { startMonth: number }).startMonth))) return NextResponse.json({ error: "the end date is before the start date" }, { status: 400 });

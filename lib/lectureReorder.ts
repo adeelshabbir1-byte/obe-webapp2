@@ -13,7 +13,7 @@ export async function reorderLectureContent(courseId: string, source: "SE" | "IN
   const linksOf = new Map<string, string[]>();
   for (const l of links) linksOf.set(l.lectureRowId, [...(linksOf.get(l.lectureRowId) || []), l.instrumentId]);
 
-  const content = rows.map((r) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct, links: linksOf.get(r.id) || [] }));
+  const content = rows.map((r) => ({ topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials, links: linksOf.get(r.id) || [] }));
   const [moved] = content.splice(from, 1);
   content.splice(to, 0, moved);
 
@@ -23,7 +23,7 @@ export async function reorderLectureContent(courseId: string, source: "SE" | "IN
     prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: slots.map((s) => s.id) } } }),
     ...slots.map((s, i) => {
       const c = content[lo + i];
-      return prisma.lectureRow.update({ where: { id: s.id }, data: { topic: c.topic, subtopic: c.subtopic, cloId: c.cloId, bloomLevel: c.bloomLevel, weightPct: c.weightPct } });
+      return prisma.lectureRow.update({ where: { id: s.id }, data: { topic: c.topic, subtopic: c.subtopic, cloId: c.cloId, bloomLevel: c.bloomLevel, weightPct: c.weightPct, teachingMethod: c.teachingMethod, teachingMaterials: c.teachingMaterials } });
     }),
     prisma.lectureRowInstrument.createMany({ data: slots.flatMap((s, i) => content[lo + i].links.map((instrumentId) => ({ lectureRowId: s.id, instrumentId }))), skipDuplicates: true }),
   ];
@@ -50,7 +50,7 @@ export async function applyLectureOrder(courseId: string, source: "SE" | "INSTRU
 
   await prisma.$transaction([
     prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: changed.map((x) => x.slot.id) } } }),
-    ...changed.map(({ slot, src }) => prisma.lectureRow.update({ where: { id: slot.id }, data: { topic: src.topic, subtopic: src.subtopic, cloId: src.cloId, bloomLevel: src.bloomLevel, weightPct: src.weightPct } })),
+    ...changed.map(({ slot, src }) => prisma.lectureRow.update({ where: { id: slot.id }, data: { topic: src.topic, subtopic: src.subtopic, cloId: src.cloId, bloomLevel: src.bloomLevel, weightPct: src.weightPct, teachingMethod: src.teachingMethod, teachingMaterials: src.teachingMaterials } })),
     prisma.lectureRowInstrument.createMany({ data: changed.flatMap(({ slot, src }) => (linksOf.get(src.id) || []).map((instrumentId) => ({ lectureRowId: slot.id, instrumentId }))), skipDuplicates: true }),
   ]);
   return { rows: await prisma.lectureRow.findMany({ where: { courseId, source }, orderBy: { lectureNumber: "asc" } }) };

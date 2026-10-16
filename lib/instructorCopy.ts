@@ -46,7 +46,7 @@ export async function ensureInstructorCopy(courseId: string) {
     const newRow = await prisma.lectureRow.create({
       data: {
         courseId, source: "INSTRUCTOR", week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
-        cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct,
+        cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials,
       },
     });
     for (const link of links) {

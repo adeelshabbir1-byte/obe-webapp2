@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import TabbedCards from "./TabbedCards";
 import { BLOOD_GROUPS, DESIGNATIONS, EMPLOYMENT_TYPES, KINDS, MONTHS, periodText, type KindDef } from "../lib/facultyProfile";
 
-type Profile = { photo?: string | null; designation?: string | null; employmentType?: string | null; dateOfJoining?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null; phone?: string | null; address?: string | null; nextOfKinName?: string | null; nextOfKinRelation?: string | null; nextOfKinPhone?: string | null; nextOfKinAddress?: string | null; officeHours?: string | null };
-type Rec = { id: string; kind: string; title: string; organisation?: string | null; role?: string | null; startYear?: number | null; startMonth?: number | null; endYear?: number | null; endMonth?: number | null; amount?: string | null; status?: string | null; link?: string | null; details?: string | null; photo?: string | null };
+type Profile = { photo?: string | null; designation?: string | null; employmentType?: string | null; dateOfJoining?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null; phone?: string | null; address?: string | null; nextOfKinName?: string | null; nextOfKinRelation?: string | null; nextOfKinPhone?: string | null; nextOfKinAddress?: string | null; officeHours?: string | null; cnic?: string | null; specialization?: string | null; affiliation?: string | null };
+type Rec = { id: string; kind: string; title: string; organisation?: string | null; role?: string | null; startYear?: number | null; startMonth?: number | null; endYear?: number | null; endMonth?: number | null; amount?: string | null; status?: string | null; link?: string | null; details?: string | null; photo?: string | null; category?: string | null; authorship?: string | null; citations?: number | null };
 
 // Shrinks a picture in the browser so it stays small enough to keep with the profile.
 function shrink(file: File, max: number): Promise<string> {
@@ -79,6 +79,9 @@ export default function FacultyProfileForm({ profile, records, name }: { profile
                 {f("Phone", <input name="phone" defaultValue={profile?.phone || ""} style={input} />)}
                 {f("Address", <input name="address" defaultValue={profile?.address || ""} style={input} />)}
                 {f("Office hours (students can meet you)", <input name="officeHours" defaultValue={profile?.officeHours || ""} placeholder="e.g. Mon & Wed 2-4 pm, Room B-12" style={input} />)}
+                {f("Specialization", <input name="specialization" defaultValue={profile?.specialization || ""} placeholder="e.g. Finance, Marketing, Machine Learning" style={input} />)}
+                {f("CNIC (for accreditation reports)", <input name="cnic" defaultValue={profile?.cnic || ""} placeholder="12345-1234567-1" style={input} />)}
+                {f("Organisation (visiting / adjunct faculty)", <input name="affiliation" defaultValue={profile?.affiliation || ""} style={input} />)}
               </div>
             </div>
             <button className="btn btn-brass" type="submit" style={{ marginTop: 14 }}>Save</button>
@@ -169,7 +172,7 @@ function RecordSection({ def, items, onDone }: { def: KindDef; items: Rec[]; onD
             <div style={{ flex: 1, fontSize: 13 }}>
               <b>{r.title}</b>
               <div style={{ color: "var(--slate)" }}>
-                {[r.organisation, r.role, periodText(r), r.amount, r.status].filter(Boolean).join(" · ")}
+                {[r.organisation, r.role, periodText(r), r.amount, r.status, r.category, r.authorship, r.citations != null ? `${r.citations} citations` : null].filter(Boolean).join(" · ")}
               </div>
               {r.details && <div style={{ marginTop: 3 }}>{r.details}</div>}
               {r.link && <div style={{ marginTop: 3, wordBreak: "break-all" }}>{r.link}</div>}

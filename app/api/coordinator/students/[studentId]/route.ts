@@ -28,13 +28,25 @@ export async function DELETE(req: Request, { params }: { params: { studentId: st
   return NextResponse.json({ ok: true });
 }
 
-// Change which track (e.g. Non-Medical / Pre-Medical) a student follows.
+// Change which track (e.g. Non-Medical / Pre-Medical) a student follows, or where the student stands
+// (still studying, graduated, left for non-academic reasons, dropped for academic reasons).
+const STATUSES = ["ACTIVE", "GRADUATED", "LEFT", "DROPPED"];
 export async function PATCH(req: Request, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const student = await prisma.student.findUnique({ where: { id: params.studentId }, include: { batch: true } });
   if (!student || student.batch.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   const body = await req.json();
+  if (body?.status !== undefined) {
+    if (!STATUSES.includes(body.status)) return NextResponse.json({ error: "unknown status" }, { status: 400 });
+    const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 300) || null : null;
+    try {
+      await prisma.student.update({ where: { id: params.studentId }, data: { status: body.status, statusDate: body.status === "ACTIVE" ? null : new Date(), statusReason: body.status === "ACTIVE" ? null : reason } });
+    } catch {
+      return NextResponse.json({ error: "Run prisma/migration_nbeac_sar.sql in Supabase first." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
   if (!(TRACKS as readonly string[]).includes(body?.track)) return NextResponse.json({ error: "unknown track" }, { status: 400 });
   await prisma.student.update({ where: { id: params.studentId }, data: { track: body.track } });
   return NextResponse.json({ ok: true });
