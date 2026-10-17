@@ -28,6 +28,9 @@ export default async function SemesterPlanPage() {
   const behind = lines.filter((l) => l.state === "BEHIND");
   const risk = lines.filter((l) => l.state === "AT_RISK");
   const starts = (await prisma.academicCalendarEntry.findMany({ where: { chairmanId: user.role === "CHAIRMAN" ? user.id : user.managedById || "none", kind: "SEMESTER_START" }, select: { termName: true, startDate: true } })) as { termName: string | null; startDate: Date }[];
+  const offCal = isIH ? ((await prisma.academicCalendarEntry.findMany({ where: { chairmanId: user.id, kind: { in: ["HOLIDAY", "BREAK"] } }, select: { startDate: true, endDate: true } })) as { startDate: Date; endDate: Date | null }[]) : [];
+  const holidays: string[] = [];
+  for (const c of offCal) { const e = c.endDate || c.startDate; for (const d = new Date(c.startDate); d <= e && holidays.length < 3000; d.setUTCDate(d.getUTCDate() + 1)) holidays.push(d.toISOString().slice(0, 10)); }
   const startOf = (t: string) => starts.find((x) => x.termName === t)?.startDate || null;
   const now = new Date();
   const terms = Array.from(new Set(lines.map((l) => l.planTerm || "Other")));
@@ -38,7 +41,7 @@ export default async function SemesterPlanPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         {isIH ? "Set a date for each task in the order the work happens. Each target belongs to a role, whoever holds it. Deans, Chairmen and Program Leads then pass them down with their own earlier dates." : "Targets set above you. Pass each one down to the people in your area with an earlier date so there is slack before the date above you."}
       </p>
-      {isIH && <SemesterPlanForm items={PLAN_TEMPLATE.map((p) => ({ key: p.key, title: p.title, role: p.role, offset: p.offset, why: p.why, phase: p.phase, scope: p.scope }))} roles={PLAN_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))} />}
+      {isIH && <SemesterPlanForm items={PLAN_TEMPLATE.map((p) => ({ key: p.key, title: p.title, role: p.role, offset: p.offset, why: p.why, phase: p.phase, scope: p.scope }))} roles={PLAN_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))} holidays={holidays} />}
 
       {lines.length > 0 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: `4px solid ${behind.length ? "#B3261E" : risk.length ? "#B7791F" : "#2E7D4F"}` }}>
