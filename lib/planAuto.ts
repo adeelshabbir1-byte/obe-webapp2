@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { labPlanEvidence } from "./labPlan";
+import { labPlanEvidence } from "./labPlanCore";
 
 type Open = { id: string; key: string; assigneeId: string | null; dueDate: Date; completedAt: Date | null };
 type Evidence = { all: Date | null; by: Map<string, Date>; own?: boolean };

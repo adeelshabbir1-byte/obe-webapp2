@@ -1,4 +1,4 @@
-import { withLabSync } from "../../../../../../../lib/labPlan";
+import { withLabSync } from "../../../../../../../lib/labSyncRoute";
 import { NextRequest, NextResponse } from "next/server";
 import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
