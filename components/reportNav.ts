@@ -207,6 +207,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/chairman/employees", label: "Upload Employees" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
@@ -326,6 +327,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/chairman/employees", label: "Upload Employees" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },

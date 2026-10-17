@@ -2227,6 +2227,7 @@ model FacultyProfile {
   photo             String?  @db.Text // small JPEG as a data URL (resized in the browser)
   designation       String?
   employmentType    String?  // Permanent | Contract | Visiting | Part-time
+  employeeCode      String?  // the institute's own employee number (from the employee upload)
   dateOfJoining     DateTime?
   dateOfBirth       DateTime?
   gender            String?

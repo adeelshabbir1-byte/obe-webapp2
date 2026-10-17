@@ -124,7 +124,7 @@ export default function BulkStudentUpload({ batches }: { batches: { degreeProgra
       )}
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 8 }}>Upload an Excel or CSV File <a href="/api/coordinator/students/template" className="btn btn-secondary btn-sm" style={{ marginLeft: 8 }}>Download Excel template</a></h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Column A = Name, Column B = Roll Number, Column C = Batch Name, optional Column D = Track (Non-Medical or Pre-Medical; left blank = unchanged / Non-Medical). Students from any number of your
           batches can be mixed in the same file. A header row is fine — it's detected and skipped automatically.
