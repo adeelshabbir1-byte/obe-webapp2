@@ -750,3 +750,9 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
   .st-nav a{white-space:nowrap;flex:none;}
   .st-main{padding:18px 14px 32px;}
 }
+
+/* Pin star on menu links: shows on hover, stays visible when pinned. */
+.sidebar .nl-star{margin-left:auto;display:inline-flex;align-items:center;padding:2px;border-radius:5px;opacity:0;color:#E8C77A;cursor:pointer;flex-shrink:0;}
+.sidebar a.nav-link:hover .nl-star,.sidebar .nl-star[data-on="true"]{opacity:.9;}
+.sidebar .nl-star:hover{background:rgba(255,255,255,.14);opacity:1;}
+@media (hover:none){.sidebar .nl-star{opacity:.6;}}

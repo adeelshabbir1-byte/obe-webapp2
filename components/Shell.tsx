@@ -4,6 +4,8 @@ import { getRequestsCount, getSessionInfo, getSidebarCurrentTerm } from "../lib/
 import AppShell from "./AppShell";
 import { unreadCount } from "../lib/notifications";
 import { prisma } from "../lib/db";
+import { navForRole } from "./reportNav";
+import { defaultWork, ROLE_WORK_LABEL } from "../lib/navDefaults";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -29,7 +31,7 @@ export default async function Shell({
   const user = await getSignedInUser();
 
   const needAdvisor = !!user && !navLinks.some((l) => l.href === "/advisor/dashboard");
-  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises] = await Promise.all([
+  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises, pinRow] = await Promise.all([
     getBrandingFor(user),
     user ? getSessionInfo(user) : null,
     user ? getRequestsCount(user) : 0,
@@ -38,9 +40,18 @@ export default async function Shell({
     user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
     user ? unreadCount(user.id) : 0,
     needAdvisor && user ? prisma.batch.count({ where: { advisorId: user.id } }).then((n) => n > 0).catch(() => false) : false,
+    user ? (((prisma as unknown as Record<string, any>).userNavPref?.findUnique({ where: { userId: user.id } }) as Promise<{ pinsJson: string } | null> | undefined)?.catch(() => null) ?? null) : null,
   ]);
   // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
   const links = advises ? [...navLinks, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : navLinks;
+  // "My work": the person's pins, else the role's default list. People with more than one role also get each other role's work list.
+  let pins: string[] | null = null;
+  try { pins = pinRow ? JSON.parse(pinRow.pinsJson) : null; } catch { pins = null; }
+  const role = user?.role || "";
+  const otherWork = (sessionInfo?.dualCapable ? sessionInfo.otherRoles : []).map((o) => {
+    const menu = navForRole(o.role);
+    return { role: o.role, label: ROLE_WORK_LABEL[o.role] || `${o.label} work`, links: defaultWork(o.role, menu).map((h) => menu.find((l) => l.href === h)).filter((l): l is { href: string; label: string } => !!l) };
+  }).filter((w) => w.links.length);
 
   return (
     <AppShell
@@ -54,6 +65,9 @@ export default async function Shell({
       currentTerm={currentTerm}
       requestsCount={requestsCount}
       unreadNotifications={unreadNotifications}
+      pins={pins}
+      defaultPins={defaultWork(role, links)}
+      otherWork={otherWork}
     >
       {children}
     </AppShell>

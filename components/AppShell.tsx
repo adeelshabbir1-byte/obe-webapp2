@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound , MessageSquarePlus, LifeBuoy } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound , MessageSquarePlus, LifeBuoy, Star, RotateCcw } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { getNavIcon } from "../lib/navIcons";
@@ -45,6 +45,9 @@ export default function AppShell({
   currentTerm,
   requestsCount,
   unreadNotifications = 0,
+  pins = null,
+  defaultPins = [],
+  otherWork = [],
   children,
 }: {
   roleLabel: string;
@@ -57,6 +60,9 @@ export default function AppShell({
   currentTerm: { termName: string; year: number } | null;
   requestsCount: number;
   unreadNotifications?: number;
+  pins?: string[] | null;
+  defaultPins?: string[];
+  otherWork?: { role: string; label: string; links: NavLink[] }[];
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -72,6 +78,29 @@ export default function AppShell({
   const [hit, setHit] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
   const [acctOpen, setAcctOpen] = useState(false);
+  // "My work": pinned pages (saved in the person's account), else the role's default list.
+  const [myPins, setMyPins] = useState<string[]>(pins ?? defaultPins);
+  const [pinErr, setPinErr] = useState("");
+  async function savePins(next: string[] | null) {
+    setMyPins(next ?? defaultPins); setPinErr("");
+    const r = await fetch("/api/nav-pins", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pins: next }) }).catch(() => null);
+    if (!r || !r.ok) setPinErr((await r?.json().catch(() => null))?.error || "Could not save the pin.");
+  }
+  const togglePin = (href: string) => savePins(myPins.includes(href) ? myPins.filter((h) => h !== href) : [...myPins, href]);
+  const star = (href: string) => (
+    <span role="button" tabIndex={-1} className="nl-star" data-on={myPins.includes(href) ? "true" : "false"} title={myPins.includes(href) ? "Unpin from My work" : "Pin to My work"}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePin(href); }}>
+      <Star size={13} fill={myPins.includes(href) ? "currentColor" : "none"} />
+    </span>
+  );
+  // A link from another of the person's roles: switch to that role, then open the page.
+  async function openAs(role: string, href: string) {
+    if (switching) return;
+    setSwitching(true);
+    await fetch("/api/auth/set-active-role", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    router.push(href);
+    router.refresh();
+  }
 
   // The program picker updates at once when chosen, then follows whatever the server sends after the refresh.
   useEffect(() => { setDeptCoordinator(deptCoordinatorProp); }, [deptCoordinatorProp]);
@@ -118,6 +147,7 @@ export default function AppShell({
       return next;
     });
   }, [current, recentKey]);
+  const myWork = myPins.map((h) => allLinks.find((l) => l.href === h)).filter((l): l is NavLink => !!l);
   const recentLinks = recent.map((h) => links.find((l) => l.href === h)).filter((l): l is NavLink => !!l && l.href !== current).slice(0, 4);
   const isOpen = (title: string, idx: number, hasActive: boolean) => openSec[title] ?? (!crowded || idx === 0 || hasActive);
   const allOpen = sections.every((sec, idx) => isOpen(sec.title, idx, sec.links.some((n) => n.href === current)));
@@ -294,6 +324,41 @@ export default function AppShell({
               })}
             </div>
           )}
+          {!q && (
+            <div className="sb-section">
+              <div className="sb-section-title" data-collapsible="false"><span><Star size={11} style={{ verticalAlign: -1, marginRight: 4 }} />My work</span></div>
+              {myWork.map((n) => {
+                const Icon = n.href === "/requests" ? Inbox : getNavIcon(n.label);
+                return (
+                  <Link key={n.href} href={n.href} prefetch={false} className="nav-link" aria-current={n.href === current ? "page" : undefined} title={n.label}>
+                    <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
+                    <span className="nl-label">{n.label}</span>
+                    {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
+                    {star(n.href)}
+                  </Link>
+                );
+              })}
+              {myWork.length === 0 && <div className="sb-empty">Click ☆ next to any page below to pin it here.</div>}
+              {pinErr && <div className="sb-empty" style={{ color: "#F3B4A8" }}>{pinErr}</div>}
+              {pins !== null && myPins.join() !== defaultPins.join() && (
+                <button type="button" className="sb-toggle-all" onClick={() => savePins(null)}><RotateCcw size={12} /> Reset to default</button>
+              )}
+            </div>
+          )}
+          {!q && otherWork.map((w) => (
+            <div className="sb-section" key={w.role}>
+              <div className="sb-section-title" data-collapsible="false"><span><Repeat size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{w.label}</span></div>
+              {w.links.map((n) => {
+                const Icon = getNavIcon(n.label);
+                return (
+                  <a key={n.href} href={n.href} className="nav-link" title={`Switches to this role and opens ${n.label}`} onClick={(e) => { e.preventDefault(); openAs(w.role, n.href); }}>
+                    <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
+                    <span className="nl-label">{n.label}</span>
+                  </a>
+                );
+              })}
+            </div>
+          ))}
           {!q && crowded && recentLinks.length > 0 && (
             <div className="sb-section">
               <div className="sb-section-title" data-collapsible="false"><span><History size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Recent</span></div>
@@ -338,6 +403,7 @@ export default function AppShell({
                       <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
                       <span className="nl-label">{n.label}</span>
                       {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
+                      {star(n.href)}
                     </Link>
                   );
                 })}

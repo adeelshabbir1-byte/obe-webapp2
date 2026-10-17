@@ -4033,3 +4033,10 @@ model ProgramPeoWeight {
   @@unique([coordinatorId, degreeProgram, peoIndex, ploNumber])
   @@index([coordinatorId, degreeProgram])
 }
+
+// Pinned menu links ("My work") per person; the menu falls back to the role's default list when there is no row.
+model UserNavPref {
+  userId    String   @id
+  pinsJson  String   @default("[]")
+  updatedAt DateTime @default(now()) @updatedAt
+}
