@@ -1,0 +1,3 @@
+export const KINDS: [string, string][] = [["INTERNSHIP", "Internship"], ["JOB", "Job"], ["HIGHER_STUDY", "Higher study"], ["STARTUP", "Own business / start-up"]];
+export const SALARY: [string, string][] = [["", "Prefer not to say"], ["<50k", "Under PKR 50,000"], ["50-100k", "PKR 50,000–100,000"], ["100-200k", "PKR 100,000–200,000"], [">200k", "Over PKR 200,000"], ["unpaid", "Unpaid"]];
+export type Placement = { id: string; studentId: string; kind: string; organization: string; position: string | null; city: string | null; startDate: Date | null; endDate: Date | null; salaryBand: string | null; inField: boolean; supervisorEmail: string | null; verifiedById: string | null; createdAt: Date };

@@ -4726,3 +4726,57 @@ model TrainingPolicy {
   exemptJson String    @default("[]") @db.Text
   updatedAt  DateTime  @default(now()) @updatedAt
 }
+
+// The teacher's end-of-course review (teacher exit survey): per CLO, why it was or wasn't met and what to change.
+model CourseReview {
+  courseId     String    @id
+  instructorId String
+  perCloJson   String    @default("{}") @db.Text
+  worked       String?   @db.Text
+  challenges   String?   @db.Text
+  changes      String?   @db.Text
+  submittedAt  DateTime?
+  updatedAt    DateTime  @default(now()) @updatedAt
+}
+
+// Internships, jobs, higher study and start-ups of students and graduates.
+model Placement {
+  id              String    @id @default(cuid())
+  studentId       String
+  kind            String    // INTERNSHIP | JOB | HIGHER_STUDY | STARTUP
+  organization    String
+  position        String?
+  city            String?
+  startDate       DateTime?
+  endDate         DateTime?
+  salaryBand      String?
+  inField         Boolean   @default(true)
+  supervisorEmail String?
+  verifiedById    String?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+
+  @@index([studentId])
+}
+
+// An assessment marked as a complex computing / engineering problem, with the accord's attributes it meets.
+model ComplexTag {
+  instrumentId String   @id
+  courseId     String
+  attrsJson    String   @default("[]") @db.Text
+  note         String?  @db.Text
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([courseId])
+}
+
+// Knowledge-profile areas a course code covers (WK1-WK8 for engineering, CK areas for computing).
+model CourseKnowledge {
+  id         String   @id @default(cuid())
+  chairmanId String
+  courseCode String
+  areasJson  String   @default("[]") @db.Text
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([chairmanId, courseCode])
+}

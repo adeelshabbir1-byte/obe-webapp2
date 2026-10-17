@@ -46,6 +46,7 @@ export default async function PortfolioReview({ searchParams }: { searchParams: 
   ((await pdb.studentWorkSample.groupBy({ by: ["courseId"], _count: { _all: true }, where: { courseId: { in: courses.map((c) => c.id) } } }).catch(() => [])) as { courseId: string; _count: { _all: number } }[]).forEach((r) => counts.set(r.courseId, r._count._all));
   const sel = searchParams.course ? courses.find((c) => c.id === searchParams.course) : null;
   const data = sel ? await courseSampling(sel.id) : null;
+  const review = sel ? ((await pdb.courseReview.findUnique({ where: { courseId: sel.id } }).catch(() => null)) as { perCloJson: string; worked: string | null; challenges: string | null; changes: string | null; submittedAt: Date | null } | null) : null;
   const byClo = new Map<string, NonNullable<typeof data>["items"]>();
   if (data) for (const i of data.items) for (const c of i.clos.length ? i.clos : ["No CLO"]) byClo.set(c, [...(byClo.get(c) || []), i]);
   const lvName: Record<string, string> = { HIGH: "Best", MEDIUM: "Average", LOW: "Weakest" };
@@ -67,6 +68,9 @@ export default async function PortfolioReview({ searchParams }: { searchParams: 
                   <tbody>{its.map((i) => <tr key={i.id}><td>{i.label}</td>{["HIGH", "MEDIUM", "LOW"].map((l) => { const s = i.samples.find((x) => x.level === l); return <td key={l}>{s ? <><a href={s.fileUrl} target="_blank" rel="noopener noreferrer">{s.student?.rollNumber || lvName[l]}</a> <span className="small-note">{s.score ?? ""}/{i.maxScore}</span></> : <span style={{ color: "#B3261E" }}>missing</span>}</td>; })}</tr>)}</tbody></table>
               </div>))}
             {!byClo.size && <p className="small-note">No assessments yet.</p>}
+            <h4 style={{ marginBottom: 4 }}>Teacher&apos;s end-of-course review</h4>
+            {review?.submittedAt ? <div style={{ fontSize: 13 }}>{Object.entries(JSON.parse(review.perCloJson) as Record<string, { reason: string; action: string }>).filter(([, v]) => v.reason || v.action).map(([k, v]) => <div key={k}><b>{k}</b>: {v.reason}{v.action ? <> — <i>action:</i> {v.action}</> : null}</div>)}
+              {review.worked && <div><b>Worked well:</b> {review.worked}</div>}{review.challenges && <div><b>Challenges:</b> {review.challenges}</div>}{review.changes && <div><b>Recommended changes:</b> {review.changes}</div>}</div> : <p className="small-note">Not submitted yet.</p>}
           </div>)}
       </div>
     </div>

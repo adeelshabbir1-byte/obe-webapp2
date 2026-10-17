@@ -4,7 +4,7 @@ import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
-  courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance" | "resources" | "flow" | "samples" | "quizzes" | "submissions" | "paper-vetting"; code: string; title: string;
+  courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance" | "resources" | "flow" | "samples" | "quizzes" | "submissions" | "paper-vetting" | "review"; code: string; title: string;
 }) {
   // Order follows the work: plan the assessments, keep attendance (which dates the log), then rubrics, and the result last.
   const tabs = [
@@ -21,6 +21,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
     { key: "paper-vetting", label: "Paper Vetting", href: `/instructor/courses/${courseId}/paper-vetting` },
     { key: "quizzes", label: "Online Quizzes", href: `/instructor/courses/${courseId}/quizzes` },
     { key: "submissions", label: "Submissions", href: `/instructor/courses/${courseId}/submissions` },
+    { key: "review", label: "Course Review", href: `/instructor/courses/${courseId}/review` },
     { key: "samples", label: "Work Samples", href: `/instructor/courses/${courseId}/samples` },
   ];
 
