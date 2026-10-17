@@ -19,6 +19,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
     { key: "marks", label: "9. Marks Entry & Result", href: `/instructor/courses/${courseId}/marks` },
     { key: "flow", label: "Flow & Weights", href: `/instructor/courses/${courseId}/flow` },
     { key: "quizzes", label: "Online Quizzes", href: `/instructor/courses/${courseId}/quizzes` },
+    { key: "submissions", label: "Submissions", href: `/instructor/courses/${courseId}/submissions` },
     { key: "samples", label: "Work Samples", href: `/instructor/courses/${courseId}/samples` },
   ];
 

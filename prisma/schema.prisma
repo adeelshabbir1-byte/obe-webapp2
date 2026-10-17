@@ -4600,3 +4600,35 @@ model QuizAttempt {
 
   @@unique([quizId, studentId])
 }
+
+// An online hand-in point for an assessment (assignment, project, lab report).
+model Dropbox {
+  id           String   @id @default(cuid())
+  courseId     String
+  instrumentId String?
+  title        String
+  instructions String?  @db.Text
+  dueAt        DateTime
+  allowLate    Boolean  @default(true)
+  status       String   @default("OPEN") // OPEN | CLOSED
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([courseId])
+}
+
+model Submission {
+  id          String    @id @default(cuid())
+  dropboxId   String
+  studentId   String
+  fileName    String
+  fileUrl     String    @db.Text
+  note        String?   @db.Text
+  submittedAt DateTime  @default(now())
+  late        Boolean   @default(false)
+  score       Float?
+  feedback    String?   @db.Text
+  gradedAt    DateTime?
+
+  @@unique([dropboxId, studentId])
+}
