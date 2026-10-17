@@ -4241,3 +4241,23 @@ model StudentCv {
   reviewedById String?
   updatedAt    DateTime @default(now()) @updatedAt
 }
+
+// FYP plans: the FYP Head's year plan (groupId null: open house and other cycle tasks) and each group's own project plan.
+model FypPlanTask {
+  id          String   @id @default(cuid())
+  cycleId     String
+  groupId     String?
+  title       String
+  category    String   @default("GENERAL") // GENERAL | OPEN_HOUSE | GROUP
+  ownerId     String?
+  ownerText   String?
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("TODO") // TODO | IN_PROGRESS | DONE
+  orderIndex  Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([cycleId])
+  @@index([groupId])
+}

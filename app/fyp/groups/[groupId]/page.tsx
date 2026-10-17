@@ -9,6 +9,9 @@ import { ActionButton, ActionForm, ScoreSheet } from "../../../../components/fyp
 import { ARTIFACT_KINDS, computeResults, EXTENSIONS, evaluatorRoleFor, fypAccess, REQUISITION_KINDS, ROLE_TEXT, standingOf, EVALUATOR_MODES } from "../../../../lib/fyp";
 import { meetingLog, remarksOf, supervisionPct } from "../../../../lib/fypPlus";
 import FypMeetings from "../../../../components/fyp/FypMeetings";
+import FypGantt from "../../../../components/fyp/FypGantt";
+import FypPlanEditor from "../../../../components/fyp/FypPlanEditor";
+import { planTasks } from "../../../../lib/fypPlan";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "FYP group" };
@@ -104,6 +107,19 @@ export default async function FypGroupPage({ params }: { params: { groupId: stri
           </tr>)}</tbody>
         </table>
       </div>
+
+      {await (async () => {
+        const plan = (await planTasks(cycle.id, group.id)) || [];
+        const canPlan = group.supervisorId === user.id || manages;
+        return (
+          <div className="card">
+            <h3 style={{ marginTop: 0 }}>Project plan</h3>
+            <FypGantt items={[...milestones.map((m) => ({ label: m.title, from: m.dueDate.toISOString(), to: m.dueDate.toISOString(), kind: "milestone" as const })), ...plan.map((t) => ({ label: t.title, from: t.startDate.toISOString(), to: t.endDate.toISOString(), kind: "task" as const, status: t.status }))].sort((a, b) => a.from.localeCompare(b.from))} />
+            <div style={{ marginTop: 8 }}><FypPlanEditor cycleId={cycle.id} groupId={group.id} tasks={plan.map((t) => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString() }))} people={[]} canEdit={canPlan}
+              templates={canPlan && plan.length === 0 ? [{ action: "groupTemplate", label: "Start from the standard 6-phase plan" }] : []} /></div>
+          </div>
+        );
+      })()}
 
       {evaluated.some((m) => m.kind === "SUPERVISION") && (
         <FypMeetings groupId={group.id} members={memberList.map((s) => ({ id: s.id, name: s.name }))} canEdit={group.supervisorId === user.id || manages}

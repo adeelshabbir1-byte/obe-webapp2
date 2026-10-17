@@ -68,7 +68,7 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
           <h1 style={{ fontSize: 22, marginBottom: 2 }}>Manage Final Year Projects</h1>
-          <div style={{ display: "flex", gap: 8, margin: "4px 0" }}><a href="/fyp/open-house" className="act">Open house &amp; industry contacts →</a><a href="/fyp/open-house" className="act">FYP yearbook (from Open house) →</a></div>
+          <div style={{ display: "flex", gap: 8, margin: "4px 0" }}><a href="/fyp/plan" className="act">Year plan &amp; Gantt →</a><a href="/fyp/open-house" className="act">Open house &amp; industry contacts →</a><a href="/fyp/open-house" className="act">FYP yearbook (from Open house) →</a></div>
           <p className="small-note" style={{ margin: 0 }}>
             {dept.name} · FYP Head: {head ? names.get(head.userId) : "not named yet"}
             {manages ? ` · you are ${acc.isHead(dept.id) ? "the FYP Head" : "on the FYP Committee"}` : chairs ? " · you sign off results" : ""}

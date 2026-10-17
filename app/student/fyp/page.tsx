@@ -5,6 +5,9 @@ import StudentShell from "../../../components/StudentShell";
 import { ActionButton, ActionForm } from "../../../components/fyp/FypClient";
 import { ARTIFACT_KINDS, eligibility, REQUISITION_KINDS, studentCycle } from "../../../lib/fyp";
 import { meetingLog, remarksOf } from "../../../lib/fypPlus";
+import { planTasks } from "../../../lib/fypPlan";
+import FypGantt from "../../../components/fyp/FypGantt";
+import FypPlanEditor from "../../../components/fyp/FypPlanEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Final Year Project" };
@@ -152,11 +155,18 @@ export default async function StudentFypPage() {
               {proposal?.scope && <p className="small-note" style={{ whiteSpace: "pre-wrap" }}>{proposal.scope}</p>}
             </div>
             {await (async () => {
-              const [log, remarks] = await Promise.all([meetingLog(group.id), remarksOf(group.id)]);
+              const [log, remarks, plan] = await Promise.all([meetingLog(group.id), remarksOf(group.id), planTasks(group.cycleId, group.id)]);
               const tasks = (log || []).flatMap((m) => m.tasks).filter((t) => !t.studentId || t.studentId === student.id);
               const next = (log || [])[0]?.nextAt;
               return (
                 <>
+                  {(plan?.length || 0) > 0 && (
+                    <div className="card">
+                      <h3 style={{ marginTop: 0 }}>Project plan</h3>
+                      <FypGantt items={[...milestones.map((m) => ({ label: m.title, from: m.dueDate.toISOString(), to: m.dueDate.toISOString(), kind: "milestone" as const })), ...(plan || []).map((t) => ({ label: t.title, from: t.startDate.toISOString(), to: t.endDate.toISOString(), kind: "task" as const, status: t.status }))].sort((a, b) => a.from.localeCompare(b.from))} />
+                      <div style={{ marginTop: 8 }}><FypPlanEditor cycleId={group.cycleId} groupId={group.id} tasks={(plan || []).map((t) => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString() }))} people={[]} canEdit={false} canStatusIds="ALL" statusUrl="/api/student/fyp" /></div>
+                    </div>
+                  )}
                   {(log?.length || 0) > 0 && (
                     <div className="card">
                       <h3 style={{ marginTop: 0 }}>Supervisor meetings</h3>
