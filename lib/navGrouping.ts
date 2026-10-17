@@ -9,7 +9,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h) || h === "/fyp", section: "Daily pages" },
 
-  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups", section: "Review & Approval" },
+  { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups" || h === "/paper-vetting", section: "Review & Approval" },
 
   { match: (h) => /^\/coordinator\/(semester|repeat-offering|calendar|timetable|out-of-batch-requests|assignment-history|elective-instructor-report)$/.test(h)
       || /^\/instructor\/course-team$/.test(h) || /^\/assigner\/(matrix|course-short-names)$/.test(h), section: "Semester & Timetable" },

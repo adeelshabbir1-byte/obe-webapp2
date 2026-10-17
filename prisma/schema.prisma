@@ -4681,3 +4681,23 @@ model MessageLog {
 
   @@index([chairmanId, createdAt])
 }
+
+// Exam paper vetting: DRAFT → SUBMITTED (to the Program Lead) → APPROVED or RETURNED (back to the teacher).
+model PaperVetting {
+  id            String    @id @default(cuid())
+  courseId      String
+  examType      String    // Midterm | Final
+  status        String    @default("DRAFT")
+  questionsJson String    @default("{}") @db.Text // paper item id → the question as written
+  systemJson    String?   @db.Text
+  aiJson        String?   @db.Text
+  teacherNote   String?   @db.Text
+  submittedAt   DateTime?
+  reviewerId    String?
+  reviewNote    String?   @db.Text
+  decidedAt     DateTime?
+  round         Int       @default(1)
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@unique([courseId, examType])
+}
