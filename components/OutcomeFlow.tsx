@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 // Outcome Flow: Assessments -> CLOs -> Courses -> PLOs -> PEOs with the weight on every link and attainment
 // (% of students reaching the target) on every box. Opens at Courses -> PLOs -> PEOs; clicking a course opens its CLOs,
-// clicking a CLO its assessments. Clicking any box focuses its chain. The OMC edits Course->PLO and PLO->PEO weights
+// clicking a CLO its assessments. Each column opens step by step from the box clicked before it. The OMC edits Course->PLO and PLO->PEO weights
 // by clicking a weight on those links; the lower levels come from the course plan and are only shown.
 
 type PloCourse = { id: string; code: string; title: string; courseType: string; creditHours: number; semesterNumber: number | null; family: string; weight: number; attainment: number | null };
@@ -49,7 +49,6 @@ export default function OutcomeFlow(props: FlowProps) {
   const [chains, setChains] = useState<Record<string, Chain>>(props.initialChain ? { [props.initialChain.course.id]: props.initialChain } : {});
   const [open, setOpen] = useState<string | null>(props.initialChain?.course.id || null);
   const [loading, setLoading] = useState<string | null>(null);
-  const [focus, setFocus] = useState<string | null>(null);
   const [edges, setEdges] = useState<{ id: string; x1: number; y1: number; x2: number; y2: number; label: string; on: boolean; edit?: { kind: "plo"; ploId: string } | { kind: "peo"; index: number } }[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [editing, setEditing] = useState<{ kind: "plo"; ploId: string } | { kind: "peo"; index: number } | null>(null);
@@ -59,55 +58,68 @@ export default function OutcomeFlow(props: FlowProps) {
   const chain = open ? chains[open] : null;
   const ploByNumber = useMemo(() => new Map(plos.map((p) => [p.number, p])), [plos]);
 
+  // Step-by-step opening: batch view goes PEO -> PLOs -> courses -> CLOs -> assessments; a course view goes from the course
+  // to its CLOs (left) and PLOs (right), then PLO -> PEOs. Clicking an open box closes it and everything opened after it.
+  const [all, setAll] = useState(false);
+  const [selE, setSelE] = useState<Set<number>>(new Set());
+  const [selP, setSelP] = useState<Set<string>>(new Set());
+  const [selL, setSelL] = useState<Set<string>>(new Set());
+  const [courseOn, setCourseOn] = useState(false); // course view: the course box has been opened
+  const flip = <T,>(set: Set<T>, v: T) => { const n = new Set(set); if (n.has(v)) n.delete(v); else n.add(v); return n; };
+
   async function openCourse(id: string) {
-    if (mode === "course") return;
-    setFocus(focus === key("C", id) ? null : key("C", id));
-    if (open === id) return;
+    if (mode === "course") { setCourseOn(!courseOn); return; }
+    if (open === id) { setOpen(null); return; }
     setOpen(id);
     if (chains[id]) return;
     setLoading(id); setError("");
     const r = await fetch(`/api/outcome-flow/course/${id}`);
     const d = await r.json().catch(() => ({}));
     setLoading(null);
-    if (!r.ok) { setError(d.error || "Could not open the course."); return; }
+    if (!r.ok) { setError(d.error || "Could not open the course."); setOpen(null); return; }
     setChains((c) => ({ ...c, [id]: d }));
   }
-  const toggle = (k: string) => setFocus(focus === k ? null : k);
+  const toggle = (k: string) => {
+    const [kind, id] = [k.slice(0, 1) as Kind, k.slice(2)];
+    if (kind === "E") setSelE(flip(selE, Number(id)));
+    if (kind === "P") setSelP(flip(selP, id));
+    if (kind === "L") setSelL(flip(selL, id));
+  };
 
-  // Which boxes belong to the focused chain.
-  const related = useMemo(() => {
-    if (!focus) return null;
-    const s = new Set<string>([focus]);
-    const [k, id] = [focus.slice(0, 1) as Kind, focus.slice(2)];
-    const addPlo = (p: Plo, withCourses: boolean) => {
-      s.add(key("P", p.id));
-      for (const e of peos) if (e.links.some((l) => l.ploNumber === p.number)) s.add(key("E", e.index));
-      if (withCourses) for (const c of p.courses) s.add(key("C", c.id));
-    };
-    const addChain = (cloFilter?: (c: Chain["clos"][number]) => boolean) => {
-      if (!chain) return;
-      for (const l of chain.clos.filter(cloFilter || (() => true))) {
-        s.add(key("L", l.id));
-        for (const a of chain.assessments) if (a.cloId === l.id) s.add(key("A", a.id));
-      }
-    };
-    if (k === "C") { for (const p of plos) if (p.courses.some((c) => c.id === id)) addPlo(p, false); if (chain?.course.id === id) addChain(); }
-    if (k === "P") { const p = plos.find((x) => x.id === id); if (p) { addPlo(p, true); if (chain && p.courses.some((c) => c.id === chain.course.id)) addChain((l) => l.ploNumber === p.number); } }
-    if (k === "E") { const e = peos.find((x) => String(x.index) === id); for (const l of e?.links || []) { const p = ploByNumber.get(l.ploNumber); if (p) { s.add(key("P", p.id)); for (const c of p.courses) s.add(key("C", c.id)); } } }
-    if (k === "L" && chain) {
-      const l = chain.clos.find((x) => x.id === id);
-      s.add(key("C", chain.course.id));
-      for (const a of chain.assessments) if (a.cloId === id) s.add(key("A", a.id));
-      const p = l?.ploNumber ? ploByNumber.get(l.ploNumber) : null; if (p) addPlo(p, false);
+  // What is visible at each level (everything when "Show all" is on).
+  const vis = useMemo(() => {
+    const peoPlos = (idx: Set<number>) => new Set(peos.filter((e) => idx.has(e.index)).flatMap((e) => e.links.map((l) => ploByNumber.get(l.ploNumber)?.id).filter((x): x is string => !!x)));
+    let P: Set<string>, E: Set<number>, C: Set<string>;
+    if (mode === "batch") {
+      E = new Set(peos.map((e) => e.index));
+      P = all ? new Set(plos.map((p) => p.id)) : peoPlos(selE);
+      const openP = plos.filter((p) => P.has(p.id) && (all || selP.has(p.id)));
+      C = all ? new Set(courses.map((c) => c.id)) : new Set(openP.flatMap((p) => p.courses.map((c) => c.id)));
+    } else {
+      C = new Set(courses.map((c) => c.id));
+      P = all || courseOn ? new Set(plos.filter((p) => !chain || p.courses.some((c) => c.id === chain.course.id)).map((p) => p.id)) : new Set();
+      E = all ? new Set(peos.map((e) => e.index)) : new Set(peos.filter((e) => e.links.some((l) => { const id = ploByNumber.get(l.ploNumber)?.id; return !!id && P.has(id) && selP.has(id); })).map((e) => e.index));
     }
-    if (k === "A" && chain) {
-      const a = chain.assessments.find((x) => x.id === id);
-      const l = chain.clos.find((x) => x.id === a?.cloId);
-      if (l) { s.add(key("L", l.id)); const p = l.ploNumber ? ploByNumber.get(l.ploNumber) : null; if (p) addPlo(p, false); }
-      s.add(key("C", chain.course.id));
-    }
-    return s;
-  }, [focus, chain, plos, peos, ploByNumber]);
+    const courseOpen = mode === "batch" ? !!chain && C.has(chain.course.id) : all || courseOn;
+    const L = new Set(courseOpen && chain ? chain.clos.map((l) => l.id) : []);
+    const A = new Set(courseOpen && chain ? chain.assessments.filter((a) => a.cloId && (all || selL.has(a.cloId))).map((a) => a.id) : []);
+    return { P, E, C, L, A, courseOpen };
+  }, [mode, all, selE, selP, selL, courseOn, chain, plos, peos, courses, ploByNumber]);
+
+  // Closing a box also closes what was opened from it.
+  useEffect(() => {
+    if (all) return;
+    const keep = <T,>(set: Set<T>, ok: Set<T>) => (Array.from(set).every((x) => ok.has(x)) ? set : new Set(Array.from(set).filter((x) => ok.has(x))));
+    setSelP((x) => keep(x, vis.P)); setSelL((x) => keep(x, vis.L));
+    if (mode === "batch") setSelE((x) => keep(x, vis.E));
+    if (mode === "batch" && open && !vis.C.has(open) && !loading) setOpen(null);
+  }, [vis, all, mode, open, loading]);
+
+  const related = useMemo(() => new Set<string>([
+    ...Array.from(vis.E).map((x) => key("E", x)), ...Array.from(vis.P).map((x) => key("P", x)), ...Array.from(vis.C).map((x) => key("C", x)),
+    ...Array.from(vis.L).map((x) => key("L", x)), ...Array.from(vis.A).map((x) => key("A", x)),
+  ]), [vis]);
+  const isOpen = (k: string) => { const [kind, id] = [k.slice(0, 1) as Kind, k.slice(2)]; return kind === "E" ? selE.has(Number(id)) : kind === "P" ? selP.has(id) : kind === "L" ? selL.has(id) : kind === "C" ? (mode === "batch" ? open === id : courseOn) : false; };
 
   // Lines between the boxes, measured from the page.
   useLayoutEffect(() => {
@@ -118,7 +130,7 @@ export default function OutcomeFlow(props: FlowProps) {
       const out: typeof edges = [];
       const add = (from: string, to: string, label: string, edit?: (typeof edges)[number]["edit"]) => {
         const a = at(from), b = at(to); if (!a || !b) return;
-        out.push({ id: `${from}>${to}`, x1: a.r, y1: a.y, x2: b.l, y2: b.y, label, on: !related || (related.has(from) && related.has(to)), edit });
+        out.push({ id: `${from}>${to}`, x1: a.r, y1: a.y, x2: b.l, y2: b.y, label, on: true, edit });
       };
       if (chain) {
         for (const a of chain.assessments) if (a.cloId) add(key("A", a.id), key("L", a.cloId), `${a.share}%`);
@@ -135,8 +147,8 @@ export default function OutcomeFlow(props: FlowProps) {
   }, [chain, plos, peos, related, ploByNumber, open, loading]);
 
   const showBadges = edges.filter((e) => e.on).length <= 90;
-  const node = (k: string, kind: Kind, onClick: () => void, children: React.ReactNode, active = false) => related && !related.has(k) ? null : (
-    <div key={k} data-k={k} onClick={onClick} style={{ background: "#fff", border: `1px solid ${active ? TIER[kind].color : "var(--line)"}`, borderLeft: `4px solid ${TIER[kind].color}`, borderRadius: 8, padding: "7px 9px", cursor: "pointer", boxShadow: focus === k ? `0 0 0 2px ${TIER[kind].color}` : "0 1px 2px rgba(0,0,0,.04)", fontSize: 12 }}>
+  const node = (k: string, kind: Kind, onClick: () => void, children: React.ReactNode, active = isOpen(k)) => !related.has(k) ? null : (
+    <div key={k} data-k={k} onClick={onClick} style={{ background: "#fff", border: `1px solid ${active ? TIER[kind].color : "var(--line)"}`, borderLeft: `4px solid ${TIER[kind].color}`, borderRadius: 8, padding: "7px 9px", cursor: "pointer", boxShadow: isOpen(k) ? `0 0 0 2px ${TIER[kind].color}` : "0 1px 2px rgba(0,0,0,.04)", fontSize: 12 }}>
       {children}
     </div>
   );
@@ -164,7 +176,7 @@ export default function OutcomeFlow(props: FlowProps) {
         <span>Line figure: the weight of that link.</span>
         {canEdit && <span>Click a weight on a <b>Course → PLO</b> or <b>PLO → PEO</b> line to change it.</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          {focus && <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setFocus(null)}>← Show everything</button>}
+          <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setAll(!all)}>{all ? "Step by step" : "Show all"}</button>
           <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setWide(!wide)}>{wide ? "Exit full screen" : "Full screen"}</button>
         </span>
       </div>
@@ -174,7 +186,7 @@ export default function OutcomeFlow(props: FlowProps) {
             {edges.map((e) => {
               const dx = Math.max(20, (e.x2 - e.x1) * 0.5);
               const d = `M ${e.x1} ${e.y1} C ${e.x1 + dx} ${e.y1}, ${e.x2 - dx} ${e.y2}, ${e.x2} ${e.y2}`;
-              return <path key={e.id} d={d} fill="none" stroke={e.on ? "#B9A3A8" : "#EEE7E8"} strokeWidth={e.on && related ? 2 : 1.3} />;
+              return <path key={e.id} d={d} fill="none" stroke={e.on ? "#B9A3A8" : "#EEE7E8"} strokeWidth={1.6} />;
             })}
           </svg>
           <svg width={size.w} height={size.h} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
@@ -197,7 +209,7 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>{a.label}</b><Att v={a.reached} target={target} avg={a.avg} /></div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{a.type} · {a.marksPct}% of the course{a.graded ? ` · ${a.graded} marked` : ""}</div>
                 </>
-              ))) : null, !chain ? (mode === "batch" ? "Click a course to open its CLOs, then a CLO to see its assessments." : "No assessments yet.") : chain.assessments.filter((a) => a.cloId).length === 0 ? "No assessment is linked to a CLO yet." : undefined)}
+              ))) : null, !vis.courseOpen || !chain ? "Open a course, then click a CLO to see its assessments." : chain.assessments.filter((a) => a.cloId).length === 0 ? "No assessment is linked to a CLO yet." : vis.A.size === 0 ? "Click a CLO to see its assessments." : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("L", chain ? chain.clos.map((l) => node(key("L", l.id), "L", () => toggle(key("L", l.id)), (
@@ -206,16 +218,16 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>{l.statement.length > 110 ? `${l.statement.slice(0, 110)}…` : l.statement}</div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 2 }}>{l.ploNumber ? `→ PLO-${l.ploNumber}${l.contribution != null ? ` (${l.contribution}% of it in this course)` : ""}` : "no PLO mapped"}</div>
                 </>
-              ))) : null, loading ? "Opening the course…" : !chain ? "—" : chain.clos.length === 0 ? "This course has no CLOs yet." : undefined)}
+              ))) : null, loading ? "Opening the course…" : !chain || !vis.courseOpen ? "Click a course to see its CLOs." : chain.clos.length === 0 ? "This course has no CLOs yet." : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("C", shownCourses.map((c) => node(key("C", c.id), "C", () => openCourse(c.id), (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>{c.code}</b><span style={{ fontSize: 10.5, color: "var(--slate)" }}>{FAMILY[c.family] || c.courseType}</span></div>
                   <div style={{ fontSize: 11.5 }}>{c.title}</div>
-                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.creditHours} CH{c.semesterNumber ? ` · semester ${c.semesterNumber}` : ""}{mode === "batch" ? (open === c.id ? " · open" : " · click to open") : ""}</div>
+                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.creditHours} CH{c.semesterNumber ? ` · semester ${c.semesterNumber}` : ""}{isOpen(key("C", c.id)) ? " · open" : " · click to open"}</div>
                 </>
-              ), open === c.id)), shownCourses.length === 0 ? "No course is mapped to a PLO yet (PLO–Course Matrix)." : undefined)}
+              ), open === c.id)), shownCourses.length === 0 ? "No course is mapped to a PLO yet (PLO–Course Matrix)." : vis.C.size === 0 ? "Click a PLO to see its courses." : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("P", plos.map((p) => node(key("P", p.id), "P", () => toggle(key("P", p.id)), (
@@ -224,7 +236,7 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ fontSize: 11.5 }}>{p.title}</div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{p.courses.length} course{p.courses.length === 1 ? "" : "s"} · {p.state === "EQUAL" ? "equal split" : "weights set"}{props.cohort?.plos[p.id]?.last != null ? ` · last batch ${props.cohort.plos[p.id].last}%` : ""}</div>
                 </>
-              ))), plos.length === 0 ? "No PLOs." : undefined)}
+              ))), plos.length === 0 ? "No PLOs." : vis.P.size === 0 ? (mode === "batch" ? "Click a PEO to see its PLOs." : "Click the course to see its CLOs and PLOs.") : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("E", peos.map((e) => node(key("E", e.index), "E", () => toggle(key("E", e.index)), (
@@ -235,12 +247,12 @@ export default function OutcomeFlow(props: FlowProps) {
                   {e.fromProfile && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>PLOs from the Program Profile, equal split</div>}
                   {e.links.length > 0 && canEdit && <div style={{ fontSize: 10.5 }}><a onClick={(ev) => { ev.stopPropagation(); setEditing({ kind: "peo", index: e.index }); }} style={{ cursor: "pointer", color: "var(--brass-dark)" }}>edit PLO weights</a></div>}
                 </>
-              ))), peos.length === 0 ? (props.peoNote || "No PEOs yet — the Program Lead adds them in the Program Profile.") : undefined)}
+              ))), peos.length === 0 ? (props.peoNote || "No PEOs yet — the Program Lead adds them in the Program Profile.") : vis.E.size === 0 ? "Click a PLO to see its PEOs." : undefined)}
             </div>
           </div>
         </div>
       </div>
-      {!showBadges && <p style={{ fontSize: 12, color: "var(--slate)" }}>Too many links to label at once — click a course, PLO or PEO to see the weights of its chain.</p>}
+      {!showBadges && <p style={{ fontSize: 12, color: "var(--slate)" }}>Too many links to label at once — use “Step by step” to see the weights of one chain.</p>}
 
       {editing?.kind === "plo" && <PloEditor plo={plos.find((p) => p.id === editing.ploId)!} cohort={props.cohort?.plos[editing.ploId] || null} prevLabel={props.cohort?.prevLabel || null} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
       {editing?.kind === "peo" && props.batchId && <PeoEditor peo={peos.find((e) => e.index === editing.index)!} plos={plos} batchId={props.batchId} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
