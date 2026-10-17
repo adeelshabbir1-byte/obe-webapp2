@@ -1,14 +1,51 @@
-// Presentation tour: a fixed walk through the key screens (best signed in as a Program Lead, e.g. dream.lead.cs in the demo institute).
-export const TOUR_STEPS: { href: string; title: string; text: string }[] = [
+// Presentation tour. The tour is built for the signed-in person from this catalogue: only the screens their role can open
+// (from their own menu), in this story order, so "Next" never lands on a page that sends them back to the dashboard.
+export type TourStep = { href: string; title: string; text: string };
+export const TOUR_CATALOGUE: TourStep[] = [
   { href: "/dashboard", title: "Dashboard", text: "Each person starts here: the Today panel shows overdue tasks, marks still to enter and results waiting for approval." },
+  { href: "/home", title: "Needs attention", text: "Everything across the institute that is late or waiting for a decision, in one list." },
+  { href: "/national-bank", title: "National Curriculum Bank", text: "HEC's national releases in green; every university's own version of a course in its own colour, shared for others to build on, with credit to the authors." },
+  { href: "/public-library", title: "Public Course Library", text: "Share a course you built, or import someone else's as an editable copy." },
+  { href: "/chairman/org-chart", title: "Organisation chart", text: "The university's own hierarchy, mapped onto system roles; the system suggests, the head decides." },
+  { href: "/chairman/training", title: "OBE training and badges", text: "Who is certified; turn on the rule that course design needs certification." },
+  { href: "/learn", title: "Learn OBE", text: "Short lessons, a glossary and practice questions from your own courses." },
+  { href: "/learn/certification", title: "Certification", text: "Take the role's exam, earn the badge and a certificate." },
   { href: "/coordinator/batches", title: "Batches", text: "Every intake of a program, with its students, semester and advisor." },
-  { href: "/coordinator/courses", title: "Courses & plans", text: "All courses of the program by semester; Subject Experts write the plan (CLOs, topics, assessments), the OMC approves it." },
+  { href: "/coordinator/plos", title: "PLOs", text: "The program's learning outcomes, mapped to PEOs." },
+  { href: "/coordinator/courses", title: "Courses and plans", text: "All courses of the program by semester; Subject Experts write the plan (CLOs, topics, assessments), the OMC approves it." },
+  { href: "/subjectexpert/courses", title: "Designing a course", text: "The Subject Expert's courses: CLOs, lecture plan with topics tagged to CLOs, assessment plan." },
+  { href: "/faculty/topic-workspace", title: "Topic Workspace", text: "Build or rebalance courses by moving topics between courses; suggest topics to colleagues." },
+  { href: "/topic-prerequisites", title: "Topic prerequisites", text: "Topics of one course linked to the topics of later courses that need them." },
+  { href: "/omc/queue", title: "OMC review", text: "Course plans waiting for quality review against policy." },
+  { href: "/omc/weight-policy", title: "Weight policy", text: "The institute's rules for assessment weights." },
   { href: "/coordinator/semester", title: "Offering a semester", text: "Offer the semester's courses; students are enrolled and instructors receive the approved plan." },
-  { href: "/outcome-flow", title: "Outcome Flow", text: "Assessments → CLOs → Courses → PLOs → PEOs. Click a PEO, then a PLO, then a course to follow the chain with real attainment." },
-  { href: "/plo-progress", title: "PLO progress", text: "How the batch's PLO attainment grows semester by semester — the evidence that CQI is working." },
+  { href: "/instructor/courses", title: "Teaching a course", text: "The instructor's courses: attendance, lecture log, online quizzes, submissions, marks, and Teach as one for several sections." },
+  { href: "/instructor/timetable", title: "My timetable", text: "The week as a grid: days down, times across, course and room in each cell." },
+  { href: "/paper-vetting", title: "Paper vetting", text: "Exam papers with the system's and the AI's checks; approve or return for improvement." },
+  { href: "/remediation-flags", title: "Flag for remediation", text: "Advisors and teachers flag students weak in earlier topics; planners turn flags into workshops." },
+  { href: "/remediation", title: "Remediation", text: "Tutorials or junior-class sittings with a micro-assessment that clears the weak topics." },
+  { href: "/results-approval", title: "Result approval", text: "Results submitted by teachers, with pre-checks, waiting for approval." },
+  { href: "/outcome-flow", title: "Outcome Flow", text: "Assessments → CLOs → Courses → PLOs → PEOs. Click a PEO, then a PLO, then a course to follow the chain." },
+  { href: "/plo-progress", title: "PLO progress", text: "How the batch's PLO attainment grows semester by semester." },
+  { href: "/indirect-assessment", title: "Direct and indirect PLOs", text: "Marks blended with course-exit, graduating, alumni and employer surveys." },
+  { href: "/coordinator/surveys", title: "Surveys", text: "The standard exit, internship, alumni and employer forms, one question per PLO." },
+  { href: "/evaluations", title: "Course and teacher evaluations", text: "Students' end-of-course ratings, with weak items flagged." },
+  { href: "/chairman/cqi", title: "CQI records", text: "Each finding, its action and the before-and-after measure." },
+  { href: "/benchmarking", title: "Benchmarking", text: "Programs compared, PLOs year over year, and a report builder." },
   { href: "/coordinator/student-transcript", title: "Transcripts", text: "Grades, GPA/CGPA and each student's CLO and PLO attainment per course." },
-  { href: "/omc/reports", title: "Reports", text: "Ready-made OBE reports for NCEAC / NBEAC: attainment, coverage, distributions, CQI." },
-  { href: "/deadlines", title: "Deadlines", text: "The semester plan: who must finish what by when, with reminders and late flags." },
-  { href: "/accreditation/readiness", title: "Accreditation readiness", text: "What is complete and what is missing before an accreditation visit." },
+  { href: "/placements", title: "Internships and placements", text: "Who interned, who got jobs, top employers." },
+  { href: "/complex-problems", title: "Complex problems", text: "Knowledge profile and complex computing / engineering problems for Seoul and Washington Accord." },
+  { href: "/fyp", title: "Final year projects", text: "Proposals, supervision, presentations with rubrics, open house, yearbook." },
+  { href: "/exams", title: "Exams", text: "Date sheet, rooms, seats and invigilation duties, with preferences and swaps." },
+  { href: "/lab-file", title: "Lab file", text: "Manuals, safety and maintenance for every lab." },
+  { href: "/student-activities", title: "Student societies", text: "Societies and their events." },
+  { href: "/deadlines", title: "Deadlines", text: "Who must finish what by when, with reminders and late flags." },
+  { href: "/accreditation/readiness", title: "Accreditation visits", text: "Each visit: tasks, the one-click Self-Assessment Report, the visit plan and the dossier." },
+  { href: "/accreditation/outcomes-report", title: "Outcomes report", text: "The cohort's outcomes in NCEAC, PEC, ABET, NBEAC or HEC format." },
+  { href: "/omc/reports", title: "Reports", text: "Ready-made OBE reports: attainment, coverage, distributions, CQI." },
+  { href: "/recognition", title: "Recognition", text: "Teachers doing great OBE work, recognised by their heads." },
 ];
 export const TOUR_KEY = "obe:tour-step";
+export const TOUR_STEPS_KEY = "obe:tour-steps";
+// Kept for anything that still imports the old fixed list.
+export const TOUR_STEPS = TOUR_CATALOGUE;
