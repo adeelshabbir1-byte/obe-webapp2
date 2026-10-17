@@ -1,3 +1,4 @@
+import { examChairman } from "../../../lib/examBranch";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
@@ -5,7 +6,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../../lib/reportScope";
-import { xdb, loadSession, sessionDays, examIssues, examRooms, parse, EXAM_MANAGERS, EXAM_VIEWERS, type ExamPaperRow } from "../../../lib/exams";
+import { xdb, loadSession, sessionDays, examIssues, examRooms, parse, EXAM_VIEWERS, type ExamPaperRow } from "../../../lib/exams";
 import { seatOrder } from "../../../lib/examPlanner";
 import { ExamActions, ExamSessionForm, PaperMove } from "../../../components/ExamControls";
 
@@ -20,7 +21,7 @@ export default async function ExamSessionPage({ params, searchParams }: { params
   if (!user.mfaVerified) redirect("/mfa-verify");
   const s = await loadSession(params.id).catch(() => null);
   if (!s || s.chairmanId !== (await chairmanIdFor(user))) notFound();
-  const manager = EXAM_MANAGERS.includes(user.role);
+  const manager = !!(await examChairman(user));
   const viewer = manager || EXAM_VIEWERS.includes(user.role);
   if (!viewer && s.status !== "PUBLISHED") notFound();
   const tab = TABS.some((t) => t[0] === searchParams.tab) ? searchParams.tab! : "sheet";
@@ -108,6 +109,10 @@ export default async function ExamSessionPage({ params, searchParams }: { params
       {viewer && papers.length > 0 && issues.length === 0 && <p className="no-print" style={{ fontSize: 12.5, background: "#E8F3EC", color: "#1F5E36", padding: "8px 12px" }}>No clashes, every student has a seat and every room has an invigilator.</p>}
       {papers.length === 0 && <div className="card"><p style={{ margin: 0, color: "var(--slate)" }}>{manager ? "Press “Generate date sheet” — every offered course with students gets a paper." : "No papers yet."}</p></div>}
 
+      <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0" }}>
+        <a className="btn btn-secondary btn-sm" href={`/exams/${s.id}/availability`}>Duty availability &amp; preferences</a>
+        <a className="btn btn-secondary btn-sm" href={`/exams/${s.id}/my-duties`}>{manager ? "Duties & swap requests" : "My duties (grid) & swaps"}</a>
+      </div>
       <nav className="tabs no-print" style={{ marginBottom: 12 }}>
         {TABS.filter((t) => t[0] !== "settings" || manager).filter((t) => viewer || t[0] === "sheet" || t[0] === "duties").map(([k, label]) => <a key={k} className="tab" href={`/exams/${s.id}?tab=${k}`} aria-current={tab === k ? "page" : undefined}>{label}</a>)}
       </nav>

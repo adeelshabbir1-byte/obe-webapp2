@@ -1,7 +1,8 @@
+import { examChairman } from "../../../../../lib/examBranch";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { loadSession, generate, allocate, EXAM_MANAGERS } from "../../../../../lib/exams";
+import { loadSession, generate, allocate } from "../../../../../lib/exams";
 
 export const maxDuration = 300;
 
@@ -9,9 +10,10 @@ export const maxDuration = 300;
 // invigilators; or only redo rooms, seats and invigilators for the dates as they are.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !EXAM_MANAGERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const cid = user ? await examChairman(user) : null;
+  if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await loadSession(params.id);
-  if (!s || s.chairmanId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!s || s.chairmanId !== cid) return NextResponse.json({ error: "not found" }, { status: 404 });
   const b = await req.json().catch(() => ({}));
   if (b.mode === "rooms") { await allocate(s.id); return NextResponse.json({ ok: true }); }
   const r = await generate(s.id);

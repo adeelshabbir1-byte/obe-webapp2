@@ -1,15 +1,17 @@
+import { examChairman } from "../../../../../../lib/examBranch";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
-import { xdb, loadSession, allocate, parse, EXAM_MANAGERS, type ExamPaperRow } from "../../../../../../lib/exams";
+import { xdb, loadSession, allocate, parse, type ExamPaperRow } from "../../../../../../lib/exams";
 
 // PATCH { date: "YYYY-MM-DD" | null, slot } — move a paper (all sections of its course code) by hand. It stays there
 // when the date sheet is generated again. Rooms and invigilators are redone. Returns the clashes the move creates.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string; paperId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !EXAM_MANAGERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const cid = user ? await examChairman(user) : null;
+  if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await loadSession(params.id);
-  if (!s || s.chairmanId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!s || s.chairmanId !== cid) return NextResponse.json({ error: "not found" }, { status: 404 });
   const paper = (await xdb.examPaper.findUnique({ where: { id: params.paperId } })) as ExamPaperRow | null;
   if (!paper || paper.sessionId !== s.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   const b = await req.json().catch(() => ({}));

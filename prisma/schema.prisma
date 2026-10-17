@@ -4780,3 +4780,59 @@ model CourseKnowledge {
 
   @@unique([chairmanId, courseCode])
 }
+
+// People the Institute Head puts in charge of exams (the exam branch / controller of examinations).
+model ExamStaff {
+  id         String   @id @default(cuid())
+  chairmanId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  @@unique([chairmanId, userId])
+}
+
+// Program Leads' lists of staff available for invigilation in an exam session.
+model ExamDutyPool {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  addedById String
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+// A teacher's preferred exam slots ("2026-12-01:0") and most duties per day.
+model ExamDutyPref {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  slotsJson String   @default("[]") @db.Text
+  maxPerDay Int      @default(1)
+  note      String?
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([sessionId, userId])
+}
+
+// Swapping an invigilation duty: with a colleague directly on the day duties are published, later through the exam branch.
+model DutySwap {
+  id          String    @id @default(cuid())
+  sessionId   String
+  paperId     String
+  roomId      String
+  fromUserId  String
+  toUserId    String
+  status      String    // PEER (waiting for the colleague) | BRANCH (waiting for the exam branch) | DONE | DECLINED | CANCELLED
+  note        String?
+  decidedById String?
+  createdAt   DateTime  @default(now())
+  decidedAt   DateTime?
+
+  @@index([sessionId])
+}
+
+model ExamPublishLog {
+  sessionId   String   @id
+  publishedAt DateTime
+}

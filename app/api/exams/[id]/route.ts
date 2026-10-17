@@ -1,12 +1,14 @@
+import { examChairman } from "../../../../lib/examBranch";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { xdb, loadSession, EXAM_MANAGERS, readSettings } from "../../../../lib/exams";
+import { xdb, loadSession, readSettings } from "../../../../lib/exams";
 
 async function own(id: string) {
   const user = await getAuthenticatedUser();
-  if (!user || !EXAM_MANAGERS.includes(user.role)) return null;
+  const cid = user ? await examChairman(user) : null;
+  if (!user || !cid) return null;
   const s = await loadSession(id);
-  return s && s.chairmanId === user.id ? { user, s } : null;
+  return s && s.chairmanId === cid ? { user, s } : null;
 }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const o = await own(params.id);

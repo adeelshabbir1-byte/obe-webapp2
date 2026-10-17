@@ -1,3 +1,4 @@
+import { examChairman } from "../../lib/examBranch";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
@@ -5,8 +6,11 @@ import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
-import { xdb, parse, EXAM_MANAGERS, EXAM_VIEWERS, type ExamSessionRow, type ExamPaperRow } from "../../lib/exams";
+import { xdb, parse, EXAM_VIEWERS, type ExamSessionRow, type ExamPaperRow } from "../../lib/exams";
 import { ExamSessionForm } from "../../components/ExamControls";
+import { ActionForm, ActionButton } from "../../components/fyp/FypClient";
+import { ebdb } from "../../lib/examBranch";
+import { prisma as pdbx } from "../../lib/db";
 
 export const dynamic = "force-dynamic";
 const day = (d: Date | string) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -16,7 +20,7 @@ export default async function ExamsPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  const manager = EXAM_MANAGERS.includes(user.role);
+  const manager = !!(await examChairman(user));
   const viewer = manager || EXAM_VIEWERS.includes(user.role);
   const chairmanId = await chairmanIdFor(user);
   let sessions: ExamSessionRow[] = [], missing = false;
@@ -51,9 +55,23 @@ export default async function ExamsPage() {
   const start = next?.startDate || new Date(Date.now() + 14 * 864e5);
   const end = next?.endDate || new Date(start.getTime() + 11 * 864e5);
 
+  // Institute Head: the exam branch (controller of examinations) who run sessions, duties and swaps.
+  let branchStaff: { id: string; name: string }[] = [], allStaff: { id: string; name: string }[] = [];
+  if (user.role === "CHAIRMAN") {
+    const ids = ((await ebdb.examStaff.findMany({ where: { chairmanId: user.id }, select: { userId: true } }).catch(() => [])) as { userId: string }[]).map((x) => x.userId);
+    allStaff = await pdbx.user.findMany({ where: { isActive: true, OR: [{ managedById: user.id }, { managedBy: { managedById: user.id } }] }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+    branchStaff = allStaff.filter((u) => ids.includes(u.id));
+  }
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Exams</h1>
+      {user.role === "CHAIRMAN" && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <b>Exam branch</b> <span className="small-note">The people you name here run exam sessions, date sheets, rooms, invigilation duties and swap requests for you.</span>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "6px 0" }}>{branchStaff.map((u) => <span key={u.id} style={{ fontSize: 13 }}>{u.name} <ActionButton url="/api/exams/branch" body={{ userId: u.id, remove: true }} label="✕" className="btn btn-secondary btn-sm" /></span>)}{!branchStaff.length && <span className="small-note">Nobody yet — you are doing it yourself.</span>}</div>
+          <ActionForm url="/api/exams/branch" fixed={{}} submit="Add to exam branch" collapsed openLabel="Add a person" initial={{ userId: allStaff[0]?.id || "" }} fields={[{ name: "userId", label: "Staff member", type: "select", options: allStaff.map((u) => [u.id, u.name] as [string, string]) }]} />
+        </div>
+      )}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         Date sheets for midterm and final exams: every course&apos;s paper gets a day and a time with no student sitting two papers at once,
         rooms and seat numbers are given out, and invigilators are assigned evenly. Students see their own exams and seats once a date sheet is published.

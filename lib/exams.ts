@@ -137,7 +137,9 @@ export async function allocate(sessionId: string) {
   let shortLeaves: { userId: string; fromDate: Date; toDate: Date }[] = [];
   try { shortLeaves = (await xdb.shortLeave.findMany({ where: { chairmanId: s.chairmanId, status: "APPROVED", toDate: { gte: s.startDate }, fromDate: { lte: s.endDate } }, select: { userId: true, fromDate: true, toDate: true } })) as typeof shortLeaves; } catch { shortLeaves = []; }
   const awayOn = (slotKey: string) => { const d = new Date(`${slotKey.split(":")[0]}T00:00:00Z`); return new Set(shortLeaves.filter((x) => new Date(x.fromDate) <= d && new Date(x.toDate) >= d).map((x) => x.userId)); };
-  const inv = assignInvigilators(slotRooms, pool, Math.max(1, s.invigilatorsPerRoom), awayOn);
+  const { dutyPool, prefsOf } = await import("./examBranch");
+  const listed = await dutyPool(s.id, pool);
+  const inv = assignInvigilators(slotRooms, listed.filter((id) => !away.has(id)), Math.max(1, s.invigilatorsPerRoom), awayOn, await prefsOf(s.id));
   for (const p of papers) {
     if (!p.date || p.slot === null) { await xdb.examPaper.update({ where: { id: p.id }, data: { roomsJson: "[]", invigilatorsJson: "[]" } }); continue; }
     const k = `${iso(new Date(p.date))}:${p.slot}`;

@@ -93,20 +93,26 @@ export function allocateRooms(groupsInSlot: { courseId: string; students: string
 
 /** Invigilators for every (slot, room) in use: fewest duties first, never two rooms at once, preferably not the
  * instructor of a paper being written in that room. */
-export function assignInvigilators(slots: { key: string; rooms: { roomId: string; instructorIds: string[] }[] }[], pool: string[], perRoom: number, unavailable?: (slotKey: string) => Set<string>) {
+export function assignInvigilators(slots: { key: string; rooms: { roomId: string; instructorIds: string[] }[] }[], pool: string[], perRoom: number, unavailable?: (slotKey: string) => Set<string>,
+  prefs?: Map<string, { slots: Set<string>; maxPerDay: number }>) {
   const duties = new Map(pool.map((p) => [p, 0]));
+  const perDay = new Map<string, number>(); // user|date -> duties that day
   const out = new Map<string, Map<string, string[]>>(); // slotKey -> roomId -> userIds
   let unfilled = 0;
   for (const s of slots) {
+    const day = s.key.split(":")[0];
     const busy = new Set<string>(unavailable ? Array.from(unavailable(s.key)) : []);
     const m = new Map<string, string[]>();
+    // A teacher's preferences: preferred slots first (soft), never more duties in a day than they asked for (hard, when given).
+    const full = (p: string) => { const pr = prefs?.get(p); return !!pr && pr.maxPerDay > 0 && (perDay.get(`${p}|${day}`) || 0) >= pr.maxPerDay; };
+    const pref = (p: string) => { const pr = prefs?.get(p); return pr && pr.slots.size ? (pr.slots.has(s.key) ? 0 : 0.6) : 0.3; };
     for (const r of s.rooms) {
       const pick: string[] = [];
       for (let i = 0; i < perRoom; i++) {
-        const cand = pool.filter((p) => !busy.has(p)).sort((a, b) => (duties.get(a)! - duties.get(b)!) || (Number(r.instructorIds.includes(a)) - Number(r.instructorIds.includes(b))) || a.localeCompare(b));
+        const cand = pool.filter((p) => !busy.has(p) && !full(p)).sort((a, b) => (duties.get(a)! + pref(a) - duties.get(b)! - pref(b)) || (Number(r.instructorIds.includes(a)) - Number(r.instructorIds.includes(b))) || a.localeCompare(b));
         const p = cand[0];
         if (!p) { unfilled++; continue; }
-        pick.push(p); busy.add(p); duties.set(p, duties.get(p)! + 1);
+        pick.push(p); busy.add(p); duties.set(p, duties.get(p)! + 1); perDay.set(`${p}|${day}`, (perDay.get(`${p}|${day}`) || 0) + 1);
       }
       m.set(r.roomId, pick);
     }
