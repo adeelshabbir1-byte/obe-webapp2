@@ -100,6 +100,7 @@ export default function DemoInstituteRunner({ summary, sources, password }: { su
       <div style={{ marginTop: 14, fontSize: 13 }}>
         <b>Logins</b> (password <code>{password}</code>):
         <ul style={{ margin: "4px 0 0 18px" }}>{LOGINS.map((l) => <li key={l}>{l}</li>)}</ul>
+        <p style={{ marginTop: 8 }}>For a presentation, sign in as <b>dream.lead.cs</b> and open <a href="/tour">/tour</a> for a guided walk through the key screens.</p>
       </div>
     </div>
   );

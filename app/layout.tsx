@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { Sora, Figtree } from "next/font/google";
 import SaveShortcut from "../components/SaveShortcut";
 import NavProgress from "../components/NavProgress";
+import TourBar from "../components/TourBar";
 
 // Self-hosted via next/font: no render-blocking request to Google at runtime,
 // no layout shift, and the files are served from our own origin with
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavProgress />
         </Suspense>
         {children}
+        <Suspense fallback={null}><TourBar /></Suspense>
       </body>
     </html>
   );
