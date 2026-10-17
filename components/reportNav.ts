@@ -92,6 +92,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/cv-review", label: "CV Review" },
   { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/my-obe", label: "My OBE Progress" },
@@ -143,6 +144,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/cv-review", label: "CV Review" },
   { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
