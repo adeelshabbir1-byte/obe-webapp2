@@ -22,7 +22,7 @@ export default async function PublicLibraryPage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Public Course Library</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Courses that teachers and Subject Experts from any institute (or from industry) have chosen to share. Search for one and import it into
-        a course of your own — you get an independent copy you can edit freely; the original is never changed.
+        a course of your own — you get an independent copy you can edit freely; the original is never changed. Its author gets the credit, and HEC can choose it for the national release (see the <a href="/national-bank" style={{ color: "#1E7B3C", fontWeight: 600 }}>National Curriculum Bank</a>).
       </p>
       <PublicCourseLibrary role={user.role} myCourses={myCourses} />
     </Shell>

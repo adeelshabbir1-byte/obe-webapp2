@@ -4924,3 +4924,67 @@ model SectionLink {
 
   @@index([masterId])
 }
+
+// The national authority (HEC or a council) that runs the national curriculum bank.
+model NationalAuthority {
+  chairmanId String   @id
+  name       String   @default("HEC")
+  createdAt  DateTime @default(now())
+}
+
+// A national committee member's verdict on a course a university shared.
+model BankReview {
+  id             String   @id @default(cuid())
+  publicCourseId String
+  reviewerId     String
+  verdict        String   // RECOMMEND | REVISE | REJECT
+  comment        String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@unique([publicCourseId, reviewerId])
+}
+
+// A versioned national curriculum release (e.g. HEC BS Computer Science, version 3).
+model NationalRelease {
+  id          String    @id @default(cuid())
+  authorityId String
+  framework   String    // HEC | NCEAC | NBEAC | PEC
+  discipline  String
+  version     Int       @default(1)
+  title       String
+  notes       String?   @db.Text
+  status      String    @default("DRAFT") // DRAFT | PUBLISHED | RETIRED
+  publishedAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([framework, discipline])
+}
+
+model NationalReleaseCourse {
+  id                   String   @id @default(cuid())
+  releaseId            String
+  publicCourseId       String?
+  code                 String
+  title                String
+  creditHours          Int
+  courseType           String   @default("Core")
+  snapshotJson         String   @db.Text
+  contributorInstitute String?
+  contributorId        String?
+  createdAt            DateTime @default(now())
+
+  @@index([releaseId])
+}
+
+// A university course built from a national release course.
+model NationalAdoption {
+  id              String   @id @default(cuid())
+  releaseCourseId String
+  chairmanId      String
+  courseId        String
+  importedById    String
+  createdAt       DateTime @default(now())
+
+  @@index([releaseCourseId])
+}

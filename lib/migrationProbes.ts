@@ -465,6 +465,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "mfaVerified"
 },
 {
+"f": "migration_national_bank.sql",
+"d": "HEC national curriculum bank: the national authority, committee reviews of shared courses, versioned national releases,",
+"t": "NationalAdoption"
+},
+{
 "f": "migration_nav_pins.sql",
 "d": "Pinned menu links (\"My work\") per person. Safe to run more than once.",
 "t": "UserNavPref"
