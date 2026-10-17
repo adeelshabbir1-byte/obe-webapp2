@@ -4122,3 +4122,16 @@ model ObeChatLog {
   @@index([userId, at])
   @@index([chairmanId])
 }
+
+// How a batch's PLO attainment changed when one course's result was approved (before = without the course, after = with it).
+model PloChangeLog {
+  id         String   @id @default(cuid())
+  batchId    String
+  courseId   String   @unique
+  courseCode String
+  approvedAt DateTime
+  deltasJson String   @db.Text // [{ plo: number, before: number|null, after: number|null }]
+  createdAt  DateTime @default(now())
+
+  @@index([batchId])
+}

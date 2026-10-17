@@ -73,10 +73,10 @@ export async function batchFlow(batchId: string) {
 
 /** One course's chain: its assessments, CLOs (weight in the course, attainment) and the PLO each CLO serves.
  * Uses the Instructor's copy when there is one (that is where marks are), else the Subject Expert's plan. */
-export async function courseChain(courseId: string) {
+export async function courseChain(courseId: string, forceSource?: "SE" | "INSTRUCTOR") {
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, code: true, title: true, creditHours: true, batchId: true, coordinatorId: true, subjectExpertId: true, instructorId: true, coordinator: { select: { managedById: true } } } });
   if (!course) return null;
-  const hasIns = (await prisma.cLO.count({ where: { courseId, source: "INSTRUCTOR" } })) > 0;
+  const hasIns = forceSource ? forceSource === "INSTRUCTOR" : (await prisma.cLO.count({ where: { courseId, source: "INSTRUCTOR" } })) > 0;
   const source = hasIns ? "INSTRUCTOR" : "SE";
   const criteria = await getPassingCriteria(course.coordinator.managedById);
   const [clos, insts, links, marks, enrolled] = await Promise.all([

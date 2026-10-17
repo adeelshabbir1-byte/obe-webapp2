@@ -8,6 +8,9 @@ import DegreeBatchFilter from "../../components/DegreeBatchFilter";
 import { FLOW_VIEW_ROLES } from "../../lib/outcomeFlow";
 import { ploProgress } from "../../lib/ploProgress";
 import { getPassingCriteria } from "../../lib/passingCriteria";
+import { ploChanges } from "../../lib/ploDelta";
+import BackfillPloButton from "../../components/BackfillPloButton";
+import { DeltaList } from "../../components/PloImpactPreview";
 
 export const dynamic = "force-dynamic";
 const COLORS = ["#2F6FB0", "#2E7D5B", "#A63D40", "#9A7B0A", "#6B3F8A", "#0F7C8A", "#7A5C2E", "#C2185B", "#455A64", "#E65100", "#1B5E20", "#4A148C"];
@@ -22,6 +25,7 @@ export default async function PloProgressPage({ searchParams }: { searchParams: 
   const batch = batches.find((b) => b.id === searchParams.batchId) || null;
   const criteria = await getPassingCriteria(await chairmanIdFor(user));
   const data = batch ? await ploProgress(batch.id, criteria.ploPct || 50) : null;
+  const changes = batch ? await ploChanges(batch.id) : null;
   const W = 760, H = 260, L = 40, B = 30;
   const x = (i: number, n: number) => L + (n <= 1 ? (W - L - 20) / 2 : (i * (W - L - 20)) / (n - 1));
   const y = (v: number) => 10 + ((100 - v) * (H - B - 10)) / 100;
@@ -47,6 +51,17 @@ export default async function PloProgressPage({ searchParams }: { searchParams: 
           </table>
         </div>
       ))}
+      {batch && (
+        <div className="card" style={{ overflowX: "auto" }}>
+          <h3 style={{ marginTop: 0 }}>PLO change after each course result</h3>
+          <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>When a course result is approved, the batch&apos;s PLO attainment is compared without and with that course. A drop of 2% or more alerts the OMC and the Program Lead.</p>
+          {changes === null ? <p style={{ color: "#95650F" }}>Not set up yet — the Super User needs to run prisma/migration_plo_change_log.sql.</p> : changes.length === 0 ? <p>No approved results recorded yet.</p> : (
+            <table><thead><tr><th>Approved</th><th>Course</th><th>Change in batch PLO attainment</th></tr></thead>
+              <tbody>{changes.map((c) => <tr key={c.courseId}><td style={{ whiteSpace: "nowrap" }}>{new Date(c.approvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td><td><b>{c.courseCode}</b></td><td style={{ fontSize: 12.5 }}><DeltaList deltas={c.deltas} /></td></tr>)}</tbody></table>
+          )}
+          {changes !== null && <div style={{ marginTop: 8 }}><BackfillPloButton batchId={batch.id} label={changes.length ? "Recalculate from all approved results" : "Fill from past approved results"} /></div>}
+        </div>
+      )}
     </Shell>
   );
 }

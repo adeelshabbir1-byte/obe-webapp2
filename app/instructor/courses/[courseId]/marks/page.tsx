@@ -1,3 +1,4 @@
+import ResultPrecheck from "../../../../../components/ResultPrecheck";
 import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -141,6 +142,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="marks" code={course.code} title={course.title} />
+      <ResultPrecheck courseId={course.id} />
       <ResultApprovalPanel
         courseId={course.id}
         status={courseResult?.status || "DRAFT"}

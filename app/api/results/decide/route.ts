@@ -3,6 +3,9 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { db, getCourseResult, canDecide, notify, logResult, resultSummary } from "../../../../lib/resultApproval";
 import { chairmanIdFor } from "../../../../lib/reportScope";
+import { recordPloChange, PLO_DROP_ALERT } from "../../../../lib/ploDelta";
+
+export const maxDuration = 60;
 
 // POST { courseId, action: "approve" | "return", note } — the Chairman (Head of Department) or Institute Head decides a
 // submitted course result. Returning needs a note; the Instructor sees it and the marks unlock.
@@ -28,5 +31,18 @@ export async function POST(req: NextRequest) {
   await db.courseResult.update({ where: { courseId }, data: { status: "APPROVED", decidedById: user.id, decidedAt: new Date(), note: note || null, summaryJson: JSON.stringify(summary) } });
   await logResult(user.id, "RESULT_APPROVED", courseId, { students: summary.students, passRate: summary.passRate, note: note || null });
   if (course?.instructorId) await notify(await chairmanIdFor(user), user.id, [course.instructorId], `Result approved: ${course.code}`, `${user.name} approved the result of ${course.code} ${course.title}. Marks are now locked; any change needs a grade change request.`, `/instructor/courses/${courseId}/marks`);
+  // Cohort PLO change caused by this course; a drop beyond the threshold alerts the OMC and the Program Lead.
+  try {
+    const ch = await recordPloChange(courseId);
+    const drops = (ch?.deltas || []).filter((d) => d.before != null && d.after != null && d.before - d.after >= PLO_DROP_ALERT);
+    if (ch && drops.length) {
+      const head = await chairmanIdFor(user);
+      const batch = await prisma.batch.findUnique({ where: { id: ch.batchId }, select: { coordinatorId: true, batchName: true } });
+      const omc = await prisma.user.findMany({ where: { isActive: true, OR: [{ role: "OMC" }, { omcHat: true }], AND: [{ OR: [{ managedById: head }, { managedBy: { managedById: head } }] }] } as never, select: { id: true } });
+      const to = Array.from(new Set([...(batch ? [batch.coordinatorId] : []), ...omc.map((u) => u.id)]));
+      const text = drops.map((d) => `PLO-${d.plo} ${d.before}% → ${d.after}%`).join(", ");
+      if (to.length) await notify(head, user.id, to, `PLO drop after ${ch.code}`, `Approving ${ch.code} lowered ${batch?.batchName || "the batch"}'s PLO attainment: ${text}. Consider a CQI action.`, `/plo-progress?batchId=${ch.batchId}`);
+    }
+  } catch { /* the approval itself already succeeded */ }
   return NextResponse.json({ ok: true, status: "APPROVED" });
 }

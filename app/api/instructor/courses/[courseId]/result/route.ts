@@ -1,3 +1,4 @@
+import { courseChain } from "../../../../../../lib/outcomeFlow";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
@@ -22,6 +23,10 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (current?.status === "SUBMITTED") return NextResponse.json({ error: "Already waiting for approval." }, { status: 409 });
   if (current?.status === "APPROVED") return NextResponse.json({ error: "Already approved. Use a grade change request for any change." }, { status: 409 });
 
+  // A CLO that no assessment measures cannot have an attainment — fix the plan before submitting.
+  { const chain = await courseChain(course.id, "INSTRUCTOR").catch(() => null);
+    const unassessed = (chain?.clos || []).filter((c) => !chain!.assessments.some((a) => a.cloId === c.id)).map((c) => c.code);
+    if (unassessed.length) return NextResponse.json({ error: `${unassessed.join(", ")} ${unassessed.length > 1 ? "are" : "is"} not measured by any assessment. Link an assessment to its topics (Assessments tab) before submitting.` }, { status: 400 }); }
   const summary = await resultSummary(course.id);
   if (!summary.students) return NextResponse.json({ error: "No students are enrolled in this course." }, { status: 400 });
   if (summary.withMarks < summary.students) return NextResponse.json({ error: `Marks are missing for ${summary.students - summary.withMarks} of ${summary.students} students. Enter them first.` }, { status: 400 });

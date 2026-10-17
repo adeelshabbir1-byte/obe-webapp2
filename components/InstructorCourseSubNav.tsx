@@ -4,7 +4,7 @@ import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
-  courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance" | "resources"; code: string; title: string;
+  courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance" | "resources" | "flow"; code: string; title: string;
 }) {
   // Order follows the work: plan the assessments, keep attendance (which dates the log), then rubrics, and the result last.
   const tabs = [
@@ -17,6 +17,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
     { key: "resources", label: "7. Tools & Books", href: `/instructor/courses/${courseId}/resources` },
     { key: "rubrics", label: "8. Rubrics", href: `/instructor/courses/${courseId}/rubrics` },
     { key: "marks", label: "9. Marks Entry & Result", href: `/instructor/courses/${courseId}/marks` },
+    { key: "flow", label: "Flow & Weights", href: `/instructor/courses/${courseId}/flow` },
   ];
 
   return (

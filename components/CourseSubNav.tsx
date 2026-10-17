@@ -5,7 +5,7 @@ import Link from "next/link";
 import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
 import TemplateChangeBanner from "./TemplateChangeBanner";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
-  courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery"; code: string; title: string; status: string;
+  courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery" | "flow"; code: string; title: string; status: string;
 }) {
   const tabs = [
     { key: "clos", label: "1. CLOs & PLO Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
@@ -14,6 +14,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
     { key: "instruments", label: "4. Assessments & Submit", href: `/subjectexpert/courses/${courseId}/instruments` },
     { key: "paper-distribution", label: "5. Paper Distribution", href: `/subjectexpert/courses/${courseId}/paper-distribution` },
     { key: "delivery", label: "6. Delivery Feedback", href: `/subjectexpert/courses/${courseId}/delivery` },
+    { key: "flow", label: "Flow & Weights", href: `/subjectexpert/courses/${courseId}/flow` },
   ];
   return (
     <div style={{ marginBottom: 20 }}>
