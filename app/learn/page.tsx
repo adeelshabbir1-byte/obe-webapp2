@@ -36,6 +36,7 @@ export default async function LearnPage({ searchParams }: { searchParams: { q?: 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Learn OBE</h1>
+      <div className="card" style={{ borderLeft: "4px solid #1B6CA8" }}>After the lessons, take your role&apos;s exam and earn your badge: <Link href="/learn/certification"><b>OBE Certification →</b></Link></div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Short lessons on Outcome-Based Education, a guide to every PLO, and practice questions built from the HEC curriculum of the courses you set or teach.</p>
 
       <div className="card">

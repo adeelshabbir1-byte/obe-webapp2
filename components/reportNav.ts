@@ -390,6 +390,8 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/benchmarking", "Benchmarking & Reports", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/chairman/messaging", "SMS & WhatsApp", ["CHAIRMAN"]],
   ["/paper-vetting", "Paper Vetting", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
+  ["/chairman/training", "OBE Training & Badges", ["CHAIRMAN"]],
+  ["/learn/certification", "OBE Certification", ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR", "HEAD_OF_DEPARTMENT", "DEAN"]],
   ["/portfolio-review", "Portfolio Review", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/my-payslips", "My Payslips", ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT", "DEPARTMENT_COORDINATOR"]],
 ];

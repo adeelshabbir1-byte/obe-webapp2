@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import TrainingBanner from "../../../components/TrainingBanner";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
@@ -91,6 +92,7 @@ export default async function SubjectExpertCoursesPage() {
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Assigned Courses</h1>
+      <TrainingBanner user={user} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Build the gold-standard template for each course: CLOs, the 30-lecture schedule, and assessment weights.
         Courses that just copy their content from a linked base course elsewhere aren't listed here — there's

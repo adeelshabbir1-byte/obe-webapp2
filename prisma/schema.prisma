@@ -4701,3 +4701,28 @@ model PaperVetting {
 
   @@unique([courseId, examType])
 }
+
+// OBE certification exam attempts; a passed attempt is the person's badge.
+model TrainingAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  badge       String    // BASICS | DESIGNER | ASSESSOR
+  idsJson     String    @db.Text
+  answersJson String    @default("{}") @db.Text
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  score       Int?
+  total       Int?
+  passed      Boolean   @default(false)
+
+  @@index([userId, badge])
+}
+
+// The Institute Head's rule: certification required before curriculum work, after a grace date, with exemptions.
+model TrainingPolicy {
+  chairmanId String    @id
+  enabled    Boolean   @default(false)
+  graceUntil DateTime?
+  exemptJson String    @default("[]") @db.Text
+  updatedAt  DateTime  @default(now()) @updatedAt
+}

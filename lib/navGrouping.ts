@@ -6,7 +6,7 @@ type Section = { title: string; links: Link[] };
 const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "University Operations", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
 
 const RULES: { match: (h: string) => boolean; section: string }[] = [
-  { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
+  { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn|learn\/certification)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h) || h === "/fyp", section: "Daily pages" },
 
   { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups" || h === "/paper-vetting", section: "Review & Approval" },
@@ -19,7 +19,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
 
   { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation", section: "Students" },
 
-  { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|org-chart|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
+  { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|org-chart|hierarchy|training|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },
 
   { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || h === "/topic-prerequisites" || h === "/topic-overlaps"
