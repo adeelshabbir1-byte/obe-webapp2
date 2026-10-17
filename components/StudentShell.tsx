@@ -26,6 +26,7 @@ const NAV = [
   { href: "/student/portfolio", label: "My Portfolio" },
   { href: "/student/course-survey", label: "Course Surveys" },
   { href: "/student/attendance", label: "My Attendance" },
+  { href: "/student/alerts", label: "Alerts & Contact" },
   { href: "/student/help", label: "Help" },
 ];
 

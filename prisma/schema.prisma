@@ -4647,3 +4647,37 @@ model VisitItem {
 
   @@index([cycleId, kind])
 }
+
+// SMS / WhatsApp gateway settings of an institute (secrets are only ever shown masked).
+model MessagingConfig {
+  chairmanId  String   @id
+  smsProvider String   @default("NONE") // NONE | TWILIO | HTTP
+  smsJson     String   @default("{}") @db.Text
+  waProvider  String   @default("NONE") // NONE | META | TWILIO
+  waJson      String   @default("{}") @db.Text
+  kindsJson   String   @default("[]") @db.Text
+  dailyLimit  Int      @default(500)
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model StudentContact {
+  studentId     String   @id
+  phone         String?
+  guardianPhone String?
+  whatsapp      Boolean  @default(true)
+  updatedAt     DateTime @default(now()) @updatedAt
+}
+
+model MessageLog {
+  id         String   @id @default(cuid())
+  chairmanId String
+  channel    String   // SMS | WHATSAPP
+  to         String
+  body       String   @db.Text
+  status     String   // SENT | FAILED
+  error      String?
+  kind       String?
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId, createdAt])
+}

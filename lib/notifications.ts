@@ -15,6 +15,8 @@ export async function notifyUsers(userIds: (string | null | undefined)[], n: { k
     await ndb.notification.createMany({ data: ids.map((userId) => ({ id: randomUUID(), userId, kind: n.kind, title: n.title.slice(0, 300), body: n.body?.slice(0, 2000) || null, href: n.href || null })) });
   } catch { return; }
   if (EMAIL_KINDS.has(n.kind)) await emailUsers(ids, n.title, n.body || "", n.href);
+  // SMS / WhatsApp, when the institute has a gateway and this kind of alert turned on (capped at 4 s so it never holds the action up).
+  try { const m = await import("./messaging"); await Promise.race([m.alertStaff(ids, n.kind, n.title, n.body), new Promise((r) => setTimeout(r, 4000))]); } catch { /* best effort */ }
 }
 
 async function emailUsers(ids: string[], subject: string, body: string, href?: string) {

@@ -3,7 +3,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { requireInstructorCourse } from "../../../lib/instructorGuard";
-import { mdb, parseLocal, parseBank, normClo, finishAttempt, pushMark, DIFF, BLOOM, type Quiz, type Attempt } from "../../../lib/mcq";
+import { alertStudents } from "../../../lib/messaging";
+import { fmt, mdb, parseLocal, parseBank, normClo, finishAttempt, pushMark, DIFF, BLOOM, type Quiz, type Attempt } from "../../../lib/mcq";
 import { writeAuditLog } from "../../../lib/audit";
 
 const s = (v: unknown, n = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
@@ -61,7 +62,15 @@ export async function POST(req: Request) {
       await mdb.onlineQuiz.update({ where: { id: quiz.id }, data: { title: s(b.title, 160) || quiz.title, closesAt, showResults: !!b.showResults } });
       return NextResponse.json({ ok: true });
     }
-    if (b.action === "status") { const st = ["DRAFT", "PUBLISHED", "CLOSED"].includes(b.status) ? b.status : "DRAFT"; await mdb.onlineQuiz.update({ where: { id: quiz.id }, data: { status: st } }); return NextResponse.json({ ok: true }); }
+    if (b.action === "status") {
+      const st = ["DRAFT", "PUBLISHED", "CLOSED"].includes(b.status) ? b.status : "DRAFT";
+      await mdb.onlineQuiz.update({ where: { id: quiz.id }, data: { status: st } });
+      if (st === "PUBLISHED" && quiz.status === "DRAFT") {
+        const ids = (await prisma.studentEnrollment.findMany({ where: { courseId: course.id, status: "ACTIVE" }, select: { studentId: true } })).map((e) => e.studentId);
+        await alertStudents(chairmanId, ids, "QUIZ", `${course.code}: ${quiz.title} is open`, `Online quiz, ${quiz.durationMin} min. Open until ${fmt(quiz.closesAt)} (PKT). Student portal → Online Quizzes.`).catch(() => null);
+      }
+      return NextResponse.json({ ok: true });
+    }
     if (b.action === "deleteQuiz") { if (await mdb.quizAttempt.count({ where: { quizId: quiz.id } })) return NextResponse.json({ error: "Students have attempted this quiz; close it instead." }, { status: 400 }); await mdb.onlineQuiz.delete({ where: { id: quiz.id } }); return NextResponse.json({ ok: true }); }
     if (b.action === "regrade") {
       // After fixing an answer key: re-score every submitted attempt and refresh marks; also closes attempts whose time ran out.

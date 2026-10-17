@@ -4,7 +4,9 @@ import { prisma } from "../../../lib/db";
 import { requireInstructorCourse } from "../../../lib/instructorGuard";
 import { resultLockMessage } from "../../../lib/resultApproval";
 import { writeAuditLog } from "../../../lib/audit";
-import { parseLocal } from "../../../lib/mcq";
+import { parseLocal, fmt } from "../../../lib/mcq";
+import { alertStudents } from "../../../lib/messaging";
+import { chairmanIdFor } from "../../../lib/reportScope";
 import { pdb, LEVELS } from "../../../lib/portfolio";
 
 const s = (v: unknown, n = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
@@ -23,7 +25,11 @@ export async function POST(req: Request) {
       const inst = b.instrumentId ? await prisma.assessmentInstrument.findFirst({ where: { id: String(b.instrumentId), courseId: course.id } }) : null;
       const data = { title, instructions: s(b.instructions, 4000), dueAt, allowLate: !!b.allowLate, instrumentId: inst?.id || null };
       if (b.id) await pdb.dropbox.updateMany({ where: { id: String(b.id), courseId: course.id }, data });
-      else await pdb.dropbox.create({ data: { ...data, courseId: course.id, createdById: user.id } });
+      else {
+        await pdb.dropbox.create({ data: { ...data, courseId: course.id, createdById: user.id } });
+        const ids = (await prisma.studentEnrollment.findMany({ where: { courseId: course.id, status: "ACTIVE" }, select: { studentId: true } })).map((e) => e.studentId);
+        await alertStudents(await chairmanIdFor(user), ids, "HANDIN", `${course.code}: ${title}`, `Submit by ${fmt(dueAt)} (PKT). Student portal → Submit Work.`).catch(() => null);
+      }
       return NextResponse.json({ ok: true });
     }
     const box = (await pdb.dropbox.findFirst({ where: { id: String(b.boxId || ""), courseId: course.id } })) as Box | null;

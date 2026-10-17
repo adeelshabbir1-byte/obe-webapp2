@@ -35,7 +35,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
       || /^\/faculty-report$/.test(h) || /^\/chairman\/(audit-log|report-access)$/.test(h) || h === "/yearly-summary" || h === "/benchmarking", section: "Reports & Analytics" },
 
   { match: (h) => /^\/(advisor\/dashboard|coordinator\/(stakeholders|surveys)|public-library|instructor\/peers)$/.test(h), section: "Community" },
-  { match: (h) => /^\/chairman\/(institute-settings|ai-configuration)$/.test(h) || h === "/settings/mfa", section: "Settings" },
+  { match: (h) => /^\/chairman\/(institute-settings|ai-configuration|messaging)$/.test(h) || h === "/settings/mfa", section: "Settings" },
   { match: (h) => /^\/admin\//.test(h), section: "Platform" },
 ];
 
