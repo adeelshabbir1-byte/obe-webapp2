@@ -6,6 +6,7 @@ export const ADMIN_NAV = [
   { href: "/admin/curriculum-migration", label: "Version Migration" },
   { href: "/admin/platform-settings", label: "Platform Settings" },
   { href: "/admin/system-health", label: "System Health" },
+  { href: "/admin/demo", label: "Demo Institute" },
   { href: "/admin/feedback", label: "System Feedback" },
   { href: "/admin/report-bundles", label: "Report Bundles" },
   { href: "/admin/landing-page", label: "Landing Page" },
