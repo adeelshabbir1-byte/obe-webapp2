@@ -83,7 +83,7 @@ export async function courseChain(courseId: string) {
     prisma.cLO.findMany({ where: { courseId, source }, orderBy: { orderIndex: "asc" }, select: { id: true, code: true, statement: true, bloomLevel: true, ploContributionPct: true, targetPct: true, mappedPlo: { select: { number: true } } } }),
     prisma.assessmentInstrument.findMany({ where: { courseId, source }, select: { id: true, type: true, label: true, marksPct: true, maxScore: true } }),
     prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId, source } }, select: { instrumentId: true, lectureRow: { select: { cloId: true } } } }),
-    source === "INSTRUCTOR" ? prisma.studentMark.findMany({ where: { courseId }, select: { instrumentId: true, score: true } }) : Promise.resolve([]),
+    source === "INSTRUCTOR" ? prisma.studentMark.findMany({ where: { courseId }, select: { studentId: true, instrumentId: true, score: true } }) : Promise.resolve([]),
     prisma.studentEnrollment.count({ where: { courseId, status: { not: "WITHDRAWN" } } }),
   ]);
   // Each assessment counts toward the first CLO its lectures serve (same rule as the result calculation).
@@ -107,14 +107,34 @@ export async function courseChain(courseId: string) {
     const reached = sc.length && i.maxScore ? Math.round((1000 * sc.filter((v) => v / i.maxScore >= criteria.cloPct / 100).length) / sc.length) / 10 : null;
     return { id: i.id, type: i.type, label: i.label, marksPct: i.marksPct, cloId: toClo.get(i.id) || null, avg, reached, graded: sc.length };
   });
+  // Performance-weighted view (for comparison only; reports keep the planned weights): within each CLO, an assessment the
+  // class did better on counts more, by the ratio of its class average to the CLO's mean, held between 0.5x and 1.5x.
+  const perfShare = new Map<string, number>(), perfAtt = new Map<string, number>();
+  for (const c of clos) {
+    const items = assessments.filter((a) => a.cloId === c.id && a.avg !== null);
+    if (!items.length) continue;
+    const mean = items.reduce((t, a) => t + (a.avg as number), 0) / items.length || 1;
+    const raw = items.map((a) => ({ a, w: a.marksPct * Math.min(1.5, Math.max(0.5, (a.avg as number) / mean)) }));
+    const tot = raw.reduce((t, x) => t + x.w, 0) || 1;
+    for (const x of raw) perfShare.set(x.a.id, Math.round((1000 * x.w) / tot) / 10);
+    const maxOf = new Map(insts.map((i) => [i.id, i.maxScore]));
+    const per = new Map<string, { got: number; w: number }>();
+    for (const m of marks as { studentId: string; instrumentId: string; score: number }[]) {
+      const x = raw.find((y) => y.a.id === m.instrumentId); if (!x) continue;
+      const e = per.get(m.studentId) || { got: 0, w: 0 };
+      e.got += (x.w * m.score) / (maxOf.get(m.instrumentId) || 1); e.w += x.w; per.set(m.studentId, e);
+    }
+    const vals = Array.from(per.values());
+    if (vals.length) perfAtt.set(c.id, Math.round((1000 * vals.filter((v) => v.w && v.got / v.w >= criteria.cloPct / 100).length) / vals.length) / 10);
+  }
   return {
     course: { id: course.id, code: course.code, title: course.title, creditHours: course.creditHours, batchId: course.batchId, coordinatorId: course.coordinatorId, subjectExpertId: course.subjectExpertId, instructorId: course.instructorId },
     source, enrolled, criteria,
     clos: clos.map((c) => {
       const w = assessments.filter((a) => a.cloId === c.id).reduce((s, a) => s + a.marksPct, 0);
-      return { id: c.id, code: c.code, statement: c.statement, bloom: c.bloomLevel, ploNumber: c.mappedPlo?.number ?? null, contribution: c.ploContributionPct ?? null, target: c.targetPct, weight: Math.round((1000 * w) / assessed) / 10, attainment: cloPassPct.get(c.code) ?? null, avg: cloAvg.get(c.code) ?? null };
+      return { id: c.id, code: c.code, statement: c.statement, bloom: c.bloomLevel, ploNumber: c.mappedPlo?.number ?? null, contribution: c.ploContributionPct ?? null, target: c.targetPct, weight: Math.round((1000 * w) / assessed) / 10, attainment: cloPassPct.get(c.code) ?? null, avg: cloAvg.get(c.code) ?? null, perfAttainment: perfAtt.get(c.id) ?? null, order: clos.indexOf(c) };
     }),
-    assessments: assessments.map((a) => ({ ...a, share: a.cloId ? Math.round((1000 * a.marksPct) / Math.max(1, assessments.filter((x) => x.cloId === a.cloId).reduce((s, x) => s + x.marksPct, 0))) / 10 : 0 })),
+    assessments: assessments.map((a) => ({ ...a, perfShare: perfShare.get(a.id) ?? null, share: a.cloId ? Math.round((1000 * a.marksPct) / Math.max(1, assessments.filter((x) => x.cloId === a.cloId).reduce((s, x) => s + x.marksPct, 0))) / 10 : 0 })),
   };
 }
 

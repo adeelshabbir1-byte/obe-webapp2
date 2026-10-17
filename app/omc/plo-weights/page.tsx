@@ -35,7 +35,7 @@ export default async function PloWeightsPage({ searchParams }: { searchParams: {
       </p>
       <div className="card no-print"><DegreeBatchFilter batches={batches} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} /></div>
       {!batch && <div className="card"><p style={{ margin: 0, fontSize: 13, color: "var(--slate)" }}>Choose a batch above.</p></div>}
-      {data?.missing && <div className="err">The PLO weight table is not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase. Until then every PLO uses the equal split.</div>}
+      {data?.missing && <div className="err">The PLO weight table is not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase. Until then every PLO uses the suggested split.</div>}
       {data && data.plos.length === 0 && <div className="card"><p style={{ margin: 0 }}>This batch has no PLOs yet.</p></div>}
       {data?.plos.map((p) => <PloWeightEditor key={p.id + p.state + p.courses.map((c) => c.weight).join(",")} plo={p} target={target} />)}
     </Shell>

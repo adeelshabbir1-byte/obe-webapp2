@@ -4,7 +4,7 @@ import { equalWeights, suggestedWeights, courseFamily, type WeightCourse } from 
 export const wdb = prisma as unknown as Record<string, any>;
 type Row = { courseId: string; ploId: string; weightPct: number; source: string };
 
-/** Per PLO of a batch: the courses the OMC mapped to it, their saved weights (else an equal split), and the suggestion. */
+/** Per PLO of a batch: the courses the OMC mapped to it, their saved weights (else the suggested split by course type and credit hours), and the suggestion. */
 export async function batchPloWeights(batchId: string, withAttainment = false, criteria?: { cloPct: number; ploPct: number }) {
   const [plos, maps] = await Promise.all([
     prisma.pLO.findMany({ where: { batchId }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } }),
@@ -32,10 +32,10 @@ export async function batchPloWeights(batchId: string, withAttainment = false, c
       const wc: WeightCourse[] = courses.map((c) => ({ id: c.id, courseType: c.courseType, creditHours: c.creditHours }));
       const mine = saved.filter((s) => s.ploId === p.id && courses.some((c) => c.id === s.courseId));
       const complete = mine.length === courses.length && courses.length > 0;
-      const weights = complete ? Object.fromEntries(mine.map((s) => [s.courseId, s.weightPct])) : equalWeights(wc);
+      const weights = complete ? Object.fromEntries(mine.map((s) => [s.courseId, s.weightPct])) : suggestedWeights(wc, p.number);
       return {
         id: p.id, number: p.number, title: p.title,
-        state: complete ? (mine.every((s) => s.source === "SUGGESTED") ? "SUGGESTED" : "SET") : "EQUAL",
+        state: complete ? (mine.every((s) => s.source === "SUGGESTED") ? "SUGGESTED" : "SET") : "DEFAULT",
         courses: courses.map((c) => ({ ...c, family: courseFamily(c.courseType), weight: weights[c.id], attainment: att.get(c.id)?.[`PLO-${p.number}`] ?? null })),
         equal: equalWeights(wc), suggested: suggestedWeights(wc, p.number),
       };

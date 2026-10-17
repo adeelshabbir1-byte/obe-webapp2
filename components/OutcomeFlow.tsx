@@ -15,8 +15,8 @@ type Peo = { index: number; text: string; links: { ploNumber: number; weight: nu
 type Chain = {
   course: { id: string; code: string; title: string };
   source: string; enrolled: number;
-  clos: { id: string; code: string; statement: string; bloom: string; ploNumber: number | null; contribution: number | null; target: number; weight: number; attainment: number | null; avg: number | null }[];
-  assessments: { id: string; type: string; label: string; marksPct: number; cloId: string | null; avg: number | null; reached: number | null; graded: number; share: number }[];
+  clos: { id: string; code: string; statement: string; bloom: string; ploNumber: number | null; contribution: number | null; target: number; weight: number; attainment: number | null; avg: number | null; perfAttainment?: number | null }[];
+  assessments: { id: string; type: string; label: string; marksPct: number; cloId: string | null; avg: number | null; reached: number | null; graded: number; share: number; perfShare?: number | null }[];
 };
 type Cohort = { prevLabel: string | null; plos: Record<string, { last: number | null; suggested: Record<string, number> | null }> } | null;
 export type FlowProps = { mode: "batch" | "course"; batchId: string | null; canEdit: boolean; target: number; courses: Course[]; plos: Plo[]; peos: Peo[]; initialChain?: Chain | null; cohort?: Cohort; peoNote?: string | null };
@@ -31,6 +31,10 @@ const TIER: Record<Kind, { title: string; sub: string; color: string; bg: string
   P: { title: "PLOs", sub: "weight on each PEO", color: "#8A5A0F", bg: "#FBF3E4" },
   E: { title: "PEOs", sub: "program objectives", color: "#1F5E36", bg: "#EAF4EE" },
 };
+
+// Same colours as the CLO–PLO Flow report.
+const TYPE_COLOR: Record<string, string> = { quiz: "#2F6FB0", assignment: "#2E7D5B", midterm: "#9A7B0A", final: "#A63D40", lab: "#0F7C8A", project: "#7A5C2E" };
+const typeColor = (t: string) => TYPE_COLOR[t.toLowerCase()] || "#3E5C8A";
 
 function Att({ v, target, avg }: { v: number | null; target: number; avg?: number | null }) {
   if (v === null) return <span style={{ fontSize: 10.5, color: "var(--slate)" }}>no results yet</span>;
@@ -49,13 +53,19 @@ export default function OutcomeFlow(props: FlowProps) {
   const [chains, setChains] = useState<Record<string, Chain>>(props.initialChain ? { [props.initialChain.course.id]: props.initialChain } : {});
   const [open, setOpen] = useState<string | null>(props.initialChain?.course.id || null);
   const [loading, setLoading] = useState<string | null>(null);
-  const [edges, setEdges] = useState<{ id: string; x1: number; y1: number; x2: number; y2: number; label: string; on: boolean; edit?: { kind: "plo"; ploId: string } | { kind: "peo"; index: number } }[]>([]);
+  const [edges, setEdges] = useState<{ id: string; x1: number; y1: number; x2: number; y2: number; label: string; on: boolean; color?: string; edit?: { kind: "plo"; ploId: string } | { kind: "peo"; index: number } }[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [editing, setEditing] = useState<{ kind: "plo"; ploId: string } | { kind: "peo"; index: number } | null>(null);
   const [error, setError] = useState("");
   const [wide, setWide] = useState(false);
 
-  const chain = open ? chains[open] : null;
+  const chain0 = open ? chains[open] : null;
+  // Assessments grouped by CLO (CLO-1's first, then CLO-2's …), largest share first inside each, so lines don't cross.
+  const chain = useMemo(() => {
+    if (!chain0) return null;
+    const ord = new Map(chain0.clos.map((c, i) => [c.id, i]));
+    return { ...chain0, assessments: [...chain0.assessments].sort((a, b) => (ord.get(a.cloId || "") ?? 99) - (ord.get(b.cloId || "") ?? 99) || b.share - a.share) };
+  }, [chain0]);
   const ploByNumber = useMemo(() => new Map(plos.map((p) => [p.number, p])), [plos]);
 
   // Step-by-step opening: batch view goes PEO -> PLOs -> courses -> CLOs -> assessments; a course view goes from the course
@@ -128,12 +138,12 @@ export default function OutcomeFlow(props: FlowProps) {
       const r0 = el.getBoundingClientRect();
       const at = (k: string) => { const n = el.querySelector<HTMLElement>(`[data-k="${CSS.escape(k)}"]`); if (!n) return null; const r = n.getBoundingClientRect(); return { l: r.left - r0.left, r: r.right - r0.left, y: r.top - r0.top + r.height / 2 }; };
       const out: typeof edges = [];
-      const add = (from: string, to: string, label: string, edit?: (typeof edges)[number]["edit"]) => {
+      const add = (from: string, to: string, label: string, edit?: (typeof edges)[number]["edit"], color?: string) => {
         const a = at(from), b = at(to); if (!a || !b) return;
-        out.push({ id: `${from}>${to}`, x1: a.r, y1: a.y, x2: b.l, y2: b.y, label, on: true, edit });
+        out.push({ id: `${from}>${to}`, x1: a.r, y1: a.y, x2: b.l, y2: b.y, label, on: true, edit, color });
       };
       if (chain) {
-        for (const a of chain.assessments) if (a.cloId) add(key("A", a.id), key("L", a.cloId), `${a.share}%`);
+        for (const a of chain.assessments) if (a.cloId) add(key("A", a.id), key("L", a.cloId), `${a.share}%`, undefined, typeColor(a.type));
         for (const l of chain.clos) add(key("L", l.id), key("C", chain.course.id), `${l.weight}%`);
       }
       for (const p of plos) for (const c of p.courses) add(key("C", c.id), key("P", p.id), `${c.weight}%`, { kind: "plo", ploId: p.id });
@@ -173,7 +183,9 @@ export default function OutcomeFlow(props: FlowProps) {
       {error && <div className="err">{error}</div>}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12, color: "var(--slate)", marginBottom: 8 }}>
         <span>Box figure: <b>% of students reaching the target</b> (green from {target}%) · avg = class average.</span>
-        <span>Line figure: the weight of that link.</span>
+        <span>Line figure: the weight of that link (assessment lines: its share of the CLO).</span>
+        <span style={{ display: "inline-flex", gap: 8 }}>{Object.entries(TYPE_COLOR).map(([t, c]) => <span key={t} style={{ color: c, fontWeight: 700, textTransform: "capitalize" }}>■ {t}</span>)}</span>
+        <span style={{ color: "#6B3F8A" }}>Purple “performance-weighted” figures: what attainment would be if better-done assessments counted more — for comparison only.</span>
         {mode === "batch" && <span>Figures refresh every 5 minutes.</span>}
         {canEdit && <span>Click a weight on a <b>Course → PLO</b> or <b>PLO → PEO</b> line to change it.</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
@@ -187,7 +199,7 @@ export default function OutcomeFlow(props: FlowProps) {
             {edges.map((e) => {
               const dx = Math.max(20, (e.x2 - e.x1) * 0.5);
               const d = `M ${e.x1} ${e.y1} C ${e.x1 + dx} ${e.y1}, ${e.x2 - dx} ${e.y2}, ${e.x2} ${e.y2}`;
-              return <path key={e.id} d={d} fill="none" stroke={e.on ? "#B9A3A8" : "#EEE7E8"} strokeWidth={1.6} />;
+              return <path key={e.id} d={d} fill="none" stroke={e.color || (e.on ? "#B9A3A8" : "#EEE7E8")} strokeOpacity={e.color ? 0.7 : 1} strokeWidth={1.6} />;
             })}
           </svg>
           <svg width={size.w} height={size.h} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
@@ -197,7 +209,7 @@ export default function OutcomeFlow(props: FlowProps) {
               return (
                 <g key={e.id} transform={`translate(${mx},${my})`} style={{ pointerEvents: editable ? "auto" : "none", cursor: editable ? "pointer" : "default" }} onClick={() => editable && setEditing(e.edit!)}>
                   <rect x={-19} y={-9} width={38} height={18} rx={5} fill="#fff" stroke={editable ? "#7E2435" : "#D8CCCF"} strokeWidth={editable ? 1.4 : 1} />
-                  <text x={0} y={4} textAnchor="middle" fontSize={10} fontWeight={700} fill={editable ? "#7E2435" : "#574C50"}>{e.label}</text>
+                  <text x={0} y={4} textAnchor="middle" fontSize={10} fontWeight={700} fill={editable ? "#7E2435" : e.color || "#574C50"}>{e.label}</text>
                 </g>
               );
             })}
@@ -207,8 +219,9 @@ export default function OutcomeFlow(props: FlowProps) {
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("A", chain ? chain.assessments.filter((a) => a.cloId).map((a) => node(key("A", a.id), "A", () => toggle(key("A", a.id)), (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>{a.label}</b><Att v={a.reached} target={target} avg={a.avg} /></div>
-                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{a.type} · {a.marksPct}% of the course{a.graded ? ` · ${a.graded} marked` : ""}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b style={{ color: typeColor(a.type) }}>{a.label}</b><Att v={a.reached} target={target} avg={a.avg} /></div>
+                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{a.marksPct}% of course · {a.share}% of {chain.clos.find((c) => c.id === a.cloId)?.code || "CLO"}{a.graded ? ` · ${a.graded} marked` : ""}</div>
+                  {a.perfShare != null && Math.abs(a.perfShare - a.share) >= 0.5 && <div style={{ fontSize: 10.5, color: "#6B3F8A" }}>performance-weighted: {a.perfShare}% of the CLO</div>}
                 </>
               ))) : null, !vis.courseOpen || !chain ? "Open a course, then click a CLO to see its assessments." : chain.assessments.filter((a) => a.cloId).length === 0 ? "No assessment is linked to a CLO yet." : vis.A.size === 0 ? "Click a CLO to see its assessments." : undefined)}
             </div>
@@ -217,6 +230,7 @@ export default function OutcomeFlow(props: FlowProps) {
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>{l.code} <span style={{ fontWeight: 400, color: "var(--slate)" }}>({l.bloom})</span></b><Att v={l.attainment} target={l.target || target} avg={l.avg} /></div>
                   <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>{l.statement.length > 110 ? `${l.statement.slice(0, 110)}…` : l.statement}</div>
+                  {l.perfAttainment != null && l.attainment != null && l.perfAttainment !== l.attainment && <div style={{ fontSize: 10.5, color: "#6B3F8A", marginTop: 2 }} title="If assessments the class did better on counted more (0.5×–1.5×). For comparison only — reports use the planned weights.">performance-weighted: {l.perfAttainment}%</div>}
                   <div style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 2 }}>{l.ploNumber ? `→ PLO-${l.ploNumber}${l.contribution != null ? ` (${l.contribution}% of it in this course)` : ""}` : "no PLO mapped"}</div>
                 </>
               ))) : null, loading ? "Opening the course…" : !chain || !vis.courseOpen ? "Click a course to see its CLOs." : chain.clos.length === 0 ? "This course has no CLOs yet." : undefined)}
@@ -235,7 +249,7 @@ export default function OutcomeFlow(props: FlowProps) {
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>PLO-{p.number}</b><Att v={p.attainment} target={target} /></div>
                   <div style={{ fontSize: 11.5 }}>{p.title}</div>
-                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{p.courses.length} course{p.courses.length === 1 ? "" : "s"} · {p.state === "EQUAL" ? "equal split" : "weights set"}{props.cohort?.plos[p.id]?.last != null ? ` · last batch ${props.cohort.plos[p.id].last}%` : ""}</div>
+                  <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{p.courses.length} course{p.courses.length === 1 ? "" : "s"} · {p.state === "DEFAULT" ? "suggested split (default)" : "weights set"}{props.cohort?.plos[p.id]?.last != null ? ` · last batch ${props.cohort.plos[p.id].last}%` : ""}</div>
                 </>
               ))), plos.length === 0 ? "No PLOs." : vis.P.size === 0 ? (mode === "batch" ? "Click a PEO to see its PLOs." : "Click the course to see its CLOs and PLOs.") : undefined)}
             </div>

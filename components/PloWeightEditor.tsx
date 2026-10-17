@@ -7,7 +7,7 @@ type Course = { id: string; code: string; title: string; courseType: string; cre
 type Plo = { id: string; number: number; title: string; state: string; courses: Course[]; equal: Record<string, number>; suggested: Record<string, number> };
 
 const FAMILY: Record<string, [string, string]> = { COMPUTING: ["Computing", "#E8EEF8"], GENERAL: ["GE / IDS", "#F3EEE2"], CAPSTONE: ["Capstone / FYP", "#E8F3EC"] };
-const STATE: Record<string, [string, string]> = { EQUAL: ["equal split (default)", "badge-neutral"], SUGGESTED: ["suggested weights saved", "badge-ok"], SET: ["set by OMC", "badge-ok"] };
+const STATE: Record<string, [string, string]> = { DEFAULT: ["suggested split (default)", "badge-neutral"], EQUAL: ["equal split", "badge-neutral"], SUGGESTED: ["suggested weights saved", "badge-ok"], SET: ["set by OMC", "badge-ok"] };
 
 /** One PLO: how much each mapped course counts toward it. Total must be 100%. */
 export default function PloWeightEditor({ plo, target }: { plo: Plo; target: number }) {
@@ -18,7 +18,7 @@ export default function PloWeightEditor({ plo, target }: { plo: Plo; target: num
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const total = Math.round(plo.courses.reduce((s, c) => s + (Number(w[c.id]) || 0), 0) * 100) / 100;
   const ok = Math.abs(total - 100) <= 0.05;
-  const changed = plo.courses.some((c) => Number(w[c.id]) !== c.weight) || (plo.state === "EQUAL" && source !== "EQUAL");
+  const changed = plo.courses.some((c) => Number(w[c.id]) !== c.weight) || (plo.state === "DEFAULT" && source !== "SUGGESTED");
   const apply = (m: Record<string, number>, s: "SUGGESTED" | "EQUAL") => { setW(Object.fromEntries(plo.courses.map((c) => [c.id, String(m[c.id] ?? 0)]))); setSource(s); setMsg(null); };
 
   let att = 0, aw = 0;
@@ -73,7 +73,7 @@ export default function PloWeightEditor({ plo, target }: { plo: Plo; target: num
             <button className="btn btn-secondary" disabled={busy} onClick={() => apply(plo.equal, "EQUAL")}>Equal split</button>
             <button className="btn btn-secondary" disabled={busy} onClick={() => apply(plo.suggested, "SUGGESTED")}>Use suggestion</button>
             <button className="btn" disabled={busy || !ok || !changed} onClick={save}>{busy ? "Saving…" : "Save weights"}</button>
-            {plo.state !== "EQUAL" && <button className="btn btn-secondary" disabled={busy} onClick={reset} style={{ marginLeft: "auto" }}>Back to equal split</button>}
+            {plo.state !== "DEFAULT" && <button className="btn btn-secondary" disabled={busy} onClick={reset} style={{ marginLeft: "auto" }}>Back to default</button>}
           </div>
         </>
       )}
