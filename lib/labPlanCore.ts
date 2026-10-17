@@ -5,7 +5,7 @@ import { norm } from "./teachingAnalysis";
 const ldb = prisma as unknown as Record<string, any>;
 export type Lecture = { lectureNumber: number; week: number; topic: string };
 export type TopicRef = { lectureNumber: number; topic: string };
-export type LabTask = { labNumber: number; title: string; week: number | null; topics: TopicRef[] };
+export type LabTask = { labNumber: number; title: string; week: number | null; topics: TopicRef[]; openEnded: boolean; oelBrief: string | null };
 export type LabFile = { versionId: string; version: number; kind: "MANUAL" | "SOLUTION"; fileName: string; fileUrl: string; note: string | null; by: string; at: string; status: string; reviewNote: string | null; reviewedBy: string | null };
 export type SyncIssue = { level: "bad" | "warn"; labNumber: number | null; text: string };
 
@@ -28,12 +28,13 @@ export function resolveTopic(ref: TopicRef, lectures: Lecture[]): Lecture | null
 export async function labTasks(labId: string): Promise<LabTask[]> {
   const [manuals, plans] = await Promise.all([
     prisma.labManual.findMany({ where: { courseId: labId }, orderBy: { labNumber: "asc" }, select: { labNumber: true, title: true } }),
-    ldb.labTaskPlan.findMany({ where: { labCourseId: labId } }).catch(() => []) as Promise<{ labNumber: number; week: number | null; topicsJson: string }[]>,
+    // Before migration_quality_gaps.sql adds openEnded, read the original columns only.
+    ldb.labTaskPlan.findMany({ where: { labCourseId: labId } }).catch(() => ldb.labTaskPlan.findMany({ where: { labCourseId: labId }, select: { labNumber: true, week: true, topicsJson: true } }).catch(() => [])) as Promise<{ labNumber: number; week: number | null; topicsJson: string; openEnded?: boolean; oelBrief?: string | null }[]>,
   ]);
   const nums = Array.from(new Set([...manuals.map((m) => m.labNumber), ...plans.map((p) => p.labNumber)])).sort((a, b) => a - b);
   return nums.map((n) => {
     const p = plans.find((x) => x.labNumber === n);
-    return { labNumber: n, title: manuals.find((m) => m.labNumber === n)?.title || `Lab ${n}`, week: p?.week ?? null, topics: parse<TopicRef[]>(p?.topicsJson, []) };
+    return { labNumber: n, title: manuals.find((m) => m.labNumber === n)?.title || `Lab ${n}`, week: p?.week ?? null, topics: parse<TopicRef[]>(p?.topicsJson, []), openEnded: !!p?.openEnded, oelBrief: p?.oelBrief || null };
   });
 }
 

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       const week = b.week === "" || b.week == null ? null : Math.round(Number(b.week));
       if (week != null && !(week >= 1 && week <= 20)) return NextResponse.json({ error: "Week must be 1–20." }, { status: 400 });
       const nums = (Array.isArray(b.lectureNumbers) ? b.lectureNumbers : []).map((n: unknown) => Math.round(Number(n))).filter((n: number) => n > 0).slice(0, 12);
-      await saveTask(labId, access.theory?.id || null, { labNumber, title, week, lectureNumbers: nums }, user.id);
+      await saveTask(labId, access.theory?.id || null, { labNumber, title, week, lectureNumbers: nums, ...(b.openEnded !== undefined ? { openEnded: !!b.openEnded, oelBrief: String(b.oelBrief || "").trim().slice(0, 1000) || null } : {}) }, user.id);
       await checkLabSync(labId, { id: user.id, name: user.name });
       return NextResponse.json({ ok: true });
     }

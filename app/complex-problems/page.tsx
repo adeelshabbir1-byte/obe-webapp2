@@ -7,7 +7,8 @@ import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
 import { reviewBatchWhere } from "../../lib/reviewScope";
 import { bodyOfProgram } from "../../lib/accreditation/bodies";
 import { ActionForm } from "../../components/fyp/FypClient";
-import { cdb, ATTRS, KNOWLEDGE, parseArr } from "../../lib/complexProblems";
+import { cdb, ATTRS, EA_ATTRS, KNOWLEDGE, parseArr } from "../../lib/complexProblems";
+import { labTasks } from "../../lib/labPlanCore";
 
 export const dynamic = "force-dynamic";
 
@@ -39,12 +40,14 @@ export default async function ComplexProblemsPage({ searchParams }: { searchPara
   const faced = new Set((await prisma.studentMark.findMany({ where: { instrumentId: { in: tags.map((t) => t.instrumentId) } }, select: { studentId: true } })).map((m) => m.studentId));
   const missing = students.filter((s) => !faced.has(s.id));
   const uncovered = kset.filter(([k]) => !codes.some((c) => kOf.get(c.code)?.includes(k)));
+  const labCourses = courses.filter((c) => /-L$/i.test(c.code));
+  const oel = (await Promise.all(labCourses.map(async (c) => (await labTasks(c.id).catch(() => [])).filter((t) => t.openEnded).map((t) => ({ lab: c.code, labNumber: t.labNumber, title: t.title, brief: t.oelBrief }))))).flat();
   const canEdit = ["CHAIRMAN", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "OMC", "DEPARTMENT_COORDINATOR"].includes(user.role);
   return shell(<>
     <p className="small-note">{body === "PEC" ? "PEC / Washington Accord" : "NCEAC / Seoul Accord"} evidence. Panels ask which courses build each knowledge area and where every student solved a {word}. The attribute and area lists follow the accords; check the wording against your council&apos;s current manual.</p>
     <form className="card" style={{ display: "flex", gap: 8 }}><select name="batch" defaultValue={sel.id}>{batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}</select><button className="btn btn-secondary btn-sm">Show</button></form>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
-      {[["Assessments tagged as complex", String(tags.length)], ["Courses with a complex problem", String(new Set(tags.map((t) => insts.find((i) => i.id === t.instrumentId)?.courseId)).size)], ["Students who faced one", `${students.length - missing.length}/${students.length}`], ["Knowledge areas not covered", uncovered.length ? uncovered.map((u) => u[0]).join(", ") : "none"]].map(([l, v]) => <div key={l} className="card" style={{ margin: 0 }}><div className="small-note">{l}</div><div style={{ fontSize: 19, fontWeight: 700 }}>{v}</div></div>)}
+      {[["Assessments tagged as complex", String(tags.filter((t) => parseArr(t.attrsJson).some((k) => k.startsWith("P"))).length)], ...(body === "PEC" ? [["Complex activities (EA1–EA5)", String(tags.filter((t) => parseArr(t.attrsJson).some((k) => k.startsWith("EA"))).length)], ["Open-ended labs", `${oel.length} in ${new Set(oel.map((o) => o.lab)).size} lab course(s)`]] : []), ["Courses with a complex problem", String(new Set(tags.map((t) => insts.find((i) => i.id === t.instrumentId)?.courseId)).size)], ["Students who faced one", `${students.length - missing.length}/${students.length}`], ["Knowledge areas not covered", uncovered.length ? uncovered.map((u) => u[0]).join(", ") : "none"]].map(([l, v]) => <div key={l} className="card" style={{ margin: 0 }}><div className="small-note">{l}</div><div style={{ fontSize: 19, fontWeight: 700 }}>{v}</div></div>)}
     </div>
     <div className="card" style={{ overflowX: "auto" }}>
       <h3 style={{ marginTop: 0 }}>Knowledge profile</h3>
@@ -63,10 +66,12 @@ export default async function ComplexProblemsPage({ searchParams }: { searchPara
             <div key={i.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 13, marginLeft: 12 }}>
               <span style={{ minWidth: 160 }}>{i.label} <span className="small-note">{i.type}</span></span>
               <span style={{ color: at.length ? "#1F5E36" : "#7A8796" }}>{at.length ? `Complex: ${at.join(", ")}` : "—"}</span>{t?.note && <span className="small-note">{t.note}</span>}
-              {canEdit && <ActionForm url="/api/complex-problems" fixed={{ action: "tag", instrumentId: i.id }} submit="Save" collapsed openLabel={at.length ? "Edit" : "Tag as complex"} initial={{ ...Object.fromEntries(ATTRS.map(([k]) => [`a_${k}`, at.includes(k)])), note: t?.note || "" }} fields={[...ATTRS.map(([k, n]) => ({ name: `a_${k}`, label: `${k} ${n}`, type: "checkbox" as const })), { name: "note", label: "Problem statement / why it is complex", type: "textarea" as const }]} />}
+              {canEdit && <ActionForm url="/api/complex-problems" fixed={{ action: "tag", instrumentId: i.id }} submit="Save" collapsed openLabel={at.length ? "Edit" : "Tag as complex"} initial={{ ...Object.fromEntries([...ATTRS, ...EA_ATTRS].map(([k]) => [`a_${k}`, at.includes(k)])), note: t?.note || "" }} fields={[...ATTRS.map(([k, n]) => ({ name: `a_${k}`, label: `${k} ${n}`, type: "checkbox" as const })), ...(body === "PEC" ? EA_ATTRS.map(([k, n]) => ({ name: `a_${k}`, label: `${k} ${n}`, type: "checkbox" as const })) : []), { name: "note", label: "Problem statement / why it is complex", type: "textarea" as const }]} />}
             </div>); })}
         </div>); })}
     </div>
+    {body === "PEC" && <div className="card"><h3 style={{ marginTop: 0 }}>Open-ended labs</h3><p className="small-note">PEC expects open-ended labs, where students design their own solution to a loosely defined problem. The Lab Engineer or the course instructor marks a lab task as open-ended on the lab page.</p>
+      {labCourses.length === 0 ? <p className="small-note">This batch has no lab courses.</p> : <table style={{ fontSize: 13 }}><tbody>{labCourses.map((c) => { const xs = oel.filter((o) => o.lab === c.code); return <tr key={c.id}><td><b>{c.code}</b> <span className="small-note">{c.title}</span></td><td style={{ color: xs.length ? undefined : "#B3261E" }}>{xs.length ? xs.map((o) => `Lab ${o.labNumber}: ${o.title}`).join("; ") : "no open-ended lab"}</td></tr>; })}</tbody></table>}</div>}
     {missing.length > 0 && tags.length > 0 && <div className="card"><h3 style={{ marginTop: 0 }}>Students who have not yet faced a {word}</h3><p style={{ fontSize: 13 }}>{missing.slice(0, 200).map((s) => s.rollNumber).join(", ")}</p></div>}
   </>);
 }

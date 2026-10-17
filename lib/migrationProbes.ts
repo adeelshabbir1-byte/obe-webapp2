@@ -625,6 +625,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "excusedExcluded"
 },
 {
+"f": "migration_quality_gaps.sql",
+"d": "Accreditation gaps: PEO targets, faculty survey, open-ended labs, HEC policy rules, NBEAC Assurance of Learning, IPE self-assessment, intern",
+"t": "LabTaskPlan",
+"c": "oelBrief"
+},
+{
 "f": "migration_queue_round.sql",
 "d": "Run in Supabase SQL Editor. Covers: degree-wide semester dates, lecture",
 "t": "Course",

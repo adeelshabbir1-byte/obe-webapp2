@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { reviewBatchWhere } from "../../../lib/reviewScope";
 import { chairmanIdFor } from "../../../lib/reportScope";
-import { cdb, ATTRS, KNOWLEDGE } from "../../../lib/complexProblems";
+import { cdb, ATTRS, EA_ATTRS, KNOWLEDGE } from "../../../lib/complexProblems";
 
 const EDIT = ["CHAIRMAN", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "OMC", "DEPARTMENT_COORDINATOR"];
 
@@ -18,9 +18,9 @@ export async function POST(req: Request) {
       const inst = await prisma.assessmentInstrument.findUnique({ where: { id: String(b.instrumentId || "") }, select: { id: true, courseId: true, course: { select: { instructorId: true, batchId: true } } } });
       const ok = inst && (inst.course.instructorId === user.id || (where && EDIT.includes(user.role) && (await prisma.course.count({ where: { id: inst.courseId, batch: where } }))));
       if (!inst || !ok) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      const attrs = ATTRS.map(([k]) => k).filter((k) => b[`a_${k}`]);
+      const attrs = [...ATTRS, ...EA_ATTRS].map(([k]) => k).filter((k) => b[`a_${k}`]);
       if (!attrs.length) { await cdb.complexTag.deleteMany({ where: { instrumentId: inst.id } }); return NextResponse.json({ ok: true }); }
-      if (!attrs.includes("P1")) return NextResponse.json({ error: "A complex problem must require depth of knowledge (P1)." }, { status: 400 });
+      if (attrs.some((k) => k.startsWith("P")) && !attrs.includes("P1")) return NextResponse.json({ error: "A complex problem must require depth of knowledge (P1)." }, { status: 400 });
       const data = { courseId: inst.courseId, attrsJson: JSON.stringify(attrs), note: typeof b.note === "string" ? b.note.slice(0, 2000) : null };
       await cdb.complexTag.upsert({ where: { instrumentId: inst.id }, create: { instrumentId: inst.id, ...data }, update: data });
       return NextResponse.json({ ok: true });

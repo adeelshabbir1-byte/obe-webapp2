@@ -5015,6 +5015,8 @@ model LabTaskPlan {
   labNumber   Int
   week        Int?
   topicsJson  String   @default("[]") @db.Text // [{ lectureNumber, topic }]
+  openEnded   Boolean  @default(false) // an open-ended lab (PEC): students design their own solution
+  oelBrief    String?  @db.Text
   updatedById String?
   updatedAt   DateTime @default(now())
 
@@ -5043,4 +5045,122 @@ model LabSyncState {
   lectureJson String   @default("[]") @db.Text
   labJson     String   @default("[]") @db.Text
   updatedAt   DateTime @default(now())
+}
+
+// PEO attainment target and the action taken when it is missed, per program.
+model PeoTarget {
+  id            String   @id
+  coordinatorId String
+  degreeProgram String
+  peoLabel      String
+  target        Float    @default(70)
+  actionTaken   String?  @db.Text
+  updatedAt     DateTime @default(now())
+
+  @@unique([coordinatorId, degreeProgram, peoLabel], map: "PeoTarget_key")
+}
+
+// Faculty survey (HEC QEC Proforma 5): a round opened by the Institute Head; answers are shown only in aggregate.
+model FacultySurveyRound {
+  id         String    @id
+  chairmanId String
+  title      String
+  status     String    @default("OPEN")
+  openedById String
+  createdAt  DateTime  @default(now())
+  closedAt   DateTime?
+
+  @@index([chairmanId])
+}
+
+model FacultySurveyAnswer {
+  id           String   @id
+  roundId      String
+  userId       String
+  departmentId String?
+  role         String?
+  answersJson  String   @db.Text
+  comment      String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  @@unique([roundId, userId])
+}
+
+// The institute's own thresholds for the HEC Undergraduate Education Policy check.
+model PolicyRuleSet {
+  chairmanId String   @id
+  rulesJson  String   @db.Text
+  updatedAt  DateTime @default(now())
+}
+
+// NBEAC Assurance of Learning: learning goals, measurable objectives, results and how the loop was closed.
+model AolGoal {
+  id            String   @id
+  coordinatorId String
+  degreeProgram String
+  code          String
+  text          String   @db.Text
+  createdAt     DateTime @default(now())
+
+  @@index([coordinatorId, degreeProgram], map: "AolGoal_program_idx")
+}
+
+model AolObjective {
+  id          String   @id
+  goalId      String
+  code        String
+  text        String   @db.Text
+  ploNumber   Int?
+  courseCode  String?
+  method      String?
+  target      Float    @default(70)
+  measureYear Int?
+  createdAt   DateTime @default(now())
+
+  @@index([goalId])
+}
+
+model AolResult {
+  id          String   @id
+  objectiveId String
+  term        String
+  attainedPct Float
+  sample      Int?
+  closingLoop String?  @db.Text
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([objectiveId])
+}
+
+// HEC Institutional Performance Evaluation: the institute's self-score and narrative per standard.
+model IpeScore {
+  id          String   @id
+  chairmanId  String
+  standard    Int
+  score       Int?
+  narrative   String?  @db.Text
+  evidence    String?  @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, standard])
+}
+
+// Internationalisation: exchanges, foreign faculty and students, international MoUs and joint programs.
+model IntlRecord {
+  id          String    @id
+  chairmanId  String
+  kind        String
+  title       String
+  partner     String?
+  country     String?
+  startDate   DateTime?
+  endDate     DateTime?
+  people      Int?
+  note        String?   @db.Text
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([chairmanId])
 }

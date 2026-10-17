@@ -77,14 +77,18 @@ export async function checkLabSync(labId: string, actor?: { id: string; name: st
 
 
 /** Save one lab task: title, week and the lecture numbers it practises (stored with their topic text). */
-export async function saveTask(labId: string, theoryId: string | null, t: { labNumber: number; title: string; week: number | null; lectureNumbers: number[] }, userId: string) {
+export async function saveTask(labId: string, theoryId: string | null, t: { labNumber: number; title: string; week: number | null; lectureNumbers: number[]; openEnded?: boolean; oelBrief?: string | null }, userId: string) {
   const lectures = await theoryLectures(theoryId);
   const topics: TopicRef[] = t.lectureNumbers.map((n) => lectures.find((l) => l.lectureNumber === n)).filter((l): l is Lecture => !!l).map((l) => ({ lectureNumber: l.lectureNumber, topic: l.topic }));
+  // Open-ended flag needs migration_quality_gaps.sql; leave it out until that column exists.
+  const oel = t.openEnded === undefined ? {} : { openEnded: !!t.openEnded, oelBrief: t.oelBrief || null };
   await prisma.labManual.upsert({ where: { courseId_labNumber: { courseId: labId, labNumber: t.labNumber } }, create: { courseId: labId, labNumber: t.labNumber, title: t.title || `Lab ${t.labNumber}` }, update: { title: t.title || `Lab ${t.labNumber}` } });
-  await ldb.labTaskPlan.upsert({
+  const up = (extra: Record<string, unknown>) => ldb.labTaskPlan.upsert({
     where: { labCourseId_labNumber: { labCourseId: labId, labNumber: t.labNumber } },
-    create: { id: randomUUID(), labCourseId: labId, labNumber: t.labNumber, week: t.week, topicsJson: JSON.stringify(topics), updatedById: userId, updatedAt: new Date() },
-    update: { week: t.week, topicsJson: JSON.stringify(topics), updatedById: userId, updatedAt: new Date() },
+    create: { id: randomUUID(), labCourseId: labId, labNumber: t.labNumber, week: t.week, topicsJson: JSON.stringify(topics), updatedById: userId, updatedAt: new Date(), ...extra },
+    update: { week: t.week, topicsJson: JSON.stringify(topics), updatedById: userId, updatedAt: new Date(), ...extra },
+    select: { id: true },
   });
+  try { await up(oel); } catch (e) { if (Object.keys(oel).length) await up({}); else throw e; } // openEnded column not added yet
 }
 

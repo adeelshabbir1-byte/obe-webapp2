@@ -1,0 +1,23 @@
+-- Accreditation gaps: PEO targets, faculty survey, open-ended labs, HEC policy rules, NBEAC Assurance of Learning, IPE self-assessment, internationalisation. Safe to run more than once.
+CREATE TABLE IF NOT EXISTS "PeoTarget" ("id" TEXT PRIMARY KEY, "coordinatorId" TEXT NOT NULL, "degreeProgram" TEXT NOT NULL, "peoLabel" TEXT NOT NULL, "target" DOUBLE PRECISION NOT NULL DEFAULT 70, "actionTaken" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS "PeoTarget_key" ON "PeoTarget" ("coordinatorId", "degreeProgram", "peoLabel");
+CREATE TABLE IF NOT EXISTS "FacultySurveyRound" ("id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "title" TEXT NOT NULL, "status" TEXT NOT NULL DEFAULT 'OPEN', "openedById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "closedAt" TIMESTAMP(3));
+CREATE INDEX IF NOT EXISTS "FacultySurveyRound_chairmanId_idx" ON "FacultySurveyRound" ("chairmanId");
+CREATE TABLE IF NOT EXISTS "FacultySurveyAnswer" ("id" TEXT PRIMARY KEY, "roundId" TEXT NOT NULL, "userId" TEXT NOT NULL, "departmentId" TEXT, "role" TEXT, "answersJson" TEXT NOT NULL, "comment" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS "FacultySurveyAnswer_roundId_userId_key" ON "FacultySurveyAnswer" ("roundId", "userId");
+CREATE TABLE IF NOT EXISTS "PolicyRuleSet" ("chairmanId" TEXT PRIMARY KEY, "rulesJson" TEXT NOT NULL, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS "AolGoal" ("id" TEXT PRIMARY KEY, "coordinatorId" TEXT NOT NULL, "degreeProgram" TEXT NOT NULL, "code" TEXT NOT NULL, "text" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS "AolGoal_program_idx" ON "AolGoal" ("coordinatorId", "degreeProgram");
+CREATE TABLE IF NOT EXISTS "AolObjective" ("id" TEXT PRIMARY KEY, "goalId" TEXT NOT NULL, "code" TEXT NOT NULL, "text" TEXT NOT NULL, "ploNumber" INTEGER, "courseCode" TEXT, "method" TEXT, "target" DOUBLE PRECISION NOT NULL DEFAULT 70, "measureYear" INTEGER, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS "AolObjective_goalId_idx" ON "AolObjective" ("goalId");
+CREATE TABLE IF NOT EXISTS "AolResult" ("id" TEXT PRIMARY KEY, "objectiveId" TEXT NOT NULL, "term" TEXT NOT NULL, "attainedPct" DOUBLE PRECISION NOT NULL, "sample" INTEGER, "closingLoop" TEXT, "createdById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS "AolResult_objectiveId_idx" ON "AolResult" ("objectiveId");
+CREATE TABLE IF NOT EXISTS "IpeScore" ("id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "standard" INTEGER NOT NULL, "score" INTEGER, "narrative" TEXT, "evidence" TEXT, "updatedById" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS "IpeScore_chairmanId_standard_key" ON "IpeScore" ("chairmanId", "standard");
+CREATE TABLE IF NOT EXISTS "IntlRecord" ("id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "kind" TEXT NOT NULL, "title" TEXT NOT NULL, "partner" TEXT, "country" TEXT, "startDate" TIMESTAMP(3), "endDate" TIMESTAMP(3), "people" INTEGER, "note" TEXT, "createdById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS "IntlRecord_chairmanId_idx" ON "IntlRecord" ("chairmanId");
+CREATE TABLE IF NOT EXISTS "LabTaskPlan" ("id" TEXT PRIMARY KEY, "labCourseId" TEXT NOT NULL, "labNumber" INTEGER NOT NULL, "week" INTEGER, "topicsJson" TEXT NOT NULL DEFAULT '[]', "updatedById" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS "LabTaskPlan_labCourseId_labNumber_key" ON "LabTaskPlan" ("labCourseId", "labNumber");
+ALTER TABLE "LabTaskPlan" ADD COLUMN IF NOT EXISTS "openEnded" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "LabTaskPlan" ADD COLUMN IF NOT EXISTS "oelBrief" TEXT;
+SELECT 'done' AS result;

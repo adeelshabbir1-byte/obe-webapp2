@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 type Lecture = { lectureNumber: number; week: number; topic: string };
 type TopicRef = { lectureNumber: number; topic: string };
-type Task = { labNumber: number; title: string; week: number | null; topics: TopicRef[] };
+type Task = { labNumber: number; title: string; week: number | null; topics: TopicRef[]; openEnded?: boolean; oelBrief?: string | null };
 type File = { versionId: string; version: number; labNumber: number; kind: "MANUAL" | "SOLUTION"; fileName: string; fileUrl: string; note: string | null; by: string; at: string; status: string; reviewNote: string | null; reviewedBy: string | null };
 type Issue = { level: "bad" | "warn"; labNumber: number | null; text: string };
 
@@ -15,7 +15,7 @@ const norm = (t: string) => (t || "").toLowerCase().replace(/&/g, " and ").repla
 export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, tasks, files, issues }: { labCourseId: string; as: "ENGINEER" | "LEAD"; theoryCode: string | null; lectures: Lecture[]; tasks: Task[]; files: File[]; issues: Issue[] }) {
   const router = useRouter();
   const lead = as === "LEAD";
-  const [edit, setEdit] = useState<{ labNumber: string; title: string; week: string; lectures: number[] } | null>(null);
+  const [edit, setEdit] = useState<{ labNumber: string; title: string; week: string; lectures: number[]; openEnded: boolean; oelBrief: string } | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +35,7 @@ export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, ta
   }
   async function save() {
     if (!edit) return;
-    if (await call({ action: "saveTask", labNumber: edit.labNumber, title: edit.title, week: edit.week, lectureNumbers: edit.lectures }, `Lab ${edit.labNumber} saved. ${lead ? "The Lab Engineer" : "The instructor"} is told about any change.`)) setEdit(null);
+    if (await call({ action: "saveTask", labNumber: edit.labNumber, title: edit.title, week: edit.week, lectureNumbers: edit.lectures, openEnded: edit.openEnded, oelBrief: edit.oelBrief }, `Lab ${edit.labNumber} saved. ${lead ? "The Lab Engineer" : "The instructor"} is told about any change.`)) setEdit(null);
   }
   async function upload(e: React.FormEvent<HTMLFormElement>, labNumber: number, title: string) {
     e.preventDefault();
@@ -69,7 +69,7 @@ export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, ta
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <h3 style={{ margin: 0 }}>Lab tasks</h3>
-          {!edit && <button className="btn btn-brass" onClick={() => setEdit({ labNumber: String(nextNo), title: "", week: "", lectures: [] })}>Add a lab task</button>}
+          {!edit && <button className="btn btn-brass" onClick={() => setEdit({ labNumber: String(nextNo), title: "", week: "", lectures: [], openEnded: false, oelBrief: "" })}>Add a lab task</button>}
         </div>
         {edit && (
           <div style={{ border: "1px dashed var(--line)", borderRadius: 8, padding: 10, margin: "10px 0" }}>
@@ -90,6 +90,8 @@ export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, ta
                 );
               })}
             </div>
+            <label style={{ display: "block", fontSize: 12.5, marginTop: 8 }}><input type="checkbox" checked={edit.openEnded} onChange={(e) => setEdit({ ...edit, openEnded: e.target.checked })} /> Open-ended lab — students design their own solution to a loosely defined problem (PEC)</label>
+            {edit.openEnded && <textarea style={{ ...input, width: "100%", marginTop: 4 }} rows={2} placeholder="The open problem students are given, and how it is assessed (rubric)" value={edit.oelBrief} onChange={(e) => setEdit({ ...edit, oelBrief: e.target.value })} />}
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-brass" disabled={busy || !edit.title.trim()} onClick={save}>Save lab task</button>
               <button className="btn" onClick={() => setEdit(null)}>Cancel</button>
@@ -107,7 +109,7 @@ export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, ta
                   <Fragment key={t.labNumber}>
                     <tr>
                       <td><b>{t.labNumber}</b></td>
-                      <td>{t.title}</td>
+                      <td>{t.title}{t.openEnded && <span className="pill" style={{ fontSize: 10.5, marginLeft: 6 }} title={t.oelBrief || ""}>open-ended</span>}</td>
                       <td>{t.week ?? <span style={{ color: "#B7791F" }}>—</span>}</td>
                       <td style={{ fontSize: 12 }}>{t.topics.length === 0 ? <span style={{ color: "#B7791F" }}>not linked</span> : t.topics.map((r, k) => {
                         const l = where(r);
@@ -116,7 +118,7 @@ export default function LabPlanPanel({ labCourseId, as, theoryCode, lectures, ta
                       })}</td>
                       {[m, s].map((f, k) => <td key={k} style={{ fontSize: 12 }}>{f ? <><a href={f.fileUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brass-dark)" }}>v{f.version}</a> <span style={{ color: STATUS[f.status]?.c }}>{STATUS[f.status]?.t || f.status}</span></> : <span style={{ color: "#B3261E" }}>missing</span>}</td>)}
                       <td style={{ whiteSpace: "nowrap" }}>
-                        <button className="act" onClick={() => setEdit({ labNumber: String(t.labNumber), title: t.title, week: t.week == null ? "" : String(t.week), lectures: t.topics.map((r) => where(r)?.lectureNumber || r.lectureNumber) })}>Edit</button>{" "}
+                        <button className="act" onClick={() => setEdit({ labNumber: String(t.labNumber), title: t.title, week: t.week == null ? "" : String(t.week), lectures: t.topics.map((r) => where(r)?.lectureNumber || r.lectureNumber), openEnded: !!t.openEnded, oelBrief: t.oelBrief || "" })}>Edit</button>{" "}
                         <button className="act" onClick={() => setOpen(open === t.labNumber ? null : t.labNumber)}>Files{mine.some((f) => f.status === "PENDING") && lead ? " •" : ""}</button>{" "}
                         {mine.length === 0 && <button className="act" onClick={() => confirm(`Remove Lab ${t.labNumber}?`) && call({ action: "removeTask", labNumber: t.labNumber }, `Lab ${t.labNumber} removed.`)}>Remove</button>}
                       </td>
