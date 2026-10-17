@@ -5,7 +5,7 @@ export const wdb = prisma as unknown as Record<string, any>;
 type Row = { courseId: string; ploId: string; weightPct: number; source: string };
 
 /** Per PLO of a batch: the courses the OMC mapped to it, their saved weights (else an equal split), and the suggestion. */
-export async function batchPloWeights(batchId: string, withAttainment = false) {
+export async function batchPloWeights(batchId: string, withAttainment = false, criteria?: { cloPct: number; ploPct: number }) {
   const [plos, maps] = await Promise.all([
     prisma.pLO.findMany({ where: { batchId }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } }),
     prisma.coursePloMapping.findMany({ where: { plo: { batchId } }, select: { ploId: true, course: { select: { id: true, code: true, title: true, courseType: true, creditHours: true, semesterNumber: true } } } }),
@@ -20,7 +20,7 @@ export async function batchPloWeights(batchId: string, withAttainment = false) {
     const marked = new Set((await prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: ids } } })).map((g) => g.courseId));
     const { computeCloPloPassRates } = await import("./resultMate");
     for (const id of Array.from(marked)) {
-      const r = await computeCloPloPassRates(id).catch(() => null);
+      const r = await computeCloPloPassRates(id, criteria).catch(() => null);
       if (r && r.studentCount) att.set(id, Object.fromEntries(r.ploStats.filter((s) => s.maxWeight > 0).map((s) => [s.label, Math.round((1000 * s.passCount) / r.studentCount) / 10])));
     }
   }

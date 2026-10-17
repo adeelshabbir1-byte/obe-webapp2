@@ -7,6 +7,7 @@ import { deptScope } from "../../../lib/omcScope";
 import DegreeBatchFilter from "../../../components/DegreeBatchFilter";
 import PloWeightEditor from "../../../components/PloWeightEditor";
 import { batchPloWeights } from "../../../lib/ploWeights";
+import { TARGET_PCT } from "../../../lib/ploWeightMath";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,8 +21,7 @@ export default async function PloWeightsPage({ searchParams }: { searchParams: {
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: leads } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }], select: { id: true, degreeProgram: true, batchName: true } });
   const batch = batches.find((b) => b.id === searchParams.batchId) || null;
   const data = batch ? await batchPloWeights(batch.id, true) : null;
-  const policy = await prisma.attainmentThreshold?.findFirst?.({ where: { chairmanId: user.managedById || "" } } as never).catch(() => null) as { percent?: number } | null;
-  const target = Number(policy?.percent) || 50;
+  const target = TARGET_PCT;
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>

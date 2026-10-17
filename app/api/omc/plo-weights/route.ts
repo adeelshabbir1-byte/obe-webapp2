@@ -40,7 +40,7 @@ export async function PUT(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "The PLO weight table is not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase." }, { status: 500 });
   }
-  await writeAuditLog({ actorUserId: user.id, action: "PLO_WEIGHTS_SET", entityType: "PLO", entityId: plo.id, metadata: { ploNumber: plo.number, source, weights } });
+  await writeAuditLog({ actorUserId: user.id, action: "PLO_WEIGHTS_SET", entityType: "PLO", entityId: plo.id, metadata: { ploNumber: plo.number, source, weights: JSON.stringify(weights) } });
   return NextResponse.json({ ok: true });
 }
 

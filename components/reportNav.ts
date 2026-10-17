@@ -13,6 +13,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/plo-requests", label: "PLO Change Requests" },
   { href: "/omc/plo-weights", label: "PLO Weights" },
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/template-changes", label: "Template Changes" },
@@ -64,6 +65,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/my-obe", label: "My OBE Progress" },
   { href: "/my-leave", label: "Short Leave" },
   { href: "/appraisals", label: "My Appraisal" },
@@ -88,6 +90,7 @@ export const INSTRUCTOR_NAV = [
 // Teaching, advising, scheduling and program-management pages live under the Instructor / Program Lead roles; a
 // Subject Expert who also teaches switches role to reach them.
 export const SUBJECT_EXPERT_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },   // build each course: CLOs, lecture plan, assessments, papers, submit
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },     // move topics between two or three of my assigned courses
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, // what students already know before my course (view only)
@@ -98,6 +101,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
@@ -155,6 +159,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
@@ -193,6 +198,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
@@ -220,6 +226,7 @@ export const DEAN_NAV = [
 ];
 
 export const DEPT_COORDINATOR_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
@@ -248,6 +255,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },

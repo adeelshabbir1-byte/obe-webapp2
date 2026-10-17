@@ -2943,3 +2943,19 @@ model CoursePloWeight {
   @@index([batchId])
   @@index([ploId])
 }
+
+// How much each PLO counts toward each PEO of a program (PEOs live in ProgramProfile.peos, in order). Per PEO the
+// weights of its PLOs total 100; a PLO with no row does not serve that PEO. Matched to every batch by PLO number.
+model ProgramPeoWeight {
+  id            String   @id @default(cuid())
+  coordinatorId String
+  degreeProgram String
+  peoIndex      Int      // 0-based position in ProgramProfile.peos
+  ploNumber     Int
+  weightPct     Float
+  updatedById   String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([coordinatorId, degreeProgram, peoIndex, ploNumber])
+  @@index([coordinatorId, degreeProgram])
+}
