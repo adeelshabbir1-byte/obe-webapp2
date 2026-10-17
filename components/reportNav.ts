@@ -6,6 +6,7 @@ export const REPORT_VIEWER_NAV = [
 ];
 
 export const OMC_ACTION_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/omc/queue", label: "Review Queue" },
   { href: "/omc/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
@@ -91,6 +92,7 @@ export const FINANCE_NAV = [
 ];
 
 export const INSTRUCTOR_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/my-obe", label: "My OBE Progress" },
   { href: "/my-leave", label: "Short Leave" },
@@ -124,6 +126,7 @@ export const INSTRUCTOR_NAV = [
 // Teaching, advising, scheduling and program-management pages live under the Instructor / Program Lead roles; a
 // Subject Expert who also teaches switches role to reach them.
 export const SUBJECT_EXPERT_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" },
   { href: "/subjectexpert/courses", label: "My Assigned Courses" },   // build each course: CLOs, lecture plan, assessments, papers, submit
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },     // link my topics to the topics of later courses that need them
@@ -140,6 +143,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/exams", label: "Exams" },
@@ -207,6 +211,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/chairman/org-chart", label: "Organisation Chart" },
   { href: "/chairman/employees", label: "Upload Employees" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
@@ -258,6 +263,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
@@ -328,6 +334,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
+  { href: "/learn", label: "Learn OBE" },
   { href: "/chairman/employees", label: "Upload Employees" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },

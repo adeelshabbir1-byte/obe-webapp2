@@ -1,3 +1,4 @@
+import ObeAssistant from "./ObeAssistant";
 import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
@@ -30,6 +31,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
         ))}
       </nav>
       <CourseReadiness courseId={courseId} source="SE" />
+      <ObeAssistant courseId={courseId} courseLabel={code} />
       {(status === "approved" || status === "reopened") && <TemplateChangeBanner courseId={courseId} />}
       {active === "clos" && (
         <div style={{ marginTop: 14 }}>

@@ -1908,6 +1908,8 @@ model AiConfig {
   apiKey        String?  @db.Text // stored as given; only ever displayed masked (last 4 chars) in the UI
   model         String   @default("claude-sonnet-4-6")
   enabled       Boolean  @default(false)
+  chatbotEnabled    Boolean @default(false) // OBE Assistant chat for faculty (Institute Head decides)
+  chatbotDailyLimit Int     @default(20)    // questions per person per day
   lastTestedAt  DateTime?
   lastTestOk    Boolean?
   lastTestNote  String?  @db.Text
@@ -4075,4 +4077,48 @@ model OrgPositionLog {
   at         DateTime @default(now())
 
   @@index([positionId])
+}
+
+// OBE learning: best score per lesson / course practice ("lesson:<key>" or "course:<masterCourseId>").
+model ObeProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  score     Int
+  total     Int
+  passed    Boolean  @default(false)
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([userId, key])
+}
+
+// Extra practice questions added by the OMC / Institute Head (chairmanId) or the Super User (chairmanId null = everyone).
+model ObeQuestion {
+  id             String   @id @default(cuid())
+  chairmanId     String?
+  masterCourseId String?
+  courseCode     String?
+  prompt         String   @db.Text
+  optionsJson    String   @db.Text
+  answer         Int
+  explanation    String?  @db.Text
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@index([masterCourseId])
+  @@index([chairmanId])
+}
+
+// OBE Assistant chat (for the daily limit and so the OMC can see common questions).
+model ObeChatLog {
+  id         String   @id @default(cuid())
+  userId     String
+  chairmanId String
+  courseId   String?
+  question   String   @db.Text
+  answer     String   @db.Text
+  at         DateTime @default(now())
+
+  @@index([userId, at])
+  @@index([chairmanId])
 }

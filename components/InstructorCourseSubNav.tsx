@@ -1,3 +1,4 @@
+import ObeAssistant from "./ObeAssistant";
 import RefreshPlanButton from "./RefreshPlanButton";
 import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
@@ -35,6 +36,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
         ))}
       </nav>
       <CourseReadiness courseId={courseId} source="INSTRUCTOR" />
+      <ObeAssistant courseId={courseId} courseLabel={code} />
     </div>
   );
 }

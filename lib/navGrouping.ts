@@ -6,7 +6,7 @@ type Section = { title: string; links: Link[] };
 const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
 
 const RULES: { match: (h: string) => boolean; section: string }[] = [
-  { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
+  { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h) || h === "/fyp", section: "Daily pages" },
 
   { match: (h) => /^\/omc\/(queue|instructor-review|weight-exceptions|template-changes)$/.test(h) || /^\/dean\/approvals$/.test(h) || h === "/follow-ups", section: "Review & Approval" },
