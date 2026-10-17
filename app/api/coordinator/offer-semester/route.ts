@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
 import { autoEnrollBatchStudents } from "../../../../lib/autoEnroll";
+import { ensureInstructorCopy } from "../../../../lib/instructorCopy";
 import { carryOverFromMatchingSemester } from "../../../../lib/benchmarkCopy";
 import { snapshotCourseAssignmentsIfTermChanging, snapshotAttainmentAndResetIfTermChanging } from "../../../../lib/assignmentSnapshot";
 
@@ -55,6 +56,8 @@ export async function POST() {
       for (const c of coursesToOffer) {
         await autoEnrollBatchStudents(c.id, batch.id);
         await carryOverFromMatchingSemester(c.id);
+        // The instructor starts with the approved SE plan as their own copy (they can still change it).
+        if (c.templateStatus === "approved") await ensureInstructorCopy(c.id).catch(() => null);
       }
     }
     // A batch is only ever genuinely "in" one semester at a time — once
