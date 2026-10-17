@@ -339,8 +339,8 @@ model FacultyUnavailability {
   facultyId    String
   faculty      User   @relation("FacultyUnavailabilityFaculty", fields: [facultyId], references: [id])
   dayOfWeek    String // "Mon".."Sun"
-  startHour    Int
-  endHour      Int
+  startHour    Float  // hours, half-hours allowed (8.5 = 8:30); the database column is double precision
+  endHour      Float
   setById      String
   note         String?
   createdAt    DateTime @default(now())
