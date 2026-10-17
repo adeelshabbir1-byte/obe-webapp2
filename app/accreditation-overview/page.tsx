@@ -57,7 +57,7 @@ export default async function AccreditationOverviewPage({ searchParams }: { sear
                 <tr key={l.id}><td><b>{l.leadProgram || "Program"}</b></td>
                   <td>{councilOf(l).body}{!councilOf(l).explicit && l.leadProgram && <span style={{ fontSize: 11, color: "var(--slate)" }} title="Inferred from the program's name — confirm it under Visit readiness › Programs"> (inferred)</span>}</td>
                   <td>{l.department_?.name || "—"}</td><td>{l.name}</td>
-                  <td><a className="btn" style={{ fontSize: 12 }} href={openHref(l)}>{councilOf(l).body === "NCEAC" ? "View readiness" : councilOf(l).body === "NBEAC" ? "NBEAC SAR" : "HEC readiness"}</a></td></tr>
+                  <td><a className="btn" style={{ fontSize: 12 }} href={openHref(l)}>{councilOf(l).body === "NCEAC" ? "View readiness" : councilOf(l).body === "NBEAC" ? "NBEAC SAR" : `${councilOf(l).body} readiness`}</a></td></tr>
               ))}</tbody>
             </table>
           )}

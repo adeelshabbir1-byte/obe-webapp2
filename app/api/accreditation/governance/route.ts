@@ -17,7 +17,7 @@ export async function PUT(req: NextRequest) {
   try {
     if (b.action === "bind") {
       if (!s.canBind) return NextResponse.json({ error: "Only the Institute Head binds programs to their council." }, { status: 403 });
-      if (!isBody(b.body)) return NextResponse.json({ error: "Choose NCEAC, NBEAC or HEC." }, { status: 400 });
+      if (!isBody(b.body)) return NextResponse.json({ error: "Choose NCEAC, NBEAC, PEC or HEC." }, { status: 400 });
       const program = String(b.program || "").trim();
       const row = await prisma.departmentProgram.findUnique({ where: { chairmanId_degreeProgram: { chairmanId: s.chairmanId, degreeProgram: program } } });
       if (!row) return NextResponse.json({ error: "Give the program a department first (Departments page), then choose its council." }, { status: 400 });
@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest) {
     }
     if (b.action === "standards") {
       if (!s.canSetStandards) return NextResponse.json({ error: "Only the Institute Head or the OMC sets the standards." }, { status: 403 });
-      if (!isBody(b.body)) return NextResponse.json({ error: "Choose NCEAC, NBEAC or HEC." }, { status: 400 });
+      if (!isBody(b.body)) return NextResponse.json({ error: "Choose NCEAC, NBEAC, PEC or HEC." }, { status: 400 });
       const data: Record<string, number | null> = {};
       for (const f of STANDARD_FIELDS) {
         const raw = b.values?.[f.key];

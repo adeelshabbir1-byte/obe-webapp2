@@ -117,7 +117,7 @@ export function BindProgram({ program, body, explicit, canBind }: { program: str
   return (
     <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
       <select value={v} onChange={(e) => save(e.target.value)} aria-label={`Council of ${program}`} style={{ padding: "3px 6px", fontSize: 12.5 }}>
-        <option value="NCEAC">NCEAC</option><option value="NBEAC">NBEAC</option><option value="HEC">HEC</option>
+        <option value="NCEAC">NCEAC</option><option value="NBEAC">NBEAC</option><option value="PEC">PEC</option><option value="HEC">HEC</option>
       </select>
       {!explicit && <><span className="hp-tag">inferred</span><button type="button" className="act" onClick={() => save(v)}>Confirm</button></>}
       {err && <span className="small-note" style={{ color: "var(--rust)" }}>{err}</span>}

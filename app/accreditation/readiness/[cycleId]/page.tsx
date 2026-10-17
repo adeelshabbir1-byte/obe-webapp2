@@ -43,6 +43,7 @@ export default async function CyclePage({ params }: { params: { cycleId: string 
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <Link href="/accreditation/readiness" className="btn btn-secondary btn-sm">All visits</Link>
+          <a href={`/accreditation/visit/${c.id}`} className="btn btn-secondary btn-sm">Visit plan: agenda, panel, findings</a>
           <a href={`/api/accreditation/cycles/${c.id}/dossier`} className="btn btn-brass btn-sm">Export dossier (ZIP)</a>
         </div>
       </div>

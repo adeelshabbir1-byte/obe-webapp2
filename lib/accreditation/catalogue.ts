@@ -230,9 +230,54 @@ const HEC_TASKS: TaskDef[] = [
     pages: [{ href: "/chairman/finance", label: "Finance" }] },
 ];
 
+// ---------------------------------------------------------------------------------------------------- PEC
+// Engineering programs: PEC's outcome-based manual. Check the criteria and figures against the council's current manual.
+const PEC_GROUPS: GroupDef[] = [
+  { key: "1", title: "Program Educational Objectives" }, { key: "2", title: "Program Learning Outcomes (Graduate Attributes)" }, { key: "3", title: "Curriculum and Learning Process" },
+  { key: "4", title: "Students" }, { key: "5", title: "Faculty and Support Staff" }, { key: "6", title: "Facilities and Infrastructure" },
+  { key: "7", title: "Institutional Support and Financial Resources" }, { key: "8", title: "Continuous Quality Improvement" }, { key: "9", title: "Industrial Linkages" },
+];
+const PEC_TASKS: TaskDef[] = [
+  { code: "1.1", group: "1", title: "Vision, mission and PEOs with their assessment", evidenceCriterion: 1, suggested: [PL, DC],
+    purpose: "The PEOs, how they serve the mission, how they were set with stakeholders, and how their attainment is measured (alumni and employer surveys).", sources: ["readiness", "surveys", "meetings"],
+    checklist: ["PEOs are approved by the statutory body", "Each PEO has an assessment tool and target", "Industrial Advisory Board minutes are on file"], fields: [NOTE], pages: [{ href: "/coordinator/program-profile", label: "Program Document" }, { href: "/coordinator/surveys", label: "Feedback Surveys" }] },
+  { code: "2.1", group: "2", title: "PLOs mapped to the 12 Graduate Attributes", evidenceCriterion: 2, suggested: [PL],
+    purpose: "The program's PLOs aligned with the Washington Accord graduate attributes, and the PLO–course matrix.", sources: ["plos"],
+    checklist: ["All 12 graduate attributes are covered", "Every PLO is taught and assessed in at least one course"], fields: [NOTE], pages: [{ href: "/coordinator/plos", label: "Program Learning Outcomes" }, { href: "/omc/plo-matrix", label: "PLO–Course Matrix" }] },
+  { code: "2.2", group: "2", title: "PLO attainment (direct and indirect)", suggested: [PL, OMC],
+    purpose: "Attainment of each PLO per student and per cohort against the threshold, with indirect evidence from surveys.", sources: ["ploAttainment", "outcomes"],
+    checklist: ["Students not attaining a PLO are identified with remedial action", "Indirect assessment results are included"], fields: [NOTE], pages: [{ href: "/indirect-assessment", label: "Direct & Indirect PLOs" }, { href: "/accreditation/outcomes-report?format=PEC", label: "Outcomes Report (PEC)" }] },
+  { code: "3.1", group: "3", title: "Curriculum and Knowledge Profile coverage", evidenceCriterion: 3, suggested: [PL],
+    purpose: "The scheme of studies against the PEC/HEC engineering curriculum: credit hours by knowledge area, complex engineering problems and activities, and the final year design project.", sources: ["curriculum", "readiness"],
+    checklist: ["Complex engineering problems (CEP) are identified in courses", "The final year design project assesses the relevant PLOs"], fields: [NOTE], pages: [{ href: "/coordinator/hec-comparison", label: "Curriculum vs HEC" }, { href: "/fyp", label: "Final Year Projects" }] },
+  { code: "3.2", group: "3", title: "Course files, CLO assessment and work samples", suggested: [PL, INS, DC],
+    purpose: "Every course folder with CLO–PLO mapping, assessment results, and best / average / weakest samples.", sources: ["courseFiles", "results"],
+    checklist: ["Every course has CLO attainment", "Work samples are kept for every assessment"], fields: [NOTE], pages: [{ href: "/coordinator/course-folders", label: "Course Folders" }, { href: "/portfolio-review", label: "Portfolio Review" }] },
+  { code: "4.1", group: "4", title: "Admission, progression, advising and counselling", evidenceCriterion: 4, suggested: [PL, SA],
+    purpose: "Admission criteria, enrolment and graduation figures, advising and counselling records.", sources: ["studentSupport", "results"],
+    checklist: ["Intake per section is within PEC's limit", "Advising records are kept"], fields: [NOTE], pages: [{ href: "/outcomes", label: "Graduation & Surveys" }] },
+  { code: "5.1", group: "5", title: "Faculty strength, qualification and load", evidenceCriterion: 5, suggested: [HOD, PL],
+    purpose: "Full-time engineering faculty with PEC registration, PhDs, student–teacher ratio and teaching load.", sources: ["faculty", "facultyLoad"],
+    checklist: ["Faculty PEC registration numbers are recorded", "Student–teacher ratio meets the standard"], fields: [NOTE], pages: [{ href: "/chairman/employees", label: "Employees" }, { href: "/chairman/faculty-workload", label: "Faculty Workload" }] },
+  { code: "6.1", group: "6", title: "Laboratories, equipment and safety", evidenceCriterion: 6, suggested: [LM, "LAB_ENGINEER"],
+    purpose: "Labs for every lab course, equipment lists, manuals and safety arrangements.", sources: ["lab", "facilities"],
+    checklist: ["Every lab course has a lab, a manual and working equipment", "Safety equipment and SOPs are displayed"], fields: [NOTE], pages: [{ href: "/lab-inventory", label: "Lab Inventory" }] },
+  { code: "6.2", group: "6", title: "Library and digital resources", suggested: [LIB],
+    purpose: "Books, journals and digital libraries for the program.", sources: ["library"], checklist: ["Required books are available"], fields: [NOTE], pages: [{ href: "/library-inventory", label: "Library" }] },
+  { code: "7.1", group: "7", title: "Budget and institutional support", evidenceCriterion: 7, suggested: [FIN],
+    purpose: "Budget for faculty, labs, library and development, and its spending.", sources: ["finance"], checklist: ["Figures match the approved budget"], fields: [NOTE], pages: [{ href: "/chairman/finance", label: "Finance" }] },
+  { code: "8.1", group: "8", title: "Closing the loop", evidenceCriterion: 8, suggested: [PL, OMC],
+    purpose: "Findings from CLO/PLO attainment and surveys, the actions taken and their measured effect.", sources: ["cqi", "meetings"],
+    checklist: ["Each weak PLO has a recorded action", "The effect of past actions is measured"], fields: [NOTE], pages: [{ href: "/chairman/cqi", label: "CQI" }] },
+  { code: "9.1", group: "9", title: "Industrial Advisory Board, internships and linkages", evidenceCriterion: 9, suggested: [PL, SA],
+    purpose: "The Industrial Advisory Board, internships, industry projects and visits.", sources: ["industry", "meetings"],
+    checklist: ["IAB meets at least once a year with minutes", "Internship records are complete"], fields: [NOTE], pages: [{ href: "/coordinator/evidence", label: "Accreditation Evidence" }] },
+];
+
 export const CATALOGUE: Record<BodyKey, { groups: GroupDef[]; tasks: TaskDef[] }> = {
   NCEAC: { groups: NCEAC_GROUPS, tasks: NCEAC_TASKS },
   NBEAC: { groups: NBEAC_GROUPS, tasks: NBEAC_TASKS },
+  PEC: { groups: PEC_GROUPS, tasks: PEC_TASKS },
   HEC: { groups: HEC_GROUPS, tasks: HEC_TASKS },
 };
 // The council comes from the database, so an unknown one finds nothing rather than throwing.

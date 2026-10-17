@@ -4632,3 +4632,18 @@ model Submission {
 
   @@unique([dropboxId, studentId])
 }
+
+// The visit itself: agenda sessions, panel members, logistics checklist, and the panel's findings with the program's responses.
+model VisitItem {
+  id        String    @id @default(cuid())
+  cycleId   String
+  kind      String    // AGENDA | PANEL | LOGISTICS | FINDING
+  sort      Int       @default(0)
+  dataJson  String    @default("{}") @db.Text
+  status    String    @default("OPEN") // OPEN | IN_PROGRESS | DONE
+  ownerId   String?
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([cycleId, kind])
+}

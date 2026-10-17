@@ -50,6 +50,7 @@ export type StandardKey = keyof Standards;
 export const DEFAULT_STANDARDS: Record<BodyKey, Standards> = {
   NCEAC: { ...NCEAC_DEFAULTS, maxStudentFacultyRatio: 25, ploTargetPct: 60, cloPassPct: null, ploPassPct: null },
   NBEAC: { minCreditHours: 120, maxStudentsPerComputer: 10, minFullTimeFaculty: 6, minPhdFaculty: 1, maxFacultyLoadCh: 12, maxClassSize: 50, maxStudentFacultyRatio: 40, ploTargetPct: 60, cloPassPct: null, ploPassPct: null },
+  PEC: { minCreditHours: 130, maxStudentsPerComputer: 3, minFullTimeFaculty: 10, minPhdFaculty: 2, maxFacultyLoadCh: 12, maxClassSize: 50, maxStudentFacultyRatio: 20, ploTargetPct: 60, cloPassPct: null, ploPassPct: null },
   HEC: { minCreditHours: 120, maxStudentsPerComputer: 5, minFullTimeFaculty: 6, minPhdFaculty: 1, maxFacultyLoadCh: 12, maxClassSize: 50, maxStudentFacultyRatio: 30, ploTargetPct: 60, cloPassPct: null, ploPassPct: null },
 };
 
