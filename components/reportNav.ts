@@ -385,6 +385,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/accounts", "Accounts", ["CHAIRMAN", "FINANCE_OFFICER"]],
   ["/inventory", "Store & Inventory", ["CHAIRMAN", "FINANCE_OFFICER", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN"]],
   ["/purchasing", "Purchasing", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT"]],
+  ["/portfolio-review", "Portfolio Review", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/my-payslips", "My Payslips", ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT", "DEPARTMENT_COORDINATOR"]],
 ];
 const navCache = new Map<string, { href: string; label: string }[]>();

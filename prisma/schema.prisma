@@ -4489,3 +4489,38 @@ model PurchaseRequest {
 
   @@index([chairmanId, status])
 }
+
+// Sampled student work (best / average / weakest script) kept per assessment as accreditation evidence.
+model StudentWorkSample {
+  id           String   @id @default(cuid())
+  courseId     String
+  instrumentId String
+  studentId    String
+  level        String   // HIGH | MEDIUM | LOW
+  score        Float?
+  fileName     String
+  fileUrl      String   @db.Text
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([courseId])
+  @@index([studentId])
+}
+
+// A student's own e-portfolio entries (projects, certificates, internships, competitions), tagged to PLOs and verified by staff.
+model StudentPortfolioItem {
+  id           String    @id @default(cuid())
+  studentId    String
+  title        String
+  kind         String    @default("PROJECT")
+  description  String?   @db.Text
+  link         String?
+  fileName     String?
+  fileUrl      String?   @db.Text
+  ploCodes     String?
+  verifiedById String?
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([studentId])
+}
