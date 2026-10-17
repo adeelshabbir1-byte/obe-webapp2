@@ -10,6 +10,7 @@ import { chairmanIdFor } from "../../../../../lib/reportScope";
 import SimpleBarChart from "../../../../../components/SimpleBarChart";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
+import LmsImport from "../../../../../components/LmsImport";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
 import { navForRole } from "../../../../../components/reportNav";
@@ -204,12 +205,15 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
       {wantsCombined && combinedData ? (
         <CombinedMarksEntryManager instruments={combinedData.instruments} sections={combinedData.sections} instrumentIdBySlot={combinedData.instrumentIdBySlot} />
       ) : (
+        <>
+        <div style={{ margin: "8px 0" }}><LmsImport courseId={course.id} instruments={instruments.filter((i) => i.marksPct > 0 || !i.partOfId).map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))} /></div>
         <MarksEntryManager
           courseId={course.id}
           instruments={instruments.map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))}
           students={enrollments.map((e) => ({ id: e.student.id, name: e.student.name, rollNumber: e.student.rollNumber, isRepeat: e.isRepeat, marks: marksByStudent.get(e.student.id) || {} }))}
           hasUnenrolledBatchStudents={batchStudentCount > enrollments.length}
         />
+        </>
       )}
       <TopicFollowUpsCard courseId={course.id} viewer={user} />
     </Shell>
