@@ -5007,3 +5007,40 @@ model RemediationFlag {
   @@index([chairmanId, status])
   @@index([studentId])
 }
+
+// A lab task (session) planned before the semester: its week and the theory lecture topics it practises.
+model LabTaskPlan {
+  id          String   @id
+  labCourseId String
+  labNumber   Int
+  week        Int?
+  topicsJson  String   @default("[]") @db.Text // [{ lectureNumber, topic }]
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([labCourseId, labNumber])
+}
+
+// Kind (manual / solution) and the instructor's approval of one uploaded lab file version.
+model LabFileReview {
+  id           String    @id
+  versionId    String    @unique
+  labCourseId  String
+  labNumber    Int
+  kind         String    @default("MANUAL") // MANUAL | SOLUTION
+  status       String    @default("PENDING") // PENDING | APPROVED | RETURNED
+  reviewedById String?
+  reviewedAt   DateTime?
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  @@index([labCourseId])
+}
+
+// Last seen lecture plan and lab plan of a lab, so changes on either side can be told to the other.
+model LabSyncState {
+  labCourseId String   @id
+  lectureJson String   @default("[]") @db.Text
+  labJson     String   @default("[]") @db.Text
+  updatedAt   DateTime @default(now())
+}

@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { labPlanEvidence } from "./labPlan";
 
 type Open = { id: string; key: string; assigneeId: string | null; dueDate: Date; completedAt: Date | null };
 type Evidence = { all: Date | null; by: Map<string, Date>; own?: boolean };
@@ -45,6 +46,10 @@ async function evidenceFor(key: string, chairmanId: string, since: Date, people:
       const leads = (await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId } as never, select: { id: true } })) as unknown as { id: string }[];
       const r = await prisma.student.findFirst({ where: { createdAt: after, batch: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } } } as never, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
       return { ...none, all: r ? (r.createdAt as Date) : null };
+    }
+    case "LAB_PLAN": case "LAB_APPROVE": {
+      if (!people.length) return none;
+      return { all: null, by: await labPlanEvidence(key, people, since), own: true };
     }
     default: return null;
   }

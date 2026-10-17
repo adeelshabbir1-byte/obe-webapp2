@@ -1,10 +1,11 @@
+import { withLabSync } from "../../../../../../../lib/labPlan";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { reorderLectureContent, applyLectureOrder } from "../../../../../../../lib/lectureReorder";
 
 // Drag a lecture's content to another slot; the lectures in between shift by one. Dates stay with the slot.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -16,3 +17,6 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 409 });
   return NextResponse.json({ rows: r.rows });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const POST = withLabSync(POST_handler);

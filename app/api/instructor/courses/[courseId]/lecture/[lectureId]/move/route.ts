@@ -1,9 +1,10 @@
+import { withLabSync } from "../../../../../../../../lib/labPlan";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../../lib/instructorGuard";
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -52,3 +53,6 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   ]);
   return NextResponse.json({ rows: [updatedRow, updatedTarget] });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const POST = withLabSync(POST_handler);

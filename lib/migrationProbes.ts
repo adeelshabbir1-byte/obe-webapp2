@@ -398,6 +398,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ActivityLog"
 },
 {
+"f": "migration_lab_plan.sql",
+"d": "Lab plan: lab tasks named before the semester and linked to the theory course's lecture topics, manual and solution files approved by the in",
+"t": "LabSyncState"
+},
+{
 "f": "migration_lab_specs.sql",
 "d": "PC specifications per lab",
 "t": "LabComputerSpec"

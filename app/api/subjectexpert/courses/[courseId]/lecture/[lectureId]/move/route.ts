@@ -1,3 +1,4 @@
+import { withLabSync } from "../../../../../../../../lib/labPlan";
 import { NextRequest, NextResponse } from "next/server";
 import { templateLockResponse } from "../../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
@@ -11,7 +12,7 @@ import { writeAuditLog } from "../../../../../../../../lib/audit";
 // when this screen was originally built. Week/lecture number stay tied
 // to the row position (same as the Instructor version); only the
 // content (topic, subtopic, CLO, Bloom level, weight) moves.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -63,3 +64,6 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   return NextResponse.json({ rows: [updatedRow, updatedTarget] });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const POST = withLabSync(POST_handler);

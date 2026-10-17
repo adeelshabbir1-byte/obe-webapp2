@@ -1,10 +1,11 @@
+import { withLabSync } from "../../../../../../../lib/labPlan";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -60,3 +61,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_LECTURE_UPDATED", entityType: "LectureRow", entityId: params.lectureId });
   return NextResponse.json({ row: updated });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const PATCH = withLabSync(PATCH_handler);

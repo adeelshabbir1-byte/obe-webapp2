@@ -1,3 +1,4 @@
+import { withLabSync } from "../../../../../../../lib/labPlan";
 import { NextRequest, NextResponse } from "next/server";
 import { templateLockResponse } from "../../../../../../../lib/templateLock";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
@@ -7,7 +8,7 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { cascadeTopicRename, reconcileLinks } from "../../../../../../../lib/prereqCascade";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -44,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   return NextResponse.json({ row: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { courseId: string; lectureId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -69,3 +70,7 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   return NextResponse.json({ ok: true });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const PATCH = withLabSync(PATCH_handler);
+export const DELETE = withLabSync(DELETE_handler);

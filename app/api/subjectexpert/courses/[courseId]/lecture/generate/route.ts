@@ -1,3 +1,4 @@
+import { withLabSync } from "../../../../../../../lib/labPlan";
 import { NextResponse } from "next/server";
 import { reconcileLinks } from "../../../../../../../lib/prereqCascade";
 import { templateLockResponse } from "../../../../../../../lib/templateLock";
@@ -7,7 +8,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -43,3 +44,6 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const created = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" }, orderBy: { lectureNumber: "asc" } });
   return NextResponse.json({ rows: created }, { status: 201 });
 }
+
+// A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
+export const POST = withLabSync(POST_handler);

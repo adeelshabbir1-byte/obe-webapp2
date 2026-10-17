@@ -8,8 +8,8 @@ type Student = { id: string; name: string; rollNumber: string };
 type Mark = { studentId: string; labNumber: number; score: number; maxScore: number };
 type Instrument = { id: string; name: string; maxScore: number };
 
-export default function LabWorkspace({ courseId, as, manuals, students, marks, instruments, theoryCode }: {
-  courseId: string; as: "ENGINEER" | "LEAD"; manuals: Manual[]; students: Student[]; marks: Mark[]; instruments: Instrument[]; theoryCode: string | null;
+export default function LabWorkspace({ courseId, as, manuals, students, marks, instruments, theoryCode, hideManuals }: {
+  hideManuals?: boolean; courseId: string; as: "ENGINEER" | "LEAD"; manuals: Manual[]; students: Student[]; marks: Mark[]; instruments: Instrument[]; theoryCode: string | null;
 }) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -64,7 +64,7 @@ export default function LabWorkspace({ courseId, as, manuals, students, marks, i
     <div>
       {msg && <div className="card" style={{ borderLeft: `4px solid ${msg.ok ? "#2e7d32" : "#c62828"}`, fontSize: 13 }}>{msg.text}</div>}
 
-      <div className="card">
+      {!hideManuals && <div className="card">
         <h3 style={{ marginTop: 0 }}>Lab manuals (Word files)</h3>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>
           {engineer ? "Upload the manual of each lab. The course instructor can read it and upload an updated version." : "Read or download the manuals set by the Lab Engineer. You can upload an updated version; the older versions are kept."}
@@ -91,7 +91,7 @@ export default function LabWorkspace({ courseId, as, manuals, students, marks, i
           <button className="btn btn-brass" disabled={busy}>{busy ? "Uploading…" : "Upload"}</button>
         </form>
         <p style={{ fontSize: 11.5, color: "var(--slate)" }}>Using an existing lab number adds a new version of that lab’s manual.</p>
-      </div>
+      </div>}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Lab marks</h3>
