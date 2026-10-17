@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { overTargetError } from "../../../../../../lib/assessmentGuard";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   // Under "best K of N" every quiz or assignment carries target / K, so a newly added one takes that weight.
   const lock = await lockedWeights(course.id, "INSTRUCTOR", { [body.type]: 1 });
   if (lock.has(body.type)) marksPct = lock.get(body.type) as number;
+  { const over = lock.has(body.type) ? null : await overTargetError(course.id, "INSTRUCTOR", new Map(), { type: body.type, marksPct });
+    if (over) return NextResponse.json({ error: over }, { status: 400 }); }
 
   const limit = await reachedDefinedCount(course.id, "INSTRUCTOR", body.type);
   if (limit) return NextResponse.json({ error: `You have defined ${limit} ${body.type.toLowerCase()}(s) for this course. To add more, change the number on the Assessment Weights page first.` }, { status: 400 });

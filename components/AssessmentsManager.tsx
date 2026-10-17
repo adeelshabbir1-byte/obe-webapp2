@@ -419,7 +419,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <div className="card" key={type}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h3 style={{ fontSize: 14 }}>{type}</h3>
-              <span style={{ fontSize: 11.5, color: overPolicy ? "var(--rust)" : overTarget ? "var(--brass-dark)" : "var(--slate)" }}>
+              <span style={{ fontSize: 11.5, color: overPolicy || (overTarget && sum > (target || 0)) ? "var(--rust)" : overTarget ? "var(--brass-dark)" : "var(--slate)", fontWeight: overTarget && sum > (target || 0) ? 700 : undefined }}>
                 {fmtPct(sum)}% defined {kBest ? `(best ${kBest} of ${items.length} count, each worth ${fmtPct(items[0] ? items[0].marksPct : 0)}%) ` : ""}{target ? `(your target: ${target}%${max !== undefined ? `, OMC max: ${max}%` : ""})` : ""}
                 {minCount > 0 ? ` — OMC minimum: ${minCount} ${isNumbered ? "question(s)" : ""}` : ""}
               </span>
@@ -437,11 +437,15 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 ⚠ Exceeds the OMC's policy maximum of {max}% for this course type.
               </p>
             )}
-            {!overPolicy && overTarget && (
+            {!overPolicy && overTarget && (sum > (target || 0) ? (
+              <p style={{ fontSize: 12, color: "var(--rust)", marginBottom: 8, fontWeight: 700 }}>
+                ⚠ {type}s total {fmtPct(sum)}% — above your {target}% target by {fmtPct(Math.round((sum - (target || 0)) * 100) / 100)}%. This pushes CLO and PLO totals above 100%. Lower the marks below (raising them further is blocked).
+              </p>
+            ) : (
               <p style={{ fontSize: 11.5, color: "var(--brass-dark)", marginBottom: 8 }}>
                 ⚠ Doesn't match your own {target}% target for this category yet.
               </p>
-            )}
+            ))}
             <SortableTable paginate={false}>
               <thead><tr><th>{isNumbered ? "Question #" : "Label"}</th><th>Marks %</th><th>Out of (raw)</th><th>Evidence</th><th></th></tr></thead>
               <tbody>

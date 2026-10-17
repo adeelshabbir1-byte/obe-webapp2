@@ -5,6 +5,7 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse } from "../../../../../../../lib/contentSync";
 import { lockedWeights } from "../../../../../../../lib/assessmentLock";
+import { overTargetError } from "../../../../../../../lib/assessmentGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
 
@@ -37,6 +38,11 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   // With "best K of N" quizzes or assignments each item's weight is fixed; only the marks it is out of can change.
   const locked = await lockedWeights(course.id, "SE");
   const typeOf = new Map<string, string>(validInstruments.map((i) => [i.id as string, i.type as string]));
+  // Never let a type go above its target (or the course above 100%); lowering is always allowed.
+  { const changes = new Map<string, number>();
+    for (const e of edits) if (validIds.has(e.instrumentId) && e.marksPct !== undefined && !locked.has(typeOf.get(e.instrumentId) || "")) changes.set(e.instrumentId, Math.round(Number(e.marksPct) * 10000) / 10000);
+    const over = changes.size ? await overTargetError(course.id, "SE", changes) : null;
+    if (over) return NextResponse.json({ error: over }, { status: 400 }); }
   const badMarks: string[] = [];
   const pending: Promise<unknown>[] = [];
   for (const e of edits) {
