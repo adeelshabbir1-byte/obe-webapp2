@@ -9,6 +9,9 @@ import { fypAccess, facultyOf } from "../../../lib/fyp";
 import { planTasks, progress } from "../../../lib/fypPlan";
 import FypGantt from "../../../components/fyp/FypGantt";
 import FypPlanEditor from "../../../components/fyp/FypPlanEditor";
+import HolidayControls from "../../../components/HolidayControls";
+import { workCalendar } from "../../../lib/workdays";
+import { analyse } from "../../../lib/fypSchedule";
 
 export const dynamic = "force-dynamic";
 const iso = (d: Date) => d.toISOString();
@@ -30,6 +33,11 @@ export default async function FypPlanPage({ searchParams }: { searchParams: { cy
     facultyOf(acc.chairmanId, cycle.departmentId),
   ]);
   const tasks = (all || []).filter((t) => !t.groupId);
+  const cal = await workCalendar(acc.chairmanId);
+  const an = analyse(cal, tasks as never);
+  const holidays = Array.from(cal.off).sort();
+  // Milestones (presentations, open house) on a holiday are warnings too.
+  const msIssues = milestones.filter((m) => cal.off.has(m.dueDate.toISOString().slice(0, 10)) || cal.weekend.includes(m.dueDate.getUTCDay())).map((m) => `${m.title} is on ${cal.names.get(m.dueDate.toISOString().slice(0, 10)) || "a weekend"} — move it in Manage FYP → Milestones.`);
   const oh = tasks.filter((t) => t.category === "OPEN_HOUSE");
   const sups = new Map(people.map((p) => [p.id, p.name]));
   const now = new Date();
@@ -43,14 +51,20 @@ export default async function FypPlanPage({ searchParams }: { searchParams: { cy
         {[["Year plan tasks", progress(tasks)], ["Open house readiness", progress(oh)]].map(([l, p]) => { const q = p as ReturnType<typeof progress>; return <div key={l as string} className="card" style={{ margin: 0 }}><div className="small-note">{l as string}</div><div style={{ fontSize: 22, fontWeight: 700 }}>{q.pct}%</div><div className="small-note">{q.done}/{q.total} done{q.overdue ? <span style={{ color: "#B3261E" }}> · {q.overdue} late</span> : ""}</div></div>; })}
         <div className="card" style={{ margin: 0 }}><div className="small-note">Groups at risk</div><div style={{ fontSize: 22, fontWeight: 700, color: groups.some((g) => g.atRisk) ? "#B3261E" : undefined }}>{groups.filter((g) => g.atRisk).length}</div><div className="small-note">of {groups.length} groups</div></div>
       </div>
+      <div className="card" style={{ fontSize: 12.5 }}>
+        <b>Working calendar:</b> {holidays.filter((h) => h >= new Date().toISOString().slice(0, 10)).slice(0, 6).map((h) => `${h} ${cal.names.get(h) || ""}`).join(" · ") || "no holidays entered"}{" "}
+        <a href="/academic-calendar">Academic Calendar →</a>
+        {user.role === "CHAIRMAN" && <div style={{ marginTop: 6 }}><HolidayControls weekend={cal.weekend} /></div>}
+        <div className="small-note">Tasks are measured in working days; weekends and holidays are skipped, and dates move automatically when a holiday is added (press Reschedule) or a task before them slips.</div>
+      </div>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Gantt chart</h3>
-        <FypGantt items={[...milestones.map((m) => ({ label: m.title, sub: m.weightPct ? `${m.weightPct}%` : "", from: iso(m.dueDate), to: iso(m.dueDate), kind: "milestone" as const })), ...tasks.map((t) => ({ label: t.title, sub: sups.get(t.ownerId || "") || t.ownerText || "", from: iso(t.startDate), to: iso(t.endDate), kind: "task" as const, status: t.status }))].sort((a, b) => a.from.localeCompare(b.from))} />
-        <p className="small-note">Diamonds: presentations and other milestones (set their dates in Manage FYP → Milestones). Bars: tasks — grey to do, blue in progress, green done, red late.</p>
+        <FypGantt holidays={holidays} items={[...milestones.map((m) => ({ label: m.title, sub: m.weightPct ? `${m.weightPct}%` : "", from: iso(m.dueDate), to: iso(m.dueDate), kind: "milestone" as const })), ...tasks.map((t) => ({ label: t.title, sub: sups.get(t.ownerId || "") || t.ownerText || "", from: iso(t.startDate), to: iso(t.endDate), kind: "task" as const, status: t.status, critical: an.info.get(t.id)?.critical }))].sort((a, b) => a.from.localeCompare(b.from))} />
+        <p className="small-note">Pink bands: holidays. Dark outline: critical path (no slack — any delay moves the end). Diamonds: presentations and other milestones (set their dates in Manage FYP → Milestones). Bars: tasks — grey to do, blue in progress, green done, red late.</p>
       </div>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Tasks</h3>
-        <FypPlanEditor cycleId={cycle.id} tasks={tasks.map((t) => ({ ...t, startDate: iso(t.startDate), endDate: iso(t.endDate) }))} people={people.map((p) => ({ id: p.id, name: p.name }))} canEdit={manages}
+        <FypPlanEditor cycleId={cycle.id} issues={[...msIssues, ...an.issues]} tasks={tasks.map((t) => ({ ...t, startDate: iso(t.startDate), endDate: iso(t.endDate), slack: an.info.get(t.id)?.slack, critical: an.info.get(t.id)?.critical }))} people={people.map((p) => ({ id: p.id, name: p.name }))} canEdit={manages}
           canStatusIds={tasks.filter((t) => t.ownerId === user.id).map((t) => t.id)} templates={manages ? [{ action: "openHouseTemplate", label: "Add the standard open-house tasks" }] : []} />
       </div>
       <div className="card" style={{ overflowX: "auto" }}>

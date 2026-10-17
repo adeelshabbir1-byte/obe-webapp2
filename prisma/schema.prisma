@@ -4255,9 +4255,33 @@ model FypPlanTask {
   endDate     DateTime
   status      String   @default("TODO") // TODO | IN_PROGRESS | DONE
   orderIndex  Int      @default(0)
+  durationDays Int?    // working days needed; the end date follows from it (holidays and weekends skipped)
+  dependsJson  String? // ids of tasks that must finish first
+  fixedStart   Boolean @default(false) // the start date is fixed (otherwise it follows its dependencies)
   createdById String
   createdAt   DateTime @default(now())
 
   @@index([cycleId])
   @@index([groupId])
+}
+
+// Open house logistics: interview rooms, ushers, refreshments, printing (per group posters) and other items.
+model FypOpenHouseItem {
+  id        String    @id @default(cuid())
+  cycleId   String
+  kind      String    // INTERVIEW | USHER | REFRESHMENT | PRINT | OTHER
+  title     String
+  groupId   String?
+  ownerId   String?
+  ownerText String?
+  room      String?
+  startAt   DateTime?
+  endAt     DateTime?
+  qty       Int?
+  vendor    String?
+  status    String    @default("PLANNED")
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  @@index([cycleId])
 }

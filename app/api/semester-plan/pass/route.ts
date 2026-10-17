@@ -1,3 +1,4 @@
+import { shiftToWorkday } from "../../../../lib/workdays";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest) {
 
   const old = (await prisma.deadline.findMany({ where: { chairmanId, setById: user.id, parentId: parent.id, allCourses: true } as never, select: { id: true, dueDate: true, title: true } })) as unknown as { id: string; dueDate: Date; title: string }[];
   for (const o of old) await prisma.deadline.deleteMany({ where: { chairmanId, setById: user.id, kind: parent.kind, title: o.title, dueDate: o.dueDate } });
-  await prisma.deadline.create({ data: { chairmanId, assigneeId: null, role: parent.role, setById: user.id, kind: parent.kind, title: parent.title, description: parent.description, courseId: null, dueDate: due, allCourses: true, parentId: parent.id, planTerm: parent.planTerm, planKey: parent.planKey } as never });
+  const dueW = await shiftToWorkday(chairmanId, due); // never on a weekend or holiday
+  await prisma.deadline.create({ data: { chairmanId, assigneeId: null, role: parent.role, setById: user.id, kind: parent.kind, title: parent.title, description: parent.description, courseId: null, dueDate: dueW, allCourses: true, parentId: parent.id, planTerm: parent.planTerm, planKey: parent.planKey } as never });
   await topUpStanding(chairmanId);
   await writeAuditLog({ actorUserId: user.id, action: "TARGET_PASSED_ON", entityType: "Deadline", entityId: parent.id });
   return NextResponse.json({ ok: true }, { status: 201 });

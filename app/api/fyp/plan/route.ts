@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { fypAccess } from "../../../../lib/fyp";
 import { addOpenHouseTemplate, addGroupTemplate } from "../../../../lib/fypPlan";
+import { reschedule } from "../../../../lib/fypSchedule";
 
 const pdb = prisma as unknown as Record<string, any>;
 const day = (v: unknown) => { const d = new Date(String(v || "") + "T00:00:00Z"); return isNaN(d.getTime()) ? null : d; };
@@ -33,15 +34,20 @@ export async function POST(req: Request) {
         const s = day(b.startDate), e = day(b.endDate) || s;
         const title = String(b.title || "").trim().slice(0, 160);
         if (!title || !s || !e || e < s) return NextResponse.json({ error: "Give a title and valid start / end dates (end on or after start)." }, { status: 400 });
-        const data = { title, startDate: s, endDate: e, ownerId: b.ownerId ? String(b.ownerId) : null, ownerText: b.ownerText ? String(b.ownerText).slice(0, 80) : null, category: groupId ? "GROUP" : b.category === "OPEN_HOUSE" ? "OPEN_HOUSE" : "GENERAL" };
+        const durationDays = Number(b.durationDays) > 0 ? Math.min(400, Math.round(Number(b.durationDays))) : null;
+        const dependsOn = (Array.isArray(b.dependsOn) ? b.dependsOn : []).map(String).filter((x: string) => x && x !== b.taskId).slice(0, 10);
+        const data = { title, startDate: s, endDate: e, ownerId: b.ownerId ? String(b.ownerId) : null, ownerText: b.ownerText ? String(b.ownerText).slice(0, 80) : null, category: groupId ? "GROUP" : b.category === "OPEN_HOUSE" ? "OPEN_HOUSE" : "GENERAL", durationDays, dependsJson: dependsOn.length ? JSON.stringify(dependsOn) : null, fixedStart: !!b.fixedStart };
         if (b.action === "add") await pdb.fypPlanTask.create({ data: { ...data, cycleId: cycle.id, groupId, createdById: user.id } });
         else await pdb.fypPlanTask.updateMany({ where: { id: String(b.taskId), cycleId: cycle.id, groupId }, data });
         break;
       }
       case "delete": await pdb.fypPlanTask.deleteMany({ where: { id: String(b.taskId), cycleId: cycle.id, groupId } }); break;
+      case "reschedule": break;
       case "status": await pdb.fypPlanTask.updateMany({ where: { id: String(b.taskId), cycleId: cycle.id }, data: { status: ["TODO", "IN_PROGRESS", "DONE"].includes(b.status) ? b.status : "TODO" } }); break;
       default: return NextResponse.json({ error: "unknown action" }, { status: 400 });
     }
+    // Dates follow durations, dependencies, weekends and holidays after every change.
+    if (b.action !== "status") await reschedule(acc.chairmanId, cycle.id, groupId);
   } catch { return NextResponse.json({ error: "FYP plans are not set up yet — run prisma/migration_fyp_plan.sql." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }

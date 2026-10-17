@@ -1,3 +1,4 @@
+import { shiftToWorkday } from "../../../lib/workdays";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -36,7 +37,8 @@ export async function POST(req: NextRequest) {
     if (!ROLE_LABEL[role]) return NextResponse.json({ error: "Choose the role this belongs to" }, { status: 400 });
     if (courseId && !["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(role)) return NextResponse.json({ error: "Course work belongs to the course's Subject Expert, Instructor or Program Lead" }, { status: 400 });
   }
-  const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: due, ...(standing ? { allCourses: true } : {}) } as never });
+  const dueW = await shiftToWorkday(chairmanOf(user), due); // never on a weekend or holiday
+  const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: dueW, ...(standing ? { allCourses: true } : {}) } as never });
   if (standing) await topUpStanding(chairmanOf(user));
   await writeAuditLog({ actorUserId: user.id, action: "DEADLINE_SET", entityType: "Deadline", entityId: row.id });
   return NextResponse.json({ ok: true }, { status: 201 });

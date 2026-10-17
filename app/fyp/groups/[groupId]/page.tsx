@@ -12,6 +12,8 @@ import FypMeetings from "../../../../components/fyp/FypMeetings";
 import FypGantt from "../../../../components/fyp/FypGantt";
 import FypPlanEditor from "../../../../components/fyp/FypPlanEditor";
 import { planTasks } from "../../../../lib/fypPlan";
+import { workCalendar } from "../../../../lib/workdays";
+import { analyse } from "../../../../lib/fypSchedule";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "FYP group" };
@@ -110,12 +112,14 @@ export default async function FypGroupPage({ params }: { params: { groupId: stri
 
       {await (async () => {
         const plan = (await planTasks(cycle.id, group.id)) || [];
+        const cal = await workCalendar(acc.chairmanId);
+        const an = analyse(cal, plan as never);
         const canPlan = group.supervisorId === user.id || manages;
         return (
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Project plan</h3>
-            <FypGantt items={[...milestones.map((m) => ({ label: m.title, from: m.dueDate.toISOString(), to: m.dueDate.toISOString(), kind: "milestone" as const })), ...plan.map((t) => ({ label: t.title, from: t.startDate.toISOString(), to: t.endDate.toISOString(), kind: "task" as const, status: t.status }))].sort((a, b) => a.from.localeCompare(b.from))} />
-            <div style={{ marginTop: 8 }}><FypPlanEditor cycleId={cycle.id} groupId={group.id} tasks={plan.map((t) => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString() }))} people={[]} canEdit={canPlan}
+            <FypGantt items={[...milestones.map((m) => ({ label: m.title, from: m.dueDate.toISOString(), to: m.dueDate.toISOString(), kind: "milestone" as const })), ...plan.map((t) => ({ label: t.title, from: t.startDate.toISOString(), to: t.endDate.toISOString(), kind: "task" as const, status: t.status, critical: an.info.get(t.id)?.critical }))].sort((a, b) => a.from.localeCompare(b.from))} holidays={Array.from(cal.off)} />
+            <div style={{ marginTop: 8 }}><FypPlanEditor cycleId={cycle.id} groupId={group.id} issues={an.issues} tasks={plan.map((t) => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString(), slack: an.info.get(t.id)?.slack, critical: an.info.get(t.id)?.critical }))} people={[]} canEdit={canPlan}
               templates={canPlan && plan.length === 0 ? [{ action: "groupTemplate", label: "Start from the standard 6-phase plan" }] : []} /></div>
           </div>
         );

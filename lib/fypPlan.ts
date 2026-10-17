@@ -2,7 +2,7 @@ import { prisma } from "./db";
 
 const pdb = prisma as unknown as Record<string, any>;
 const DAY = 86400000;
-export type PlanTask = { id: string; groupId: string | null; title: string; category: string; ownerId: string | null; ownerText: string | null; startDate: Date; endDate: Date; status: string };
+export type PlanTask = { id: string; groupId: string | null; title: string; category: string; ownerId: string | null; ownerText: string | null; startDate: Date; endDate: Date; status: string; durationDays: number | null; dependsJson: string | null; fixedStart: boolean };
 
 export const OPEN_HOUSE_TEMPLATE: [string, number, number][] = [
   ["Book the venue and stalls", -45, -30], ["Invite industry evaluators", -40, -14], ["Collect posters and abstracts from groups", -21, -7],
@@ -22,7 +22,7 @@ export async function addOpenHouseTemplate(cycleId: string, userId: string) {
   const oh = await prisma.fypMilestone.findFirst({ where: { cycleId, kind: "OPEN_HOUSE" }, orderBy: { dueDate: "asc" } });
   if (!oh) return "Add a “Demo / Open house” milestone with its date first.";
   const d0 = oh.dueDate.getTime();
-  await pdb.fypPlanTask.createMany({ data: OPEN_HOUSE_TEMPLATE.map(([title, a, b], i) => ({ cycleId, groupId: null, title, category: "OPEN_HOUSE", startDate: new Date(d0 + a * DAY), endDate: new Date(d0 + b * DAY), orderIndex: i, createdById: userId })) });
+  await pdb.fypPlanTask.createMany({ data: OPEN_HOUSE_TEMPLATE.map(([title, a, b], i) => ({ cycleId, groupId: null, title, category: "OPEN_HOUSE", startDate: new Date(d0 + a * DAY), endDate: new Date(d0 + b * DAY), orderIndex: i, createdById: userId, fixedStart: true, durationDays: Math.max(1, Math.round(((b - a) * 5) / 7) || 1) })) });
   return null;
 }
 
@@ -33,7 +33,9 @@ export async function addGroupTemplate(cycleId: string, groupId: string, userId:
   if (!fin) return "Set the cycle's milestones first.";
   const start = Math.min(Date.now(), ms[0]?.dueDate.getTime() ?? Date.now());
   const span = Math.max(30 * DAY, fin.dueDate.getTime() - start), step = span / GROUP_PHASES.length;
-  await pdb.fypPlanTask.createMany({ data: GROUP_PHASES.map((title, i) => ({ cycleId, groupId, title, category: "GROUP", startDate: new Date(start + i * step), endDate: new Date(start + (i + 1) * step - DAY), orderIndex: i, createdById: userId })) });
+  // Each phase follows the one before it (finish-to-start), with its length in working days.
+  const ids = GROUP_PHASES.map(() => (globalThis.crypto as Crypto).randomUUID());
+  await pdb.fypPlanTask.createMany({ data: GROUP_PHASES.map((title, i) => ({ id: ids[i], cycleId, groupId, title, category: "GROUP", startDate: new Date(start + i * step), endDate: new Date(start + (i + 1) * step - DAY), orderIndex: i, createdById: userId, durationDays: Math.max(3, Math.round((step / DAY) * 5 / 7)), fixedStart: i === 0, dependsJson: i ? JSON.stringify([ids[i - 1]]) : null })) });
   return null;
 }
 

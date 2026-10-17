@@ -1,3 +1,4 @@
+import { shiftToWorkday } from "../../../lib/workdays";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -19,7 +20,8 @@ export async function POST(req: NextRequest) {
   // Publishing again for the same semester replaces the earlier plan, including anything passed on from it.
   await prisma.deadline.deleteMany({ where: { chairmanId: user.id, planTerm: term } as never });
   for (const { t, due, role } of chosen) {
-    await prisma.deadline.create({ data: { chairmanId: user.id, assigneeId: null, role: role || t!.role, setById: user.id, kind: t!.kind, title: `${t!.title} (${term})`, description: t!.why, courseId: null, dueDate: due, allCourses: true, planTerm: term, planKey: t!.scope === "COURSE" ? null : `${t!.scope}:${t!.key}` } as never });
+    const dueW = await shiftToWorkday(user.id, due); // never on a weekend or holiday
+    await prisma.deadline.create({ data: { chairmanId: user.id, assigneeId: null, role: role || t!.role, setById: user.id, kind: t!.kind, title: `${t!.title} (${term})`, description: t!.why, courseId: null, dueDate: dueW, allCourses: true, planTerm: term, planKey: t!.scope === "COURSE" ? null : `${t!.scope}:${t!.key}` } as never });
   }
   const hasStart = await prisma.academicCalendarEntry.findFirst({ where: { chairmanId: user.id, kind: "SEMESTER_START", termName: term } });
   if (!hasStart) await prisma.academicCalendarEntry.create({ data: { chairmanId: user.id, facultyId: null, kind: "SEMESTER_START", title: `${term} begins`, startDate: start, termName: term, termYear: start.getUTCFullYear(), createdById: user.id } });
