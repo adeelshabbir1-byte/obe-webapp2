@@ -1,3 +1,4 @@
+import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
@@ -31,6 +32,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
           <a key={t.key} href={t.href} className="tab" aria-current={active === t.key ? "page" : undefined}>{t.label}</a>
         ))}
       </nav>
+      <CourseReadiness courseId={courseId} source="INSTRUCTOR" />
     </div>
   );
 }

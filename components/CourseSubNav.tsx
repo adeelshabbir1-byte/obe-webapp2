@@ -1,3 +1,4 @@
+import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
@@ -28,6 +29,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           <Link key={t.key} href={t.href} className="tab" aria-current={active === t.key ? "page" : undefined}>{t.label}</Link>
         ))}
       </nav>
+      <CourseReadiness courseId={courseId} source="SE" />
       {(status === "approved" || status === "reopened") && <TemplateChangeBanner courseId={courseId} />}
       {active === "clos" && (
         <div style={{ marginTop: 14 }}>
