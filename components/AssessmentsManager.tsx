@@ -750,6 +750,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                         )}
                         {parts.length === 0 && cloList.length > 1 && <button className="act" disabled={loading} style={{ marginLeft: 6 }} onClick={() => { setSplitFor(splitFor === i.id ? null : i.id); setSplitPct({}); }}>Split into parts…</button>}
                         {parts.length === 0 && apiBase.includes("/instructor") && <button className="act" disabled={loading} style={{ marginLeft: 6 }} title="Uses the CLO chosen for each rubric criterion" onClick={() => direct({ action: "split-from-rubric", instrumentId: i.id })}>Split by rubric CLOs</button>}
+                        {apiBase.includes("/instructor") && <a href={`/instructor/courses/${courseId}/evaluate/${i.id}`} className="act" style={{ marginLeft: 6 }}>Evaluate (groups) →</a>}
                         {parts.length > 0 && <span style={{ color: "var(--slate)" }}> — split into {parts.length} parts <button className="act act-danger" disabled={loading} onClick={() => confirm("Join the parts back into one item?") && direct({ action: "unsplit", instrumentId: i.id })}>Undo split</button></span>}
                         {splitFor === i.id && (
                           <div style={{ marginTop: 6, padding: 8, background: "#fff", border: "1px solid var(--line)" }}>

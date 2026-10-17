@@ -2149,6 +2149,8 @@ model LabManual {
   createdAt DateTime @default(now())
   versions  LabManualVersion[]
 
+  cloId        String?  // the CLO this lab session measures (theory course CLO when the lab is imported into it)
+  criteriaJson String?  @db.Text // optional rubric for this session (criteria may each carry a CLO)
   @@unique([courseId, labNumber])
 }
 
@@ -2179,6 +2181,7 @@ model LabMark {
   enteredById String
   updatedAt   DateTime @updatedAt
 
+  levelsJson  String?  @db.Text // rubric levels chosen for this student, when the session has a rubric
   @@unique([courseId, studentId, labNumber])
   @@index([courseId])
   @@index([studentId])
@@ -4136,4 +4139,25 @@ model PloChangeLog {
   createdAt  DateTime @default(now())
 
   @@index([batchId])
+}
+
+// Project / lab groups of a course: mark the group once, change individual students when needed.
+model WorkGroup {
+  id          String   @id @default(cuid())
+  courseId    String
+  name        String
+  title       String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([courseId])
+}
+
+model WorkGroupMember {
+  id        String @id @default(cuid())
+  groupId   String
+  studentId String
+
+  @@unique([groupId, studentId])
+  @@index([studentId])
 }

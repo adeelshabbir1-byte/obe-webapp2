@@ -6,6 +6,9 @@ import { labWorkspaceData } from "../../../../lib/labData";
 import Shell from "../../../../components/Shell";
 import { navForRole } from "../../../../components/reportNav";
 import LabWorkspace from "../../../../components/LabWorkspace";
+import LabSessionsEditor from "../../../../components/LabSessionsEditor";
+import { labSessions, labCloOptions } from "../../../../lib/labSessions";
+import { templateCriteria } from "../../../../lib/rubrics";
 
 export default async function LabDetail({ params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -22,6 +25,7 @@ export default async function LabDetail({ params }: { params: { courseId: string
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         {access.lab.batch ? `${access.lab.batch.degreeProgram} ${access.lab.batch.batchName}` : "—"} · Lab Engineer: {access.lab.labEngineer?.name || "not named yet"} · Lab lead: {access.lead?.name || "not named yet"}
       </p>
+      <LabSessionsEditor labCourseId={access.lab.id} sessions={await labSessions(access.lab.id)} clos={(await labCloOptions(access.lab.id, access.theory?.id || null)).map((c) => ({ id: c.id, code: c.code }))} template={templateCriteria("Lab")} />
       <LabWorkspace courseId={access.lab.id} as={access.as} theoryCode={access.theory?.code || null} {...data} />
     </Shell>
   );

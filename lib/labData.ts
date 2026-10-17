@@ -17,6 +17,6 @@ export async function labWorkspaceData(lab: { id: string }, theory: { id: string
     })),
     students: enrollments.map((e: any) => ({ id: e.student.id, name: e.student.name, rollNumber: e.student.rollNumber })).sort((a: any, b: any) => a.rollNumber.localeCompare(b.rollNumber)),
     marks: marks.map((m: any) => ({ studentId: m.studentId, labNumber: m.labNumber, score: m.score, maxScore: m.maxScore })),
-    instruments: instruments.map((i: any) => ({ id: i.id, name: i.label, maxScore: i.maxScore })),
+    instruments: instruments.filter((i: any) => !i.partOfId).map((i: any) => ({ id: i.id, name: i.label, maxScore: i.maxScore })),
   };
 }
