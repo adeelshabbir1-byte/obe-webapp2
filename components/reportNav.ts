@@ -13,7 +13,7 @@ export const OMC_ACTION_NAV = [
   { href: "/omc/plo-matrix", label: "PLO–Course Matrix" },
   { href: "/omc/plo-requests", label: "PLO Change Requests" },
   { href: "/omc/plo-weights", label: "PLO Weights" },
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/omc/weight-policy", label: "Weight Policy" },
   { href: "/omc/weight-exceptions", label: "Weight Exceptions" },
   { href: "/omc/template-changes", label: "Template Changes" },
@@ -140,7 +140,7 @@ export const SUBJECT_EXPERT_NAV = [
 ];
 
 export const COORDINATOR_NAV = [
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/exams", label: "Exams" },
   { href: "/fyp", label: "Final Year Projects" },
@@ -207,7 +207,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/fyp/manage", label: "Final Year Projects" },
@@ -256,7 +256,7 @@ export const CHAIRMAN_NAV = [
 ];
 
 export const DEAN_NAV = [
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
   { href: "/faculty-leave", label: "Faculty Leave" },
@@ -291,7 +291,7 @@ export const DEAN_NAV = [
 ];
 
 export const DEPT_COORDINATOR_NAV = [
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/risk", label: "Risk Register" },
   { href: "/exams", label: "Exams" },
   { href: "/fyp", label: "Final Year Projects" },
@@ -326,7 +326,7 @@ export const DEPT_COORDINATOR_NAV = [
 ];
 
 export const HOD_NAV = [
-  { href: "/outcome-flow", label: "Outcome Flow" },
+  { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },
   { href: "/recognition", label: "OBE Recognition" },
   { href: "/leave-approvals", label: "Leave & Substitutes" },
