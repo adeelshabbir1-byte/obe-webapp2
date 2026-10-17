@@ -54,6 +54,7 @@ export default function OutcomeFlow(props: FlowProps) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [editing, setEditing] = useState<{ kind: "plo"; ploId: string } | { kind: "peo"; index: number } | null>(null);
   const [error, setError] = useState("");
+  const [wide, setWide] = useState(false);
 
   const chain = open ? chains[open] : null;
   const ploByNumber = useMemo(() => new Map(plos.map((p) => [p.number, p])), [plos]);
@@ -107,7 +108,6 @@ export default function OutcomeFlow(props: FlowProps) {
     }
     return s;
   }, [focus, chain, plos, peos, ploByNumber]);
-  const dim = (k: string) => (related && !related.has(k) ? 0.28 : 1);
 
   // Lines between the boxes, measured from the page.
   useLayoutEffect(() => {
@@ -135,35 +135,41 @@ export default function OutcomeFlow(props: FlowProps) {
   }, [chain, plos, peos, related, ploByNumber, open, loading]);
 
   const showBadges = edges.filter((e) => e.on).length <= 90;
-  const node = (k: string, kind: Kind, onClick: () => void, children: React.ReactNode, active = false) => (
-    <div data-k={k} onClick={onClick} style={{ background: "#fff", border: `1px solid ${active ? TIER[kind].color : "var(--line)"}`, borderLeft: `4px solid ${TIER[kind].color}`, borderRadius: 8, padding: "7px 9px", cursor: "pointer", opacity: dim(k), transition: "opacity .15s", boxShadow: focus === k ? `0 0 0 2px ${TIER[kind].color}` : "0 1px 2px rgba(0,0,0,.04)", fontSize: 12 }}>
+  const node = (k: string, kind: Kind, onClick: () => void, children: React.ReactNode, active = false) => related && !related.has(k) ? null : (
+    <div key={k} data-k={k} onClick={onClick} style={{ background: "#fff", border: `1px solid ${active ? TIER[kind].color : "var(--line)"}`, borderLeft: `4px solid ${TIER[kind].color}`, borderRadius: 8, padding: "7px 9px", cursor: "pointer", boxShadow: focus === k ? `0 0 0 2px ${TIER[kind].color}` : "0 1px 2px rgba(0,0,0,.04)", fontSize: 12 }}>
       {children}
     </div>
   );
   const col = (kind: Kind, children: React.ReactNode, empty?: string) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, justifyContent: "center", minWidth: 0, width: "100%" }}>
-      <div style={{ textAlign: "center", borderBottom: `2px solid ${TIER[kind].color}`, paddingBottom: 4, marginBottom: 2, position: "sticky", top: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", minWidth: 0, width: "100%" }}>
+      <div style={{ textAlign: "center", borderBottom: `2px solid ${TIER[kind].color}`, paddingBottom: 4, marginBottom: 10 }}>
         <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", color: TIER[kind].color }}>{TIER[kind].title}</div>
         <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{TIER[kind].sub}</div>
       </div>
-      {children}
-      {empty && <div style={{ fontSize: 11.5, color: "var(--slate)", textAlign: "center", padding: 10, border: "1px dashed var(--line)", borderRadius: 8 }}>{empty}</div>}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+        {children}
+        {empty && <div style={{ fontSize: 11.5, color: "var(--slate)", textAlign: "center", padding: 10, border: "1px dashed var(--line)", borderRadius: 8 }}>{empty}</div>}
+      </div>
     </div>
   );
+
 
   const shownCourses = mode === "course" && chain ? courses.filter((c) => c.id === chain.course.id) : courses;
 
   return (
-    <div>
+    <div style={wide ? { position: "fixed", inset: 0, zIndex: 90, background: "var(--paper, #F7F4F3)", overflow: "auto", padding: "14px 20px" } : undefined}>
       {error && <div className="err">{error}</div>}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12, color: "var(--slate)", marginBottom: 8 }}>
         <span>Box figure: <b>% of students reaching the target</b> (green from {target}%) · avg = class average.</span>
         <span>Line figure: the weight of that link.</span>
         {canEdit && <span>Click a weight on a <b>Course → PLO</b> or <b>PLO → PEO</b> line to change it.</span>}
-        {focus && <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12, marginLeft: "auto" }} onClick={() => setFocus(null)}>Show everything</button>}
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {focus && <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setFocus(null)}>← Show everything</button>}
+          <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setWide(!wide)}>{wide ? "Exit full screen" : "Full screen"}</button>
+        </span>
       </div>
       <div style={{ overflowX: "auto" }}>
-        <div ref={box} style={{ position: "relative", minWidth: 1150, display: "grid", gridTemplateColumns: "1fr 1.15fr 1.15fr 1.25fr 1.15fr", gap: 46, padding: "6px 4px 16px" }}>
+        <div ref={box} style={{ position: "relative", minWidth: 1450, display: "grid", gridTemplateColumns: "1fr 1.15fr 1.1fr 1.2fr 1.15fr", gap: 96, padding: "6px 4px 16px" }}>
           <svg width={size.w} height={size.h} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
             {edges.map((e) => {
               const dx = Math.max(20, (e.x2 - e.x1) * 0.5);
