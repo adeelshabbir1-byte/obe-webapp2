@@ -174,6 +174,7 @@ export default function OutcomeFlow(props: FlowProps) {
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12, color: "var(--slate)", marginBottom: 8 }}>
         <span>Box figure: <b>% of students reaching the target</b> (green from {target}%) · avg = class average.</span>
         <span>Line figure: the weight of that link.</span>
+        {mode === "batch" && <span>Figures refresh every 5 minutes.</span>}
         {canEdit && <span>Click a weight on a <b>Course → PLO</b> or <b>PLO → PEO</b> line to change it.</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setAll(!all)}>{all ? "Step by step" : "Show all"}</button>

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { batchPloWeights, wdb } from "./ploWeights";
 import { weightedAttainment, equalWeights, cohortWeights, TARGET_PCT } from "./ploWeightMath";
@@ -142,3 +143,7 @@ export async function cohortSuggestion(batchId: string) {
 }
 
 export { equalWeights };
+
+/** batchFlow kept for 5 minutes (it computes attainment for every course); weight changes clear it at once. */
+export const OUTCOME_FLOW_TAG = "outcome-flow";
+export const cachedBatchFlow = (batchId: string) => unstable_cache(() => batchFlow(batchId), ["outcome-flow-batch", batchId], { revalidate: 300, tags: [OUTCOME_FLOW_TAG] })();

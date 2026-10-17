@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -41,6 +42,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "The PLO weight table is not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase." }, { status: 500 });
   }
   await writeAuditLog({ actorUserId: user.id, action: "PLO_WEIGHTS_SET", entityType: "PLO", entityId: plo.id, metadata: { ploNumber: plo.number, source, weights: JSON.stringify(weights) } });
+  revalidateTag("outcome-flow");
   return NextResponse.json({ ok: true });
 }
 
@@ -49,5 +51,6 @@ export async function DELETE(req: NextRequest) {
   if ("error" in g) return g.error;
   try { await wdb.coursePloWeight.deleteMany({ where: { ploId: g.plo.id } }); } catch { /* table missing: nothing saved */ }
   await writeAuditLog({ actorUserId: g.user.id, action: "PLO_WEIGHTS_RESET", entityType: "PLO", entityId: g.plo.id, metadata: { ploNumber: g.plo.number } });
+  revalidateTag("outcome-flow");
   return NextResponse.json({ ok: true });
 }

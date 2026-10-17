@@ -28,7 +28,8 @@ export default async function Shell({
   // The person themselves (as the sign-in API routes see them), not the Program Lead a department coordinator may be working as.
   const user = await getSignedInUser();
 
-  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications] = await Promise.all([
+  const needAdvisor = !!user && !navLinks.some((l) => l.href === "/advisor/dashboard");
+  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises] = await Promise.all([
     getBrandingFor(user),
     user ? getSessionInfo(user) : null,
     user ? getRequestsCount(user) : 0,
@@ -36,9 +37,9 @@ export default async function Shell({
     // (reports, the registration window, degree planning) depend on which term is "current".
     user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
     user ? unreadCount(user.id) : 0,
+    needAdvisor && user ? prisma.batch.count({ where: { advisorId: user.id } }).then((n) => n > 0).catch(() => false) : false,
   ]);
   // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
-  const advises = user && !navLinks.some((l) => l.href === "/advisor/dashboard") ? (await prisma.batch.count({ where: { advisorId: user.id } }).catch(() => 0)) > 0 : false;
   const links = advises ? [...navLinks, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : navLinks;
 
   return (

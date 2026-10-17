@@ -8,6 +8,9 @@ const nextConfig = {
     serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"],
     // Import only the icons actually used instead of the whole barrel.
     optimizePackageImports: ["lucide-react"],
+    // Keep visited pages in the browser for 30 s, so going back or switching between recent pages is instant.
+    // Saving anything calls router.refresh(), which fetches fresh data straight away.
+    staleTimes: { dynamic: 30, static: 180 },
   },
   async headers() {
     return [

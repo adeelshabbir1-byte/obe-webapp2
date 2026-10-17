@@ -7,7 +7,7 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel, coordinatorIdsFor } from "../../lib/reportScope";
 import DegreeBatchFilter from "../../components/DegreeBatchFilter";
 import OutcomeFlow from "../../components/OutcomeFlow";
-import { batchFlow, courseChain, cohortSuggestion, FLOW_VIEW_ROLES } from "../../lib/outcomeFlow";
+import { cachedBatchFlow, courseChain, cohortSuggestion, FLOW_VIEW_ROLES } from "../../lib/outcomeFlow";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -37,7 +37,7 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
     const mine = await prisma.course.findMany({ where: user.role === "SUBJECT_EXPERT" ? { subjectExpertId: user.id } : { instructorId: user.id, isOffered: true }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, batch: { select: { degreeProgram: true, batchName: true } } } });
     const pick = mine.find((c) => c.id === searchParams.courseId) || mine[0] || null;
     const chain = pick ? await courseChain(pick.id) : null;
-    const flow = chain?.course.batchId ? await batchFlow(chain.course.batchId) : null;
+    const flow = chain?.course.batchId ? await cachedBatchFlow(chain.course.batchId) : null;
     const ploNumbers = new Set(chain?.clos.map((c) => c.ploNumber).filter((n): n is number => n !== null));
     const plos = (flow?.plos || []).filter((p) => p.courses.some((c) => c.id === pick?.id) || ploNumbers.has(p.number)).map((p) => ({ ...p, courses: p.courses.filter((c) => c.id === pick?.id) }));
     const keep = new Set(plos.map((p) => p.number));
@@ -61,7 +61,7 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
   const leads = await coordinatorIdsFor(user);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: leads } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }], select: { id: true, degreeProgram: true, batchName: true } });
   const batch = batches.find((b) => b.id === searchParams.batchId) || null;
-  const flow = batch ? await batchFlow(batch.id) : null;
+  const flow = batch ? await cachedBatchFlow(batch.id) : null;
   const cohort = batch && canEdit && searchParams.cohort === "1" ? await cohortSuggestion(batch.id) : null;
 
   return (

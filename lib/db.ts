@@ -9,6 +9,15 @@ import { PrismaClient } from "@prisma/client";
 // general slowness/unreliability, not any specific page's logic.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function makeClient() {
+  const c = new PrismaClient({ log: [{ emit: "event", level: "query" }] });
+  // Speed watch: any query slower than 300 ms goes to the Vercel logs as [slow-query], so slow pages can be found.
+  (c as unknown as { $on: (e: "query", cb: (x: { duration: number; query: string }) => void) => void }).$on("query", (e) => {
+    if (e.duration > 300) console.warn(`[slow-query] ${e.duration}ms ${e.query.slice(0, 300)}`);
+  });
+  return c as unknown as PrismaClient;
+}
+
+export const prisma = globalForPrisma.prisma ?? makeClient();
 
 globalForPrisma.prisma = prisma;

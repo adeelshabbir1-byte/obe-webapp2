@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -29,5 +30,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "The outcome weight tables are not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase." }, { status: 500 });
   }
   await writeAuditLog({ actorUserId: user.id, action: "PEO_WEIGHTS_SET", entityType: "ProgramProfile", entityId: `${batch.coordinatorId}:${batch.degreeProgram}`, metadata: { peoIndex, weights: JSON.stringify(Object.fromEntries(entries)) } });
+  revalidateTag("outcome-flow");
   return NextResponse.json({ ok: true });
 }
