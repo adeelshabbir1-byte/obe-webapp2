@@ -1,3 +1,4 @@
+import TodayPanel from "../../components/TodayPanel";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -112,6 +113,7 @@ export default async function Dashboard() {
           <img className="hero-mark" src={BRAND.mark.src} alt="" {...sized(BRAND.mark, 104)} />
         </div>
       </section>
+      <TodayPanel user={user} />
 
       <AssignmentResponses items={offered} />
       {removed.length > 0 && (
