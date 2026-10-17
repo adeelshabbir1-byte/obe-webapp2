@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import StudentShell from "../../../components/StudentShell";
 import { ActionButton, ActionForm } from "../../../components/fyp/FypClient";
 import { ARTIFACT_KINDS, eligibility, REQUISITION_KINDS, studentCycle } from "../../../lib/fyp";
+import { meetingLog, remarksOf } from "../../../lib/fypPlus";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Final Year Project" };
@@ -150,6 +151,36 @@ export default async function StudentFypPage() {
               {group.extendedUntil && <p style={{ fontSize: 13, margin: 0, color: "var(--rust)" }}>Your group has an extension until {day(group.extendedUntil)}. Your FYP grade is on hold until the follow-up evaluation.</p>}
               {proposal?.scope && <p className="small-note" style={{ whiteSpace: "pre-wrap" }}>{proposal.scope}</p>}
             </div>
+            {await (async () => {
+              const [log, remarks] = await Promise.all([meetingLog(group.id), remarksOf(group.id)]);
+              const tasks = (log || []).flatMap((m) => m.tasks).filter((t) => !t.studentId || t.studentId === student.id);
+              const next = (log || [])[0]?.nextAt;
+              return (
+                <>
+                  {(log?.length || 0) > 0 && (
+                    <div className="card">
+                      <h3 style={{ marginTop: 0 }}>Supervisor meetings</h3>
+                      {next && <p style={{ margin: "0 0 6px" }}>Next meeting: <b>{day(next)}</b></p>}
+                      {tasks.filter((t) => t.status === "OPEN").length > 0 ? <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{tasks.filter((t) => t.status === "OPEN").map((t) => <li key={t.id}>{t.text}{t.studentId ? " (you)" : ""}</li>)}</ul> : <p className="small-note">No open tasks.</p>}
+                      {(log || [])[0]?.feedback && <p className="small-note">Latest feedback: {(log || [])[0].feedback}</p>}
+                    </div>
+                  )}
+                  {remarks.length > 0 && (
+                    <div className="card">
+                      <h3 style={{ marginTop: 0 }}>Panel remarks</h3>
+                      <p className="small-note" style={{ marginTop: 0 }}>Reply to each remark with what you changed — the next panel sees your reply.</p>
+                      {remarks.map((r) => (
+                        <div key={r.id} style={{ borderTop: "1px solid var(--line)", padding: "6px 0", fontSize: 13 }}>
+                          <span className="small-note">{milestones.find((m) => m.id === r.milestoneId)?.title} · {r.by}:</span> {r.text}
+                          {r.replies.map((rp, i) => <div key={i} className="small-note" style={{ marginLeft: 14 }}>↳ {rp.text}{rp.addressed ? " (addressed)" : ""}</div>)}
+                          <ActionForm url="/api/student/fyp" fixed={{ action: "replyRemark", evaluationId: r.id }} submit="Reply" collapsed openLabel="Reply" fields={[{ name: "text", label: "What you did", type: "textarea" }, { name: "addressed", label: "Addressed", type: "checkbox" }]} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Milestones</h3>
               <table>

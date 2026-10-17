@@ -162,7 +162,7 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                 <h3 style={{ marginTop: 0 }}>Milestones</h3>
                 {(() => {
                   if (!manages) return <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{ms.map((m) => <li key={m.id}>{m.title} — {day(m.dueDate)}{m.weightPct ? ` · ${m.weightPct}%` : ""}</li>)}</ul>;
-                  return <MilestonesEditor cycleId={cycle.id} kinds={MILESTONE_KINDS} initial={ms.map((m) => ({ id: m.id, kind: m.kind, title: m.title, dueDate: day(m.dueDate), weightPct: m.weightPct }))} />;
+                  return <MilestonesEditor cycleId={cycle.id} kinds={MILESTONE_KINDS} initial={ms.map((m) => ({ id: m.id, kind: m.kind, title: m.title, dueDate: day(m.dueDate), weightPct: m.weightPct, evaluatorMode: (m as unknown as { evaluatorMode?: string }).evaluatorMode || "PANEL" }))} />;
                 })()}
               </div>
               <div className="card">

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       case "saveMilestones": {
         if (!managesCycle || !cycle) return bad("forbidden", 403);
         const list = Array.isArray(b.milestones) ? b.milestones : [];
-        const rows = list.map((m: Record<string, unknown>, i: number) => ({ id: str(m.id, 60) || null, kind: MILESTONE_KINDS[String(m.kind)] ? String(m.kind) : "OTHER", title: str(m.title, 120), dueDate: str(m.dueDate, 10), weightPct: Math.max(0, num(m.weightPct)), orderIndex: i }));
+        const rows = list.map((m: Record<string, unknown>, i: number) => ({ id: str(m.id, 60) || null, kind: MILESTONE_KINDS[String(m.kind)] ? String(m.kind) : "OTHER", title: str(m.title, 120), dueDate: str(m.dueDate, 10), weightPct: Math.max(0, num(m.weightPct)), orderIndex: i, evaluatorMode: ["PANEL", "SUPERVISOR_ONLY", "SINGLE"].includes(String(m.evaluatorMode)) ? String(m.evaluatorMode) : "PANEL" }));
         if (rows.some((r: { title: string; dueDate: string }) => !r.title || !/^\d{4}-\d{2}-\d{2}$/.test(r.dueDate))) return bad("Every milestone needs a title and a due date.");
         const total = rows.reduce((n: number, r: { weightPct: number }) => n + r.weightPct, 0);
         if (Math.abs(total - 100) > 0.01) return bad(`The evaluated milestones' weights must add up to 100% (now ${total}%).`);
@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
         if (used.length) return bad("A milestone that already has scores can't be removed.");
         await prisma.$transaction([
           prisma.fypMilestone.deleteMany({ where: { cycleId: cycle.id, id: { notIn: keep.length ? keep : ["none"] } } }),
-          ...rows.map((r: { id: string | null; kind: string; title: string; dueDate: string; weightPct: number; orderIndex: number }) => r.id
-            ? prisma.fypMilestone.update({ where: { id: r.id }, data: { kind: r.kind, title: r.title, dueDate: new Date(r.dueDate + "T00:00:00Z"), weightPct: r.weightPct, orderIndex: r.orderIndex } })
-            : prisma.fypMilestone.create({ data: { cycleId: cycle.id, kind: r.kind, title: r.title, dueDate: new Date(r.dueDate + "T00:00:00Z"), weightPct: r.weightPct, orderIndex: r.orderIndex } })),
+          ...rows.map((r: { id: string | null; kind: string; title: string; dueDate: string; weightPct: number; orderIndex: number; evaluatorMode: string }) => r.id
+            ? prisma.fypMilestone.update({ where: { id: r.id }, data: { kind: r.kind, title: r.title, dueDate: new Date(r.dueDate + "T00:00:00Z"), weightPct: r.weightPct, orderIndex: r.orderIndex, evaluatorMode: r.evaluatorMode } as never })
+            : prisma.fypMilestone.create({ data: { cycleId: cycle.id, kind: r.kind, title: r.title, dueDate: new Date(r.dueDate + "T00:00:00Z"), weightPct: r.weightPct, orderIndex: r.orderIndex, evaluatorMode: r.evaluatorMode } as never })),
         ]);
         await audit("FypCycle", cycle.id, { milestones: rows.length });
         return NextResponse.json({ ok: true });

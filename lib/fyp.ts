@@ -19,7 +19,8 @@ export const db = prisma;
 // ---------------------------------------------------------------------------
 // Defaults and labels
 
-export const MILESTONE_KINDS: Record<string, string> = { PROPOSAL_DEFENSE: "Proposal defense", MID_TERM: "Mid-term evaluation", FINAL: "Final evaluation", THESIS: "Camera-ready thesis", OTHER: "Other" };
+export const MILESTONE_KINDS: Record<string, string> = { PROPOSAL_DEFENSE: "Proposal defense", MID_TERM: "Mid-term evaluation", FINAL: "Final evaluation", THESIS: "Camera-ready thesis", SUPERVISION: "Supervisor meetings", OPEN_HOUSE: "Demo / Open house", OTHER: "Other" };
+export const EVALUATOR_MODES: Record<string, string> = { PANEL: "Supervisor + panel", SUPERVISOR_ONLY: "Supervisor only", SINGLE: "Any one evaluator" };
 export const DEFAULT_MILESTONES = [
   { kind: "PROPOSAL_DEFENSE", title: "Proposal defense", days: 30, weightPct: 10 },
   { kind: "MID_TERM", title: "Mid-term evaluation", days: 100, weightPct: 30 },
@@ -123,10 +124,16 @@ export async function studentCycle(studentId: string) {
 // Evaluation
 
 /** How this person may evaluate a group: as its supervisor, or as a member of its panel (never both). */
-export async function evaluatorRoleFor(userId: string, group: { supervisorId: string | null; panelId: string | null }): Promise<"SUPERVISOR" | "INTERNAL" | null> {
+export async function evaluatorRoleFor(userId: string, group: { id?: string; supervisorId: string | null; panelId: string | null }, milestoneId?: string): Promise<"SUPERVISOR" | "INTERNAL" | null> {
   if (group.supervisorId === userId) return "SUPERVISOR";
-  if (!group.panelId) return null;
-  const m = await prisma.fypPanelMember.findFirst({ where: { panelId: group.panelId, userId, role: { in: ["CHAIR", "INTERNAL"] } } });
+  // A presentation may have its own panel for this group; otherwise the group's panel.
+  let panelIds = [group.panelId].filter((x): x is string => !!x);
+  if (group.id) {
+    const own = (await (prisma as unknown as Record<string, any>).fypMilestonePanel.findMany({ where: { groupId: group.id, ...(milestoneId ? { milestoneId } : {}) } }).catch(() => [])) as { panelId: string }[];
+    panelIds = milestoneId && own.length ? own.map((x) => x.panelId) : [...panelIds, ...own.map((x) => x.panelId)];
+  }
+  if (!panelIds.length) return null;
+  const m = await prisma.fypPanelMember.findFirst({ where: { panelId: { in: panelIds }, userId, role: { in: ["CHAIR", "INTERNAL"] } } });
   return m ? "INTERNAL" : null;
 }
 
@@ -198,6 +205,8 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
   const crit = new Map(criteria.map((c) => [c.id, c]));
   const roleWeight: Record<string, number> = { SUPERVISOR: cycle.supervisorPct, INTERNAL: cycle.internalPct, EXTERNAL: cycle.externalPct };
   const cutoffs = cutoffsOf(cycle);
+  const { supervisionPct } = await import("./fypPlus");
+  const supervision = await supervisionPct(groups.map((g) => g.id));
   const rows: StudentResult[] = [];
   for (const g of groups) {
     for (const m of members.filter((x) => x.groupId === g.id)) {
@@ -215,9 +224,13 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
           }).filter((x): x is number => x !== null);
           byRole[role] = pcts.length ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
         }
+        const mode = (ms as unknown as { evaluatorMode?: string }).evaluatorMode || "PANEL";
         const scored = Object.entries(byRole).filter(([r, v]) => v !== null && roleWeight[r] > 0);
         const w = scored.reduce((n, [r]) => n + roleWeight[r], 0);
-        const pct = w > 0 ? scored.reduce((n, [r, v]) => n + (v as number) * roleWeight[r], 0) / w : null;
+        let pct = w > 0 ? scored.reduce((n, [r, v]) => n + (v as number) * roleWeight[r], 0) / w : null;
+        if (ms.kind === "SUPERVISION") pct = supervision.get(`${g.id}|${m.studentId}`) ?? null; // from the meeting log
+        else if (mode === "SUPERVISOR_ONLY") pct = byRole.SUPERVISOR;
+        else if (mode === "SINGLE") { const any = Object.values(byRole).filter((v): v is number => v !== null); pct = any.length ? any.reduce((a, b) => a + b, 0) / any.length : null; }
         return { milestoneId: ms.id, title: ms.title, weightPct: ms.weightPct, pct: pct === null ? null : Math.round(pct * 10) / 10, byRole: Object.fromEntries(Object.entries(byRole).map(([k, v]) => [k, v === null ? null : Math.round(v * 10) / 10])) };
       });
       const done = byMilestone.filter((x) => x.pct !== null);
@@ -225,7 +238,7 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
       const total = wsum > 0 ? Math.round((done.reduce((n, x) => n + (x.pct as number) * x.weightPct, 0) / wsum) * 10) / 10 : null;
       const missing = byMilestone.filter((x) => x.pct === null).map((x) => x.title);
       // Missing roles on the evaluated milestones (e.g. no external score yet) are worth knowing before consolidating.
-      for (const x of done) for (const [r, v] of Object.entries(x.byRole)) if (v === null && roleWeight[r] > 0) missing.push(`${x.title}: ${ROLE_TEXT[r].toLowerCase()}`);
+      for (const x of done) { const ms = milestones.find((y) => y.id === x.milestoneId) as unknown as { kind: string; evaluatorMode?: string }; if (ms.kind === "SUPERVISION" || (ms.evaluatorMode && ms.evaluatorMode !== "PANEL")) continue; for (const [r, v] of Object.entries(x.byRole)) if (v === null && roleWeight[r] > 0) missing.push(`${x.title}: ${ROLE_TEXT[r].toLowerCase()}`); }
       const ploMap = new Map<number, { got: number; max: number }>();
       for (const s of mine) {
         const c = crit.get(s.criterionId);

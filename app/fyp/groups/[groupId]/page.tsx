@@ -6,7 +6,9 @@ import { navForRole } from "../../../../components/reportNav";
 import { roleLabel } from "../../../../lib/reportScope";
 import Shell from "../../../../components/Shell";
 import { ActionButton, ActionForm, ScoreSheet } from "../../../../components/fyp/FypClient";
-import { ARTIFACT_KINDS, computeResults, EXTENSIONS, evaluatorRoleFor, fypAccess, REQUISITION_KINDS, ROLE_TEXT, standingOf } from "../../../../lib/fyp";
+import { ARTIFACT_KINDS, computeResults, EXTENSIONS, evaluatorRoleFor, fypAccess, REQUISITION_KINDS, ROLE_TEXT, standingOf, EVALUATOR_MODES } from "../../../../lib/fyp";
+import { meetingLog, remarksOf, supervisionPct } from "../../../../lib/fypPlus";
+import FypMeetings from "../../../../components/fyp/FypMeetings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "FYP group" };
@@ -51,6 +53,15 @@ export default async function FypGroupPage({ params }: { params: { groupId: stri
   const evaluated = milestones.filter((m) => m.weightPct > 0);
   const latest = (kind: string) => artifacts.find((a) => a.kind === kind);
   const memberList = students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber }));
+  // Per presentation: who may score it (its own panel, or the group's), earlier remarks, meeting log, panels to choose from.
+  const roleFor = new Map(await Promise.all(evaluated.map(async (m) => [m.id, await evaluatorRoleFor(user.id, group, m.id)] as const)));
+  const [remarks, meetings, supMark, panels, msPanels] = await Promise.all([
+    remarksOf(group.id), meetingLog(group.id), supervisionPct([group.id]),
+    manages ? prisma.fypPanel.findMany({ where: { cycleId: cycle.id }, orderBy: { name: "asc" } }) : Promise.resolve([]),
+    (prisma as unknown as Record<string, any>).fypMilestonePanel.findMany({ where: { groupId: group.id } }).catch(() => []) as Promise<{ milestoneId: string; panelId: string }[]>,
+  ]);
+  const orderOf = new Map(milestones.map((m, i) => [m.id, i]));
+  const modeOf = (m: { id: string }) => (m as unknown as { evaluatorMode?: string }).evaluatorMode || "PANEL";
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -81,20 +92,40 @@ export default async function FypGroupPage({ params }: { params: { groupId: stri
         {panel && <p className="small-note" style={{ marginBottom: 0 }}>Panel: {panelMembers.map((m) => `${panelNames.get(m.userId || m.externalId || "") || "?"} (${m.role.toLowerCase()})`).join(", ")}{panel.sessionAt ? ` · session ${panel.sessionAt.toISOString().slice(0, 16).replace("T", " ")}` : ""}{panel.venue ? ` · ${panel.venue}` : ""}</p>}
       </div>
 
+      {manages && <div className="card" style={{ padding: "8px 14px" }}><ActionForm url="/api/fyp/faculty" fixed={{ action: "setStall", groupId: group.id }} submit="Save" initial={{ stall: (group as unknown as { stall?: string | null }).stall || "" }} fields={[{ name: "stall", label: "Open house stall / room", width: 160, placeholder: "e.g. Lab 3 · Stall 12" }]} /></div>}
+
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Milestones</h3>
         <table>
-          <thead><tr><th>Milestone</th><th>Due</th><th>Weight</th></tr></thead>
-          <tbody>{milestones.map((m) => <tr key={m.id}><td>{m.title}</td><td>{day(m.dueDate)}{group.extendedUntil && ["FINAL", "THESIS"].includes(m.kind) ? <span className="badge badge-warn" style={{ marginLeft: 6 }}>extended to {day(group.extendedUntil)}</span> : null}</td><td>{m.weightPct ? `${m.weightPct}%` : "deadline"}</td></tr>)}</tbody>
+          <thead><tr><th>Milestone</th><th>Due</th><th>Weight</th><th>Evaluated by</th>{manages && <th>Panel for this group</th>}</tr></thead>
+          <tbody>{milestones.map((m) => <tr key={m.id}><td>{m.title}</td><td>{day(m.dueDate)}{group.extendedUntil && ["FINAL", "THESIS"].includes(m.kind) ? <span className="badge badge-warn" style={{ marginLeft: 6 }}>extended to {day(group.extendedUntil)}</span> : null}</td><td>{m.weightPct ? `${m.weightPct}%` : "deadline"}</td>
+            <td className="small-note">{m.kind === "SUPERVISION" ? "Meeting log" : EVALUATOR_MODES[modeOf(m)]}</td>
+            {manages && <td>{m.weightPct > 0 && m.kind !== "SUPERVISION" && modeOf(m) !== "SUPERVISOR_ONLY" ? <ActionForm url="/api/fyp/faculty" fixed={{ action: "setMilestonePanel", groupId: group.id, milestoneId: m.id }} submit="Set" initial={{ panelId: msPanels.find((x) => x.milestoneId === m.id)?.panelId || "" }} fields={[{ name: "panelId", label: "", type: "select", options: [["", `Group panel${panel ? ` (${panel.name})` : ""}`], ...panels.map((p) => [p.id, `${p.name}${p.venue ? ` · ${p.venue}` : ""}`] as [string, string])] }]} /> : <span className="small-note">—</span>}</td>}
+          </tr>)}</tbody>
         </table>
       </div>
 
-      {evalRole && students.length > 0 && evaluated.map((m) => {
+      {evaluated.some((m) => m.kind === "SUPERVISION") && (
+        <FypMeetings groupId={group.id} members={memberList.map((s) => ({ id: s.id, name: s.name }))} canEdit={group.supervisorId === user.id || manages}
+          markPct={Object.fromEntries(memberList.map((s) => [s.id, supMark.get(`${group.id}|${s.id}`) ?? null]))}
+          meetings={(meetings || []).map((m) => ({ id: m.id, heldAt: m.heldAt.toISOString(), nextAt: m.nextAt ? m.nextAt.toISOString() : null, feedback: m.feedback, attendance: m.attendance, tasks: m.tasks }))} />
+      )}
+
+      {students.length > 0 && evaluated.filter((m) => m.kind !== "SUPERVISION" && roleFor.get(m.id) && !(modeOf(m) === "SUPERVISOR_ONLY" && roleFor.get(m.id) !== "SUPERVISOR")).map((m) => {
+        const evalRole = roleFor.get(m.id)!;
+        const earlier = remarks.filter((x) => (orderOf.get(x.milestoneId) ?? 0) < (orderOf.get(m.id) ?? 0) || (x.milestoneId === m.id && !(x.by === user.name)));
         const mine = myScores.filter((s) => s.milestoneId === m.id);
         const ev = evaluations.find((e) => e.milestoneId === m.id && e.evaluatorKey === user.id);
         return (
           <details key={m.id} className="card" open={!ev && group.status !== "COMPLETED"}>
             <summary style={{ cursor: "pointer", fontWeight: 700 }}>Score: {m.title} {ev ? <span className="badge badge-ok">scored</span> : <span className="badge badge-warn">to do</span>}</summary>
+            {earlier.length > 0 && (
+              <div style={{ background: "#F7F4F3", padding: "6px 10px", borderRadius: 8, margin: "6px 0", fontSize: 12.5 }}>
+                <b>Earlier remarks</b>
+                {earlier.map((x) => <div key={x.id} style={{ marginTop: 4 }}><span className="small-note">{milestones.find((y) => y.id === x.milestoneId)?.title} · {x.by}:</span> {x.text}
+                  {x.replies.map((rp, i) => <div key={i} style={{ marginLeft: 14, color: rp.addressed ? "#1F5E36" : "#7A520C" }}>↳ {students.find((s) => s.id === rp.studentId)?.name || "Student"}{rp.addressed ? " (addressed)" : ""}: {rp.text}</div>)}</div>)}
+              </div>
+            )}
             <ScoreSheet url="/api/fyp/faculty" groupId={group.id} milestoneId={m.id} roleText={ROLE_TEXT[evalRole]}
               criteria={criteria.map((c) => ({ id: c.id, name: c.name, description: c.description, bloomLevel: c.bloomLevel, ploNumber: c.ploNumber, maxScore: c.maxScore, appliesTo: c.appliesTo }))}
               members={memberList} existing={Object.fromEntries(mine.map((s) => [`${s.criterionId}|${s.studentId}`, s.score]))} comments={ev?.comments} recommendation={ev?.recommendation} readOnly={group.status === "COMPLETED"} />

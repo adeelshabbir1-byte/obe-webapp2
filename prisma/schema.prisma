@@ -3298,6 +3298,7 @@ model FypMilestone {
   weightPct  Float    @default(0)
   orderIndex Int      @default(0)
 
+  evaluatorMode String @default("PANEL") // PANEL (supervisor + panel roles) | SUPERVISOR_ONLY | SINGLE (any one evaluator)
   @@index([cycleId])
 }
 
@@ -3360,6 +3361,7 @@ model FypGroup {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  stall      String?  // open house: stall / room number
   @@index([cycleId])
   @@index([supervisorId])
   @@index([panelId])
@@ -4160,4 +4162,82 @@ model WorkGroupMember {
 
   @@unique([groupId, studentId])
   @@index([studentId])
+}
+
+// A presentation can have its own panel per group (different size per milestone).
+model FypMilestonePanel {
+  id          String @id @default(cuid())
+  milestoneId String
+  groupId     String
+  panelId     String
+
+  @@unique([milestoneId, groupId])
+}
+
+// Students answer each panel remark; the next panel sees remark and reply.
+model FypRemarkReply {
+  id           String   @id @default(cuid())
+  evaluationId String
+  studentId    String
+  text         String   @db.Text
+  addressed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([evaluationId])
+}
+
+// Supervisor meetings: attendance, tasks with follow-up at the next meeting, feedback and the next date.
+model FypMeeting {
+  id          String    @id @default(cuid())
+  groupId     String
+  heldAt      DateTime
+  nextAt      DateTime?
+  feedback    String?   @db.Text
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([groupId])
+}
+
+model FypMeetingAttendance {
+  id        String  @id @default(cuid())
+  meetingId String
+  studentId String
+  present   Boolean
+
+  @@unique([meetingId, studentId])
+}
+
+model FypMeetingTask {
+  id         String    @id @default(cuid())
+  meetingId  String
+  groupId    String
+  studentId  String?
+  text       String    @db.Text
+  status     String    @default("OPEN") // OPEN | DONE | PARTIAL | NOT_DONE
+  reviewedAt DateTime?
+
+  @@index([groupId])
+}
+
+// Open house: projects an external evaluator chose to visit.
+model FypShowcasePick {
+  id         String   @id @default(cuid())
+  externalId String
+  groupId    String
+  createdAt  DateTime @default(now())
+
+  @@unique([externalId, groupId])
+}
+
+// A student's CV, built from their profile; shown to industry only once approved and published.
+model StudentCv {
+  studentId    String   @id
+  dataJson     String   @db.Text
+  showCgpa     Boolean  @default(false)
+  published    Boolean  @default(false)
+  status       String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | CHANGES
+  reviewerNote String?  @db.Text
+  reviewedById String?
+  updatedAt    DateTime @default(now()) @updatedAt
 }

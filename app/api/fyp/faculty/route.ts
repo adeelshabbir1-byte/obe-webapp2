@@ -74,11 +74,53 @@ export async function POST(req: NextRequest) {
         await writeAuditLog({ actorUserId: user.id, action: "FYP_GROUP_ACCEPTED", entityType: "FypGroup", entityId: group.id, metadata: { proposalId: p.id } });
         return NextResponse.json({ ok: true });
       }
+      // ---- Supervisor meetings: attendance, feedback, tasks, next date; earlier tasks reviewed at this meeting.
+      case "addMeeting": case "reviewTask": {
+        const group = await prisma.fypGroup.findUnique({ where: { id: str(b.groupId, 60) } });
+        if (!group) return bad("group not found", 404);
+        const cycle = await prisma.fypCycle.findUnique({ where: { id: group.cycleId } });
+        if (group.supervisorId !== user.id && !(cycle && acc.manages(cycle.departmentId))) return bad("Only the group's supervisor records meetings.", 403);
+        const fdb = prisma as unknown as Record<string, any>;
+        if (action === "reviewTask") {
+          const status = ["DONE", "PARTIAL", "NOT_DONE", "OPEN"].includes(String(b.status)) ? String(b.status) : "OPEN";
+          await fdb.fypMeetingTask.updateMany({ where: { id: str(b.taskId, 60), groupId: group.id }, data: { status, reviewedAt: status === "OPEN" ? null : new Date() } });
+          return NextResponse.json({ ok: true });
+        }
+        const heldAt = new Date(str(b.heldAt, 30) || Date.now());
+        if (isNaN(heldAt.getTime())) return bad("Meeting date is not valid.");
+        const nextAt = b.nextAt ? new Date(str(b.nextAt, 30)) : null;
+        const members = await prisma.fypGroupMember.findMany({ where: { groupId: group.id, status: "JOINED" }, select: { studentId: true } });
+        const present = new Set(Array.isArray(b.present) ? b.present.map(String) : []);
+        const meeting = await fdb.fypMeeting.create({ data: { groupId: group.id, heldAt, nextAt: nextAt && !isNaN(nextAt.getTime()) ? nextAt : null, feedback: str(b.feedback, 4000) || null, createdById: user.id } });
+        await fdb.fypMeetingAttendance.createMany({ data: members.map((m) => ({ meetingId: meeting.id, studentId: m.studentId, present: present.has(m.studentId) })) });
+        const tasks = (Array.isArray(b.tasks) ? b.tasks : []).map((t: { text?: string; studentId?: string }) => ({ text: str(t.text, 500), studentId: t.studentId && members.some((m) => m.studentId === t.studentId) ? String(t.studentId) : null })).filter((t: { text: string }) => t.text);
+        if (tasks.length) await fdb.fypMeetingTask.createMany({ data: tasks.map((t: { text: string; studentId: string | null }) => ({ meetingId: meeting.id, groupId: group.id, studentId: t.studentId, text: t.text })) });
+        await writeAuditLog({ actorUserId: user.id, action: "FYP_MEETING_RECORDED", entityType: "FypGroup", entityId: group.id, metadata: { tasks: tasks.length } });
+        return NextResponse.json({ ok: true });
+      }
+      // ---- A presentation's own panel for a group, and the open-house stall (FYP Head).
+      case "setMilestonePanel": case "setStall": {
+        const group = await prisma.fypGroup.findUnique({ where: { id: str(b.groupId, 60) } });
+        const cycle = group ? await prisma.fypCycle.findUnique({ where: { id: group.cycleId } }) : null;
+        if (!group || !cycle || !acc.manages(cycle.departmentId)) return bad("Only the FYP Head can do this.", 403);
+        const fdb = prisma as unknown as Record<string, any>;
+        if (action === "setStall") { await fdb.fypGroup.update({ where: { id: group.id }, data: { stall: str(b.stall, 40) || null } }); return NextResponse.json({ ok: true }); }
+        const milestoneId = str(b.milestoneId, 60), panelId = str(b.panelId, 60);
+        if (!panelId) await fdb.fypMilestonePanel.deleteMany({ where: { milestoneId, groupId: group.id } });
+        else {
+          if (!(await prisma.fypPanel.count({ where: { id: panelId, cycleId: cycle.id } }))) return bad("panel not found", 404);
+          await fdb.fypMilestonePanel.upsert({ where: { milestoneId_groupId: { milestoneId, groupId: group.id } }, create: { milestoneId, groupId: group.id, panelId }, update: { panelId } });
+        }
+        return NextResponse.json({ ok: true });
+      }
       case "saveScores": {
         const group = await prisma.fypGroup.findUnique({ where: { id: str(b.groupId, 60) } });
         if (!group) return bad("group not found", 404);
-        const role = await evaluatorRoleFor(user.id, group);
-        if (!role) return bad("Only the group's supervisor or a member of its panel can evaluate it.", 403);
+        const ms = await prisma.fypMilestone.findFirst({ where: { id: str(b.milestoneId, 60), cycleId: group.cycleId } });
+        const role = await evaluatorRoleFor(user.id, group, ms?.id);
+        if (!role) return bad("Only the group's supervisor or a member of its panel for this presentation can evaluate it.", 403);
+        if (ms?.kind === "SUPERVISION") return bad("This component is marked from the supervisor meeting log, not a score sheet.");
+        if ((ms as unknown as { evaluatorMode?: string } | null)?.evaluatorMode === "SUPERVISOR_ONLY" && role !== "SUPERVISOR") return bad("Only the supervisor evaluates this component.", 403);
         const scores = Array.isArray(b.scores) ? b.scores.map((s: Record<string, unknown>) => ({ criterionId: String(s.criterionId || ""), studentId: String(s.studentId || ""), score: Number(s.score) })) : [];
         if (!scores.length) return bad("Enter the scores.");
         const r = await saveScores({ groupId: group.id, milestoneId: str(b.milestoneId, 60), evaluatorKey: user.id, evaluatorRole: role, evaluatorName: user.name, scores, comments: str(b.comments, 3000), recommendation: String(b.recommendation || "") });

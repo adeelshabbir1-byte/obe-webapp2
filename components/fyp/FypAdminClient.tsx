@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fypPost } from "./FypClient";
 
-type Milestone = { id?: string; kind: string; title: string; dueDate: string; weightPct: number };
+type Milestone = { id?: string; kind: string; title: string; dueDate: string; weightPct: number; evaluatorMode?: string };
 /** The cycle's milestones: deadlines for every group, and (with a weight) the evaluations the result is built from. */
 export function MilestonesEditor({ cycleId, initial, kinds }: { cycleId: string; initial: Milestone[]; kinds: Record<string, string> }) {
   const router = useRouter();
@@ -23,12 +23,13 @@ export function MilestonesEditor({ cycleId, initial, kinds }: { cycleId: string;
   return (
     <div>
       <table>
-        <thead><tr><th>Milestone</th><th>Kind</th><th>Due date</th><th>Weight in result</th><th /></tr></thead>
+        <thead><tr><th>Milestone</th><th>Kind</th><th>Evaluated by</th><th>Due date</th><th>Weight in result</th><th /></tr></thead>
         <tbody>
           {rows.map((m, i) => (
             <tr key={m.id || `new-${i}`}>
               <td><input value={m.title} onChange={(e) => set(i, { title: e.target.value })} style={{ width: 230 }} aria-label="Milestone title" /></td>
               <td><select value={m.kind} onChange={(e) => set(i, { kind: e.target.value })}>{Object.entries(kinds).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></td>
+              <td><select value={m.evaluatorMode || "PANEL"} disabled={m.kind === "SUPERVISION"} onChange={(e) => set(i, { evaluatorMode: e.target.value })} title="Supervisor meetings are marked from the meeting log">{[["PANEL", "Supervisor + panel"], ["SUPERVISOR_ONLY", "Supervisor only"], ["SINGLE", "Any one evaluator"]].map(([k, t]) => <option key={k} value={k}>{m.kind === "SUPERVISION" ? "Meeting log" : t}</option>)}</select></td>
               <td><input type="date" value={m.dueDate} onChange={(e) => set(i, { dueDate: e.target.value })} aria-label="Due date" /></td>
               <td><input type="number" min={0} max={100} value={m.weightPct} onChange={(e) => set(i, { weightPct: Number(e.target.value) })} style={{ width: 70 }} aria-label="Weight" /> %</td>
               <td><button type="button" className="act act-danger" onClick={() => setRows((r) => r.filter((_, j) => j !== i))}>Remove</button></td>

@@ -21,6 +21,15 @@ export async function POST(req: NextRequest) {
   const joined = async (gid: string) => prisma.fypGroupMember.findMany({ where: { groupId: gid, status: "JOINED" } });
   try {
     switch (action) {
+      case "replyRemark": {
+        if (!group || me?.status !== "JOINED") return bad("You are not in a group.");
+        const ev = await prisma.fypEvaluation.findFirst({ where: { id: String(b.evaluationId || ""), groupId: group.id } });
+        if (!ev) return bad("remark not found", 404);
+        const text = String(b.text || "").trim().slice(0, 2000);
+        if (!text) return bad("Write your reply.");
+        await (prisma as unknown as Record<string, any>).fypRemarkReply.create({ data: { evaluationId: ev.id, studentId: student.id, text, addressed: !!b.addressed } });
+        return NextResponse.json({ ok: true });
+      }
       case "createGroup": {
         if (me) return bad(me.status === "INVITED" ? "Answer your group invitation first." : "You are already in a group.");
         const el = await eligibility(student.id, cycle);
