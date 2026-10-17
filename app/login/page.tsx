@@ -2,11 +2,13 @@ import Link from "next/link";
 import { GraduationCap, Building2, ChevronRight } from "lucide-react";
 import AuthLayout from "../../components/auth/AuthLayout";
 import LoginForm from "../../components/auth/LoginForm";
+import SsoButtons from "../../components/auth/SsoButtons";
 import { BRAND } from "../../lib/brandAssets";
 
 export const metadata = { title: "Sign in" };
+export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: { sso?: string } }) {
   return (
     <AuthLayout
       heroTitle={<>Outcome-based education, <em>measured end to end.</em></>}
@@ -17,6 +19,7 @@ export default function LoginPage() {
         <h1>Welcome back</h1>
         <p className="auth-sub">Sign in to your institutional account.</p>
         <LoginForm />
+        <SsoButtons error={searchParams.sso} />
         <div className="auth-links">
           <Link href="/student/login" className="auth-link-row">
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -33,7 +36,7 @@ export default function LoginPage() {
             <ChevronRight size={16} />
           </Link>
         </div>
-        <p className="auth-foot">© {new Date().getFullYear()} Lets Innovate Pvt Ltd</p>
+        <p className="auth-foot"><Link href="/security">Security &amp; data protection</Link> · © {new Date().getFullYear()} Lets Innovate Pvt Ltd</p>
       </div>
     </AuthLayout>
   );
