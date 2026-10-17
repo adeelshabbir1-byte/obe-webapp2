@@ -4285,3 +4285,207 @@ model FypOpenHouseItem {
 
   @@index([cycleId])
 }
+
+// ===================== University-wide planner and ERP modules =====================
+// A plan of any office (admissions campaign, convocation, accreditation visit …); its tasks live in FypPlanTask with cycleId = plan id.
+model UniPlan {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  title       String
+  area        String?
+  ownerId     String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model PayStructure {
+  userId         String   @id
+  basic          Float    @default(0)
+  allowancesJson String   @default("[]")
+  deductionsJson String   @default("[]")
+  taxPct         Float    @default(0)
+  bank           String?
+  account        String?
+  updatedAt      DateTime @default(now()) @updatedAt
+}
+
+model PayrollRun {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  month       String
+  status      String   @default("DRAFT")
+  totalsJson  String   @default("{}")
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([chairmanId, month])
+}
+
+model Payslip {
+  id         String @id @default(cuid())
+  runId      String
+  userId     String
+  gross      Float
+  deductions Float
+  tax        Float
+  net        Float
+  linesJson  String @db.Text
+
+  @@index([runId])
+}
+
+model FeeInvoice {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  studentId   String
+  termName    String
+  termYear    Int
+  linesJson   String   @db.Text
+  amount      Float
+  discount    Float    @default(0)
+  fine        Float    @default(0)
+  paid        Float    @default(0)
+  dueDate     DateTime
+  status      String   @default("UNPAID")
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+  @@index([studentId])
+}
+
+model FeePayment {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  amount       Float
+  method       String
+  reference    String?
+  paidAt       DateTime @default(now())
+  receivedById String
+
+  @@index([invoiceId])
+}
+
+model LedgerAccount {
+  id         String @id @default(cuid())
+  chairmanId String
+  code       String
+  name       String
+  type       String // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE
+
+  @@unique([chairmanId, code])
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  date        DateTime
+  memo        String
+  source      String?
+  sourceId    String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, date])
+}
+
+model JournalLine {
+  id        String @id @default(cuid())
+  entryId   String
+  accountId String
+  debit     Float  @default(0)
+  credit    Float  @default(0)
+
+  @@index([entryId])
+  @@index([accountId])
+}
+
+model AdmissionLead {
+  id           String    @id @default(cuid())
+  chairmanId   String
+  name         String
+  phone        String?
+  email        String?
+  city         String?
+  program      String?
+  source       String?
+  stage        String    @default("INQUIRY")
+  score        Float?
+  ownerId      String?
+  nextFollowUp DateTime?
+  notes        String?   @db.Text
+  studentId    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, stage])
+}
+
+model LeadActivity {
+  id     String   @id @default(cuid())
+  leadId String
+  kind   String
+  text   String   @db.Text
+  byId   String
+  at     DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model Vendor {
+  id         String  @id @default(cuid())
+  chairmanId String
+  name       String
+  phone      String?
+  email      String?
+  ntn        String?
+  address    String?
+
+  @@index([chairmanId])
+}
+
+model StockItem {
+  id           String @id @default(cuid())
+  chairmanId   String
+  code         String
+  name         String
+  category     String?
+  unit         String @default("pcs")
+  location     String?
+  qty          Float  @default(0)
+  reorderLevel Float  @default(0)
+  unitCost     Float  @default(0)
+
+  @@unique([chairmanId, code])
+}
+
+model StockMove {
+  id     String   @id @default(cuid())
+  itemId String
+  qty    Float
+  kind   String // RECEIPT | ISSUE | ADJUST
+  ref    String?
+  byId   String
+  at     DateTime @default(now())
+
+  @@index([itemId])
+}
+
+model PurchaseRequest {
+  id            String    @id @default(cuid())
+  chairmanId    String
+  requestedById String
+  title         String
+  linesJson     String    @db.Text // [{ itemId?, name, qty, unitCost }]
+  total         Float     @default(0)
+  status        String    @default("REQUESTED") // REQUESTED | APPROVED | REJECTED | ORDERED | RECEIVED
+  vendorId      String?
+  poNumber      String?
+  decidedById   String?
+  note          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@index([chairmanId, status])
+}

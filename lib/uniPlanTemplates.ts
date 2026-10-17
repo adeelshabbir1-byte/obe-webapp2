@@ -1,0 +1,7 @@
+// Ready-made university plans: steps with working days and the steps they follow.
+export const UNI_TEMPLATES: Record<string, { label: string; steps: [string, number, number[]][] }> = {
+  SEMESTER: { label: "Semester start", steps: [["Approve academic calendar", 3, []], ["Offer courses and assign teachers", 7, [0]], ["Timetable and room allocation", 5, [1]], ["Course registration window", 10, [2]], ["Fee invoices issued", 3, [3]], ["Orientation for new students", 2, [3]], ["Classes begin", 1, [4, 5]]] },
+  ADMISSIONS: { label: "Admissions campaign", steps: [["Approve seats, merit and fee structure", 5, []], ["Advertisements and social media", 15, [0]], ["Open online applications", 20, [0]], ["Entry test", 2, [2]], ["Interviews", 5, [3]], ["Merit lists", 3, [4]], ["Fee deposit and documents", 7, [5]], ["Orientation", 2, [6]]] },
+  CONVOCATION: { label: "Convocation", steps: [["Fix date, venue and chief guest", 5, []], ["Verify degree eligibility", 10, [0]], ["Gown, invitations and passes", 10, [1]], ["Print degrees and medals", 10, [1]], ["Rehearsal", 1, [2, 3]], ["Convocation day", 1, [4]], ["Media and thank-you letters", 3, [5]]] },
+  ACCREDITATION: { label: "Accreditation visit", steps: [["Self-assessment report (SAR) draft", 20, []], ["Course files and CLO/PLO evidence", 20, []], ["Internal review of SAR", 5, [0, 1]], ["Mock visit", 2, [2]], ["Fix gaps from mock visit", 10, [3]], ["Accreditation visit", 2, [4]], ["Respond to visit report", 10, [5]]] },
+};

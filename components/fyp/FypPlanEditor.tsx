@@ -8,10 +8,10 @@ const depsOf = (t: Task) => { try { return JSON.parse(t.dependsJson || "[]") as 
 const STATUS: Record<string, string> = { TODO: "To do", IN_PROGRESS: "In progress", DONE: "Done" };
 
 // Tasks of the FYP year plan (groupId absent) or of one group's project plan: add / edit / status / templates.
-export default function FypPlanEditor({ cycleId, groupId, tasks, people, canEdit, canStatusIds, statusUrl, templates, issues }: {
+export default function FypPlanEditor({ cycleId, groupId, tasks, people, canEdit, canStatusIds, statusUrl, templates, issues, apiUrl = "/api/fyp/plan" }: {
   cycleId: string; groupId?: string; tasks: Task[]; people: { id: string; name: string }[]; canEdit: boolean;
   /** Tasks this viewer may tick even without edit rights (their own); "ALL" for students of the group. */ canStatusIds?: string[] | "ALL"; statusUrl?: string;
-  templates?: { action: string; label: string }[]; issues?: string[];
+  templates?: { action: string; label: string }[]; issues?: string[]; apiUrl?: string;
 }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -19,7 +19,7 @@ export default function FypPlanEditor({ cycleId, groupId, tasks, people, canEdit
   const [dep, setDep] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
-  const call = async (body: Record<string, unknown>, url = "/api/fyp/plan") => { const r = await fypPost(url, { cycleId, groupId, ...body }); if (r.ok) { setMsg(""); router.refresh(); return true; } setMsg(r.error || "Could not save."); return false; };
+  const call = async (body: Record<string, unknown>, url = apiUrl) => { const r = await fypPost(url, { cycleId, groupId, ...body }); if (r.ok) { setMsg(""); router.refresh(); return true; } setMsg(r.error || "Could not save."); return false; };
   const who = (t: Task) => people.find((p) => p.id === t.ownerId)?.name || t.ownerText || "—";
   const mayStatus = (t: Task) => canEdit || canStatusIds === "ALL" || (Array.isArray(canStatusIds) && canStatusIds.includes(t.id));
   return (
