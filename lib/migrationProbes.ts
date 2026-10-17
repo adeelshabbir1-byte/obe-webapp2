@@ -636,6 +636,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "DegreePlanLock"
 },
 {
+"f": "migration_remediation_flags.sql",
+"d": "Remediation flags: the advisor, the course's teacher, the next course's teacher or the OMC flag students who need",
+"t": "RemediationFlag"
+},
+{
 "f": "migration_result_approval.sql",
 "d": "Result approval (submit -> approve -> locked) and grade-change requests after approval.",
 "t": "GradeChangeRequest"

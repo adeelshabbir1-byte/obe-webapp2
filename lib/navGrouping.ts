@@ -17,7 +17,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/coordinator\/(batches|courses|assign-subject-experts|plos|grading-scale|elective-options|custom-categories|program-profile|required-books)$/.test(h)
       || /^\/dean\/curricula$/.test(h) || h === "/clo-bulk-import", section: "Programs & Courses" },
 
-  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation" || h === "/placements" || h === "/complaints", section: "Students" },
+  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation" || h === "/remediation-flags" || h === "/placements" || h === "/complaints", section: "Students" },
 
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|org-chart|hierarchy|training|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },

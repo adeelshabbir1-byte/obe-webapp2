@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
         if (!lectureNumbers.length) return bad("That offering's lecture plan doesn't teach these topics. Choose another offering, or plan a tutorial.");
       }
       const fee = Math.max(0, num(b.feePerStudent)), share = Math.min(100, Math.max(0, num(b.instructorSharePct, 70)));
-      const students = await inInstitute(ids(b.studentIds));
+      // Students flagged for these topics of this course (by advisors, teachers or the OMC) join the plan automatically.
+      const flagRows = ((await (prisma as unknown as Record<string, any>).remediationFlag.findMany({ where: { chairmanId: scope.chairmanId, courseCode: course.code, status: "OPEN" } }).catch(() => [])) as { id: string; studentId: string; topicsJson: string; flaggedById: string }[]).filter((f) => (JSON.parse(f.topicsJson) as string[]).some((t) => topics.includes(t)));
+      const students = await inInstitute(Array.from(new Set([...ids(b.studentIds), ...flagRows.map((f) => f.studentId)])));
       const plan = await prisma.remediationPlan.create({
         data: {
           chairmanId: scope.chairmanId, coordinatorId: course.coordinatorId, courseCode: course.code, courseTitle: course.title, topics, cloCodes: await cloCodesForTopics(course.id, topics),
@@ -46,6 +48,10 @@ export async function POST(req: NextRequest) {
         },
       });
       if (students.length) await prisma.remediationEnrollment.createMany({ data: students.map((s) => ({ planId: plan.id, studentId: s.id, sourceCourseId: course.id, feeAmount: fee })), skipDuplicates: true });
+      if (flagRows.length) {
+        await (prisma as unknown as Record<string, any>).remediationFlag.updateMany({ where: { id: { in: flagRows.map((f) => f.id) } }, data: { status: "PLANNED", planId: plan.id } });
+        await notifyUsers(Array.from(new Set(flagRows.map((f) => f.flaggedById))), { kind: "REMEDIATION", title: `Remediation planned: ${course.code}`, body: `The students you flagged on ${topics.join(", ")} are in "${plan.title}".`, href: `/remediation/${plan.id}`, exceptId: user.id });
+      }
       await notifyUsers([instructorId], { kind: "REMEDIATION", title: `You teach a remediation ${kind === "TUTORIAL" ? "tutorial" : "sitting"}: ${course.code}`, body: `${topics.join(", ")} — ${students.length} student(s). Give the micro-assessment afterwards and record the scores.`, href: `/remediation/${plan.id}`, exceptId: user.id });
       await writeAuditLog({ actorUserId: user.id, action: "REMEDIATION_PLANNED", entityType: "RemediationPlan", entityId: plan.id, metadata: { course: course.code, students: students.length } });
       return NextResponse.json({ plan, enrolled: students.length });

@@ -4988,3 +4988,22 @@ model NationalAdoption {
 
   @@index([releaseCourseId])
 }
+
+// A student flagged for remediation on topics of a course, by the advisor, the course's teacher, the next course's teacher or the OMC.
+model RemediationFlag {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  studentId   String
+  courseId    String
+  courseCode  String
+  topicsJson  String   @db.Text
+  reason      String?  @db.Text
+  flaggedById String
+  flaggedAs   String   // ADVISOR | TEACHER | NEXT_TEACHER | OMC | PROGRAM
+  status      String   @default("OPEN") // OPEN | PLANNED | DISMISSED
+  planId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, status])
+  @@index([studentId])
+}
