@@ -15,6 +15,7 @@ const NAV = [
   { href: "/student/dashboard", label: "Elective Choices" },
   { href: "/student/timetable", label: "My Timetable" },
   { href: "/student/exams", label: "My Exams" },
+  { href: "/student/quizzes", label: "Online Quizzes" },
   { href: "/student/fyp", label: "Final Year Project" },
   { href: "/student/cv", label: "My Profile & CV" },
   { href: "/student/fees", label: "My Fees" },

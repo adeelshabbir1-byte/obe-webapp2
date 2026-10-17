@@ -4544,3 +4544,59 @@ model IndirectConfig {
   target        Float    @default(60)
   updatedAt     DateTime @default(now()) @updatedAt
 }
+
+// MCQ bank shared by every offering of a course code in the institute, tagged by CLO, difficulty and Bloom level.
+model McqQuestion {
+  id          String   @id @default(cuid())
+  chairmanId  String
+  courseCode  String
+  stem        String   @db.Text
+  optionsJson String   @db.Text // ["option A", "option B", ...]
+  correct     Int      // index into options
+  cloCode     String?
+  topic       String?
+  difficulty  String   @default("MEDIUM") // EASY | MEDIUM | HARD
+  bloom       String?
+  explanation String?  @db.Text
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, courseCode])
+}
+
+// An online quiz for a course section; scores go to the linked assessment automatically.
+model OnlineQuiz {
+  id           String   @id @default(cuid())
+  courseId     String
+  instrumentId String?
+  title        String
+  opensAt      DateTime
+  closesAt     DateTime
+  durationMin  Int      @default(20)
+  pickJson     String   @db.Text // { "CLO-1": 3, "CLO-2": 2 } or { "ids": [...] }
+  shuffle      Boolean  @default(true)
+  showResults  Boolean  @default(true)
+  negativePct  Float    @default(0)
+  status       String   @default("DRAFT") // DRAFT | PUBLISHED | CLOSED
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@index([courseId])
+}
+
+model QuizAttempt {
+  id              String    @id @default(cuid())
+  quizId          String
+  studentId       String
+  questionIdsJson String    @db.Text
+  orderJson       String    @default("{}") @db.Text // questionId → shuffled option order
+  answersJson     String    @default("{}") @db.Text // questionId → chosen original option index
+  startedAt       DateTime  @default(now())
+  submittedAt     DateTime?
+  score           Float?
+  maxScore        Float?
+  perCloJson      String?   @db.Text
+
+  @@unique([quizId, studentId])
+}
