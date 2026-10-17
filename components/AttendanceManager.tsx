@@ -100,21 +100,25 @@ export default function AttendanceManager({ courseId, lectureRows: initialRows }
               <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No students enrolled.</p>
             ) : (
               <>
+                <p className="small-note" style={{ marginTop: 0 }}>Tip: press “Mark All Present”, then tap a student's name to switch them to Absent (tap again for Present). {roster.filter((x) => x.status === "ABSENT").length} absent, {roster.filter((x) => x.status === "PRESENT").length} present.</p>
+                <div style={{ overflowX: "auto" }}>
                 <table>
                   <thead><tr><th>Roll #</th><th>Name</th>{MARKS.map(([, l]) => <th key={l}>{l}</th>)}</tr></thead>
                   <tbody>
                     {roster.map((s) => (
                       <tr key={s.id}>
-                        <td>{s.rollNumber}</td><td>{s.name}</td>
+                        <td>{s.rollNumber}</td>
+                        <td onClick={() => setStatus(s.id, s.status === "ABSENT" ? "PRESENT" : "ABSENT")} style={{ cursor: "pointer", fontWeight: 600, color: s.status === "ABSENT" ? "var(--rust)" : undefined, userSelect: "none" }} title="Tap to switch Present / Absent">{s.name}</td>
                         {MARKS.map(([st]) => (
                           <td key={st} style={{ textAlign: "center" }}>
-                            <input type="radio" name={`att-${s.id}`} checked={s.status === st} onChange={() => setStatus(s.id, st)} aria-label={`${s.name}: ${MARKS.find((m) => m[0] === st)![1]}`} />
+                            <input type="radio" name={`att-${s.id}`} checked={s.status === st} onChange={() => setStatus(s.id, st)} style={{ width: 20, height: 20 }} aria-label={`${s.name}: ${MARKS.find((m) => m[0] === st)![1]}`} />
                           </td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
                 <div style={{ marginTop: 12 }}>
                   {saved && <span style={{ color: "var(--sage)", fontSize: 12, marginRight: 10 }}>Saved.</span>}
                   <button onClick={save} disabled={saving || !date} className="btn btn-brass">{saving ? "Saving…" : "Save Attendance"}</button>

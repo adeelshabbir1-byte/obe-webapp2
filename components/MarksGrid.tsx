@@ -136,6 +136,29 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
     else if (e.key === "Escape") { const b = saved.current[studentId]?.[item.id]; el.value = b !== undefined ? String(b) : ""; el.blur(); }
   }
 
+  // Paste from Excel: a block of numbers (rows × columns) fills down and across from the box you paste into, then saves each box.
+  async function onPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    if (!/[\t\n]/.test(text.trim())) return; // a single value pastes normally
+    e.preventDefault();
+    const grid = text.replace(/\r/g, "").replace(/\n+$/, "").split("\n").map((line) => line.split("\t"));
+    const list = rows();
+    const r0 = list.indexOf(e.currentTarget.closest("tr") as HTMLTableRowElement);
+    const c0 = Number(e.currentTarget.dataset.col);
+    let filled = 0;
+    for (let i = 0; i < grid.length && r0 + i < list.length; i++) {
+      for (let j = 0; j < grid[i].length && c0 + j < cols.length; j++) {
+        const el = cell(list[r0 + i], c0 + j);
+        const v = grid[i][j].trim();
+        if (!el || v === "") continue;
+        el.value = v;
+        await save(el, list[r0 + i].dataset.sid as string, cols[c0 + j]);
+        filled++;
+      }
+    }
+    setError((prev) => prev || (filled ? "" : "Nothing was pasted."));
+  }
+
   const current = MOVES.find((m) => m.key === mode)!;
 
   return (
@@ -151,13 +174,13 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
           <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a student…" aria-label="Find a student" style={{ maxWidth: 220 }} />
         </div>
       )}
-      {editable && <p className="small-note no-print" style={{ marginTop: 0 }}>{current.hint} Shift + Enter goes back, ↑ ↓ move up and down, Esc undoes the box. Each mark is saved as you leave its box.</p>}
+      {editable && <p className="small-note no-print" style={{ marginTop: 0 }}>{current.hint} Shift + Enter goes back, ↑ ↓ move up and down, Esc undoes the box. Each mark is saved as you leave its box. To paste from Excel, copy a column (or block) of marks in the same student order and paste into the first box.</p>}
       {error && <div className="err">{error}</div>}
       <div style={{ overflowX: "auto" }}>
         <table style={{ minWidth: 260 + cols.length * 62 }}>
           <thead>
             <tr>
-              <th rowSpan={2} style={{ minWidth: 150 }}>Name</th>
+              <th rowSpan={2} style={{ minWidth: 150, position: "sticky", left: 0, zIndex: 2, background: "var(--card, #fff)" }}>Name</th>
               <th rowSpan={2} style={{ minWidth: 100 }}>Roll #</th>
               {groups.map((g, i) => (
                 <th key={`${g.type}-${i}`} colSpan={g.span} style={{ textAlign: "center", background: TYPE_COLOR[g.type] || "#94A3B8", color: "#fff" }}>
@@ -177,7 +200,7 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
           <tbody ref={tbodyRef}>
             {students.map((s) => (
               <tr key={s.id} data-sid={s.id} hidden={!shown(s)}>
-                <td>{s.name}{s.isRepeat && <span className="badge badge-warn" style={{ marginLeft: 6 }}>Repeat</span>}</td>
+                <td style={{ position: "sticky", left: 0, zIndex: 1, background: "var(--card, #fff)" }}>{s.name}{s.isRepeat && <span className="badge badge-warn" style={{ marginLeft: 6 }}>Repeat</span>}</td>
                 <td>{s.rollNumber}</td>
                 {cols.map((c, ci) => (
                   <td key={c.id} style={{ textAlign: "center", padding: "4px 6px" }}>
@@ -190,6 +213,7 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
                         onWheel={(e) => e.currentTarget.blur()}
                         onKeyDown={(e) => onKey(e, s.id, c)}
                         onBlur={(e) => save(e.currentTarget, s.id, c)}
+                        onPaste={onPaste}
                         style={{ width: 54, padding: "4px 5px", textAlign: "center", fontSize: 12 }}
                       />
                     ) : (s.marks[c.id] ?? "—")}
