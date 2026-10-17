@@ -25,6 +25,7 @@ export default async function CvReviewPage() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>CV Review</h1>
       <p style={{ color: "var(--slate)", fontSize: 13 }}>Students of batches you advise or lead, and of FYP groups you supervise. Only approved CVs can be shared with industry.</p>
+      {batches.length > 0 && <p style={{ fontSize: 13 }}>Batch CV books: {(await prisma.batch.findMany({ where: { id: { in: batches.map((b) => b.id) } }, select: { id: true, batchName: true } })).map((b, i) => <span key={b.id}>{i ? " · " : ""}<a href={`/cv-book?batchId=${b.id}`} target="_blank" rel="noopener noreferrer">{b.batchName}</a></span>)}</p>}
       <div className="card">
         {rows.length === 0 ? <p style={{ margin: 0 }}>No CVs yet.</p> : (
           <table><thead><tr><th>Student</th><th>Status</th><th>Updated</th><th /></tr></thead>
