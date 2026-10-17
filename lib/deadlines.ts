@@ -184,6 +184,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "COURSE_UPDATE", kind: "CUSTOM", title: "Course contents updated", role: "SUBJECT_EXPERT", offset: -45, days: 10, scope: "EACH", phase: "Courses and outcomes", why: "Course contents reviewed and updated where needed" },
   { key: "CLO_SET", kind: "CLO_SET", title: "CLOs written for every course", role: "SUBJECT_EXPERT", offset: -40, days: 10, scope: "COURSE", phase: "Courses and outcomes", why: "Subject Experts write the course learning outcomes" },
   { key: "PROFILE", kind: "CUSTOM", title: "Faculty profile updated", role: "INSTRUCTOR", offset: -40, days: 14, scope: "EACH", phase: "Before the semester", why: "Every teacher updates qualifications and experience" },
+  { key: "ELECTIVES", kind: "CUSTOM", title: "Elective courses for the semester decided", role: "PROGRAM_COORDINATOR", offset: -42, days: 10, scope: "EACH", phase: "Allocation and timetable", why: "Each program decides which electives it offers, so allocation and the timetable can follow" },
   { key: "PRIORITIES", kind: "CUSTOM", title: "Course and timetable priorities sent", role: "INSTRUCTOR", offset: -35, days: 10, scope: "EACH", phase: "Allocation and timetable", why: "Teachers tell the Chairman the courses and time slots they prefer" },
   { key: "CLO_PLO", kind: "CLO_PLO", title: "Every CLO mapped to a PLO", role: "SUBJECT_EXPERT", offset: -35, days: 5, scope: "COURSE", phase: "Courses and outcomes", why: "Each CLO says which PLO it supports" },
   { key: "OMC_BEFORE", kind: "CUSTOM", title: "OMC meeting held and minutes filed (before the semester)", role: "PROGRAM_COORDINATOR", offset: -30, days: 3, scope: "EACH", phase: "Meetings", why: "Outcome Monitoring Committee approves the semester's courses" },
@@ -238,6 +239,20 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "DEAN_REVIEW", kind: "CUSTOM", title: "Faculty accreditation readiness reviewed", role: "DEAN", offset: 150, days: 7, scope: "EACH", phase: "Semester close", why: "Dean reviews each program's readiness and gaps" },
 ];
 PLAN_TEMPLATE.sort((a, b) => a.offset - b.offset);
+/** Phases in the order the work happens; tasks the Institute Head adds go into one of these. */
+export const PLAN_PHASES = ["Before the semester", "Allocation and timetable", "Courses and outcomes", "During the semester", "Labs and facilities", "Meetings", "Exams and assessment", "Semester close", "Other"];
+/** Tasks the Institute Head adds have keys like custom.<phase number>.<slug>. */
+export function customKey(phase: string, title: string) {
+  const i = Math.max(0, PLAN_PHASES.indexOf(phase));
+  return `custom.${i}.${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "task"}`;
+}
+/** Days and phase for a plan key, whether a built-in task or one the Institute Head added. */
+export function planMeta(key: string | null | undefined): { days: number; phase: string } {
+  const t = PLAN_TEMPLATE.find((p) => p.key === key);
+  if (t) return { days: t.days, phase: t.phase };
+  const m = /^custom\.(\d+)\./.exec(key || "");
+  return { days: 7, phase: m ? PLAN_PHASES[+m[1]] || "Other" : "Other" };
+}
 /** Roles a plan task can be given to. */
 export const PLAN_ROLES = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_MANAGER", "LAB_ENGINEER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS"];
 export const RANK: Record<string, number> = { CHAIRMAN: 0, DEAN: 1, HEAD_OF_DEPARTMENT: 2, DEPARTMENT_COORDINATOR: 3, PROGRAM_COORDINATOR: 4 };
@@ -358,7 +373,7 @@ export async function planProgress(user: U, opts: { stamp?: boolean } = {}): Pro
     });
     const kids = templates.filter((k) => k.parentId === t.id);
     lines.push({
-      id: t.id, title: t.title, kind: t.kind, planKey: t.planKey, days: (PLAN_TEMPLATE.find((p) => p.key === (t.planKey ? t.planKey.split(":")[1] : t.kind)) || { days: 14 }).days, phase: (PLAN_TEMPLATE.find((p) => p.key === (t.planKey ? t.planKey.split(":")[1] : t.kind)) || { phase: "Other" }).phase, role, planTerm: t.planTerm, dueDate: t.dueDate, setBy: setters.get(t.setById)?.name || "—", setById: t.setById, mine: t.setById === user.id,
+      id: t.id, title: t.title, kind: t.kind, planKey: t.planKey, days: planMeta(t.planKey ? t.planKey.split(":")[1] : t.kind).days, phase: planMeta(t.planKey ? t.planKey.split(":")[1] : t.kind).phase, role, planTerm: t.planTerm, dueDate: t.dueDate, setBy: setters.get(t.setById)?.name || "—", setById: t.setById, mine: t.setById === user.id,
       total: rows.length, done, late, behind, state, daysLeft, notDone,
       passed: kids.map((k) => ({ by: setters.get(k.setById)?.name || "—", dueDate: k.dueDate, slack: Math.round((t.dueDate.getTime() - k.dueDate.getTime()) / 86400000) })),
     });

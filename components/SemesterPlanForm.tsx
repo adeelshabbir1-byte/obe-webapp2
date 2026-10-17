@@ -3,20 +3,35 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Item = { key: string; title: string; role: string; offset: number; why: string; phase: string; scope: string };
+type Item = { key: string; title: string; role: string; offset: number; why: string; phase: string; scope: string; own?: boolean };
+type Own = { title: string; why: string; role: string; scope: string; phase: string; offset: number };
 const input = { padding: "5px 7px", border: "1px solid var(--line)" } as const;
 const addDays = (start: string, n: number) => { const d = new Date(start + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const dayDiff = (a: string, b: string) => Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
 const WEEKENDS: Record<string, number[]> = { SATSUN: [6, 0], SUN: [0], FRISAT: [5, 6], NONE: [] };
 const WEEKEND_LABEL: Record<string, string> = { SATSUN: "Saturday and Sunday", SUN: "Sunday only", FRISAT: "Friday and Saturday", NONE: "No weekend" };
 
-export default function SemesterPlanForm({ items, roles, holidays = [] }: { items: Item[]; roles: { value: string; label: string }[]; holidays?: string[] }) {
+export default function SemesterPlanForm({ items: builtIn, roles, holidays = [], phases: phaseList = [], ownTasks = [] }: { items: Item[]; roles: { value: string; label: string }[]; holidays?: string[]; phases?: string[]; ownTasks?: Own[] }) {
+  const [own, setOwn] = useState<Item[]>(ownTasks.map((o, n) => ({ ...o, key: `custom-${n}`, own: true })));
+  const items = [...builtIn, ...own];
+  const [draft, setDraft] = useState({ title: "", why: "", role: roles[0]?.value || "", scope: "EACH", phase: phaseList[0] || "Other", days: "" });
   const router = useRouter();
   const [term, setTerm] = useState("");
   const [start, setStart] = useState("");
   const [dates, setDates] = useState<Record<string, string>>({});
   const [on, setOn] = useState<Record<string, boolean>>(Object.fromEntries(items.map((i) => [i.key, true])));
   const [roleOf, setRoleOf] = useState<Record<string, string>>(Object.fromEntries(items.map((i) => [i.key, i.role])));
+  function addOwn() {
+    const title = draft.title.trim();
+    if (!title) return;
+    const key = `custom-${Date.now()}`;
+    const n = parseInt(draft.days, 10) || 0;
+    setOwn([...own, { key, title, why: draft.why.trim(), role: draft.role, scope: draft.scope, phase: draft.phase, offset: n, own: true }]);
+    setOn({ ...on, [key]: true }); setRoleOf({ ...roleOf, [key]: draft.role });
+    if (start) setDates({ ...dates, [key]: addDays(start, n) });
+    setDraft({ ...draft, title: "", why: "", days: "" });
+  }
+  function removeOwn(key: string) { setOwn(own.filter((o) => o.key !== key)); }
   const [msg, setMsg] = useState(""); const [ok, setOk] = useState(false);
   const [weekend, setWeekend] = useState("SATSUN");
   const [calDraft, setCalDraft] = useState<Record<string, string>>({});
@@ -41,11 +56,11 @@ export default function SemesterPlanForm({ items, roles, holidays = [] }: { item
   const clearDrafts = (k: string) => { setCalDraft((x) => { const y = { ...x }; delete y[k]; return y; }); setWrkDraft((x) => { const y = { ...x }; delete y[k]; return y; }); };
   function setByCal(k: string, v: string) { setCalDraft({ ...calDraft, [k]: v }); const n = parseInt(v, 10); if (start && /^-?\d+$/.test(v.trim())) setDates({ ...dates, [k]: addDays(start, n) }); }
   function setByWrk(k: string, v: string) { setWrkDraft({ ...wrkDraft, [k]: v }); const n = parseInt(v, 10); if (start && /^-?\d+$/.test(v.trim())) setDates({ ...dates, [k]: addWorking(start, n) }); }
-  const phases = Array.from(new Set(items.map((i) => i.phase)));
+  const phases = Array.from(new Set(items.map((i) => i.phase))).sort((a, b) => (phaseList.indexOf(a) + 99) % 99 - (phaseList.indexOf(b) + 99) % 99);
   function setStartDate(v: string) { setStart(v); setCalDraft({}); setWrkDraft({}); setDates(v ? Object.fromEntries(items.map((i) => [i.key, addDays(v, i.offset)])) : {}); }
   async function publish() {
     setMsg("");
-    const res = await fetch("/api/semester-plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ term, startDate: start, items: items.filter((i) => on[i.key] && dates[i.key]).map((i) => ({ key: i.key, dueDate: dates[i.key], role: roleOf[i.key] })) }) });
+    const res = await fetch("/api/semester-plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ term, startDate: start, items: items.filter((i) => on[i.key] && dates[i.key]).map((i) => ({ key: i.key, dueDate: dates[i.key], role: roleOf[i.key], ...(i.own ? { title: i.title, why: i.why, phase: i.phase, scope: i.scope } : {}) })) }) });
     const d = await res.json().catch(() => ({}));
     setOk(res.ok); setMsg(res.ok ? `Plan published with ${d.count} targets. Deans, Chairmen and Program Leads can now pass each one down with their own earlier date.` : d.error || "Something went wrong");
     if (res.ok) router.refresh();
@@ -70,7 +85,7 @@ export default function SemesterPlanForm({ items, roles, holidays = [] }: { item
                 {items.filter((i) => i.phase === ph).map((i) => (
                   <tr key={i.key}>
                     <td><input type="checkbox" checked={on[i.key]} onChange={(e) => setOn({ ...on, [i.key]: e.target.checked })} /></td>
-                    <td><b>{i.title}</b><div style={{ fontSize: 11.5, color: "var(--slate)" }}>{i.why}{i.scope === "COURSE" ? " · tracked per course" : i.scope === "EACH" ? " · one for each person in the role" : ""}</div></td>
+                    <td><b>{i.title}</b>{i.own && <> <span className="pill" style={{ fontSize: 10.5 }}>added by you</span> <button type="button" onClick={() => removeOwn(i.key)} style={{ fontSize: 11, border: "none", background: "none", color: "#b3261e", cursor: "pointer" }}>remove</button></>}<div style={{ fontSize: 11.5, color: "var(--slate)" }}>{i.why}{i.scope === "COURSE" ? " · tracked per course" : i.scope === "EACH" ? " · one for each person in the role" : ""}</div></td>
                     <td><select style={input} value={roleOf[i.key]} onChange={(e) => setRoleOf({ ...roleOf, [i.key]: e.target.value })}>{roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></td>
                     <td><input style={input} type="date" value={dates[i.key] || ""} onChange={(e) => { setDates({ ...dates, [i.key]: e.target.value }); clearDrafts(i.key); }} />
                       {dates[i.key] && <div style={{ fontSize: 11, color: isWorking(dates[i.key]) ? "var(--slate)" : "#b3261e" }}>{new Date(dates[i.key] + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })}{hol.has(dates[i.key]) ? " · holiday" : !isWorking(dates[i.key]) ? " · weekend" : ""}</div>}</td>
@@ -81,6 +96,21 @@ export default function SemesterPlanForm({ items, roles, holidays = [] }: { item
               </Fragment>
             ))}</tbody>
           </table>
+        </div>
+      )}
+      {start && (
+        <div style={{ marginTop: 12, padding: 10, border: "1px dashed var(--line)", borderRadius: 8 }}>
+          <b style={{ fontSize: 13 }}>Add a task of your own</b>
+          <div style={{ fontSize: 12, color: "var(--slate)", margin: "2px 0 8px" }}>For anything not in the list above, for example a meeting or a decision. It is tracked like the others and is suggested again in the next semester&apos;s plan.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <label style={{ fontSize: 12 }}>Task<br /><input style={{ ...input, width: 240 }} placeholder="e.g. Final exam results notified" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
+            <label style={{ fontSize: 12 }}>What it means (optional)<br /><input style={{ ...input, width: 220 }} value={draft.why} onChange={(e) => setDraft({ ...draft, why: e.target.value })} /></label>
+            <label style={{ fontSize: 12 }}>Role<br /><select style={input} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })}>{roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></label>
+            <label style={{ fontSize: 12 }}>Who ticks it<br /><select style={input} value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value })}><option value="EACH">Each person in the role</option><option value="ONE">One for the area</option></select></label>
+            <label style={{ fontSize: 12 }}>Stage<br /><select style={input} value={draft.phase} onChange={(e) => setDraft({ ...draft, phase: e.target.value })}>{phaseList.map((p) => <option key={p}>{p}</option>)}</select></label>
+            <label style={{ fontSize: 12 }}>Days from start<br /><input style={{ ...input, width: 72 }} type="number" placeholder="0" value={draft.days} onChange={(e) => setDraft({ ...draft, days: e.target.value })} /></label>
+            <button type="button" className="btn" onClick={addOwn} disabled={!draft.title.trim()}>Add task</button>
+          </div>
         </div>
       )}
       <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
