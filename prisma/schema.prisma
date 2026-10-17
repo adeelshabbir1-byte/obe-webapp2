@@ -4524,3 +4524,23 @@ model StudentPortfolioItem {
 
   @@index([studentId])
 }
+
+// A student's end-of-course self-rating (1-5) of each CLO: indirect evidence that rolls up to PLOs.
+model CourseExitResponse {
+  id          String   @id @default(cuid())
+  courseId    String
+  studentId   String
+  ratingsJson String   @db.Text // { cloId: 1..5 }
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@unique([courseId, studentId])
+}
+
+// How a program blends direct and indirect PLO evidence, and its attainment target.
+model IndirectConfig {
+  coordinatorId String   @id
+  weightsJson   String   @db.Text
+  target        Float    @default(60)
+  updatedAt     DateTime @default(now()) @updatedAt
+}
