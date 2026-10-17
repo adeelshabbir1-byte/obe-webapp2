@@ -1,3 +1,4 @@
+import { onEmployeeLeft } from "../../../lib/exitSurveys";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
   const toTerm = kind === "LEFT" || b.toTerm === "" || b.toTerm === null || b.toTerm === undefined ? null : parseInt(String(b.toTerm), 10);
   if (!Number.isInteger(fromTerm) || (toTerm !== null && (!Number.isInteger(toTerm) || toTerm < fromTerm))) return NextResponse.json({ error: "Choose the first and last semester of the leave." }, { status: 400 });
   const row = (await ldb.facultyLeave.create({ data: { userId, chairmanId, kind, fromTerm, toTerm, allowDesign: !!b.allowDesign && kind !== "LEFT", note: b.note ? String(b.note).slice(0, 1000) : null, createdById: user.id } })) as LeaveRow;
+  if (kind === "LEFT") await onEmployeeLeft(userId, chairmanId, user.id);
   if (kind === "LEFT" && b.disableLogin !== false) await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_LEAVE_RECORDED", entityType: "User", entityId: userId, metadata: { kind, fromTerm, toTerm } });
   return NextResponse.json({ ok: true, id: row.id, affected: await affectedCourses(row) });

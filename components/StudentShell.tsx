@@ -24,9 +24,10 @@ const NAV = [
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
   { href: "/student/portfolio", label: "My Portfolio" },
-  { href: "/student/course-survey", label: "Course Surveys" },
+  { href: "/student/course-survey", label: "Course Surveys & Evaluations" },
   { href: "/student/attendance", label: "My Attendance" },
   { href: "/student/placements", label: "Internships & Jobs" },
+  { href: "/student/complaints", label: "Complaints" },
   { href: "/student/alerts", label: "Alerts & Contact" },
   { href: "/student/help", label: "Help" },
 ];

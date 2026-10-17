@@ -4836,3 +4836,80 @@ model ExamPublishLog {
   sessionId   String   @id
   publishedAt DateTime
 }
+
+// Exit surveys for students who leave and for departing faculty / staff (token link, no login needed).
+model ExitSurvey {
+  id          String    @id @default(cuid())
+  chairmanId  String
+  kind        String    // STUDENT_EXIT | FACULTY_EXIT | STAFF_EXIT
+  subjectId   String
+  subjectName String
+  token       String    @unique
+  answersJson String?   @db.Text
+  submittedAt DateTime?
+  sentById    String?
+  createdAt   DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// End-of-course student evaluation of the course and of the teacher (anonymous to the teacher).
+model CourseEvaluation {
+  id          String   @id @default(cuid())
+  courseId    String
+  studentId   String
+  kind        String   // COURSE | TEACHER
+  answersJson String   @db.Text
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@unique([courseId, studentId, kind])
+}
+
+model Complaint {
+  id           String    @id @default(cuid())
+  chairmanId   String
+  byStudentId  String?
+  byUserId     String?
+  anonymous    Boolean   @default(false)
+  category     String
+  subject      String
+  details      String    @db.Text
+  status       String    @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | REJECTED
+  assignedToId String?
+  resolution   String?   @db.Text
+  createdAt    DateTime  @default(now())
+  closedAt     DateTime?
+
+  @@index([chairmanId])
+}
+
+// The lab file: manuals, SOPs, safety training, maintenance and equipment records per lab.
+model LabFileEntry {
+  id          String    @id @default(cuid())
+  chairmanId  String
+  lab         String
+  kind        String    // MANUAL | SOP | SAFETY_TRAINING | MAINTENANCE | EQUIPMENT | CALIBRATION
+  title       String
+  courseCode  String?
+  entryDate   DateTime?
+  note        String?   @db.Text
+  fileName    String?
+  fileUrl     String?   @db.Text
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// Text the Program Lead writes for a SAR section; kept when the SAR is regenerated.
+model SarNarrative {
+  id          String   @id @default(cuid())
+  cycleId     String
+  sectionKey  String
+  text        String   @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([cycleId, sectionKey])
+}

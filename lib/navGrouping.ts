@@ -17,7 +17,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/coordinator\/(batches|courses|assign-subject-experts|plos|grading-scale|elective-options|custom-categories|program-profile|required-books)$/.test(h)
       || /^\/dean\/curricula$/.test(h) || h === "/clo-bulk-import", section: "Programs & Courses" },
 
-  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation" || h === "/placements", section: "Students" },
+  { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation" || h === "/placements" || h === "/complaints", section: "Students" },
 
   { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|org-chart|hierarchy|training|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },
@@ -27,7 +27,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/omc\/(weight-policy|passing-criteria|equivalence|content-sync|import-content)$/.test(h) || h === "/registration-rules", section: "Policies & Rules" },
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h) || h === "/indirect-assessment" || h === "/complex-problems", section: "Curriculum & Outcomes" },
 
-  { match: (h) => /^\/accreditation(-overview|\/readiness|\/tasks|\/nbeac)?$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings|portfolio-review|accreditation\/outcomes-report)$/.test(h), section: "Accreditation" },
+  { match: (h) => /^\/accreditation(-overview|\/readiness|\/tasks|\/nbeac)?$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings|portfolio-review|accreditation\/outcomes-report|evaluations|exit-surveys|lab-file)$/.test(h), section: "Accreditation" },
   { match: (h) => /^\/(plans|admissions|fees|hr|accounts|inventory|purchasing|my-payslips)$/.test(h), section: "University Operations" },
   { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h) || h === "/library/requisitions", section: "Facilities & Calendar" },
 

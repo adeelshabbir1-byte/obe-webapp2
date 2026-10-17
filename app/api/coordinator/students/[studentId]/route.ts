@@ -1,3 +1,4 @@
+import { onStudentStatus } from "../../../../../lib/exitSurveys";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -42,6 +43,7 @@ export async function PATCH(req: Request, { params }: { params: { studentId: str
     const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 300) || null : null;
     try {
       await prisma.student.update({ where: { id: params.studentId }, data: { status: body.status, statusDate: body.status === "ACTIVE" ? null : new Date(), statusReason: body.status === "ACTIVE" ? null : reason } });
+      if (body.status !== "ACTIVE") await onStudentStatus(params.studentId, body.status, user.id);
     } catch {
       return NextResponse.json({ error: "Run prisma/migration_nbeac_sar.sql in Supabase first." }, { status: 500 });
     }

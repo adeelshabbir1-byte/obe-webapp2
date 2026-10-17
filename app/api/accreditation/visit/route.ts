@@ -6,7 +6,7 @@ import { vdb, agendaTemplate, LOGISTICS, FINDING_TYPES } from "../../../../lib/a
 import type { BodyKey } from "../../../../lib/accreditation/bodyInfer";
 
 const s = (v: unknown, n = 300) => (typeof v === "string" ? v.trim().slice(0, n) : "");
-const FIELDS: Record<string, string[]> = { AGENDA: ["day", "time", "session", "with", "venue", "host"], PANEL: ["name", "role", "organization", "contact", "arrival"], LOGISTICS: ["task", "note"], FINDING: ["criterion", "type", "observation", "response", "action"] };
+const FIELDS: Record<string, string[]> = { AGENDA: ["day", "time", "session", "with", "venue", "host"], PANEL: ["name", "role", "organization", "contact", "arrival"], LOGISTICS: ["task", "note"], FINDING: ["criterion", "type", "observation", "response", "action"], IMPLEMENTATION: ["finding", "action", "responsible", "resources", "timeline", "indicator"] };
 
 // Managers (Institute Head, Dean, Chairman) and the program's own Lead plan the visit and answer its findings.
 export async function POST(req: Request) {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       const kind = String(b.kind || "");
       if (!FIELDS[kind]) return NextResponse.json({ error: "bad kind" }, { status: 400 });
       const d: Record<string, string> = {};
-      for (const f of FIELDS[kind]) d[f] = s(b[f], f === "observation" || f === "response" || f === "action" ? 3000 : 300);
+      for (const f of FIELDS[kind]) d[f] = s(b[f], ["observation", "response", "action", "finding", "indicator"].includes(f) ? 3000 : 300);
       if (kind === "FINDING" && !FINDING_TYPES.some((t) => t[0] === d.type)) d.type = "OBSERVATION";
       if (!Object.values(d).some(Boolean)) return NextResponse.json({ error: "Fill in the details." }, { status: 400 });
       const extra = { ownerId: typeof b.ownerId === "string" && b.ownerId ? b.ownerId : null, dueDate: b.dueDate ? new Date(b.dueDate) : null };

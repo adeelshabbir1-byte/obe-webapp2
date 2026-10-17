@@ -7,6 +7,7 @@ import { navForRole } from "../../../../../components/reportNav";
 import { ActionForm } from "../../../../../components/fyp/FypClient";
 import { computeCloPloPassRates } from "../../../../../lib/resultMate";
 import { cdb } from "../../../../../lib/complexProblems";
+import { evalSummary, EVAL, MIN_RESPONSES } from "../../../../../lib/evaluations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function CourseReviewPage({ params }: { params: { courseId:
   const r = (await cdb.courseReview.findUnique({ where: { courseId: course.id } }).catch(() => undefined)) as { perCloJson: string; worked: string | null; challenges: string | null; changes: string | null; submittedAt: Date | null } | null | undefined;
   if (r === undefined) return shell(<div className="err">Run prisma/migration_teaching_extras.sql first.</div>);
   const stats = await computeCloPloPassRates(course.id).catch(() => null);
+  const ev = (await evalSummary([course.id])).get(course.id)!;
   const per = r ? (JSON.parse(r.perCloJson) as Record<string, { reason: string; action: string }>) : {};
   const rows = (stats?.cloStats || []).map((c) => { const n = c.passCount + c.failCount; const pct = n ? Math.round((100 * c.passCount) / n) : 0; return { code: c.code, pct, n }; });
   return shell(<>
@@ -29,6 +31,9 @@ export default async function CourseReviewPage({ params }: { params: { courseId:
       <h3 style={{ marginTop: 0 }}>End-of-course review {r?.submittedAt ? <span className="small-note">submitted {r.submittedAt.toISOString().slice(0, 10)}</span> : null}</h3>
       <p className="small-note">Your reflection on the course, kept in the course folder and read by the Program Lead for CQI. The CLO results come from your marks; explain each one below 60% and what you will change.</p>
       <table><thead><tr><th>CLO</th><th>Students who met it</th></tr></thead><tbody>{rows.map((x) => <tr key={x.code}><td>{x.code}</td><td style={{ color: x.pct >= 60 ? "#1F5E36" : "#B3261E", fontWeight: 700 }}>{x.pct}% <span className="small-note">of {x.n}</span></td></tr>)}</tbody></table>
+    </div>
+    <div className="card"><h3 style={{ marginTop: 0 }}>Students&apos; evaluation of this course</h3>
+      {(["COURSE", "TEACHER"] as const).map((k) => <div key={k} style={{ fontSize: 13, marginBottom: 6 }}><b>{EVAL[k].title}</b>: {ev[k].n >= MIN_RESPONSES ? <>{ev[k].overall}/5 from {ev[k].n} students · {EVAL[k].items.filter(([key]) => ev[k].avg[key] !== undefined && ev[k].avg[key] < 3.5).map(([, l]) => l).join("; ") || "no weak items"}{ev[k].comments.length ? <div className="small-note">Comments: {ev[k].comments.slice(0, 8).join(" | ")}</div> : null}</> : <span className="small-note">{ev[k].n} responses — shown once {MIN_RESPONSES} students answer</span>}</div>)}
     </div>
     <div className="card">
       <ActionForm url="/api/course-review" fixed={{ courseId: course.id, submit: true }} submit={r?.submittedAt ? "Update review" : "Submit review"}
