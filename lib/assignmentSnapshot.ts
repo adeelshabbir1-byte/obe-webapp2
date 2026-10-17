@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { directClos } from "./directClo";
 import { getPassingCriteria } from "./passingCriteria";
 
 /** Call BEFORE overwriting a course's offeredTermName/Year — if it already
@@ -126,6 +127,7 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
     course.batch ? getGradingScaleForBatch(course.coordinatorId, course.batch) : Promise.resolve([]),
   ]);
   const instrumentToClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) instrumentToClo.set(k, v);
   for (const link of links) if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
 
   const cloMaxWeight: Record<string, number> = {};

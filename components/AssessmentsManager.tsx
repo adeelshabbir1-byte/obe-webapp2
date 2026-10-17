@@ -6,7 +6,7 @@ import SortableTable from "./SortableTable";
 import Link from "next/link";
 
 type Evidence = { id: string; fileName: string; fileUrl: string; status: string; method: string | null; reasoning: string | null };
-type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number; evidence: Evidence[] };
+type Instrument = { id: string; type: string; label: string; marksPct: number; maxScore: number; evidence: Evidence[]; cloId?: string | null; partOfId?: string | null };
 type Targets = { assignmentPct: number; quizPct: number; midtermPct: number; finalPct: number; projectPct: number; labPct: number };
 type PolicyMax = { assignmentMax?: number; quizMax?: number; midtermMax?: number; finalMax?: number; projectMax?: number; labMax?: number };
 type PolicyMinCount = { assignmentMinCount?: number; quizMinCount?: number; midtermMinCount?: number; finalMinCount?: number; projectMinCount?: number; labMinCount?: number };
@@ -73,10 +73,12 @@ function statusBadge(status: string) {
 // response, instead of router.refresh() re-fetching this course's
 // full instrument list, lecture rows, and evidence on every single
 // edit, upload, or checkbox toggle.
-export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf, counts, coverage }: {
+export default function AssessmentsManager({ courseId, initialInstruments, targets, policyMax, policyMinCount, rows: initialRows, clos, apiBase, bestOf, counts, coverage, midtermWeek }: {
   courseId: string; initialInstruments: Instrument[]; targets: Targets; policyMax?: PolicyMax; policyMinCount?: PolicyMinCount; rows: Row[]; clos?: Clo[]; apiBase: string; counts?: Record<string, number | null>; bestOf?: Record<string, number | null>;
   /** The OMC's coverage rules for this course type: every PLO must carry ploMinPct % of the marks through ploMinItems items. */
   coverage?: { ploMinPct: number; ploMinItems: number; cloSpreadMax: number };
+  /** The week the midterm is held (set in the semester plan); 9 when nobody set it. */
+  midtermWeek?: number | null;
 }) {
   const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
   // "rows" is the working copy the checkboxes/question-number boxes edit
@@ -105,6 +107,21 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
       setInstruments((prev) => prev.map((i) => i.id === instrumentId ? { ...i, evidence: [data.evidence, ...i.evidence] } : i));
       setUploadingId(null);
     } catch (err: any) { setError("Unexpected error: " + err.message); setUploadingId(null); }
+  }
+
+  // Project / Lab mapped to a CLO directly, split into parts (one per CLO), or split from the rubric's criteria.
+  const [splitFor, setSplitFor] = useState<string | null>(null);
+  const [splitPct, setSplitPct] = useState<Record<string, string>>({});
+  async function direct(body: Record<string, unknown>) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`${apiBase}/courses/${courseId}/instruments/direct`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return false; }
+      setInstruments(data.instruments);
+      if (apiBase.includes("subjectexpert")) fetch(`${apiBase}/courses/${courseId}/sync-followers`, { method: "POST" }).catch(() => {});
+      setLoading(false); return true;
+    } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); return false; }
   }
 
   async function addInstrument(type: string, nextLabel: string, marksPct: string, maxScore: string) {
@@ -309,7 +326,11 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   // other — a topic maps to exactly one CLO here — plus a Total row
   // summing each CLO's column across every topic, and a grand total.
   const cloList = clos || [];
-  const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0));
+  // Project / Lab items carrying marks: measured against a CLO directly (a split item's parts carry the marks, the original 0%).
+  const directItems = instruments.filter((i) => (i.type === "Project" || i.type === "Lab") && i.marksPct > 0);
+  const directPct = (cloId: string) => directItems.filter((i) => i.cloId === cloId).reduce((s, i) => s + i.marksPct, 0);
+  const splitParents = instruments.filter((i) => (i.type === "Project" || i.type === "Lab") && instruments.some((p) => p.partOfId === i.id));
+  const cloTotals = cloList.map((c) => filledRows.filter((r) => r.cloId === c.id).reduce((s, r) => s + r.weightPct, 0) + directPct(c.id));
   const grandTotal = cloTotals.reduce((s, t) => s + t, 0);
   const typeIndex = new Map<string, number>(); // instrument id -> position within its own type
   const seenPerType: Record<string, number> = {};
@@ -317,8 +338,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
   const colBg = (i: { id: string; type: string }) => shade(i.type, typeIndex.get(i.id) || 0);
   const colEdge = (i: { id: string }) => ((typeIndex.get(i.id) || 0) === 0 ? { borderLeft: GROUP_EDGE } : {});
   // What the Total can reach here: Project and Lab marks are not tied to lecture topics, so they never appear in this table.
-  const mappablePct = (targets.quizPct || 0) + (targets.assignmentPct || 0) + (targets.midtermPct || 0) + (targets.finalPct || 0);
-  const unmappablePct = (targets.projectPct || 0) + (targets.labPct || 0);
+  const mappablePct = (targets.quizPct || 0) + (targets.assignmentPct || 0) + (targets.midtermPct || 0) + (targets.finalPct || 0) + (targets.projectPct || 0) + (targets.labPct || 0);
+  const unmappablePct = directItems.filter((i) => !i.cloId).reduce((s, i) => s + i.marksPct, 0);
   const linkedIds = new Set(filledRows.flatMap((r) => r.linkedInstrumentIds));
   const notLinked = [
     ...checkboxInstruments.filter((i) => !linkedIds.has(i.id)).map((i) => headingFor(i)),
@@ -344,6 +365,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     const its = new Set<string>();
     let pct = 0;
     for (const r of filledRows) if (r.cloId && cloIds.has(r.cloId)) { pct += r.weightPct; r.linkedInstrumentIds.forEach((id) => its.add(id)); }
+    for (const i of directItems) if (i.cloId && cloIds.has(i.cloId)) { pct += i.marksPct; its.add(i.id); }
     ploStats.set(key, { pct, items: its.size });
   }
   const rules = coverage || { ploMinPct: 0, ploMinItems: 0, cloSpreadMax: 7 };
@@ -650,7 +672,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                         of {fmtPct(mappablePct)}%{notLinked.length ? ` — not linked to a topic yet: ${notLinked.join(", ")}` : ""}
                       </div>
                     )}
-                    {unmappablePct > 0 && <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--slate)", lineHeight: 1.3 }}>Project/Lab {fmtPct(unmappablePct)}% is not tied to topics</div>}
+                    {unmappablePct > 0 && <div style={{ fontSize: 9.5, fontWeight: 400, color: "var(--rust)", lineHeight: 1.3 }}>Project/Lab {fmtPct(unmappablePct)}% has no CLO yet — choose it in the rows at the bottom</div>}
                   </td>
                   {cloTotals.map((t, idx) => <td key={cloList[idx].id} onClick={() => toggleFocus("clo", cloList[idx].id)} title="Click to highlight this CLO's topics" style={{ textAlign: "center", fontSize: 12, cursor: "pointer", background: focusCloIds.has(cloList[idx].id) ? "#F3D58A" : cloTint(cloList[idx]), color: cloLow(idx) ? "var(--rust)" : undefined }}>{fmtPct(t)}%</td>)}
                 </tr>
@@ -658,6 +680,8 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             </thead>
             <tbody>
               {groups.map((g, idx) => {
+                const midW = midtermWeek || 9;
+                const markerHere = g.rows[0].week > midW && (idx === 0 || groups[idx - 1].rows[0].week <= midW);
                 const rowIds = g.rows.map((r) => r.id);
                 const first = g.rows[0];
                 const lectureLabel = g.rows.length === 1
@@ -666,7 +690,13 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 const groupWeight = g.rows.reduce((s, r) => s + r.weightPct, 0);
                 const hit = !!focus && g.rows.some((r) => r.cloId && focusCloIds.has(r.cloId));
                 return (
-                <tr key={first.id} style={focus ? (hit ? { outline: "2px solid #E0A526", outlineOffset: -2 } : { opacity: 0.4 }) : undefined}>
+                <Fragment key={first.id}>
+                {markerHere && (
+                  <tr style={{ background: "#FBF3E4" }}>
+                    <td colSpan={3 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0) + cloList.length} style={{ fontSize: 12, fontWeight: 700, color: "#7A520C", textAlign: "center" }}>Week {midtermWeek || 9} — Midterm exam week (no teaching; not mapped to any CLO){midtermWeek ? "" : " · default week 9 until the semester plan sets it"}</td>
+                  </tr>
+                )}
+                <tr style={focus ? (hit ? { outline: "2px solid #E0A526", outlineOffset: -2 } : { opacity: 0.4 }) : undefined}>
                   <td style={{ fontSize: 12, color: "var(--slate)", background: hit ? "#FFE58F" : undefined }}>{idx + 1}</td>
                   <td style={{ fontSize: 12, background: hit ? "#FFF1B8" : undefined, fontWeight: hit ? 600 : undefined }}>
                     {lectureLabel} — {g.key}
@@ -697,6 +727,49 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                     return <td key={c.id} style={{ textAlign: "center", fontSize: 12, background: mine ? "#FFD666" : cloTint(c), fontWeight: mine ? 700 : undefined }}>{mine && t === 0 ? "●" : t > 0 ? `${fmtPct(t)}%` : ""}</td>;
                   })}
                 </tr>
+                </Fragment>
+                );
+              })}
+              {[...directItems, ...splitParents].length > 0 && (
+                <tr style={{ background: "#EEF2F8" }}><td colSpan={3 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0) + cloList.length} style={{ fontSize: 12, fontWeight: 700 }}>Project / Lab — measured against a CLO directly (not through topics)</td></tr>
+              )}
+              {[...splitParents, ...directItems.filter((i) => !i.partOfId)].map((i) => {
+                const parts = instruments.filter((p) => p.partOfId === i.id);
+                const pre = 2 + checkboxInstruments.length + (hasMidterm ? 1 : 0) + (hasFinal ? 1 : 0);
+                const total = parts.length ? parts.reduce((s, p) => s + p.marksPct, 0) : i.marksPct;
+                return (
+                  <Fragment key={i.id}>
+                    <tr>
+                      <td colSpan={pre} style={{ fontSize: 12 }}>
+                        <b>{headingFor(i)}</b> · {fmtPct(total)}%{" "}
+                        {parts.length === 0 && (
+                          <select value={i.cloId || ""} disabled={loading} onChange={(e) => direct({ action: "clo", instrumentId: i.id, cloId: e.target.value || null })} style={{ fontSize: 12, marginLeft: 6 }}>
+                            <option value="">— choose the CLO it measures —</option>
+                            {cloList.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
+                          </select>
+                        )}
+                        {parts.length === 0 && cloList.length > 1 && <button className="act" disabled={loading} style={{ marginLeft: 6 }} onClick={() => { setSplitFor(splitFor === i.id ? null : i.id); setSplitPct({}); }}>Split into parts…</button>}
+                        {parts.length === 0 && apiBase.includes("/instructor") && <button className="act" disabled={loading} style={{ marginLeft: 6 }} title="Uses the CLO chosen for each rubric criterion" onClick={() => direct({ action: "split-from-rubric", instrumentId: i.id })}>Split by rubric CLOs</button>}
+                        {parts.length > 0 && <span style={{ color: "var(--slate)" }}> — split into {parts.length} parts <button className="act act-danger" disabled={loading} onClick={() => confirm("Join the parts back into one item?") && direct({ action: "unsplit", instrumentId: i.id })}>Undo split</button></span>}
+                        {splitFor === i.id && (
+                          <div style={{ marginTop: 6, padding: 8, background: "#fff", border: "1px solid var(--line)" }}>
+                            <div style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 4 }}>Give each CLO this item measures its share; the shares must add up to {fmtPct(i.marksPct)}%. Marks are then entered for each part (or come from the rubric).</div>
+                            {cloList.map((c) => <label key={c.id} style={{ marginRight: 10, fontSize: 12 }}>{c.code} <input type="number" step="any" min={0} value={splitPct[c.id] || ""} onChange={(e) => setSplitPct({ ...splitPct, [c.id]: e.target.value })} style={{ width: 56 }} />%</label>)}
+                            <button className="btn btn-sm" disabled={loading} onClick={async () => { const parts = Object.entries(splitPct).filter(([, v]) => Number(v) > 0).map(([cloId, v]) => ({ cloId, marksPct: Number(v) })); if (await direct({ action: "split", instrumentId: i.id, parts })) setSplitFor(null); }}>Split</button>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{fmtPct(total)}%</td>
+                      {cloList.map((c) => { const t = parts.length ? parts.filter((p) => p.cloId === c.id).reduce((s, p) => s + p.marksPct, 0) : i.cloId === c.id ? i.marksPct : 0; return <td key={c.id} style={{ textAlign: "center", fontSize: 12, background: cloTint(c) }}>{t > 0 ? `${fmtPct(t)}%` : ""}</td>; })}
+                    </tr>
+                    {parts.map((p) => (
+                      <tr key={p.id} style={{ fontSize: 12 }}>
+                        <td colSpan={pre} style={{ paddingLeft: 24, color: "var(--slate)" }}>↳ {p.label}</td>
+                        <td>{fmtPct(p.marksPct)}%</td>
+                        {cloList.map((c) => <td key={c.id} style={{ background: cloTint(c) }}></td>)}
+                      </tr>
+                    ))}
+                  </Fragment>
                 );
               })}
             </tbody>

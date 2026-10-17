@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { directClos } from "./directClo";
 import { computeResultMate } from "./resultMate";
 
 export type CoAttainmentRow = { code: string; targetPct: number; actualPct: number; level: number };
@@ -21,6 +22,7 @@ export async function computeCoAttainment(courseId: string, criteria?: { cloPct:
   const instruments = await prisma.assessmentInstrument.findMany({ where: { courseId, source: "INSTRUCTOR" } });
   const links = await prisma.lectureRowInstrument.findMany({ where: { instrument: { courseId, source: "INSTRUCTOR" } }, include: { lectureRow: true } });
   const instrumentToClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) instrumentToClo.set(k, v);
   for (const link of links) if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
 
   const cloMaxWeight: Record<string, number> = {};

@@ -32,7 +32,7 @@ export async function ensureInstructorCopy(courseId: string) {
       id: cloIdMap[c.id], courseId, source: "INSTRUCTOR", code: c.code, statement: c.statement, bloomLevel: c.bloomLevel,
       mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct, orderIndex: c.orderIndex, targetPct: c.targetPct, ploMappingSource: c.ploMappingSource,
     })) }),
-    prisma.assessmentInstrument.createMany({ data: seInstruments.map((i) => ({ id: instrumentIdMap[i.id], courseId, source: "INSTRUCTOR", type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore })) }),
+    prisma.assessmentInstrument.createMany({ data: seInstruments.map((i) => ({ id: instrumentIdMap[i.id], courseId, source: "INSTRUCTOR", type: i.type, label: i.label, marksPct: i.marksPct, maxScore: i.maxScore, cloId: i.cloId ? cloIdMap[i.cloId] || null : null, partOfId: i.partOfId ? instrumentIdMap[i.partOfId] || null : null })) }),
     prisma.lectureRow.createMany({ data: seLectureRows.map((r) => ({
       id: rowIdMap[r.id], courseId, source: "INSTRUCTOR", week: r.week, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic,
       cloId: r.cloId ? cloIdMap[r.cloId] || null : null, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials,

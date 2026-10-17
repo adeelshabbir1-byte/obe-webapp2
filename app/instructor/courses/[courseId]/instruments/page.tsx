@@ -65,6 +65,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
       <PrereqTopicChecks courseId={updated.id} source="INSTRUCTOR" />
 
       <AssessmentsManager
+        midtermWeek={(course as unknown as { midtermWeek: number | null }).midtermWeek}
         coverage={coverageRules(policy as unknown as Record<string, unknown>)}
         counts={{ Quiz: (course as unknown as { quizCount: number | null }).quizCount, Assignment: (course as unknown as { assignmentCount: number | null }).assignmentCount }}
         bestOf={{ Quiz: (course as unknown as { quizBestOf: number | null }).quizBestOf, Assignment: (course as unknown as { assignmentBestOf: number | null }).assignmentBestOf }}

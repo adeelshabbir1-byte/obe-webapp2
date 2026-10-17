@@ -159,17 +159,20 @@ export async function copyCourseContent(sourceCourseId: string, newCourseId: str
   // the whole sync ran synchronously inside that save's request.
   const instrumentIdMap: Record<string, string> = {};
   for (const inst of instruments) instrumentIdMap[inst.id] = randomUUID();
+  const cloIdPre: Record<string, string> = {};
+  for (const c of clos) cloIdPre[c.id] = randomUUID();
   if (instruments.length > 0) {
     await prisma.assessmentInstrument.createMany({
       data: instruments.map((inst) => ({
         id: instrumentIdMap[inst.id], courseId: newCourseId, source: "SE",
         type: inst.type, label: inst.label, marksPct: inst.marksPct, maxScore: inst.maxScore,
+        cloId: inst.cloId ? cloIdPre[inst.cloId] || null : null, partOfId: inst.partOfId ? instrumentIdMap[inst.partOfId] || null : null,
       })),
     });
   }
 
   const cloIdMap: Record<string, string> = {};
-  for (const c of clos) cloIdMap[c.id] = randomUUID();
+  for (const c of clos) cloIdMap[c.id] = cloIdPre[c.id];
   if (clos.length > 0) {
     await prisma.cLO.createMany({
       data: clos.map((c) => {

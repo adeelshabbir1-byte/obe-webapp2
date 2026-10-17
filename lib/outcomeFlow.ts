@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { directClos } from "./directClo";
 import { prisma } from "./db";
 import { batchPloWeights, wdb } from "./ploWeights";
 import { weightedAttainment, equalWeights, cohortWeights, TARGET_PCT } from "./ploWeightMath";
@@ -88,6 +89,7 @@ export async function courseChain(courseId: string, forceSource?: "SE" | "INSTRU
   ]);
   // Each assessment counts toward the first CLO its lectures serve (same rule as the result calculation).
   const toClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) toClo.set(k, v);
   for (const l of links) if (l.lectureRow.cloId && !toClo.has(l.instrumentId)) toClo.set(l.instrumentId, l.lectureRow.cloId);
   const cloPassPct = new Map<string, number>(), cloAvg = new Map<string, number>();
   if (marks.length) {

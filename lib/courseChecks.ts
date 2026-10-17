@@ -8,7 +8,7 @@ export async function courseIssues(courseId: string, source: "SE" | "INSTRUCTOR"
   const [clos, rows, insts, mapped] = await Promise.all([
     prisma.cLO.findMany({ where: { courseId, source }, orderBy: { orderIndex: "asc" }, select: { id: true, code: true, mappedPloId: true } }),
     prisma.lectureRow.findMany({ where: { courseId, source }, select: { cloId: true, topic: true, instrumentLinks: { select: { instrumentId: true } } } }),
-    prisma.assessmentInstrument.findMany({ where: { courseId, source }, select: { id: true, label: true, marksPct: true } }),
+    prisma.assessmentInstrument.findMany({ where: { courseId, source }, select: { id: true, label: true, marksPct: true, type: true, cloId: true, partOfId: true } }),
     prisma.coursePloMapping.findMany({ where: { courseId }, select: { ploId: true, plo: { select: { number: true } } } }),
   ]);
   const out: CourseIssue[] = [];
@@ -32,9 +32,10 @@ export async function courseIssues(courseId: string, source: "SE" | "INSTRUCTOR"
     const total = Math.round(insts.reduce((s, i) => s + i.marksPct, 0) * 100) / 100;
     if (Math.abs(total - 100) > 0.01) out.push({ text: `Assessment marks add up to ${total}%, not 100%.`, fix: "weights" });
     const linked = new Set(rows.flatMap((r) => r.instrumentLinks.map((l) => l.instrumentId)));
-    const unlinked = insts.filter((i) => !linked.has(i.id)).map((i) => i.label);
+    const hasParts = new Set(insts.map((i) => i.partOfId).filter(Boolean));
+    const unlinked = insts.filter((i) => !linked.has(i.id) && !i.cloId && !hasParts.has(i.id) && i.marksPct > 0).map((i) => i.label);
     if (unlinked.length) out.push({ text: `${list(unlinked)} not linked to any lecture topic.`, fix: "instruments" });
-    const tested = new Set(rows.filter((r) => r.instrumentLinks.length && r.cloId).map((r) => r.cloId));
+    const tested = new Set([...rows.filter((r) => r.instrumentLinks.length && r.cloId).map((r) => r.cloId), ...insts.map((i) => i.cloId).filter(Boolean)]);
     const untested = clos.filter((c) => !tested.has(c.id)).map((c) => c.code);
     if (untested.length) out.push({ text: `${list(untested)} not assessed by any quiz, assignment or exam.`, fix: "instruments" });
   }

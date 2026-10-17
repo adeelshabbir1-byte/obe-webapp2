@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../../lib/instructorGuard";
 import { rdb, parseCriteria, scoreFor, type RubricRow } from "../../../../../../../../lib/rubrics";
+import { writePartMarks } from "../../../../../../../../lib/instrumentParts";
 import { resultLockMessage } from "../../../../../../../../lib/resultApproval";
 
 // PUT { studentId, levels: { criterionId: levelIndex }, comment } — mark one student with the rubric. When every criterion
@@ -32,5 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await rdb.rubricScore.upsert({ where: { rubricId_studentId: { rubricId: rubric.id, studentId } }, update: { levelsJson: JSON.stringify(levels), comment }, create: { rubricId: rubric.id, studentId, levelsJson: JSON.stringify(levels), comment } });
   const r = scoreFor(criteria, levels, inst.maxScore);
   if (r) await prisma.studentMark.upsert({ where: { studentId_instrumentId: { studentId, instrumentId: inst.id } }, update: { score: r.score, enteredById: user.id }, create: { studentId, courseId: course.id, instrumentId: inst.id, score: r.score, enteredById: user.id } });
+  // A project split into parts by CLO: each part gets its own mark from its criteria.
+  await writePartMarks(inst.id, course.id, studentId, rubric.criteriaJson, levels, user.id).catch(() => null);
   return NextResponse.json({ ok: true, complete: !!r, score: r?.score ?? null, pct: r?.pct ?? null });
 }

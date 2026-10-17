@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { directClos } from "./directClo";
 
 export type PlanAssessment = { id: string; label: string; type: string; marksPct: number; cloId: string | null };
 export type PlanClo = { id: string; code: string; mappedPloId: string | null; contributionPct: number | null };
@@ -27,6 +28,7 @@ export async function loadPlansBulk(courseIds: string[]): Promise<Map<string, { 
   ]);
   // instrument -> CLO via its lecture row (first link wins, same rule used by attainment)
   const instrumentToClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseIds)).entries())) instrumentToClo.set(k, v);
   for (const link of links) if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
 
   for (const courseId of courseIds) {

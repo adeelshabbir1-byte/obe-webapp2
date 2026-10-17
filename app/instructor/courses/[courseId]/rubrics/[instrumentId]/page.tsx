@@ -28,7 +28,7 @@ export default async function RubricPage({ params }: { params: { courseId: strin
   ]);
   // The CLOs this item is linked to through the lecture plan — suggested for its criteria.
   const linked = await prisma.lectureRowInstrument.findMany({ where: { instrumentId: inst.id }, select: { lectureRow: { select: { cloId: true } } } });
-  const linkedClos = Array.from(new Set(linked.map((l) => l.lectureRow.cloId).filter((x): x is string => !!x)));
+  const linkedClos = Array.from(new Set([...(inst.cloId ? [inst.cloId] : []), ...linked.map((l) => l.lectureRow.cloId).filter((x): x is string => !!x)]));
   let rubric: RubricRow | null = null, scores: RubricScoreRow[] = [], missing = false;
   try {
     rubric = (await rdb.rubric.findUnique({ where: { instrumentId: inst.id } })) as RubricRow | null;

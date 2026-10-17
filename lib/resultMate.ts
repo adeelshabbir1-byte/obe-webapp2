@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { directClos } from "./directClo";
 import { classStats, gradeWithCutoffs } from "./grading";
 import { PLAN_SELECT, planFor } from "./assessmentWeights";
 
@@ -29,7 +30,8 @@ export async function computeResultMate(courseId: string) {
     where: { instrument: { courseId, source: "INSTRUCTOR" } },
     include: { lectureRow: true, instrument: true },
   });
-  const instrumentToClo = new Map<string, string>(); // instrumentId -> cloId (first match)
+  const instrumentToClo = new Map<string, string>(); // instrumentId -> cloId (direct Project/Lab CLO first, else first linked topic)
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) instrumentToClo.set(k, v);
   for (const link of links) {
     if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
   }
@@ -153,6 +155,7 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
     include: { lectureRow: true },
   });
   const instrumentToClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) instrumentToClo.set(k, v);
   for (const link of links) {
     if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
   }
@@ -215,6 +218,7 @@ export async function suggestClOReweighting(courseId: string) {
     include: { lectureRow: true },
   });
   const instrumentToClo = new Map<string, string>();
+  for (const [k, v] of Array.from((await directClos(courseId)).entries())) instrumentToClo.set(k, v);
   for (const link of links) {
     if (link.lectureRow.cloId && !instrumentToClo.has(link.instrumentId)) instrumentToClo.set(link.instrumentId, link.lectureRow.cloId);
   }

@@ -1619,6 +1619,8 @@ model AssessmentInstrument {
   type      String   // Assignment | Quiz | Midterm | Final | Project | Lab
   label     String   // "Quiz 1", "Midterm Q3"
   marksPct  Float    // this instrument's % of total course marks
+  cloId     String?  // Project / Lab measured against one CLO directly (not through lecture topics)
+  partOfId  String?  // a part of a split Project / Lab (the original item stays as a 0% container, e.g. for its rubric)
   maxScore  Int      @default(10) // the raw marks this instrument is scored out of (e.g. Quiz out of 10)
   createdAt DateTime @default(now())
 

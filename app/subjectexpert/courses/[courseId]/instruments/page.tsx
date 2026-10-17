@@ -90,6 +90,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
       )}
 
       {weightsComplete && <AssessmentsManager
+        midtermWeek={(course as unknown as { midtermWeek: number | null }).midtermWeek}
         counts={{ Quiz: (course as unknown as { quizCount: number | null }).quizCount, Assignment: (course as unknown as { assignmentCount: number | null }).assignmentCount }}
         bestOf={{ Quiz: (course as unknown as { quizBestOf: number | null }).quizBestOf, Assignment: (course as unknown as { assignmentBestOf: number | null }).assignmentBestOf }}
         courseId={course.id}
