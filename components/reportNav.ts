@@ -376,7 +376,28 @@ export const HOD_NAV = [
   { href: "/coordinator/attendance", label: "Attendance Report" },
 ];
 
+// University ERP pages, added to each role's menu by what the role may use (see lib/erp erpAccess).
+const ERP_LINKS: [string, string, string[]][] = [
+  ["/plans", "University Planner", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN"]],
+  ["/admissions", "Admissions CRM", ["CHAIRMAN", "STUDENT_AFFAIRS", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "FINANCE_OFFICER"]],
+  ["/fees", "Student Fees", ["CHAIRMAN", "FINANCE_OFFICER"]],
+  ["/hr", "HR & Payroll", ["CHAIRMAN", "FINANCE_OFFICER"]],
+  ["/accounts", "Accounts", ["CHAIRMAN", "FINANCE_OFFICER"]],
+  ["/inventory", "Store & Inventory", ["CHAIRMAN", "FINANCE_OFFICER", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN"]],
+  ["/purchasing", "Purchasing", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT"]],
+  ["/my-payslips", "My Payslips", ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT", "DEPARTMENT_COORDINATOR"]],
+];
+const navCache = new Map<string, { href: string; label: string }[]>();
 export function navForRole(role: string) {
+  const hit = navCache.get(role);
+  if (hit) return hit;
+  const base = baseNavForRole(role);
+  const extra = ERP_LINKS.filter(([h, , rs]) => rs.includes(role) && !base.some((l) => l.href === h)).map(([href, label]) => ({ href, label }));
+  const out = extra.length ? [...base, ...extra] : base;
+  navCache.set(role, out);
+  return out;
+}
+function baseNavForRole(role: string): { href: string; label: string }[] {
   switch (role) {
     case "DEPARTMENT_COORDINATOR": return DEPT_COORDINATOR_NAV;
     case "DEAN": return DEAN_NAV;

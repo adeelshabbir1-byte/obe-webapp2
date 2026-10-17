@@ -3,7 +3,7 @@ type Section = { title: string; links: Link[] };
 
 // The same headings are used for every role, in the same order, so the menu looks alike wherever you sign in.
 // First matching rule wins, which lets Shell group any flat nav array without each page changing how it passes navLinks.
-const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
+const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "University Operations", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
 
 const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
@@ -28,6 +28,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
   { match: (h) => /^\/omc\/(plo-matrix|master-curriculum)$/.test(h) || /^\/chairman\/(cqi|plos)$/.test(h) || /^\/master-design$/.test(h), section: "Curriculum & Outcomes" },
 
   { match: (h) => /^\/accreditation(-overview|\/readiness|\/tasks|\/nbeac)?$/.test(h) || /^\/coordinator\/(evidence|course-folders|hec-comparison|sar|accreditation-status)$/.test(h) || /^\/(evidence-files|meetings)$/.test(h), section: "Accreditation" },
+  { match: (h) => /^\/(plans|admissions|fees|hr|accounts|inventory|purchasing|my-payslips)$/.test(h), section: "University Operations" },
   { match: (h) => /^\/(resources|facilities|student-activities|lab-inventory|library-inventory|academic-calendar|admission-criteria)$/.test(h) || /^\/chairman\/finance$/.test(h) || /^\/coordinator\/activities$/.test(h) || h === "/library/requisitions", section: "Facilities & Calendar" },
 
   { match: (h) => /^\/(omc\/)?reports/.test(h) || /^\/omc\/(total-summary|adherence-report)$/.test(h) || /^\/coordinator\/(load-report|semester-health|batch-comparison|feedforward-digest|report-bundles)$/.test(h)
