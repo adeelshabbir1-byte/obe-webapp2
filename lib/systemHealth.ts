@@ -157,11 +157,20 @@ export function fixScript(issues: Issue[]) {
   return `-- System Health fix script, made ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC.\n-- Only adds what is missing; nothing is dropped or overwritten. Safe to run more than once.\n-- Note: a unique rule can fail if duplicate rows already exist; the error names the table.\n\n${parts.join("\n\n")}\n\nSELECT 'done' AS result;\n`;
 }
 
+/** Host, port and options of the database connection (never the password), and where this server runs. */
+function dbUrlInfo() {
+  try {
+    const u = new URL(process.env.DATABASE_URL || "");
+    const pooled = u.port === "6543" && u.searchParams.get("pgbouncer") === "true";
+    return `Host ${u.hostname}, port ${u.port || "5432"}${u.search ? `, options ${u.search.slice(1)}` : ", no options"}. ${pooled ? "Pooled connection: good." : "Not using the pooler (port 6543 with ?pgbouncer=true&connection_limit=1) — slower and can run out of connections."} Server region: ${process.env.VERCEL_REGION || "unknown"}.`;
+  } catch { return ""; }
+}
+
 /** Settings the app reads from Vercel. Only whether each is set — never the value. */
 export function settingsCheck() {
   const has = (k: string) => !!process.env[k];
   return [
-    { key: "DATABASE_URL", set: has("DATABASE_URL"), need: "required", what: "The database connection." },
+    { key: "DATABASE_URL", set: has("DATABASE_URL"), need: "required", what: `The database connection. ${dbUrlInfo()}` },
     { key: "CRON_SECRET", set: has("CRON_SECRET"), need: "required", what: "Without it the daily job (deadline reminders, sign-in watch) refuses to run." },
     { key: "RESEND_API_KEY", set: has("RESEND_API_KEY"), need: "optional", what: "Email delivery. Without it, notifications stay inside the app." },
     { key: "EMAIL_FROM", set: has("EMAIL_FROM"), need: "optional", what: "The sender address for emails (needed together with RESEND_API_KEY)." },
