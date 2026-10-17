@@ -6,6 +6,7 @@ import { resultLockMessage } from "../../../lib/resultApproval";
 import { writeAuditLog } from "../../../lib/audit";
 import { parseLocal, fmt } from "../../../lib/mcq";
 import { alertStudents } from "../../../lib/messaging";
+import { followersOf, mirrorInstrument } from "../../../lib/sectionLink";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { pdb, LEVELS } from "../../../lib/portfolio";
 
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
       if (b.id) await pdb.dropbox.updateMany({ where: { id: String(b.id), courseId: course.id }, data });
       else {
         await pdb.dropbox.create({ data: { ...data, courseId: course.id, createdById: user.id } });
+        for (const fid of await followersOf(course.id)) await pdb.dropbox.create({ data: { ...data, instrumentId: await mirrorInstrument(data.instrumentId, fid), courseId: fid, createdById: user.id } });
         const ids = (await prisma.studentEnrollment.findMany({ where: { courseId: course.id, status: "ACTIVE" }, select: { studentId: true } })).map((e) => e.studentId);
         await alertStudents(await chairmanIdFor(user), ids, "HANDIN", `${course.code}: ${title}`, `Submit by ${fmt(dueAt)} (PKT). Student portal → Submit Work.`).catch(() => null);
       }

@@ -3,6 +3,7 @@ import RefreshPlanButton from "./RefreshPlanButton";
 import CourseReadiness from "./CourseReadiness";
 import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
+import SectionLinkBanner from "./SectionLinkBanner";
 export default function InstructorCourseSubNav({ courseId, active, code, title }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "rubrics" | "schedule" | "marks" | "paper-distribution" | "attendance" | "resources" | "flow" | "samples" | "quizzes" | "submissions" | "paper-vetting" | "review"; code: string; title: string;
 }) {
@@ -32,6 +33,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
           <h1 style={{ fontSize: 22 }}>{code} — {title}</h1>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>Your delivery record — starts as a copy of the Subject Expert's plan, fully editable.</div>
           <SubjectHomeLine courseId={courseId} />
+          <SectionLinkBanner courseId={courseId} />
         </div>
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}><RefreshPlanButton courseId={courseId} />
         <Link href="/instructor/courses" className="btn btn-secondary btn-sm no-print">← Back to courses</Link></span>

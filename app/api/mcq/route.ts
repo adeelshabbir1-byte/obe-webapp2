@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { requireInstructorCourse } from "../../../lib/instructorGuard";
 import { alertStudents } from "../../../lib/messaging";
+import { followersOf, mirrorInstrument } from "../../../lib/sectionLink";
 import { fmt, mdb, parseLocal, parseBank, normClo, finishAttempt, pushMark, DIFF, BLOOM, type Quiz, type Attempt } from "../../../lib/mcq";
 import { writeAuditLog } from "../../../lib/audit";
 
@@ -51,7 +52,11 @@ export async function POST(req: Request) {
       const inst = b.instrumentId ? await prisma.assessmentInstrument.findFirst({ where: { id: String(b.instrumentId), courseId: course.id } }) : null;
       const data = { title, opensAt, closesAt, durationMin: Math.max(1, Math.min(300, Number(b.durationMin) || 20)), pickJson: JSON.stringify(pick), shuffle: b.shuffle !== false, showResults: b.showResults !== false, negativePct: Math.max(0, Math.min(100, Number(b.negativePct) || 0)), instrumentId: inst?.id || null };
       if (b.id) { const started = await mdb.quizAttempt.count({ where: { quizId: String(b.id) } }); await mdb.onlineQuiz.updateMany({ where: { id: String(b.id), courseId: course.id }, data: started ? { title, closesAt, showResults: data.showResults, instrumentId: data.instrumentId } : data }); }
-      else await mdb.onlineQuiz.create({ data: { ...data, courseId: course.id, createdById: user.id } });
+      else {
+        await mdb.onlineQuiz.create({ data: { ...data, courseId: course.id, createdById: user.id } });
+        // Teach as one: the same quiz goes to every linked section (its own copy, its own marks).
+        for (const fid of await followersOf(course.id)) await mdb.onlineQuiz.create({ data: { ...data, instrumentId: await mirrorInstrument(data.instrumentId, fid), courseId: fid, createdById: user.id } });
+      }
       return NextResponse.json({ ok: true });
     }
     const quiz = (await mdb.onlineQuiz.findFirst({ where: { id: String(b.quizId || ""), courseId: course.id } })) as Quiz | null;
@@ -65,8 +70,10 @@ export async function POST(req: Request) {
     if (b.action === "status") {
       const st = ["DRAFT", "PUBLISHED", "CLOSED"].includes(b.status) ? b.status : "DRAFT";
       await mdb.onlineQuiz.update({ where: { id: quiz.id }, data: { status: st } });
+      const fids = await followersOf(course.id);
+      if (fids.length) await mdb.onlineQuiz.updateMany({ where: { courseId: { in: fids }, title: quiz.title }, data: { status: st } });
       if (st === "PUBLISHED" && quiz.status === "DRAFT") {
-        const ids = (await prisma.studentEnrollment.findMany({ where: { courseId: course.id, status: "ACTIVE" }, select: { studentId: true } })).map((e) => e.studentId);
+        const ids = (await prisma.studentEnrollment.findMany({ where: { courseId: { in: [course.id, ...fids] }, status: "ACTIVE" }, select: { studentId: true } })).map((e) => e.studentId);
         await alertStudents(chairmanId, ids, "QUIZ", `${course.code}: ${quiz.title} is open`, `Online quiz, ${quiz.durationMin} min. Open until ${fmt(quiz.closesAt)} (PKT). Student portal → Online Quizzes.`).catch(() => null);
       }
       return NextResponse.json({ ok: true });

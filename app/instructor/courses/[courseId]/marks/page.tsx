@@ -1,3 +1,4 @@
+import { ensureSynced } from "../../../../../lib/sectionLink";
 import ResultPrecheck from "../../../../../components/ResultPrecheck";
 import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
@@ -30,6 +31,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, include: { batch: true } });
   if (!course || course.instructorId !== user.id) notFound();
+  await ensureSynced(course.id); // linked section: take the main section's latest plan first
 
   const linkedSections = await getLinkedSections(user.id, course.id);
   const wantsCombined = searchParams.combined === "1" && linkedSections.length > 0;

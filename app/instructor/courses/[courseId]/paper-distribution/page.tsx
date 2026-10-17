@@ -1,3 +1,4 @@
+import { ensureSynced } from "../../../../../lib/sectionLink";
 import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -21,6 +22,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course || course.instructorId !== user.id) notFound();
+  await ensureSynced(course.id); // linked section: take the main section's latest plan first
   const qs = await questionShortfalls(course.id, "INSTRUCTOR");
 
   const [items, lectureRows, clos] = await Promise.all([

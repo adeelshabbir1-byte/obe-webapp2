@@ -1,3 +1,4 @@
+import { ensureSynced } from "../../../../../lib/sectionLink";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../../lib/session";
@@ -20,6 +21,7 @@ export default async function QuizzesPage({ params, searchParams }: { params: { 
   if (user.role !== "INSTRUCTOR") redirect("/dashboard");
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, select: { id: true, code: true, title: true, instructorId: true } });
   if (!course || course.instructorId !== user.id) notFound();
+  await ensureSynced(course.id); // linked section: take the main section's latest plan first
   const shell = (c: React.ReactNode) => <Shell roleLabel="Instructor" userName={user.name} navLinks={navForRole(user.role)}><InstructorCourseSubNav courseId={course.id} active="quizzes" code={course.code} title={course.title} />{c}</Shell>;
   const bank = await bankOf(await chairmanIdFor(user), course.code).catch(() => null);
   if (bank === null) return shell(<div className="err">Online quizzes are not set up yet — run prisma/migration_mcq.sql.</div>);

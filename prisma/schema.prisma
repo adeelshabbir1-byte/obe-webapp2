@@ -4913,3 +4913,14 @@ model SarNarrative {
 
   @@unique([cycleId, sectionKey])
 }
+
+// "Teach as one": this section follows the main section's plan (CLOs, weights, assessments, lecture plan, paper).
+model SectionLink {
+  courseId     String    @id
+  masterId     String
+  linkedById   String
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([masterId])
+}

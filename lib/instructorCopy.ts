@@ -8,6 +8,7 @@ import { prisma } from "./db";
  * does nothing.
  */
 export async function ensureInstructorCopy(courseId: string) {
+  await (await import("./sectionLink")).ensureSynced(courseId); // a linked section first takes the main section's latest plan
   const existingCount = await prisma.cLO.count({ where: { courseId, source: "INSTRUCTOR" } });
   if (existingCount > 0) return; // already copied
   // A plan with no CLOs leaves no INSTRUCTOR CLOs behind, so the lecture rows tell too (copying them again would fail).

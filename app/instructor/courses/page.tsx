@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import SectionLinker from "../../../components/SectionLinker";
+import { sdb } from "../../../lib/sectionLink";
 import TrainingBanner from "../../../components/TrainingBanner";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
@@ -66,11 +68,17 @@ export default async function InstructorCoursesPage() {
     byId.set(a.course.id, { ...(existing || a.course), sectionCount: a.sectionCount });
   }
   const courses = Array.from(byId.values());
+  // "Teach as one": my own sections that share a course code.
+  const mine = courses.filter((c) => c.instructorId === user.id);
+  const codes = Array.from(new Set(mine.map((c) => c.code))).filter((code) => mine.filter((c) => c.code === code).length > 1);
+  const links = codes.length ? ((await sdb.sectionLink.findMany({ where: { courseId: { in: mine.map((c) => c.id) } } }).catch(() => [])) as { courseId: string; masterId: string }[]) : [];
+  const linkGroups = codes.map((code) => ({ code, title: mine.find((c) => c.code === code)!.title, sections: mine.filter((c) => c.code === code).map((c) => ({ id: c.id, label: c.batch?.batchName || c.id.slice(-4), masterId: links.find((l) => l.courseId === c.id)?.masterId || null })) }));
 
   return (
     <Shell roleLabel="Faculty / Lecturer" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Semester Courses</h1>
       <TrainingBanner user={user} />
+      {linkGroups.length > 0 && <SectionLinker groups={linkGroups} />}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses currently offered and assigned to you. Click "Open" to record your actual delivery — starts as
         an editable copy of the Subject Expert's plan.
