@@ -7,6 +7,7 @@ import PassOnForm from "../../components/PassOnForm";
 import GanttChart from "../../components/GanttChart";
 import { prisma } from "../../lib/db";
 import RemindButton from "../../components/RemindButton";
+import RemindAllButton from "../../components/RemindAllButton";
 import { PLAN_ROLES, PLAN_TEMPLATE, ROLE_LABEL, SETTER_ROLES, planProgress, type PlanState } from "../../lib/deadlines";
 
 const LABEL: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead" };
@@ -46,6 +47,9 @@ export default async function SemesterPlanPage() {
           </b>
           {behind.map((l) => <div key={l.id} style={{ fontSize: 12.5 }}>{l.title}: {l.behind} of {l.total} course{l.total > 1 ? "s" : ""} not done, {-l.daysLeft} day{-l.daysLeft === 1 ? "" : "s"} past {day(l.dueDate)}</div>)}
           {risk.map((l) => <div key={l.id} style={{ fontSize: 12.5, color: "#B7791F" }}>{l.title}: due in {l.daysLeft} day{l.daysLeft === 1 ? "" : "s"} and only {l.done} of {l.total} done</div>)}
+          <RemindAllButton targets={lines.filter((l) => l.notDone.length > 0 && (l.state === "BEHIND" || l.state === "AT_RISK")).flatMap((l) =>
+            Array.from(l.notDone.reduce((m, n) => (n.whoId ? m.set(n.whoId, (m.get(n.whoId) || 0) + 1) : m), new Map<string, number>()).entries())
+              .map(([toId, k]) => ({ deadlineId: l.id, toId, item: l.planKey ? "" : `${k} course${k === 1 ? "" : "s"}` })))} />
         </div>
       )}
 
