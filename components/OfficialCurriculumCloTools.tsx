@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import TemplateLink from "./TemplateLink";
 
 type Copy = { id: string; label: string; courses: number; withClos: number };
 
@@ -52,6 +53,7 @@ export default function OfficialCurriculumCloTools({ curriculumId }: { curriculu
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <b style={{ fontSize: 13 }}>From Excel:</b>
         <button className="btn btn-brass" disabled={busy} onClick={() => input.current?.click()}>Import CLOs &amp; PLO mapping from Excel</button>
+        <TemplateLink name="official-clos" />
         <input ref={input} type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
         <span style={{ fontSize: 12, color: "var(--slate)" }}>Columns: Course code, CLO, Statement, Bloom level, Mapped PLO</span>
       </div>

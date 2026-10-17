@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { readGradebook, type LmsSheet } from "../lib/lmsImport";
+import TemplateLink from "./TemplateLink";
 
 type Inst = { id: string; label: string; type: string; maxScore: number };
 
@@ -49,6 +50,7 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
     <div className="card" style={{ borderLeft: "4px solid #2D63B5" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}><b>Import grades from an LMS</b><button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Close</button></div>
       <p className="small-note">Moodle: Grades → Export → Plain text file. Google Classroom: Grades → Download as CSV. Canvas: Grades → Export. Students are matched by roll number (ID number / username), then by name. Each score is rescaled to the assessment&apos;s own marks, so CLO and PLO attainment update automatically.</p>
+      <TemplateLink name="lms-gradebook" />{" "}
       <input type="file" accept=".csv,.txt,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
       {sheet && (
         <>

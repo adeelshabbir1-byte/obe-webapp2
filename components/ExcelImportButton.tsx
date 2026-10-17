@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import TemplateLink from "./TemplateLink";
 
 // Generic "Import from Excel" button: posts the chosen file (plus any extra fields) to an import route and shows its summary.
-export default function ExcelImportButton({ endpoint, label = "Import from Excel", fields = {} }: { endpoint: string; label?: string; fields?: Record<string, string> }) {
+export default function ExcelImportButton({ endpoint, label = "Import from Excel", fields = {}, templateHref }: { endpoint: string; label?: string; fields?: Record<string, string>; templateHref?: string }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -28,6 +29,7 @@ export default function ExcelImportButton({ endpoint, label = "Import from Excel
 
   return (
     <span>
+      {templateHref && <><TemplateLink href={templateHref} />{" "}</>}
       <button className="btn btn-brass" type="button" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Importing…" : label}</button>
       <input ref={input} type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
       {msg && <span style={{ fontSize: 12.5, color: ok ? "var(--sage)" : "#b3261e", marginLeft: 10 }}>{msg}</span>}

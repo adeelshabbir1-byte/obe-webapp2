@@ -5,6 +5,7 @@ import { useState } from "react";
 import SortableTable from "./SortableTable";
 import { useRouter } from "next/navigation";
 import { TRACKS } from "../lib/tracks";
+import TemplateLink from "./TemplateLink";
 
 type Student = { id: string; name: string; rollNumber: string; currentSemesterNumber: number; track?: string; status?: string; statusReason?: string | null };
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Studying", GRADUATED: "Graduated", LEFT: "Left (non-academic)", DROPPED: "Dropped (academic)" };
@@ -242,6 +243,7 @@ export default function StudentManager({ batches, initialBatchId, students: init
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
           Column A = Name, Column B = Roll Number. A header row is fine — it's detected and skipped automatically.
         </p>
+        <div style={{ marginBottom: 8 }}><TemplateLink name="students" /></div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 12.5, marginBottom: 10, display: "block" }} />
         <button onClick={importFile} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
       </div>

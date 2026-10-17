@@ -41,7 +41,7 @@ export default async function LibraryInventoryPage() {
       </div>
       <p style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <a className="btn" href="/api/library-inventory/export">Download Excel</a>
-        {scope.canEdit && <ExcelImportButton endpoint="/api/library-inventory/import" label="Import from Excel" />}
+        {scope.canEdit && <ExcelImportButton templateHref="/api/library-inventory/export" endpoint="/api/library-inventory/import" label="Import from Excel" />}
       </p>
       <LibraryInventoryForm key={lib ? lib.updatedAt.getTime() : "none"} canEdit={scope.canEdit}
         lib={lib ? { seats: lib.seats, totalTitles: lib.totalTitles, computingTitles: lib.computingTitles, totalVolumes: lib.totalVolumes, printJournals: lib.printJournals, ebooks: lib.ebooks, databases: lib.databases, openHoursPerWeek: lib.openHoursPerWeek, hasLibrarian: lib.hasLibrarian, lastStockCheck: lib.lastStockCheck ? lib.lastStockCheck.toISOString() : null, notes: lib.notes } : null} />

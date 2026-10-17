@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import TemplateLink from "./TemplateLink";
 
 type Result = { file: string; ok: boolean; text: string };
 
@@ -35,6 +36,7 @@ export default function CurriculumWorkbookImport({ official }: { official: boole
         Sheets: Curriculum, PLOs, Courses, CLOs and PLO mapping, Lecture topics (the layout the full-curriculum download produces). You can pick several files at once.
       </p>
       <button className="btn btn-brass" disabled={!!busy} onClick={() => input.current?.click()}>{busy || "Choose workbook(s)…"}</button>
+      <TemplateLink name="curriculum-workbook" />
       <input ref={input} type="file" accept=".xlsx" multiple style={{ display: "none" }} onChange={(e) => { if (e.target.files?.length) run(e.target.files); }} />
       {results.length > 0 && (
         <ul style={{ fontSize: 12.5, marginTop: 10 }}>

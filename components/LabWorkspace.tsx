@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import LabMarksUpload from "./LabMarksUpload";
 
 type Version = { version: number; fileName: string; fileUrl: string; note: string | null; by: string; at: string };
 type Manual = { labNumber: number; title: string; versions: Version[] };
@@ -97,6 +98,7 @@ export default function LabWorkspace({ courseId, as, manuals, students, marks, i
         <h3 style={{ marginTop: 0 }}>Lab marks</h3>
         {students.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 13 }}>No students are enrolled in this lab yet.</p> : engineer ? (
           <>
+            <LabMarksUpload courseId={courseId} />
             <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 10, flexWrap: "wrap" }}>
               <label style={{ fontSize: 12 }}>Lab no.<br /><input type="number" min={1} max={40} value={gridLab} onChange={(e) => pickLab(parseInt(e.target.value, 10) || 1)} style={{ width: 70 }} /></label>
               <label style={{ fontSize: 12 }}>Marked out of<br /><input type="number" min={1} step="any" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} style={{ width: 80 }} /></label>

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import TemplateLink from "./TemplateLink";
 
 // Upload PLOs from Excel/CSV (# , Title, Description). Existing numbers are kept; only new ones are added.
 export default function PloImportButton({ batchId }: { batchId: string }) {
@@ -26,6 +27,7 @@ export default function PloImportButton({ batchId }: { batchId: string }) {
   return (
     <span>
       <button className="btn btn-brass" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Importing…" : "Import from Excel"}</button>
+      <TemplateLink name="plos" />
       <input ref={input} type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
       {msg && <span style={{ fontSize: 12.5, color: "var(--slate)", marginLeft: 10 }}>{msg}</span>}
     </span>

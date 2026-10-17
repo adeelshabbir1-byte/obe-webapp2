@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import TemplateLink from "./TemplateLink";
 
 /** Test send, broadcast and student-number import (results shown inline). */
 export default function MessagingTools({ audiences }: { audiences: [string, string][] }) {
@@ -27,6 +28,7 @@ export default function MessagingTools({ audiences }: { audiences: [string, stri
         </div></div>
       <div className="card"><h3 style={{ marginTop: 0 }}>Import student and guardian numbers</h3>
         <p className="small-note">CSV with columns: Roll number, Student mobile, Guardian mobile. Students can also enter their own under Alerts &amp; Contact in the student portal.</p>
+        <TemplateLink name="messaging-contacts" />{" "}
         <input type="file" accept=".csv,text/csv" onChange={async (e) => { const file = e.target.files?.[0]; if (file) post("imp", { action: "importContacts", csv: await file.text() }); }} /> <span style={{ fontSize: 13 }}>{msg.imp}</span></div>
     </div>
   );

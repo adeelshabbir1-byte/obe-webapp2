@@ -44,7 +44,7 @@ export default async function LabInventoryPage() {
       </div>
       <p style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <a className="btn" href="/api/lab-inventory/export">Download Excel (labs and PC specifications)</a>
-        {scope.canEdit && <ExcelImportButton endpoint="/api/lab-inventory/import" label="Import from Excel" />}
+        {scope.canEdit && <ExcelImportButton templateHref="/api/lab-inventory/export" endpoint="/api/lab-inventory/import" label="Import from Excel" />}
       </p>
       {scope.canEdit && <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -6 }}>Upload the same file after editing it. Labs are matched by name (new ones are added). For each lab listed on the PC specifications sheet, its PC lines are replaced by the lines in the file.</p>}
       {ratios.length > 1 && (

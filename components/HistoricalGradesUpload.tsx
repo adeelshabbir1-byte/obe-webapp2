@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import TemplateLink from "./TemplateLink";
 
 const CHUNK_SIZE = 50;
 
@@ -113,6 +114,7 @@ export default function HistoricalGradesUpload({ batches }: { batches: { id: str
           fine — it's detected and skipped automatically. Use grade <code>W</code> for a withdrawn/dropped course
           (it won't affect GPA but will still show on Courses Remaining).
         </p>
+        <div style={{ marginBottom: 8 }}><TemplateLink name="historical-grades" /></div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 12.5, marginBottom: 10, display: "block" }} />
         <button onClick={() => runImport("file")} disabled={loading || !file} className="btn btn-brass">{loading ? "Importing…" : "Import File"}</button>
       </div>
