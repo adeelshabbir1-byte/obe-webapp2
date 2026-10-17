@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { fypAccess } from "../../../../lib/fyp";
-import { addOpenHouseTemplate, addGroupTemplate } from "../../../../lib/fypPlan";
+import { addOpenHouseTemplate, addGroupTemplate, addYearTemplate } from "../../../../lib/fypPlan";
 import { reschedule } from "../../../../lib/fypSchedule";
 
 const pdb = prisma as unknown as Record<string, any>;
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
   try {
     switch (b.action) {
       case "openHouseTemplate": { if (!manages) return NextResponse.json({ error: "forbidden" }, { status: 403 }); const e = await addOpenHouseTemplate(cycle.id, user.id); if (e) return NextResponse.json({ error: e }, { status: 400 }); break; }
+      case "yearTemplate": { if (!manages) return NextResponse.json({ error: "forbidden" }, { status: 403 }); await addYearTemplate(cycle.id, user.id); break; }
       case "groupTemplate": { if (!groupId) return NextResponse.json({ error: "choose a group" }, { status: 400 }); const e = await addGroupTemplate(cycle.id, groupId, user.id); if (e) return NextResponse.json({ error: e }, { status: 400 }); break; }
       case "add": case "update": {
         const s = day(b.startDate), e = day(b.endDate) || s;

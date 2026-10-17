@@ -155,11 +155,19 @@ export default async function StudentFypPage() {
               {proposal?.scope && <p className="small-note" style={{ whiteSpace: "pre-wrap" }}>{proposal.scope}</p>}
             </div>
             {await (async () => {
-              const [log, remarks, plan] = await Promise.all([meetingLog(group.id), remarksOf(group.id), planTasks(group.cycleId, group.id)]);
+              const [log, remarks, plan, posters] = await Promise.all([meetingLog(group.id), remarksOf(group.id), planTasks(group.cycleId, group.id),
+                (prisma as unknown as Record<string, any>).fypOpenHouseItem.findMany({ where: { groupId: group.id, kind: "PRINT" } }).catch(() => []) as Promise<{ id: string; title: string; endAt: Date | null; status: string; note: string | null }[]>]);
               const tasks = (log || []).flatMap((m) => m.tasks).filter((t) => !t.studentId || t.studentId === student.id);
               const next = (log || [])[0]?.nextAt;
               return (
                 <>
+                  {posters.length > 0 && (
+                    <div className="card">
+                      <h3 style={{ marginTop: 0 }}>Open house poster</h3>
+                      {posters.map((p) => <p key={p.id} style={{ margin: "0 0 6px", fontSize: 13 }}>{p.title}: <b>{p.status.replace("_", " ").toLowerCase()}</b>{p.endAt ? ` · deadline ${day(p.endAt)}` : ""}{p.note ? <> · <a href={p.note} target="_blank" rel="noopener noreferrer">your file</a></> : null}</p>)}
+                      {posters.some((p) => ["NOT_SUBMITTED", "SUBMITTED"].includes(p.status)) && <ActionForm url="/api/student/fyp" fixed={{ action: "submitPoster" }} submit="Submit poster" fields={[{ name: "link", label: "Link to your poster (PDF / image)", width: 360, placeholder: "https://" }]} />}
+                    </div>
+                  )}
                   {(plan?.length || 0) > 0 && (
                     <div className="card">
                       <h3 style={{ marginTop: 0 }}>Project plan</h3>

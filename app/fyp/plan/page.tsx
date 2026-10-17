@@ -65,7 +65,7 @@ export default async function FypPlanPage({ searchParams }: { searchParams: { cy
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Tasks</h3>
         <FypPlanEditor cycleId={cycle.id} issues={[...msIssues, ...an.issues]} tasks={tasks.map((t) => ({ ...t, startDate: iso(t.startDate), endDate: iso(t.endDate), slack: an.info.get(t.id)?.slack, critical: an.info.get(t.id)?.critical }))} people={people.map((p) => ({ id: p.id, name: p.name }))} canEdit={manages}
-          canStatusIds={tasks.filter((t) => t.ownerId === user.id).map((t) => t.id)} templates={manages ? [{ action: "openHouseTemplate", label: "Add the standard open-house tasks" }] : []} />
+          canStatusIds={tasks.filter((t) => t.ownerId === user.id).map((t) => t.id)} templates={manages ? [...(tasks.some((t) => t.category === "GENERAL") ? [] : [{ action: "yearTemplate", label: "Add the standard FYP year plan (17 steps)" }]), { action: "openHouseTemplate", label: "Add the standard open-house tasks" }] : []} />
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>Status of every FYP</h3>

@@ -44,3 +44,35 @@ export function progress(tasks: PlanTask[], now = new Date()) {
   const overdue = tasks.filter((t) => t.status !== "DONE" && t.endDate < now).length;
   return { total: tasks.length, done, overdue, pct: tasks.length ? Math.round((100 * done) / tasks.length) : 0 };
 }
+
+/** The FYP Head's whole year, as a starting plan: steps in order, each with working days, anchored to the milestone dates where one exists. */
+const YEAR: { title: string; days: number; after: number[]; anchor?: [string, number] }[] = [
+  { title: "Announce the FYP cycle, eligibility and calendar", days: 3, after: [] },
+  { title: "Call for project proposals from faculty and industry", days: 10, after: [0] },
+  { title: "FYP Committee reviews and approves proposals", days: 7, after: [1] },
+  { title: "Publish projects; students form groups and apply", days: 10, after: [2] },
+  { title: "Allocate supervisors and confirm groups", days: 5, after: [3] },
+  { title: "Form evaluation panels and book rooms", days: 5, after: [4] },
+  { title: "Proposal defense (presentations)", days: 3, after: [5], anchor: ["PROPOSAL_DEFENSE", -1] },
+  { title: "Share proposal-defense remarks; groups revise scope", days: 7, after: [6] },
+  { title: "Monitor supervisor meetings and at-risk groups", days: 40, after: [7] },
+  { title: "Mid-term evaluation (presentations)", days: 3, after: [8], anchor: ["MID_TERM", -1] },
+  { title: "Invite external examiners and industry evaluators", days: 15, after: [9] },
+  { title: "Thesis draft and similarity (plagiarism) check", days: 10, after: [9] },
+  { title: "Final evaluation (presentations)", days: 3, after: [10, 11], anchor: ["FINAL", -1] },
+  { title: "Demo / Open house", days: 1, after: [12], anchor: ["OPEN_HOUSE", 0] },
+  { title: "Consolidate results; Chairman sign-off", days: 5, after: [12, 13] },
+  { title: "Camera-ready thesis, repository and archive", days: 10, after: [14], anchor: ["THESIS", -9] },
+  { title: "FYP yearbook, CV book and certificates", days: 7, after: [14] },
+];
+export async function addYearTemplate(cycleId: string, userId: string) {
+  const ms = await prisma.fypMilestone.findMany({ where: { cycleId }, orderBy: { dueDate: "asc" } });
+  const ids = YEAR.map(() => (globalThis.crypto as Crypto).randomUUID());
+  const now = Date.now();
+  await pdb.fypPlanTask.createMany({ data: YEAR.map((t, i) => {
+    const m = t.anchor ? ms.find((x) => x.kind === t.anchor![0]) : null;
+    const start = m ? new Date(m.dueDate.getTime() + t.anchor![1] * DAY) : new Date(now);
+    return { id: ids[i], cycleId, groupId: null, title: t.title, category: t.anchor?.[0] === "OPEN_HOUSE" ? "OPEN_HOUSE" : "GENERAL", startDate: start, endDate: start, durationDays: t.days, fixedStart: !!m || i === 0, dependsJson: t.after.length && !m ? JSON.stringify(t.after.map((k) => ids[k])) : null, orderIndex: i, createdById: userId };
+  }) });
+  return null;
+}

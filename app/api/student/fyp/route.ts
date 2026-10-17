@@ -21,6 +21,14 @@ export async function POST(req: NextRequest) {
   const joined = async (gid: string) => prisma.fypGroupMember.findMany({ where: { groupId: gid, status: "JOINED" } });
   try {
     switch (action) {
+      case "submitPoster": {
+        if (!group || me?.status !== "JOINED") return bad("You are not in a group.");
+        const link = String(b.link || "").trim();
+        if (!/^https?:\/\/\S+$/.test(link)) return bad("Paste a link to your poster file (e.g. Google Drive).");
+        const n = await (prisma as unknown as Record<string, any>).fypOpenHouseItem.updateMany({ where: { groupId: group.id, kind: "PRINT", status: { in: ["NOT_SUBMITTED", "SUBMITTED"] } }, data: { note: link.slice(0, 500), status: "SUBMITTED" } });
+        if (!n.count) return bad("No poster is expected from your group, or it is already approved.");
+        return NextResponse.json({ ok: true });
+      }
       case "status": {
         if (!group || me?.status !== "JOINED") return bad("You are not in a group.");
         await (prisma as unknown as Record<string, any>).fypPlanTask.updateMany({ where: { id: String(b.taskId || ""), groupId: group.id }, data: { status: ["TODO", "IN_PROGRESS", "DONE"].includes(b.status) ? b.status : "TODO" } });
