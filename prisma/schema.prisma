@@ -4041,3 +4041,38 @@ model UserNavPref {
   pinsJson  String   @default("[]")
   updatedAt DateTime @default(now()) @updatedAt
 }
+
+// Organisation chart drawn by the Institute Head in the university's own words. Each box may grant one system role
+// (role) with a scope (faculty / department / program) and may also cover duties of missing levels (coversJson).
+model OrgPosition {
+  id           String   @id @default(cuid())
+  chairmanId   String
+  parentId     String?
+  title        String
+  role         String   @default("NONE") // NONE | DEAN | HEAD_OF_DEPARTMENT | DEPARTMENT_COORDINATOR | PROGRAM_LEAD | OMC | COURSE_ASSIGNER
+  facultyId    String?
+  departmentId String?
+  program      String?
+  holderId     String?
+  coversJson   String   @default("[]")
+  orderIndex   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([chairmanId])
+  @@index([parentId])
+  @@index([holderId])
+}
+
+// Who held each position, from when to when.
+model OrgPositionLog {
+  id         String   @id @default(cuid())
+  positionId String
+  title      String
+  userId     String
+  action     String   // ASSIGNED | REMOVED
+  byId       String
+  at         DateTime @default(now())
+
+  @@index([positionId])
+}

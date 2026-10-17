@@ -19,7 +19,7 @@ const RULES: { match: (h: string) => boolean; section: string }[] = [
 
   { match: (h) => /^\/coordinator\/(students|bulk-student-upload|student-transcript|deficiency-status|historical-grades-upload|attendance)$/.test(h) || h === "/outcomes" || /^\/fyp\/(manage|exams)$/.test(h) || h === "/remediation", section: "Students" },
 
-  { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
+  { match: (h) => /^\/chairman\/(coordinators|omc|assigners|people|employees|org-chart|hierarchy|faculties|departments|staff|alumni-custodian)$/.test(h) || /^\/(course-leads|course-split|move-program|program-moves)$/.test(h)
       || /^\/(omc|coordinator)\/faculty-requests$/.test(h) || /^\/(hod|assigner)\/borrow-teacher$/.test(h) || /^\/coordinator\/(faculty|lab-engineers)$/.test(h), section: "People & Structure" },
 
   { match: (h) => /^\/coordinator\/(prerequisite-map|program-semester-map|semester-section-map|curriculum-readiness-matrix)$/.test(h) || h === "/topic-prerequisites" || h === "/topic-overlaps"

@@ -207,6 +207,7 @@ export const COORDINATOR_NAV = [
 ];
 
 export const CHAIRMAN_NAV = [
+  { href: "/chairman/org-chart", label: "Organisation Chart" },
   { href: "/chairman/employees", label: "Upload Employees" },
   { href: "/outcome-flow", label: "Outcome Flow" }, { href: "/plo-progress", label: "PLO Progress" },
   { href: "/inactivity", label: "Sign-in Watch" },

@@ -172,6 +172,8 @@ export async function GET() {
     return scores.reduce((a, b) => a + b, 0) / scores.length;
   }
 
+  // Visiting / contract faculty (from the employee upload or their profile) are marked in the name.
+  const empType = new Map((await prisma.facultyProfile.findMany({ where: { userId: { in: instructors.map((i) => i.id) }, employmentType: { in: ["Visiting", "Contract"] } }, select: { userId: true, employmentType: true } }).catch(() => [])).map((x) => [x.userId, x.employmentType]));
   const instructorRows = instructors
     .map((i) => ({
       id: i.id, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
@@ -180,7 +182,7 @@ export async function GET() {
       dominantType: dominantTypeFor(i.id),
       isVisiting: i.isVisitingPlaceholder,
       outOfPool: outOfPool.has(i.id),
-      name: outOfPool.has(i.id) ? `${i.name} (not in teaching pool)` : i.name,
+      name: `${i.name}${empType.get(i.id) ? ` (${empType.get(i.id)})` : ""}${outOfPool.has(i.id) ? " (not in teaching pool)" : ""}`,
     }))
     .sort((a, b) => {
       if (a.isVisiting !== b.isVisiting) return a.isVisiting ? -1 : 1; // visiting option always first

@@ -116,6 +116,7 @@ export default async function InstituteHierarchyPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <PeopleTabs />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Institute Chart</h1>
+      {user.role === "CHAIRMAN" && <p style={{ fontSize: 13, margin: "4px 0 10px" }}><a href="/chairman/org-chart" style={{ fontWeight: 700 }}>Open the editable Organisation Chart →</a> draw your own structure, map positions to roles and assign people.</p>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Your whole institute at a glance. Dashed boxes are missing a head or a lead. Click “faculty” to see the teachers. Change any of this from Faculties &amp; Deans and Departments.</p>
       <div className="key" style={{ marginBottom: 14 }}>
         <span><i style={{ borderColor: "#96650F" }} />Institute Head</span>
