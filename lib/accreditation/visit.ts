@@ -27,3 +27,36 @@ export function agendaTemplate(body: BodyKey): { day: string; time: string; sess
 export const LOGISTICS = ["Panel travel and accommodation confirmed", "Board room with projector and Wi-Fi", "Refreshments and lunch for panel and participants", "Evidence room set up (SAR, minutes, surveys, policies)", "Course files arranged by semester", "Work samples (best / average / weakest) available", "Printed copies of the SAR and visit agenda", "Students from all years invited", "Alumni and employers invited and confirmed", "Labs working, manuals and safety signs displayed", "Escort / liaison officer named for the panel", "Name tags and seating plan", "Photographs and attendance sheets for each meeting"];
 
 export const data = (i: { dataJson: string }) => { try { return JSON.parse(i.dataJson) as Record<string, string>; } catch { return {} as Record<string, string>; } };
+
+/* ---------------- Rebuttals and follow-up of findings ----------------
+ * Each finding (VisitItem kind FINDING) also keeps, in its dataJson:
+ *   position: ACCEPT | PARTIAL | REBUT, rebuttal (our argument), evidence: [{ name, url }]
+ *   decision: PENDING | ACCEPTED | PARTLY | REJECTED (the council's ruling on a rebuttal), decisionNote
+ *   progress: [{ on, pct, note, by }] (work on an accepted finding), outcome: OPEN | IMPROVING | RESOLVED | STRENGTH,
+ *   outcomeNote, metricBefore, metricAfter
+ * One REPORT item per cycle keeps the dates: reportReceived, rebuttalDue, rebuttalSent, decisionReceived.
+ */
+export const POSITIONS: [string, string][] = [["ACCEPT", "Accept"], ["PARTIAL", "Partially accept"], ["REBUT", "Rebut"]];
+export const DECISIONS: [string, string][] = [["PENDING", "Awaiting council"], ["ACCEPTED", "Rebuttal accepted (finding withdrawn)"], ["PARTLY", "Partly accepted (finding softened)"], ["REJECTED", "Rebuttal rejected (finding stands)"]];
+export const OUTCOMES: [string, string][] = [["OPEN", "Not started"], ["IMPROVING", "Improving"], ["RESOLVED", "Resolved"], ["STRENGTH", "Now a strength"]];
+
+export type Evidence = { name: string; url: string };
+export type Progress = { on: string; pct: number; note: string; by: string };
+
+export function parseFinding(i: { dataJson: string; status: string }) {
+  let raw: Record<string, unknown> = {};
+  try { raw = JSON.parse(i.dataJson); } catch { raw = {}; }
+  const str = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : "");
+  const evidence = (Array.isArray(raw.evidence) ? raw.evidence : []) as Evidence[];
+  const progress = (Array.isArray(raw.progress) ? raw.progress : []) as Progress[];
+  const type = str("type");
+  const position = str("position");
+  const decision = str("decision") || (position === "REBUT" || position === "PARTIAL" ? "PENDING" : "");
+  // A finding is withdrawn when the council accepted our rebuttal; it then needs no corrective action.
+  const withdrawn = position === "REBUT" && decision === "ACCEPTED";
+  const needsAction = type !== "STRENGTH" && type !== "" && !withdrawn;
+  const pct = progress.length ? Math.max(0, Math.min(100, Number(progress.at(-1)?.pct) || 0)) : i.status === "DONE" ? 100 : 0;
+  const outcome = str("outcome") || (i.status === "DONE" ? "RESOLVED" : progress.length ? "IMPROVING" : "OPEN");
+  return { raw, type, position, decision, withdrawn, needsAction, evidence, progress, pct, outcome, rebuttal: str("rebuttal"), decisionNote: str("decisionNote"), outcomeNote: str("outcomeNote"), metricBefore: str("metricBefore"), metricAfter: str("metricAfter") };
+}
+export const labelOf = (list: [string, string][], k: string) => list.find((x) => x[0] === k)?.[1] || k;

@@ -1,3 +1,4 @@
+import { parseFinding, labelOf, POSITIONS, DECISIONS, OUTCOMES } from "./accreditation/visit";
 import { Document, HeadingLevel, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType, PageBreak, AlignmentType } from "docx";
 import { prisma } from "./db";
 import { BODIES, type BodyKey } from "./accreditation/bodies";
@@ -229,7 +230,7 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
 
   // 11 Compliance
   kids.push(h1(`11. ${chs[10].title}`));
-  if (d.prevCycle) { kids.push(p(`Previous visit: ${d.prevCycle.title}${d.prevCycle.visitDate ? ` (${d.prevCycle.visitDate.toISOString().slice(0, 10)})` : ""}.`)); const fs = d.prevFindings.map((f) => ({ f, x: JSON.parse(f.dataJson || "{}") as Record<string, string> })).filter((r) => r.x.type !== "STRENGTH"); if (fs.length) kids.push(table(["Finding", "Response / action", "Status"], fs.map((r) => [`${r.x.type || ""} ${r.x.criterion ? `(${r.x.criterion})` : ""} ${r.x.observation || ""}`, `${r.x.response || ""} ${r.x.action || ""}`, r.f.status === "DONE" ? "Complied" : r.f.status === "IN_PROGRESS" ? "In progress" : "Pending"]))); }
+  if (d.prevCycle) { kids.push(p(`Previous visit: ${d.prevCycle.title}${d.prevCycle.visitDate ? ` (${d.prevCycle.visitDate.toISOString().slice(0, 10)})` : ""}.`)); const fs = d.prevFindings.map((f) => ({ f, x: JSON.parse(f.dataJson || "{}") as Record<string, string>, q: parseFinding(f) })).filter((r) => r.x.type !== "STRENGTH" && !r.q.withdrawn); if (fs.length) kids.push(table(["Finding", "Our position", "Action and progress", "Result"], fs.map((r) => [`${r.x.type || ""} ${r.x.criterion ? `(${r.x.criterion})` : ""} ${r.x.observation || ""}`, r.q.position ? `${labelOf(POSITIONS, r.q.position)}${r.q.position !== "ACCEPT" ? ` — ${labelOf(DECISIONS, r.q.decision)}` : ""}` : "Accept", `${r.x.action || r.x.response || ""} (${r.q.pct}%)${r.q.metricBefore || r.q.metricAfter ? ` ${r.q.metricBefore || "—"} → ${r.q.metricAfter || "—"}` : ""}`, `${labelOf(OUTCOMES, r.q.outcome)}${r.q.outcomeNote ? `: ${r.q.outcomeNote}` : ""}`]))); const w = d.prevFindings.filter((f) => parseFinding(f).withdrawn).length; if (w) kids.push(p(`${w} finding(s) of the previous visit were withdrawn by the council after our rebuttal.`)); }
   else kids.push(p("This is the program's first accreditation visit recorded in the system."));
   kids.push(...narrative("compliance"));
 
