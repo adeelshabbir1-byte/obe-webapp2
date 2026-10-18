@@ -3,7 +3,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 {
 "f": "migration_aas.sql",
 "d": "NCEAC AAS: values people type for the AAS forms that OBEHUB cannot work out (CNICs, dates, narratives, yes/no answers). Safe to run more tha",
-"t": "AasRecord"
+"t": "StaffDetail"
 },
 {
 "f": "migration_accreditation_governance.sql",

@@ -43,8 +43,10 @@ export default async function AasPage({ searchParams }: { searchParams: { progra
     ["Every offered course is linked to a teacher", form5.length > 0 && unlinked === 0, unlinked ? `${unlinked} course(s) without a teacher` : `${form5.length} courses linked`],
   ];
   const staff = await prisma.user.findMany({ where: { OR: [{ id: ctx.chairmanId }, { managedById: ctx.chairmanId }] }, select: { id: true, name: true }, orderBy: { name: "asc" } });
-  const qs = `program=${encodeURIComponent(ctx.program)}&batch=${ctx.batchId || ""}`;
+  const qs0 = `program=${encodeURIComponent(ctx.program)}&batch=${ctx.batchId || ""}`;
+  const qs = qs0;
   return shell(<>
+    <p className="small-note" style={{ marginTop: -6 }}>Visit type: <b>{ctx.visitType}</b> · Institute: <b>{ctx.instituteType === "AFFILIATED" ? "affiliated institute (Administrator and Librarian contacts)" : "university campus (Rector, Dean, Registrar and Librarian contacts)"}</b></p>
     {!ready && <div className="err">{AAS_HINT} Until then the workbook downloads, but values typed in it cannot be saved.</div>}
     <form className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
       <label style={{ fontSize: 12 }}>Program under accreditation<br /><select name="program" defaultValue={ctx.program}>{ctx.programs.map((p) => <option key={p}>{p}</option>)}</select></label>
@@ -61,14 +63,15 @@ export default async function AasPage({ searchParams }: { searchParams: { progra
     <div className="card" style={{ overflowX: "auto" }}>
       <h3 style={{ marginTop: 0 }}>AAS sections</h3>
       <table style={{ fontSize: 13 }}>
-        <thead><tr><th>AAS section</th><th>Rows</th><th>Compulsory empty</th><th>Wrong format</th><th>Filled from</th></tr></thead>
+        <thead><tr><th>AAS section</th><th>Rows</th><th>Compulsory empty</th><th>Wrong format</th><th>Filled from</th><th>Excel</th></tr></thead>
         <tbody>{results.map(({ s, g }) => (
           <tr key={s.key}><td><b>{s.title}</b>{g.notes.length > 0 && <div className="small-note" style={{ color: "#A35A00" }}>{g.notes.join(" · ")}</div>}</td><td>{g.rows}</td>
-            <td style={{ color: g.missing ? "#B3261E" : "#2E7D4F", fontWeight: 700 }}>{g.missing || "—"}</td><td style={{ color: g.invalid ? "#A35A00" : undefined }}>{g.invalid || "—"}</td><td className="small-note">{SOURCE[s.key]}</td></tr>
+            <td style={{ color: g.missing ? "#B3261E" : "#2E7D4F", fontWeight: 700 }}>{g.missing || "—"}</td><td style={{ color: g.invalid ? "#A35A00" : undefined }}>{g.invalid || "—"}</td><td className="small-note">{SOURCE[s.key]}</td>
+            <td style={{ whiteSpace: "nowrap" }}><a className="act" href={`/api/accreditation/aas?file=workbook&section=${s.key}&${qs}`}>⬇ Download</a>{ctx.canEdit && <div style={{ marginTop: 4 }}><AasUpload compact program={ctx.program} batch={ctx.batchId || ""} staff={[]} focalId="" canSettings={false} instituteType="" visitType="" /></div>}</td></tr>
         ))}</tbody>
       </table>
     </div>
-    {ctx.canEdit && <div className="card"><h3 style={{ marginTop: 0 }}>Save what you filled in</h3><AasUpload program={ctx.program} batch={ctx.batchId || ""} staff={staff} focalId={ctx.focalId} canFocal={["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)} />
-      <p className="small-note">Values you type in the workbook are kept and win over what OBEHUB works out. Fixing data at its source (a faculty profile, the lab inventory) also updates the workbook.</p></div>}
+    {ctx.canEdit && <div className="card"><h3 style={{ marginTop: 0 }}>Save what you filled in</h3><AasUpload program={ctx.program} batch={ctx.batchId || ""} staff={staff} focalId={ctx.focalId} canSettings={["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)} instituteType={ctx.instituteType} visitType={ctx.visitType} />
+      <p className="small-note">Each section can be downloaded and uploaded on its own (the Excel column above), or all together. Universities with their own campus management system can fill the Student Directory, Faculty Directory and Course Catalog from that system and upload them here: student rows are matched by roll number in the chosen batch (new roll numbers are added to the batch), staff by their OBEHUB account, and anyone else is kept as a directory-only row. Students can also fill their own details in the student portal, and teachers in My Profile.</p></div>}
   </>);
 }

@@ -4,6 +4,9 @@ import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import FacultyProfileForm from "../../../components/FacultyProfileForm";
+import DetailsForm from "../../../components/DetailsForm";
+import { staffDetails } from "../../../lib/aas";
+import { selfFields } from "../../../lib/aasFields";
 import { completeness, experienceSummary, EXPERIENCE_HEADS, ymText } from "../../../lib/facultyProfile";
 
 const LABEL: Record<string, string> = { INSTRUCTOR: "Course Instructor", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", CHAIRMAN: "Institute Head" };
@@ -46,6 +49,10 @@ export default async function FacultyProfilePage() {
         profile={profile ? { ...profile, dateOfJoining: profile.dateOfJoining?.toISOString() || null, dateOfBirth: profile.dateOfBirth?.toISOString() || null } : null}
         records={records.map((r) => ({ ...r, createdAt: undefined }) as never)}
       />
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Details for NCEAC (Faculty Directory)</h3>
+        <DetailsForm fields={selfFields("staff")} values={{ type: "Local", country: "Pakistan", ...((await staffDetails([user.id])).get(user.id) || {}) }} endpoint="/api/my-details" note="NCEAC's accreditation system asks for these about every teacher. Highest degree only. Dates as dd/mm/yyyy; CNIC as xxxxx-xxxxxxx-x (foreign faculty: passport number). Anything blank here is taken from your profile above." />
+      </div>
     </Shell>
   );
 }

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { aasContext } from "../../../../lib/aasAccess";
-import { adb, AAS_HINT } from "../../../../lib/aas";
+import { adb, AAS_HINT, sectionOf, VISIT_TYPES } from "../../../../lib/aas";
 import { aasWorkbook, studentUploadFile, importAasWorkbook } from "../../../../lib/aasWorkbook";
 import { writeAuditLog } from "../../../../lib/audit";
 
@@ -22,8 +22,9 @@ export async function GET(req: Request) {
     const buf = await studentUploadFile(ctx);
     return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": XLSX, "Content-Disposition": `attachment; filename="${safe(`Student Directory - ${ctx.program} ${b?.batchName || ""}`)}.xlsx"` } });
   }
-  const buf = await aasWorkbook(ctx);
-  return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": XLSX, "Content-Disposition": `attachment; filename="${safe(`NCEAC AAS - ${ctx.program || "institute"}`)}.xlsx"` } });
+  const only = q.get("section") && sectionOf(q.get("section") || "") ? String(q.get("section")) : undefined;
+  const buf = await aasWorkbook(ctx, only);
+  return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": XLSX, "Content-Disposition": `attachment; filename="${safe(only ? `${sectionOf(only)!.sheet} - ${ctx.program}` : `NCEAC AAS - ${ctx.program || "institute"}`)}.xlsx"` } });
 }
 
 /** POST multipart { file, program, batch } — save what people filled in the AAS workbook. POST JSON { action: "focal", userId } — choose the focal person. */
@@ -35,9 +36,13 @@ export async function POST(req: Request) {
       const b = await req.json().catch(() => ({}));
       const ctx = await aasContext(user, {});
       if (!ctx || !["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      const u = await prisma.user.findUnique({ where: { id: String(b.userId || "") }, select: { id: true } });
-      if (!u) return NextResponse.json({ error: "Choose a person." }, { status: 400 });
-      await adb.aasRecord.upsert({ where: { chairmanId_scope_key: { chairmanId: ctx.chairmanId, scope: "settings", key: "focal" } }, create: { id: randomUUID(), chairmanId: ctx.chairmanId, scope: "settings", key: "focal", dataJson: JSON.stringify({ userId: u.id }), updatedById: user.id }, update: { dataJson: JSON.stringify({ userId: u.id }), updatedById: user.id, updatedAt: new Date() } });
+      // Settings: the focal person, whether the institute is a campus or an affiliated institute, and the visit type.
+      const cur = await adb.aasRecord.findUnique({ where: { chairmanId_scope_key: { chairmanId: ctx.chairmanId, scope: "settings", key: "focal" } } });
+      let d: Record<string, string> = {}; try { d = cur ? JSON.parse(cur.dataJson) : {}; } catch { d = {}; }
+      if (b.userId) { const u = await prisma.user.findUnique({ where: { id: String(b.userId) }, select: { id: true } }); if (!u) return NextResponse.json({ error: "Choose a person." }, { status: 400 }); d.userId = u.id; }
+      if (b.instituteType) d.instituteType = b.instituteType === "AFFILIATED" ? "AFFILIATED" : "CAMPUS";
+      if (b.visitType && VISIT_TYPES.includes(String(b.visitType))) d.visitType = String(b.visitType);
+      await adb.aasRecord.upsert({ where: { chairmanId_scope_key: { chairmanId: ctx.chairmanId, scope: "settings", key: "focal" } }, create: { id: randomUUID(), chairmanId: ctx.chairmanId, scope: "settings", key: "focal", dataJson: JSON.stringify(d), updatedById: user.id }, update: { dataJson: JSON.stringify(d), updatedById: user.id, updatedAt: new Date() } });
       return NextResponse.json({ ok: true });
     }
     const form = await req.formData();
@@ -49,7 +54,7 @@ export async function POST(req: Request) {
     const r = await importAasWorkbook(Buffer.from(await file.arrayBuffer()), ctx, user.id);
     if (!r.sheets) return NextResponse.json({ error: "No AAS sheets were found. Upload the workbook downloaded from this page." }, { status: 400 });
     await writeAuditLog({ actorUserId: user.id, action: "AAS_WORKBOOK_IMPORTED", entityType: "AasRecord", entityId: ctx.program || "institute", metadata: { rows: r.saved } });
-    return NextResponse.json({ ok: true, saved: r.saved });
+    return NextResponse.json({ ok: true, saved: r.saved, created: r.created, skipped: r.skipped });
   } catch (e) {
     const m = String((e as Error)?.message || "");
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? AAS_HINT : `Could not read the file: ${m.slice(0, 160)}` }, { status: 500 });

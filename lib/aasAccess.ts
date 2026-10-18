@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { chairmanIdFor } from "./reportScope";
 import { REVIEW_ROLES } from "./reviewScope";
-import { adb, programContext } from "./aas";
+import { programContext, aasSettings } from "./aas";
 
 type U = { id: string; role: string; managedById: string | null };
 
@@ -18,7 +18,6 @@ export async function aasContext(user: U, q: { program?: string | null; batch?: 
   const program = programs.find((p) => p === q.program) || programs[0] || "";
   const batches = program ? await prisma.batch.findMany({ where: { degreeProgram: program, coordinator: { managedById: chairmanId }, ...(user.role === "PROGRAM_COORDINATOR" ? { coordinatorId: user.id } : {}) }, select: { id: true, batchName: true, startYear: true }, orderBy: { startYear: "asc" } }) : [];
   const batchId = batches.find((b) => b.id === q.batch)?.id || batches[0]?.id || null;
-  let focalId = chairmanId;
-  try { const r = await adb.aasRecord.findUnique({ where: { chairmanId_scope_key: { chairmanId, scope: "settings", key: "focal" } } }); const f = r ? JSON.parse(r.dataJson).userId : null; if (f) focalId = f; } catch { /* default: Institute Head */ }
-  return { chairmanId, programs, program, batches, batchId, focalId, canEdit: user.role !== "OMC" };
+  const st = await aasSettings(chairmanId);
+  return { chairmanId, programs, program, batches, batchId, focalId: st.focalId || chairmanId, instituteType: st.instituteType || "CAMPUS", visitType: st.visitType || "Accreditation Visit", canEdit: user.role !== "OMC" };
 }

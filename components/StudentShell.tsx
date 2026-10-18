@@ -19,6 +19,7 @@ const NAV = [
   { href: "/student/quizzes", label: "Online Quizzes" },
   { href: "/student/submissions", label: "Submit Work" },
   { href: "/student/fyp", label: "Final Year Project" },
+  { href: "/student/details", label: "My Details" },
   { href: "/student/cv", label: "My Profile & CV" },
   { href: "/student/fees", label: "My Fees" },
   { href: "/student/activities", label: "Societies & Activities" },

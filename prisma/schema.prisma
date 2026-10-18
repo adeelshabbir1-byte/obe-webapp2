@@ -5189,3 +5189,19 @@ model AasRecord {
 
   @@unique([chairmanId, scope, key])
 }
+
+// Student details NCEAC's Student Directory asks for (father's name, CNIC, DOB, domicile, SSC/HSSC …), as JSON keyed by AAS field.
+model StudentDetail {
+  studentId   String   @id
+  dataJson    String   @default("{}") @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
+
+// Staff details NCEAC's Faculty Directory asks for that the faculty profile does not hold (passport, province, city, highest degree …).
+model StaffDetail {
+  userId      String   @id
+  dataJson    String   @default("{}") @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
