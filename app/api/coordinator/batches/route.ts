@@ -1,3 +1,4 @@
+import { programNotLicensed, instituteOfUser } from "../../../../lib/moduleLocks";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
   });
   if (existing) return NextResponse.json({ error: "this degree program + batch already exists" }, { status: 409 });
 
+  { const inst = await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }); const why = await programNotLicensed(inst, String(body.degreeProgram)); if (why) return NextResponse.json({ error: why }, { status: 403 }); }
   // Licensing check: an institution is only allowed as many DISTINCT degree
   // programs as its Institute Head has been licensed for. Scoped across every
   // Coordinator under the same Institute Head, since the license is per-institution.

@@ -1,3 +1,4 @@
+import { programNotLicensed, instituteOfUser } from "../../../../lib/moduleLocks";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
     const dup = await prisma.batch.findFirst({ where: { coordinatorId: user.id, degreeProgram: p.name, batchName } });
     if (dup) { skipped.push({ degreeProgram: p.name, reason: "this intake already exists" }); continue; }
 
+    { const why = await programNotLicensed(await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }), p.name); if (why) { skipped.push({ degreeProgram: p.name, reason: "not part of the institution's licence" }); continue; } }
     if (maxDegreePrograms !== null && !existingDistinctPrograms.has(p.name) && existingDistinctPrograms.size >= maxDegreePrograms) {
       skipped.push({ degreeProgram: p.name, reason: `institution is licensed for only ${maxDegreePrograms} degree program(s)` });
       continue;

@@ -15,7 +15,7 @@ export async function lockedModules(chairmanId: string | null | undefined): Prom
   if (hit && Date.now() - hit.at < TTL) return hit.locked;
   let locked = new Set<string>();
   try {
-    const row = await mdb.instituteLicense.findUnique({ where: { chairmanId } });
+    const row = await mdb.instituteLicense.findUnique({ where: { chairmanId }, select: { lockedJson: true } });
     if (row) { const xs = JSON.parse(row.lockedJson || "[]") as string[]; locked = new Set(xs.filter((k) => MODULE_KEYS.includes(k as ModuleKey))); }
   } catch { /* migration_modules.sql not run yet: nothing locked */ }
   lockCache.set(chairmanId, { at: Date.now(), locked });
@@ -61,4 +61,26 @@ export async function lockedModuleForPath(chairmanId: string | null, path: strin
 
 export async function isModuleOn(chairmanId: string | null | undefined, key: ModuleKey) {
   return !(await lockedModules(chairmanId)).has(key);
+}
+
+/* ---------------- Licensed programs ---------------- */
+
+const normProg = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** The degree programs the institute is licensed for (empty = any program). */
+export async function licensedPrograms(chairmanId: string | null | undefined): Promise<string[]> {
+  if (!chairmanId) return [];
+  try {
+    const row = await mdb.instituteLicense.findUnique({ where: { chairmanId }, select: { programsJson: true } });
+    const xs = JSON.parse(row?.programsJson || "[]");
+    return Array.isArray(xs) ? xs.map(String).filter(Boolean) : [];
+  } catch { return []; } // column not added yet: no program limit
+}
+
+/** null when the program may be used; otherwise the message to show. */
+export async function programNotLicensed(chairmanId: string | null | undefined, program: string): Promise<string | null> {
+  const list = await licensedPrograms(chairmanId);
+  if (!list.length || !program) return null;
+  if (list.some((p) => normProg(p) === normProg(program))) return null;
+  return `Your institution is licensed for ${list.join(", ")} only. "${program}" is not part of the licence; contact the OBEHUB team to add it. New batches of a licensed program can be added freely.`;
 }

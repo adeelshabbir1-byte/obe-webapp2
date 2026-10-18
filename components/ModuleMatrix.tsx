@@ -3,23 +3,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Mod = { key: string; label: string; group: string; about: string };
-type Inst = { id: string; name: string; email: string; locked: string[]; packageKey: string | null; note: string | null; validUntil: string | null; updatedAt: string | null };
+type Inst = { id: string; name: string; email: string; programs: string[]; existing: string[]; locked: string[]; packageKey: string | null; note: string | null; validUntil: string | null; updatedAt: string | null };
 type Pkg = { key: string; label: string; modules: string[] };
 
 /** Super User: switch modules on or off for each institute, one card per institute. */
 export default function ModuleMatrix({ modules, institutes, packages }: { modules: Mod[]; institutes: Inst[]; packages: Pkg[] }) {
   const router = useRouter();
   const all = modules.map((m) => m.key);
-  const [state, setState] = useState<Record<string, { on: Set<string>; pkg: string; note: string; until: string }>>(Object.fromEntries(institutes.map((i) => [i.id, { on: new Set(all.filter((k) => !i.locked.includes(k))), pkg: i.packageKey || "", note: i.note || "", until: i.validUntil || "" }])));
+  const [state, setState] = useState<Record<string, { on: Set<string>; pkg: string; note: string; until: string; progs: string }>>(Object.fromEntries(institutes.map((i) => [i.id, { on: new Set(all.filter((k) => !i.locked.includes(k))), pkg: i.packageKey || "", note: i.note || "", until: i.validUntil || "", progs: i.programs.join("\n") }])));
   const [msg, setMsg] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
   const groups = Array.from(new Set(modules.map((m) => m.group)));
-  const set = (id: string, patch: Partial<{ on: Set<string>; pkg: string; note: string; until: string }>) => setState({ ...state, [id]: { ...state[id], ...patch } });
+  const set = (id: string, patch: Partial<{ on: Set<string>; pkg: string; note: string; until: string; progs: string }>) => setState({ ...state, [id]: { ...state[id], ...patch } });
   const toggle = (id: string, k: string) => { const on = new Set(state[id].on); if (on.has(k)) on.delete(k); else on.add(k); set(id, { on, pkg: "" }); };
   async function save(id: string) {
     const st = state[id];
     setMsg({ ...msg, [id]: "Saving…" });
-    const r = await fetch("/api/admin/modules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chairmanId: id, on: Array.from(st.on), packageKey: st.pkg || null, note: st.note, validUntil: st.until || null }) });
+    const r = await fetch("/api/admin/modules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chairmanId: id, on: Array.from(st.on), packageKey: st.pkg || null, note: st.note, validUntil: st.until || null, programs: st.progs.split("\n").map((x) => x.trim()).filter(Boolean) }) });
     const d = await r.json().catch(() => ({}));
     setMsg({ ...msg, [id]: r.ok ? `Saved — ${all.length - d.locked} of ${all.length} modules on. Takes effect within a minute.` : d.error || "Could not save" });
     if (r.ok) router.refresh();
@@ -47,6 +47,12 @@ export default function ModuleMatrix({ modules, institutes, packages }: { module
                 ))}
               </div>
             ))}
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={{ fontSize: 12, display: "block" }}>Licensed programs — one per line; empty = any program<br />
+              <textarea rows={3} value={st.progs} onChange={(e) => set(i.id, { progs: e.target.value })} placeholder="BBA" style={{ padding: "5px 7px", border: "1px solid var(--line)", width: "100%", maxWidth: 520, fontFamily: "inherit" }} /></label>
+            {i.existing.length > 0 && <div style={{ fontSize: 12, color: "var(--slate)" }}>Programs this institute already has: {i.existing.map((x) => <button key={x} type="button" className="act" style={{ marginRight: 4 }} onClick={() => { const cur = st.progs.split("\n").map((y) => y.trim()).filter(Boolean); if (!cur.includes(x)) set(i.id, { progs: [...cur, x].join("\n") }); }}>+ {x}</button>)}</div>}
+            <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{st.progs.trim() ? `Only these programs; unlimited batches of each.` : "No program limit."}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginTop: 10 }}>
             <label style={{ fontSize: 12 }}>Paid until<br /><input type="date" value={st.until} onChange={(e) => set(i.id, { until: e.target.value })} style={{ padding: "5px 7px", border: "1px solid var(--line)" }} /></label>

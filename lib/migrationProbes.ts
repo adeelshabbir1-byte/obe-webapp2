@@ -472,7 +472,8 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 {
 "f": "migration_modules.sql",
 "d": "Module licensing: which modules each institute has switched off (no row = everything on). Safe to run more than once.",
-"t": "InstituteLicense"
+"t": "InstituteLicense",
+"c": "programsJson"
 },
 {
 "f": "migration_national_bank.sql",

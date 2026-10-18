@@ -5169,6 +5169,7 @@ model IntlRecord {
 model InstituteLicense {
   chairmanId  String    @id
   lockedJson  String    @default("[]") @db.Text
+  programsJson String   @default("[]") @db.Text // licensed degree programs; empty = any
   packageKey  String?
   note        String?   @db.Text
   validUntil  DateTime?

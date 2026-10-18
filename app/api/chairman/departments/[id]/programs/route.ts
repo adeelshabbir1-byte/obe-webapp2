@@ -1,3 +1,4 @@
+import { programNotLicensed, instituteOfUser } from "../../../../../../lib/moduleLocks";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
@@ -13,6 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const body = await req.json().catch(() => ({}));
   if (!Array.isArray(body.programs)) return NextResponse.json({ error: "programs is required" }, { status: 400 });
   const programs: string[] = Array.from(new Set<string>(body.programs.filter((p: unknown): p is string => typeof p === "string" && p.trim().length > 0).map((p: string) => p.trim())));
+  { const bad: string[] = []; for (const pr of programs) if (await programNotLicensed(user.id, pr)) bad.push(pr); if (bad.length) return NextResponse.json({ error: (await programNotLicensed(user.id, bad[0])) || "Not licensed" }, { status: 403 }); }
   // { program: "NCEAC" | "NBEAC" | "HEC" } — the accreditation council of a program being added.
   const chosen: Record<string, string> = body.councils && typeof body.councils === "object" ? body.councils : {};
 

@@ -1,3 +1,4 @@
+import { programNotLicensed, instituteOfUser } from "../../../../lib/moduleLocks";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.name || !body.shortCode) return NextResponse.json({ error: "name and shortCode are required" }, { status: 400 });
 
+  { const why = await programNotLicensed(await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }), String(body.name)); if (why) return NextResponse.json({ error: why }, { status: 403 }); }
   const existing = await prisma.degreeProgram.findUnique({ where: { coordinatorId_shortCode: { coordinatorId: user.id, shortCode: body.shortCode } } });
   if (existing) return NextResponse.json({ error: `a program with short code "${body.shortCode}" already exists` }, { status: 409 });
 

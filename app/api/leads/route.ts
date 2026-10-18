@@ -1,3 +1,4 @@
+import { programNotLicensed, instituteOfUser } from "../../../lib/moduleLocks";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findFirst({ where: { OR: [{ username: body.username }, { email: body.email }] } });
   if (existing) return NextResponse.json({ error: "username or email already in use" }, { status: 409 });
 
+  { const why = await programNotLicensed(await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }), String(body.program || "")); if (why) return NextResponse.json({ error: why }, { status: 403 }); }
   await prisma.user.updateMany({ where: { role: "PROGRAM_COORDINATOR", departmentId: dept.id, leadProgram: body.program }, data: { leadProgram: null } });
   const created = await prisma.user.create({
     data: { email: body.email, username: body.username, passwordHash: await hashPassword(body.password), name: body.name, role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: dept.id, leadProgram: body.program, mustChangePassword: true },
@@ -55,6 +57,7 @@ export async function PATCH(req: NextRequest) {
   if (!owns) return NextResponse.json({ error: "that program does not belong to this department" }, { status: 400 });
 
   // One lead per program: whoever led it before no longer does.
+  { const why = await programNotLicensed(await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }), String(body.program || "")); if (why) return NextResponse.json({ error: why }, { status: 403 }); }
   await prisma.user.updateMany({ where: { role: "PROGRAM_COORDINATOR", departmentId: dept.id, leadProgram: body.program }, data: { leadProgram: null } });
   if (body.userId) {
     const coordinator = await prisma.user.findFirst({ where: { id: body.userId, role: "PROGRAM_COORDINATOR", managedById: chairmanId, departmentId: dept.id } });
