@@ -5164,3 +5164,14 @@ model IntlRecord {
 
   @@index([chairmanId])
 }
+
+// Module licensing per institute: the modules switched off (JSON array of module keys), set by the Super User.
+model InstituteLicense {
+  chairmanId  String    @id
+  lockedJson  String    @default("[]") @db.Text
+  packageKey  String?
+  note        String?   @db.Text
+  validUntil  DateTime?
+  updatedById String?
+  updatedAt   DateTime  @default(now())
+}

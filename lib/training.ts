@@ -1,3 +1,4 @@
+import { isModuleOn } from "./moduleLocks";
 import { headers } from "next/headers";
 import { prisma } from "./db";
 import { LESSONS, type Q } from "./obeLessons";
@@ -60,6 +61,8 @@ export async function trainingBlock(user: { id: string; role: string; managedByI
   const badge = user.role === "SUBJECT_EXPERT" ? "DESIGNER" : user.role === "INSTRUCTOR" ? "BASICS" : null;
   if (!badge) return null;
   const cid = await chairmanIdFor(user).catch(() => "");
+  // No training gate for institutes that have not bought the training module.
+  if (cid && !(await isModuleOn(cid, "training"))) return null;
   const p = cid ? await policyOf(cid) : null;
   if (!p?.enabled || (p.graceUntil && p.graceUntil > new Date())) return null;
   let ex: string[] = []; try { ex = JSON.parse(p.exemptJson); } catch { ex = []; }

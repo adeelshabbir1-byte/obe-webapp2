@@ -5,6 +5,8 @@ import AppShell from "./AppShell";
 import { unreadCount } from "../lib/notifications";
 import { prisma } from "../lib/db";
 import { navForRole } from "./reportNav";
+import { instituteOfUser, lockedModules } from "../lib/moduleLocks";
+import { moduleForPath } from "../lib/modules";
 import { defaultWork, ROLE_WORK_LABEL } from "../lib/navDefaults";
 
 /**
@@ -43,7 +45,10 @@ export default async function Shell({
     user ? (((prisma as unknown as Record<string, any>).userNavPref?.findUnique({ where: { userId: user.id } }) as Promise<{ pinsJson: string } | null> | undefined)?.catch(() => null) ?? null) : null,
   ]);
   // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
-  const links = advises ? [...navLinks, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : navLinks;
+  // Licensing: links to modules the institute has not bought are left out of the menu.
+  const off = user && user.role !== "SUPER_USER" ? await lockedModules(await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null)) : new Set<string>();
+  const licensed = off.size ? navLinks.filter((l) => { const m = moduleForPath(l.href); return !m || !off.has(m.key); }) : navLinks;
+  const links = advises ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : licensed;
   // "My work": the person's pins, else the role's default list. People with more than one role also get each other role's work list.
   let pins: string[] | null = null;
   try { pins = pinRow ? JSON.parse(pinRow.pinsJson) : null; } catch { pins = null; }

@@ -7,6 +7,8 @@ import { Prisma, type Session, type User } from "@prisma/client";
 import { prisma } from "./db";
 import { chairmanIdFor } from "./reportScope";
 import { assignerHatActive } from "./assignerHat";
+import { redirect } from "next/navigation";
+import { instituteOfUser, lockedModuleForPath } from "./moduleLocks";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_TTL_DAYS = 7;
@@ -76,6 +78,16 @@ const resolveSelf = cache(async () => {
   }
 
   const { passwordHash, ...safeUser } = session.user;
+  // Licensing: a module the institute has not bought is closed — its pages show a notice, its API calls are refused.
+  if (session.mfaVerified && safeUser.role !== "SUPER_USER") {
+    let reqPath = "";
+    try { reqPath = headers().get("x-pathname") || ""; } catch { reqPath = ""; }
+    if (reqPath && !reqPath.startsWith("/module-locked")) {
+      const inst = await instituteOfUser({ id: safeUser.id, role: safeUser.role, managedById: safeUser.managedById ?? null }).catch(() => null);
+      const locked = await lockedModuleForPath(inst, reqPath).catch(() => null);
+      if (locked) { if (reqPath.startsWith("/api/")) return null; redirect(`/module-locked?m=${locked}`); }
+    }
+  }
   // Sign-in watch: remember that this person used the app today (throttled; never blocks the request).
   if (session.mfaVerified) touchActivity(safeUser.id);
   // A dual-capable Subject Expert's chosen role for this session overrides

@@ -1,4 +1,6 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { instituteOfBatch, lockedModuleForPath } from "./moduleLocks";
 import crypto from "crypto";
 import { prisma } from "./db";
 
@@ -47,5 +49,12 @@ export async function getAuthenticatedStudent() {
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
   const { passwordHash, ...safeStudent } = session.student;
+  // Licensing: student pages of a module the institute has not bought are closed.
+  let reqPath = "";
+  try { reqPath = headers().get("x-pathname") || ""; } catch { reqPath = ""; }
+  if (reqPath && session.student.batchId) {
+    const locked = await lockedModuleForPath(await instituteOfBatch(session.student.batchId).catch(() => null), reqPath).catch(() => null);
+    if (locked) { if (reqPath.startsWith("/api/")) return null; redirect(`/student/dashboard?locked=${locked}`); }
+  }
   return safeStudent;
 }
