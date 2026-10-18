@@ -195,8 +195,8 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
                       onChange={(e) => setCloPloEdits((prev) => ({ ...prev, [clo.id]: e.target.value }))}
                       style={{ fontSize: 10.5, padding: 2, background: sourceColor, border: "1px solid var(--line)" }}
                     >
-                      <option value="">No PLO mapped</option>
-                      {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}</option>)}
+                      <option value="">No GA mapped</option>
+                      {plos.map((p) => <option key={p.id} value={p.id}>GA-{p.number}: {p.title}</option>)}
                     </select>
                   </div>
                 </div>
@@ -213,16 +213,16 @@ export default function CourseEditModal({ course, plos, allCourses, onClose, onS
           </div>
           <div>
             <h4 style={{ fontSize: 12, marginBottom: 6 }}>
-              PLO suggestions <span style={{ fontWeight: 400, color: "var(--slate)" }}>(shared by course code across every curriculum using it)</span>
+              GA suggestions <span style={{ fontWeight: 400, color: "var(--slate)" }}>(shared by course code across every curriculum using it)</span>
             </h4>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {plos.map((p) => (
                 <label key={p.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}>
                   <input type="checkbox" checked={suggestedPloNumbers.includes(p.number)} onChange={() => togglePloLocal(p.number)} />
-                  PLO-{p.number}
+                  GA-{p.number}
                 </label>
               ))}
-              {plos.length === 0 && <p style={{ fontSize: 11, color: "var(--slate)" }}>Add PLOs to this curriculum first.</p>}
+              {plos.length === 0 && <p style={{ fontSize: 11, color: "var(--slate)" }}>Add GAs to this curriculum first.</p>}
             </div>
           </div>
         </div>

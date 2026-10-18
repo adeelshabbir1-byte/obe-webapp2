@@ -165,7 +165,7 @@ export default async function FypGroupPage({ params }: { params: { groupId: stri
           {results.length > 0 && (
             <div style={{ overflowX: "auto", marginTop: 10 }}>
               <table>
-                <thead><tr><th>Student</th>{evaluated.map((m) => <th key={m.id}>{m.title} ({m.weightPct}%)</th>)}<th>Total</th><th>Grade</th><th>PLO attainment</th></tr></thead>
+                <thead><tr><th>Student</th>{evaluated.map((m) => <th key={m.id}>{m.title} ({m.weightPct}%)</th>)}<th>Total</th><th>Grade</th><th>GA attainment</th></tr></thead>
                 <tbody>{results.map((r) => (
                   <tr key={r.studentId}>
                     <td>{r.name}{r.missing.length ? <div className="small-note" style={{ color: "var(--rust)" }}>Missing: {r.missing.slice(0, 3).join("; ")}</div> : null}</td>

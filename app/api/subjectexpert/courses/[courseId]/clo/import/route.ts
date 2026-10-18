@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     if (ploRaw) {
       const n = parseInt(String(ploRaw).replace(/\D+/g, ""), 10);
       plo = ploByNumber.get(n) || null;
-      if (!plo) { errors.push(`Row ${rowNo}: PLO ${ploRaw} does not exist for this batch`); continue; }
+      if (!plo) { errors.push(`Row ${rowNo}: GA ${ploRaw} does not exist for this batch`); continue; }
     }
     const pct = pctRaw ? Math.min(100, Math.max(0, parseInt(pctRaw, 10) || 0)) : plo ? 100 : null;
     if (plo && !pctRaw) blankPctPlos.add(plo.id);

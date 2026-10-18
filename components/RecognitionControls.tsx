@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const METRICS: [string, string][] = [["COURSE_FILES", "Course files kept"], ["RESULTS_APPROVED", "Course results approved"], ["CLOS_MAPPED", "Courses with every CLO mapped to a PLO"], ["MARKS_COMPLETE", "Courses with all marks entered"], ["CQI_DONE", "Courses with CQI done where CLOs fell short"]];
+const METRICS: [string, string][] = [["COURSE_FILES", "Course files kept"], ["RESULTS_APPROVED", "Course results approved"], ["CLOS_MAPPED", "Courses with every CLO mapped to a GA"], ["MARKS_COMPLETE", "Courses with all marks entered"], ["CQI_DONE", "Courses with CQI done where CLOs fell short"]];
 async function send(url: string, method: string, body?: unknown) {
   const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   const d = await r.json().catch(() => ({}));

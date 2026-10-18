@@ -10,7 +10,7 @@ export function agendaTemplate(body: BodyKey): { day: string; time: string; sess
   const ind = body === "PEC" ? "Industrial Advisory Board, alumni and employers" : body === "NBEAC" ? "Alumni, employers and corporate partners" : "Alumni and employers";
   return [
     { day: "Day 1", time: "09:00", session: "Opening meeting", with: "Institute Head, Dean, Chairman", venue: "Board room" },
-    { day: "Day 1", time: "09:45", session: "Program presentation: mission, PEOs, PLOs, assessment and CQI", with: "Program Lead, faculty", venue: "Board room" },
+    { day: "Day 1", time: "09:45", session: "Program presentation: mission, PEOs, GAs, assessment and CQI", with: "Program Lead, faculty", venue: "Board room" },
     { day: "Day 1", time: "11:00", session: "Review of course files, assessment evidence and work samples", with: "Program Coordinator", venue: "Evidence room" },
     { day: "Day 1", time: "13:00", session: "Lunch", with: "Panel", venue: "Guest room" },
     { day: "Day 1", time: "14:00", session: "Meeting with faculty", with: "Full-time faculty (without management)", venue: "Seminar room" },

@@ -15,7 +15,7 @@ export default async function MasterCurriculumPage() {
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curriculum Editor</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Edit the shared HEC/standard-curriculum reference library — courses, seed CLOs, and PLO suggestions.
+        Edit the shared HEC/standard-curriculum reference library — courses, seed CLOs, and GA suggestions.
       </p>
       <MasterCurriculumEditor />
     </Shell>

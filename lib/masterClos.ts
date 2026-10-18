@@ -31,7 +31,7 @@ export async function importClosIntoMasterCurriculum(curriculumId: string, file:
   const hi = grid.findIndex((r) => r.some((c) => /statement/i.test(c || "")) && r.some((c) => /course\s*code|^code$/i.test(c || "")));
   if (hi < 0) return { ok: false, error: "no heading row with Course code and Statement found" };
   const f = (re: RegExp) => grid[hi].findIndex((c) => re.test(c || ""));
-  const col = { code: f(/course\s*code|^code$/i), clo: f(/^clo$/i), st: f(/statement/i), bloom: f(/bloom/i), plo: f(/(mapped\s*)?plo/i) };
+  const col = { code: f(/course\s*code|^code$/i), clo: f(/^clo$/i), st: f(/statement/i), bloom: f(/bloom/i), plo: f(/(mapped\s*)?\b(plo|ga)\b/i) };
   if (col.bloom < 0) return { ok: false, error: "a Bloom level column is needed" };
 
   const courseByCode = new Map(curriculum.courses.map((c) => [norm(c.code), c.id]));
@@ -49,7 +49,7 @@ export async function importClosIntoMasterCurriculum(curriculumId: string, file:
     if (col.plo >= 0 && r[col.plo]) {
       const n = parseInt(String(r[col.plo]).replace(/\D+/g, ""), 10);
       ploId = ploByNumber.get(n) || null;
-      if (!ploId) errors.push(`${code}: PLO-${n} does not exist in this curriculum`);
+      if (!ploId) errors.push(`${code}: GA-${n} does not exist in this curriculum`);
     }
     byCourse.set(code, [...(byCourse.get(code) || []), { statement, bloom, ploId }]);
   }

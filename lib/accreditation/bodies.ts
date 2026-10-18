@@ -62,9 +62,9 @@ export const STANDARD_FIELDS: { key: StandardKey; label: string; unit: string; m
   { key: "minPhdFaculty", label: "Minimum full-time faculty with a PhD", unit: "faculty", min: 0, max: 50, hint: "" },
   { key: "maxFacultyLoadCh", label: "Maximum teaching load per teacher", unit: "credit hours / semester", min: 3, max: 30, hint: "" },
   { key: "maxClassSize", label: "Maximum students per section", unit: "students", min: 10, max: 200, hint: "" },
-  { key: "ploTargetPct", label: "PLO attainment benchmark: students attaining each PLO", unit: "%", min: 1, max: 100, hint: "A PLO attained by fewer students is shown as a gap." },
+  { key: "ploTargetPct", label: "GA attainment benchmark: students attaining each GA", unit: "%", min: 1, max: 100, hint: "A GA attained by fewer students is shown as a gap." },
   { key: "cloPassPct", label: "CLO passing mark for this council's programs", unit: "%", min: 1, max: 100, nullable: true, hint: "Empty = the institute's Passing Criteria (OMC)." },
-  { key: "ploPassPct", label: "PLO passing mark for this council's programs", unit: "%", min: 1, max: 100, nullable: true, hint: "Empty = the institute's Passing Criteria (OMC)." },
+  { key: "ploPassPct", label: "GA passing mark for this council's programs", unit: "%", min: 1, max: 100, nullable: true, hint: "Empty = the institute's Passing Criteria (OMC)." },
 ];
 
 /** The thresholds for one council's programs: the institute's own figures over the defaults. */

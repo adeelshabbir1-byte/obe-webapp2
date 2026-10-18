@@ -156,11 +156,11 @@ async function plos(l: SourceLoader): Promise<SourceResult> {
   ]);
   const covered = new Set(maps.map((m) => m.ploId));
   return {
-    key: "plos", title: "Program learning outcomes", columns: ["Batch", "PLOs", "Approved", "Taught by a course"],
+    key: "plos", title: "Program learning outcomes", columns: ["Batch", "GAs", "Approved", "Taught by a course"],
     rows: batches.map((b) => { const mine = rows.filter((r) => r.batchId === b.id); return [b.batchName, mine.length, mine.filter((r) => r.status === "approved").length, mine.filter((r) => covered.has(r.id)).length]; }),
-    checks: [chk("Batches with PLOs", batches.filter((b) => rows.some((r) => r.batchId === b.id)).length, batches.length, "Write or import the PLOs.", "/coordinator/plos"),
-      chk("PLOs approved", rows.filter((r) => r.status === "approved").length, rows.length, "Send the PLOs for approval.", "/coordinator/plos"),
-      chk("PLOs taught by at least one course", rows.filter((r) => covered.has(r.id)).length, rows.length, "Map courses to every PLO.", "/omc/plo-matrix")],
+    checks: [chk("Batches with GAs", batches.filter((b) => rows.some((r) => r.batchId === b.id)).length, batches.length, "Write or import the GAs.", "/coordinator/plos"),
+      chk("GAs approved", rows.filter((r) => r.status === "approved").length, rows.length, "Send the GAs for approval.", "/coordinator/plos"),
+      chk("GAs taught by at least one course", rows.filter((r) => covered.has(r.id)).length, rows.length, "Map courses to every GA.", "/omc/plo-matrix")],
     gaps: [],
   };
 }
@@ -168,7 +168,7 @@ async function plos(l: SourceLoader): Promise<SourceResult> {
 async function ploAttainment(l: SourceLoader): Promise<SourceResult> {
   const target = l.std.ploTargetPct;
   const recs = await prisma.studentTranscriptRecord.findMany({ where: { coordinatorId: l.ctx.leadId }, select: { termName: true, termYear: true, ploAttainmentJson: true } });
-  if (!recs.length) return { key: "ploAttainment", title: "PLO attainment", columns: [], rows: [], checks: [chk("Results with PLO attainment recorded", 0, 1, "Approve course results so attainment is recorded.", "/results-approval")], gaps: [] };
+  if (!recs.length) return { key: "ploAttainment", title: "GA attainment", columns: [], rows: [], checks: [chk("Results with GA attainment recorded", 0, 1, "Approve course results so attainment is recorded.", "/results-approval")], gaps: [] };
   const latest = recs.reduce((m, r) => Math.max(m, r.termYear * 2 + (r.termName === "Fall" ? 1 : 0)), 0);
   const agg = new Map<string, { n: number; ok: number }>();
   for (const r of recs.filter((x) => x.termYear * 2 + (x.termName === "Fall" ? 1 : 0) === latest)) {
@@ -180,9 +180,9 @@ async function ploAttainment(l: SourceLoader): Promise<SourceResult> {
   const below = items.filter((x) => x.pct < target);
   const term = `${latest % 2 ? "Fall" : "Spring"} ${Math.floor(latest / 2)}`;
   return {
-    key: "ploAttainment", title: `PLO attainment, ${term}`, columns: ["PLO", "Student results", "Attained", `Benchmark ${target}%`],
+    key: "ploAttainment", title: `GA attainment, ${term}`, columns: ["PLO", "Student results", "Attained", `Benchmark ${target}%`],
     rows: items.map((x) => [x.label, x.n, `${x.pct}%`, x.pct >= target ? "met" : "below"]),
-    checks: [chk(`PLOs attained by at least ${target}% of students`, items.length - below.length, items.length, "Plan remediation and CQI actions for the weak PLOs.", "/omc/reports/attainment-analytics")],
+    checks: [chk(`GAs attained by at least ${target}% of students`, items.length - below.length, items.length, "Plan remediation and CQI actions for the weak GAs.", "/omc/reports/attainment-analytics")],
     gaps: below.map((x) => ({ kind: "plo" as const, text: `${x.label}: ${x.pct}% attained (benchmark ${target}%)`, href: "/omc/reports/attainment-analytics" })),
   };
 }

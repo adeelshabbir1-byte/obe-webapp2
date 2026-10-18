@@ -15,7 +15,7 @@ function ploLabel(plos: Plo[], id: string | null) {
   if (!id) return "—";
   const p = plos.find((x) => x.id === id);
   if (!p) return "—";
-  return `PLO-${p.number}: ${p.title}`;
+  return `GA-${p.number}: ${p.title}`;
 }
 
 export default function InstructorClosManager({ courseId, initialClos, plos, seClos }: { courseId: string; initialClos: Clo[]; plos: Plo[]; seClos: Clo[] }) {
@@ -65,8 +65,8 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
 
   const ploSelectOptions = (
     <>
-      <option value="">— No PLO mapped —</option>
-      {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}</option>)}
+      <option value="">— No GA mapped —</option>
+      {plos.map((p) => <option key={p.id} value={p.id}>GA-{p.number}: {p.title}</option>)}
     </>
   );
 
@@ -85,7 +85,7 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
 
       <div className="card">
         <SortableTable paginate={false}>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped GA</th><th></th></tr></thead>
           <tbody>
             {clos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
             {clos.map((c) => (
@@ -128,7 +128,7 @@ export default function InstructorClosManager({ courseId, initialClos, plos, seC
             <div className="field"><label>Bloom's Level</label><select name="bloomLevel" required>{BLOOM_OPTIONS.map((b) => <option key={b.v} value={b.v}>{b.label}</option>)}</select></div>
           </div>
           <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
-          <div className="field"><label>Mapped PLO</label><select name="mappedPloId">{ploSelectOptions}</select></div>
+          <div className="field"><label>Mapped GA</label><select name="mappedPloId">{ploSelectOptions}</select></div>
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
         </form>
       </div>

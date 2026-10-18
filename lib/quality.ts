@@ -185,7 +185,7 @@ export async function ipeFacts(chairmanId: string) {
   return {
     5: `${faculty} teaching staff on the system; workload and faculty survey pages hold the detail.`,
     6: `${students} students across ${programs} programs; complaints logged: ${complaints}.`,
-    8: `${programs} programs with CLO/PLO attainment; ${cqi} improvement actions recorded.`,
+    8: `${programs} programs with CLO/GA attainment; ${cqi} improvement actions recorded.`,
     10: `${meetings} meeting minutes, ${evals} course/teacher evaluations and ${surveys} completed stakeholder surveys on record.`,
     11: `${placements} internship / placement records; advising and remediation are tracked per student.`,
   } as Record<number, string>;

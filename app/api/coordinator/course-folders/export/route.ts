@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   a.addRows([["Code", course.code], ["Title", course.title], ["Credit hours", course.creditHours], ["Batch", course.batch ? `${course.batch.degreeProgram} ${course.batch.batchName}` : ""], ["Exported", new Date().toISOString().slice(0, 10)]]);
   a.getColumn(1).font = { bold: true }; a.getColumn(1).width = 16; a.getColumn(2).width = 60;
   const b = wb.addWorksheet("CLOs");
-  b.addRow(["CLO", "Statement", "Bloom level", "Mapped PLO"]); head(b);
+  b.addRow(["CLO", "Statement", "Bloom level", "Mapped GA"]); head(b);
   for (const c of clos as unknown as Cl[]) b.addRow([c.code, c.statement, c.bloomLevel, c.mappedPlo ? `PLO-${c.mappedPlo.number} ${c.mappedPlo.title}` : "not mapped"]);
   b.columns = [{ width: 10 }, { width: 80 }, { width: 12 }, { width: 40 }];
   const l = wb.addWorksheet("Lecture plan");

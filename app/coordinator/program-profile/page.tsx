@@ -30,7 +30,7 @@ export default async function ProgramProfilePage({ searchParams }: { searchParam
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Document</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Fill in your department's narrative content once per degree program, then generate the full program
-        document (title page, PEOs/PLOs, program structure, study plan, and every course's detailed syllabus)
+        document (title page, PEOs/GAs, program structure, study plan, and every course's detailed syllabus)
         as a Word file, matching a full curriculum submission format.
       </p>
 

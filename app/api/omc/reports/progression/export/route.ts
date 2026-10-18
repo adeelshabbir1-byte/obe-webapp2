@@ -24,7 +24,7 @@ export async function GET() {
     name: "Semester Progression",
     columns: [
       { header: "Program", key: "program", width: 22 },
-      { header: "PLO", key: "plo", width: 10 },
+      { header: "GA", key: "plo", width: 10 },
       { header: "Title", key: "title", width: 34 },
       ...[1, 2, 3, 4, 5, 6, 7, 8].map((s) => ({ header: `Sem ${s}`, key: `Sem ${s}`, width: 10 })),
     ],

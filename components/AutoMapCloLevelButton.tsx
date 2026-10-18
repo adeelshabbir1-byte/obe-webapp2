@@ -19,8 +19,8 @@ export default function AutoMapCloLevelButton({ batchId }: { batchId: string }) 
 
   async function run() {
     if (!confirm(
-      "This maps individual CLOs to PLOs by matching keywords in their wording — this is a guess, not a verified mapping, and " +
-      "it's the field that actually drives weighted PLO attainment scoring (a coarser course-level matrix already exists separately). " +
+      "This maps individual CLOs to GAs by matching keywords in their wording — this is a guess, not a verified mapping, and " +
+      "it's the field that actually drives weighted GA attainment scoring (a coarser course-level matrix already exists separately). " +
       "Review every suggestion afterward in each course's CLO editor before trusting it. Continue?"
     )) return;
 
@@ -57,23 +57,23 @@ export default function AutoMapCloLevelButton({ batchId }: { batchId: string }) 
 
   return (
     <div className="card" style={{ background: "#FBEED2" }}>
-      <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map Individual CLOs to PLOs (Unverified)</h3>
+      <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map Individual CLOs to GAs (Unverified)</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-        Suggests a PLO for each CLO that doesn't have one yet, by matching keywords between the CLO's own
-        wording and this batch's PLO descriptions — separate from, and more granular than, the course-level
-        matrix tools above. This is the field weighted PLO attainment scoring actually reads, so an unmapped
+        Suggests a GA for each CLO that doesn't have one yet, by matching keywords between the CLO's own
+        wording and this batch's GA descriptions — separate from, and more granular than, the course-level
+        matrix tools above. This is the field weighted GA attainment scoring actually reads, so an unmapped
         CLO here means that outcome is invisible to attainment analytics regardless of what the course-level
-        matrix shows. Only fills gaps, never overwrites an existing choice or changes which PLO it points to.
+        matrix shows. Only fills gaps, never overwrites an existing choice or changes which GA it points to.
       </p>
       {error && <div className="err">{error}</div>}
       {progress && <div style={{ fontSize: 12, color: "#96650F", marginBottom: 8 }}>{progress}</div>}
       <button onClick={run} disabled={loading} className="btn" style={{ background: "#96650F", borderColor: "#96650F", color: "#fff" }}>
-        {loading ? "Mapping…" : "Auto-Map CLOs to PLOs"}
+        {loading ? "Mapping…" : "Auto-Map CLOs to GAs"}
       </button>
       {result && (
         <p style={{ fontSize: 12, marginTop: 10, color: "#96650F" }}>
           Mapped {result.suggested} CLO(s) — review these in each course's CLO editor. {result.skippedNoConfidentMatch} had no confident
-          keyword match and were left unmapped, {result.alreadyMapped} already had a PLO set and were left alone.
+          keyword match and were left unmapped, {result.alreadyMapped} already had a GA set and were left alone.
         </p>
       )}
     </div>

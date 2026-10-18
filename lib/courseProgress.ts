@@ -28,9 +28,9 @@ export function buildSeProgress(opts: {
 }): ProgressStep[] {
   return [
     { label: "CLOs defined", done: opts.cloCount > 0 },
-    { label: opts.topicShort.length ? `Lecture plan meets OMC minimum topics (${opts.topicShort.join("; ")})` : "Lecture plan meets OMC minimum topics per CLO/PLO", done: opts.lectureCount > 0 && opts.topicShort.length === 0 },
+    { label: opts.topicShort.length ? `Lecture plan meets OMC minimum topics (${opts.topicShort.join("; ")})` : "Lecture plan meets OMC minimum topics per CLO/GA", done: opts.lectureCount > 0 && opts.topicShort.length === 0 },
     { label: "Quizzes/Assignments/Exams set up", done: opts.instrumentCount > 0 },
-    { label: opts.assessShort.length ? `PLOs assessed as OMC requires (${opts.assessShort.join("; ")})` : "PLOs assessed as OMC requires", done: opts.instrumentCount > 0 && opts.assessShort.length === 0 },
+    { label: opts.assessShort.length ? `GAs assessed as OMC requires (${opts.assessShort.join("; ")})` : "GAs assessed as OMC requires", done: opts.instrumentCount > 0 && opts.assessShort.length === 0 },
     { label: "Midterm & Final paper distribution set", done: opts.midtermPaperCount > 0 && opts.finalPaperCount > 0 },
     { label: "Submitted to OMC", done: opts.templateStatus !== "draft" && opts.templateStatus !== "changes-requested" && opts.templateStatus !== "reopened" },
   ];

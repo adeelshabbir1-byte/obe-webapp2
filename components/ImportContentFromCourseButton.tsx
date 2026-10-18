@@ -54,7 +54,7 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
       </div>
       {!open && (
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 6 }}>
-          Pull in CLOs, PLO mappings, the weekly lecture plan, and assessment instruments from a course OMC has
+          Pull in CLOs, GA mappings, the weekly lecture plan, and assessment instruments from a course OMC has
           marked as equivalent to this one — a twin section of the same real class — instead of starting from
           scratch.
         </p>
@@ -88,7 +88,7 @@ export default function ImportContentFromCourseButton({ courseId }: { courseId: 
               {sourceId && (
                 <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, marginBottom: 10 }}>
                   <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
-                  I understand this replaces this course's existing CLOs, PLO mappings, weekly lecture plan, and
+                  I understand this replaces this course's existing CLOs, GA mappings, weekly lecture plan, and
                   assessment instruments — this cannot be undone.
                 </label>
               )}

@@ -17,7 +17,7 @@ export async function loadResults(batchWhere: object, max = 60000): Promise<BRow
 }
 
 export const DIMS: [keyof BRow, string][] = [["program", "Program"], ["batch", "Batch"], ["intake", "Intake year"], ["course", "Course"], ["term", "Term"], ["year", "Calendar year"], ["grade", "Grade"]];
-export const METRICS: [string, string][] = [["count", "Results (count)"], ["avgPct", "Average marks %"], ["passPct", "Pass rate %"], ["avgGpa", "Average grade points"], ["cloRate", "CLOs met %"], ["ploRate", "PLOs met %"], ["aPct", "A / A- share %"]];
+export const METRICS: [string, string][] = [["count", "Results (count)"], ["avgPct", "Average marks %"], ["passPct", "Pass rate %"], ["avgGpa", "Average grade points"], ["cloRate", "CLOs met %"], ["ploRate", "GAs met %"], ["aPct", "A / A- share %"]];
 
 const avg = (a: number[]) => (a.length ? Math.round((10 * a.reduce((x, y) => x + y, 0)) / a.length) / 10 : null);
 export function metric(rows: BRow[], m: string): number | null {

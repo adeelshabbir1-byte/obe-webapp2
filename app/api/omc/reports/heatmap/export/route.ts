@@ -22,10 +22,10 @@ export async function GET() {
   const allTypes = Array.from(new Set(programs.flatMap((p) => p.courseTypes)));
 
   return buildExcelResponse("plo-depth-heatmap.xlsx", [{
-    name: "PLO Depth Heatmap",
+    name: "GA Depth Heatmap",
     columns: [
       { header: "Program", key: "program", width: 22 },
-      { header: "PLO", key: "plo", width: 10 },
+      { header: "GA", key: "plo", width: 10 },
       { header: "Title", key: "title", width: 34 },
       ...allTypes.map((t) => ({ header: t, key: t, width: 14 })),
     ],

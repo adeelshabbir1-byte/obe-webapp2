@@ -44,7 +44,7 @@ export default async function ChairmanDepartmentsPage() {
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole("CHAIRMAN")}>
       <PeopleTabs />
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments &amp; Programs</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Split your institute into departments. Each department has its own programs, heads, coordinators, course assigners and faculty.
         A program belongs to one department. Faculty can still be shared between departments later.

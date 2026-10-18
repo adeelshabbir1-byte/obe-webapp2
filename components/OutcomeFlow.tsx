@@ -27,8 +27,8 @@ const FAMILY: Record<string, string> = { COMPUTING: "Computing", GENERAL: "GE / 
 const TIER: Record<Kind, { title: string; sub: string; color: string; bg: string }> = {
   A: { title: "Assessments", sub: "share of the CLO", color: "#3E5C8A", bg: "#EEF2F8" },
   L: { title: "CLOs", sub: "share of the course", color: "#6B3F8A", bg: "#F3EEF7" },
-  C: { title: "Courses", sub: "weight on each PLO", color: "#7E2435", bg: "#F8EEF0" },
-  P: { title: "PLOs", sub: "weight on each PEO", color: "#8A5A0F", bg: "#FBF3E4" },
+  C: { title: "Courses", sub: "weight on each GA", color: "#7E2435", bg: "#F8EEF0" },
+  P: { title: "GAs", sub: "weight on each PEO", color: "#8A5A0F", bg: "#FBF3E4" },
   E: { title: "PEOs", sub: "program objectives", color: "#1F5E36", bg: "#EAF4EE" },
 };
 
@@ -187,7 +187,7 @@ export default function OutcomeFlow(props: FlowProps) {
         <span style={{ display: "inline-flex", gap: 8 }}>{Object.entries(TYPE_COLOR).map(([t, c]) => <span key={t} style={{ color: c, fontWeight: 700, textTransform: "capitalize" }}>■ {t}</span>)}</span>
         <span style={{ color: "#6B3F8A" }}>Purple “performance-weighted” figures: what attainment would be if better-done assessments counted more — for comparison only.</span>
         {mode === "batch" && <span>Figures refresh every 5 minutes.</span>}
-        {canEdit && <span>Click a weight on a <b>Course → PLO</b> or <b>PLO → PEO</b> line to change it.</span>}
+        {canEdit && <span>Click a weight on a <b>Course → GA</b> or <b>GA → PEO</b> line to change it.</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setAll(!all)}>{all ? "Step by step" : "Show all"}</button>
           <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setWide(!wide)}>{wide ? "Exit full screen" : "Full screen"}</button>
@@ -231,7 +231,7 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>{l.code} <span style={{ fontWeight: 400, color: "var(--slate)" }}>({l.bloom})</span></b><Att v={l.attainment} target={l.target || target} avg={l.avg} /></div>
                   <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>{l.statement.length > 110 ? `${l.statement.slice(0, 110)}…` : l.statement}</div>
                   {l.perfAttainment != null && l.attainment != null && l.perfAttainment !== l.attainment && <div style={{ fontSize: 10.5, color: "#6B3F8A", marginTop: 2 }} title="If assessments the class did better on counted more (0.5×–1.5×). For comparison only — reports use the planned weights.">performance-weighted: {l.perfAttainment}%</div>}
-                  <div style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 2 }}>{l.ploNumber ? `→ PLO-${l.ploNumber}${l.contribution != null ? ` (${l.contribution}% of it in this course)` : ""}` : "no PLO mapped"}</div>
+                  <div style={{ fontSize: 10.5, color: "var(--slate)", marginTop: 2 }}>{l.ploNumber ? `→ GA-${l.ploNumber}${l.contribution != null ? ` (${l.contribution}% of it in this course)` : ""}` : "no GA mapped"}</div>
                 </>
               ))) : null, loading ? "Opening the course…" : !chain || !vis.courseOpen ? "Click a course to see its CLOs." : chain.clos.length === 0 ? "This course has no CLOs yet." : undefined)}
             </div>
@@ -242,27 +242,27 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ fontSize: 11.5 }}>{c.title}</div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{c.creditHours} CH{c.semesterNumber ? ` · semester ${c.semesterNumber}` : ""}{isOpen(key("C", c.id)) ? " · open" : " · click to open"}</div>
                 </>
-              ), open === c.id)), shownCourses.length === 0 ? "No course is mapped to a PLO yet (PLO–Course Matrix)." : vis.C.size === 0 ? "Click a PLO to see its courses." : undefined)}
+              ), open === c.id)), shownCourses.length === 0 ? "No course is mapped to a GA yet (GA–Course Matrix)." : vis.C.size === 0 ? "Click a GA to see its courses." : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("P", plos.map((p) => node(key("P", p.id), "P", () => toggle(key("P", p.id)), (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>PLO-{p.number}</b><Att v={p.attainment} target={target} /></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>GA-{p.number}</b><Att v={p.attainment} target={target} /></div>
                   <div style={{ fontSize: 11.5 }}>{p.title}</div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{p.courses.length} course{p.courses.length === 1 ? "" : "s"} · {p.state === "DEFAULT" ? "suggested split (default)" : "weights set"}{props.cohort?.plos[p.id]?.last != null ? ` · last batch ${props.cohort.plos[p.id].last}%` : ""}</div>
                 </>
-              ))), plos.length === 0 ? "No PLOs." : vis.P.size === 0 ? (mode === "batch" ? "Click a PEO to see its PLOs." : "Click the course to see its CLOs and PLOs.") : undefined)}
+              ))), plos.length === 0 ? "No GAs." : vis.P.size === 0 ? (mode === "batch" ? "Click a PEO to see its GAs." : "Click the course to see its CLOs and GAs.") : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("E", peos.map((e) => node(key("E", e.index), "E", () => toggle(key("E", e.index)), (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b>PEO-{e.index + 1}</b><Att v={e.attainment} target={target} /></div>
                   <div style={{ fontSize: 11, lineHeight: 1.35 }}>{e.text.length > 120 ? `${e.text.slice(0, 120)}…` : e.text}</div>
-                  {e.links.length === 0 && <div style={{ fontSize: 10.5, color: "#95650F" }}>No PLO linked yet{canEdit ? " — " : ""}{canEdit && <a onClick={(ev) => { ev.stopPropagation(); setEditing({ kind: "peo", index: e.index }); }} style={{ cursor: "pointer", textDecoration: "underline" }}>link PLOs</a>}</div>}
-                  {e.fromProfile && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>PLOs from the Program Profile, equal split</div>}
-                  {e.links.length > 0 && canEdit && <div style={{ fontSize: 10.5 }}><a onClick={(ev) => { ev.stopPropagation(); setEditing({ kind: "peo", index: e.index }); }} style={{ cursor: "pointer", color: "var(--brass-dark)" }}>edit PLO weights</a></div>}
+                  {e.links.length === 0 && <div style={{ fontSize: 10.5, color: "#95650F" }}>No GA linked yet{canEdit ? " — " : ""}{canEdit && <a onClick={(ev) => { ev.stopPropagation(); setEditing({ kind: "peo", index: e.index }); }} style={{ cursor: "pointer", textDecoration: "underline" }}>link GAs</a>}</div>}
+                  {e.fromProfile && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>GAs from the Program Profile, equal split</div>}
+                  {e.links.length > 0 && canEdit && <div style={{ fontSize: 10.5 }}><a onClick={(ev) => { ev.stopPropagation(); setEditing({ kind: "peo", index: e.index }); }} style={{ cursor: "pointer", color: "var(--brass-dark)" }}>edit GA weights</a></div>}
                 </>
-              ))), peos.length === 0 ? (props.peoNote || "No PEOs yet — the Program Lead adds them in the Program Profile.") : vis.E.size === 0 ? "Click a PLO to see its PEOs." : undefined)}
+              ))), peos.length === 0 ? (props.peoNote || "No PEOs yet — the Program Lead adds them in the Program Profile.") : vis.E.size === 0 ? "Click a GA to see its PEOs." : undefined)}
             </div>
           </div>
         </div>
@@ -308,9 +308,9 @@ function PloEditor({ plo, cohort, prevLabel, onClose, onSaved }: { plo: Plo; coh
   const total = Math.round(plo.courses.reduce((s, c) => s + (Number(w[c.id]) || 0), 0) * 100) / 100;
   const set = (m: Record<string, number>, s: string) => { setW(Object.fromEntries(plo.courses.map((c) => [c.id, String(m[c.id] ?? 0)]))); setSource(s); };
   return (
-    <Modal title={`PLO-${plo.number}: ${plo.title} — course weights`} onClose={onClose}>
-      <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>{plo.number < 6 ? "Technical PLO: computing courses weigh more in the suggestion." : "Soft-skill PLO: General Education / IDS courses weigh more in the suggestion."} The weights must total 100%.</p>
-      {cohort?.last != null && <p style={{ fontSize: 12.5, background: cohort.last < 60 ? "#FFF8EC" : "#EAF4EE", padding: "6px 10px", borderRadius: 6 }}>Last batch ({prevLabel}) reached this PLO at <b>{cohort.last}%</b>.{cohort.suggested ? " The cohort suggestion leans on the courses where those students did best." : ""}</p>}
+    <Modal title={`GA-${plo.number}: ${plo.title} — course weights`} onClose={onClose}>
+      <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>{plo.number < 6 ? "Technical GA: computing courses weigh more in the suggestion." : "Soft-skill GA: General Education / IDS courses weigh more in the suggestion."} The weights must total 100%.</p>
+      {cohort?.last != null && <p style={{ fontSize: 12.5, background: cohort.last < 60 ? "#FFF8EC" : "#EAF4EE", padding: "6px 10px", borderRadius: 6 }}>Last batch ({prevLabel}) reached this GA at <b>{cohort.last}%</b>.{cohort.suggested ? " The cohort suggestion leans on the courses where those students did best." : ""}</p>}
       <table style={{ fontSize: 12.5 }}>
         <thead><tr><th>Course</th><th>Type</th><th style={{ textAlign: "center" }}>CH</th><th style={{ textAlign: "center" }}>Equal</th><th style={{ textAlign: "center" }}>Suggested</th>{cohort?.suggested && <th style={{ textAlign: "center" }}>Cohort</th>}<th style={{ textAlign: "center" }}>Weight %</th></tr></thead>
         <tbody>{plo.courses.map((c) => (
@@ -342,15 +342,15 @@ function PeoEditor({ peo, plos, batchId, onClose, onSaved }: { peo: Peo; plos: P
   const total = Math.round(on.reduce((s, p) => s + (Number(w[p.number]) || 0), 0) * 100) / 100;
   const equal = () => { const n = on.length; if (!n) return; const each = Math.floor(10000 / n) / 100; setW(Object.fromEntries(on.map((p, i) => [p.number, String(i === 0 ? Math.round((100 - each * (n - 1)) * 100) / 100 : each)]))); };
   return (
-    <Modal title={`PEO-${peo.index + 1} — which PLOs serve it`} onClose={onClose}>
+    <Modal title={`PEO-${peo.index + 1} — which GAs serve it`} onClose={onClose}>
       <p style={{ fontSize: 12.5, marginTop: 0 }}>{peo.text}</p>
-      <p style={{ fontSize: 12, color: "var(--slate)" }}>Tick the PLOs that serve this objective and give each a weight (total 100%). This applies to every batch of the program.</p>
+      <p style={{ fontSize: 12, color: "var(--slate)" }}>Tick the GAs that serve this objective and give each a weight (total 100%). This applies to every batch of the program.</p>
       <table style={{ fontSize: 12.5 }}>
-        <thead><tr><th></th><th>PLO</th><th style={{ textAlign: "center" }}>Weight %</th></tr></thead>
+        <thead><tr><th></th><th>GA</th><th style={{ textAlign: "center" }}>Weight %</th></tr></thead>
         <tbody>{plos.map((p) => (
           <tr key={p.id}>
             <td><input type="checkbox" checked={w[p.number] !== undefined} onChange={(e) => { const n = { ...w }; if (e.target.checked) n[p.number] = "0"; else delete n[p.number]; setW(n); }} /></td>
-            <td><b>PLO-{p.number}</b> {p.title}</td>
+            <td><b>GA-{p.number}</b> {p.title}</td>
             <td style={{ textAlign: "center" }}>{w[p.number] !== undefined && <input type="number" min={0} max={100} step={0.01} value={w[p.number]} onChange={(e) => setW({ ...w, [p.number]: e.target.value })} style={{ width: 80, textAlign: "right" }} />}</td>
           </tr>
         ))}</tbody>
@@ -359,7 +359,7 @@ function PeoEditor({ peo, plos, batchId, onClose, onSaved }: { peo: Peo; plos: P
       {err && <div className="err" style={{ marginTop: 8 }}>{err}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
         <button className="btn btn-secondary" disabled={!on.length} onClick={equal}>Equal split among ticked</button>
-        <button className="btn" style={{ marginLeft: "auto" }} disabled={busy || (on.length > 0 && Math.abs(total - 100) > 0.05)} onClick={() => run("/api/omc/peo-weights", { batchId, peoIndex: peo.index, weights: Object.fromEntries(on.map((p) => [p.number, Number(w[p.number]) || 0])) }, onSaved)}>{busy ? "Saving…" : on.length ? "Save" : "Save (no PLO)"}</button>
+        <button className="btn" style={{ marginLeft: "auto" }} disabled={busy || (on.length > 0 && Math.abs(total - 100) > 0.05)} onClick={() => run("/api/omc/peo-weights", { batchId, peoIndex: peo.index, weights: Object.fromEntries(on.map((p) => [p.number, Number(w[p.number]) || 0])) }, onSaved)}>{busy ? "Saving…" : on.length ? "Save" : "Save (no GA)"}</button>
       </div>
     </Modal>
   );

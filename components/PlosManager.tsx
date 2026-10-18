@@ -35,7 +35,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       });
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setBulkResult(`Added ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
+      setBulkResult(`Added ${data.created} GA(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
       if (data.plos) setPlos((prev) => [...prev, ...data.plos].sort((a, b) => a.number - b.number));
       setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -51,7 +51,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       });
       const { ok, data } = await safeFetchJson(res);
       if (!ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setBulkResult(`Copied ${data.created} PLO(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
+      setBulkResult(`Copied ${data.created} GA(s).${data.skipped ? ` (${data.skipped} already existed at those numbers.)` : ""}`);
       if (data.plos) setPlos((prev) => [...prev, ...data.plos].sort((a, b) => a.number - b.number));
       setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -118,11 +118,11 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       {bulkResult && <div style={{ background: "#E2F4E8", color: "var(--sage)", border: "1px solid #B8E0C4", padding: "8px 12px", fontSize: 12.5, marginBottom: 12 }}>{bulkResult}</div>}
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Add All PLOs at Once</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Add All GAs at Once</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>All added as editable copies — nothing stays locked to the source.</p>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-            <button onClick={addAllHec} disabled={loading} className="btn btn-brass" style={{ padding: "8px 14px" }}>Add All 10 HEC PLOs</button>
+            <button onClick={addAllHec} disabled={loading} className="btn btn-brass" style={{ padding: "8px 14px" }}>Add All 10 HEC GAs</button>
           </div>
           {otherBatches.length > 0 && (
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
@@ -133,23 +133,23 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
                   {otherBatches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
                 </select>
               </div>
-              <button onClick={copyAllFromBatch} disabled={loading || !copySourceBatchId} className="btn btn-brass" style={{ padding: "8px 14px" }}>Copy All PLOs</button>
+              <button onClick={copyAllFromBatch} disabled={loading || !copySourceBatchId} className="btn btn-brass" style={{ padding: "8px 14px" }}>Copy All GAs</button>
             </div>
           )}
         </div>
       </div>
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Program's PLOs</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Your Program's GAs</h3>
         <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th>Description</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            {plos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined yet.</td></tr>}
+            {plos.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No GAs defined yet.</td></tr>}
             {plos.map((p) => editingId === p.id ? (
               <tr key={p.id}>
                 <td colSpan={5}>
                   <form onSubmit={(e) => saveEdit(e, p.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
-                    <span style={{ fontWeight: 600 }}>PLO-{p.number}</span>
+                    <span style={{ fontWeight: 600 }}>GA-{p.number}</span>
                     <input name="title" defaultValue={p.title} placeholder="Title" style={{ flex: "1 1 160px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <input name="description" defaultValue={p.description} placeholder="Description" style={{ flex: "2 1 260px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
@@ -159,7 +159,7 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
               </tr>
             ) : (
               <tr key={p.id}>
-                <td>PLO-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
+                <td>GA-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
                 <td>{statusBadge(p.status)}{p.chairmanComment ? <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 3 }}>{p.chairmanComment}</div> : null}</td>
                 <td style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setEditingId(p.id)} className="act act-primary">Edit</button>
@@ -173,14 +173,14 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
 
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Copy from HEC BS Computer Science 2025</h3>
-        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>Adds it as your next PLO number, pre-filled from the official text — fully editable afterward.</p>
+        <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>Adds it as your next GA number, pre-filled from the official text — fully editable afterward.</p>
         <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th></th></tr></thead>
           <tbody>
             {hecPlos.map((hp) => (
               <tr key={hp.number}>
                 <td>{hp.number}</td><td>{hp.title}</td>
-                <td><button onClick={() => copyFromHec(hp)} disabled={loading} className="act act-primary">Copy as PLO-{nextNumber}</button></td>
+                <td><button onClick={() => copyFromHec(hp)} disabled={loading} className="act act-primary">Copy as GA-{nextNumber}</button></td>
               </tr>
             ))}
           </tbody>
@@ -188,14 +188,14 @@ export default function PlosManager({ initialPlos, hecPlos, batchId, otherBatche
       </div>
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add Custom PLO</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add Custom GA</h3>
         <form onSubmit={addCustom}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 14 }}>
-            <div className="field"><label>PLO Number</label><input name="number" type="number" defaultValue={nextNumber} required /></div>
+            <div className="field"><label>GA Number</label><input name="number" type="number" defaultValue={nextNumber} required /></div>
             <div className="field"><label>Title</label><input name="title" placeholder="Problem-Solving and Critical Thinking" required /></div>
           </div>
           <div className="field"><label>Description</label><input name="description" placeholder="Students should be able to..." required /></div>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add PLO"}</button>
+          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add GA"}</button>
         </form>
       </div>
     </>

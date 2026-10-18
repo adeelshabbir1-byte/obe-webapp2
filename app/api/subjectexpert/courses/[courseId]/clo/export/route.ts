@@ -18,9 +18,9 @@ export async function GET(_req: Request, { params }: { params: { courseId: strin
   return buildExcelResponse(`${safe}.xlsx`, [
     { name: "CLOs", columns: [
       { header: "CLO", key: "code", width: 9 }, { header: "Statement", key: "statement", width: 80 }, { header: "Bloom level (C1-C6)", key: "bloom", width: 18 },
-      { header: "PLO number", key: "plo", width: 12 }, { header: "Contribution to PLO %", key: "pct", width: 20 }, { header: "Target % of students", key: "target", width: 20 },
+      { header: "GA number", key: "plo", width: 12 }, { header: "Contribution to GA %", key: "pct", width: 20 }, { header: "Target % of students", key: "target", width: 20 },
     ], rows: clos.map((c) => ({ code: c.code, statement: c.statement, bloom: c.bloomLevel, plo: c.mappedPlo?.number ?? "", pct: c.ploContributionPct ?? "", target: c.targetPct })) },
-    { name: "PLO reference", columns: [{ header: "PLO number", key: "n", width: 12 }, { header: "Title", key: "t", width: 44 }, { header: "Description", key: "d", width: 90 }],
+    { name: "GA reference", columns: [{ header: "GA number", key: "n", width: 12 }, { header: "Title", key: "t", width: 44 }, { header: "Description", key: "d", width: 90 }],
       rows: plos.map((p) => ({ n: p.number, t: p.title, d: p.description })) },
   ]);
 }

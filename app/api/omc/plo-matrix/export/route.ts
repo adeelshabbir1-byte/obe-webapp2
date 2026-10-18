@@ -22,12 +22,12 @@ export async function GET(req: NextRequest) {
     for (const p of plos) r[`p${p.number}`] = mapped.has(p.id) ? "X" : "";
     return r;
   });
-  const safe = `PLO-matrix-${batch.degreeProgram}-${batch.batchName}`.replace(/[^A-Za-z0-9._-]+/g, "_");
+  const safe = `GA-matrix-${batch.degreeProgram}-${batch.batchName}`.replace(/[^A-Za-z0-9._-]+/g, "_");
   return buildExcelResponse(`${safe}.xlsx`, [
-    { name: "PLO matrix", columns: [
+    { name: "GA matrix", columns: [
       { header: "Course code", key: "code", width: 14 }, { header: "Course title", key: "title", width: 42 }, { header: "Semester", key: "sem", width: 10 }, { header: "Type", key: "type", width: 14 },
       ...plos.map((p) => ({ header: `PLO-${p.number}`, key: `p${p.number}`, width: 8 })),
     ], rows },
-    { name: "PLO reference", columns: [{ header: "PLO", key: "n", width: 8 }, { header: "Title", key: "t", width: 44 }, { header: "Description", key: "d", width: 90 }], rows: plos.map((p) => ({ n: `PLO-${p.number}`, t: p.title, d: p.description })) },
+    { name: "GA reference", columns: [{ header: "GA", key: "n", width: 8 }, { header: "Title", key: "t", width: 44 }, { header: "Description", key: "d", width: 90 }], rows: plos.map((p) => ({ n: `GA-${p.number}`, t: p.title, d: p.description })) },
   ]);
 }

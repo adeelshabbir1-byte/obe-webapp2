@@ -24,8 +24,8 @@ export default function ObeAssistant({ courseId, courseLabel }: { courseId?: str
     setChat((c) => [...c, { q: text, a: d.answer }]); setLeft(d.left ?? left);
   }
   const starters = courseId
-    ? ["Why is each CLO mapped to its PLO? Is any mapping weak?", "Are my CLOs at the right Bloom level for this semester?", "Which CLO has too few topics or assessments?", "Rewrite my weakest CLO to be measurable."]
-    : ["What is the difference between PLO-2 and PLO-3?", "How do I write a measurable CLO?", "How is PLO attainment calculated?"];
+    ? ["Why is each CLO mapped to its GA? Is any mapping weak?", "Are my CLOs at the right Bloom level for this semester?", "Which CLO has too few topics or assessments?", "Rewrite my weakest CLO to be measurable."]
+    : ["What is the difference between GA-2 and GA-3?", "How do I write a measurable CLO?", "How is GA attainment calculated?"];
   return (
     <>
       <button className="no-print" onClick={() => setOpen(!open)} style={{ position: "fixed", right: 18, bottom: 18, zIndex: 120, background: "#3A1218", color: "#fff", border: 0, borderRadius: 24, padding: "10px 16px", fontWeight: 700, boxShadow: "0 6px 20px rgba(0,0,0,.25)", cursor: "pointer" }}>{open ? "Close assistant" : "💬 Ask OBE Assistant"}</button>
@@ -45,7 +45,7 @@ export default function ObeAssistant({ courseId, courseLabel }: { courseId?: str
             <div ref={end} />
           </div>
           <form onSubmit={(e) => { e.preventDefault(); ask(q); }} style={{ display: "flex", gap: 6, padding: 10, borderTop: "1px solid #F0EAEA" }}>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about your CLOs, PLOs, Bloom levels…" style={{ flex: 1 }} disabled={busy || left === 0} />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about your CLOs, GAs, Bloom levels…" style={{ flex: 1 }} disabled={busy || left === 0} />
             <button className="btn btn-sm" disabled={busy || !q.trim() || left === 0}>Ask</button>
           </form>
         </div>

@@ -111,7 +111,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
       {error && <div className="err">{error}</div>}
       <div className="card">
         <SortableTable>
-          <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>PLOs</th><th>Institutes</th><th></th></tr></thead>
+          <thead><tr><th>Authority</th><th>Title</th><th>Version</th><th>Courses</th><th>GAs</th><th>Institutes</th><th></th></tr></thead>
           <tbody>
             {curricula.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)" }}>No curricula yet.</td></tr>}
             {curricula.map((c, idx) => (
@@ -167,7 +167,7 @@ export default function CurriculaManager({ initialCurricula }: { initialCurricul
                         <span style={{ fontSize: 12 }}>New version label:</span>
                         <input name="newVersion" placeholder="2027" style={{ padding: "6px 8px", border: "1px solid var(--line)", width: 120 }} required />
                         <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Clone</button>
-                        <span style={{ fontSize: 11, color: "var(--slate)" }}>Copies all courses & PLOs — edit the copy afterward.</span>
+                        <span style={{ fontSize: 11, color: "var(--slate)" }}>Copies all courses & GAs — edit the copy afterward.</span>
                       </form>
                     </td>
                   </tr>

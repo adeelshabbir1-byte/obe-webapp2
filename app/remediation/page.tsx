@@ -64,7 +64,7 @@ export default async function RemediationPage({ searchParams }: { searchParams: 
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Remediation</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12, maxWidth: 940 }}>
         Instead of retaking a whole course, students who did not attain some of its topics take a short remediation — a dedicated tutorial, or sitting
-        the lectures that teach those topics in a junior class — then a micro-assessment. Passing it raises their CLO and PLO attainment on the transcript
+        the lectures that teach those topics in a junior class — then a micro-assessment. Passing it raises their CLO and GA attainment on the transcript
         (the grade stays) and releases any strong prerequisite those topics held up. Students pay a small fee; the teacher is paid a share of it.
       </p>
       {missing && <div className="err">Remediation is not set up in the database yet — run prisma/migration_master_spec.sql in Supabase.</div>}

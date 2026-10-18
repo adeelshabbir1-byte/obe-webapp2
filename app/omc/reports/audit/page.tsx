@@ -12,7 +12,7 @@ import Shell from "../../../../components/Shell";
 import ReportsSubNav from "../../../../components/ReportsSubNav";
 
 function flagBadge(flag: string) {
-  if (flag === "orphan") return <span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>Orphan — No PLO</span>;
+  if (flag === "orphan") return <span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>Orphan — No GA</span>;
   if (flag === "broad") return <span style={{ background: "#E8E6FB", color: "var(--brass-dark)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>Overly Broad</span>;
   return <span style={{ background: "var(--emerald-50)", color: "var(--sage)", fontSize: 10, textTransform: "uppercase", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>OK</span>;
 }
@@ -38,7 +38,7 @@ export default async function AuditReportPage({ searchParams }: { searchParams: 
         <a href="/api/omc/reports/audit/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Flags orphan courses (mapped to zero PLOs) and overly broad courses (mapped to every single PLO indiscriminately) — both signal misconfiguration to accreditation panels.
+        Flags orphan courses (mapped to zero GAs) and overly broad courses (mapped to every single GA indiscriminately) — both signal misconfiguration to accreditation panels.
       </p>
       <ReportsSubNav active="audit" />
       <div className="card no-print">
@@ -62,7 +62,7 @@ export default async function AuditReportPage({ searchParams }: { searchParams: 
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
             <SortableTable>
-              <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Sem</th><th>PLOs Mapped</th><th>Flag</th></tr></thead>
+              <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Sem</th><th>GAs Mapped</th><th>Flag</th></tr></thead>
               <tbody>
                 {prog.rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No courses yet.</td></tr>}
                 {prog.rows.map((r) => (

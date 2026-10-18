@@ -39,7 +39,7 @@ export function courseFitsTarget(c: WorkCourse, t: { planTerm: string | null; ki
 }
 
 export const DEADLINE_KINDS: Record<string, string> = {
-  CUSTOM: "Any task", PLO_MAP: "Course mapped to PLOs", CLO_PLO: "CLOs mapped to PLOs", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan meets the OMC minimum topics per CLO/PLO", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
+  CUSTOM: "Any task", PLO_MAP: "Course mapped to GAs", CLO_PLO: "CLOs mapped to GAs", CLO_SET: "CLOs written", LECTURE_PLAN: "Lecture plan meets the OMC minimum topics per CLO/GA", ASSESSMENT_PLAN: "Quizzes / assignments / exams set up",
   PAPERS: "Midterm and final paper distribution set", SUBMITTED: "Course submitted to OMC", MARKS: "Marks entered", MID_MARKS: "Midterm marks entered", FINAL_MARKS: "Final exam marks entered", ATTENDANCE: "Attendance recorded",
 };
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
@@ -179,7 +179,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "SHARED_FACULTY", kind: "CUSTOM", title: "Shared faculty requests sent", role: "HEAD_OF_DEPARTMENT", offset: -60, days: 10, scope: "EACH", phase: "Before the semester", why: "Teachers needed from other departments are requested" },
   { key: "MISSION_VISION", kind: "CUSTOM", title: "Mission and vision checked against the program", role: "HEAD_OF_DEPARTMENT", offset: -55, days: 7, scope: "EACH", phase: "Before the semester", why: "Program objectives still agree with the mission and vision" },
   { key: "LIBRARY", kind: "CUSTOM", title: "Library record updated", role: "LIBRARIAN", offset: -55, days: 10, scope: "EACH", phase: "Before the semester", why: "Books, magazines and titles for the program are current" },
-  { key: "PLO_MAP", kind: "PLO_MAP", title: "Course-to-PLO mapping complete", role: "PROGRAM_COORDINATOR", offset: -50, days: 14, scope: "COURSE", phase: "Courses and outcomes", why: "Every course is mapped to the PLOs it serves" },
+  { key: "PLO_MAP", kind: "PLO_MAP", title: "Course-to-GA mapping complete", role: "PROGRAM_COORDINATOR", offset: -50, days: 14, scope: "COURSE", phase: "Courses and outcomes", why: "Every course is mapped to the GAs it serves" },
   { key: "COURSES_OFFERED", kind: "CUSTOM", title: "Courses to be offered decided", role: "PROGRAM_COORDINATOR", offset: -48, days: 7, scope: "EACH", phase: "Before the semester", why: "The list of courses offered this semester is final" },
   { key: "COURSE_UPDATE", kind: "CUSTOM", title: "Course contents updated", role: "SUBJECT_EXPERT", offset: -45, days: 10, scope: "EACH", phase: "Courses and outcomes", why: "Course contents reviewed and updated where needed" },
   { key: "CLO_SET", kind: "CLO_SET", title: "CLOs written for every course", role: "SUBJECT_EXPERT", offset: -40, days: 10, scope: "COURSE", phase: "Courses and outcomes", why: "Subject Experts write the course learning outcomes" },
@@ -188,7 +188,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "LAB_PLAN", kind: "CUSTOM", title: "Lab tasks named, linked to lecture topics, manuals and solutions uploaded", role: "LAB_ENGINEER", offset: -14, days: 14, scope: "EACH", phase: "Labs and facilities", why: "Every lab task has a week and the lecture topics it practises, with its manual and solution uploaded (ticks itself)" },
   { key: "LAB_APPROVE", kind: "CUSTOM", title: "Lab manuals and solutions reviewed and approved", role: "INSTRUCTOR", offset: -5, days: 7, scope: "EACH", phase: "Labs and facilities", why: "The teacher of each course with a lab approves its manuals and solutions (ticks itself; teachers with no lab are ticked)" },
   { key: "PRIORITIES", kind: "CUSTOM", title: "Course and timetable priorities sent", role: "INSTRUCTOR", offset: -35, days: 10, scope: "EACH", phase: "Allocation and timetable", why: "Teachers tell the Chairman the courses and time slots they prefer" },
-  { key: "CLO_PLO", kind: "CLO_PLO", title: "Every CLO mapped to a PLO", role: "SUBJECT_EXPERT", offset: -35, days: 5, scope: "COURSE", phase: "Courses and outcomes", why: "Each CLO says which PLO it supports" },
+  { key: "CLO_PLO", kind: "CLO_PLO", title: "Every CLO mapped to a GA", role: "SUBJECT_EXPERT", offset: -35, days: 5, scope: "COURSE", phase: "Courses and outcomes", why: "Each CLO says which GA it supports" },
   { key: "OMC_BEFORE", kind: "CUSTOM", title: "OMC meeting held and minutes filed (before the semester)", role: "PROGRAM_COORDINATOR", offset: -30, days: 3, scope: "EACH", phase: "Meetings", why: "Outcome Monitoring Committee approves the semester's courses" },
   { key: "ALLOCATION", kind: "CUSTOM", title: "Courses allocated to teachers", role: "HEAD_OF_DEPARTMENT", offset: -28, days: 7, scope: "EACH", phase: "Allocation and timetable", why: "Every course has an Instructor, using the teachers' priorities" },
   { key: "LECTURE_PLAN", kind: "LECTURE_PLAN", title: "Lecture plan built and mapped to CLOs", role: "SUBJECT_EXPERT", offset: -28, days: 14, scope: "COURSE", phase: "Courses and outcomes", why: "Every lecture topic is tied to a CLO" },
@@ -235,7 +235,7 @@ export const PLAN_TEMPLATE: PlanItem[] = [
   { key: "FINAL_EXAM", kind: "FINAL_MARKS", title: "Final exam marks entered", role: "INSTRUCTOR", offset: 118, days: 7, scope: "COURSE", phase: "Exams and assessment", why: "Final exam marks are entered for every course" },
   { key: "RESULTS", kind: "CUSTOM", title: "Final results submitted", role: "INSTRUCTOR", offset: 125, days: 5, scope: "EACH", phase: "Semester close", why: "Grades are submitted for every course taught" },
   { key: "FOLDER", kind: "CUSTOM", title: "Course folders completed", role: "INSTRUCTOR", offset: 130, days: 10, scope: "EACH", phase: "Semester close", why: "Every course folder holds the papers, solutions and samples" },
-  { key: "ATTAIN", kind: "CUSTOM", title: "CLO and PLO attainment reviewed", role: "SUBJECT_EXPERT", offset: 135, days: 10, scope: "EACH", phase: "Semester close", why: "Subject Experts review how well each CLO was met" },
+  { key: "ATTAIN", kind: "CUSTOM", title: "CLO and GA attainment reviewed", role: "SUBJECT_EXPERT", offset: 135, days: 10, scope: "EACH", phase: "Semester close", why: "Subject Experts review how well each CLO was met" },
   { key: "OBE_REPORT", kind: "CUSTOM", title: "Semester OBE report reviewed", role: "HEAD_OF_DEPARTMENT", offset: 140, days: 7, scope: "EACH", phase: "Semester close", why: "Chairman reviews the attainment and readiness reports" },
   { key: "IMPROVE", kind: "CUSTOM", title: "Improvement actions recorded", role: "PROGRAM_COORDINATOR", offset: 145, days: 7, scope: "EACH", phase: "Semester close", why: "Actions for the next semester are written down and assigned" },
   { key: "DEAN_REVIEW", kind: "CUSTOM", title: "Faculty accreditation readiness reviewed", role: "DEAN", offset: 150, days: 7, scope: "EACH", phase: "Semester close", why: "Dean reviews each program's readiness and gaps" },

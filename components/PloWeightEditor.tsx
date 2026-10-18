@@ -42,12 +42,12 @@ export default function PloWeightEditor({ plo, target }: { plo: Plo; target: num
   return (
     <div className="card">
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-        <h3 style={{ margin: 0, fontSize: 15 }}>PLO-{plo.number}: {plo.title}</h3>
+        <h3 style={{ margin: 0, fontSize: 15 }}>GA-{plo.number}: {plo.title}</h3>
         <span className={`badge ${STATE[plo.state][1]}`}>{STATE[plo.state][0]}</span>
-        <span style={{ fontSize: 12, color: "var(--slate)" }}>{plo.number < 6 ? "technical PLO — computing courses weigh more" : "soft-skill PLO — GE / IDS courses weigh more"}</span>
+        <span style={{ fontSize: 12, color: "var(--slate)" }}>{plo.number < 6 ? "technical GA — computing courses weigh more" : "soft-skill GA — GE / IDS courses weigh more"}</span>
         {batchAtt !== null && <span style={{ marginLeft: "auto", fontSize: 12.5 }}>Batch attainment (weighted): <b style={{ color: batchAtt >= target ? "#1F5E36" : "#B42318" }}>{batchAtt}%</b></span>}
       </div>
-      {plo.courses.length === 0 ? <p style={{ fontSize: 13, color: "var(--slate)", margin: 0 }}>No course is mapped to this PLO on the PLO–Course Matrix yet.</p> : (
+      {plo.courses.length === 0 ? <p style={{ fontSize: 13, color: "var(--slate)", margin: 0 }}>No course is mapped to this GA on the GA–Course Matrix yet.</p> : (
         <>
           <div style={{ overflowX: "auto" }}>
             <table style={{ fontSize: 12.5 }}>

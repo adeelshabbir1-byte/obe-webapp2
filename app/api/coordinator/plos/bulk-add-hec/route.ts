@@ -49,6 +49,6 @@ export async function POST(req: NextRequest) {
       : [];
     return NextResponse.json({ created: toCreate.length, skipped: dedupedHecPlos.length - toCreate.length, plos: createdPlos });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "something went wrong adding HEC PLOs" }, { status: 500 });
+    return NextResponse.json({ error: err?.message || "something went wrong adding HEC GAs" }, { status: 500 });
   }
 }

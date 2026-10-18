@@ -194,8 +194,8 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
   const peosOf = (p: string): string[] => { try { return JSON.parse(profileOf(p)?.peos || "[]"); } catch { return []; } };
   f2.push(table("Table 2.3a", "Program educational objectives (PEOs)", ["Program", "PEO", "Statement"], programNames.flatMap((p) => peosOf(p).map((x, i) => [p, `PEO${i + 1}`, x])), "/coordinator/program-profile"));
   const plosByProgram = await Promise.all(programNames.map(async (p) => { const b = newestBatch(p); return { p, plos: b ? await prisma.pLO.findMany({ where: { batchId: b.id }, select: { number: true, title: true, description: true }, orderBy: { number: "asc" } }) : [] }; }));
-  f2.push(table("Table 2.3b", "Program learning outcomes (PLOs)", ["Program", "PLO", "Statement"], plosByProgram.flatMap(({ p, plos }) => plos.map((x) => [p, `PLO${x.number}`, x.description || x.title])), "/coordinator/plos"));
-  f2.push(table("Table 2.4", "Mapping of PEOs and PLOs", ["Program", "PEO", "PLOs serving it"],
+  f2.push(table("Table 2.3b", "Program learning outcomes (GAs)", ["Program", "PLO", "Statement"], plosByProgram.flatMap(({ p, plos }) => plos.map((x) => [p, `PLO${x.number}`, x.description || x.title])), "/coordinator/plos"));
+  f2.push(table("Table 2.4", "Mapping of PEOs and GAs", ["Program", "PEO", "GAs serving it"],
     programNames.flatMap((p) => { let m: Record<string, number[]> = {}; try { m = JSON.parse(profileOf(p)?.peoPloJson || "{}"); } catch { m = {}; } return peosOf(p).map((_, i) => (m[`PEO${i + 1}`]?.length ? [p, `PEO${i + 1}`, m[`PEO${i + 1}`].map((x) => `PLO${x}`).join(", ")] : null)).filter(nonNull); }), "/coordinator/program-profile"));
   f2.push(narrative("2.3d", "How the PEOs of each program align with the business school's vision and mission"));
   const latestPerCode = new Map<string, (typeof courses)[number]>();
@@ -224,7 +224,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
     outlineRows.push([`${c.title} (${c.code})`, c.courseType || "", clos, sessions.length, sessions.filter((x) => x.teachingMethod).length]);
   }
   f2.push(table("Q 2.6", "Course outlines of one support, one core and one elective course (Appendix 2C)", ["Course", "Category", "CLOs", "Sessions planned", "Sessions with a teaching method"], outlineRows, "/coordinator/courses",
-    "Each course outline (CLOs, CLO-PLO map, session plan with method, assessment and materials) prints from the course's Course Description report."));
+    "Each course outline (CLOs, CLO-GA map, session plan with method, assessment and materials) prints from the course's Course Description report."));
   f2.push(appendix(["2A", "2B"], "Academic Council approval and HEC NOC"));
   f2.push(appendix(["2D"], "Policy for continuously updating the curriculum"));
   f2.push(table("Table 2.10", "Curriculum review record", ["Program", "Review", "Number", "Date", "Participants", "Details", "Approved by"],

@@ -27,7 +27,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const badTotals = Object.entries(byPlo).filter(([, total]) => total !== 100);
   if (badTotals.length > 0) {
     return NextResponse.json({
-      error: `CLO contribution percentages must sum to 100% per PLO — ${badTotals.length} PLO(s) don't add up correctly yet`,
+      error: `CLO contribution percentages must sum to 100% per GA — ${badTotals.length} GA(s) don't add up correctly yet`,
     }, { status: 400 });
   }
 

@@ -46,7 +46,7 @@ export async function decide(r: PloRequestRow, approve: boolean, note: string, a
     prisma.course.findUnique({ where: { id: r.courseId }, select: { code: true, title: true, subjectExpertId: true, instructorId: true } }),
     prisma.pLO.findUnique({ where: { id: r.ploId }, select: { number: true } }),
   ]);
-  if (!course || !plo) throw new Error("The course or PLO no longer exists.");
+  if (!course || !plo) throw new Error("The course or GA no longer exists.");
   let unmapped = 0;
   if (approve) {
     if (r.action === "ADD") {
@@ -60,12 +60,12 @@ export async function decide(r: PloRequestRow, approve: boolean, note: string, a
   }
   await pdb.ploChangeRequest.update({ where: { id: r.id }, data: { status: approve ? "APPROVED" : "REJECTED", decidedById: actor.id, decidedAt: new Date(), decisionNote: note || null, closUnmapped: unmapped } });
   await writeAuditLog({ actorUserId: actor.id, action: approve ? "PLO_REQUEST_APPROVED" : "PLO_REQUEST_REJECTED", entityType: "Course", entityId: r.courseId, metadata: { requestId: r.id, action: r.action, ploNumber: plo.number } });
-  const what = `${r.action === "ADD" ? "add" : "remove"} PLO-${plo.number} ${r.action === "ADD" ? "to" : "from"} ${course.code}`;
+  const what = `${r.action === "ADD" ? "add" : "remove"} GA-${plo.number} ${r.action === "ADD" ? "to" : "from"} ${course.code}`;
   const href = r.requestedAs === "INSTRUCTOR" ? `/instructor/courses/${r.courseId}/clos` : `/subjectexpert/courses/${r.courseId}/clos`;
   const others = [course.subjectExpertId, course.instructorId].filter((x) => x && x !== r.requestedById);
-  const body = `${actor.name}${note ? `: ${note}` : ""}.${unmapped ? ` ${unmapped} CLO(s) that pointed to PLO-${plo.number} now need a PLO again.` : ""}`;
+  const body = `${actor.name}${note ? `: ${note}` : ""}.${unmapped ? ` ${unmapped} CLO(s) that pointed to GA-${plo.number} now need a GA again.` : ""}`;
   await notifyUsers([r.requestedById], { kind: "TEMPLATE", title: `OMC ${approve ? "approved" : "declined"} your request to ${what}`, body, href });
-  if (approve) await notifyUsers(others, { kind: "TEMPLATE", title: `PLO-${plo.number} was ${r.action === "ADD" ? "added to" : "removed from"} ${course.code}`, body, href: "/dashboard" });
+  if (approve) await notifyUsers(others, { kind: "TEMPLATE", title: `GA-${plo.number} was ${r.action === "ADD" ? "added to" : "removed from"} ${course.code}`, body, href: "/dashboard" });
   return unmapped;
 }
 

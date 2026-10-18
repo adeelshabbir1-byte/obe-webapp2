@@ -37,11 +37,11 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <ReportPrintHeader title="Semester-Wise PLO Progression & Balance" />
+        <ReportPrintHeader title="Semester-Wise GA Progression & Balance" />
         <a href="/api/omc/reports/progression/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        How outcomes scale across the 8 semesters — foundational PLOs should show up heavily in semesters 1–4, advanced ones in 5–8.
+        How outcomes scale across the 8 semesters — foundational GAs should show up heavily in semesters 1–4, advanced ones in 5–8.
       </p>
       <ReportsSubNav active="progression" />
       <div className="card no-print">
@@ -57,19 +57,19 @@ export default async function ProgressionReportPage({ searchParams }: { searchPa
           <div className="card" key={prog.coordinatorName} style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 4 }}>{prog.coordinatorName}'s Program</h3>
             {prog.plos.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No PLOs defined yet.</p>
+              <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No GAs defined yet.</p>
             ) : (
               <SortableTable paginate={false} searchable={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
-                    <th>PLO</th>
+                    <th>GA</th>
                     {prog.semesters.map((s) => <th key={s} style={{ textAlign: "center" }}>Sem {s}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {prog.plos.map((p) => (
                     <tr key={p.number}>
-                      <td style={{ whiteSpace: "nowrap", fontWeight: 600, fontSize: 12 }}>PLO-{p.number}<br /><span style={{ fontWeight: 400, color: "var(--slate)", fontSize: 10.5 }}>{p.title}</span></td>
+                      <td style={{ whiteSpace: "nowrap", fontWeight: 600, fontSize: 12 }}>GA-{p.number}<br /><span style={{ fontWeight: 400, color: "var(--slate)", fontSize: 10.5 }}>{p.title}</span></td>
                       {prog.semesters.map((s) => {
                         const val = prog.matrix[p.number]?.[s] || 0;
                         return (

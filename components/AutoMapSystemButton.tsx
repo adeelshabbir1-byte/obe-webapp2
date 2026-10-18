@@ -31,7 +31,7 @@ export default function AutoMapSystemButton({ batchId }: { batchId: string }) {
     <div className="card" style={{ background: "#FBEED2" }}>
       <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map from System Suggestions (Unverified)</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-        Bulk-creates course-PLO mappings from CLOs whose PLO was <em>inferred</em> by keyword matching, not
+        Bulk-creates course-GA mappings from CLOs whose GA was <em>inferred</em> by keyword matching, not
         tagged by HEC's own document — use "Auto-Map from HEC" first; use this only for courses that have
         no HEC tag at all, and review what it creates. Only fills in gaps, never overwrites or removes
         anything already set.
@@ -42,7 +42,7 @@ export default function AutoMapSystemButton({ batchId }: { batchId: string }) {
       </button>
       {result && (
         <p style={{ fontSize: 12, marginTop: 10, color: "#96650F" }}>
-          Created {result.created} new mapping(s) — review these. {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching PLO number in this batch), {result.skippedNoSuggestion} course(s) had no system suggestion on record.
+          Created {result.created} new mapping(s) — review these. {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching GA number in this batch), {result.skippedNoSuggestion} course(s) had no system suggestion on record.
         </p>
       )}
     </div>

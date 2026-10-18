@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
     ws.eachRow((row) => { const cells: string[] = []; row.eachCell({ includeEmpty: true }, (c, i) => { cells[i - 1] = (c.text || "").trim(); }); grid.push(cells); });
   } catch { return NextResponse.json({ error: "could not read that file — use the Excel file from Export" }, { status: 400 }); }
 
-  const headerIdx = grid.findIndex((r) => r.some((c) => /^PLO\D*\d+$/i.test(c || "")));
-  if (headerIdx < 0) return NextResponse.json({ error: "no PLO-1, PLO-2 … column headings found" }, { status: 400 });
+  const headerIdx = grid.findIndex((r) => r.some((c) => /^(?:PLO|GA)\D*\d+$/i.test(c || "")));
+  if (headerIdx < 0) return NextResponse.json({ error: "no GA-1, GA-2 … column headings found" }, { status: 400 });
   const header = grid[headerIdx];
   const ploCols: { col: number; number: number }[] = [];
-  header.forEach((h, i) => { const m = /^PLO\D*(\d+)$/i.exec(h || ""); if (m) ploCols.push({ col: i, number: parseInt(m[1], 10) }); });
+  header.forEach((h, i) => { const m = /^(?:PLO|GA)\D*(\d+)$/i.exec(h || ""); if (m) ploCols.push({ col: i, number: parseInt(m[1], 10) }); });
   const codeCol = Math.max(0, header.findIndex((h) => /code/i.test(h || "")));
 
   const [plos, courses] = await Promise.all([

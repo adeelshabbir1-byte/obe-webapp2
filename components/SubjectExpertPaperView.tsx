@@ -40,7 +40,7 @@ export default async function SubjectExpertPaperView({ courseId }: { courseId: s
                         <tr key={i.id}>
                           <td>{i.questionNo}</td>
                           <td>{i.topicText || row?.topic || "—"}{row ? <span className="small-note"> · lecture {row.lectureNumber}</span> : null}</td>
-                          <td>{clo ? `${clo.code}${clo.mappedPlo ? ` (PLO-${clo.mappedPlo.number})` : ""}` : "—"}</td>
+                          <td>{clo ? `${clo.code}${clo.mappedPlo ? ` (GA-${clo.mappedPlo.number})` : ""}` : "—"}</td>
                           <td>{i.cognitiveLevel || "—"}</td>
                           <td>{i.marks ?? "—"}</td>
                         </tr>

@@ -37,7 +37,7 @@ export default function BulkCloImport({ batches }: { batches: Batch[] }) {
         {b && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--slate)" }}>{b.courses} course(s), {b.withClos} with CLOs already</span>}
 
         <h3>2. Download the template</h3>
-        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -6 }}>One Excel file for the whole batch: every course with its current CLOs, a sheet of the batch&apos;s PLOs and short instructions. Fill in or correct the CLOs and their PLO numbers.</p>
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -6 }}>One Excel file for the whole batch: every course with its current CLOs, a sheet of the batch&apos;s GAs and short instructions. Fill in or correct the CLOs and their GA numbers.</p>
         <a className="btn" href={`/api/clo-bulk/export?batchId=${batchId}`}>Download Excel template</a>
 
         <h3>3. Upload it back</h3>
@@ -55,7 +55,7 @@ export default function BulkCloImport({ batches }: { batches: Batch[] }) {
           <h3 style={{ marginTop: 0, color: "var(--sage)" }}>Imported</h3>
           <p style={{ fontSize: 13.5 }}>
             <b>{result.coursesDone}</b> course(s) updated: <b>{result.added}</b> CLO(s) added, <b>{result.updated}</b> updated{result.removed ? <>, <b>{result.removed}</b> removed</> : null}.
-            {" "}<b>{result.mappingsAdded}</b> new course-to-PLO link(s) added to the PLO–Course matrix.
+            {" "}<b>{result.mappingsAdded}</b> new course-to-GA link(s) added to the GA–Course matrix.
           </p>
           {result.skipped.length > 0 && <><b style={{ fontSize: 13 }}>Skipped</b><ul style={{ fontSize: 12.5, marginTop: 4 }}>{result.skipped.map((x) => <li key={x}>{x}</li>)}</ul></>}
           {result.errors.length > 0 && <><b style={{ fontSize: 13, color: "#b3261e" }}>Rows not imported</b><ul style={{ fontSize: 12.5, marginTop: 4, color: "#b3261e" }}>{result.errors.map((x) => <li key={x}>{x}</li>)}</ul></>}

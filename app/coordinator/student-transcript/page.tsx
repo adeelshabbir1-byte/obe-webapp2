@@ -155,9 +155,9 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
             </table>
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO-Wise Attainment — Whole Batch</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>GA-Wise Attainment — Whole Batch</h3>
             <table>
-              <thead><tr><th>PLO</th><th>Attempted</th><th>Passed</th><th>Pass Rate</th></tr></thead>
+              <thead><tr><th>GA</th><th>Attempted</th><th>Passed</th><th>Pass Rate</th></tr></thead>
               <tbody>
                 {batchSummary.ploAgg.size === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No historical data yet for this batch.</td></tr>}
                 {Array.from(batchSummary.ploAgg.entries()).map(([label, v]) => (

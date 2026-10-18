@@ -252,12 +252,12 @@ export async function analyzeTeaching(courseId: string): Promise<TeachingAnalysi
     const a1 = se.summary.alignment, a2 = ins.summary.alignment;
     if (a2 !== null) findings.push({ level: a2 >= 75 ? "good" : a2 >= 60 ? "warn" : "bad", text: `Teaching–assessment balance: Instructor ${a2}/100${a1 !== null ? `, SE plan ${a1}/100` : ""}. 100 means every topic's share of marks equals its share of lectures.` });
     const ploGap = ploRows.filter((p) => p.seMarks > 0 && p.insMarks === 0);
-    if (ploGap.length) findings.push({ level: "bad", text: `PLOs the SE planned to assess that the Instructor's assessments don't reach: ${ploGap.map((p) => p.code).join(", ")}.` });
+    if (ploGap.length) findings.push({ level: "bad", text: `GAs the SE planned to assess that the Instructor's assessments don't reach: ${ploGap.map((p) => p.code).join(", ")}.` });
     const ploDrift = ploRows.filter((p) => p.seMarks > 0 && p.insMarks > 0 && Math.abs(p.insMarks - p.seMarks) >= 10);
-    if (ploDrift.length) findings.push({ level: "warn", text: `PLO weight changed by 10+ marks: ${ploDrift.map((p) => `${p.code} ${round1(p.seMarks)}% → ${round1(p.insMarks)}%`).join("; ")}.` });
+    if (ploDrift.length) findings.push({ level: "warn", text: `GA weight changed by 10+ marks: ${ploDrift.map((p) => `${p.code} ${round1(p.seMarks)}% → ${round1(p.insMarks)}%`).join("; ")}.` });
     const cloGap = cloRows.filter((c) => c.seMarks > 0 && c.insMarks === 0);
     if (cloGap.length) findings.push({ level: "warn", text: `CLOs not assessed by the Instructor: ${cloGap.map((c) => c.code).join(", ")}.` });
-    if (ins.summary.unlinkedMarks > 0) findings.push({ level: "warn", text: `${round1(ins.summary.unlinkedMarks)}% of the Instructor's marks are not linked to any lecture, so they can't be traced to a topic, CLO or PLO.` });
+    if (ins.summary.unlinkedMarks > 0) findings.push({ level: "warn", text: `${round1(ins.summary.unlinkedMarks)}% of the Instructor's marks are not linked to any lecture, so they can't be traced to a topic, CLO or GA.` });
   }
   const seUnder = topicRows.filter((t) => t.seFlags.length);
   if (seUnder.length) findings.push({ level: "info", text: `In the SE's own plan, ${seUnder.length} topic${seUnder.length === 1 ? "'s" : "s'"} lecture time and marks don't agree: ${seUnder.map((t) => t.topic).join("; ")}.` });

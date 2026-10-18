@@ -22,10 +22,10 @@ export async function GET() {
   }
 
   return buildExcelResponse("plo-coverage-summary.xlsx", [{
-    name: "PLO Coverage Summary",
+    name: "GA Coverage Summary",
     columns: [
       { header: "Program", key: "program", width: 24 },
-      { header: "PLO", key: "plo", width: 10 },
+      { header: "GA", key: "plo", width: 10 },
       { header: "Title", key: "title", width: 40 },
       { header: "Status", key: "status", width: 16 },
       { header: "Courses Mapped", key: "coursesMapped", width: 16 },

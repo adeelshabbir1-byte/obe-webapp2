@@ -42,10 +42,10 @@ export default function PassingCriteriaForm() {
 
   return (
     <div className="card">
-      <h3 style={{ fontSize: 14, marginBottom: 8 }}>CLO / PLO Passing Criteria</h3>
+      <h3 style={{ fontSize: 14, marginBottom: 8 }}>CLO / GA Passing Criteria</h3>
       <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 14 }}>
-        A student needs at least this % of a CLO's (or PLO's) maximum weighted marks to count as having attained
-        it — used everywhere pass/fail is shown: Result Mate, CLO/PLO Pass Rates, Program Attainment Analytics,
+        A student needs at least this % of a CLO's (or GA's) maximum weighted marks to count as having attained
+        it — used everywhere pass/fail is shown: Result Mate, CLO/GA Pass Rates, Program Attainment Analytics,
         and student transcripts. Versioned by semester, the same way the Grading Scale is: a new version applies
         from its effective term onward, without changing what already applied to earlier terms.
       </p>
@@ -58,7 +58,7 @@ export default function PassingCriteriaForm() {
           {versions.map((v) => (
             <div key={v.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
               <span>Effective from {v.effectiveFromTerm} {v.effectiveFromYear}</span>
-              <span>CLO {v.cloPassingPct}% / PLO {v.ploPassingPct}% / Deficiency pass {v.deficiencyPassingPct ?? 40}%</span>
+              <span>CLO {v.cloPassingPct}% / GA {v.ploPassingPct}% / Deficiency pass {v.deficiencyPassingPct ?? 40}%</span>
             </div>
           ))}
         </div>
@@ -71,7 +71,7 @@ export default function PassingCriteriaForm() {
           <input type="number" min={1} max={100} value={cloPct} onChange={(e) => setCloPct(e.target.value)} style={{ width: 90 }} />
         </div>
         <div className="field" style={{ margin: 0 }}>
-          <label>PLO Passing %</label>
+          <label>GA Passing %</label>
           <input type="number" min={1} max={100} value={ploPct} onChange={(e) => setPloPct(e.target.value)} style={{ width: 90 }} />
         </div>
         <div className="field" style={{ margin: 0 }}>

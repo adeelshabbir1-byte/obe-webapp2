@@ -34,7 +34,7 @@ export async function buildBulkCloWorkbook(batchId: string): Promise<Buffer> {
   const ws = wb.addWorksheet("CLOs");
   ws.columns = [
     { header: "Course code", key: "code", width: 13 }, { header: "Course title", key: "title", width: 34 }, { header: "CLO", key: "clo", width: 8 },
-    { header: "Statement", key: "st", width: 70 }, { header: "Bloom level", key: "bl", width: 11 }, { header: "PLO number", key: "plo", width: 11 },
+    { header: "Statement", key: "st", width: 70 }, { header: "Bloom level", key: "bl", width: 11 }, { header: "GA number", key: "plo", width: 11 },
     { header: "Contribution %", key: "pct", width: 14 }, { header: "Target %", key: "tg", width: 10 }, { header: "Semester", key: "sem", width: 10 },
   ];
   for (const c of courses) {
@@ -46,8 +46,8 @@ export async function buildBulkCloWorkbook(batchId: string): Promise<Buffer> {
   ws.views = [{ state: "frozen", ySplit: 1 }];
   ws.getColumn("st").alignment = { wrapText: true, vertical: "top" };
 
-  const ps = wb.addWorksheet("PLOs");
-  ps.columns = [{ header: "PLO number", key: "n", width: 11 }, { header: "Title", key: "t", width: 36 }, { header: "Description", key: "d", width: 80 }];
+  const ps = wb.addWorksheet("GAs");
+  ps.columns = [{ header: "GA number", key: "n", width: 11 }, { header: "Title", key: "t", width: 36 }, { header: "Description", key: "d", width: 80 }];
   for (const p of plos) ps.addRow({ n: p.number, t: p.title, d: p.description });
   ps.getRow(1).font = { bold: true };
 
@@ -56,10 +56,10 @@ export async function buildBulkCloWorkbook(batchId: string): Promise<Buffer> {
   [
     "One row per CLO. Course code must match a course of this batch exactly as it appears in the app (e.g. CS101).",
     "CLO: leave blank for a new CLO (it gets the next number), or keep CLO-1, CLO-2 ... to update that CLO.",
-    "Bloom level: C1 to C6.   PLO number: a number from the PLOs sheet (1, 2, 3 ...). Leave blank if the CLO maps to no PLO.",
-    "Contribution %: share of that PLO this CLO carries inside the course. Leave blank and CLOs on the same PLO share it equally (3 CLOs -> 34/33/33).",
+    "Bloom level: C1 to C6.   GA number: a number from the GAs sheet (1, 2, 3 ...). Leave blank if the CLO maps to no GA.",
+    "Contribution %: share of that GA this CLO carries inside the course. Leave blank and CLOs on the same GA share it equally (3 CLOs -> 34/33/33).",
     "Target %: expected share of students attaining the CLO (default 60).",
-    "The course-to-PLO mapping (PLO–Course matrix) is filled in automatically from the PLOs of each course's CLOs.",
+    "The course-to-GA mapping (GA–Course matrix) is filled in automatically from the GAs of each course's CLOs.",
     "Courses whose template the OMC has approved (locked) and courses that copy their content from a base course are skipped; the result lists them.",
   ].forEach((t) => help.addRow([t]));
   return Buffer.from(await wb.xlsx.writeBuffer());
@@ -84,7 +84,7 @@ export async function importBulkClos(opts: { batchId: string; file: File; userId
   const hi = grid.findIndex((r) => r.some((c) => /^course code$/.test(norm(c))) && r.some((c) => /^statement$/.test(norm(c))));
   if (hi < 0) throw new Error("no heading row with \"Course code\" and \"Statement\" found - download the template and fill that in");
   const col = (re: RegExp) => grid[hi].findIndex((c) => re.test(norm(c)));
-  const C = { code: col(/^course code$/), clo: col(/^clo$/), st: col(/^statement$/), bl: col(/^bloom/), plo: col(/^plo/), pct: col(/^contribution/), tg: col(/^target/) };
+  const C = { code: col(/^course code$/), clo: col(/^clo$/), st: col(/^statement$/), bl: col(/^bloom/), plo: col(/^(plo|ga)\b/), pct: col(/^contribution/), tg: col(/^target/) };
   const at = (r: string[], i: number) => (i >= 0 ? (r[i] || "").trim() : "");
   const rows: Row[] = grid.slice(hi + 1).map((r, i) => ({ code: at(r, C.code), clo: at(r, C.clo), statement: at(r, C.st), bloom: at(r, C.bl).toUpperCase().replace(/\s+/g, ""), plo: at(r, C.plo), pct: at(r, C.pct), target: at(r, C.tg), rowNo: hi + i + 2 }))
     .filter((r) => r.code && r.statement);
@@ -105,7 +105,7 @@ export async function importBulkClos(opts: { batchId: string; file: File; userId
     if (!BLOOM.includes(r.bloom)) { errors.push(`Row ${r.rowNo} (${r.code}): Bloom level must be C1 to C6`); continue; }
     if (r.plo) {
       const n = parseInt(r.plo.replace(/\D+/g, ""), 10);
-      if (!ploByNumber.has(n)) { errors.push(`Row ${r.rowNo} (${r.code}): PLO ${r.plo} does not exist for this batch`); continue; }
+      if (!ploByNumber.has(n)) { errors.push(`Row ${r.rowNo} (${r.code}): GA ${r.plo} does not exist for this batch`); continue; }
     }
     const k = normCode(r.code);
     byCourse.set(k, [...(byCourse.get(k) || []), r]);

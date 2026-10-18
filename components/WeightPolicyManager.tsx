@@ -29,9 +29,9 @@ const COUNT_BG = "#FBEED2"; // light warm gold — every # Min (minimum count) c
 const PLO_BG = "#EFEAF8";   // light violet — assessment-coverage rules
 const COVERAGE: { key: "ploMinPct" | "ploMinItems" | "cloSpreadMax" | "cloMinTopics" | "ploMinTopics"; label: string; tip: string; dflt: number }[] = [
   { key: "cloMinTopics", label: "CLO min topics", tip: "Every CLO needs at least this many lecture topics in the plan (exam and review slots don't count; 0 = no rule).", dflt: 3 },
-  { key: "ploMinTopics", label: "PLO min topics", tip: "Every PLO a course serves needs at least this many lecture topics in the plan, through its CLOs (0 = no rule).", dflt: 0 },
-  { key: "ploMinPct", label: "PLO min % marks", tip: "Every PLO a course serves must carry at least this % of the course marks (0 = no rule).", dflt: 0 },
-  { key: "ploMinItems", label: "PLO min # items", tip: "Every PLO a course serves must be tested by at least this many assessment items - quizzes, assignments, midterm, final (0 = no rule).", dflt: 0 },
+  { key: "ploMinTopics", label: "GA min topics", tip: "Every GA a course serves needs at least this many lecture topics in the plan, through its CLOs (0 = no rule).", dflt: 0 },
+  { key: "ploMinPct", label: "GA min % marks", tip: "Every GA a course serves must carry at least this % of the course marks (0 = no rule).", dflt: 0 },
+  { key: "ploMinItems", label: "GA min # items", tip: "Every GA a course serves must be tested by at least this many assessment items - quizzes, assignments, midterm, final (0 = no rule).", dflt: 0 },
   { key: "cloSpreadMax", label: "CLO max spread %", tip: "Largest allowed gap between the most and the least assessed CLO, in % of marks.", dflt: 7 },
 ];
 
@@ -81,7 +81,7 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
               <th key={c.key} colSpan={3} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: c.color, color: "#fff" }}>{c.label}</th>
             ))}
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "#96650F", color: "#fff", fontSize: 11 }} title="Share of the Final paper that should come from topics taught up to the midterm. The rest comes from after it. Leave blank for no guidance.">Final: % before midterm</th>
-            <th colSpan={COVERAGE.length} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: "#5B4A8C", color: "#fff" }} title="How well each PLO must be assessed">Assessment coverage (PLO is the goal)</th>
+            <th colSpan={COVERAGE.length} style={{ border: "1px solid var(--line)", padding: "6px 8px", textAlign: "center", background: "#5B4A8C", color: "#fff" }} title="How well each GA must be assessed">Assessment coverage (GA is the goal)</th>
             <th rowSpan={2} style={{ border: "1px solid var(--line)", padding: "6px 8px", verticalAlign: "bottom", background: "var(--surface-1, #F3E4E7)" }}></th>
           </tr>
           <tr>
@@ -134,8 +134,8 @@ export default function WeightPolicyManager({ initialPolicies }: { initialPolici
       </SortableTable>
       <p style={{ fontSize: 11, color: "var(--slate)", marginTop: 10 }}>
         "# Min" is the minimum number of that assessment type to be conducted (e.g. 3 quizzes, 2 assignments). "Final: % before midterm" is your suggested split of the Final paper — e.g. 30 means about 30% of its marks from topics taught up to the midterm and 70% from after it. Subject Experts see it on the Paper Distribution page and get a warning if their Final is far from it.
-        <br /><b>Minimum topics:</b> "CLO min topics" and "PLO min topics" set how many lecture topics each CLO and each PLO must get in the plan. Once a course meets them, lectures left without a CLO (or not tested by any assessment) are allowed.
-        <br /><b>Assessment coverage:</b> "PLO min % marks" and "PLO min # items" set how strongly every PLO a course serves must be assessed (for example 10% of the marks through at least 3 items); a course cannot be submitted until each of its PLOs meets them, and the topics of a PLO that falls short are highlighted on the Assessments page. "CLO max spread %" is the largest gap allowed between the most and the least assessed CLO.
+        <br /><b>Minimum topics:</b> "CLO min topics" and "GA min topics" set how many lecture topics each CLO and each GA must get in the plan. Once a course meets them, lectures left without a CLO (or not tested by any assessment) are allowed.
+        <br /><b>Assessment coverage:</b> "GA min % marks" and "GA min # items" set how strongly every GA a course serves must be assessed (for example 10% of the marks through at least 3 items); a course cannot be submitted until each of its GAs meets them, and the topics of a GA that falls short are highlighted on the Assessments page. "CLO max spread %" is the largest gap allowed between the most and the least assessed CLO.
         <br />Course weights the Subject Expert has not confirmed yet always start inside these limits; saving a row moves any such course inside the new limits.
       </p>
     </div>

@@ -73,7 +73,7 @@ export default function ImportCourseContentManager() {
       {sourceId && targetId && !target?.hasGradedMarks && (
         <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, marginBottom: 16 }}>
           <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
-          I understand this replaces the target course's existing CLOs, PLO mappings, weekly lecture plan, and
+          I understand this replaces the target course's existing CLOs, GA mappings, weekly lecture plan, and
           assessment instruments — this cannot be undone.
         </label>
       )}

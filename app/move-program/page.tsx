@@ -21,7 +21,7 @@ export default async function MoveProgramPage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Move Program Data</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Batches belong to whoever created them. Batches made before the Program Leads were appointed are still with the earlier account, so the leads see nothing.
-        Pick the Program Lead for each program and press Move: the batches, their courses, students, program learning outcomes and results go with it.
+        Pick the Program Lead for each program and press Move: the batches, their courses, students, graduate attributes and results go with it.
         The lead also gets a copy of the current term, grading scale and holidays if he has none yet. Teachers are moved separately under Teacher Program Moves.
       </p>
       <MoveProgramManager data={data} />

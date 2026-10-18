@@ -15,7 +15,7 @@ export default async function ImportContentPage() {
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Import Course Content</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Copy CLOs, PLO mappings, the weekly lecture plan, and assessment instruments from one course into
+        Copy CLOs, GA mappings, the weekly lecture plan, and assessment instruments from one course into
         an equivalent one — this does NOT combine them for teaching (see Course Equivalence for that);
         it's a one-time content copy. The target course's own existing content is replaced, not merged.
       </p>

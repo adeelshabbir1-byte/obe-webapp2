@@ -47,7 +47,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         <div className="card">
           <div className="lp-toolbar" style={{ marginBottom: 10 }}>
             <h3>CLO coverage</h3>
-            <span className="lp-meta">{minClo > 0 ? `OMC minimum: ${minClo} lecture topic${minClo === 1 ? "" : "s"} per CLO` : "No OMC minimum per CLO"}{coverage.rules.ploMinTopics > 0 ? ` · ${coverage.rules.ploMinTopics} per PLO` : ""}</span>
+            <span className="lp-meta">{minClo > 0 ? `OMC minimum: ${minClo} lecture topic${minClo === 1 ? "" : "s"} per CLO` : "No OMC minimum per CLO"}{coverage.rules.ploMinTopics > 0 ? ` · ${coverage.rules.ploMinTopics} per GA` : ""}</span>
           </div>
           <div className="lp-chips">
             {course.clos.map((c) => {

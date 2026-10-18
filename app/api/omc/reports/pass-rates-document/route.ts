@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const doc = await generatePassRateReport(courseId, user);
-    return buildDocxResponse(`${course.code}-CLO-PLO-Pass-Rate-Report.docx`, doc);
+    return buildDocxResponse(`${course.code}-CLO-GA-Pass-Rate-Report.docx`, doc);
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "something went wrong generating the document" }, { status: 500 });
   }

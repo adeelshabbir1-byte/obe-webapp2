@@ -83,7 +83,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       const copy = data.autoCopy;
       setCopyResultMsg(
         copy?.copiedFrom
-          ? `Copied ${copy.coursesCopied} course(s) and ${copy.plosCopied} PLO(s) forward from ${copy.copiedFrom}.`
+          ? `Copied ${copy.coursesCopied} course(s) and ${copy.plosCopied} GA(s) forward from ${copy.copiedFrom}.`
           : "No earlier batch of this program to copy from — starting empty."
       );
       setBatches((prev) => [...prev, { ...data.batch, courseCount: copy?.coursesCopied || 0 }]);
@@ -105,7 +105,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
   }
 
   async function removeAllBatches() {
-    const typed = prompt(`This permanently deletes EVERY batch you have (${batches.length} total) — every course, student, PLO, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
+    const typed = prompt(`This permanently deletes EVERY batch you have (${batches.length} total) — every course, student, GA, and all their data across all of them. This cannot be undone.\n\nType exactly: DELETE ALL BATCHES`);
     if (typed !== "DELETE ALL BATCHES") { if (typed !== null) alert("Confirmation phrase didn't match — nothing was deleted."); return; }
 
     // Delete one batch at a time from here, rather than one big server-side
@@ -134,7 +134,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
   }
 
   async function removeBatch(batchId: string, batchName: string) {
-    const typed = prompt(`This permanently deletes the "${batchName}" batch — every course, student, PLO, and all their data. This cannot be undone.\n\nType the batch name exactly to confirm: ${batchName}`);
+    const typed = prompt(`This permanently deletes the "${batchName}" batch — every course, student, GA, and all their data. This cannot be undone.\n\nType the batch name exactly to confirm: ${batchName}`);
     if (typed !== batchName) { if (typed !== null) alert("Name didn't match — nothing was deleted."); return; }
     setBusyId(batchId); setError("");
     try {

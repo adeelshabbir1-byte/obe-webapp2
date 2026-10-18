@@ -38,11 +38,11 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <ReportPrintHeader title="PLO Depth & Contribution Heatmap" />
+        <ReportPrintHeader title="GA Depth & Contribution Heatmap" />
         <a href="/api/omc/reports/heatmap/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Mapping distribution by course type — darker cells mean more courses of that type contribute to that PLO. Checks whether core courses carry the primary weight of programmatic outcomes.
+        Mapping distribution by course type — darker cells mean more courses of that type contribute to that GA. Checks whether core courses carry the primary weight of programmatic outcomes.
       </p>
       <ReportsSubNav active="heatmap" />
       <div className="card no-print">
@@ -63,14 +63,14 @@ export default async function HeatmapReportPage({ searchParams }: { searchParams
               <SortableTable paginate={false} searchable={false} style={{ marginTop: 10 }}>
                 <thead>
                   <tr>
-                    <th>PLO</th>
+                    <th>GA</th>
                     {prog.courseTypes.map((t) => <th key={t} style={{ textAlign: "center" }}>{t}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {prog.plos.map((p) => (
                     <tr key={p.number}>
-                      <td style={{ whiteSpace: "nowrap", fontWeight: 600, fontSize: 12 }}>PLO-{p.number}<br /><span style={{ fontWeight: 400, color: "var(--slate)", fontSize: 10.5 }}>{p.title}</span></td>
+                      <td style={{ whiteSpace: "nowrap", fontWeight: 600, fontSize: 12 }}>GA-{p.number}<br /><span style={{ fontWeight: 400, color: "var(--slate)", fontSize: 10.5 }}>{p.title}</span></td>
                       {prog.courseTypes.map((t) => {
                         const val = prog.matrix[p.number]?.[t] || 0;
                         return (

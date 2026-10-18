@@ -12,7 +12,7 @@ export default function LoginPage({ searchParams }: { searchParams: { sso?: stri
   return (
     <AuthLayout
       heroTitle={<>Outcome-based education, <em>measured end to end.</em></>}
-      heroText="Curricula, CLO–PLO mapping, assessments, attainment and accreditation evidence — one governed workspace for your whole institution."
+      heroText="Curricula, CLO–GA mapping, assessments, attainment and accreditation evidence — one governed workspace for your whole institution."
     >
       <div className="auth-card">
         <img className="auth-logo" src={BRAND.logo.src} alt="OBEHUB — Outcome · Learn · Assess · Excel" width={BRAND.logo.width} height={BRAND.logo.height} />

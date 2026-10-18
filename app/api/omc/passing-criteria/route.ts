@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
   const effectiveFromTerm = body.effectiveFromTerm === "Spring" ? "Spring" : "Fall";
   const effectiveFromYear = parseInt(body.effectiveFromYear, 10);
   if (isNaN(cloPassingPct) || cloPassingPct < 1 || cloPassingPct > 100) return NextResponse.json({ error: "CLO passing % must be between 1 and 100" }, { status: 400 });
-  if (isNaN(ploPassingPct) || ploPassingPct < 1 || ploPassingPct > 100) return NextResponse.json({ error: "PLO passing % must be between 1 and 100" }, { status: 400 });
+  if (isNaN(ploPassingPct) || ploPassingPct < 1 || ploPassingPct > 100) return NextResponse.json({ error: "GA passing % must be between 1 and 100" }, { status: 400 });
   if (isNaN(deficiencyPassingPct) || deficiencyPassingPct < 1 || deficiencyPassingPct > 100) return NextResponse.json({ error: "Deficiency-course pass mark must be between 1 and 100" }, { status: 400 });
   if (isNaN(effectiveFromYear)) return NextResponse.json({ error: "a valid effective-from year is required" }, { status: 400 });
 

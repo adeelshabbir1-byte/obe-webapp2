@@ -37,7 +37,7 @@ export default async function LearnPage({ searchParams }: { searchParams: { q?: 
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Learn OBE</h1>
       <div className="card" style={{ borderLeft: "4px solid #1B6CA8" }}>After the lessons, take your role&apos;s exam and earn your badge: <Link href="/learn/certification"><b>OBE Certification →</b></Link></div>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Short lessons on Outcome-Based Education, a guide to every PLO, and practice questions built from the HEC curriculum of the courses you set or teach.</p>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>Short lessons on Outcome-Based Education, a guide to every GA, and practice questions built from the HEC curriculum of the courses you set or teach.</p>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>OBE Basics {done === LESSONS.length && <span className="badge badge-ok" style={{ marginLeft: 6 }}>OBE Ready ✓</span>}</h3>
@@ -51,7 +51,7 @@ export default async function LearnPage({ searchParams }: { searchParams: { q?: 
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Practice on your courses</h3>
-        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>Questions made from each course&apos;s HEC CLOs, PLO mapping, Bloom levels and topics — e.g. &quot;which PLO does this CLO build?&quot; — with the reason after each answer.</p>
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>Questions made from each course&apos;s HEC CLOs, GA mapping, Bloom levels and topics — e.g. &quot;which GA does this CLO build?&quot; — with the reason after each answer.</p>
         {mine.length === 0 && <p style={{ fontSize: 13 }}>None of your courses is linked to an HEC course yet — search below.</p>}
         {mine.map((c) => { const p = prog.get(`course:${c.masterCourseId}`); return <div key={c.masterCourseId} style={{ padding: "4px 0" }}><Link href={`/learn/course/${c.masterCourseId}`}>{c.code} — {c.title}</Link>{p && <span style={{ fontSize: 12, color: "var(--slate)", marginLeft: 8 }}>best {p.score}/{p.total}</span>}</div>; })}
         <form style={{ marginTop: 10, display: "flex", gap: 8 }}><input name="q" defaultValue={q} placeholder="Search any HEC course (e.g. Data Structures)" style={{ flex: 1 }} /><button className="btn btn-secondary" type="submit">Search</button></form>
@@ -61,16 +61,16 @@ export default async function LearnPage({ searchParams }: { searchParams: { q?: 
       </div>
 
       <details className="card">
-        <summary style={{ cursor: "pointer" }}><b>PLO guide</b> — what each PLO means and how it differs from its neighbours</summary>
+        <summary style={{ cursor: "pointer" }}><b>GA guide</b> — what each GA means and how it differs from its neighbours</summary>
         {PLO_GUIDE.map((p) => (
           <div key={p.n} style={{ borderTop: "1px solid #F0EAEA", padding: "8px 0", fontSize: 13 }}>
-            <b>PLO-{p.n} {p.title}</b> <span style={{ color: "var(--slate)", fontSize: 12 }}>· typical level {p.bloom} · verbs: {p.verbs.join(", ")}</span>
+            <b>GA-{p.n} {p.title}</b> <span style={{ color: "var(--slate)", fontSize: 12 }}>· typical level {p.bloom} · verbs: {p.verbs.join(", ")}</span>
             <div>{p.meaning}</div>
             <div style={{ color: "#1F5E36" }}>Good CLO: {p.good.join(" / ")}</div>
             <div style={{ color: "#7A520C" }}>{p.notThis}</div>
           </div>
         ))}
-        <p style={{ fontSize: 12, color: "var(--slate)" }}>Your program&apos;s own PLO statements (Program Profile / PLOs page) are what count; this guide explains the standard NCEAC computing PLOs in plain words.</p>
+        <p style={{ fontSize: 12, color: "var(--slate)" }}>Your program&apos;s own GA statements (Program Profile / GAs page) are what count; this guide explains the standard NCEAC computing GAs in plain words.</p>
         <b>Bloom levels:</b> {BLOOM.map((b) => <span key={b.level} style={{ fontSize: 12.5, marginRight: 10 }}>{b.level} {b.name} ({b.verbs.slice(0, 3).join(", ")})</span>)}
       </details>
 

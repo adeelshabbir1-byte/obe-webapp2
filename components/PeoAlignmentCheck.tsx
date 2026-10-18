@@ -30,9 +30,9 @@ export default function PeoAlignmentCheck({ degreeProgram, batchId, peoCount }: 
 
   return (
     <div className="card">
-      <h3 style={{ fontSize: 14, marginBottom: 6 }}>PEO ↔ PLO Alignment Check (AI)</h3>
+      <h3 style={{ fontSize: 14, marginBottom: 6 }}>PEO ↔ GA Alignment Check (AI)</h3>
       <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
-        Checks whether this batch's PLOs, collectively, plausibly support each PEO above — an unsupported PEO
+        Checks whether this batch's GAs, collectively, plausibly support each PEO above — an unsupported PEO
         is a real accreditation gap, since there's no traceable path from what students learn to that
         longer-term objective. A judgment call, not a final verdict — review before relying on it.
       </p>
@@ -55,7 +55,7 @@ export default function PeoAlignmentCheck({ degreeProgram, batchId, peoCount }: 
                   </span>
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--slate)", marginTop: 4 }}>
-                  {r.supportingPloNumbers.length > 0 ? `Supported by: PLO-${r.supportingPloNumbers.join(", PLO-")}` : "No supporting PLOs identified."}
+                  {r.supportingPloNumbers.length > 0 ? `Supported by: GA-${r.supportingPloNumbers.join(", GA-")}` : "No supporting GAs identified."}
                 </div>
                 <div style={{ fontSize: 11.5, marginTop: 3 }}>{r.reasoning}</div>
               </div>

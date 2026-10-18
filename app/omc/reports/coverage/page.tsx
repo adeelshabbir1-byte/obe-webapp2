@@ -39,11 +39,11 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <ReportPrintHeader title="Program-Level PLO Coverage & Distribution Summary" />
+        <ReportPrintHeader title="Program-Level GA Coverage & Distribution Summary" />
         <a href="/api/omc/reports/coverage/export" className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        How comprehensively the program addresses each PLO — a short bar means few courses map to it, worth reviewing.
+        How comprehensively the program addresses each GA — a short bar means few courses map to it, worth reviewing.
       </p>
       <ReportsSubNav active="coverage" />
       <div className="card no-print">
@@ -56,20 +56,20 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
         <div key={sec.coordinatorName} style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 15, marginBottom: 10 }}>{sec.coordinatorName}'s Program</h3>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            <StatCard label="PLOs Defined" value={sec.totalPlos} />
-            <StatCard label="PLOs Approved" value={sec.approved} tone="var(--sage)" />
+            <StatCard label="GAs Defined" value={sec.totalPlos} />
+            <StatCard label="GAs Approved" value={sec.approved} tone="var(--sage)" />
             <StatCard label="Courses in Program" value={sec.totalCourses} />
-            <StatCard label="Avg Courses / PLO" value={sec.avg} />
-            <StatCard label="PLOs Not Hit" value={sec.notHit} tone={sec.notHit > 0 ? "var(--rust)" : "var(--sage)"} />
+            <StatCard label="Avg Courses / GA" value={sec.avg} />
+            <StatCard label="GAs Not Hit" value={sec.notHit} tone={sec.notHit > 0 ? "var(--rust)" : "var(--sage)"} />
           </div>
 
           <div className="card">
-            <h4 style={{ fontSize: 12.5, marginBottom: 12, color: "var(--slate)" }}>Courses Mapped, per PLO</h4>
+            <h4 style={{ fontSize: 12.5, marginBottom: 12, color: "var(--slate)" }}>Courses Mapped, per GA</h4>
             {sec.rows.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLOs defined.</p>
+              <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No GAs defined.</p>
             ) : (
               <SimpleBarChart
-                bars={sec.rows.map((r) => ({ label: `PLO-${r.number}`, value: r.count, color: r.count === 0 ? "#B1512E" : undefined }))}
+                bars={sec.rows.map((r) => ({ label: `GA-${r.number}`, value: r.count, color: r.count === 0 ? "#B1512E" : undefined }))}
               />
             )}
           </div>
@@ -77,14 +77,14 @@ export default async function CoverageReportPage({ searchParams }: { searchParam
           <div className="card" style={{ overflowX: "auto" }}>
             <h4 style={{ fontSize: 12.5, marginBottom: 12, color: "var(--slate)" }}>Detail — Breakdown by Course Type</h4>
             <table>
-              <thead><tr><th>PLO</th><th>Title</th><th>Status</th><th>Courses</th><th>By Course Type</th></tr></thead>
+              <thead><tr><th>GA</th><th>Title</th><th>Status</th><th>Courses</th><th>By Course Type</th></tr></thead>
               <tbody>
-                {sec.rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No PLOs defined.</td></tr>}
+                {sec.rows.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No GAs defined.</td></tr>}
                 {sec.rows.map((r) => {
                   const typeEntries = Object.entries(r.byType);
                   return (
                     <tr key={r.number}>
-                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>PLO-{r.number}</td>
+                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>GA-{r.number}</td>
                       <td>{r.title}</td>
                       <td>
                         {r.status !== "approved" ? (

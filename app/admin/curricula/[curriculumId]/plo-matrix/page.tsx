@@ -48,7 +48,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22 }}>Course – PLO Matrix</h1>
+        <h1 style={{ fontSize: 22 }}>Course – GA Matrix</h1>
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
           {curriculum.authority} {curriculum.title} ({curriculum.version})
         </div>
@@ -77,7 +77,7 @@ export default async function PloMatrixPage({ params }: { params: { curriculumId
               <th style={{ textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", background: "#4A4A6A", color: "#fff", position: "sticky", left: 0, zIndex: 1 }}>Course</th>
               {curriculum.plos.map((p) => (
                 <th key={p.id} title={p.title} style={{ padding: "4px 4px", border: "1px solid var(--line)", background: "#4A4A6A", color: "#fff", minWidth: 30 }}>
-                  PLO{p.number}
+                  GA{p.number}
                 </th>
               ))}
             </tr>

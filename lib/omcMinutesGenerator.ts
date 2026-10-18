@@ -111,7 +111,7 @@ export async function generateOmcMinutes(
     new Paragraph({ children: [new TextRun({ text: `Generated ${new Date().toISOString().slice(0, 10)}`, size: 18, color: "888888" })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
     new Paragraph({
       children: [new TextRun({
-        text: "This record lists every action taken by an OMC member — course template reviews and approvals, PLO/CLO mapping decisions, curriculum and content-sync changes, and institutional policy settings — grouped by the phase of the semester in which it occurred, as recorded automatically by the system at the time each action was taken.",
+        text: "This record lists every action taken by an OMC member — course template reviews and approvals, GA/CLO mapping decisions, curriculum and content-sync changes, and institutional policy settings — grouped by the phase of the semester in which it occurred, as recorded automatically by the system at the time each action was taken.",
         size: 20, color: "555555",
       })],
       spacing: { after: 200 },

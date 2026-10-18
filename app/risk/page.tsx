@@ -29,7 +29,7 @@ export default async function RiskPage() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Risk Register</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
-        Every program on one screen: courses nobody owns, plans not ready, overdue work, results stuck, PLOs below target and teaching
+        Every program on one screen: courses nobody owns, plans not ready, overdue work, results stuck, GAs below target and teaching
         that doesn&apos;t match the plan — this term and the coming one. Highest risk first. Every number opens the page where it is fixed.
       </p>
 
@@ -46,7 +46,7 @@ export default async function RiskPage() {
           <thead><tr>
             <th>Program</th><th>Risk</th><th style={{ textAlign: "center" }}>No Subject Expert</th><th style={{ textAlign: "center" }}>SE not accepted</th><th style={{ textAlign: "center" }}>No instructor</th>
             <th style={{ textAlign: "center" }}>Plans not submitted</th><th style={{ textAlign: "center" }}>Plans below OMC rules</th><th style={{ textAlign: "center" }}>Overdue deadlines</th>
-            <th style={{ textAlign: "center" }}>Results stuck</th><th style={{ textAlign: "center" }}>Teaching flags</th><th>PLOs below 60%</th><th style={{ textAlign: "center" }}>Attendance stale</th>
+            <th style={{ textAlign: "center" }}>Results stuck</th><th style={{ textAlign: "center" }}>Teaching flags</th><th>GAs below 60%</th><th style={{ textAlign: "center" }}>Attendance stale</th>
           </tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={12} style={{ color: "var(--slate)" }}>No programs in your area.</td></tr>}

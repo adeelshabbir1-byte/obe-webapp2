@@ -31,14 +31,14 @@ export default function ObeAnalytics() {
   return (
     <div>
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Your PLO Attainment</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Your GA Attainment</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-          Averaged across every completed course that touches each Program Learning Outcome. Below {data.ploPassingThreshold}% is flagged as needing attention.
+          Averaged across every completed course that touches each Graduate Attribute. Below {data.ploPassingThreshold}% is flagged as needing attention.
         </p>
         {data.overallByPlo.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No attainment data yet — this fills in as you complete courses.</p>}
         {data.overallByPlo.map((p) => (
           <div key={p.number} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
-            <span style={{ fontSize: 12.5 }}>PLO-{p.number}: {p.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({p.coursesContributing} course{p.coursesContributing === 1 ? "" : "s"})</span></span>
+            <span style={{ fontSize: 12.5 }}>GA-{p.number}: {p.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>({p.coursesContributing} course{p.coursesContributing === 1 ? "" : "s"})</span></span>
             <span className={p.lagging ? "badge badge-no" : "badge badge-ok"}>{p.avgPct.toFixed(0)}%</span>
           </div>
         ))}
@@ -46,9 +46,9 @@ export default function ObeAnalytics() {
 
       {laggingPlos.length > 0 && (
         <div className="card" style={{ background: "#FBEED2" }}>
-          <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLOs Needing Attention</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>GAs Needing Attention</h3>
           <p style={{ fontSize: 11.5, color: "#96650F" }}>
-            You're currently below target on: {laggingPlos.map((p) => `PLO-${p.number}`).join(", ")}.
+            You're currently below target on: {laggingPlos.map((p) => `GA-${p.number}`).join(", ")}.
           </p>
         </div>
       )}
@@ -56,13 +56,13 @@ export default function ObeAnalytics() {
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 4 }}>Improvement Roadmap</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-          Future courses in your own curriculum that would specifically help your currently-lagging PLOs.
+          Future courses in your own curriculum that would specifically help your currently-lagging GAs.
         </p>
-        {data.roadmap.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>{laggingPlos.length === 0 ? "You're not currently lagging on anything." : "No upcoming course in your plan directly targets your lagging PLOs — talk to your Advisor about options."}</p>}
+        {data.roadmap.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>{laggingPlos.length === 0 ? "You're not currently lagging on anything." : "No upcoming course in your plan directly targets your lagging GAs — talk to your Advisor about options."}</p>}
         {data.roadmap.map((r) => (
           <div key={r.courseId} style={{ padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
             <span style={{ fontSize: 12.5 }}>{r.code} — {r.title} <span style={{ color: "var(--slate)", fontSize: 11 }}>(Semester {r.semesterNumber})</span></span>
-            <div style={{ fontSize: 11, color: "var(--sage)", marginTop: 2 }}>Helps: {r.touchedLaggingPlos.map((n) => `PLO-${n}`).join(", ")}</div>
+            <div style={{ fontSize: 11, color: "var(--sage)", marginTop: 2 }}>Helps: {r.touchedLaggingPlos.map((n) => `GA-${n}`).join(", ")}</div>
           </div>
         ))}
       </div>
@@ -75,7 +75,7 @@ export default function ObeAnalytics() {
               <thead>
                 <tr>
                   <th style={{ padding: "4px 8px", textAlign: "left" }}>Term</th>
-                  {data.allPloNumbers.map((n) => <th key={n} style={{ padding: "4px 8px" }}>PLO-{n}</th>)}
+                  {data.allPloNumbers.map((n) => <th key={n} style={{ padding: "4px 8px" }}>GA-{n}</th>)}
                 </tr>
               </thead>
               <tbody>

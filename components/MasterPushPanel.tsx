@@ -24,7 +24,7 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
   async function apply() {
     if (!plan) return;
     const todo = plan.filter((p) => p.action !== "skip").map((p) => p.courseId);
-    if (!confirm(`Update ${todo.length} course(s) from this curriculum? CLOs are replaced by the curriculum's CLOs (in the same order) with their PLOs.`)) return;
+    if (!confirm(`Update ${todo.length} course(s) from this curriculum? CLOs are replaced by the curriculum's CLOs (in the same order) with their GAs.`)) return;
     setBusy(true); setError("");
     const sum: Totals = { courses: 0, closAdded: 0, closUpdated: 0, closRemoved: 0, closKept: 0, topicsFilled: 0, cloLinks: 0, mappingsAdded: 0 };
     setProgress({ done: 0, total: todo.length });
@@ -45,8 +45,8 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
     <div className="card" style={{ marginBottom: 16, borderColor: "var(--brass)" }}>
       <h3 style={{ fontSize: 14, marginTop: 0 }}>Update my courses from this curriculum</h3>
       <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -4 }}>
-        Copies this curriculum&apos;s CLOs (with Bloom level and PLO) into every course of your batches that comes from it, shares each PLO equally between its CLOs,
-        and fills the PLO–Course matrix. Lecture topics, textbook and description are filled only where a course has none yet. Approved (locked) courses and courses with student marks are left alone.
+        Copies this curriculum&apos;s CLOs (with Bloom level and GA) into every course of your batches that comes from it, shares each GA equally between its CLOs,
+        and fills the GA–Course matrix. Lecture topics, textbook and description are filled only where a course has none yet. Approved (locked) courses and courses with student marks are left alone.
       </p>
       <button className="btn" onClick={preview} disabled={busy}>{busy && !progress ? "Checking…" : plan ? "Check again" : "Preview what will change"}</button>
       {error && <div className="err" style={{ marginTop: 10 }}>{error}</div>}
@@ -69,7 +69,7 @@ export default function MasterPushPanel({ curriculumId }: { curriculumId: string
       {totals && (
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--sage)" }}>
           Done: {totals.courses} course(s) updated — {totals.closAdded} CLO(s) added, {totals.closUpdated} updated, {totals.closRemoved} removed
-          {totals.closKept ? `, ${totals.closKept} extra CLO(s) kept because lecture topics use them` : ""}; lecture topics filled in {totals.topicsFilled} course(s); {totals.cloLinks} lecture(s) linked to their CLO; {totals.mappingsAdded} new course-to-PLO link(s).
+          {totals.closKept ? `, ${totals.closKept} extra CLO(s) kept because lecture topics use them` : ""}; lecture topics filled in {totals.topicsFilled} course(s); {totals.cloLinks} lecture(s) linked to their CLO; {totals.mappingsAdded} new course-to-GA link(s).
         </p>
       )}
     </div>

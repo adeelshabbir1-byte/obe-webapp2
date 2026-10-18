@@ -29,8 +29,8 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
   const wb = new ExcelJS.Workbook();
   try { await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as any); } catch { return { error: "could not read that file - upload the .xlsx workbook" }; }
   const sheet = (re: RegExp) => readSheet(wb.worksheets.find((w) => re.test(norm(w.name))));
-  const meta = sheet(/^curriculum$|^program$/), ploS = sheet(/^plos?$/), courseS = sheet(/^courses$/), cloS = sheet(/^clos/), topicS = sheet(/^lecture topics|^topics$/);
-  if (!ploS || !courseS) return { error: "the workbook needs at least a \"PLOs\" sheet and a \"Courses\" sheet" };
+  const meta = sheet(/^curriculum$|^program$/), ploS = sheet(/^(plos?|gas?|graduate attributes)$/), courseS = sheet(/^courses$/), cloS = sheet(/^clos/), topicS = sheet(/^lecture topics|^topics$/);
+  if (!ploS || !courseS) return { error: "the workbook needs at least a \"GAs\" sheet and a \"Courses\" sheet" };
 
   const info = new Map<string, string>();
   if (meta) {
@@ -48,10 +48,10 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
 
   const warnings: string[] = [];
   // PLOs
-  const pn = col(ploS, /^plo( number)?$|^number$|^#$/), pt = col(ploS, /^title$/), pd = col(ploS, /^description$/);
+  const pn = col(ploS, /^(plo|ga)( number)?$|^number$|^#$/), pt = col(ploS, /^title$/), pd = col(ploS, /^description$/);
   const plos = ploS.rows.map((r) => ({ id: randomUUID(), number: parseInt(at(r, pn).replace(/\D+/g, ""), 10), title: at(r, pt), description: at(r, pd) || at(r, pt) }))
     .filter((p) => Number.isFinite(p.number) && p.title);
-  if (!plos.length) return { error: "no PLOs found (columns: PLO number, Title, Description)" };
+  if (!plos.length) return { error: "no GAs found (columns: GA number, Title, Description)" };
   const ploByNo = new Map(plos.map((p) => [p.number, p.id]));
 
   // Courses
@@ -75,7 +75,7 @@ export async function importCurriculumWorkbook(file: File, owner: { chairmanId: 
   // CLOs
   const clos: { masterCourseId: string; statement: string; bloomLevel: string; orderIndex: number; mappedPloId: string | null; ploMappingSource: string | null }[] = [];
   if (cloS) {
-    const K = { code: col(cloS, /^course code$|^code$/), st: col(cloS, /^statement$/), bl: col(cloS, /^bloom/), plo: col(cloS, /^(mapped )?plo$/) };
+    const K = { code: col(cloS, /^course code$|^code$/), st: col(cloS, /^statement$/), bl: col(cloS, /^bloom/), plo: col(cloS, /^(mapped )?(plo|ga)$/) };
     const order = new Map<string, number>();
     for (const r of cloS.rows) {
       const cid = courseByCode.get(code(at(r, K.code)));

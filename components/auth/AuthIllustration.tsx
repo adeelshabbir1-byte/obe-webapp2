@@ -47,7 +47,7 @@ export default function AuthIllustration() {
         <circle cx="384" cy="170" r="46" fill="none" stroke="url(#ai-ring)" strokeWidth="14" strokeLinecap="round"
           strokeDasharray="289" strokeDashoffset="52" transform="rotate(-90 384 170)" />
         <text x="384" y="176" textAnchor="middle" fill="#5A1923" fontSize="22" fontWeight="800" style={display}>82%</text>
-        <text x="384" y="238" textAnchor="middle" fill="#574C50" fontSize="11" fontWeight="700" letterSpacing="1.5" style={font}>PLO ATTAINMENT</text>
+        <text x="384" y="238" textAnchor="middle" fill="#574C50" fontSize="11" fontWeight="700" letterSpacing="1.5" style={font}>GA ATTAINMENT</text>
         <rect x="336" y="256" width="96" height="8" rx="4" fill="#F4EFEE" />
         <rect x="336" y="256" width="70" height="8" rx="4" fill="#1D8A4E" />
       </g>
@@ -55,7 +55,7 @@ export default function AuthIllustration() {
       {/* CLO → PLO mapping card */}
       <g filter="url(#ai-shadow)">
         <rect x="14" y="248" width="206" height="136" rx="16" fill="#FFFFFF" stroke="#E6DEDB" />
-        <text x="32" y="276" fill="#241A1D" fontSize="12.5" fontWeight="800" style={display}>CLO → PLO mapping</text>
+        <text x="32" y="276" fill="#241A1D" fontSize="12.5" fontWeight="800" style={display}>CLO → GA mapping</text>
         {[0, 1, 2].map((i) => (
           <g key={i} transform={`translate(32 ${294 + i * 28})`}>
             <circle cx="8" cy="0" r="8" fill={["#1D8A4E", "#7E2435", "#2C578C"][i]} />
@@ -63,7 +63,7 @@ export default function AuthIllustration() {
             <rect x="24" y="-5" width={[92, 74, 104][i]} height="10" rx="5" fill="#EFE7E5" />
             <rect x="136" y="-8" width="34" height="16" rx="8" fill={["#E2F4E8", "#F8EEF0", "#E3EBF3"][i]} />
             <text x="153" y="4" textAnchor="middle" fontSize="9.5" fontWeight="800" fill={["#136B3A", "#5A1923", "#234A78"][i]} style={font}>
-              {["PLO 1", "PLO 3", "PLO 7"][i]}
+              {["GA 1", "GA 3", "GA 7"][i]}
             </text>
           </g>
         ))}

@@ -50,10 +50,10 @@ export default async function PeerPlanPage({ params }: { params: { courseId: str
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Course Learning Outcomes</h3>
         <table>
-          <thead><tr><th>CLO</th><th>Statement</th><th>Bloom</th><th>PLO</th></tr></thead>
+          <thead><tr><th>CLO</th><th>Statement</th><th>Bloom</th><th>GA</th></tr></thead>
           <tbody>
             {clos.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>}
-            {clos.map((c) => <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `PLO-${c.mappedPlo.number}` : "—"}</td></tr>)}
+            {clos.map((c) => <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `GA-${c.mappedPlo.number}` : "—"}</td></tr>)}
           </tbody>
         </table>
       </div>

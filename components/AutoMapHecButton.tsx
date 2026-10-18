@@ -25,14 +25,14 @@ export default function AutoMapHecButton({ batchId }: { batchId: string }) {
     <div className="card">
       <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Auto-Map from HEC</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-        Bulk-creates course-PLO mappings for this batch from HEC's own CLO-level PLO tags (matched via each course's link to its HEC
+        Bulk-creates course-GA mappings for this batch from HEC's own CLO-level GA tags (matched via each course's link to its HEC
         master template) — only fills in gaps, never overwrites or removes anything already set.
       </p>
       {error && <div className="err">{error}</div>}
       <button onClick={run} disabled={loading} className="btn btn-brass">{loading ? "Mapping…" : "Auto-Map from HEC"}</button>
       {result && (
         <p style={{ fontSize: 12, marginTop: 10, color: "var(--sage)" }}>
-          Created {result.created} new mapping(s). {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching PLO number in this batch), {result.skippedNoSuggestion} course(s) had no HEC suggestion on record.
+          Created {result.created} new mapping(s). {result.alreadyMapped} already existed, {result.skippedNoPlo} skipped (no matching GA number in this batch), {result.skippedNoSuggestion} course(s) had no HEC suggestion on record.
         </p>
       )}
     </div>

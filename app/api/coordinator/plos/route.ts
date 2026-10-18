@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!batch || batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
 
   const existing = await prisma.pLO.findFirst({ where: { batchId: body.batchId, number: parseInt(body.number, 10) } });
-  if (existing) return NextResponse.json({ error: "a PLO with this number already exists for this batch" }, { status: 409 });
+  if (existing) return NextResponse.json({ error: "a GA with this number already exists for this batch" }, { status: 409 });
 
   const plo = await prisma.pLO.create({
     data: {

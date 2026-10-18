@@ -27,7 +27,7 @@ export type PeoAlignmentResult = {
 // (like DotAI evidence) would.
 export async function checkPeoAlignment(chairmanId: string, peos: string[], plos: { number: number; title: string; description: string }[]): Promise<{ results: PeoAlignmentResult[] } | { error: string }> {
   if (peos.length === 0) return { error: "No PEOs are defined yet for this degree program — add some above first." };
-  if (plos.length === 0) return { error: "No PLOs are defined yet for this batch — define them on the Program Learning Outcomes page first." };
+  if (plos.length === 0) return { error: "No GAs are defined yet for this batch — define them on the Graduate Attributes page first." };
 
   const creds = await resolveAiCredentials(chairmanId);
   if (!creds) {
@@ -37,18 +37,18 @@ export async function checkPeoAlignment(chairmanId: string, peos: string[], plos
   const peoList = peos.map((p, i) => `PEO-${i + 1}: ${p}`).join("\n");
   const ploList = plos.map((p) => `PLO-${p.number} (${p.title}): ${p.description}`).join("\n");
 
-  const prompt = `You are reviewing a university degree program's outcome structure for NCEAC-style accreditation. Program Educational Objectives (PEOs) describe what graduates should achieve in their careers a few years after graduation; Program Learning Outcomes (PLOs) describe what a graduate can do at the moment of graduation. A PEO should be plausibly supported by the cumulative effect of the program's PLOs — a PEO with no genuine connection to any PLO is a real gap, since there's no traceable path from what students actually learn to that longer-term objective.
+  const prompt = `You are reviewing a university degree program's outcome structure for NCEAC-style accreditation. Program Educational Objectives (PEOs) describe what graduates should achieve in their careers a few years after graduation; Graduate Attributes (GAs) describe what a graduate can do at the moment of graduation. A PEO should be plausibly supported by the cumulative effect of the program's GAs — a PEO with no genuine connection to any GA is a real gap, since there's no traceable path from what students actually learn to that longer-term objective.
 
 PEOs:
 ${peoList}
 
-PLOs:
+GAs:
 ${ploList}
 
-For EACH PEO, judge whether the PLOs above, collectively, plausibly support it. Respond with ONLY a JSON array, no other text, one object per PEO in the same order given:
-[{"peo": "<the exact PEO text>", "status": "STRONG" | "PARTIAL" | "GAP", "supportingPloNumbers": [<PLO numbers that genuinely support this PEO>], "reasoning": "one or two sentences explaining the judgment"}]
+For EACH PEO, judge whether the GAs above, collectively, plausibly support it. Respond with ONLY a JSON array, no other text, one object per PEO in the same order given:
+[{"peo": "<the exact PEO text>", "status": "STRONG" | "PARTIAL" | "GAP", "supportingPloNumbers": [<GA numbers that genuinely support this PEO>], "reasoning": "one or two sentences explaining the judgment"}]
 
-Use STRONG when multiple PLOs clearly and directly build toward the PEO, PARTIAL when the connection is real but thin or indirect, and GAP when no PLO plausibly supports it at all.`;
+Use STRONG when multiple GAs clearly and directly build toward the PEO, PARTIAL when the connection is real but thin or indirect, and GAP when no GA plausibly supports it at all.`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {

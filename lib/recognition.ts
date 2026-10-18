@@ -10,13 +10,13 @@ export type BadgeRow = { id: string; chairmanId: string; userId: string; term: s
 export type GoalRow = { id: string; chairmanId: string; departmentId: string | null; title: string; metric: string; targetPct: number; dueDate: Date; createdById: string; createdAt: Date };
 
 export const BADGES: Record<string, { title: string; icon: string; rule: string }> = {
-  OBE_CHAMPION: { title: "OBE Champion", icon: "🏆", rule: "Every course you taught this semester is complete: CLOs mapped to PLOs, assessments linked to CLOs, all marks in, result approved, CQI done where needed, course file kept." },
+  OBE_CHAMPION: { title: "OBE Champion", icon: "🏆", rule: "Every course you taught this semester is complete: CLOs mapped to GAs, assessments linked to CLOs, all marks in, result approved, CQI done where needed, course file kept." },
   ALWAYS_ON_TIME: { title: "Always On Time", icon: "⏱️", rule: "Every one of your deadlines this semester (at least 3) was met on time." },
   CQI_CLOSER: { title: "CQI Closer", icon: "🔁", rule: "Every CLO of your courses that fell below its target has a CQI action written down." },
   COURSE_FILE_COMPLETE: { title: "Course File Complete", icon: "📁", rule: "The course file of every course you taught this semester is complete and kept." },
 };
 export const METRICS: Record<string, string> = {
-  COURSE_FILES: "Course files kept", RESULTS_APPROVED: "Course results approved", CLOS_MAPPED: "Courses with every CLO mapped to a PLO",
+  COURSE_FILES: "Course files kept", RESULTS_APPROVED: "Course results approved", CLOS_MAPPED: "Courses with every CLO mapped to a GA",
   MARKS_COMPLETE: "Courses with all marks entered", CQI_DONE: "Courses with CQI done where CLOs fell short",
 };
 export const RECOGNITION_MANAGERS = ["CHAIRMAN", "HEAD_OF_DEPARTMENT"];
@@ -67,7 +67,7 @@ export async function courseChecklist(courseIds: string[]): Promise<CourseCheck[
       }
     }
     const steps = [
-      { key: "clos", label: "Every CLO mapped to a PLO", done: cl.length > 0 && cl.every((x) => !!x.mappedPloId) },
+      { key: "clos", label: "Every CLO mapped to a GA", done: cl.length > 0 && cl.every((x) => !!x.mappedPloId) },
       { key: "assess", label: "Every assessment linked to the CLOs it tests", done: ins.length > 0 && ins.every((i) => linked.has(i.id)) },
       { key: "marks", label: "All marks entered", done: students > 0 && ins.length > 0 && markCount >= students * ins.length, note: students && ins.length ? `${Math.min(100, Math.round((100 * markCount) / (students * ins.length)))}%` : undefined },
       { key: "result", label: "Result approved", done: approved },

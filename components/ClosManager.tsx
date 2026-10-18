@@ -15,7 +15,7 @@ function ploLabel(plos: Plo[], id: string | null) {
   if (!id) return "—";
   const p = plos.find((x) => x.id === id);
   if (!p) return "—";
-  return `PLO-${p.number}: ${p.title}${p.status !== "approved" ? " (pending approval)" : ""}`;
+  return `GA-${p.number}: ${p.title}${p.status !== "approved" ? " (pending approval)" : ""}`;
 }
 
 // Groups CLOs by their mapped PLO and flags any PLO whose CLO contributions
@@ -29,7 +29,7 @@ function contributionWarnings(clos: Clo[], plos: Plo[]) {
     .filter(([, total]) => total !== 100)
     .map(([ploId, total]) => {
       const p = plos.find((x) => x.id === ploId);
-      return { label: p ? `PLO-${p.number}: ${p.title}` : "Unknown PLO", total };
+      return { label: p ? `GA-${p.number}: ${p.title}` : "Unknown GA", total };
     });
 }
 
@@ -171,8 +171,8 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
 
   const ploSelectOptions = (
     <>
-      <option value="">— No PLO mapped —</option>
-      {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}{p.status !== "approved" ? " (pending)" : ""}</option>)}
+      <option value="">— No GA mapped —</option>
+      {plos.map((p) => <option key={p.id} value={p.id}>GA-{p.number}: {p.title}{p.status !== "approved" ? " (pending)" : ""}</option>)}
     </>
   );
 
@@ -184,8 +184,8 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       {!readOnly && plos.length === 0 && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>
-            The OMC hasn't assigned any PLOs to this course yet (via the PLO–Course Matrix) — CLOs can
-            still be added, but won't have a PLO to map to until that happens.
+            The OMC hasn't assigned any GAs to this course yet (via the GA–Course Matrix) — CLOs can
+            still be added, but won't have a GA to map to until that happens.
           </p>
         </div>
       )}
@@ -199,7 +199,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       )}
       <div className="card">
         <SortableTable paginate={false}>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped GA</th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
           <tbody>
             {clos.length === 0 && (
               <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
@@ -260,7 +260,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
             </button>
             {dirtyClos.length > 0 && <button className="btn" type="button" onClick={() => { setDrafts({}); setError(""); }} disabled={loading} style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Undo changes</button>}
             {saved && <span style={{ color: "var(--sage)", fontSize: 13 }}>{saved}</span>}
-            {!saved && dirtyClos.length === 0 && <span style={{ color: "var(--slate)", fontSize: 12 }}>Edit any cell above, then save. CLOs on the same PLO share it equally by default; you can change the split before saving.</span>}
+            {!saved && dirtyClos.length === 0 && <span style={{ color: "var(--slate)", fontSize: 12 }}>Edit any cell above, then save. CLOs on the same GA share it equally by default; you can change the split before saving.</span>}
           </div>
         )}
       </div>
@@ -276,7 +276,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
             <div className="field"><label>Outcome Statement</label><input name="statement" placeholder="Apply formal logic proofs to..." required /></div>
             <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 14 }}>
               <div className="field">
-                <label>Mapped PLO (defined by your Program Coordinator)</label>
+                <label>Mapped GA (defined by your Program Coordinator)</label>
                 <select name="mappedPloId">{ploSelectOptions}</select>
               </div>
               <div className="field">
@@ -289,7 +289,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
               </div>
             </div>
             <p style={{ fontSize: 11, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>
-              If more than one CLO in this course maps to the same PLO, they share it equally (their contributions must add up to 100%).
+              If more than one CLO in this course maps to the same GA, they share it equally (their contributions must add up to 100%).
             </p>
             <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add CLO"}</button>
           </form>

@@ -39,7 +39,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
 
   return (
     <Shell roleLabel={LABEL[user.role] || "Faculty"} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Details Report</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Directory</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
         Built from the profiles faculty fill in under My Profile. People who have not filled theirs in yet show a low “profile complete” score.
       </p>

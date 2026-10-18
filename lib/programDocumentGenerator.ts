@@ -87,15 +87,15 @@ export async function generateProgramDocument(batchId: string, coordinatorId: st
   }
 
   // --- PLOs table ---
-  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 300 }, children: [new TextRun({ text: "Program Learning Outcomes (PLOs)", bold: true })] }));
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 300 }, children: [new TextRun({ text: "Graduate Attributes (GAs)", bold: true })] }));
   if (plos.length === 0) {
-    children.push(new Paragraph({ children: [new TextRun({ text: "No PLOs have been defined for this batch yet.", italics: true })] }));
+    children.push(new Paragraph({ children: [new TextRun({ text: "No GAs have been defined for this batch yet.", italics: true })] }));
   } else {
     const ploWidths = [Math.round(CONTENT_WIDTH * 0.15), Math.round(CONTENT_WIDTH * 0.25), CONTENT_WIDTH - Math.round(CONTENT_WIDTH * 0.4)];
     children.push(new Table({
       width: { size: CONTENT_WIDTH, type: WidthType.DXA },
       rows: [
-        headerRow(["PLO #", "Title", "Description"], ploWidths),
+        headerRow(["GA #", "Title", "Description"], ploWidths),
         ...plos.map((p) => new TableRow({ children: [cell(`PLO-${p.number}`, { width: ploWidths[0] }), cell(p.title, { width: ploWidths[1] }), cell(p.description, { width: ploWidths[2] })] })),
       ],
     }));

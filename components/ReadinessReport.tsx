@@ -53,7 +53,7 @@ export default function ReadinessReport({ data, sarHref, ask }: { data: Awaited<
         <div style={{ flex: 1, minWidth: 260 }}>
           <h3 style={{ marginTop: 0 }}>Overall readiness</h3>
           <p style={{ fontSize: 13, color: "var(--slate)", marginTop: 0 }}>
-            {courses.length} course(s) and {plos.length} PLO(s) in view. The overall figure is the average of the areas that already have data.
+            {courses.length} course(s) and {plos.length} GA(s) in view. The overall figure is the average of the areas that already have data.
           </p>
           <div style={{ display: "grid", gap: 8 }}>
             {scored.map(({ a, s }) => {

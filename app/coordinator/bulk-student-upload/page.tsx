@@ -21,7 +21,7 @@ export default async function BulkStudentUploadPage() {
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bulk Student Upload (Multi-Batch)</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Student Directory Upload (Multi-Batch)</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Upload students for any number of your batches in a single file — each row names its own batch,
         which is checked against your real batches before anything is saved. Logins are activated

@@ -59,7 +59,7 @@ export default async function ProgramsCouncilsPage() {
         <div key={b} className="card">
           <h3 style={{ fontSize: 15, margin: "0 0 4px" }}>{BODIES[b].name} ({b}) — standards</h3>
           <p className="small-note" style={{ margin: "0 0 10px" }}>
-            Used for the readiness of every {b} program{b === "NCEAC" ? " (Accreditation Overview too)" : ""}. The defaults are starting points: enter the figures in the council&apos;s current manual. CLO / PLO passing marks left empty follow the institute&apos;s Passing Criteria.
+            Used for the readiness of every {b} program{b === "NCEAC" ? " (Accreditation Overview too)" : ""}. The defaults are starting points: enter the figures in the council&apos;s current manual. CLO / GA passing marks left empty follow the institute&apos;s Passing Criteria.
           </p>
           <StandardsForm body={b} fields={STANDARD_FIELDS} values={st as unknown as Record<string, number | null>} defaults={DEFAULT_STANDARDS[b] as unknown as Record<string, number | null>} customised={st.customised} canEdit={s.canSetStandards} />
         </div>

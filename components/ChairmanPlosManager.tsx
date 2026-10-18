@@ -23,13 +23,13 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
   const pendingCount = plos.filter((p) => p.status !== "approved").length;
 
   async function approveAll() {
-    if (!confirm(`Approve all ${pendingCount} pending PLO(s)? This can't be undone in bulk.`)) return;
+    if (!confirm(`Approve all ${pendingCount} pending GA(s)? This can't be undone in bulk.`)) return;
     setLoading(true); setError(""); setBulkResult("");
     try {
       const res = await fetch("/api/chairman/plos/approve-all", { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setBulkResult(`Approved ${data.approved} PLO(s).`);
+      setBulkResult(`Approved ${data.approved} GA(s).`);
       setPlos((prev) => prev.map((p) => p.status !== "approved" ? { ...p, status: "approved" } : p));
       setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
@@ -66,11 +66,11 @@ export default function ChairmanPlosManager({ initialPlos }: { initialPlos: Plo[
       <SortableTable>
         <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Coordinator</th><th>Status</th><th></th></tr></thead>
         <tbody>
-          {plos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No PLOs submitted by your coordinators yet.</td></tr>}
+          {plos.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)" }}>No GAs submitted by your coordinators yet.</td></tr>}
           {plos.map((p) => (
             <Fragment key={p.id}>
               <tr>
-                <td>PLO-{p.number}</td><td>{p.title}</td><td style={{ fontSize: 11.5 }}>{p.degreeProgram}</td><td>{p.coordinatorName}</td>
+                <td>GA-{p.number}</td><td>{p.title}</td><td style={{ fontSize: 11.5 }}>{p.degreeProgram}</td><td>{p.coordinatorName}</td>
                 <td>{statusBadge(p.status)}</td>
                 <td><button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="act act-primary">{openId === p.id ? "Close" : "Review"}</button></td>
               </tr>

@@ -30,7 +30,7 @@ export default async function SarPage({ params }: { params: { cycleId: string } 
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <p><Link href={`/accreditation/readiness/${c.id}`}>← {c.title}</Link></p>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Self-Assessment Report</h1>
-      <p className="small-note">{BODIES[c.body as BodyKey]?.name} · {c.program}. The SAR is generated from live data every time you download it: PLO attainment (direct and indirect), curriculum, knowledge profile and complex problems, CLO results, evaluations, students and placements, faculty and CVs, labs, CQI, previous-visit compliance and the implementation plan. Write the narrative for each chapter below; it is kept across regenerations. Then download the Word file, edit it if you like, and save it as PDF.</p>
+      <p className="small-note">{BODIES[c.body as BodyKey]?.name} · {c.program}. The SAR is generated from live data every time you download it: GA attainment (direct and indirect), curriculum, knowledge profile and complex problems, CLO results, evaluations, students and placements, faculty and CVs, labs, CQI, previous-visit compliance and the implementation plan. Write the narrative for each chapter below; it is kept across regenerations. Then download the Word file, edit it if you like, and save it as PDF.</p>
       <div className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <a className="btn" href={`/api/accreditation/sar/${c.id}`}>Download SAR (Word)</a>
         <a className="btn btn-secondary" href={`/api/accreditation/cycles/${c.id}/dossier`}>Download evidence dossier (ZIP)</a>

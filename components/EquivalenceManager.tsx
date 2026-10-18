@@ -117,7 +117,7 @@ export default function EquivalenceManager() {
         </label>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>
           The <b>HEC Course</b> column links a group to its matching HEC/standard-curriculum course — once set,
-          HEC's suggested PLO mapping becomes available on the PLO-Course Matrix page for that course in every
+          HEC's suggested GA mapping becomes available on the GA-Course Matrix page for that course in every
           batch it's linked to ("Auto-map HEC" there applies it, one batch at a time).
         </p>
       </div>
@@ -179,7 +179,7 @@ export default function EquivalenceManager() {
                           {filtered.map((o) => (
                             <div key={o.id} onClick={() => setGroupMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                               <b>{o.code}</b> — {o.title}
-                              {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                              {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC GAs</span>}
                               <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
                             </div>
                           ))}

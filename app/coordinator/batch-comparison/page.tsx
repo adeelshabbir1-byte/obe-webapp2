@@ -37,7 +37,7 @@ export default async function BatchComparisonPage() {
       </p>
       <div className="card" style={{ overflowX: "auto" }}>
         <SortableTable>
-          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students on Roll</th><th>Intake Size (entered)</th><th>Courses</th><th>PLOs Defined</th><th>PLOs Approved</th><th>Courses with a PLO Assigned</th></tr></thead>
+          <thead><tr><th>Degree Program</th><th>Batch</th><th>Semester 1 Starts</th><th>Students on Roll</th><th>Intake Size (entered)</th><th>Courses</th><th>GAs Defined</th><th>GAs Approved</th><th>Courses with a GA Assigned</th></tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={9} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {rows.map((r) => (

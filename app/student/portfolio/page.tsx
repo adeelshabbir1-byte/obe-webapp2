@@ -25,7 +25,7 @@ export default async function StudentPortfolio() {
     <StudentShell studentName={st.name}>
       <h1 style={{ fontSize: 22 }}>My Portfolio</h1>
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Graduate attributes (PLOs)</h3>
+        <h3 style={{ marginTop: 0 }}>Graduate attributes (GAs)</h3>
         {plos.length ? plos.map((p) => (
           <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, margin: "4px 0" }}>
             <span style={{ width: 60 }}>{p.label}</span>

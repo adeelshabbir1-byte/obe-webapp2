@@ -20,7 +20,7 @@ export default async function AolPage({ searchParams }: { searchParams: { p?: st
   const programs = await programsFor(user);
   if (!programs.length) redirect("/dashboard");
   const sel = programs.find((p) => p.key === searchParams.p) || programs[0];
-  const intro = "Assurance of Learning (NBEAC): set the program's Learning Goals, break each into measurable Learning Objectives, decide in which year and course each is measured, record the result against the target, and write how the loop was closed. An objective tied to a PLO shows that PLO's current direct attainment as a starting point.";
+  const intro = "Assurance of Learning (NBEAC): set the program's Learning Goals, break each into measurable Learning Objectives, decide in which year and course each is measured, record the result against the target, and write how the loop was closed. An objective tied to a GA shows that GA's current direct attainment as a starting point.";
   const goals = ((await qdb.aolGoal.findMany({ where: { coordinatorId: sel.coordinatorId, degreeProgram: sel.degreeProgram }, orderBy: { code: "asc" } }).catch(() => null)) as Goal[] | null);
   if (goals === null) return <QualityShell user={user} title="Assurance of Learning" intro={intro}><div className="err">{QUALITY_HINT}</div></QualityShell>;
   const objs = (await qdb.aolObjective.findMany({ where: { goalId: { in: goals.map((g) => g.id).concat(["none"]) } }, orderBy: { code: "asc" } })) as Obj[];
@@ -30,7 +30,7 @@ export default async function AolPage({ searchParams }: { searchParams: { p?: st
   const ploPct = (n: number | null) => (n == null ? null : plo?.rows.find((r) => r.number === n)?.cells.direct?.pct ?? null);
   const edit = canEditProgram(user, sel.coordinatorId);
   const years = Array.from(new Set(objs.map((o) => o.measureYear).filter((y): y is number => !!y))).sort();
-  const objFields = [{ name: "code", label: "Code", placeholder: "LO1.1", width: 80 }, { name: "text", label: "Objective (what students will be able to do)", type: "textarea" as const, full: true }, { name: "ploNumber", label: "PLO no.", type: "number" as const, width: 70 }, { name: "courseCode", label: "Measured in course", placeholder: "MGT401", width: 110 }, { name: "method", label: "Method / rubric", placeholder: "Case analysis, rubric R2", width: 200 }, { name: "target", label: "Target %", type: "number" as const, width: 70 }, { name: "measureYear", label: "Year measured", type: "number" as const, width: 80 }];
+  const objFields = [{ name: "code", label: "Code", placeholder: "LO1.1", width: 80 }, { name: "text", label: "Objective (what students will be able to do)", type: "textarea" as const, full: true }, { name: "ploNumber", label: "GA no.", type: "number" as const, width: 70 }, { name: "courseCode", label: "Measured in course", placeholder: "MGT401", width: 110 }, { name: "method", label: "Method / rubric", placeholder: "Case analysis, rubric R2", width: 200 }, { name: "target", label: "Target %", type: "number" as const, width: 70 }, { name: "measureYear", label: "Year measured", type: "number" as const, width: 80 }];
   return (
     <QualityShell user={user} title="Assurance of Learning" intro={intro}>
       <form className="card" style={{ display: "flex", gap: 8 }}><select name="p" defaultValue={sel.key}>{programs.map((p) => <option key={p.key} value={p.key}>{p.degreeProgram} — {p.lead}</option>)}</select><button className="btn btn-secondary btn-sm">Show</button></form>
@@ -40,13 +40,13 @@ export default async function AolPage({ searchParams }: { searchParams: { p?: st
         <div key={g.id} className="card">
           <h3 style={{ marginTop: 0 }}>{g.code}: {g.text} {edit && <ActionButton url="/api/quality" body={{ action: "aolDelete", program: sel.key, kind: "goal", id: g.id }} label="Delete" className="act" confirmText="Delete this goal, its objectives and results?" />}</h3>
           <table style={{ fontSize: 12.5 }}>
-            <thead><tr><th>Objective</th><th>PLO</th><th>Course · method</th><th>Year</th><th>Target</th><th>Latest result</th><th>Closing the loop</th><th></th></tr></thead>
+            <thead><tr><th>Objective</th><th>GA</th><th>Course · method</th><th>Year</th><th>Target</th><th>Latest result</th><th>Closing the loop</th><th></th></tr></thead>
             <tbody>{objs.filter((o) => o.goalId === g.id).map((o) => {
               const rs = res.filter((r) => r.objectiveId === o.id); const last = rs[0]; const sug = ploPct(o.ploNumber);
               return (
                 <tr key={o.id}>
                   <td style={{ maxWidth: 280 }}><b>{o.code}</b> {o.text}</td>
-                  <td>{o.ploNumber ? `PLO-${o.ploNumber}` : "—"}{sug != null && <div className="small-note">direct now {sug}%</div>}</td>
+                  <td>{o.ploNumber ? `GA-${o.ploNumber}` : "—"}{sug != null && <div className="small-note">direct now {sug}%</div>}</td>
                   <td>{o.courseCode || "—"}<div className="small-note">{o.method || ""}</div></td><td>{o.measureYear || "—"}</td><td>{o.target}%</td>
                   <td style={{ color: last ? (last.attainedPct >= o.target ? "#2E7D4F" : "#B3261E") : "var(--slate)", fontWeight: 700 }}>{last ? `${last.attainedPct}% (${last.term}${last.sample ? `, n=${last.sample}` : ""})` : "not measured"}{rs.length > 1 && <div className="small-note">{rs.slice(1, 4).map((r) => `${r.term}: ${r.attainedPct}%`).join(" · ")}</div>}</td>
                   <td style={{ maxWidth: 240 }}>{last?.closingLoop || (last && last.attainedPct < o.target ? <span style={{ color: "#B3261E" }}>needs an action</span> : "—")}</td>

@@ -12,8 +12,8 @@ export default function AutoMapCloLevelAllButton() {
 
   async function run() {
     if (!confirm(
-      "This maps individual CLOs to PLOs by keyword matching, across every batch in the institution at once — a guess, not a " +
-      "verified mapping, and the field that actually drives weighted PLO attainment scoring. Review every suggestion afterward " +
+      "This maps individual CLOs to GAs by keyword matching, across every batch in the institution at once — a guess, not a " +
+      "verified mapping, and the field that actually drives weighted GA attainment scoring. Review every suggestion afterward " +
       "in each course's CLO editor before trusting it. Continue?"
     )) return;
 
@@ -51,25 +51,25 @@ export default function AutoMapCloLevelAllButton() {
 
   return (
     <div className="card" style={{ background: "#FBEED2" }}>
-      <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map Individual CLOs to PLOs — All Batches (Unverified)</h3>
+      <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>⚠️ Auto-Map Individual CLOs to GAs — All Batches (Unverified)</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         Same as the per-batch version below, but across every batch in the institution at once — keyword-matched
-        and unverified, this is the field that actually drives weighted PLO attainment scoring (separate from,
-        and more granular than, the course-level matrix tools above). Only fills gaps; a batch with no PLOs
+        and unverified, this is the field that actually drives weighted GA attainment scoring (separate from,
+        and more granular than, the course-level matrix tools above). Only fills gaps; a batch with no GAs
         defined yet is skipped and listed below rather than causing an error.
       </p>
       {error && <div className="err">{error}</div>}
       <button onClick={run} disabled={loading} className="btn" style={{ background: "#96650F", borderColor: "#96650F", color: "#fff" }}>
-        {progress ? `Mapping… ${progress.done}/${progress.total} batches` : loading ? "Mapping…" : "Auto-Map CLOs to PLOs — All Batches"}
+        {progress ? `Mapping… ${progress.done}/${progress.total} batches` : loading ? "Mapping…" : "Auto-Map CLOs to GAs — All Batches"}
       </button>
       {result && (
         <div style={{ fontSize: 12, marginTop: 10, color: "#96650F" }}>
           <p>
             Across {result.batchesTouched} batch(es): mapped {result.suggested} CLO(s) — review these in each course's CLO editor.
-            {" "}{result.skippedNoConfidentMatch} had no confident keyword match, {result.alreadyMapped} already had a PLO set.
+            {" "}{result.skippedNoConfidentMatch} had no confident keyword match, {result.alreadyMapped} already had a GA set.
           </p>
           {result.batchesSkippedNoPlos.length > 0 && (
-            <p style={{ marginTop: 6 }}>Skipped (no PLOs defined yet): {result.batchesSkippedNoPlos.join(", ")}</p>
+            <p style={{ marginTop: 6 }}>Skipped (no GAs defined yet): {result.batchesSkippedNoPlos.join(", ")}</p>
           )}
         </div>
       )}

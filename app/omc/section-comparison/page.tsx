@@ -114,7 +114,7 @@ export default async function SectionComparisonPage({ searchParams }: { searchPa
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each PLO</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each GA</h3>
             <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 20 }}>
               {statsBySection.map(({ course, stats }, i) => (
                 <SimpleBarChart key={course.id} bars={stats.ploStats.map((p) => ({ label: p.label, value: p.passCount, color: SERIES_COLORS[i % SERIES_COLORS.length] }))} unit={` / ${stats.studentCount}`} />

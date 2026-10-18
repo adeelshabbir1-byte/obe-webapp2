@@ -22,12 +22,12 @@ export default async function StudentMakeUpPlan({ student }: { student: { id: st
 
       {p.plos.length > 0 && (
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 14 }}>Outcomes below target (PLO target {p.ploPct}%)</h3>
+          <h3 style={{ marginTop: 0, fontSize: 14 }}>Outcomes below target (GA target {p.ploPct}%)</h3>
           <table>
-            <thead><tr><th>PLO</th><th>You</th><th>What happens next</th></tr></thead>
+            <thead><tr><th>GA</th><th>You</th><th>What happens next</th></tr></thead>
             <tbody>{p.plos.map((x) => (
               <tr key={x.number}>
-                <td>PLO-{x.number}</td><td>{x.pct}%</td>
+                <td>GA-{x.number}</td><td>{x.pct}%</td>
                 <td>{x.verdict === "COMPENSABLE"
                   ? <span><span className="badge badge-warn">Can be made up</span> <span className="small-note">in {x.makeUp.map((c) => `${c.code}${c.semester ? ` (sem ${c.semester})` : ""}`).join(", ")}</span></span>
                   : <span><span className="badge badge-no">Remediation needed</span> <span className="small-note">no course ahead of you covers it</span></span>}</td>
@@ -44,7 +44,7 @@ export default async function StudentMakeUpPlan({ student }: { student: { id: st
             <thead><tr><th>Course</th><th>CLO</th><th>You</th><th>Next</th></tr></thead>
             <tbody>{p.clos.map((x, i) => (
               <tr key={i}>
-                <td>{x.course}<div className="small-note">{x.title}</div></td><td>{x.clo}{x.plo ? <div className="small-note">PLO-{x.plo}</div> : null}</td><td>{x.pct}%</td>
+                <td>{x.course}<div className="small-note">{x.title}</div></td><td>{x.clo}{x.plo ? <div className="small-note">GA-{x.plo}</div> : null}</td><td>{x.pct}%</td>
                 <td>{x.verdict === "COMPENSABLE" ? <span className="small-note">Made up in {x.makeUp.join(", ")}</span> : <span className="badge badge-no">Remediation needed</span>}</td>
               </tr>
             ))}</tbody>

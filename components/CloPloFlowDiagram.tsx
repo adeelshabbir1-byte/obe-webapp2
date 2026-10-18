@@ -127,10 +127,10 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
           </div>
         )}
         <div style={{ color: ploSumsOk ? ok : bad }}>
-          {ploSumsOk ? "CLO → PLO shares add up to 100% for every PLO ✓." : "CLO → PLO shares do not add up to 100% for every PLO — see the red Σ on the PLO boxes."}
+          {ploSumsOk ? "CLO → GA shares add up to 100% for every GA ✓." : "CLO → GA shares do not add up to 100% for every GA — see the red Σ on the GA boxes."}
         </div>
         <div style={{ color: "var(--slate)" }}>
-          How to read it: a label on an assessment line is that assessment's own % of the whole course grade (so each CLO's box shows the total of its assessments). A label on a CLO line is that CLO's share of the PLO it feeds; the CLOs feeding one PLO should add to 100%.
+          How to read it: a label on an assessment line is that assessment's own % of the whole course grade (so each CLO's box shows the total of its assessments). A label on a CLO line is that CLO's share of the GA it feeds; the CLOs feeding one GA should add to 100%.
         </div>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, marginBottom: 8, alignItems: "center" }}>
@@ -145,7 +145,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minHeight: 300, fontFamily: "inherit" }}>
       <text x={col1X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">ASSESSMENTS</text>
       <text x={col2X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">CLOs</text>
-      <text x={col3X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">PLOs</text>
+      <text x={col3X} y={16} fontSize={11} fontWeight={700} fill="var(--slate)">GAs</text>
 
       {/* Assessment -> CLO arrows */}
       {assessments.map((a) => {
@@ -205,7 +205,7 @@ export default function CloPloFlowDiagram({ assessments, clos, plos, changed }: 
       {usedPlos.map((p) => (
         <g key={p.id}>
           <rect x={col3X} y={pPos.get(p.id)} width={COL_W} height={BOX_H} rx={5} fill="#A85D1F" />
-          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">PLO-{p.number}</text>
+          <text x={col3X + 10} y={(pPos.get(p.id) || 0) + 17} fontSize={11} fontWeight={600} fill="#fff">GA-{p.number}</text>
           <text x={col3X + COL_W - 8} y={(pPos.get(p.id) || 0) + 17} fontSize={10.5} fontWeight={700} textAnchor="end" fill={ploSums.get(p.id) === 100 ? "#C8F0CB" : "#FFB4AB"}>
             Σ {ploSums.get(p.id)}%{ploSums.get(p.id) === 100 ? " ✓" : ""}
           </text>

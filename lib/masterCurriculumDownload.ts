@@ -44,13 +44,13 @@ export function curriculumSheets(c: Curriculum): SheetSpec[] {
     { name: "Courses", columns: [
       { header: "Semester", key: "sem", width: 10 }, { header: "Code", key: "code", width: 11 }, { header: "Title", key: "title", width: 42 }, { header: "Credit hours", key: "cr", width: 11 },
       { header: "Category", key: "cat", width: 20 }, { header: "Domain", key: "dom", width: 18 }, { header: "Prerequisite", key: "pre", width: 13 }, { header: "CLOs", key: "nclo", width: 7 },
-      { header: "PLOs", key: "plos", width: 20 }, { header: "Lecture topics", key: "ntop", width: 13 }, { header: "Description", key: "desc", width: 60 }, { header: "Textbook", key: "tb", width: 40 }, { header: "Reference material", key: "ref", width: 40 },
+      { header: "GAs", key: "plos", width: 20 }, { header: "Lecture topics", key: "ntop", width: 13 }, { header: "Description", key: "desc", width: 60 }, { header: "Textbook", key: "tb", width: 40 }, { header: "Reference material", key: "ref", width: 40 },
     ], rows: c.courses.map((k) => ({ sem: k.semesterNumber ?? "", code: k.code, title: k.title, cr: k.creditHours, cat: k.category, dom: k.domain || "", pre: k.prerequisiteCourse?.code || "", nclo: k.seedClos.length, plos: coursePlos(k).map((n) => `PLO-${n}`).join(", "), ntop: k.seedTopics.length, desc: k.catalogDescription || "", tb: k.textbook || "", ref: k.referenceMaterial || "" })) },
-    { name: "CLOs and PLO mapping", columns: [
+    { name: "CLOs and GA mapping", columns: [
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "CLO", key: "clo", width: 8 },
-      { header: "Statement", key: "st", width: 70 }, { header: "Bloom level", key: "bl", width: 10 }, { header: "Mapped PLO", key: "plo", width: 11 },
+      { header: "Statement", key: "st", width: 70 }, { header: "Bloom level", key: "bl", width: 10 }, { header: "Mapped GA", key: "plo", width: 11 },
     ], rows: c.courses.flatMap((k) => k.seedClos.map((l, i) => ({ code: k.code, title: k.title, clo: `CLO-${i + 1}`, st: l.statement, bl: l.bloomLevel, plo: l.mappedPlo ? `PLO-${l.mappedPlo.number}` : "" }))) },
-    { name: "Course-PLO matrix", columns: [
+    { name: "Course-GA matrix", columns: [
       { header: "Code", key: "code", width: 11 }, { header: "Title", key: "title", width: 40 }, { header: "Semester", key: "sem", width: 10 },
       ...c.plos.map((p) => ({ header: `PLO-${p.number}`, key: `p${p.number}`, width: 8 })),
     ], rows: c.courses.map((k) => { const ps = coursePlos(k); return { code: k.code, title: k.title, sem: k.semesterNumber ?? "", ...Object.fromEntries(c.plos.map((p) => [`p${p.number}`, ps.includes(p.number) ? "X" : ""])) }; }) },
@@ -58,7 +58,7 @@ export function curriculumSheets(c: Curriculum): SheetSpec[] {
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "Week", key: "wk", width: 7 }, { header: "Lecture", key: "lec", width: 8 },
       { header: "Topic", key: "topic", width: 60 }, { header: "Subtopic", key: "sub", width: 50 }, { header: "CLO", key: "clo", width: 8 },
     ], rows: c.courses.flatMap((k) => k.seedTopics.map((t) => ({ code: k.code, title: k.title, wk: Math.ceil(t.lectureNumber / 2), lec: t.lectureNumber, topic: t.topic, sub: t.subtopic || "", clo: cloOf(t) }))) },
-    { name: "PLOs", columns: [{ header: "PLO", key: "n", width: 8 }, { header: "Title", key: "t", width: 40 }, { header: "Description", key: "d", width: 90 }], rows: c.plos.map((p) => ({ n: `PLO-${p.number}`, t: p.title, d: p.description })) },
+    { name: "GAs", columns: [{ header: "PLO", key: "n", width: 8 }, { header: "Title", key: "t", width: 40 }, { header: "Description", key: "d", width: 90 }], rows: c.plos.map((p) => ({ n: `GA-${p.number}`, t: p.title, d: p.description })) },
   ];
 }
 
@@ -83,9 +83,9 @@ export function curriculumDocument(c: Curriculum) {
   body.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: `${c.title}` })] }));
   body.push(p(`${c.authority} curriculum, version ${c.version}${c.sourceReference ? ` — ${c.sourceReference}` : ""}`, { italics: true }));
   const totalCr = c.courses.filter((k) => k.semesterNumber).reduce((s, k) => s + k.creditHours, 0);
-  body.push(p(`${c.courses.length} courses · ${c.plos.length} PLOs · ${totalCr} credit hours placed in semesters`));
+  body.push(p(`${c.courses.length} courses · ${c.plos.length} GAs · ${totalCr} credit hours placed in semesters`));
 
-  body.push(h("Program Learning Outcomes", HeadingLevel.HEADING_1));
+  body.push(h("Graduate Attributes", HeadingLevel.HEADING_1));
   body.push(table(["PLO", "Title", "Description"], [900, 2600, CONTENT - 3500], c.plos.map((x) => [`PLO-${x.number}`, x.title, x.description])));
 
   body.push(h("Scheme of Studies", HeadingLevel.HEADING_1));
@@ -93,7 +93,7 @@ export function curriculumDocument(c: Curriculum) {
   for (const s of sems) {
     const list = c.courses.filter((k) => k.semesterNumber === s);
     body.push(h(`${semLabel(s)} (${list.reduce((n, k) => n + k.creditHours, 0)} credit hours)`, HeadingLevel.HEADING_3));
-    body.push(table(["Code", "Course", "Cr", "Category", "Prerequisite", "PLOs"], [1000, 3300, 500, 1600, 1500, CONTENT - 7900],
+    body.push(table(["Code", "Course", "Cr", "Category", "Prerequisite", "GAs"], [1000, 3300, 500, 1600, 1500, CONTENT - 7900],
       list.map((k) => [k.code, k.title, String(k.creditHours), k.category + (k.domain ? ` (${k.domain})` : ""), k.prerequisiteCourse?.code || "", coursePlos(k).map((n) => `PLO-${n}`).join(", ")])));
   }
 

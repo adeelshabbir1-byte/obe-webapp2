@@ -9,7 +9,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
 }) {
   // Order follows the work: plan the assessments, keep attendance (which dates the log), then rubrics, and the result last.
   const tabs = [
-    { key: "clos", label: "1. CLOs & PLO Mapping", href: `/instructor/courses/${courseId}/clos` },
+    { key: "clos", label: "1. CLOs & GA Mapping", href: `/instructor/courses/${courseId}/clos` },
     { key: "weights", label: "2. Assessment Weights", href: `/instructor/courses/${courseId}/weights` },
     { key: "instruments", label: "3. Assessments", href: `/instructor/courses/${courseId}/instruments` },
     { key: "paper-distribution", label: "4. Paper Distribution", href: `/instructor/courses/${courseId}/paper-distribution` },

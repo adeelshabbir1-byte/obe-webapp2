@@ -122,7 +122,7 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
                 {result.created.map((c: any) => (
                   <p key={c.batchName}>
                     {c.batchName} created.
-                    {c.copiedFrom ? ` Copied ${c.coursesCopied} course(s) and ${c.plosCopied} PLO(s) forward from ${c.copiedFrom}.` : " No earlier batch of this program to copy from — starting empty."}
+                    {c.copiedFrom ? ` Copied ${c.coursesCopied} course(s) and ${c.plosCopied} GA(s) forward from ${c.copiedFrom}.` : " No earlier batch of this program to copy from — starting empty."}
                   </p>
                 ))}
               </div>

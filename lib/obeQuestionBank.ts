@@ -22,7 +22,7 @@ export async function courseQuestions(masterCourseId: string, chairmanId: string
       const others = shuffle(plos.filter((p) => p.id !== plo.id), r).sort((a, b) => Math.abs(a.number - plo.number) - Math.abs(b.number - plo.number)).slice(0, 3);
       const { options, answer } = withAnswer(ploName(plo), others.map(ploName), r);
       const g = ploGuide(plo.number);
-      qs.push({ kind: "plo", prompt: `${mc.code} ${mc.title} — CLO-${i + 1}: "${c.statement}". Which PLO does this CLO build?`, options, answer,
+      qs.push({ kind: "plo", prompt: `${mc.code} ${mc.title} — CLO-${i + 1}: "${c.statement}". Which GA does this CLO build?`, options, answer,
         why: `HEC maps it to ${ploName(plo)}. ${plo.description}${g ? ` In plain words: ${g.meaning} ${g.notThis}` : ""}` });
     }
     const b = BLOOM.find((x) => x.level === c.bloomLevel);

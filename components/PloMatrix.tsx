@@ -72,7 +72,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
           <div className="card" key={prog.coordinatorId} style={{ overflowX: "auto" }}>
             <h3 style={{ fontSize: 14, marginBottom: 4 }}>{prog.coordinatorName}'s Program</h3>
             {prog.plos.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No PLOs defined for this program yet.</p>
+              <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No GAs defined for this program yet.</p>
             ) : prog.courses.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 8 }}>No courses in this program yet.</p>
             ) : (
@@ -82,7 +82,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
                     <th>Course</th><th>Type</th><th>Sem</th>
                     {prog.plos.map((p) => (
                       <th key={p.id} style={{ textAlign: "center", writingMode: "vertical-rl", transform: "rotate(180deg)", height: 90, whiteSpace: "nowrap" }}>
-                        PLO-{p.number}{p.status !== "approved" ? " *" : ""}
+                        GA-{p.number}{p.status !== "approved" ? " *" : ""}
                       </th>
                     ))}
                   </tr>
@@ -141,7 +141,7 @@ export default function PloMatrix({ programs: initialPrograms }: { programs: Pro
               </SortableTable>
             )}
             {prog.plos.some((p) => p.status !== "approved") && (
-              <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>* PLO not yet approved by Institute Head</div>
+              <div style={{ fontSize: 11, color: "var(--slate)", marginTop: 8 }}>* GA not yet approved by Institute Head</div>
             )}
           </div>
         );

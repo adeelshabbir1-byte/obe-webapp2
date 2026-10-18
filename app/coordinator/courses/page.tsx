@@ -50,7 +50,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Courses</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Catalog</h1>
         <a href="/api/coordinator/courses/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>

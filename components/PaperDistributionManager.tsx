@@ -216,7 +216,7 @@ export default function PaperDistributionManager({ apiBase, items: initialItems,
 
         <div className="card" style={{ overflowX: "auto" }}>
           <table>
-            <thead><tr><th>Q. No.</th><th>Topic</th><th>CLO</th><th>PLO</th><th>Cognitive Level</th><th>Suggested Verbs</th><th>Marks</th>{coverageByTopic && <th>Actual Coverage</th>}<th></th></tr></thead>
+            <thead><tr><th>Q. No.</th><th>Topic</th><th>CLO</th><th>GA</th><th>Cognitive Level</th><th>Suggested Verbs</th><th>Marks</th>{coverageByTopic && <th>Actual Coverage</th>}<th></th></tr></thead>
             <tbody>
               {sectionItems.length === 0 && <tr><td colSpan={coverageByTopic ? 9 : 8} style={{ color: "var(--slate)" }}>No questions added yet.</td></tr>}
               {sectionItems.map((it, i) => (
@@ -315,7 +315,7 @@ function HitSummary({ items, clos, lectureRows, total }: { items: Item[]; clos: 
   for (const it of items) {
     const c = it.cloId ? clos.find((x) => x.id === it.cloId) : null;
     add(byClo, c?.code || "No CLO", it, c?.statement);
-    add(byPlo, c?.plo || "No PLO", it, c?.ploTitle || undefined);
+    add(byPlo, c?.plo || "No GA", it, c?.ploTitle || undefined);
     const row = it.lectureRowId ? lectureRows.find((r) => r.id === it.lectureRowId) : null;
     add(byTopic, (row?.topic || it.topicText || "—").trim(), it);
   }
@@ -349,7 +349,7 @@ function HitSummary({ items, clos, lectureRows, total }: { items: Item[]; clos: 
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 10 }}>What this paper tests</h3>
       <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
-        {block("PLOs hit", byPlo)}
+        {block("GAs hit", byPlo)}
         {block("CLOs hit", byClo)}
       </div>
       {unhit.length > 0 && <p style={{ fontSize: 11.5, color: "var(--rust)", marginTop: 8 }}>Not tested in this paper: {unhit.map((c) => c.code + (c.plo ? ` (${c.plo})` : "")).join(", ")}</p>}

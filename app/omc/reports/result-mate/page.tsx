@@ -234,8 +234,8 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
 
           {result.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 4 }}>PLO Attainment, by Student</h3>
-              <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that PLO.</p>
+              <h3 style={{ fontSize: 14, marginBottom: 4 }}>GA Attainment, by Student</h3>
+              <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 10 }}><span style={{ background: "var(--crimson-50)", color: "var(--rust)", fontWeight: 700, padding: "1px 6px" }}>Red</span> = below the {passCriteria.ploPct}% pass threshold for that GA.</p>
               <SortableTable paginate={false} searchable={false}>
                 <thead><tr><th>Roll #</th><th>Name</th>{result.ploLabels.map((p) => {
                   const max = result.ploMaxWeight[p] || 0;

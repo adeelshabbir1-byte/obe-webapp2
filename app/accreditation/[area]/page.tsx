@@ -14,9 +14,9 @@ export const metadata = { title: "Accreditation data" };
 // Where the rest of each area's SAR data is kept in the system.
 const ELSEWHERE: Partial<Record<AreaKey, [string, string][]>> = {
   governance: [["/meetings", "Meetings & Minutes (statutory body meetings)"], ["/hod/department", "Department (Dean and Chairman details)"]],
-  curriculum: [["/coordinator/program-profile", "Program Profile (PEOs, program level and approvals, PEO-PLO map)"], ["/coordinator/courses", "Courses and course outlines"], ["/coordinator/course-folders", "Course folders"]],
-  students: [["/admission-criteria", "Admission criteria"], ["/coordinator/students", "Students (status: graduated, left, dropped)"], ["/student-activities", "Student societies and events"], ["/chairman/finance", "Scholarships"]],
-  faculty: [["/faculty-report", "Faculty details report"], ["/appraisals", "Faculty appraisals"], ["/coordinator/surveys", "Student feedback surveys"], ["/coordinator/load-report", "Teacher load report"]],
+  curriculum: [["/coordinator/program-profile", "Program Profile (PEOs, program level and approvals, PEO-GA map)"], ["/coordinator/courses", "Course Catalog"], ["/coordinator/course-folders", "Course folders"]],
+  students: [["/admission-criteria", "Admission criteria"], ["/coordinator/students", "Student Directory"], ["/student-activities", "Student societies and events"], ["/chairman/finance", "Scholarships"]],
+  faculty: [["/faculty-report", "Faculty Directory"], ["/appraisals", "Faculty appraisals"], ["/coordinator/surveys", "Student feedback surveys"], ["/coordinator/load-report", "Teacher load report"]],
   research: [["/faculty/profile", "Faculty profiles (publications, grants)"], ["/fyp", "Final Year Projects"]],
   outreach: [["/coordinator/stakeholders", "Alumni & employers"], ["/meetings", "Industrial advisory board meetings"]],
   resources: [["/chairman/finance", "Finance"], ["/facilities", "Facilities"], ["/library-inventory", "Library"], ["/lab-inventory", "Labs"]],

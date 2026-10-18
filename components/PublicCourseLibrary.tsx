@@ -62,7 +62,7 @@ export default function PublicCourseLibrary({ role, myCourses }: { role: string;
     setBusy(false);
     if (r.ok) {
       const d = r.data;
-      setMessage(`Imported: ${d.cloCount} CLOs, ${d.lectureRowCount} lecture rows, ${d.instrumentCount} assessments.${d.ploUnmapped > 0 ? ` ${d.ploUnmapped} CLO(s) were mapped to PLOs your batch doesn't have, so they are left unmapped — map them in the CLO editor.` : ""} Open the course to review and edit it.`);
+      setMessage(`Imported: ${d.cloCount} CLOs, ${d.lectureRowCount} lecture rows, ${d.instrumentCount} assessments.${d.ploUnmapped > 0 ? ` ${d.ploUnmapped} CLO(s) were mapped to GAs your batch doesn't have, so they are left unmapped — map them in the CLO editor.` : ""} Open the course to review and edit it.`);
       search();
     } else if (r.data?.needsConfirm) {
       if (confirm(`${r.data.error}\n\nReplace it?`)) await doImport(id, true);

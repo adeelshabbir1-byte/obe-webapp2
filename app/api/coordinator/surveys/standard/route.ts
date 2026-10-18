@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const batch = await prisma.batch.findFirst({ where: { id: String(b.batchId || ""), coordinatorId: user.id }, select: { id: true, degreeProgram: true, batchName: true } });
   if (!batch) return NextResponse.json({ error: "Choose one of your batches." }, { status: 400 });
   const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } });
-  if (!plos.length) return NextResponse.json({ error: "This batch has no PLOs yet." }, { status: 400 });
+  if (!plos.length) return NextResponse.json({ error: "This batch has no GAs yet." }, { status: 400 });
   const prof = await prisma.programProfile.findFirst({ where: { coordinatorId: user.id, degreeProgram: batch.degreeProgram }, select: { peos: true } }).catch(() => null);
   let peos: string[] = []; try { peos = prof?.peos ? JSON.parse(prof.peos) : []; } catch { peos = []; }
   const keys: string[] = Array.isArray(b.keys) && b.keys.length ? b.keys : STANDARD_SURVEYS.map((s) => s.key);

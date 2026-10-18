@@ -355,7 +355,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
     const key = c.ploId || "none";
     const last = ploGroups[ploGroups.length - 1];
     if (last && last.key === key) { last.cols += 1; last.total += cloTotals[idx]; last.weighted += cloTotals[idx] * ((c.contribution ?? 0) / 100); return; }
-    ploGroups.push({ key, label: c.ploNumber != null ? `PLO-${c.ploNumber}` : "No PLO", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], weighted: cloTotals[idx] * ((c.contribution ?? 0) / 100), tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
+    ploGroups.push({ key, label: c.ploNumber != null ? `GA-${c.ploNumber}` : "No GA", title: c.ploTitle || "", cols: 1, total: cloTotals[idx], weighted: cloTotals[idx] * ((c.contribution ?? 0) / 100), tint: PLO_TINTS[ploGroups.length % PLO_TINTS.length] });
   });
   const cloTint = (c: Clo) => ploGroups.find((g) => g.key === (c.ploId || "none"))?.tint;
   // Per PLO: % of the marks it carries and how many different assessment items (quizzes, assignments, midterm, final) test it.
@@ -461,7 +461,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
             )}
             {!overPolicy && overTarget && (sum > (target || 0) ? (
               <p style={{ fontSize: 12, color: "var(--rust)", marginBottom: 8, fontWeight: 700 }}>
-                ⚠ {type}s total {fmtPct(sum)}% — above your {target}% target by {fmtPct(Math.round((sum - (target || 0)) * 100) / 100)}%. This pushes CLO and PLO totals above 100%. Lower the marks below (raising them further is blocked).
+                ⚠ {type}s total {fmtPct(sum)}% — above your {target}% target by {fmtPct(Math.round((sum - (target || 0)) * 100) / 100)}%. This pushes CLO and GA totals above 100%. Lower the marks below (raising them further is blocked).
               </p>
             ) : (
               <p style={{ fontSize: 11.5, color: "var(--brass-dark)", marginBottom: 8 }}>
@@ -562,10 +562,10 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         })}
         {ploGroups.length > 0 && cloList.length > 0 && (rules.ploMinPct > 0 || rules.ploMinItems > 0) && (
           <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 6px" }}>
-            OMC rule for this course type: every PLO needs {rules.ploMinPct > 0 ? <b>at least {rules.ploMinPct}% of the marks</b> : null}
+            OMC rule for this course type: every GA needs {rules.ploMinPct > 0 ? <b>at least {rules.ploMinPct}% of the marks</b> : null}
             {rules.ploMinPct > 0 && rules.ploMinItems > 0 ? " through " : null}
             {rules.ploMinItems > 0 ? <b>at least {rules.ploMinItems} assessment item{rules.ploMinItems === 1 ? "" : "s"}</b> : null}.
-            {ploGroups.some((g) => ploLow(g.key)) ? <span style={{ color: "var(--rust)", fontWeight: 600 }}> PLOs in red fall short - click one to see its topics and tick more quizzes, assignments or exam questions for them.</span> : <span style={{ color: "var(--sage)", fontWeight: 600 }}> All PLOs meet it.</span>}
+            {ploGroups.some((g) => ploLow(g.key)) ? <span style={{ color: "var(--rust)", fontWeight: 600 }}> GAs in red fall short - click one to see its topics and tick more quizzes, assignments or exam questions for them.</span> : <span style={{ color: "var(--sage)", fontWeight: 600 }}> All GAs meet it.</span>}
           </p>
         )}
         {ploGroups.length > 0 && cloList.length > 0 && (
@@ -576,7 +576,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
                 <div style={{ fontSize: 11.5, fontWeight: 700 }}>{g.label}</div>
                 <div style={{ fontSize: 17, fontWeight: 700 }}>{fmtPct(g.total)}%</div>
                 <div style={{ fontSize: 10.5, color: "var(--slate)" }}>of total marks · {g.cols} CLO{g.cols > 1 ? "s" : ""}</div>
-                {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }} title="Each CLO's marks multiplied by its contribution % to this PLO">{fmtPct(g.weighted)}% by CLO contribution</div>}
+                {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }} title="Each CLO's marks multiplied by its contribution % to this GA">{fmtPct(g.weighted)}% by CLO contribution</div>}
                 {g.key !== "none" && <div style={{ fontSize: 10.5, color: "var(--slate)" }}>tested by {ploStats.get(g.key)?.items || 0} item{(ploStats.get(g.key)?.items || 0) === 1 ? "" : "s"}{rules.ploMinItems ? ` (min ${rules.ploMinItems})` : ""}</div>}
                 {ploShort(g.key).length > 0 && <div style={{ fontSize: 10.5, color: "var(--rust)", fontWeight: 600 }}>Short: {ploShort(g.key).join("; ")}</div>}
               </div>
@@ -593,7 +593,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
         {cloList.length > 0 && filledRows.length > 0 && (
           <div className="no-print" style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 5 }}>
-              Click a CLO or PLO to highlight the topics mapped to it, then tick quizzes/assignments or add question numbers for those topics. Click it again to stop.
+              Click a CLO or GA to highlight the topics mapped to it, then tick quizzes/assignments or add question numbers for those topics. Click it again to stop.
               {" "}<span style={{ color: "var(--rust)" }}>Red = not hit enough.</span>
               <button type="button" onClick={refreshAll} disabled={saving} className="btn" title="Save any unsaved ticks and reload the latest percentages"
                 style={{ marginLeft: 10, padding: "3px 12px", fontSize: 12 }}>{saving ? "Saving…" : "⟳ Refresh"}</button>

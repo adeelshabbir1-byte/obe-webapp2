@@ -16,7 +16,7 @@ export type AreaDef = { key: AreaKey; label: string; form: string; blurb: string
 export const AREAS: AreaDef[] = [
   { key: "governance", label: "Institute & governance", form: "Form 1", blurb: "Institute and business-school information, contacts, vision and mission approvals, strategic plans, statutory bodies, QA reviews, QEC and external audits." },
   { key: "policies", label: "Policies & manuals", form: "All forms", blurb: "Every approved policy, rules and manual the SAR asks to attach, with its approving body and approval / review dates." },
-  { key: "curriculum", label: "Curriculum records", form: "Form 2", blurb: "Curriculum reviews and indigenous teaching materials. Program approvals, the PEO-PLO map and course details are kept on the program and course pages." },
+  { key: "curriculum", label: "Curriculum records", form: "Form 2", blurb: "Curriculum reviews and indigenous teaching materials. Program approvals, the PEO-GA map and course details are kept on the program and course pages." },
   { key: "students", label: "Admissions & student support", form: "Form 3", blurb: "Applications and admissions per intake, selection tools, counselling, internships and placement activities." },
   { key: "faculty", label: "Faculty activities", form: "Form 4", blurb: "Teaching-load policy, workload time allocation, development activities, committees, consultancy, executive education, outside engagement, satisfaction surveys and exits." },
   { key: "research", label: "Research & ORIC", form: "Form 5", blurb: "ORIC, research centres and groups, research funding and spending, funded projects, impact of research, forums organised and thesis supervision." },

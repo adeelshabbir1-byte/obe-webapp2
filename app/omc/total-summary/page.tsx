@@ -38,8 +38,8 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Total Summary" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Every topic's contribution to each CLO, each PLO, and each assessment type — from the Subject Expert's plan.
-        Rows in red have a mismatch between the CLO, assessment-type, and PLO totals — usually a lecture with a
+        Every topic's contribution to each CLO, each GA, and each assessment type — from the Subject Expert's plan.
+        Rows in red have a mismatch between the CLO, assessment-type, and GA totals — usually a lecture with a
         CLO assigned but no linked instrument, or vice versa.
       </p>
 
@@ -106,7 +106,7 @@ export default async function TotalSummaryPage({ searchParams }: { searchParams:
 
           {summary.ploLabels.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
-              <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → PLO Contribution</h3>
+              <h3 style={{ fontSize: 14, marginBottom: 10 }}>Topic → GA Contribution</h3>
               <SortableTable paginate={false} searchable={false}>
                 <thead><tr><th>Topic</th><th>Lec</th>{summary.ploLabels.map((p) => <th key={p}>{p}</th>)}<th>Total</th></tr></thead>
                 <tbody>

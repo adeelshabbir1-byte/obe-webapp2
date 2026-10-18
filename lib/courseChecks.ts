@@ -15,7 +15,7 @@ export async function courseIssues(courseId: string, source: "SE" | "INSTRUCTOR"
   const list = (xs: string[]) => (xs.length > 4 ? `${xs.slice(0, 4).join(", ")} and ${xs.length - 4} more` : xs.join(", "));
   if (!clos.length) return [{ text: "No CLOs yet.", fix: "clos" }];
   const noPlo = clos.filter((c) => !c.mappedPloId).map((c) => c.code);
-  if (noPlo.length) out.push({ text: `${list(noPlo)} not mapped to a PLO.`, fix: "clos" });
+  if (noPlo.length) out.push({ text: `${list(noPlo)} not mapped to a GA.`, fix: "clos" });
   const served = new Set(clos.map((c) => c.mappedPloId).filter(Boolean));
   const unserved = mapped.filter((m) => !served.has(m.ploId)).map((m) => `PLO-${m.plo.number}`);
   if (unserved.length) out.push({ text: `${list(unserved)} assigned to the course but no CLO serves it.`, fix: "clos" });

@@ -16,10 +16,10 @@ export default async function CourseFlowPanel({ courseId, source }: { courseId: 
       <WeightAdvice chain={chain} />
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Outcome flow of this course</h3>
-        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>Click the course to open its CLOs (left) and PLOs (right); click a CLO to see its assessments, a PLO to see its PEOs. Figures update as you change the plan.</p>
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>Click the course to open its CLOs (left) and GAs (right); click a CLO to see its assessments, a GA to see its PEOs. Figures update as you change the plan.</p>
         <OutcomeFlow mode="course" batchId={chain.course.batchId} canEdit={false} target={flow?.target || 60}
           courses={[{ id: courseId, code: chain.course.code, title: chain.course.title, courseType: "", creditHours: chain.course.creditHours, semesterNumber: null, family: flow?.courses.find((c) => c.id === courseId)?.family || "COMPUTING" }]}
-          plos={plos} peos={peos} initialChain={chain} peoNote="No program objective is linked to this course's PLOs yet." />
+          plos={plos} peos={peos} initialChain={chain} peoNote="No program objective is linked to this course's GAs yet." />
       </div>
     </>
   );

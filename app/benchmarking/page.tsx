@@ -33,7 +33,7 @@ export default async function Benchmarking({ searchParams }: { searchParams: SP 
     const p = pivot(rows, ["program"], mets);
     const all = mets.map((m) => pivot(rows, [], [m])[0]?.values[0] ?? null);
     body = <div className="card"><T head={["Program", ...mets.map((m) => METRICS.find((x) => x[0] === m)![1])]} body={[...p.map((r) => [r.keys[0], ...r.values]), ["All programs", ...all]]} />
-      <p className="small-note">Each row covers every finalised course result of the program&apos;s cohorts. Compare a program&apos;s CLO/PLO rates with the institute line to spot outliers.</p></div>;
+      <p className="small-note">Each row covers every finalised course result of the program&apos;s cohorts. Compare a program&apos;s CLO/GA rates with the institute line to spot outliers.</p></div>;
   } else if (tab === "years") {
     const prog = programs.includes(searchParams.program || "") ? searchParams.program! : programs[0];
     const pr = rows.filter((r) => r.program === prog);
@@ -41,11 +41,11 @@ export default async function Benchmarking({ searchParams }: { searchParams: SP 
     const coh = pivot(pr, ["intake", "batch"], ["count", "avgPct", "passPct", "cloRate", "ploRate"]);
     body = <>
       <form className="card" style={{ display: "flex", gap: 8 }}><input type="hidden" name="tab" value="years" /><select name="program" defaultValue={prog}>{programs.map((p) => <option key={p}>{p}</option>)}</select><button className="btn btn-secondary btn-sm">Show</button></form>
-      <div className="card"><h3 style={{ marginTop: 0 }}>Cohorts of {prog}</h3><T head={["Intake", "Batch", "Results", "Avg marks %", "Pass %", "CLOs met %", "PLOs met %"]} body={coh.map((r) => [...r.keys, ...r.values])} /></div>
-      <div className="card" style={{ overflowX: "auto" }}><h3 style={{ marginTop: 0 }}>PLO results met, by cohort</h3>
-        <table><thead><tr><th>PLO</th>{yo.cohorts.map((c) => <th key={c}>{c}</th>)}<th>Change</th></tr></thead>
+      <div className="card"><h3 style={{ marginTop: 0 }}>Cohorts of {prog}</h3><T head={["Intake", "Batch", "Results", "Avg marks %", "Pass %", "CLOs met %", "GAs met %"]} body={coh.map((r) => [...r.keys, ...r.values])} /></div>
+      <div className="card" style={{ overflowX: "auto" }}><h3 style={{ marginTop: 0 }}>GA results met, by cohort</h3>
+        <table><thead><tr><th>GA</th>{yo.cohorts.map((c) => <th key={c}>{c}</th>)}<th>Change</th></tr></thead>
           <tbody>{yo.nums.map((n, i) => { const v = yo.grid[i].filter((x): x is number => x !== null); const ch = v.length > 1 ? Math.round(10 * (v[v.length - 1] - v[0])) / 10 : null;
-            return <tr key={n}><td>PLO-{n}</td>{yo.grid[i].map((x, j) => <td key={j} style={{ background: heat(x) }}>{x ?? "—"}</td>)}<td style={{ color: ch === null ? undefined : ch >= 0 ? "#1F5E36" : "#B3261E", fontWeight: 700 }}>{ch === null ? "—" : `${ch > 0 ? "+" : ""}${ch}`}</td></tr>; })}</tbody></table>
+            return <tr key={n}><td>GA-{n}</td>{yo.grid[i].map((x, j) => <td key={j} style={{ background: heat(x) }}>{x ?? "—"}</td>)}<td style={{ color: ch === null ? undefined : ch >= 0 ? "#1F5E36" : "#B3261E", fontWeight: 700 }}>{ch === null ? "—" : `${ch > 0 ? "+" : ""}${ch}`}</td></tr>; })}</tbody></table>
         <p className="small-note">Green ≥ 70%, amber 50–70%, red below 50%. Change = latest cohort minus the oldest.</p></div>
     </>;
   } else {

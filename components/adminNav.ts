@@ -12,5 +12,5 @@ export const ADMIN_NAV = [
   { href: "/admin/feedback", label: "System Feedback" },
   { href: "/admin/report-bundles", label: "Report Bundles" },
   { href: "/admin/landing-page", label: "Landing Page" },
-  { href: "/public-library", label: "Public Course Library" },
+  { href: "/public-library", label: "National Course Catalog" },
 ];

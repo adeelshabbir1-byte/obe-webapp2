@@ -9,7 +9,7 @@ const TABS = [
   { href: "/chairman/omc", label: "OMC members" },
   { href: "/chairman/assigners", label: "Course Assigners" },
   { href: "/chairman/faculties", label: "Faculties & Deans" },
-  { href: "/chairman/departments", label: "Departments" },
+  { href: "/chairman/departments", label: "Departments & Programs" },
   { href: "/chairman/hierarchy", label: "Institute chart" },
 ];
 

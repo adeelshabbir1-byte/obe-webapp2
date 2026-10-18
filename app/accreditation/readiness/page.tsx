@@ -13,7 +13,7 @@ import { Bar, heat } from "../../../components/accreditation/Visuals";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Visit readiness" };
 
-const GAP_LABEL: Record<string, string> = { "course-file": "Missing course files", "unverified-profile": "Unverified faculty profiles", plo: "PLOs below the benchmark", result: "Results not approved", fsr: "Student–faculty ratio", lab: "Lab capacity", overload: "Overloaded teachers", cqi: "CQI findings without action", data: "Missing data" };
+const GAP_LABEL: Record<string, string> = { "course-file": "Missing course files", "unverified-profile": "Unverified faculty profiles", plo: "GAs below the benchmark", result: "Results not approved", fsr: "Student–faculty ratio", lab: "Lab capacity", overload: "Overloaded teachers", cqi: "CQI findings without action", data: "Missing data" };
 
 // The Dean's and Chairman's view of every accreditation visit being prepared: how ready each program is for its own
 // council, where the gaps are, and the dossier.

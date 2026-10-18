@@ -10,24 +10,24 @@ export default function PloCoverageCard({ rows, minTopics, minPct, minItems }: {
   return (
     <div className="card">
       <div className="lp-toolbar" style={{ marginBottom: 10 }}>
-        <h3>PLO coverage</h3>
-        <span className="lp-meta">{minTopics > 0 ? `OMC minimum: ${minTopics} lecture topic${minTopics === 1 ? "" : "s"} per PLO` : "No OMC minimum per PLO"}{minPct ? ` · ${minPct}% of marks` : ""}{minItems ? ` · ${minItems} assessment item${minItems === 1 ? "" : "s"}` : ""}</span>
+        <h3>GA coverage</h3>
+        <span className="lp-meta">{minTopics > 0 ? `OMC minimum: ${minTopics} lecture topic${minTopics === 1 ? "" : "s"} per GA` : "No OMC minimum per GA"}{minPct ? ` · ${minPct}% of marks` : ""}{minItems ? ` · ${minItems} assessment item${minItems === 1 ? "" : "s"}` : ""}</span>
       </div>
       <div className="lp-chips">
         {rows.map((r) => {
           const ok = r.clos.length > 0 && r.lectures >= minTopics && r.onCourse;
-          const tip = `${r.title}${r.clos.length ? ` — through ${r.clos.join(", ")}` : " — no CLO maps to it yet"}. ${r.lectures} lecture topic(s), ${r.sharePct}% of teaching lectures, ${r.marksPct}% of marks in ${r.items} assessment item(s).${!r.onCourse ? " Not one of the PLOs the OMC set for this course." : ""}`;
+          const tip = `${r.title}${r.clos.length ? ` — through ${r.clos.join(", ")}` : " — no CLO maps to it yet"}. ${r.lectures} lecture topic(s), ${r.sharePct}% of teaching lectures, ${r.marksPct}% of marks in ${r.items} assessment item(s).${!r.onCourse ? " Not one of the GAs the OMC set for this course." : ""}`;
           return (
             <span key={r.id} className={`lp-chip ${ok ? "ok" : "short"}`} title={tip}>
-              <i />PLO-{r.number}
+              <i />GA-{r.number}
               <small>{r.clos.length ? `${r.clos.join(", ")} · ${r.lectures} lecture${r.lectures === 1 ? "" : "s"} (${r.sharePct}%)${r.marksPct ? ` · ${r.marksPct}% marks` : ""}` : "no CLO yet"}{r.clos.length > 0 && minTopics > 0 && r.lectures < minTopics ? ` · ${minTopics - r.lectures} more needed` : ""}</small>
             </span>
           );
         })}
       </div>
-      {notReached.length > 0 && <p className="lp-hint" style={{ color: "var(--amber-800)" }}>{notReached.map((r) => `PLO-${r.number}`).join(", ")} {notReached.length === 1 ? "is" : "are"} set for this course but no CLO maps to {notReached.length === 1 ? "it" : "them"} — map a CLO on the CLOs tab, or ask the OMC to remove it.</p>}
-      {offCourse.length > 0 && <p className="lp-hint" style={{ color: "var(--amber-800)" }}>{offCourse.map((r) => `PLO-${r.number}`).join(", ")}: a CLO points to {offCourse.length === 1 ? "it" : "them"} but the OMC hasn&apos;t put {offCourse.length === 1 ? "it" : "them"} on this course.</p>}
-      {short.length === 0 && notReached.length === 0 && offCourse.length === 0 && <p className="lp-hint">Every PLO of this course is reached through its CLOs{minTopics > 0 ? " with enough lecture topics" : ""}. Hover a PLO for its share of lectures and marks.</p>}
+      {notReached.length > 0 && <p className="lp-hint" style={{ color: "var(--amber-800)" }}>{notReached.map((r) => `GA-${r.number}`).join(", ")} {notReached.length === 1 ? "is" : "are"} set for this course but no CLO maps to {notReached.length === 1 ? "it" : "them"} — map a CLO on the CLOs tab, or ask the OMC to remove it.</p>}
+      {offCourse.length > 0 && <p className="lp-hint" style={{ color: "var(--amber-800)" }}>{offCourse.map((r) => `GA-${r.number}`).join(", ")}: a CLO points to {offCourse.length === 1 ? "it" : "them"} but the OMC hasn&apos;t put {offCourse.length === 1 ? "it" : "them"} on this course.</p>}
+      {short.length === 0 && notReached.length === 0 && offCourse.length === 0 && <p className="lp-hint">Every GA of this course is reached through its CLOs{minTopics > 0 ? " with enough lecture topics" : ""}. Hover a GA for its share of lectures and marks.</p>}
     </div>
   );
 }

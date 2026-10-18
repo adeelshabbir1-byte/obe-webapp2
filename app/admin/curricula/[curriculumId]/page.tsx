@@ -40,7 +40,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
         </div>
         <Link href="/admin/curricula" className="btn btn-secondary btn-sm">← Back to Master Curricula</Link>
         <Link href={`/admin/curricula/${curriculum.id}/create-program`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Create Program Copy</Link>
-        <Link href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–PLO Matrix</Link>
+        <Link href={`/admin/curricula/${curriculum.id}/plo-matrix`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Course–GA Matrix</Link>
         <Link href={`/admin/curricula/${curriculum.id}/review-pending`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Review Pending Courses</Link>
         <Link href={`/admin/curricula/${curriculum.id}/topic-workspace`} style={{ fontSize: 12.5, color: "var(--brass-dark)", marginLeft: 12 }}>Topic Workspace</Link>
         <a href={`/api/master-curriculum/${curriculum.id}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12.5, marginLeft: 12 }}>Download full curriculum (Excel)</a>

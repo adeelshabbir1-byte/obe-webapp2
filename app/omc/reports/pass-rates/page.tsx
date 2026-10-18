@@ -44,9 +44,9 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
 
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
-      <ReportPrintHeader title="CLO / PLO Pass Rate Report" />
+      <ReportPrintHeader title="CLO / GA Pass Rate Report" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        A student passes a CLO or PLO if they scored at least 50% of its maximum weighted marks.
+        A student passes a CLO or GA if they scored at least 50% of its maximum weighted marks.
       </p>
       <div className="card no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
@@ -107,7 +107,7 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each PLO {compareStats && "— Current vs Past"}</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Students Who Passed Each GA {compareStats && "— Current vs Past"}</h3>
             <SimpleBarChart bars={result.ploStats.map((p) => ({ label: p.label, value: p.passCount }))} unit={` / ${result.studentCount}`} />
             {compareStats && (
               <>
@@ -136,11 +136,11 @@ export default async function PassRatesPage({ searchParams }: { searchParams: { 
           </div>
 
           <div className="card" style={{ overflowX: "auto" }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by PLO — Detail</h3>
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>Pass / Fail by GA — Detail</h3>
             <table>
-              <thead><tr><th>PLO</th><th>Max Weight</th><th>Passed</th><th>Failed</th><th>Pass Rate</th></tr></thead>
+              <thead><tr><th>GA</th><th>Max Weight</th><th>Passed</th><th>Failed</th><th>Pass Rate</th></tr></thead>
               <tbody>
-                {result.ploStats.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs mapped to a PLO yet.</td></tr>}
+                {result.ploStats.length === 0 && <tr><td colSpan={5} style={{ color: "var(--slate)" }}>No CLOs mapped to a GA yet.</td></tr>}
                 {result.ploStats.map((p) => (
                   <tr key={p.label}>
                     <td>{p.label}</td><td>{p.maxWeight}%</td>

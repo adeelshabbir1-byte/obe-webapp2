@@ -63,7 +63,7 @@ export default async function InstructorPaperDistributionPage({ params }: { para
         apiBase={`/api/instructor/courses/${course.id}/paper-distribution`}
         items={items.map((i) => ({ id: i.id, examType: i.examType, questionNo: i.questionNo, lectureRowId: i.lectureRowId, topicText: i.topicText, cloId: i.cloId, cognitiveLevel: i.cognitiveLevel, marks: i.marks }))}
         lectureRows={lectureRows.map((r) => ({ id: r.id, topic: r.topic, cloId: r.cloId, bloomLevel: r.bloomLevel }))}
-        clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, plo: c.mappedPlo ? `PLO-${c.mappedPlo.number}` : null, ploTitle: c.mappedPlo?.title || null }))}
+        clos={clos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, plo: c.mappedPlo ? `GA-${c.mappedPlo.number}` : null, ploTitle: c.mappedPlo?.title || null }))}
         coverageByTopic={Object.fromEntries(coverageByTopic.entries())}
         canGenerate
       />

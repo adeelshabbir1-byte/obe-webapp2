@@ -5,9 +5,9 @@ export type Template = { file: string; csv?: boolean; title: string; notes: stri
 
 export const TEMPLATES: Record<string, Template> = {
   plos: {
-    file: "PLOs format.xlsx", title: "Program Learning Outcomes (PLOs)",
-    notes: ["One row per PLO. # is the PLO number.", "PLOs whose number already exists in the batch are skipped, so the file can be uploaded again safely."],
-    sheets: [{ name: "PLOs", headers: ["#", "Title", "Description"], rows: [[1, "Engineering Knowledge", "An ability to apply knowledge of mathematics, science and engineering fundamentals to the solution of complex engineering problems."], [2, "Problem Analysis", "An ability to identify, formulate and analyse complex engineering problems."]], widths: [6, 28, 90] }],
+    file: "GAs format.xlsx", title: "Graduate Attributes (GAs)",
+    notes: ["One row per GA. # is the GA number.", "GAs whose number already exists in the batch are skipped, so the file can be uploaded again safely."],
+    sheets: [{ name: "GAs", headers: ["#", "Title", "Description"], rows: [[1, "Engineering Knowledge", "An ability to apply knowledge of mathematics, science and engineering fundamentals to the solution of complex engineering problems."], [2, "Problem Analysis", "An ability to identify, formulate and analyse complex engineering problems."]], widths: [6, 28, 90] }],
   },
   students: {
     file: "Students format.xlsx", title: "Students of one batch",
@@ -20,16 +20,16 @@ export const TEMPLATES: Record<string, Template> = {
     sheets: [{ name: "Grades", headers: ["Roll Number", "Course Code", "Course Title", "Credit Hours", "Grade", "Term Name", "Term Year"], rows: [["2022-CS-014", "CS101", "Introduction to Programming", 3, "B+", "Fall", 2022]], widths: [16, 12, 34, 12, 8, 10, 10] }],
   },
   "official-clos": {
-    file: "Official curriculum CLOs format.xlsx", title: "CLOs and PLO mapping for the official curriculum",
-    notes: ["One row per CLO. Course Code must match a course in this curriculum.", "Bloom is C1–C6, P1–P7 or A1–A5. Mapped PLO is the PLO number (e.g. 3 or PLO-3)."],
-    sheets: [{ name: "CLOs", headers: ["Course Code", "CLO", "Statement", "Bloom", "Mapped PLO"], rows: [["CS101", "CLO-1", "Explain the basic constructs of a programming language.", "C2", 1], ["CS101", "CLO-2", "Apply loops and functions to solve computing problems.", "C3", 2]], widths: [12, 8, 70, 8, 12] }],
+    file: "Official curriculum CLOs format.xlsx", title: "CLOs and GA mapping for the official curriculum",
+    notes: ["One row per CLO. Course Code must match a course in this curriculum.", "Bloom is C1–C6, P1–P7 or A1–A5. Mapped GA is the GA number (e.g. 3 or GA-3)."],
+    sheets: [{ name: "CLOs", headers: ["Course Code", "CLO", "Statement", "Bloom", "Mapped GA"], rows: [["CS101", "CLO-1", "Explain the basic constructs of a programming language.", "C2", 1], ["CS101", "CLO-2", "Apply loops and functions to solve computing problems.", "C3", 2]], widths: [12, 8, 70, 8, 12] }],
   },
   "curriculum-workbook": {
     file: "Curriculum workbook format.xlsx", title: "A full curriculum in one workbook",
-    notes: ["Five sheets: Curriculum, PLOs, Courses, CLOs, Lecture topics. Only Curriculum and Courses are required.", "The Curriculum sheet needs a Degree program row; change Version to import the same program again.", "Course codes in CLOs and Lecture topics must match the Courses sheet."],
+    notes: ["Five sheets: Curriculum, GAs, Courses, CLOs, Lecture topics. Only Curriculum and Courses are required.", "The Curriculum sheet needs a Degree program row; change Version to import the same program again.", "Course codes in CLOs and Lecture topics must match the Courses sheet."],
     sheets: [
       { name: "Curriculum", headers: ["Item", "Value"], rows: [["Degree program", "BS Computer Science"], ["Authority", "HEC"], ["Version", "2026"]], widths: [20, 40] },
-      { name: "PLOs", headers: ["PLO", "Title", "Description"], rows: [[1, "Academic Education", "To prepare graduates as computing professionals."]], widths: [6, 28, 80] },
+      { name: "GAs", headers: ["PLO", "Title", "Description"], rows: [[1, "Academic Education", "To prepare graduates as computing professionals."]], widths: [6, 28, 80] },
       { name: "Courses", headers: ["Code", "Title", "Credit hours", "Category", "Domain", "Semester", "Description", "Textbook", "Reference"], rows: [["CS101", "Programming Fundamentals", 4, "Core", "Computing", 1, "Basic programming constructs.", "Deitel, C++ How to Program", ""]], widths: [10, 30, 12, 12, 14, 10, 40, 30, 30] },
       { name: "CLOs", headers: ["Course code", "Statement", "Bloom", "PLO"], rows: [["CS101", "Apply loops and functions to solve problems.", "C3", 1]], widths: [12, 60, 8, 6] },
       { name: "Lecture topics", headers: ["Course code", "Lecture", "Topic", "Sub topic", "CLO"], rows: [["CS101", 1, "Introduction to programming", "Compilers and IDEs", 1]], widths: [12, 8, 36, 30, 6] },

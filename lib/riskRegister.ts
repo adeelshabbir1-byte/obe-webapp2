@@ -124,12 +124,12 @@ export async function riskRegister(user: Who, opts: { teaching?: boolean } = {})
     add("medium", "Ownership", `${seWaiting.length} Subject Expert assignment(s) not yet accepted.`, "/coordinator/assign-subject-experts", seWaiting.length);
     add(overdue.length > 5 ? "high" : "medium", "Deadlines", `${overdue.length} course deadline(s) are overdue (e.g. ${overdue.slice(0, 2).map((d) => d.title.replace(/ \((Fall|Spring)[^)]*\)$/i, "")).join("; ")}).`, "/deadlines", overdue.length);
     add("medium", "Course plans", `${notReady.length} course plan(s) not submitted to the OMC yet.`, "/omc/queue", notReady.length);
-    add("medium", "Course plans", `${belowOmc.length} course plan(s) are below the OMC's minimums (topics per CLO/PLO or PLO assessment).`, "/omc/queue", belowOmc.length);
+    add("medium", "Course plans", `${belowOmc.length} course plan(s) are below the OMC's minimums (topics per CLO/GA or GA assessment).`, "/omc/queue", belowOmc.length);
     add("medium", "Results", `${resultsPending.length} course result(s) waiting for approval.`, "/results-approval", resultsPending.length);
     add("medium", "Results", `${returned.length} result(s) were returned to the instructor and not resubmitted.`, "/results-approval", returned.length);
     add("low", "Results", `${gc.length} grade change request(s) waiting.`, "/results-approval", gc.length);
     add("medium", "Teaching quality", `${flagged.length} course(s) where teaching time and assessment don't match or planned topics were dropped: ${flagged.slice(0, 5).map((c) => c.code).join(", ")}.`, "/omc/reports/planned-vs-taught", flagged.length);
-    add("high", "Outcomes", `PLOs attained by fewer than 60% of students last term: ${low.join(", ")}.`, "/omc/reports/attainment-analytics", low.length);
+    add("high", "Outcomes", `GAs attained by fewer than 60% of students last term: ${low.join(", ")}.`, "/omc/reports/attainment-analytics", low.length);
     add("low", "Attendance", `${stale.length} course(s) have no attendance marked in the last 14 days.`, "/omc/delivery-completion", stale.length);
     add(shortStudents >= 10 ? "high" : "medium", "Attendance", `${shortStudents} attendance shortage(s) below the minimum in ${shortCourses.length} course(s): ${shortCourses.slice(0, 5).map((c) => c.code).join(", ")}${shortCourses.length > 5 ? "…" : ""}.`, "/coordinator/attendance", shortStudents);
     const mine = risks.filter((r) => r.program === p);

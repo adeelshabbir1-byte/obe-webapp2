@@ -27,7 +27,7 @@ export async function generateCourseEvaluationForm(courseId: string, viewer: { i
       new TableRow({ children: [cell("Degree(s) Title", { bold: true, width: headerWidths[0] }), cell(course.batch?.degreeProgram || "—", { width: headerWidths[1] }), cell("Semester", { bold: true, width: headerWidths[2] }), cell(`${course.offeredTermName || "—"} ${course.offeredTermYear || ""}`, { width: headerWidths[3] })] }),
       new TableRow({ children: [cell("Course Name", { bold: true, width: headerWidths[0] }), cell(course.title, { width: headerWidths[1] }), cell("No. of Students Registered", { bold: true, width: headerWidths[2] }), cell(String(enrollmentCount), { width: headerWidths[3] })] }),
       new TableRow({ children: [cell("Course Code", { bold: true, width: headerWidths[0] }), cell(course.code, { width: headerWidths[1] }), cell("No. of Students Achieved CLOs", { bold: true, width: headerWidths[2] }), cell(clos.map((c) => { const s = result.cloStats.find((x) => x.code === c.code); return s ? `${c.code}: ${s.passCount}` : ""; }).filter(Boolean).join(", "), { width: headerWidths[3], size: 16 })] }),
-      new TableRow({ children: [cell("Instructor's Name", { bold: true, width: headerWidths[0] }), cell(course.instructor?.name || "—", { width: headerWidths[1] }), cell("No. of Students Achieved PLOs", { bold: true, width: headerWidths[2] }), cell(result.ploStats.map((s) => `${s.label}: ${s.passCount}`).join(", "), { width: headerWidths[3], size: 16 })] }),
+      new TableRow({ children: [cell("Instructor's Name", { bold: true, width: headerWidths[0] }), cell(course.instructor?.name || "—", { width: headerWidths[1] }), cell("No. of Students Achieved GAs", { bold: true, width: headerWidths[2] }), cell(result.ploStats.map((s) => `${s.label}: ${s.passCount}`).join(", "), { width: headerWidths[3], size: 16 })] }),
       new TableRow({ children: [cell("Credit Hours", { bold: true, width: headerWidths[0] }), cell(String(course.creditHours), { width: headerWidths[1] }), cell("", { width: headerWidths[2] }), cell("", { width: headerWidths[3] })] }),
     ],
   });
@@ -38,7 +38,7 @@ export async function generateCourseEvaluationForm(courseId: string, viewer: { i
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
     columnWidths: cloWidths,
     rows: [
-      headerRow(["CLO #", "Course Learning Outcome", "Learning Level", "Mapped PLO", "Lec", "Marks", "Pass Rate", "Below"], cloWidths),
+      headerRow(["CLO #", "Course Learning Outcome", "Learning Level", "Mapped GA", "Lec", "Marks", "Pass Rate", "Below"], cloWidths),
       ...clos.map((c) => {
         const stats = result.cloStats.find((s) => s.code === c.code);
         const passCount = stats?.passCount ?? 0, failCount = stats?.failCount ?? 0;
@@ -67,7 +67,7 @@ export async function generateCourseEvaluationForm(courseId: string, viewer: { i
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
     columnWidths: ploWidths,
     rows: [
-      headerRow(["PLO #", "Program Learning Outcome", "Marks", "Pass Rate", "Below", ""], ploWidths),
+      headerRow(["GA #", "Graduate Attribute", "Marks", "Pass Rate", "Below", ""], ploWidths),
       ...result.ploStats.map((s) => {
         const total = s.passCount + s.failCount;
         const passRate = total > 0 ? `${Math.round((s.passCount / total) * 100)}%` : "—";
@@ -145,7 +145,7 @@ export async function generateCourseEvaluationForm(courseId: string, viewer: { i
         new Paragraph({ text: "" }),
         cloTable,
         new Paragraph({ text: "" }),
-        new Paragraph({ children: [new TextRun({ text: "Program Learning Outcomes", bold: true, size: 24 })] }),
+        new Paragraph({ children: [new TextRun({ text: "Graduate Attributes", bold: true, size: 24 })] }),
         new Paragraph({ text: "" }),
         ploTable,
         new Paragraph({ text: "" }),

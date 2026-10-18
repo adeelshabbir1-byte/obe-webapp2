@@ -71,7 +71,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         NBA / Washington-Accord style attainment — target vs actual per CO, POs scored on a 0–3 scale, trends across
         semesters, and a side-by-side view of every subject. This sits alongside, not in place of, the existing
-        pass/fail-based CLO/PLO reports.
+        pass/fail-based CLO/GA reports.
       </p>
 
       <div className="card no-print">
@@ -98,7 +98,7 @@ export default async function AttainmentAnalyticsPage({ searchParams }: { search
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>PO Attainment{selectedCourse ? ` — ${selectedCourse.code} ${selectedCourse.title}` : ""}</h3>
           <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 12 }}>Weighted average of contributing COs' levels, scored 0–3.</p>
           {!coData || coData.poRows.length === 0 ? (
-            <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No PLO-mapped CLOs with marks yet for this course.</p>
+            <p style={{ color: "var(--slate)", fontSize: 12.5 }}>No GA-mapped CLOs with marks yet for this course.</p>
           ) : (
             <SimpleBarChart bars={coData.poRows.map((r) => ({ label: r.label, value: r.level }))} maxValue={3} />
           )}

@@ -25,7 +25,7 @@ export default function CourseEvaluationSection({ courseId, initialObservations 
       <h3 style={{ fontSize: 14, marginBottom: 4 }}>Course Evaluation Form</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
         Write your end-of-term observations (one per line — each becomes a numbered point on the form), then
-        download the full Course Evaluation Form with your CLO/PLO attainment auto-filled in.
+        download the full Course Evaluation Form with your CLO/GA attainment auto-filled in.
       </p>
       {error && <div className="err">{error}</div>}
       <textarea

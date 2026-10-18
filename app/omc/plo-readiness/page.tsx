@@ -48,9 +48,9 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO Readiness Matrix</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA Readiness Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Every PLO number, across every batch, color-coded by status.
+        Every GA number, across every batch, color-coded by status.
       </p>
 
       <div className="card no-print">
@@ -72,7 +72,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
         <SortableTable paginate={false} searchable={false} style={{ tableLayout: "fixed" }}>
           <thead>
             <tr>
-              <th style={{ width: 70 }}>PLO #</th>
+              <th style={{ width: 70 }}>GA #</th>
               {batches.map((b) => <th key={b.id} style={{ minWidth: 130, fontSize: 10.5 }}>{b.degreeProgram}<br />{b.batchName}</th>)}
             </tr>
           </thead>
@@ -80,7 +80,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
             {batches.length === 0 && <tr><td colSpan={1} style={{ color: "var(--slate)" }}>No batches yet.</td></tr>}
             {numbers.map((n) => (
               <tr key={n}>
-                <td style={{ fontWeight: 600 }}>PLO-{n}</td>
+                <td style={{ fontWeight: 600 }}>GA-{n}</td>
                 {batches.map((b) => {
                   const { status, title } = statusFor(b.id, n);
                   const style = STATUS_STYLE[status];

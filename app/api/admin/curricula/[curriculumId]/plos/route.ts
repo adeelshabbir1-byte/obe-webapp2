@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
   }
 
   const existing = await prisma.masterPLO.findFirst({ where: { masterCurriculumId: curriculum.id, number: parseInt(body.number, 10) } });
-  if (existing) return NextResponse.json({ error: "a PLO with this number already exists" }, { status: 409 });
+  if (existing) return NextResponse.json({ error: "a GA with this number already exists" }, { status: 409 });
 
   const plo = await prisma.masterPLO.create({
     data: { masterCurriculumId: curriculum.id, number: parseInt(body.number, 10), title: body.title, description: body.description },

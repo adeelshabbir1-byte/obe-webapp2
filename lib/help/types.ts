@@ -9,7 +9,7 @@ export type HelpCategory =
 export const CATEGORIES: { key: HelpCategory; label: string; blurb: string }[] = [
   { key: "account", label: "Account & sign-in", blurb: "Passwords, two-step sign-in, locked accounts and switching roles." },
   { key: "people", label: "People & roles", blurb: "Who adds whom, onboarding teachers and students, lending teachers." },
-  { key: "curriculum", label: "Courses & OBE", blurb: "Course templates, CLOs and PLOs, prerequisites and their cascade." },
+  { key: "curriculum", label: "Courses & OBE", blurb: "Course templates, CLOs and GAs, prerequisites and their cascade." },
   { key: "weights", label: "Assessments & weightage", blurb: "The weight policy, exceptions and passing criteria." },
   { key: "teaching", label: "Teaching & delivery", blurb: "Recording delivery, leave, papers, follow-ups and remediation." },
   { key: "registration", label: "Registration & students", blurb: "Why registration is blocked, exemptions, advisors and status." },

@@ -56,7 +56,7 @@ export function comparePlans(se: PlanData, ins: PlanData): PlanComparison {
   if (!ins.exists) return { differences, seChanged, instructorChanged, instructorStarted: false };
 
   const cloCode = (plan: PlanData, id: string | null) => plan.clos.find((c) => c.id === id)?.code || "no CLO";
-  const ploNumber = (plan: PlanData, id: string | null) => { const p = plan.plos.find((x) => x.id === id); return p ? `PLO-${p.number}` : "no PLO"; };
+  const ploNumber = (plan: PlanData, id: string | null) => { const p = plan.plos.find((x) => x.id === id); return p ? `PLO-${p.number}` : "no GA"; };
   const key = (a: PlanAssessment) => `${a.type.trim().toLowerCase()}|${a.label.trim().toLowerCase()}`;
 
   const seByKey = new Map(se.assessments.map((a) => [key(a), a]));

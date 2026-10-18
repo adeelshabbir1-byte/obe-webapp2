@@ -50,16 +50,16 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     { name: "Courses", columns: [
       { header: "Code", key: "code", width: 12 }, { header: "Title", key: "title", width: 44 }, { header: "Credit hours", key: "credits", width: 12 },
       { header: "Category", key: "category", width: 20 }, { header: "Semester", key: "semester", width: 10 }, { header: "Prerequisite", key: "prerequisite", width: 14 },
-      { header: "CLOs", key: "cloCount", width: 8 }, { header: "HEC-suggested PLOs", key: "suggestedPlos", width: 26 }, { header: "Textbook", key: "textbook", width: 36 },
+      { header: "CLOs", key: "cloCount", width: 8 }, { header: "HEC-suggested GAs", key: "suggestedPlos", width: 26 }, { header: "Textbook", key: "textbook", width: 36 },
     ], rows: courseRows },
-    { name: "CLOs and PLO mapping", columns: [
+    { name: "CLOs and GA mapping", columns: [
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "CLO", key: "clo", width: 8 },
-      { header: "Statement", key: "statement", width: 70 }, { header: "Bloom level", key: "bloom", width: 10 }, { header: "Mapped PLO", key: "plo", width: 11 }, { header: "Mapping source", key: "source", width: 18 },
+      { header: "Statement", key: "statement", width: 70 }, { header: "Bloom level", key: "bloom", width: 10 }, { header: "Mapped GA", key: "plo", width: 11 }, { header: "Mapping source", key: "source", width: 18 },
     ], rows: cloRows },
     { name: "Lecture topics", columns: [
       { header: "Course code", key: "code", width: 12 }, { header: "Course title", key: "title", width: 36 }, { header: "Week", key: "week", width: 7 }, { header: "Lecture", key: "lecture", width: 8 },
       { header: "Topic", key: "topic", width: 60 }, { header: "Subtopic", key: "subtopic", width: 50 }, { header: "CLO", key: "clo", width: 8 },
     ], rows: topicRows },
-    { name: "PLOs", columns: [{ header: "PLO", key: "number", width: 8 }, { header: "Title", key: "title", width: 40 }, { header: "Description", key: "description", width: 90 }], rows: ploRows },
+    { name: "GAs", columns: [{ header: "GA", key: "number", width: 8 }, { header: "Title", key: "title", width: 40 }, { header: "Description", key: "description", width: 90 }], rows: ploRows },
   ]);
 }

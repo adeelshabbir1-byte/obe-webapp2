@@ -59,17 +59,17 @@ export default async function DeanCurriculumReviewPage({ params }: { params: { c
         {tile("Courses", c.courses.length)}
         {tile("Credit hours", credits)}
         {tile("Semesters", order.filter((s) => s !== null).length)}
-        {tile("PLOs", c.plos.length)}
+        {tile("GAs", c.plos.length)}
         {tile("CLOs", cloCount)}
         {tile("Courses with a lecture plan", `${withPlan} / ${c.courses.length}`)}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Program Learning Outcomes</h3>
-        {c.plos.length === 0 ? <p className="small-note">No PLOs in this curriculum.</p> : (
+        <h3 style={{ marginTop: 0 }}>Graduate Attributes</h3>
+        {c.plos.length === 0 ? <p className="small-note">No GAs in this curriculum.</p> : (
           <table>
-            <thead><tr><th style={{ width: 70 }}>PLO</th><th>Title</th><th>Description</th></tr></thead>
-            <tbody>{c.plos.map((p) => <tr key={p.id}><td><b>PLO-{p.number}</b></td><td>{p.title}</td><td style={{ fontSize: 12.5 }}>{p.description}</td></tr>)}</tbody>
+            <thead><tr><th style={{ width: 70 }}>GA</th><th>Title</th><th>Description</th></tr></thead>
+            <tbody>{c.plos.map((p) => <tr key={p.id}><td><b>GA-{p.number}</b></td><td>{p.title}</td><td style={{ fontSize: 12.5 }}>{p.description}</td></tr>)}</tbody>
           </table>
         )}
       </div>
@@ -84,14 +84,14 @@ export default async function DeanCurriculumReviewPage({ params }: { params: { c
                 <summary style={{ cursor: "pointer", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}>
                   <b>{k.code}</b><span>{k.title}</span>
                   <span className="small-note">{k.creditHours} CH · {k.category}{k.domain ? ` · ${k.domain}` : ""}{k.prerequisiteCourse ? ` · prerequisite ${k.prerequisiteCourse.code}` : ""}</span>
-                  <span className="small-note">{k.seedClos.length} CLOs{plosOf(k).length ? ` → PLO ${plosOf(k).join(", ")}` : ""} · {k.seedTopics.length} lecture topics</span>
+                  <span className="small-note">{k.seedClos.length} CLOs{plosOf(k).length ? ` → GA ${plosOf(k).join(", ")}` : ""} · {k.seedTopics.length} lecture topics</span>
                 </summary>
                 <div style={{ padding: "8px 0 4px 14px", fontSize: 12.5 }}>
                   {k.catalogDescription && <p style={{ marginTop: 0 }}>{k.catalogDescription}</p>}
                   {k.seedClos.length > 0 && (
                     <table style={{ marginBottom: 8 }}>
-                      <thead><tr><th style={{ width: 60 }}>CLO</th><th>Statement</th><th style={{ width: 70 }}>Level</th><th style={{ width: 70 }}>PLO</th></tr></thead>
-                      <tbody>{k.seedClos.map((l, i) => <tr key={l.id}><td>CLO-{i + 1}</td><td>{l.statement}</td><td>{l.bloomLevel}</td><td>{l.mappedPlo ? `PLO-${l.mappedPlo.number}` : "—"}</td></tr>)}</tbody>
+                      <thead><tr><th style={{ width: 60 }}>CLO</th><th>Statement</th><th style={{ width: 70 }}>Level</th><th style={{ width: 70 }}>GA</th></tr></thead>
+                      <tbody>{k.seedClos.map((l, i) => <tr key={l.id}><td>CLO-{i + 1}</td><td>{l.statement}</td><td>{l.bloomLevel}</td><td>{l.mappedPlo ? `GA-${l.mappedPlo.number}` : "—"}</td></tr>)}</tbody>
                     </table>
                   )}
                   {k.seedTopics.length > 0 && (

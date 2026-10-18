@@ -29,20 +29,20 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Learning Outcomes</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Graduate Attributes</h1>
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {selectedBatchId && <PloImportButton batchId={selectedBatchId} />}
           <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
         </span>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        PLOs are defined separately per batch/cohort — even two intakes of the same degree can have different
+        GAs are defined separately per batch/cohort — even two intakes of the same degree can have different
         outcomes if the curriculum was revised between them. Copy a starting point from the HEC curriculum or
         write your own; the Institute Head reviews and approves them before Subject Experts map CLOs to them.
       </p>
 
       {batches.length === 0 ? (
-        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Create a batch first before defining PLOs.</p></div>
+        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Create a batch first before defining GAs.</p></div>
       ) : (
         <>
           <div className="card" style={{ display: "flex", alignItems: "center", gap: 10 }}>

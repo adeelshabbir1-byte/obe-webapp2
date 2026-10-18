@@ -1,5 +1,5 @@
 const REPORTS = [
-  { key: "coverage", label: "1. PLO Coverage Summary", href: "/omc/reports/coverage" },
+  { key: "coverage", label: "1. GA Coverage Summary", href: "/omc/reports/coverage" },
   { key: "heatmap", label: "2. Depth Heatmap", href: "/omc/reports/heatmap" },
   { key: "progression", label: "3. Semester Progression", href: "/omc/reports/progression" },
   { key: "audit", label: "4. Course Audit / Orphans", href: "/omc/reports/audit" },

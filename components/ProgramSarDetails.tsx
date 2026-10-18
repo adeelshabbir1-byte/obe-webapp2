@@ -36,17 +36,17 @@ export default function ProgramSarDetails({ degreeProgram, peos, plos, initial }
         {date("academicCouncilDate", "Academic Council approval")}
         {date("hecNocDate", "HEC NOC (if applicable)")}
       </div>
-      <h4 style={{ margin: "16px 0 6px" }}>PEO × PLO alignment</h4>
-      {peos.length === 0 || plos.length === 0 ? <p className="small-note">Add the PEOs above{plos.length === 0 ? " and the batch's PLOs" : ""} first.</p> : (
+      <h4 style={{ margin: "16px 0 6px" }}>PEO × GA alignment</h4>
+      {peos.length === 0 || plos.length === 0 ? <p className="small-note">Add the PEOs above{plos.length === 0 ? " and the batch's GAs" : ""} first.</p> : (
         <div style={{ overflowX: "auto" }}>
           <table>
-            <thead><tr><th>PEO</th>{plos.map((p) => <th key={p.number} title={p.title} style={{ textAlign: "center" }}>PLO{p.number}</th>)}</tr></thead>
+            <thead><tr><th>PEO</th>{plos.map((p) => <th key={p.number} title={p.title} style={{ textAlign: "center" }}>GA{p.number}</th>)}</tr></thead>
             <tbody>{peos.map((peo, i) => {
               const key = `PEO${i + 1}`;
               return (
                 <tr key={key}>
                   <td title={peo}><b>{key}</b> <span className="small-note">{peo.slice(0, 60)}{peo.length > 60 ? "…" : ""}</span></td>
-                  {plos.map((p) => <td key={p.number} style={{ textAlign: "center" }}><input type="checkbox" checked={(map[key] || []).includes(p.number)} onChange={() => toggle(key, p.number)} aria-label={`${key} served by PLO${p.number}`} /></td>)}
+                  {plos.map((p) => <td key={p.number} style={{ textAlign: "center" }}><input type="checkbox" checked={(map[key] || []).includes(p.number)} onChange={() => toggle(key, p.number)} aria-label={`${key} served by GA${p.number}`} /></td>)}
                 </tr>
               );
             })}</tbody>

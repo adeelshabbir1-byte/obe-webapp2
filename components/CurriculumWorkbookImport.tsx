@@ -19,7 +19,7 @@ export default function CurriculumWorkbookImport({ official }: { official: boole
         const r = await fetch("/api/curriculum-workbook/import", { method: "POST", body: fd });
         const d = await r.json().catch(() => ({}));
         out.push(r.ok
-          ? { file: f.name, ok: true, text: `${d.title}: ${d.plos} PLOs, ${d.courses} courses, ${d.clos} CLOs, ${d.topics} lecture topics${d.warnings?.length ? ` (notes: ${d.warnings.join("; ")})` : ""}` }
+          ? { file: f.name, ok: true, text: `${d.title}: ${d.plos} GAs, ${d.courses} courses, ${d.clos} CLOs, ${d.topics} lecture topics${d.warnings?.length ? ` (notes: ${d.warnings.join("; ")})` : ""}` }
           : { file: f.name, ok: false, text: d.error || "import failed" });
       } catch { out.push({ file: f.name, ok: false, text: "import failed" }); }
       setResults([...out]);
@@ -32,8 +32,8 @@ export default function CurriculumWorkbookImport({ official }: { official: boole
     <div className="card" style={{ marginBottom: 16, borderColor: "var(--brass)" }}>
       <h3 style={{ fontSize: 14, marginTop: 0 }}>Import a complete curriculum from Excel</h3>
       <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -4 }}>
-        Each workbook becomes a new {official ? "official curriculum (assign it to institutes afterwards)" : "curriculum of your institute"} with its PLOs, courses, CLOs mapped to PLOs and the lecture-by-lecture topics.
-        Sheets: Curriculum, PLOs, Courses, CLOs and PLO mapping, Lecture topics (the layout the full-curriculum download produces). You can pick several files at once.
+        Each workbook becomes a new {official ? "official curriculum (assign it to institutes afterwards)" : "curriculum of your institute"} with its GAs, courses, CLOs mapped to GAs and the lecture-by-lecture topics.
+        Sheets: Curriculum, GAs, Courses, CLOs and GA mapping, Lecture topics (the layout the full-curriculum download produces). You can pick several files at once.
       </p>
       <button className="btn btn-brass" disabled={!!busy} onClick={() => input.current?.click()}>{busy || "Choose workbook(s)…"}</button>
       <TemplateLink name="curriculum-workbook" />

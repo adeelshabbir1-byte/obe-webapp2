@@ -40,10 +40,10 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
       <div className="card">
         <h3 style={{ fontSize: 14, marginBottom: 12 }}>CLOs</h3>
         <SortableTable paginate={false} searchable={false}>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped PLO</th><th>Contribution</th></tr></thead>
+          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped GA</th><th>Contribution</th></tr></thead>
           <tbody>
             {course.clos.map((c) => (
-              <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `PLO-${c.mappedPlo.number}: ${c.mappedPlo.title}` : "—"}</td><td>{c.mappedPlo ? `${c.ploContributionPct ?? 100}%` : "—"}</td></tr>
+              <tr key={c.id}><td>{c.code}</td><td>{c.statement}</td><td>{c.bloomLevel}</td><td>{c.mappedPlo ? `GA-${c.mappedPlo.number}: ${c.mappedPlo.title}` : "—"}</td><td>{c.mappedPlo ? `${c.ploContributionPct ?? 100}%` : "—"}</td></tr>
             ))}
           </tbody>
         </SortableTable>

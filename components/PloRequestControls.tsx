@@ -33,16 +33,16 @@ export function CoursePloRequests({ courseId, plos, requests, meId, readOnly, mi
   const chosen = form ? plos.find((p) => p.id === form.ploId) : null;
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, marginBottom: 4 }}>This course&apos;s PLOs</h3>
-      <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>The OMC decides which PLOs a course serves. If one is missing or doesn&apos;t fit, ask here — the OMC is notified and the change happens when they approve.</p>
-      {missing && <div className="err">The PLO request table is not in the database yet — run prisma/migration_plo_requests.sql in Supabase.</div>}
-      {plos.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 13 }}>This batch has no PLOs yet.</p> : (
+      <h3 style={{ marginTop: 0, marginBottom: 4 }}>This course&apos;s GAs</h3>
+      <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>The OMC decides which GAs a course serves. If one is missing or doesn&apos;t fit, ask here — the OMC is notified and the change happens when they approve.</p>
+      {missing && <div className="err">The GA request table is not in the database yet — run prisma/migration_plo_requests.sql in Supabase.</div>}
+      {plos.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 13 }}>This batch has no GAs yet.</p> : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ fontSize: 12.5 }}>
-            <thead><tr><th>PLO</th><th>Title</th><th>On this course</th><th>CLOs mapped</th>{!readOnly && <th></th>}</tr></thead>
+            <thead><tr><th>GA</th><th>Title</th><th>On this course</th><th>CLOs mapped</th>{!readOnly && <th></th>}</tr></thead>
             <tbody>
               {plos.map((p) => {
-                const key = `PLO-${p.number}`;
+                const key = `GA-${p.number}`;
                 return (
                   <tr key={p.id} style={p.onCourse ? undefined : { color: "var(--slate)" }}>
                     <td><b>{key}</b></td>
@@ -62,12 +62,12 @@ export function CoursePloRequests({ courseId, plos, requests, meId, readOnly, mi
       )}
       {form && chosen && (
         <div style={{ marginTop: 12, padding: 12, background: "var(--royal-50, #F4F6FB)", borderRadius: 8 }}>
-          <b>{form.action === "ADD" ? "Ask to add" : "Ask to remove"} PLO-{chosen.number}</b> — {chosen.title}
-          {form.action === "REMOVE" && chosen.clos.length > 0 && <p style={{ fontSize: 12.5, color: "#7A5208", margin: "6px 0" }}>{chosen.clos.join(", ")} point to this PLO. If the OMC approves, they will need a PLO again.</p>}
+          <b>{form.action === "ADD" ? "Ask to add" : "Ask to remove"} GA-{chosen.number}</b> — {chosen.title}
+          {form.action === "REMOVE" && chosen.clos.length > 0 && <p style={{ fontSize: 12.5, color: "#7A5208", margin: "6px 0" }}>{chosen.clos.join(", ")} point to this GA. If the OMC approves, they will need a GA again.</p>}
           {error && <div className="err">{error}</div>}
           <div className="field" style={{ marginTop: 8 }}>
             <label>Why? (the OMC sees this)</label>
-            <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={form.action === "ADD" ? "e.g. Lectures 12–16 are a team project with presentations; this course builds communication skills (PLO-10)." : "e.g. No topic or assessment of this course addresses this PLO."} />
+            <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={form.action === "ADD" ? "e.g. Lectures 12–16 are a team project with presentations; this course builds communication skills (GA-10)." : "e.g. No topic or assessment of this course addresses this GA."} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn" disabled={busy} onClick={send}>{busy ? "Sending…" : "Send to OMC"}</button>
@@ -87,7 +87,7 @@ export function CoursePloRequests({ courseId, plos, requests, meId, readOnly, mi
                 {r.status === "PENDING" && r.byId === meId && <button className="btn btn-secondary" style={{ padding: "1px 8px", fontSize: 11.5, marginLeft: "auto" }} disabled={busy} onClick={() => withdraw(r.id)}>Withdraw</button>}
               </div>
               <div style={{ marginTop: 3 }}>{r.reason}</div>
-              {r.status !== "PENDING" && r.status !== "CANCELLED" && <div style={{ marginTop: 3, color: "var(--slate)" }}>OMC{r.decidedBy ? ` (${r.decidedBy})` : ""}: {r.note || (r.status === "APPROVED" ? "approved" : "declined")}{r.closUnmapped ? ` — ${r.closUnmapped} CLO(s) lost this PLO and need remapping` : ""}</div>}
+              {r.status !== "PENDING" && r.status !== "CANCELLED" && <div style={{ marginTop: 3, color: "var(--slate)" }}>OMC{r.decidedBy ? ` (${r.decidedBy})` : ""}: {r.note || (r.status === "APPROVED" ? "approved" : "declined")}{r.closUnmapped ? ` — ${r.closUnmapped} CLO(s) lost this GA and need remapping` : ""}</div>}
             </div>
           ))}
         </details>

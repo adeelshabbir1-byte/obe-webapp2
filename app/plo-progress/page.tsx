@@ -31,12 +31,12 @@ export default async function PloProgressPage({ searchParams }: { searchParams: 
   const y = (v: number) => 10 + ((100 - v) * (H - B - 10)) / 100;
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO Progress by Semester</h1>
-      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>How a batch&apos;s PLO attainment grows term by term (all courses up to that term): the share of students whose average on each PLO reached {criteria.ploPct || 50}%. Use it to see whether CQI actions are working.</p>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA Progress by Semester</h1>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>How a batch&apos;s GA attainment grows term by term (all courses up to that term): the share of students whose average on each GA reached {criteria.ploPct || 50}%. Use it to see whether CQI actions are working.</p>
       <div className="card no-print"><DegreeBatchFilter batches={batches} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} /></div>
       {batch && data && (data.terms.length === 0 ? <div className="card">No approved results with transcripts for this batch yet.</div> : (
         <div className="card" style={{ overflowX: "auto" }}>
-          <svg width={W} height={H} style={{ maxWidth: "100%" }} role="img" aria-label="PLO attainment by term">
+          <svg width={W} height={H} style={{ maxWidth: "100%" }} role="img" aria-label="GA attainment by term">
             {[0, 25, 50, 75, 100].map((v) => <g key={v}><line x1={L} x2={W - 10} y1={y(v)} y2={y(v)} stroke="#EEE7E8" /><text x={L - 6} y={y(v) + 4} fontSize={10} textAnchor="end" fill="#8A7F82">{v}%</text></g>)}
             {data.terms.map((t, i) => <text key={t} x={x(i, data.terms.length)} y={H - 8} fontSize={10.5} textAnchor="middle" fill="#574C50">{t}</text>)}
             {data.series.map((s, k) => {
@@ -46,17 +46,17 @@ export default async function PloProgressPage({ searchParams }: { searchParams: 
           </svg>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12, margin: "6px 0 12px" }}>{data.series.map((s, k) => <span key={s.label}><span style={{ display: "inline-block", width: 10, height: 10, background: COLORS[k % COLORS.length], borderRadius: 2, marginRight: 4 }} />{s.label}</span>)}</div>
           <table>
-            <thead><tr><th>PLO</th>{data.terms.map((t) => <th key={t} style={{ textAlign: "center" }}>{t}</th>)}</tr></thead>
+            <thead><tr><th>GA</th>{data.terms.map((t) => <th key={t} style={{ textAlign: "center" }}>{t}</th>)}</tr></thead>
             <tbody>{data.series.map((s) => <tr key={s.label}><td><b>{s.label}</b></td>{s.points.map((p) => <td key={p.term} style={{ textAlign: "center", color: p.reached === null ? "var(--slate)" : p.reached >= 60 ? "#1F5E36" : "#95650F" }}>{p.reached === null ? "—" : <>{p.reached}%<div style={{ fontSize: 10.5, color: "var(--slate)" }}>avg {p.avg}%</div></>}</td>)}</tr>)}</tbody>
           </table>
         </div>
       ))}
       {batch && (
         <div className="card" style={{ overflowX: "auto" }}>
-          <h3 style={{ marginTop: 0 }}>PLO change after each course result</h3>
-          <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>When a course result is approved, the batch&apos;s PLO attainment is compared without and with that course. A drop of 2% or more alerts the OMC and the Program Lead.</p>
+          <h3 style={{ marginTop: 0 }}>GA change after each course result</h3>
+          <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>When a course result is approved, the batch&apos;s GA attainment is compared without and with that course. A drop of 2% or more alerts the OMC and the Program Lead.</p>
           {changes === null ? <p style={{ color: "#95650F" }}>Not set up yet — the Super User needs to run prisma/migration_plo_change_log.sql.</p> : changes.length === 0 ? <p>No approved results recorded yet.</p> : (
-            <table><thead><tr><th>Approved</th><th>Course</th><th>Change in batch PLO attainment</th></tr></thead>
+            <table><thead><tr><th>Approved</th><th>Course</th><th>Change in batch GA attainment</th></tr></thead>
               <tbody>{changes.map((c) => <tr key={c.courseId}><td style={{ whiteSpace: "nowrap" }}>{new Date(c.approvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td><td><b>{c.courseCode}</b></td><td style={{ fontSize: 12.5 }}><DeltaList deltas={c.deltas} /></td></tr>)}</tbody></table>
           )}
           {changes !== null && <div style={{ marginTop: 8 }}><BackfillPloButton batchId={batch.id} label={changes.length ? "Recalculate from all approved results" : "Fill from past approved results"} /></div>}

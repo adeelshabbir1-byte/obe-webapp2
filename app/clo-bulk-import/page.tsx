@@ -24,7 +24,7 @@ export default async function BulkCloImportPage() {
     <Shell roleLabel={ROLE_TEXT[user.role] || "Program Lead"} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bulk CLO Import</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Upload the CLOs of all courses of a batch at once, each with its PLO. The course-to-PLO mapping (PLO–Course matrix) is worked out from the CLOs, so you don&apos;t have to tick it separately.
+        Upload the CLOs of all courses of a batch at once, each with its GA. The course-to-GA mapping (GA–Course matrix) is worked out from the CLOs, so you don&apos;t have to tick it separately.
       </p>
       <BulkCloImport batches={batches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}`, courses: counts.find((c) => c.batchId === b.id)?._count._all || 0, withClos: withClos.find((c) => c.batchId === b.id)?._count._all || 0 }))} />
     </Shell>

@@ -571,7 +571,7 @@ export default function ContentSyncManager() {
                                 {filtered.map((o) => (
                                   <div key={o.id} onClick={() => selectPendingMasterCourse(group.id, o.id)} style={{ fontSize: 11, padding: "3px 4px", cursor: "pointer", borderBottom: "1px solid var(--line)" }}>
                                     <b>{o.code}</b> — {o.title}
-                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC PLOs</span>}
+                                    {o.hasPloSuggestions && <span style={{ fontSize: 9, background: "#FBEED2", padding: "0 4px", marginLeft: 4 }}>HEC GAs</span>}
                                     <div style={{ fontSize: 9.5, color: "var(--slate)" }}>{o.degreeProgram}</div>
                                   </div>
                                 ))}

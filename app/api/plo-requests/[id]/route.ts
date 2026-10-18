@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await pdb.ploChangeRequest.update({ where: { id: r.id }, data: { status: "CANCELLED", decidedAt: new Date() } });
     return NextResponse.json({ ok: true });
   }
-  if (user.role !== "OMC") return NextResponse.json({ error: "Only the OMC decides PLO changes." }, { status: 403 });
+  if (user.role !== "OMC") return NextResponse.json({ error: "Only the OMC decides GA changes." }, { status: 403 });
   // Only an OMC member whose department looks after this course (see omcCourseScope) decides on it.
   const c = await prisma.course.findFirst({ where: { id: r.courseId, coordinator: { managedById: user.managedById || "" }, ...omcCourseScope(user) }, select: { id: true } });
   if (!c) return NextResponse.json({ error: "not found" }, { status: 404 });

@@ -216,7 +216,7 @@ export default function WeightsForm({ courseId, current, currentCounts, currentB
           the OMC's minimum, raise it if you want more. Saving creates them on the Assessments & Submit tab automatically,
           splitting that category's % evenly across them, so you won't need to add each one by hand. "Best Of" (Quiz and
           Assignment only) drops the lowest-scoring item(s) from each student's final grade — e.g. best 3 of 5 quizzes
-          counts their top 3 and drops the other 2. This only affects the grade/GPA; CLO/PLO attainment always uses every
+          counts their top 3 and drops the other 2. This only affects the grade/GPA; CLO/GA attainment always uses every
           quiz and assignment, since dropping one there would misrepresent whether that CLO was actually met.
         </p>
       </form>

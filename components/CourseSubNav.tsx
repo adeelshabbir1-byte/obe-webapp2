@@ -8,7 +8,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery" | "flow"; code: string; title: string; status: string;
 }) {
   const tabs = [
-    { key: "clos", label: "1. CLOs & PLO Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
+    { key: "clos", label: "1. CLOs & GA Mapping", href: `/subjectexpert/courses/${courseId}/clos` },
     { key: "schedule", label: "2. Lecture Content", href: `/subjectexpert/courses/${courseId}/schedule` },
     { key: "weights", label: "3. Assessment Weights", href: `/subjectexpert/courses/${courseId}/weights` },
     { key: "instruments", label: "4. Assessments & Submit", href: `/subjectexpert/courses/${courseId}/instruments` },

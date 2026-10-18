@@ -10,7 +10,7 @@ export default function VettingReport({ systemJson, aiJson, items }: { systemJso
     <div style={{ display: "grid", gap: 10 }}>
       {s && <div className="card"><h3 style={{ marginTop: 0 }}>System check</h3>
         <ul style={{ margin: "0 0 8px", paddingLeft: 18 }}>{s.findings.map((f, i) => <li key={i} style={{ color: col[f.level] }}>{f.text}</li>)}</ul>
-        <div style={{ fontSize: 13 }}>Total {s.total} marks · Bloom spread: C1–C2 {s.bloom.low}% · C3–C4 {s.bloom.mid}% · C5–C6 {s.bloom.high}% · PLOs reached: {s.plos.join(", ") || "—"}</div>
+        <div style={{ fontSize: 13 }}>Total {s.total} marks · Bloom spread: C1–C2 {s.bloom.low}% · C3–C4 {s.bloom.mid}% · C5–C6 {s.bloom.high}% · GAs reached: {s.plos.join(", ") || "—"}</div>
         <table style={{ marginTop: 6 }}><thead><tr><th>CLO</th><th>CLO level</th><th>Taught in this part</th><th>Marks</th><th>Share</th></tr></thead>
           <tbody>{s.perClo.map((p) => <tr key={p.code}><td>{p.code}</td><td>{p.bloom}</td><td>{p.taught ? "Yes" : "—"}</td><td>{p.marks}</td><td>{p.pct}%</td></tr>)}</tbody></table></div>}
       {a && <div className="card"><h3 style={{ marginTop: 0 }}>AI check <span className="small-note">an independent reading of each question; advisory only</span></h3>

@@ -53,7 +53,7 @@ export default function AutoMapHecAllButton() {
       {result && (
         <p style={{ fontSize: 12, marginTop: 10, color: "var(--sage)" }}>
           Across {result.batchesTouched} batch(es): created {result.created} new mapping(s). {result.alreadyMapped} already existed,
-          {" "}{result.skippedNoPlo} skipped (no matching PLO number in that batch), {result.skippedNoSuggestion} course(s) had no HEC suggestion on record.
+          {" "}{result.skippedNoPlo} skipped (no matching GA number in that batch), {result.skippedNoSuggestion} course(s) had no HEC suggestion on record.
         </p>
       )}
     </div>

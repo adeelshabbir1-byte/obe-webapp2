@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
             labelValueRow("Batch", course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"),
             labelValueRow("Subject Expert", course.subjectExpert?.name || "—"),
             labelValueRow("Instructor", course.instructor?.name || "—"),
-            labelValueRow("PLOs Assigned to this Course", `${mappedPlos} of ${totalPlos} program PLOs`),
+            labelValueRow("GAs Assigned to this Course", `${mappedPlos} of ${totalPlos} program GAs`),
             labelValueRow("Assessment Weightage", `Assignment ${w.assignmentPct}%, Quiz ${w.quizPct}%, Project ${w.projectPct}%, Lab ${w.labPct}%, Midterm ${w.midtermPct}%, Final ${w.finalPct}%`),
             labelValueRow("Plan Adherence", `${variance.adherencePct}% of planned weight delivered${variance.missed.length > 0 ? ` — ${variance.missed.length} topic(s) not covered: ${variance.missed.map((m) => m.topic).join(", ")}` : " — all planned topics covered"}`),
           ],

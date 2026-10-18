@@ -64,7 +64,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
                 <tr><td style={{ fontWeight: 600 }}>Batch</td><td>{course.batch ? `${course.batch.degreeProgram} — ${course.batch.batchName}` : "—"}</td></tr>
                 <tr><td style={{ fontWeight: 600 }}>Subject Expert</td><td>{course.subjectExpert?.name || "—"}</td></tr>
                 <tr><td style={{ fontWeight: 600 }}>Instructor</td><td>{course.instructor?.name || "—"}</td></tr>
-                <tr><td style={{ fontWeight: 600 }}>PLOs Assigned to this Course</td><td>{mappedPlos} of {totalPlos} program PLOs</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>GAs Assigned to this Course</td><td>{mappedPlos} of {totalPlos} program GAs</td></tr>
               </tbody>
             </SortableTable>
           </div>

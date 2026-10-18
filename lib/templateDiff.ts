@@ -48,7 +48,7 @@ export function diffTemplates(before: Snap, after: Snap): string[] {
     if (!o) { out.push(`CLO: ${code} added — "${short(x.statement)}"`); return; }
     if (o.statement !== x.statement) out.push(`CLO: ${code} statement changed from "${short(o.statement)}" to "${short(x.statement)}"`);
     if (o.bloom !== x.bloom) out.push(`CLO: ${code} Bloom level changed from ${o.bloom} to ${x.bloom}`);
-    if (o.plo !== x.plo) out.push(`CLO: ${code} now maps to ${x.plo ?? "no PLO"} (was ${o.plo ?? "no PLO"})`);
+    if (o.plo !== x.plo) out.push(`CLO: ${code} now maps to ${x.plo ?? "no GA"} (was ${o.plo ?? "no GA"})`);
     else if (o.contribution !== x.contribution) out.push(`CLO: ${code} contribution to ${x.plo ?? "PLO"} changed from ${o.contribution ?? 0}% to ${x.contribution ?? 0}%`);
   });
   Array.from(bc.keys()).forEach((code) => { if (!ac.has(code)) out.push(`CLO: ${code} removed`); });

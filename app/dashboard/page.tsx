@@ -267,12 +267,12 @@ async function omcStats(user: { id: string; role: string; managedById: string | 
     stats: [
       // /omc/review-pending never existed; the pending master courses are reviewed on the Master Curriculum page.
       { label: "Courses awaiting review", value: pendingReview, href: "/omc/master-curriculum", tone: pendingReview > 0 ? "warn" : "ok", icon: "review" },
-      { label: "Courses with no PLO mapped yet", value: coursesWithoutPlo, href: "/omc/plo-matrix", tone: coursesWithoutPlo > 0 ? "warn" : "ok", icon: "plo" },
+      { label: "Courses with no GA mapped yet", value: coursesWithoutPlo, href: "/omc/plo-matrix", tone: coursesWithoutPlo > 0 ? "warn" : "ok", icon: "plo" },
       { label: "Weight exceptions awaiting decision", value: pendingWeightExceptions, href: "/omc/weight-exceptions", tone: pendingWeightExceptions > 0 ? "warn" : "ok", icon: "weights" },
       { label: "Total courses in scope", value: totalCourses, tone: "neutral", icon: "courses" },
     ],
     progress: [
-      { label: "PLO mapping coverage", done: totalCourses - coursesWithoutPlo, total: totalCourses, hint: "courses mapped to at least one PLO" },
+      { label: "GA mapping coverage", done: totalCourses - coursesWithoutPlo, total: totalCourses, hint: "courses mapped to at least one GA" },
     ],
     breakdown: {
       title: "Course templates by status",
@@ -363,7 +363,7 @@ async function chairmanStats(chairmanId: string): Promise<Stat[]> {
     prisma.batch.count({ where: { coordinatorId: { in: coordinatorIds } } }),
   ]);
   return [
-    { label: "PLOs awaiting your approval", value: pendingPlos, href: "/chairman/plos", tone: pendingPlos > 0 ? "warn" : "ok", icon: "plo" },
+    { label: "GAs awaiting your approval", value: pendingPlos, href: "/chairman/plos", tone: pendingPlos > 0 ? "warn" : "ok", icon: "plo" },
     { label: "Open CQI findings", value: openCqi, href: "/chairman/cqi", tone: openCqi > 0 ? "warn" : "ok", icon: "cqi" },
     { label: "Program Leads", value: coordinators.length, href: "/chairman/coordinators", tone: "neutral", icon: "coordinators" },
     { label: "Batches across your institution", value: batches, tone: "neutral", icon: "batches" },

@@ -31,13 +31,13 @@ export default async function SurveysPage() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Feedback Surveys</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Measure indirect PLO attainment through stakeholder feedback — a second evidence source alongside direct
-        (assessment-based) attainment, mapped to your Program Learning Outcomes.
+        Measure indirect GA attainment through stakeholder feedback — a second evidence source alongside direct
+        (assessment-based) attainment, mapped to your Graduate Attributes.
       </p>
       {user.role === "PROGRAM_COORDINATOR" && (
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0 }}>Standard OBE forms</h3>
-          <p className="small-note">One click creates these forms for a batch, with one question per PLO (and per PEO for alumni and employers), rated 1 to 5. Each form becomes a separate indirect source for that PLO on <a href="/indirect-assessment">Direct &amp; Indirect PLOs</a>, weighted as you set there. Students also rate every course&apos;s CLOs in the course-exit survey in their portal.</p>
+          <p className="small-note">One click creates these forms for a batch, with one question per GA (and per PEO for alumni and employers), rated 1 to 5. Each form becomes a separate indirect source for that GA on <a href="/indirect-assessment">Direct &amp; Indirect GAs</a>, weighted as you set there. Students also rate every course&apos;s CLOs in the course-exit survey in their portal.</p>
           <ul style={{ fontSize: 13, margin: "0 0 8px", paddingLeft: 18 }}>{STANDARD_SURVEYS.map((s) => <li key={s.key}><b>{s.title}</b>, {s.when}</li>)}</ul>
           <StandardSurveysButton batches={batches.filter((b) => b.coordinatorId === user.id).map((b) => [b.id, `${b.degreeProgram} — ${b.batchName}`] as [string, string])} />
         </div>

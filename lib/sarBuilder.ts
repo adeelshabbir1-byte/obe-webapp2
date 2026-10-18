@@ -16,8 +16,8 @@ const db = prisma as unknown as Record<string, any>;
 type Ch = { key: string; title: string; prompt: string };
 
 const TITLES: Record<BodyKey, Record<string, string>> = {
-  NCEAC: { profile: "Criterion 1 — Program Mission, Objectives and Outcomes", outcomes: "Criterion 2 — Graduate Attributes / PLO Assessment", curriculum: "Criterion 3 — Curriculum and Learning Process", students: "Criterion 4 — Students", faculty: "Criterion 5 — Faculty and Support Staff", facilities: "Criterion 6 — Facilities and Infrastructure", support: "Criterion 7 — Institutional Support and Financial Resources", cqi: "Criterion 8 — Steps to Improve the Program (CQI)", industry: "Criterion 9 — Industrial Linkages" },
-  PEC: { profile: "Criterion 1 — Program Educational Objectives", outcomes: "Criterion 2 — Program Learning Outcomes (Graduate Attributes)", curriculum: "Criterion 3 — Curriculum and Learning Process", students: "Criterion 4 — Students", faculty: "Criterion 5 — Faculty and Support Staff", facilities: "Criterion 6 — Facilities and Infrastructure", support: "Criterion 7 — Institutional Support and Financial Resources", cqi: "Criterion 8 — Continuous Quality Improvement", industry: "Criterion 9 — Industrial Linkages" },
+  NCEAC: { profile: "Criterion 1 — Program Mission, Objectives and Outcomes", outcomes: "Criterion 2 — Graduate Attributes / GA Assessment", curriculum: "Criterion 3 — Curriculum and Learning Process", students: "Criterion 4 — Students", faculty: "Criterion 5 — Faculty and Support Staff", facilities: "Criterion 6 — Facilities and Infrastructure", support: "Criterion 7 — Institutional Support and Financial Resources", cqi: "Criterion 8 — Steps to Improve the Program (CQI)", industry: "Criterion 9 — Industrial Linkages" },
+  PEC: { profile: "Criterion 1 — Program Educational Objectives", outcomes: "Criterion 2 — Graduate Attributes (Graduate Attributes)", curriculum: "Criterion 3 — Curriculum and Learning Process", students: "Criterion 4 — Students", faculty: "Criterion 5 — Faculty and Support Staff", facilities: "Criterion 6 — Facilities and Infrastructure", support: "Criterion 7 — Institutional Support and Financial Resources", cqi: "Criterion 8 — Continuous Quality Improvement", industry: "Criterion 9 — Industrial Linkages" },
   NBEAC: { profile: "Form 2 — Program Mission, Objectives and Learning Goals", outcomes: "Assurance of Learning — Goal Attainment", curriculum: "Form 2 — Curriculum and Course Results", students: "Form 3 — Students", faculty: "Form 4 — Faculty", facilities: "Form 6 — Facilities and Resources", support: "Form 6 — Financial Resources", cqi: "Closing the Loop", industry: "Form 5 — Social Responsibility and Linkages" },
   HEC: { profile: "Criterion 1 — Program Mission, Objectives and Outcomes", outcomes: "Criterion 1 — Outcome Assessment", curriculum: "Criterion 2 — Curriculum Design and Organization", students: "Criterion 4 — Student Support and Advising", faculty: "Criterion 6 — Faculty", facilities: "Criterion 3 & 7 — Laboratories and Institutional Facilities", support: "Criterion 8 — Institutional Support", cqi: "Criterion 5 — Process Control and Improvement", industry: "Linkages with Industry and Society" },
 };
@@ -26,7 +26,7 @@ export function chapters(body: BodyKey): Ch[] {
   return [
     { key: "intro", title: "Introduction and Program Profile", prompt: "Brief history of the program, the department and the self-assessment process (who prepared this report and how)." },
     { key: "profile", title: t.profile, prompt: "How the mission and objectives were set with stakeholders and approved, and how they are reviewed." },
-    { key: "outcomes", title: t.outcomes, prompt: "How PLOs are measured (direct and indirect), the targets, and what the results show." },
+    { key: "outcomes", title: t.outcomes, prompt: "How GAs are measured (direct and indirect), the targets, and what the results show." },
     { key: "curriculum", title: t.curriculum, prompt: "Curriculum design, review process, teaching methods, and how complex problems are built into courses." },
     { key: "students", title: t.students, prompt: "Admission criteria, advising and counselling, progression, and student support." },
     { key: "faculty", title: t.faculty, prompt: "Faculty recruitment, development, workload and retention." },
@@ -105,8 +105,8 @@ export function sarGaps(d: SarData) {
   const latest = d.out[0];
   if (!latest?.peos.length) g.push({ ch: "profile", text: "Program Educational Objectives are not entered (Program Profile)." });
   if (!latest?.mission) g.push({ ch: "profile", text: "Mission statement is not entered." });
-  if (!d.plos.length) g.push({ ch: "outcomes", text: "No PLOs for this program's batches." });
-  if (latest && !latest.plo.rows.some((r) => r.cells.direct)) g.push({ ch: "outcomes", text: "No finalised results yet, so there is no direct PLO attainment." });
+  if (!d.plos.length) g.push({ ch: "outcomes", text: "No GAs for this program's batches." });
+  if (latest && !latest.plo.rows.some((r) => r.cells.direct)) g.push({ ch: "outcomes", text: "No finalised results yet, so there is no direct GA attainment." });
   if (latest && !latest.plo.rows.some((r) => ["STUDENT", "ALUMNI", "EMPLOYER", "courseExit"].some((k) => r.cells[k]))) g.push({ ch: "outcomes", text: "No indirect evidence: run the exit, alumni and employer surveys." });
   if (!d.tags.length && (d.body === "PEC" || d.body === "NCEAC")) g.push({ ch: "curriculum", text: "No assessment is tagged as a complex problem." });
   if (!d.know.length && (d.body === "PEC" || d.body === "NCEAC")) g.push({ ch: "curriculum", text: "Knowledge profile not mapped for any course." });
@@ -163,9 +163,9 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
   kids.push(h1(`3. ${chs[2].title}`)); kids.push(...gapsFor("outcomes"));
   const latestBatch = d.batches[0];
   const pl = d.plos.filter((x) => x.batchId === latestBatch?.id).sort((a, b) => a.number - b.number);
-  if (pl.length) { kids.push(h2("Program Learning Outcomes")); kids.push(table(["PLO", "Statement"], pl.map((x) => [`PLO-${x.number}`, x.title]))); }
+  if (pl.length) { kids.push(h2("Graduate Attributes")); kids.push(table(["PLO", "Statement"], pl.map((x) => [`PLO-${x.number}`, x.title]))); }
   for (const o of d.out) {
-    kids.push(h2(`PLO attainment — ${o.batch.batchName} (target ${o.plo.target}%)`));
+    kids.push(h2(`GA attainment — ${o.batch.batchName} (target ${o.plo.target}%)`));
     kids.push(table(["PLO", ...SOURCES.map(([, v]) => v), "Blended", "Met"], o.plo.rows.map((r) => [`PLO-${r.number}`, ...SOURCES.map(([k]) => (r.cells[k] ? `${r.cells[k]!.pct}% (n=${r.cells[k]!.n})` : "")), r.blended !== null ? `${r.blended}%` : "", r.met === null ? "" : r.met ? "Yes" : "No"])));
   }
   kids.push(...narrative("outcomes"));
@@ -175,7 +175,7 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
   const codes = Array.from(d.latestByCode.values());
   kids.push(h2("Scheme of studies"));
   kids.push(p(`${codes.length} courses, ${codes.reduce((s, x) => s + x.creditHours, 0)} credit hours.`));
-  kids.push(table(["Code", "Title", "Cr. Hrs", "Type", "PLOs"], codes.map((x) => [x.code, x.title, x.creditHours, x.courseType, Array.from(new Set(d.clos.filter((cl) => cl.courseId === x.id && cl.mappedPloId).map((cl) => d.ploNum.get(cl.mappedPloId!)))).sort((a, b) => (a || 0) - (b || 0)).map((n) => `PLO-${n}`).join(", ")])));
+  kids.push(table(["Code", "Title", "Cr. Hrs", "Type", "GAs"], codes.map((x) => [x.code, x.title, x.creditHours, x.courseType, Array.from(new Set(d.clos.filter((cl) => cl.courseId === x.id && cl.mappedPloId).map((cl) => d.ploNum.get(cl.mappedPloId!)))).sort((a, b) => (a || 0) - (b || 0)).map((n) => `PLO-${n}`).join(", ")])));
   if (d.body === "PEC" || d.body === "NCEAC") {
     const ks = KNOWLEDGE[d.body === "PEC" ? "PEC" : "NCEAC"];
     const kOf = new Map(d.know.map((k) => [k.courseCode, parseArr(k.areasJson)]));

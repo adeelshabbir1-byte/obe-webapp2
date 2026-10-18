@@ -65,9 +65,9 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
       )}
 
       <div className="card" style={{ overflowX: "auto" }}>
-        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Transcript 2 — CLO/PLO Attainment</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Transcript 2 — CLO/GA Attainment</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-          Which Course and Program Learning Outcomes this student has met, across every course taken — the
+          Which Course and Graduate Attributes this student has met, across every course taken — the
           OBE accreditation record, independent of letter grades.
         </p>
         <table>
@@ -80,7 +80,7 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
           </tbody>
         </table>
         <table style={{ marginTop: 14 }}>
-          <thead><tr><th>PLO</th><th>Attempted</th><th>Passed</th></tr></thead>
+          <thead><tr><th>GA</th><th>Attempted</th><th>Passed</th></tr></thead>
           <tbody>
             {ploAgg.size === 0 && <tr><td colSpan={3} style={{ color: "var(--slate)" }}>No data yet.</td></tr>}
             {Array.from(ploAgg.entries()).map(([label, v]) => (
@@ -92,16 +92,16 @@ export default function StudentTranscriptReport({ studentName, rollNumber, batch
 
       {remediation.length > 0 && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
-          <h3 style={{ fontSize: 14, marginBottom: 4, color: "var(--rust)" }}>PLO Remediation Path</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 4, color: "var(--rust)" }}>GA Remediation Path</h3>
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 12 }}>
-            For each PLO with at least one recorded failure, here are the courses in this student's curriculum
+            For each GA with at least one recorded failure, here are the courses in this student's curriculum
             that still contribute to it and haven't been taken yet.
           </p>
           {remediation.map((r) => (
             <div key={r.ploLabel} style={{ marginBottom: 12 }}>
               <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{r.ploLabel}</p>
               {r.courses.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--rust)" }}>No remaining courses in this curriculum contribute to this PLO — this needs a curriculum review.</p>
+                <p style={{ fontSize: 12, color: "var(--rust)" }}>No remaining courses in this curriculum contribute to this GA — this needs a curriculum review.</p>
               ) : (
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {r.courses.map((c) => <li key={c.code} style={{ fontSize: 12.5 }}>{c.code} — {c.title}</li>)}

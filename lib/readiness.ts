@@ -85,7 +85,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const share = (done: number, total: number): State => (total === 0 ? "missing" : done === total ? "ok" : done > 0 ? "partial" : "missing");
 
   const COLS = [
-    { key: "clos", label: "CLOs written" }, { key: "plo", label: "CLOs linked to PLOs" }, { key: "plan", label: "Lecture plan" },
+    { key: "clos", label: "CLOs written" }, { key: "plo", label: "CLOs linked to GAs" }, { key: "plan", label: "Lecture plan" },
     { key: "link", label: "Plan linked to CLOs" }, { key: "assess", label: "Assessments add to 100%" }, { key: "se", label: "Subject Expert" },
     { key: "inst", label: "Instructor" }, { key: "deliv", label: "Delivery logged" }, { key: "marks", label: "Marks entered" },
   ] as const;
@@ -230,7 +230,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
       { label: "Employer survey answered", done: surveyOf("EMPLOYER") > 0 ? 1 : 0, total: 1, hint: "Send the employer survey.", href: "/coordinator/surveys" },
     ] },
     { no: 2, title: "Graduate Attributes (GAs)", manual: ["GAs cover the Seoul Accord GA-1 to GA-10 and are adopted by the university's statutory body", "Documented process to review the GAs periodically", "Mapping of the GAs to the POs", "Samples of student work showing GA achievement (projects, labs, FYDP)"], checks: [
-      { label: "Batches that have GAs (PLOs) defined (2.a)", done: scopeBatches.filter((b) => plos.some((p) => p.batchId === b.id)).length, total: scopeBatches.length, hint: "Create or import the GAs/PLOs for each batch.", href: "/coordinator/plos" },
+      { label: "Batches that have GAs (GAs) defined (2.a)", done: scopeBatches.filter((b) => plos.some((p) => p.batchId === b.id)).length, total: scopeBatches.length, hint: "Create or import the GAs/GAs for each batch.", href: "/coordinator/plos" },
       { label: "GAs approved by the Institute Head", done: plos.filter((p) => p.status === "approved").length, total: plos.length, hint: "Send the GAs for approval.", href: "/coordinator/plos" },
       { label: "Reviews of POs, GAs or CLOs recorded in the last 12 months (2.b)", done: Math.min(q("Review of POs / GAs / CLOs").filter(recent).length, 1), total: 1, hint: "Record each review under Accreditation Evidence, Quality.", href: EV },
       { label: "GAs covered by at least one course", done: plos.filter((p) => coveredPlos.has(p.id)).length, total: plos.length, hint: "Some GAs are not taught anywhere.", href: "/omc/reports/coverage" },

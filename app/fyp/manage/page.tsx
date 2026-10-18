@@ -168,9 +168,9 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
               </div>
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Evaluation rubric</h3>
-                <p className="small-note" style={{ marginTop: 0 }}>Each criterion is tied to a Bloom level (C = cognitive, P = psychomotor, A = affective) and a PLO, so the scores feed the students&apos; PLO attainment.</p>
+                <p className="small-note" style={{ marginTop: 0 }}>Each criterion is tied to a Bloom level (C = cognitive, P = psychomotor, A = affective) and a GA, so the scores feed the students&apos; GA attainment.</p>
                 {(() => {
-                  if (!manages) return <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{cr.map((c) => <li key={c.id}>{c.name} — {c.bloomLevel || "—"} · PLO-{c.ploNumber ?? "—"} · out of {c.maxScore} · {c.appliesTo === "GROUP" ? "whole group" : "per student"}</li>)}</ul>;
+                  if (!manages) return <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{cr.map((c) => <li key={c.id}>{c.name} — {c.bloomLevel || "—"} · GA-{c.ploNumber ?? "—"} · out of {c.maxScore} · {c.appliesTo === "GROUP" ? "whole group" : "per student"}</li>)}</ul>;
                   return <RubricEditor cycleId={cycle.id} initial={cr.map((c) => ({ id: c.id, name: c.name, description: c.description, bloomLevel: c.bloomLevel, ploNumber: c.ploNumber, maxScore: c.maxScore, appliesTo: c.appliesTo }))} />;
                 })()}
               </div>
@@ -192,7 +192,7 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                     <div>
                       <b>{p.title}</b> <span className={`badge ${PROPOSAL[p.status]?.[1] || "badge-neutral"}`}>{PROPOSAL[p.status]?.[0] || p.status}</span>
-                      <div className="small-note">{people.get(p.proposerId) || "?"}{p.domain ? ` · ${p.domain}` : ""} · {taken} of {p.maxGroups} group(s){p.ploNumbers.length ? ` · PLO ${p.ploNumbers.join(", ")}` : ""} · submitted {day(p.updatedAt)}</div>
+                      <div className="small-note">{people.get(p.proposerId) || "?"}{p.domain ? ` · ${p.domain}` : ""} · {taken} of {p.maxGroups} group(s){p.ploNumbers.length ? ` · GA ${p.ploNumbers.join(", ")}` : ""} · submitted {day(p.updatedAt)}</div>
                     </div>
                     {manages && (p.status === "SUBMITTED" || p.status === "REVISION") && (
                       <span style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -401,9 +401,9 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
             </div>
             {ploAgg.size > 0 && (
               <div className="card">
-                <h3 style={{ marginTop: 0 }}>PLO attainment from the FYP</h3>
+                <h3 style={{ marginTop: 0 }}>GA attainment from the FYP</h3>
                 <table>
-                  <thead><tr><th>PLO</th><th>Average</th><th>Students attaining (≥ {passPct}%)</th></tr></thead>
+                  <thead><tr><th>GA</th><th>Average</th><th>Students attaining (≥ {passPct}%)</th></tr></thead>
                   <tbody>{Array.from(ploAgg.entries()).sort((a, b) => Number(a[0].slice(4)) - Number(b[0].slice(4))).map(([k, e]) => <tr key={k}><td>{k}</td><td>{Math.round((e.sum / e.n) * 10) / 10}%</td><td>{e.pass} of {e.n}</td></tr>)}</tbody>
                 </table>
                 <p className="small-note" style={{ marginBottom: 0 }}>Once signed off, these feed each student&apos;s transcript and OBE dashboard.</p>

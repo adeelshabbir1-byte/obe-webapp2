@@ -72,7 +72,7 @@ export default function MasterCourseEditor({ courseId }: { courseId: string }) {
             <textarea value={c.statement} onChange={(e) => upClo(i, { statement: e.target.value })} rows={2} style={{ ...input, flex: 1 }} placeholder="Students will be able to…" />
             <select value={c.bloomLevel} onChange={(e) => upClo(i, { bloomLevel: e.target.value })} style={{ padding: 6, border: "1px solid var(--line)" }}>{["C1", "C2", "C3", "C4", "C5", "C6"].map((b) => <option key={b}>{b}</option>)}</select>
             <select value={c.mappedPloId || ""} onChange={(e) => upClo(i, { mappedPloId: e.target.value || null })} style={{ padding: 6, border: "1px solid var(--line)", maxWidth: 170 }}>
-              <option value="">No PLO</option>{plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number} {p.title.slice(0, 20)}</option>)}
+              <option value="">No GA</option>{plos.map((p) => <option key={p.id} value={p.id}>GA-{p.number} {p.title.slice(0, 20)}</option>)}
             </select>
             <button type="button" className="btn" onClick={() => setClos((p) => p.filter((_, j) => j !== i))}>Remove</button>
           </div>

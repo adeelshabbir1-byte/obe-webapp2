@@ -7,7 +7,7 @@ export type DeskKey = "ACCOUNT" | "COURSES" | "REGISTRATION" | "EXAMS" | "FYP" |
 
 export const DESKS: { key: DeskKey; label: string; who: string; students: boolean; categories: HelpCategory[] }[] = [
   { key: "ACCOUNT", label: "My account, password or roles", who: "whoever manages your account (your Program Lead or the Institute Head)", students: true, categories: ["account", "people"] },
-  { key: "COURSES", label: "Courses, CLOs, PLOs or weightage", who: "the OMC (students: your Program Lead)", students: true, categories: ["curriculum", "weights", "teaching"] },
+  { key: "COURSES", label: "Courses, CLOs, GAs or weightage", who: "the OMC (students: your Program Lead)", students: true, categories: ["curriculum", "weights", "teaching"] },
   { key: "REGISTRATION", label: "Registration, timetable or student records", who: "the Program Lead (students: also your advisor)", students: true, categories: ["registration"] },
   { key: "EXAMS", label: "Exams and results", who: "the department Chairman (students: your Program Lead)", students: true, categories: ["exams"] },
   { key: "FYP", label: "Final Year Project", who: "the department's FYP Head", students: true, categories: ["fyp"] },

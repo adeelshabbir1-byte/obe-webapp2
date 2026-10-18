@@ -16,8 +16,8 @@ export default async function ResultPrecheck({ courseId }: { courseId: string })
       {!log && (unassessed.length ? <p style={{ color: "#B3261E", margin: "4px 0" }}><b>Blocks submission:</b> {unassessed.map((c) => c.code).join(", ")} {unassessed.length > 1 ? "are" : "is"} not measured by any assessment.</p>
         : <p style={{ color: "#1F5E36", margin: "4px 0" }}>✓ Every CLO is measured by at least one assessment.</p>)}
       {below.length > 0 && <p style={{ margin: "4px 0", color: "#7A520C" }}>Below target: {below.map((c) => `${c.code} ${c.attainment}% (target ${c.target}%)`).join(", ")}. {log ? "" : "Mention the CQI action you plan in the submission note, so the approver and the OMC see it."}</p>}
-      <div style={{ fontSize: 13, marginTop: 6 }}><b>Batch PLO attainment:</b> {log ? <DeltaList deltas={JSON.parse(log.deltasJson)} /> : <PloImpactPreview courseId={courseId} />}</div>
-      <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 0 }}>Figures = share of the batch&apos;s students reaching each PLO, over the courses whose results are approved, weighted by the batch&apos;s course weights — without and with this course.</p>
+      <div style={{ fontSize: 13, marginTop: 6 }}><b>Batch GA attainment:</b> {log ? <DeltaList deltas={JSON.parse(log.deltasJson)} /> : <PloImpactPreview courseId={courseId} />}</div>
+      <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 0 }}>Figures = share of the batch&apos;s students reaching each GA, over the courses whose results are approved, weighted by the batch&apos;s course weights — without and with this course.</p>
     </div>
   );
 }

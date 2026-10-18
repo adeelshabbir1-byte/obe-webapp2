@@ -129,7 +129,7 @@ export default function PrerequisiteCorrelationReport() {
                             </table>
                             {p.plo.length > 0 && (
                               <>
-                                <h4 style={{ fontSize: 12, marginTop: 14, marginBottom: 6 }}>Shared PLO correlations</h4>
+                                <h4 style={{ fontSize: 12, marginTop: 14, marginBottom: 6 }}>Shared GA correlations</h4>
                                 {p.plo.map((plo) => {
                                   const s = strengthLabel(plo.correlation);
                                   return (

@@ -48,9 +48,9 @@ export default async function CloPloFlowPage({ searchParams }: { searchParams: {
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <ReportPrintHeader title="Assessment → CLO → PLO Flow" />
+      <ReportPrintHeader title="Assessment → CLO → GA Flow" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        How each assessment's marks flow through to CLOs, and each CLO's contribution flows through to PLOs.
+        How each assessment's marks flow through to CLOs, and each CLO's contribution flows through to GAs.
         Thicker, more saturated lines carry more weight.
       </p>
 
@@ -58,7 +58,7 @@ export default async function CloPloFlowPage({ searchParams }: { searchParams: {
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
         <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} hidden={showAll ? { all: "1" } : undefined} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}${c.batch ? ` (${c.batch.degreeProgram} · ${c.batch.batchName})` : ""}${readyIds.has(c.id) ? "" : " — incomplete"}${(diffCount.get(c.id) || 0) > 0 ? " — ⚑ plans differ" : ""}` }))} />
         <span style={{ fontSize: 11.5, color: "var(--slate)", marginLeft: 12 }}>
-          {showAll ? `Showing all ${allCourses.length} courses.` : `Showing ${ready.length} course(s) with assessments and CLO→PLO mapping defined.`}{" "}
+          {showAll ? `Showing all ${allCourses.length} courses.` : `Showing ${ready.length} course(s) with assessments and CLO→GA mapping defined.`}{" "}
           {flaggedCount > 0 && <strong style={{ color: "#B26B00" }}>⚑ {flaggedCount} course(s) where the Instructor's plan differs from the Subject Expert's.{" "}</strong>}
           {hiddenCount > 0 && (showAll
             ? <a href={`?${searchParams.courseId ? `courseId=${searchParams.courseId}` : ""}`}>Show only complete courses</a>

@@ -18,7 +18,7 @@ export default function PloImportButton({ batchId }: { batchId: string }) {
       const res = await fetch("/api/coordinator/plos/import", { method: "POST", body: fd });
       const d = await res.json();
       if (!res.ok) setMsg(d.error || "Import failed.");
-      else { setMsg(`${d.added} PLO(s) added, ${d.skipped} already existed.${d.errors?.length ? " " + d.errors.join("; ") : ""}`); router.refresh(); }
+      else { setMsg(`${d.added} GA(s) added, ${d.skipped} already existed.${d.errors?.length ? " " + d.errors.join("; ") : ""}`); router.refresh(); }
     } catch { setMsg("Import failed."); }
     setBusy(false);
     if (input.current) input.current.value = "";

@@ -60,9 +60,9 @@ export default async function OmcPloReportPage() {
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO Coverage Report</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA Coverage Report</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        How many courses map to each PLO, broken down by course type — highlighting outcomes that are
+        How many courses map to each GA, broken down by course type — highlighting outcomes that are
         heavily covered versus not addressed anywhere.
       </p>
 
@@ -73,15 +73,15 @@ export default async function OmcPloReportPage() {
           <h3 style={{ fontSize: 15, marginBottom: 10 }}>{sec.coordinatorName}'s Program</h3>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            <StatCard label="PLOs Defined" value={sec.totalPlos} />
-            <StatCard label="PLOs Approved" value={sec.approved} tone="var(--sage)" />
+            <StatCard label="GAs Defined" value={sec.totalPlos} />
+            <StatCard label="GAs Approved" value={sec.approved} tone="var(--sage)" />
             <StatCard label="Courses in Program" value={sec.totalCourses} />
-            <StatCard label="Avg Courses / PLO" value={sec.avg} />
-            <StatCard label="PLOs Not Hit" value={sec.notHit} tone={sec.notHit > 0 ? "var(--rust)" : "var(--sage)"} />
+            <StatCard label="Avg Courses / GA" value={sec.avg} />
+            <StatCard label="GAs Not Hit" value={sec.notHit} tone={sec.notHit > 0 ? "var(--rust)" : "var(--sage)"} />
           </div>
 
           <div className="card">
-            {sec.rows.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLOs defined.</p>}
+            {sec.rows.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No GAs defined.</p>}
 
             {sec.rows.map((r) => {
               const typeEntries = Object.entries(r.byType);
@@ -89,7 +89,7 @@ export default async function OmcPloReportPage() {
                 <div key={r.number} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #EFEADC" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600 }}>
-                      PLO-{r.number}: {r.title}
+                      GA-{r.number}: {r.title}
                       {r.status !== "approved" && (
                         <span style={{ marginLeft: 8, fontSize: 9, textTransform: "uppercase", color: "var(--slate)", background: "#EFECE3", padding: "1px 6px", borderRadius: 6 }}>
                           {r.status.replace("-", " ")}

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const plos = await prisma.pLO.findMany({ where: { batchId: batch.id } });
   if (plos.length === 0) {
-    return NextResponse.json({ error: "This batch has no PLOs defined yet — nothing to map against." }, { status: 400 });
+    return NextResponse.json({ error: "This batch has no GAs defined yet — nothing to map against." }, { status: 400 });
   }
   const ploCandidates = plos.map((p) => ({ id: p.id, statement: `${p.title} ${p.description}` }));
 

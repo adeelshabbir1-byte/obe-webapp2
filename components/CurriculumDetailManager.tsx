@@ -163,7 +163,7 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
                 <td>{c.semesterNumber ?? "—"}</td>
                 <td style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setEditingCourseId(c.id)} className="act act-primary">
-                    Edit ({c.seedClos.length} CLOs, {c.suggestedPloNumbers.length} PLOs)
+                    Edit ({c.seedClos.length} CLOs, {c.suggestedPloNumbers.length} GAs)
                   </button>
                   <button onClick={() => removeCourse(c.id)} className="act act-danger">Remove</button>
                 </td>
@@ -218,16 +218,16 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
       </div>
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>PLOs ({plos.length})</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>GAs ({plos.length})</h3>
         <SortableTable>
           <thead><tr><th>#</th><th>Title</th><th>Description</th><th></th></tr></thead>
           <tbody>
-            {plos.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No PLOs yet.</td></tr>}
+            {plos.length === 0 && <tr><td colSpan={4} style={{ color: "var(--slate)" }}>No GAs yet.</td></tr>}
             {plos.map((p) => editingPloId === p.id ? (
               <tr key={p.id}>
                 <td colSpan={4}>
                   <form onSubmit={(e) => savePloEdit(e, p.id)} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "6px 0" }}>
-                    <span style={{ fontWeight: 600 }}>PLO-{p.number}</span>
+                    <span style={{ fontWeight: 600 }}>GA-{p.number}</span>
                     <input name="title" defaultValue={p.title} style={{ flex: "1 1 160px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <input name="description" defaultValue={p.description} style={{ flex: "2 1 260px", padding: "6px 8px", border: "1px solid var(--line)" }} required />
                     <button type="submit" disabled={loading} className="btn btn-brass" style={{ padding: "5px 10px", fontSize: 11.5 }}>Save</button>
@@ -237,7 +237,7 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
               </tr>
             ) : (
               <tr key={p.id}>
-                <td>PLO-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
+                <td>GA-{p.number}</td><td>{p.title}</td><td>{p.description}</td>
                 <td style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setEditingPloId(p.id)} className="act act-primary">Edit</button>
                   <button onClick={() => removePlo(p.id)} className="act act-danger">Remove</button>
@@ -249,14 +249,14 @@ export default function CurriculumDetailManager({ curriculumId, courses: initial
       </div>
 
       <div className="card">
-        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add PLO</h3>
+        <h3 style={{ fontSize: 14, marginBottom: 12 }}>Add GA</h3>
         <form onSubmit={addPlo}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14 }}>
             <div className="field"><label>Number</label><input name="number" type="number" required /></div>
             <div className="field"><label>Title</label><input name="title" required /></div>
           </div>
           <div className="field"><label>Description</label><input name="description" required /></div>
-          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add PLO"}</button>
+          <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Adding…" : "Add GA"}</button>
         </form>
       </div>
     </>

@@ -131,7 +131,7 @@ export default async function StudentFypPage() {
               return (
                 <div key={p.id} style={{ borderTop: "1px solid var(--line)", padding: "10px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div><b>{p.title}</b><div className="small-note">{teachers.get(p.proposerId)}{p.domain ? ` · ${p.domain}` : ""} · {seats > 0 ? `${seats} place(s) left` : "full"}{p.ploNumbers.length ? ` · PLO ${p.ploNumbers.join(", ")}` : ""}</div></div>
+                    <div><b>{p.title}</b><div className="small-note">{teachers.get(p.proposerId)}{p.domain ? ` · ${p.domain}` : ""} · {seats > 0 ? `${seats} place(s) left` : "full"}{p.ploNumbers.length ? ` · GA ${p.ploNumbers.join(", ")}` : ""}</div></div>
                     {applied && <span className={`badge ${APP[applied.status][1]}`}>{APP[applied.status][0]}</span>}
                   </div>
                   <p style={{ fontSize: 13, margin: "4px 0" }}>{p.abstract}</p>

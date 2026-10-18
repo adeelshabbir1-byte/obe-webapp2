@@ -15,5 +15,5 @@ export async function POST(req: Request) {
   const batch = await prisma.batch.findUnique({ where: { id: String(b.batchId || "") }, select: { id: true, coordinatorId: true } });
   if (!batch || !(await coordinatorIdsFor(user)).includes(batch.coordinatorId)) return NextResponse.json({ error: "not found" }, { status: 404 });
   try { return NextResponse.json({ ok: true, courses: await backfillPloChanges(batch.id) }); }
-  catch { return NextResponse.json({ error: "The PLO change log is not set up yet — run prisma/migration_plo_change_log.sql." }, { status: 500 }); }
+  catch { return NextResponse.json({ error: "The GA change log is not set up yet — run prisma/migration_plo_change_log.sql." }, { status: 500 }); }
 }

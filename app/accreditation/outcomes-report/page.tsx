@@ -45,9 +45,9 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
           <h2 style={{ fontSize: 16 }}>{f.sections[1]}</h2>
           <p>Each {f.outcome} is assessed directly (share of students&apos; course results meeting it) and indirectly (share of survey ratings of 3 or more out of 5). Target: blended attainment ≥ {d.plo.target}%.</p>
           <table style={{ borderCollapse: "collapse", width: "100%" }}><thead><tr><th style={th}>{f.outcome}</th>{f.outcomes.length > 0 && <th style={th}>{fk} attribute</th>}{SOURCES.map(([k, v]) => <th key={k} style={th}>{v} ({d.plo.weights[k]})</th>)}<th style={th}>Blended</th><th style={th}>Met</th></tr></thead>
-            <tbody>{d.plo.rows.map((r) => <tr key={r.number}><td style={td}>PLO-{r.number}: {r.title}</td>{f.outcomes.length > 0 && <td style={td}>{f.outcomes[r.number - 1] ? `${fk === "ABET" ? "SO" : "GA"} ${r.number} — ${f.outcomes[r.number - 1]}` : "—"}</td>}
+            <tbody>{d.plo.rows.map((r) => <tr key={r.number}><td style={td}>GA-{r.number}: {r.title}</td>{f.outcomes.length > 0 && <td style={td}>{f.outcomes[r.number - 1] ? `${fk === "ABET" ? "SO" : "GA"} ${r.number} — ${f.outcomes[r.number - 1]}` : "—"}</td>}
               {SOURCES.map(([k]) => <td key={k} style={td}>{r.cells[k] ? `${r.cells[k]!.pct}% (n=${r.cells[k]!.n})` : "—"}</td>)}<td style={{ ...td, fontWeight: 700 }}>{r.blended ?? "—"}{r.blended !== null ? "%" : ""}</td><td style={td}>{r.met === null ? "—" : r.met ? "Yes" : "No"}</td></tr>)}</tbody></table>
-          {f.outcomes.length > 0 && <p style={{ fontSize: 12 }}><i>{fk} attributes are matched to the program&apos;s PLOs by number; keep PLO numbering aligned with the {fk} list.</i></p>}
+          {f.outcomes.length > 0 && <p style={{ fontSize: 12 }}><i>{fk} attributes are matched to the program&apos;s GAs by number; keep GA numbering aligned with the {fk} list.</i></p>}
 
           <h2 style={{ fontSize: 16 }}>{f.sections[2]}</h2>
           <p>{f.courseReport}: share of students meeting each CLO, from finalised results.</p>
@@ -59,7 +59,7 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
           <table style={{ borderCollapse: "collapse", width: "100%" }}><thead><tr><th style={th}>Outcome</th><th style={th}>Finding</th><th style={th}>Action</th><th style={th}>Before → after</th><th style={th}>Status</th></tr></thead>
             <tbody>{d.cqi.map((c, i) => <tr key={i}><td style={td}>{c.sourceReference || "—"}</td><td style={td}>{c.finding}</td><td style={td}>{c.actionTaken || "—"}</td><td style={td}>{c.metricBefore ?? "—"} → {c.metricAfter ?? "—"}</td><td style={td}>{c.status}</td></tr>)}</tbody></table>
           {!d.cqi.length && <p><i>No improvement actions recorded for this cohort yet.</i></p>}
-          {d.plo.rows.filter((r) => r.met === false).length > 0 && <p><b>Outcomes below target needing an action:</b> {d.plo.rows.filter((r) => r.met === false).map((r) => `PLO-${r.number}`).join(", ")}</p>}
+          {d.plo.rows.filter((r) => r.met === false).length > 0 && <p><b>Outcomes below target needing an action:</b> {d.plo.rows.filter((r) => r.met === false).map((r) => `GA-${r.number}`).join(", ")}</p>}
 
           <h2 style={{ fontSize: 16 }}>Supporting evidence</h2>
           <p>Sampled student scripts (best / average / weakest): {d.samples}. Verified student portfolio entries: {d.verified}. The evidence bundle contains these indexes with links, and the data tables above as spreadsheets.</p>

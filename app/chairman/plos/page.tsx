@@ -24,9 +24,9 @@ export default async function ChairmanPlosPage() {
 
   return (
     <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Program Learning Outcomes</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Graduate Attributes</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Review, edit, and formally approve the PLOs your Program Coordinators have defined, per batch/cohort.
+        Review, edit, and formally approve the GAs your Program Coordinators have defined, per batch/cohort.
       </p>
       <ChairmanPlosManager
         initialPlos={plos.map((p) => ({ id: p.id, number: p.number, title: p.title, description: p.description, status: p.status, chairmanComment: p.chairmanComment, coordinatorName: p.coordinator.name, degreeProgram: p.batch ? `${p.batch.degreeProgram} — ${p.batch.batchName}` : "" }))}

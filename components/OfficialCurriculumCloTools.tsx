@@ -35,7 +35,7 @@ export default function OfficialCurriculumCloTools({ curriculumId }: { curriculu
   }
   async function adopt() {
     const c = copies.find((x) => x.id === fromId);
-    if (!c || !confirm(`Copy the CLOs and PLO mapping of "${c.label}" into this official curriculum${onlyEmpty ? " (only courses that have no CLOs yet)" : " (replacing the official CLOs of every course that copy has CLOs for)"}?`)) return;
+    if (!c || !confirm(`Copy the CLOs and GA mapping of "${c.label}" into this official curriculum${onlyEmpty ? " (only courses that have no CLOs yet)" : " (replacing the official CLOs of every course that copy has CLOs for)"}?`)) return;
     setBusy(true); setMsg(null);
     const r = await fetch(`/api/admin/curricula/${curriculumId}/adopt-from-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fromId, onlyEmpty }) });
     const d = await r.json().catch(() => ({}));
@@ -52,10 +52,10 @@ export default function OfficialCurriculumCloTools({ curriculumId }: { curriculu
       </p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <b style={{ fontSize: 13 }}>From Excel:</b>
-        <button className="btn btn-brass" disabled={busy} onClick={() => input.current?.click()}>Import CLOs &amp; PLO mapping from Excel</button>
+        <button className="btn btn-brass" disabled={busy} onClick={() => input.current?.click()}>Import CLOs &amp; GA mapping from Excel</button>
         <TemplateLink name="official-clos" />
         <input ref={input} type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
-        <span style={{ fontSize: 12, color: "var(--slate)" }}>Columns: Course code, CLO, Statement, Bloom level, Mapped PLO</span>
+        <span style={{ fontSize: 12, color: "var(--slate)" }}>Columns: Course code, CLO, Statement, Bloom level, Mapped GA</span>
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <b style={{ fontSize: 13 }}>From an institute&apos;s copy:</b>

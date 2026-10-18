@@ -26,9 +26,9 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
     <>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Outcome Flow</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 12 }}>
-        How every assessment feeds a CLO, every CLO its course, every course its PLOs and every PLO the program&apos;s objectives (PEOs) — with the
-        weight of each link and how many students reach each outcome. Batch PLO attainment is the weighted average of its courses; a PEO&apos;s, of its PLOs.
-        {canEdit ? " You set the Course → PLO weights (per batch) and PLO → PEO weights (per program); assessment and CLO weights come from each course plan." : ""}
+        How every assessment feeds a CLO, every CLO its course, every course its GAs and every GA the program&apos;s objectives (PEOs) — with the
+        weight of each link and how many students reach each outcome. Batch GA attainment is the weighted average of its courses; a PEO&apos;s, of its GAs.
+        {canEdit ? " You set the Course → GA weights (per batch) and GA → PEO weights (per program); assessment and CLO weights come from each course plan." : ""}
       </p>
     </>
   );
@@ -53,7 +53,7 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
         {!pick && <div className="card"><p style={{ margin: 0 }}>You have no course yet.</p></div>}
         {pick && chain && <OutcomeFlow key={pick.id} mode="course" batchId={chain.course.batchId} canEdit={false} target={flow?.target || 60}
           courses={[{ id: pick.id, code: chain.course.code, title: chain.course.title, courseType: "", creditHours: chain.course.creditHours, semesterNumber: null, family: flow?.courses.find((c) => c.id === pick.id)?.family || "COMPUTING" }]}
-          plos={plos} peos={peos} initialChain={chain} peoNote="No program objective is linked to this course's PLOs yet." />}
+          plos={plos} peos={peos} initialChain={chain} peoNote="No program objective is linked to this course's GAs yet." />}
       </Shell>
     );
   }
@@ -70,12 +70,12 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
       <div className="card no-print" style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" }}>
         <DegreeBatchFilter batches={batches} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} />
         {batch && canEdit && (searchParams.cohort === "1"
-          ? <span style={{ fontSize: 12.5 }}>{cohort?.prevLabel ? <>Compared with last batch: <b>{cohort.prevLabel}</b> — open a PLO&apos;s weights to see its cohort suggestion.</> : "No earlier batch of this program to compare with."}</span>
+          ? <span style={{ fontSize: 12.5 }}>{cohort?.prevLabel ? <>Compared with last batch: <b>{cohort.prevLabel}</b> — open a GA&apos;s weights to see its cohort suggestion.</> : "No earlier batch of this program to compare with."}</span>
           : <Link className="btn btn-secondary" href={`/outcome-flow?batchId=${batch.id}&degree=${encodeURIComponent(searchParams.degree || "")}&cohort=1`}>Compare with last batch</Link>)}
-        {batch && canEdit && <Link href={`/omc/plo-weights?batchId=${batch.id}`} style={{ fontSize: 12.5, marginLeft: "auto" }}>All PLO weights as a table →</Link>}
+        {batch && canEdit && <Link href={`/omc/plo-weights?batchId=${batch.id}`} style={{ fontSize: 12.5, marginLeft: "auto" }}>All GA weights as a table →</Link>}
       </div>
       {!batch && <div className="card"><p style={{ margin: 0, fontSize: 13, color: "var(--slate)" }}>Choose a batch above.</p></div>}
-      {flow?.missing && <div className="err">The outcome weight tables are not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase. Until then every PLO uses the equal split and PEOs have no links.</div>}
+      {flow?.missing && <div className="err">The outcome weight tables are not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase. Until then every GA uses the equal split and PEOs have no links.</div>}
       {flow && <OutcomeFlow key={batch!.id} mode="batch" batchId={batch!.id} canEdit={canEdit} target={flow.target} courses={flow.courses} plos={flow.plos} peos={flow.peos} cohort={cohort} />}
     </Shell>
   );

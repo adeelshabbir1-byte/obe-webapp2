@@ -172,7 +172,7 @@ export default function TeachingAnalysisReport({ a, heading = "Planned vs Taught
         </table>
       </div>
 
-      <OutcomeTable title="PLOs — lectures and marks reaching each PLO" rows={a.plos} showIns={showIns} />
+      <OutcomeTable title="GAs — lectures and marks reaching each GA" rows={a.plos} showIns={showIns} />
       <OutcomeTable title="CLOs — lectures and marks per CLO" rows={a.clos} showIns={showIns} />
 
       <div className="card" style={{ overflowX: "auto" }}>

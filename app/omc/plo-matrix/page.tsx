@@ -82,10 +82,10 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO–Course Matrix</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA–Course Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Assign which PLOs each course contributes to — scoped one batch/cohort at a time, since even two intakes
-        of the same degree can have different PLOs. Cells shaded <span style={{ background: "#FFF9C4", padding: "1px 5px" }}>yellow</span> with a small "HEC" label are HEC's own suggested mapping for that course — a hint only, not automatically applied; check the box yourself to actually set it.
+        Assign which GAs each course contributes to — scoped one batch/cohort at a time, since even two intakes
+        of the same degree can have different GAs. Cells shaded <span style={{ background: "#FFF9C4", padding: "1px 5px" }}>yellow</span> with a small "HEC" label are HEC's own suggested mapping for that course — a hint only, not automatically applied; check the box yourself to actually set it.
         If a course is the base of a Content Sync group, checking or unchecking a box here also applies to that
         same course's not-yet-taught future batches automatically.
       </p>
@@ -97,7 +97,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
       <AutoMapCloLevelAllButton />
       {!hasFilter && (
         <div className="card">
-          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Select a program or a specific batch above to load its PLO-Course Matrix.</p>
+          <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Select a program or a specific batch above to load its GA-Course Matrix.</p>
         </div>
       )}
       {hasFilter && searchParams.batchId && <PloMatrixExcelButtons batchId={searchParams.batchId} />}
@@ -108,8 +108,8 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         <div className="card">
           <h3 style={{ fontSize: 13.5, marginBottom: 8 }}>Copy Mappings from Another Batch</h3>
           <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-            If two batches share the same or an equivalent curriculum, copy one's PLO mappings into the other —
-            matched by course code and PLO number. Only fills in gaps; never overwrites what's already set.
+            If two batches share the same or an equivalent curriculum, copy one's GA mappings into the other —
+            matched by course code and GA number. Only fills in gaps; never overwrites what's already set.
           </p>
           <CopyPloMappingsForm batches={allBatches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))} />
         </div>

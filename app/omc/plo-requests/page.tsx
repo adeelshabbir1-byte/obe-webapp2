@@ -36,13 +36,13 @@ export default async function PloRequestsPage() {
 
   return (
     <Shell roleLabel="OMC Member" userName={user.name} navLinks={OMC_ACTION_NAV}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>PLO Change Requests</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA Change Requests</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        A course&apos;s Subject Expert or Instructor asking you to add a PLO to the course, or take one off. Approving changes the
-        PLO–Course Matrix exactly as ticking the box would (and carries it to linked future offerings). Taking a PLO off also clears it
+        A course&apos;s Subject Expert or Instructor asking you to add a GA to the course, or take one off. Approving changes the
+        GA–Course Matrix exactly as ticking the box would (and carries it to linked future offerings). Taking a GA off also clears it
         from the course&apos;s CLOs that pointed to it, and their owners are told to map those CLOs again.
       </p>
-      {missing && <div className="err">The PLO request table is not in the database yet — run prisma/migration_plo_requests.sql in Supabase.</div>}
+      {missing && <div className="err">The GA request table is not in the database yet — run prisma/migration_plo_requests.sql in Supabase.</div>}
 
       <h3 style={{ marginBottom: 8 }}>Waiting for you ({pending.length})</h3>
       {pending.length === 0 && <div className="card"><p style={{ color: "var(--slate)", margin: 0 }}>Nothing waiting.</p></div>}
@@ -54,21 +54,21 @@ export default async function PloRequestsPage() {
         return (
           <div key={r.id} className="card">
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <span className={`badge ${r.action === "ADD" ? "badge-ok" : "badge-no"}`}>{r.action === "ADD" ? "Add" : "Remove"} PLO-{p?.number}</span>
+              <span className={`badge ${r.action === "ADD" ? "badge-ok" : "badge-no"}`}>{r.action === "ADD" ? "Add" : "Remove"} GA-{p?.number}</span>
               <b>{c.code} — {c.title}</b>
               <span style={{ color: "var(--slate)", fontSize: 12.5 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : ""}</span>
             </div>
-            <div style={{ fontSize: 12.5, marginTop: 6 }}><b>PLO-{p?.number}: {p?.title}</b>{p?.description ? <span style={{ color: "var(--slate)" }}> — {p.description}</span> : null}</div>
+            <div style={{ fontSize: 12.5, marginTop: 6 }}><b>GA-{p?.number}: {p?.title}</b>{p?.description ? <span style={{ color: "var(--slate)" }}> — {p.description}</span> : null}</div>
             <div style={{ fontSize: 13, marginTop: 8, background: "#F7F7F4", padding: "8px 10px", borderRadius: 6 }}>
               <span style={{ color: "var(--slate)" }}>{name.get(r.requestedById) || "—"} ({r.requestedAs === "INSTRUCTOR" ? "Instructor" : "Subject Expert"}), {new Date(r.createdAt).toLocaleDateString("en-GB")}:</span> {r.reason}
             </div>
             <div style={{ fontSize: 12.5, marginTop: 8, color: "var(--slate)" }}>
-              PLOs on the course now: {current.length ? current.map((n) => `PLO-${n}`).join(", ") : "none"}.
+              GAs on the course now: {current.length ? current.map((n) => `GA-${n}`).join(", ") : "none"}.
               {r.action === "REMOVE" && <> {pointing.length ? <span style={{ color: "#B42318" }}>{pointing.map((x) => `${x.code}${x.source === "INSTRUCTOR" ? " (instructor)" : ""}`).join(", ")} point to it and would be cleared.</span> : "No CLO points to it."}</>}
             </div>
             {r.action === "ADD" && c.clos.length > 0 && (
               <details style={{ marginTop: 6 }}>
-                <summary style={{ cursor: "pointer", fontSize: 12.5 }}>The course&apos;s CLOs ({c.clos.length}) — does any of them serve this PLO?</summary>
+                <summary style={{ cursor: "pointer", fontSize: 12.5 }}>The course&apos;s CLOs ({c.clos.length}) — does any of them serve this GA?</summary>
                 <ul style={{ fontSize: 12.5, margin: "6px 0" }}>{c.clos.map((x, i) => <li key={i}><b>{x.code}</b>{x.source === "INSTRUCTOR" ? " (instructor)" : ""}: {x.statement}</li>)}</ul>
               </details>
             )}
@@ -85,7 +85,7 @@ export default async function PloRequestsPage() {
             <tbody>{done.map((r) => (
               <tr key={r.id}>
                 <td>{cOf.get(r.courseId)?.code}</td>
-                <td>{r.action === "ADD" ? "Add" : "Remove"} PLO-{pOf.get(r.ploId)?.number}</td>
+                <td>{r.action === "ADD" ? "Add" : "Remove"} GA-{pOf.get(r.ploId)?.number}</td>
                 <td>{name.get(r.requestedById) || "—"}</td>
                 <td><span className={`badge ${r.status === "APPROVED" ? "badge-ok" : "badge-no"}`}>{r.status === "APPROVED" ? "approved" : "declined"}</span> {r.decidedById ? name.get(r.decidedById) : ""}{r.decidedAt ? `, ${new Date(r.decidedAt).toLocaleDateString("en-GB")}` : ""}</td>
                 <td style={{ color: "var(--slate)" }}>{r.decisionNote}{r.closUnmapped ? ` (${r.closUnmapped} CLO(s) cleared)` : ""}</td>

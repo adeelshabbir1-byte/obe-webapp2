@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   });
 
   return buildExcelResponse("plos.xlsx", [{
-    name: "Program Learning Outcomes",
+    name: "Graduate Attributes",
     columns: [
       { header: "Batch", key: "batch", width: 26 },
       { header: "#", key: "number", width: 6 },

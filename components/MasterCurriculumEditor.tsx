@@ -191,8 +191,8 @@ export default function MasterCurriculumEditor() {
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 10 }}>
           Edits here change the shared HEC/standard-curriculum reference library — future imports and any course
           linked to one of these (via Content Sync or Course Equivalence's "HEC Course" column) will pick up
-          changes made here. PLO suggestion checkboxes are what drives the yellow suggested cells and "Auto-map
-          HEC" on the PLO-Course Matrix page.
+          changes made here. GA suggestion checkboxes are what drives the yellow suggested cells and "Auto-map
+          HEC" on the GA-Course Matrix page.
         </p>
         <select value={selectedId} onChange={(e) => loadDetail(e.target.value)} style={{ fontSize: 13, padding: 6, minWidth: 320 }}>
           <option value="">Select a curriculum…</option>
@@ -221,17 +221,17 @@ export default function MasterCurriculumEditor() {
         )}
         {selectedId && (
           <>
-            <a href={`/api/master-curriculum/${selectedId}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }} title="Courses, CLOs with PLOs, Course–PLO matrix, lecture topics and PLOs">
+            <a href={`/api/master-curriculum/${selectedId}/download?format=xlsx`} className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, textDecoration: "none", display: "inline-block" }} title="Courses, CLOs with GAs, Course–GA matrix, lecture topics and GAs">
               Download full curriculum (Excel)
             </a>
-            <a href={`/api/master-curriculum/${selectedId}/download?format=docx`} className="btn" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 8, textDecoration: "none", display: "inline-block" }} title="A readable curriculum document: PLOs, scheme of studies and every course's details">
+            <a href={`/api/master-curriculum/${selectedId}/download?format=docx`} className="btn" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 8, textDecoration: "none", display: "inline-block" }} title="A readable curriculum document: GAs, scheme of studies and every course's details">
               Download as Word
             </a>
           </>
         )}
         {selectedId && detail?.isOwned && (
-          <button className="btn" disabled={busy} style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10 }} title="Bring in CLOs and PLO mapping improved in the official curriculum" onClick={async () => {
-            if (!confirm("Bring the latest CLOs and PLO mapping from the official curriculum into your copy?")) return;
+          <button className="btn" disabled={busy} style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10 }} title="Bring in CLOs and GA mapping improved in the official curriculum" onClick={async () => {
+            if (!confirm("Bring the latest CLOs and GA mapping from the official curriculum into your copy?")) return;
             const all = confirm("Also REPLACE the CLOs of courses that already have CLOs in your copy?\n\nOK = yes, replace them with the official ones.\nCancel = no, only fill courses that have no CLOs yet (keeps your own work).");
             setBusy(true); setError(""); setNotice("");
             try {
@@ -245,7 +245,7 @@ export default function MasterCurriculumEditor() {
         )}
         {selectedId && detail?.isOwned && (
           <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 10, cursor: "pointer", display: "inline-block" }}>
-            Import CLOs &amp; PLO mapping from Excel
+            Import CLOs &amp; GA mapping from Excel
             <input type="file" accept=".xlsx,.csv" style={{ display: "none" }} onChange={async (e) => {
               const f = e.target.files?.[0]; if (!f) return;
               if (!confirm("For every course in the file, its existing CLOs will be replaced by the ones in the file. Continue?")) { e.target.value = ""; return; }
@@ -266,7 +266,7 @@ export default function MasterCurriculumEditor() {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 14, marginTop: 0 }}>Import a full curriculum from Excel</h3>
         <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -4 }}>
-          One file with sheets <b>Program</b> (Degree program, Authority, Version), <b>PLOs</b>, <b>Courses</b>, <b>CLOs and PLO mapping</b> and <b>Lecture topics</b> — the same layout as &quot;Download full curriculum&quot;.
+          One file with sheets <b>Program</b> (Degree program, Authority, Version), <b>GAs</b>, <b>Courses</b>, <b>CLOs and GA mapping</b> and <b>Lecture topics</b> — the same layout as &quot;Download full curriculum&quot;.
           It goes into your institute&apos;s own curriculum for that degree program (created if needed); courses are matched by code, and the CLOs and topics of every course in the file are replaced.
         </p>
         <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", cursor: "pointer", display: "inline-block" }}>
@@ -280,7 +280,7 @@ export default function MasterCurriculumEditor() {
               const d = await r.json();
               if (!r.ok) setError(d.error || "Import failed.");
               else {
-                setNotice(`Imported: ${d.plos} PLO(s), ${d.coursesCreated} new and ${d.coursesUpdated} updated course(s), ${d.clos} CLO(s), ${d.topics} lecture topic(s).${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`);
+                setNotice(`Imported: ${d.plos} GA(s), ${d.coursesCreated} new and ${d.coursesUpdated} updated course(s), ${d.clos} CLO(s), ${d.topics} lecture topic(s).${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`);
                 const refreshed = await fetch("/api/omc/master-curriculum").then((x) => x.json());
                 if (refreshed.curricula) setCurricula(refreshed.curricula);
                 await loadDetail(d.curriculumId);
@@ -359,7 +359,7 @@ export default function MasterCurriculumEditor() {
       {detail && (
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ fontSize: 15 }}>{detail.title} — {detail.plos.length} PLOs {detail.isOwned && <span style={{ fontSize: 11, color: "var(--sage)" }}>(your copy — editable)</span>}</h3>
+            <h3 style={{ fontSize: 15 }}>{detail.title} — {detail.plos.length} GAs {detail.isOwned && <span style={{ fontSize: 11, color: "var(--sage)" }}>(your copy — editable)</span>}</h3>
             {detail.isOwned ? (
               <button onClick={() => setShowAddCourse(!showAddCourse)} className="btn btn-brass" style={{ fontSize: 12, padding: "5px 10px" }}>
                 {showAddCourse ? "Cancel" : "+ Add Course"}
@@ -374,7 +374,7 @@ export default function MasterCurriculumEditor() {
             <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10, background: "#FBEED2", padding: 8 }}>
               This is the shared official reference copy — read-only. Clone it to get your own editable version;
               future imports can then use your copy instead of the original, and any edits you make (including
-              new PLO suggestions) are available for your institution going forward. Note: PLO suggestion
+              new GA suggestions) are available for your institution going forward. Note: GA suggestion
               checkboxes are keyed by course code and shared across every curriculum using that code — editing
               them here or on a clone updates the same underlying suggestion everywhere that code appears,
               including the official copy.
@@ -400,7 +400,7 @@ export default function MasterCurriculumEditor() {
             <thead>
               <tr style={{ fontSize: 11, textAlign: "left" }}>
                 <th style={{ padding: 6 }}>Code</th><th style={{ padding: 6 }}>Title</th><th style={{ padding: 6 }}>Sem</th>
-                <th style={{ padding: 6 }}>CLOs</th><th style={{ padding: 6 }}>PLO Suggestions</th><th></th>
+                <th style={{ padding: 6 }}>CLOs</th><th style={{ padding: 6 }}>GA Suggestions</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -483,12 +483,12 @@ function CourseEditPanel({ course, plos, busy, isOwned, onSaveField, onTogglePlo
           </button>
         )}
 
-        <h4 style={{ fontSize: 12, marginTop: 14, marginBottom: 6 }}>PLO suggestions {!isOwned && <span style={{ fontWeight: 400, color: "var(--slate)" }}>(shared by course code — editable here too)</span>}</h4>
+        <h4 style={{ fontSize: 12, marginTop: 14, marginBottom: 6 }}>GA suggestions {!isOwned && <span style={{ fontWeight: 400, color: "var(--slate)" }}>(shared by course code — editable here too)</span>}</h4>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {plos.map((p) => (
             <label key={p.id} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}>
               <input type="checkbox" checked={course.suggestedPloNumbers.includes(p.number)} disabled={busy} onChange={() => onTogglePlo(course.id, course.suggestedPloNumbers, p.number)} />
-              PLO-{p.number}
+              GA-{p.number}
             </label>
           ))}
         </div>

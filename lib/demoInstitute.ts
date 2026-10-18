@@ -244,7 +244,7 @@ export async function activityStep(demoBatchId: string, semester: number) {
           studentId: s.id, coordinatorId: batch.coordinatorId, courseCode: c.code, courseTitle: c.title, creditHours: c.creditHours, courseType: c.courseType, termName: term, termYear: year,
           totalPct: Math.round(total * 10) / 10, grade: g[0], gpaPoints: g[2],
           cloAttainmentJson: JSON.stringify(cloPct.map(({ code, pct, passed }) => ({ code, pct, passed }))),
-          ploAttainmentJson: JSON.stringify(Array.from(ploAgg.entries()).sort((a, b) => a[0] - b[0]).map(([n, e]) => { const pct = e.w ? Math.round((10 * e.s) / e.w) / 10 : 0; return { label: `PLO-${n}`, pct, passed: pct >= 50 }; })),
+          ploAttainmentJson: JSON.stringify(Array.from(ploAgg.entries()).sort((a, b) => a[0] - b[0]).map(([n, e]) => { const pct = e.w ? Math.round((10 * e.s) / e.w) / 10 : 0; return { label: `GA-${n}`, pct, passed: pct >= 50 }; })),
         });
       }
     } else {

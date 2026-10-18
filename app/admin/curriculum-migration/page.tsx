@@ -116,10 +116,10 @@ export default async function CurriculumMigrationPage({ searchParams }: { search
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>PLO Changes</h3>
-            {diff.addedPlos.length > 0 && <p style={{ fontSize: 12.5, color: "var(--sage)" }}>Added: {diff.addedPlos.map((p: any) => `PLO-${p.number}`).join(", ")}</p>}
-            {diff.removedPlos.length > 0 && <p style={{ fontSize: 12.5, color: "var(--rust)" }}>Removed: {diff.removedPlos.map((p: any) => `PLO-${p.number}`).join(", ")}</p>}
-            {diff.addedPlos.length === 0 && diff.removedPlos.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No PLO differences.</p>}
+            <h3 style={{ fontSize: 14, marginBottom: 10 }}>GA Changes</h3>
+            {diff.addedPlos.length > 0 && <p style={{ fontSize: 12.5, color: "var(--sage)" }}>Added: {diff.addedPlos.map((p: any) => `GA-${p.number}`).join(", ")}</p>}
+            {diff.removedPlos.length > 0 && <p style={{ fontSize: 12.5, color: "var(--rust)" }}>Removed: {diff.removedPlos.map((p: any) => `GA-${p.number}`).join(", ")}</p>}
+            {diff.addedPlos.length === 0 && diff.removedPlos.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No GA differences.</p>}
           </div>
 
           <div className="card">

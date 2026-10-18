@@ -31,16 +31,16 @@ export async function courseContext(courseId: string) {
   return [
     `COURSE: ${course?.code} ${course?.title} (${course?.creditHours} credit hours, semester ${course?.semesterNumber ?? "?"}, ${course?.courseType}).`,
     course?.catalogDescription ? `Description: ${course.catalogDescription.slice(0, 800)}` : "",
-    `PROGRAM PLOs:\n${plos.map((p) => `PLO-${p.number} ${p.title}: ${p.description}`).join("\n")}`,
-    `CLOs:\n${chain.clos.map((c) => `${c.code} (${c.bloom}) → ${c.ploNumber ? `PLO-${c.ploNumber}` : "no PLO"}: ${c.statement}${c.attainment != null ? ` [attainment ${c.attainment}% of students, target ${c.target}%]` : ""}`).join("\n")}`,
+    `PROGRAM GAs:\n${plos.map((p) => `PLO-${p.number} ${p.title}: ${p.description}`).join("\n")}`,
+    `CLOs:\n${chain.clos.map((c) => `${c.code} (${c.bloom}) → ${c.ploNumber ? `PLO-${c.ploNumber}` : "no GA"}: ${c.statement}${c.attainment != null ? ` [attainment ${c.attainment}% of students, target ${c.target}%]` : ""}`).join("\n")}`,
     `LECTURE TOPICS:\n${topics.map((t) => `L${t.lectureNumber} ${t.topic}${t.cloId ? ` [${cloCode.get(t.cloId) || ""}]` : ""}`).join("\n").slice(0, 3500)}`,
     `ASSESSMENTS:\n${chain.assessments.map((a) => `${a.label} (${a.type}, ${a.marksPct}% of course) → ${a.cloId ? cloCode.get(a.cloId) : "no CLO"}${a.avg != null ? `, class average ${a.avg}%` : ""}`).join("\n")}`,
   ].filter(Boolean).join("\n\n");
 }
 
-export const SYSTEM_PROMPT = `You are the OBE Assistant inside a university's Outcome-Based Education app, helping faculty (Subject Experts and Instructors) understand and improve their course's CLOs, PLO mapping, Bloom levels, topics and assessments.
-Rules: be concise and practical (short paragraphs or bullets). Explain WHY a CLO fits a PLO using the CLO's verb, its Bloom level and the PLO's meaning. When you suggest a rewrite, give the exact new CLO text. You only suggest — the OMC approves changes to PLO mappings (faculty can use "Request PLO change" in the app). Never invent marks or results; use only the data given. If something is outside OBE/curriculum, say so briefly.
-Reference — standard computing PLOs: ${PLO_GUIDE.map((p) => `PLO-${p.n} ${p.title}: ${p.meaning} (${p.notThis})`).join(" ")}
+export const SYSTEM_PROMPT = `You are the OBE Assistant inside a university's Outcome-Based Education app, helping faculty (Subject Experts and Instructors) understand and improve their course's CLOs, GA mapping, Bloom levels, topics and assessments.
+Rules: be concise and practical (short paragraphs or bullets). Explain WHY a CLO fits a GA using the CLO's verb, its Bloom level and the GA's meaning. When you suggest a rewrite, give the exact new CLO text. You only suggest — the OMC approves changes to GA mappings (faculty can use "Request GA change" in the app). Never invent marks or results; use only the data given. If something is outside OBE/curriculum, say so briefly.
+Reference — standard computing GAs: ${PLO_GUIDE.map((p) => `PLO-${p.n} ${p.title}: ${p.meaning} (${p.notThis})`).join(" ")}
 Bloom: ${BLOOM.map((b) => `${b.level} ${b.name} (${b.verbs.join(", ")})`).join("; ")}.`;
 
 export async function askClaude(cfg: { apiKey: string; model: string }, system: string, messages: { role: "user" | "assistant"; content: string }[]) {

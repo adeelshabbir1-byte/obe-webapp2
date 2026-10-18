@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       const omc = await prisma.user.findMany({ where: { isActive: true, OR: [{ role: "OMC" }, { omcHat: true }], AND: [{ OR: [{ managedById: head }, { managedBy: { managedById: head } }] }] } as never, select: { id: true } });
       const to = Array.from(new Set([...(batch ? [batch.coordinatorId] : []), ...omc.map((u) => u.id)]));
       const text = drops.map((d) => `PLO-${d.plo} ${d.before}% → ${d.after}%`).join(", ");
-      if (to.length) await notify(head, user.id, to, `PLO drop after ${ch.code}`, `Approving ${ch.code} lowered ${batch?.batchName || "the batch"}'s PLO attainment: ${text}. Consider a CQI action.`, `/plo-progress?batchId=${ch.batchId}`);
+      if (to.length) await notify(head, user.id, to, `GA drop after ${ch.code}`, `Approving ${ch.code} lowered ${batch?.batchName || "the batch"}'s GA attainment: ${text}. Consider a CQI action.`, `/plo-progress?batchId=${ch.batchId}`);
     }
   } catch { /* the approval itself already succeeded */ }
   // Students (and, if turned on, parents) hear that the result is out.

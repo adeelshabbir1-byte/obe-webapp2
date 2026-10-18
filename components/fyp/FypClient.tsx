@@ -128,13 +128,13 @@ export function ScoreSheet({ url, groupId, milestoneId, criteria, members, exist
       <div style={{ overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Criterion</th><th style={{ width: 90 }}>Level · PLO</th><th style={{ width: 60 }}>Max</th>{members.map((m) => <th key={m.id} style={{ textAlign: "center" }}>{m.name}<div className="small-note">{m.rollNumber}</div></th>)}</tr>
+            <tr><th>Criterion</th><th style={{ width: 90 }}>Level · GA</th><th style={{ width: 60 }}>Max</th>{members.map((m) => <th key={m.id} style={{ textAlign: "center" }}>{m.name}<div className="small-note">{m.rollNumber}</div></th>)}</tr>
           </thead>
           <tbody>
             {criteria.map((c) => (
               <tr key={c.id}>
                 <td><b>{c.name}</b>{c.description && <div className="small-note">{c.description}</div>}</td>
-                <td className="small-note">{[c.bloomLevel, c.ploNumber ? `PLO-${c.ploNumber}` : ""].filter(Boolean).join(" · ") || "—"}</td>
+                <td className="small-note">{[c.bloomLevel, c.ploNumber ? `GA-${c.ploNumber}` : ""].filter(Boolean).join(" · ") || "—"}</td>
                 <td>{c.maxScore}</td>
                 {c.appliesTo === "GROUP"
                   ? <td colSpan={members.length} style={{ textAlign: "center" }}>{cell(c, members[0]?.id || "", (v) => setGroup(c.id, v))} <span className="small-note">whole group</span></td>

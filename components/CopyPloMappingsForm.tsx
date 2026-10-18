@@ -32,7 +32,7 @@ export default function CopyPloMappingsForm({ batches }: { batches: Batch[] }) {
       {error && <div className="err">{error}</div>}
       {result && (
         <div style={{ background: "#E2F4E8", color: "var(--sage)", padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>
-          Copied {result.copiedCount} mapping(s).{result.skippedNoMatch > 0 && ` ${result.skippedNoMatch} couldn't be matched (different course codes or PLO numbers).`}
+          Copied {result.copiedCount} mapping(s).{result.skippedNoMatch > 0 && ` ${result.skippedNoMatch} couldn't be matched (different course codes or GA numbers).`}
         </div>
       )}
       <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>

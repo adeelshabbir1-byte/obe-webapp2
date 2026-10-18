@@ -247,7 +247,7 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
         e.got += s.score; e.max += c.maxScore;
         ploMap.set(c.ploNumber, e);
       }
-      const plo = Array.from(ploMap.entries()).sort((a, b) => a[0] - b[0]).map(([n, e]) => { const pct = e.max ? Math.round((1000 * e.got) / e.max) / 10 : 0; return { label: `PLO-${n}`, pct, passed: pct >= passPct }; });
+      const plo = Array.from(ploMap.entries()).sort((a, b) => a[0] - b[0]).map(([n, e]) => { const pct = e.max ? Math.round((1000 * e.got) / e.max) / 10 : 0; return { label: `GA-${n}`, pct, passed: pct >= passPct }; });
       const complete = missing.length === 0 && byMilestone.length > 0;
       rows.push({ studentId: m.studentId, name: st?.name || "", rollNumber: st?.rollNumber || "", groupId: g.id, groupName: g.name, totalPct: total, complete, grade: total === null ? null : letterFor(total, cutoffs), byMilestone, plo, missing });
     }

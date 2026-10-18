@@ -67,14 +67,14 @@ export function RubricEditor({ cycleId, initial }: { cycleId: string; initial: C
     <div>
       <div style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Criterion</th><th>What is judged</th><th>Bloom</th><th>PLO</th><th>Max</th><th>Scored</th><th /></tr></thead>
+          <thead><tr><th>Criterion</th><th>What is judged</th><th>Bloom</th><th>GA</th><th>Max</th><th>Scored</th><th /></tr></thead>
           <tbody>
             {rows.map((c, i) => (
               <tr key={c.id || `new-${i}`}>
                 <td><input value={c.name} onChange={(e) => set(i, { name: e.target.value })} style={{ width: 190 }} aria-label="Criterion" /></td>
                 <td><input value={c.description || ""} onChange={(e) => set(i, { description: e.target.value })} style={{ width: 280 }} aria-label="Description" /></td>
                 <td><input value={c.bloomLevel || ""} onChange={(e) => set(i, { bloomLevel: e.target.value })} style={{ width: 50 }} aria-label="Bloom level" /></td>
-                <td><input type="number" min={1} max={20} value={c.ploNumber ?? ""} onChange={(e) => set(i, { ploNumber: e.target.value ? Number(e.target.value) : null })} style={{ width: 55 }} aria-label="PLO" /></td>
+                <td><input type="number" min={1} max={20} value={c.ploNumber ?? ""} onChange={(e) => set(i, { ploNumber: e.target.value ? Number(e.target.value) : null })} style={{ width: 55 }} aria-label="GA" /></td>
                 <td><input type="number" min={1} value={c.maxScore} onChange={(e) => set(i, { maxScore: Number(e.target.value) })} style={{ width: 60 }} aria-label="Maximum" /></td>
                 <td><select value={c.appliesTo} onChange={(e) => set(i, { appliesTo: e.target.value })}><option value="INDIVIDUAL">Per student</option><option value="GROUP">Whole group</option></select></td>
                 <td><button type="button" className="act act-danger" onClick={() => setRows((r) => r.filter((_, j) => j !== i))}>Remove</button></td>

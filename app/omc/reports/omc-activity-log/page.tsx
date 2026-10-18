@@ -67,7 +67,7 @@ export default async function OmcActivityLogPage({ searchParams }: { searchParam
         <a href={`/api/omc/reports/omc-activity-log/export${qs({})}`} className="btn btn-brass no-print" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Every recorded action taken by an OMC member — course template reviews and approvals, PLO/CLO mapping
+        Every recorded action taken by an OMC member — course template reviews and approvals, GA/CLO mapping
         decisions, content-sync and curriculum changes, policy settings — in plain language, with who did it,
         when, and on what. This is the record to hand an accreditation panel showing OMC oversight actually
         happened, and when.

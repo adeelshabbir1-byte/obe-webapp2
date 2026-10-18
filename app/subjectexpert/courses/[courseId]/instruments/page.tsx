@@ -156,13 +156,13 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
         )}
         {badPloCount > 0 && (
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
-            Not ready yet — {badPloCount} PLO(s) have CLO contribution percentages that don't add up to 100%
-            (see the CLOs & PLO Mapping tab).
+            Not ready yet — {badPloCount} GA(s) have CLO contribution percentages that don't add up to 100%
+            (see the CLOs & GA Mapping tab).
           </p>
         )}
         {coverage.assessShort.length > 0 && (
           <p style={{ fontSize: 12.5, color: "var(--rust)", marginBottom: 12 }}>
-            Not ready yet — these PLOs are not assessed enough for the OMC&apos;s rules: {coverage.assessShort.join("; ")}.
+            Not ready yet — these GAs are not assessed enough for the OMC&apos;s rules: {coverage.assessShort.join("; ")}.
             Tick more quizzes, assignments or exam questions for their topics above.
           </p>
         )}

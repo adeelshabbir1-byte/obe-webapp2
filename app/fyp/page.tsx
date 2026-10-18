@@ -89,7 +89,7 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
                   { name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain (e.g. Machine Learning, IoT)", width: 220 }, { name: "maxGroups", label: "Groups it can take", type: "number", width: 90 },
                   { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope and deliverables", type: "textarea" },
                   { name: "skills", label: "Domain skills needed", width: 300 }, { name: "hardware", label: "Hardware needed", width: 220 }, { name: "software", label: "Software needed", width: 220 },
-                  { name: "outcomes", label: "Learning outcomes (CLOs) this project serves", type: "textarea" }, { name: "societalIssue", label: "Corporate or societal issue it addresses (if any)", type: "textarea" }, { name: "ploNumbers", label: "PLOs it maps to", type: "plos", width: 140 },
+                  { name: "outcomes", label: "Learning outcomes (CLOs) this project serves", type: "textarea" }, { name: "societalIssue", label: "Corporate or societal issue it addresses (if any)", type: "textarea" }, { name: "ploNumbers", label: "GAs it maps to", type: "plos", width: 140 },
                 ]} />
             )}
           </div>
@@ -100,7 +100,7 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
               return (
                 <div key={p.id} style={{ borderTop: "1px solid var(--line)", padding: "10px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div><b>{p.title}</b> {badge(p.status)} <span className="small-note">{cycleById.get(p.cycleId)?.title}{p.domain ? ` · ${p.domain}` : ""} · {accepted} of {p.maxGroups} group(s){p.ploNumbers.length ? ` · PLO ${p.ploNumbers.join(", ")}` : ""}</span></div>
+                    <div><b>{p.title}</b> {badge(p.status)} <span className="small-note">{cycleById.get(p.cycleId)?.title}{p.domain ? ` · ${p.domain}` : ""} · {accepted} of {p.maxGroups} group(s){p.ploNumbers.length ? ` · GA ${p.ploNumbers.join(", ")}` : ""}</span></div>
                     {p.status !== "WITHDRAWN" && p.status !== "REJECTED" && accepted === 0 && <ActionButton url="/api/fyp/faculty" body={{ action: "withdrawProposal", proposalId: p.id }} label="Withdraw" className="act act-danger" confirmText="Withdraw this proposal?" />}
                   </div>
                   <p style={{ fontSize: 12.5, margin: "4px 0" }}>{p.abstract}</p>
@@ -108,7 +108,7 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
                   {(p.status === "REVISION" || p.status === "SUBMITTED") && (
                     <ActionForm url="/api/fyp/faculty" fixed={{ action: "submitProposal", proposalId: p.id }} submit={p.status === "REVISION" ? "Resubmit" : "Save changes"} collapsed openLabel={p.status === "REVISION" ? "Revise and resubmit" : "Edit"}
                       initial={{ title: p.title, domain: p.domain || "", abstract: p.abstract, scope: p.scope || "", skills: p.skills || "", hardware: p.hardware || "", software: p.software || "", outcomes: p.outcomes || "", societalIssue: p.societalIssue || "", ploNumbers: p.ploNumbers, maxGroups: p.maxGroups }}
-                      fields={[{ name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain", width: 220 }, { name: "maxGroups", label: "Groups", type: "number", width: 80 }, { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "skills", label: "Skills", width: 300 }, { name: "hardware", label: "Hardware", width: 220 }, { name: "software", label: "Software", width: 220 }, { name: "outcomes", label: "Learning outcomes", type: "textarea" }, { name: "societalIssue", label: "Corporate / societal issue", type: "textarea" }, { name: "ploNumbers", label: "PLOs", type: "plos", width: 140 }]} />
+                      fields={[{ name: "title", label: "Title", width: 360 }, { name: "domain", label: "Domain", width: 220 }, { name: "maxGroups", label: "Groups", type: "number", width: 80 }, { name: "abstract", label: "Abstract", type: "textarea" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "skills", label: "Skills", width: 300 }, { name: "hardware", label: "Hardware", width: 220 }, { name: "software", label: "Software", width: 220 }, { name: "outcomes", label: "Learning outcomes", type: "textarea" }, { name: "societalIssue", label: "Corporate / societal issue", type: "textarea" }, { name: "ploNumbers", label: "GAs", type: "plos", width: 140 }]} />
                   )}
                 </div>
               );

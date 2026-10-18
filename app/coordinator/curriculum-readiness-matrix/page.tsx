@@ -45,7 +45,7 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Curriculum Readiness Matrix</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Every course in a batch, its HEC category, and whether it has lectures, CLOs, and PLO mapping set up
+        Every course in a batch, its HEC category, and whether it has lectures, CLOs, and GA mapping set up
         — a quick visual sweep for what still needs attention before a semester starts. Read-only.
       </p>
 
@@ -66,8 +66,8 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
       {selectedBatchId && ploCount === 0 && (
         <div className="card" style={{ background: "#FBE2DF" }}>
           <p style={{ fontSize: 12.5, color: "#B1512E" }}>
-            This batch has no Program Learning Outcomes defined at all yet — every course's PLO mapping
-            below will show as unmapped until PLOs are added on the Program Learning Outcomes page.
+            This batch has no Graduate Attributes defined at all yet — every course's GA mapping
+            below will show as unmapped until GAs are added on the Graduate Attributes page.
           </p>
         </div>
       )}
@@ -88,7 +88,7 @@ export default async function CurriculumReadinessMatrixPage({ searchParams }: { 
                   <th style={{ padding: "6px 10px" }}>Category</th>
                   <th style={{ padding: "6px 10px" }}>Lectures</th>
                   <th style={{ padding: "6px 10px" }}>CLOs</th>
-                  <th style={{ padding: "6px 10px" }}>PLO Mapping</th>
+                  <th style={{ padding: "6px 10px" }}>GA Mapping</th>
                 </tr>
               </thead>
               <tbody>

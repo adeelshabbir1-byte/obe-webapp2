@@ -128,8 +128,8 @@ export default function SurveysManager({ surveys: initialSurveys, plos }: { surv
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
               <textarea value={q.text} onChange={(e) => updateQuestion(i, "text", e.target.value)} rows={2} placeholder="e.g. Graduates apply core engineering knowledge effectively" style={{ flex: 2, padding: 8, border: "1px solid var(--line)" }} />
               <select value={q.mappedPloId} onChange={(e) => updateQuestion(i, "mappedPloId", e.target.value)} style={{ flex: 1, padding: "8px 6px", border: "1px solid var(--line)" }}>
-                <option value="">No PLO mapping</option>
-                {plos.map((p) => <option key={p.id} value={p.id}>PLO-{p.number}: {p.title}</option>)}
+                <option value="">No GA mapping</option>
+                {plos.map((p) => <option key={p.id} value={p.id}>GA-{p.number}: {p.title}</option>)}
               </select>
               <input value={q.mappedPeoLabel} onChange={(e) => updateQuestion(i, "mappedPeoLabel", e.target.value)} placeholder="PEO (e.g. PEO-1, optional)" style={{ width: 130, padding: "8px 6px", border: "1px solid var(--line)" }} />
               <button type="button" onClick={() => removeQuestion(i)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12, cursor: "pointer" }}>Remove</button>

@@ -40,7 +40,7 @@ export async function DELETE(req: Request, { params }: { params: { ploId: string
 
   const cloCount = await prisma.cLO.count({ where: { mappedPloId: params.ploId } });
   if (cloCount > 0) {
-    return NextResponse.json({ error: `cannot delete — ${cloCount} CLO(s) are mapped to this PLO` }, { status: 409 });
+    return NextResponse.json({ error: `cannot delete — ${cloCount} CLO(s) are mapped to this GA` }, { status: 409 });
   }
 
   await prisma.pLO.delete({ where: { id: params.ploId } });

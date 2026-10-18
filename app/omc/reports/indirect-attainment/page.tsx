@@ -27,7 +27,7 @@ export default async function IndirectAttainmentPage() {
   const byPeo = new Map<string, { total: number; count: number; byStakeholder: Record<string, { total: number; count: number }> }>();
   for (const a of answers) {
     if (a.question.mappedPlo) {
-      const label = `PLO-${a.question.mappedPlo.number}`;
+      const label = `GA-${a.question.mappedPlo.number}`;
       const entry = byPlo.get(label) || { total: 0, count: 0, byStakeholder: {} };
       entry.total += a.ratingValue; entry.count++;
       const stype = a.surveyResponse.respondentType;
@@ -60,27 +60,27 @@ export default async function IndirectAttainmentPage() {
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <ReportPrintHeader title="Indirect PLO Attainment (Stakeholder Feedback)" />
+      <ReportPrintHeader title="Indirect GA Attainment (Stakeholder Feedback)" />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
-        Average rating (1–5) per PLO from submitted student, alumni, and employer surveys — a second evidence
+        Average rating (1–5) per GA from submitted student, alumni, and employer surveys — a second evidence
         source alongside direct (assessment-based) attainment, used to triangulate accreditation claims.
       </p>
 
       {rows.length === 0 && peoRows.length === 0 ? (
-        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No submitted survey responses mapped to a PLO or PEO yet.</p></div>
+        <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>No submitted survey responses mapped to a GA or PEO yet.</p></div>
       ) : (
         <>
           {rows.length > 0 && (
             <>
               <div className="card">
-                <h3 style={{ fontSize: 14, marginBottom: 12 }}>Average Rating per PLO (out of 5)</h3>
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>Average Rating per GA (out of 5)</h3>
                 <SimpleBarChart bars={rows.map((r) => ({ label: r.label, value: r.avg }))} maxValue={5} />
               </div>
 
               <div className="card" style={{ overflowX: "auto" }}>
                 <h3 style={{ fontSize: 14, marginBottom: 10 }}>Detail — by Stakeholder Group</h3>
                 <table>
-                  <thead><tr><th>PLO</th><th>Overall Avg</th><th>Responses</th><th>Breakdown</th></tr></thead>
+                  <thead><tr><th>GA</th><th>Overall Avg</th><th>Responses</th><th>Breakdown</th></tr></thead>
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.label}>
