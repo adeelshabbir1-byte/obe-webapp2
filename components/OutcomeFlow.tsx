@@ -102,7 +102,8 @@ export default function OutcomeFlow(props: FlowProps) {
     let P: Set<string>, E: Set<number>, C: Set<string>;
     if (mode === "batch") {
       E = new Set(peos.map((e) => e.index));
-      P = all ? new Set(plos.map((p) => p.id)) : peoPlos(selE);
+      // Every GA shows from the start (a batch whose PEOs aren't linked yet would otherwise show none); picking PEOs narrows it.
+      P = all || selE.size === 0 ? new Set(plos.map((p) => p.id)) : peoPlos(selE);
       const openP = plos.filter((p) => P.has(p.id) && (all || selP.has(p.id)));
       C = all ? new Set(courses.map((c) => c.id)) : new Set(openP.flatMap((p) => p.courses.map((c) => c.id)));
     } else {
@@ -251,7 +252,7 @@ export default function OutcomeFlow(props: FlowProps) {
                   <div style={{ fontSize: 11.5 }}>{p.title}</div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{p.courses.length} course{p.courses.length === 1 ? "" : "s"} · {p.state === "DEFAULT" ? "suggested split (default)" : "weights set"}{props.cohort?.plos[p.id]?.last != null ? ` · last batch ${props.cohort.plos[p.id].last}%` : ""}</div>
                 </>
-              ))), plos.length === 0 ? "No GAs." : vis.P.size === 0 ? (mode === "batch" ? "Click a PEO to see its GAs." : "Click the course to see its CLOs and GAs.") : undefined)}
+              ))), plos.length === 0 ? "No GAs." : vis.P.size === 0 ? (mode === "batch" ? "No GA is linked to the PEOs you picked." : "Click the course to see its CLOs and GAs.") : undefined)}
             </div>
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("E", peos.map((e) => node(key("E", e.index), "E", () => toggle(key("E", e.index)), (
