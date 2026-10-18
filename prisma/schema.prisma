@@ -5176,3 +5176,16 @@ model InstituteLicense {
   updatedById String?
   updatedAt   DateTime  @default(now())
 }
+
+// NCEAC AAS: values people typed for the AAS forms (per institute, per section scope, per row key).
+model AasRecord {
+  id          String   @id
+  chairmanId  String
+  scope       String
+  key         String
+  dataJson    String   @default("{}") @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, scope, key])
+}

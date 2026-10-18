@@ -404,6 +404,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/policy-check", "HEC Policy Check", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/grade-distribution", "Grade Distribution", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/aol", "Assurance of Learning (NBEAC)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
+  ["/accreditation/aas", "NCEAC AAS", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/qec-proformas", "QEC Proformas", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/ipe", "IPE Self-Assessment", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC"]],
   ["/internationalisation", "Internationalisation", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "STUDENT_AFFAIRS", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
