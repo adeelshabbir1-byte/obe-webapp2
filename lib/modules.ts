@@ -54,6 +54,12 @@ export function moduleForPath(path: string): ModuleDef | null {
 export const PACKAGES: { key: string; label: string; modules: ModuleKey[] }[] = [
   { key: "starter", label: "Starter (core OBE only)", modules: [] },
   { key: "accreditation", label: "Accreditation", modules: ["accreditation", "quality", "surveys", "complexProblems", "portfolio", "training"] },
+  // One council's full requirement, for an institute accredited by that council only. The accreditation pages follow
+  // whichever council each program is bound to, so the same modules serve every council.
+  { key: "nbeac", label: "NBEAC (business schools)", modules: ["accreditation", "quality", "surveys", "studentServices", "portfolio", "training"] },
+  { key: "nceac", label: "NCEAC (computing)", modules: ["accreditation", "quality", "surveys", "complexProblems", "labs", "fyp", "portfolio", "studentServices", "training"] },
+  { key: "pec", label: "PEC (engineering)", modules: ["accreditation", "quality", "surveys", "complexProblems", "labs", "fyp", "portfolio", "studentServices", "training"] },
+  { key: "hec", label: "HEC QEC / IPE", modules: ["accreditation", "quality", "surveys", "training"] },
   { key: "academic", label: "Academic", modules: ["accreditation", "quality", "surveys", "complexProblems", "portfolio", "training", "labs", "quizzes", "paperVetting", "fyp", "remediation", "nationalBank", "exams", "timetable", "planning", "studentServices"] },
   { key: "complete", label: "Complete (everything)", modules: [...MODULE_KEYS] },
 ];
