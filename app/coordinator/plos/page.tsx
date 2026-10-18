@@ -31,6 +31,7 @@ export default async function CoordinatorPlosPage({ searchParams }: { searchPara
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Graduate Attributes</h1>
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {selectedBatchId && <a href={`/ga-council-map?batchId=${selectedBatchId}`} className="btn btn-secondary" style={{ textDecoration: "none" }} title="Load PEC EGAs / NCEAC CGAs in one click, or map these GAs to the council's attributes">Council attributes (EGA / CGA / BGA)</a>}
           {selectedBatchId && <PloImportButton batchId={selectedBatchId} />}
           <a href={`/api/coordinator/plos/export?batchId=${selectedBatchId}`} className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
         </span>

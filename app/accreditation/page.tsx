@@ -37,7 +37,7 @@ export default async function AccreditationHub() {
             the courses, students, faculty, results and facilities already in the system.
           </p>
         </div>
-        {canBuild && <Link href="/accreditation/nbeac" className="btn btn-brass">Open the NBEAC SAR</Link>}
+        {canBuild && <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><Link href="/accreditation/eligibility" className="btn btn-secondary">Council eligibility</Link><Link href="/accreditation/nbeac" className="btn btn-brass">Open the NBEAC SAR</Link></div>}
       </div>
       {missing && <div className="err">The accreditation tables are not in the database yet — run prisma/migration_nbeac_sar.sql in Supabase.</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginTop: 14 }}>

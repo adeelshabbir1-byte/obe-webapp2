@@ -96,7 +96,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_clo_contribution.sql",
-"d": "Run in Supabase SQL Editor. Adds the CLO-to-GA contribution percentage.",
+"d": "Run in Supabase SQL Editor. Adds the CLO-to-PLO contribution percentage.",
 "t": "CLO",
 "c": "ploContributionPct"
 },
@@ -123,6 +123,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "Run in Supabase SQL Editor. Adds CourseContentSyncGroup and",
 "t": "CourseContentSyncGroup",
 "c": "needsSync"
+},
+{
+"f": "migration_council_tools.sql",
+"d": "============================================================================",
+"t": "GaCouncilMap"
 },
 {
 "f": "migration_course_assigner.sql",
@@ -382,7 +387,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_institutional_plos.sql",
-"d": "Run in Supabase SQL Editor. Replaces the direct-to-HEC GA mapping with",
+"d": "Run in Supabase SQL Editor. Replaces the direct-to-HEC PLO mapping with",
 "t": "CLO",
 "c": "mappedPloId"
 },
@@ -564,13 +569,13 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_plo_batch_scope.sql",
-"d": "Run in Supabase SQL Editor. Re-scopes GA from (coordinator + degreeProgram)",
+"d": "Run in Supabase SQL Editor. Re-scopes PLO from (coordinator + degreeProgram)",
 "t": "PLO",
 "c": "batchId"
 },
 {
 "f": "migration_plo_change_log.sql",
-"d": "Cohort GA change per approved course result. Safe to run more than once.",
+"d": "Cohort PLO change per approved course result. Safe to run more than once.",
 "t": "PloChangeLog"
 },
 {
@@ -581,18 +586,18 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_plo_coverage_rules.sql",
-"d": "OMC assessment-coverage rules per course type (GA marks %, GA assessment items, CLO balance).",
+"d": "OMC assessment-coverage rules per course type (PLO marks %, PLO assessment items, CLO balance).",
 "t": "WeightPolicy",
 "c": "cloSpreadMax"
 },
 {
 "f": "migration_plo_requests.sql",
-"d": "Requests from a Subject Expert or Instructor to add a GA to their course or take one off; the OMC decides.",
+"d": "Requests from a Subject Expert or Instructor to add a PLO to their course or take one off; the OMC decides.",
 "t": "PloChangeRequest"
 },
 {
 "f": "migration_plo_weights.sql",
-"d": "Outcome weights: how much each course counts toward a GA of its batch, and how much each GA counts toward a PEO",
+"d": "Outcome weights: how much each course counts toward a PLO of its batch, and how much each PLO counts toward a PEO",
 "t": "ProgramPeoWeight"
 },
 {
@@ -772,7 +777,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_topic_minimums.sql",
-"d": "OMC minimum number of lecture topics per CLO and per GA (replaces the fixed \"3 topics per CLO\" rule).",
+"d": "OMC minimum number of lecture topics per CLO and per PLO (replaces the fixed \"3 topics per CLO\" rule).",
 "t": "WeightPolicy",
 "c": "ploMinTopics"
 },

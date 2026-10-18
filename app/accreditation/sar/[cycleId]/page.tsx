@@ -8,7 +8,8 @@ import { roleLabel } from "../../../../lib/reportScope";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { BODIES, type BodyKey } from "../../../../lib/accreditation/bodies";
 import { sarData, sarGaps, chapters } from "../../../../lib/sarBuilder";
-import { ActionForm } from "../../../../components/fyp/FypClient";
+import ChapterTabs from "../../../../components/sar/ChapterTabs";
+import { chapterStatuses } from "../../../../lib/sarStatus";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Self-Assessment Report" };
@@ -26,25 +27,20 @@ export default async function SarPage({ params }: { params: { cycleId: string } 
   if (!d) notFound();
   const gaps = sarGaps(d);
   const chs = chapters(d.body);
+  const statuses = await chapterStatuses(c.id, d.body, chs, d.narr, gaps);
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <p><Link href={`/accreditation/readiness/${c.id}`}>← {c.title}</Link></p>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Self-Assessment Report</h1>
-      <p className="small-note">{BODIES[c.body as BodyKey]?.name} · {c.program}. The SAR is generated from live data every time you download it: GA attainment (direct and indirect), curriculum, knowledge profile and complex problems, CLO results, evaluations, students and placements, faculty and CVs, labs, CQI, previous-visit compliance and the implementation plan. Write the narrative for each chapter below; it is kept across regenerations. Then download the Word file, edit it if you like, and save it as PDF.</p>
+      <p className="small-note">{BODIES[c.body as BodyKey]?.name} · {c.program}. The SAR is generated from live data every time you download it: GA attainment (direct and indirect), curriculum, knowledge profile and complex problems, CLO results, evaluations, students and placements, faculty and CVs, labs, CQI, previous-visit compliance and the implementation plan. Each chapter is a tab coloured by where it stands — grey not started, amber in progress, blue written with no data missing, green ready, red changed since approval. Write the narrative for each chapter; it is kept across regenerations. Then download the Word file, edit it if you like, and save it as PDF.</p>
       <div className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <a className="btn" href={`/api/accreditation/sar/${c.id}`}>Download SAR (Word)</a>
         <a className="btn btn-secondary" href={`/api/accreditation/cycles/${c.id}/dossier`}>Download evidence dossier (ZIP)</a>
         <a className="btn btn-secondary" href={`/accreditation/visit/${c.id}`}>Visit plan, findings, implementation plan</a>
         <span className="small-note">{gaps.length ? `${gaps.length} items still missing` : "Complete"}</span>
       </div>
-      {gaps.filter((g) => !g.text.startsWith("Narrative")).length > 0 && <div className="card" style={{ borderLeft: "4px solid #B3261E" }}><b>Data still missing</b><ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13 }}>{gaps.filter((g) => !g.text.startsWith("Narrative")).map((g, i) => <li key={i}><b>{chs.find((x) => x.key === g.ch)?.title}:</b> {g.text}</li>)}</ul></div>}
-      {chs.map((ch, i) => { const t = d.narr.get(ch.key) || ""; return (
-        <div key={ch.key} className="card">
-          <b>{i + 1}. {ch.title}</b> {t.trim() ? <span style={{ color: "#1F5E36", fontSize: 12 }}>✓ written</span> : <span style={{ color: "#B3261E", fontSize: 12 }}>not written</span>}
-          <div className="small-note">{ch.prompt}</div>
-          {t && <div style={{ fontSize: 13, whiteSpace: "pre-wrap", margin: "4px 0" }}>{t.length > 600 ? `${t.slice(0, 600)}…` : t}</div>}
-          {edit && <ActionForm url={`/api/accreditation/sar/${c.id}`} fixed={{ sectionKey: ch.key }} submit="Save" collapsed openLabel={t ? "Edit" : "Write"} initial={{ text: t }} fields={[{ name: "text", label: ch.title, type: "textarea" }]} />}
-        </div>); })}
+      <ChapterTabs cycleId={c.id} userId={user.id} canEdit={edit} statuses={statuses}
+        chapters={chs.map((ch) => ({ key: ch.key, title: ch.title, prompt: ch.prompt, text: d.narr.get(ch.key) || "", gaps: gaps.filter((g) => g.ch === ch.key && !g.text.startsWith("Narrative")).map((g) => g.text) }))} />
     </Shell>
   );
 }

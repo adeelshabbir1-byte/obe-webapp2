@@ -5205,3 +5205,45 @@ model StaffDetail {
   updatedById String?
   updatedAt   DateTime @default(now())
 }
+
+// A council SAR table marked ready, with a fingerprint of its data then (lib/sarStatus.ts): a later change turns it red.
+model SarItemState {
+  id          String   @id
+  scopeKey    String
+  body        String
+  itemKey     String
+  hash        String
+  readyAt     DateTime @default(now())
+  readyById   String?
+  readyByName String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([scopeKey, body, itemKey])
+}
+
+// Answers typed in on the council eligibility check (lib/councilEligibility.ts), per program and council.
+model CouncilEligibility {
+  id          String   @id
+  chairmanId  String
+  body        String
+  program     String
+  inputsJson  String   @default("{}") @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, body, program])
+}
+
+// Which council attributes (EGA / CGA / BGA numbers) a batch's GA stands for (lib/gaCouncilMap.ts).
+model GaCouncilMap {
+  id          String   @id
+  batchId     String
+  ploId       String
+  body        String
+  attrsJson   String   @default("[]")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([ploId, body])
+  @@index([batchId, body])
+}
