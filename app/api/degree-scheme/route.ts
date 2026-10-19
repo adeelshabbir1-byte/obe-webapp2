@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true });
   }
-  const r = await changeScheme(access.studentId, String(b.action || ""), String(b.courseId || ""), { semesterNumber: b.semesterNumber, grade: b.grade ?? null });
+  const r = await changeScheme(access.studentId, String(b.action || ""), String(b.courseId || ""), { semesterNumber: b.semesterNumber, grade: b.grade ?? null }, { kind: access.by, id: access.actorId });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
   if (access.by === "staff") await writeAuditLog({ actorUserId: access.actorId, action: `DEGREE_PLAN_${String(b.action).toUpperCase()}`, entityType: "Student", entityId: access.studentId, metadata: { courseId: String(b.courseId), semester: Number(b.semesterNumber) || 0 } });
   return NextResponse.json(r);

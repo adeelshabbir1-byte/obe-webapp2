@@ -6,6 +6,9 @@ import { getGradingScaleForBatch } from "./gradingScaleLookup";
 import { planLock, studentContext, loadLimit, selfRegistrationBlock } from "./registrationRules";
 import { termIndex } from "./termLogic";
 import { courseTermIndex, termLabel } from "./courseTerm";
+import { planMeta, setMeta, planRequests, programOfferings } from "./degreePlanner";
+import { getPolicy } from "./registrationRules";
+import { computeCgpa } from "./academicStanding";
 
 // The full degree scheme of one student, semester by semester: what was already taken (with the grade, in the semester it
 // was taken) and every remaining course in the semester it is planned for. The student, the batch's advisor and the
@@ -53,6 +56,7 @@ export async function loadScheme(studentId: string) {
   for (const r of records) { const b = best.get(key(r.courseCode)); if (!b || (r.gpaPoints ?? -1) > (b.gpaPoints ?? -1)) best.set(key(r.courseCode), r); }
   const plan = new Map(entries.map((e) => [e.courseId, e]));
   const enrolled = new Set(enrollments.map((e) => e.courseId));
+  const meta = await planMeta(studentId);
 
   const completed = records.map((r) => {
     const b = best.get(key(r.courseCode))!;
@@ -75,6 +79,7 @@ export async function loadScheme(studentId: string) {
         nativeSemesterNumber: c.semesterNumber, plannedSemesterNumber: e?.plannedSemesterNumber ?? Math.max(c.semesterNumber ?? 1, b ? student.currentSemesterNumber : 1),
         hypotheticalGrade: e?.hypotheticalGrade ?? null, currentlyEnrolled: enrolled.has(c.id),
         kind: !b ? "new" : passed(b) ? "improvement" : "retake", previousGrade: b?.grade ?? null,
+        source: e ? meta.get(c.id)?.source || null : null, plannedBatch: e ? meta.get(c.id)?.batchLabel || null : null, summer: !!(e && meta.get(c.id)?.summer),
       };
     });
   const programSemesters = Math.max(8, ...courses.map((c) => c.semesterNumber || 0));
@@ -116,7 +121,7 @@ export async function loadScheme(studentId: string) {
 }
 
 /** Changes to the plan. Real grades are never touched. */
-export async function changeScheme(studentId: string, action: string, courseId: string, opts: { semesterNumber?: number; grade?: string | null }) {
+export async function changeScheme(studentId: string, action: string, courseId: string, opts: { semesterNumber?: number; grade?: string | null }, by: { kind: "student" | "staff"; id: string } = { kind: "staff", id: "" }) {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { batchId: true, currentSemesterNumber: true } });
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, batchId: true, code: true, semesterNumber: true } });
   if (!student || !course || course.batchId !== student.batchId) return { error: "That course is not in this student's program." };
@@ -125,11 +130,52 @@ export async function changeScheme(studentId: string, action: string, courseId: 
     const n = Number(opts.semesterNumber);
     if (!Number.isInteger(n) || n < 1 || n > 16) return { error: "Choose a semester." };
     if (n < student.currentSemesterNumber) return { error: "A course can only be planned in the current or a later semester." };
+    const problem = await moveProblem(studentId, course, n, by.kind);
+    if (problem) return { error: problem };
     await prisma.degreePlanEntry.upsert({ where, update: { plannedSemesterNumber: n }, create: { studentId, courseId, plannedSemesterNumber: n } });
+    await setMeta(studentId, courseId, { source: by.kind === "student" ? "STUDENT" : "ADVISOR", termKey: null, batch: null }, by.id);
   } else if (action === "grade") {
     await prisma.degreePlanEntry.upsert({ where, update: { hypotheticalGrade: opts.grade || null }, create: { studentId, courseId, plannedSemesterNumber: Math.max(course.semesterNumber ?? 1, student.currentSemesterNumber), hypotheticalGrade: opts.grade || null } });
   } else if (action === "cancel") {
     await prisma.degreePlanEntry.deleteMany({ where: { studentId, courseId } });
   } else return { error: "unknown action" };
   return { ok: true };
+}
+
+
+/** Why a course can't go into semester n of this student's plan (null = it can). Anyone: not before its own semester
+ * unless approved. The student's own changes must also keep prerequisites in order, find a batch teaching it that term,
+ * and stay within the semester's credit-hour limit; the advisor may override those three. */
+async function moveProblem(studentId: string, course: { id: string; code: string; semesterNumber: number | null }, n: number, by: "student" | "staff"): Promise<string | null> {
+  const up = (x: string) => x.trim().toUpperCase();
+  const attempted = new Set((await prisma.studentTranscriptRecord.findMany({ where: { studentId }, select: { courseCode: true } })).map((r) => up(r.courseCode)));
+  const req = await planRequests(studentId);
+  if ((course.semesterNumber || 1) > n && !attempted.has(up(course.code)) && !req.ahead.has(up(course.code)))
+    return `${course.code} is a semester-${course.semesterNumber} course. Taking it in semester ${n} needs approval: the advisor can request it (HOD, Chairman or Dean decides).`;
+  if (by === "staff") return null;
+  const s = await prisma.student.findUnique({ where: { id: studentId }, select: { currentSemesterNumber: true, batch: { select: { id: true, coordinatorId: true, degreeProgram: true, coordinator: { select: { managedById: true } } } } } });
+  if (!s?.batch) return null;
+  const all = await prisma.course.findMany({ where: { batchId: s.batch.id }, select: { id: true, code: true, creditHours: true, isNonCredit: true, semesterNumber: true, prerequisiteCourseId: true } });
+  const entries = new Map((await prisma.degreePlanEntry.findMany({ where: { studentId } })).map((e) => [e.courseId, e.plannedSemesterNumber]));
+  const passed = new Set((await prisma.studentTranscriptRecord.findMany({ where: { studentId, OR: [{ gpaPoints: { gt: 0 } }, { grade: "P" }] }, select: { courseCode: true } })).map((r) => up(r.courseCode)));
+  const semOf = (c: { id: string; semesterNumber: number | null }) => entries.get(c.id) ?? c.semesterNumber ?? 1;
+  const me = all.find((c) => c.id === course.id)!;
+  const pre = me.prerequisiteCourseId ? all.find((c) => c.id === me.prerequisiteCourseId) : null;
+  if (pre && !passed.has(up(pre.code)) && semOf(pre) >= n) return `${course.code} needs ${pre.code} first, which is planned for semester ${semOf(pre)}.`;
+  const dep = all.find((c) => c.prerequisiteCourseId === me.id && !passed.has(up(c.code)) && semOf(c) <= n);
+  if (dep) return `${dep.code} (semester ${semOf(dep)}) needs ${course.code} first — move it later too, or ask your advisor.`;
+  // A batch must be studying it that term (existing or expected batches on today's curriculum).
+  const chairmanId = s.batch.coordinator?.managedById || "";
+  const leads = (await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId }, select: { id: true } })).map((u) => u.id);
+  const ct = await prisma.currentTerm.findUnique({ where: { coordinatorId: s.batch.coordinatorId }, select: { termName: true, year: true } });
+  const nowReg = ct ? termIndex(/fall/i.test(ct.termName) ? "Fall" : "Spring", ct.year) : termIndex(new Date().getMonth() >= 7 ? "Fall" : "Spring", new Date().getFullYear());
+  const targetReg = nowReg + (n - s.currentSemesterNumber);
+  const { offerings } = await programOfferings(leads.length ? leads : [s.batch.coordinatorId], s.batch.degreeProgram, nowReg, s.batch.id);
+  if (!(offerings.get(up(course.code)) || []).some((o) => o.reg === targetReg)) return `No batch studies ${course.code} in semester ${n}'s term — it is taught in other terms. Ask your advisor if you need it then.`;
+  const policy = await getPolicy(chairmanId);
+  const cgpa = await computeCgpa(studentId);
+  const limit = cgpa !== null && cgpa < policy.lowCgpaThreshold ? policy.maxCreditsLowCgpa : policy.maxCreditsNormal;
+  const load = all.filter((c) => c.id !== me.id && semOf(c) === n && !passed.has(up(c.code))).reduce((a, c) => a + (c.isNonCredit ? 0 : c.creditHours), 0) + (me.isNonCredit ? 0 : me.creditHours);
+  if (load > limit) return `Semester ${n} would have ${load} credit hours — over your limit of ${limit}. Move another course out first.`;
+  return null;
 }

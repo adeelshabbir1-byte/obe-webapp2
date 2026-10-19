@@ -161,10 +161,14 @@ export async function checkCourses(ctx: Ctx, courses: { id: string; code: string
 export async function registerFromPlan(studentId: string, termName?: string) {
   const ctx = await studentContext(studentId, termName);
   if (!ctx) return { error: "student not found" };
-  const entries = await prisma.degreePlanEntry.findMany({ where: { studentId, plannedSemesterNumber: ctx.student.currentSemesterNumber }, include: { course: true } });
-  const own = await prisma.course.findMany({ where: { batchId: ctx.student.batchId, semesterNumber: ctx.student.currentSemesterNumber } });
+  // A summer course is filed with the semester before it: in summer register only those, in a regular term skip them.
+  const meta = await import("./degreePlanner").then((m) => m.planMeta(studentId)).catch(() => new Map<string, { summer: boolean }>());
+  const entries = (await prisma.degreePlanEntry.findMany({ where: { studentId, plannedSemesterNumber: ctx.student.currentSemesterNumber }, include: { course: true } }))
+    .filter((e) => !!meta.get(e.courseId)?.summer === ctx.summer);
+  const own = ctx.summer ? [] : await prisma.course.findMany({ where: { batchId: ctx.student.batchId, semesterNumber: ctx.student.currentSemesterNumber } });
   // Courses of the current semester that have no plan entry follow the batch's own semester unless moved.
   const movedAway = new Set((await prisma.degreePlanEntry.findMany({ where: { studentId, NOT: { plannedSemesterNumber: ctx.student.currentSemesterNumber } }, select: { courseId: true } })).map((e) => e.courseId));
+  for (const [id, m] of Array.from(meta.entries())) if (m.summer) movedAway.add(id); // planned for the summer, not this term
   const wanted = [...entries.map((e) => e.course), ...own.filter((c) => !movedAway.has(c.id) && !entries.some((e) => e.courseId === c.id))]
     .filter((c) => !ctx.passed.has(up(c.code)) || entries.some((e) => e.courseId === c.id)); // passed courses only when planned as a repeat
   const offered: typeof own = [];
@@ -183,5 +187,7 @@ export async function registerFromPlan(studentId: string, termName?: string) {
     const c = toCheck.find((x) => x.id === id)!;
     await prisma.studentEnrollment.create({ data: { studentId, courseId: id, isRepeat: c.batchId !== ctx.student.batchId || ctx.attempted.has(up(c.code)) } }).catch(() => {});
   }
+  // The target grades as they stand at registration become this semester's planned grades (planned vs actual later).
+  await import("./studentCourseStatus").then((m) => m.freezePlannedGrades(studentId)).catch(() => 0);
   return { registered: res.ok.map((id) => toCheck.find((x) => x.id === id)!.code), blocked: res.blocked, notOffered, load: res.load, limit: res.limit };
 }

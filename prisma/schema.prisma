@@ -5267,3 +5267,75 @@ model FacultyAllocationWish {
   remarks     String?  @db.Text
   updatedAt   DateTime @default(now())
 }
+
+// ---- Degree planner (lib/degreePlanner.ts, lib/planRequests.ts, lib/curriculumWatch.ts, lib/extraCourses.ts)
+model PlanLoad {
+  id          String   @id
+  studentId   String   @unique
+  loadsJson   String   @default("{}")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
+
+model PlanEntryMeta {
+  id          String   @id
+  studentId   String
+  courseId    String
+  termKey     String?
+  batchLabel  String?
+  source      String   @default("SYSTEM") // SYSTEM | STUDENT | ADVISOR
+  summer      Boolean  @default(false)
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model PlanRequest {
+  id            String    @id
+  studentId     String
+  kind          String    // SUMMER_LOAD | AHEAD | SUMMER_NEW
+  courseCode    String?
+  termKey       String?
+  value         Int?
+  note          String?
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  requestedById String
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime  @default(now())
+
+  @@index([studentId])
+  @@index([status])
+}
+
+model CurriculumWatch {
+  id            String   @id
+  chairmanId    String
+  program       String
+  signatureJson String   @default("{}") @db.Text
+  batchId       String?
+  updatedAt     DateTime @default(now())
+
+  @@unique([chairmanId, program])
+}
+
+model PlanSetting {
+  id            String   @id
+  chairmanId    String   @unique
+  minExtraClass Int      @default(5)
+  updatedAt     DateTime @default(now())
+}
+
+model GradePlanSnapshot {
+  id           String   @id
+  studentId    String
+  courseCode   String
+  termName     String
+  termYear     Int
+  plannedGrade String
+  createdAt    DateTime @default(now())
+
+  @@index([studentId])
+}

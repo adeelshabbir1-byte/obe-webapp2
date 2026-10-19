@@ -8,6 +8,9 @@ import Shell from "../../../../components/Shell";
 import AdvisorStudentPlanner from "../../../../components/AdvisorStudentPlanner";
 import { computeCgpa, standingFromCgpa } from "../../../../lib/academicStanding";
 import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
+import AdvisorCourseStatus from "../../../../components/AdvisorCourseStatus";
+import { liveCourseStatus, plannedVsActual } from "../../../../lib/studentCourseStatus";
+import { ActionButton } from "../../../../components/fyp/FypClient";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
   const ct = s.batch ? await prisma.currentTerm.findUnique({ where: { coordinatorId: s.batch.coordinatorId } }) : null;
   const expected = s.batch && ct ? computeCurrentSemesterNumber(s.batch, ct) : null;
   const pending = await prisma.registrationApprovalRequest.count({ where: { studentId: s.id, status: "PENDING" } });
+  const [live, history] = await Promise.all([liveCourseStatus(s.id).catch(() => []), plannedVsActual(s.id).catch(() => [])]);
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -54,6 +58,8 @@ export default async function AdvisorStudentPage({ params }: { params: { student
           {s.currentSemesterNumber < expected ? " If the student is not held back, the Program Lead should advance the batch (Students → Advance semester); the degree plan below uses the recorded semester." : ""}
         </div>
       )}
+      <AdvisorCourseStatus courses={live} history={history} />
+      {live.length > 0 && <div style={{ marginTop: 8 }}><ActionButton url={`/api/advisor/students/${s.id}/freeze-grades`} body={{}} label="Save target grades as this semester's plan" className="btn btn-secondary btn-sm" done="Saved (only courses without a saved plan)." /></div>}
       <h2 style={{ fontSize: 16, margin: "18px 0 8px" }}>Degree plan</h2>
       <AdvisorStudentPlanner studentId={s.id} />
     </Shell>

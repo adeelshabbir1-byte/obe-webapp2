@@ -7,6 +7,30 @@ type ScaleEntry = { letter: string; gpaValue: number };
 
 const HEIGHT = 420;
 const BAR_GAP = 3;
+const NEAR = 0.5; // a student this close below a boundary is flagged for a second look
+const r1 = (x: number) => Math.round(x * 10) / 10;
+const r2 = (x: number) => Math.round(x * 100) / 100;
+
+/** Bell-curve boundaries from the class mean and SD: with up to five letters, D at mean − 2 SD and one SD per letter up
+ * (the usual relative scheme); with more letters, evenly spaced from mean − 2 SD (lowest pass) to mean + 1.5 SD (top). */
+export function bellCurveCutoffs(scores: number[], scale: ScaleEntry[]): Record<string, number> {
+  const n = scores.length;
+  const mean = n ? scores.reduce((a, b) => a + b, 0) / n : 0;
+  const sd = n > 1 ? Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1)) : 0;
+  const ordered = [...scale].sort((a, b) => b.gpaValue - a.gpaValue);
+  const pass = ordered.filter((g) => g.gpaValue > 0);
+  const out: Record<string, number> = {};
+  const k = pass.length;
+  pass.forEach((g, i) => {
+    const z = k <= 5 ? -2 + (k - 1 - i) : 1.5 - (3.5 * i) / Math.max(1, k - 1);
+    out[g.letter] = Math.max(0, Math.min(100, r1(mean + z * sd)));
+  });
+  for (const g of ordered) if (g.gpaValue <= 0) out[g.letter] = 0;
+  // Keep them strictly descending.
+  let prev = 101;
+  for (const g of ordered) { if (out[g.letter] >= prev) out[g.letter] = r1(prev - 0.1); prev = out[g.letter]; }
+  return out;
+}
 
 export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScale, initialCutoffs }: {
   apiEndpoint: string; students: Student[]; gradingScale: ScaleEntry[]; initialCutoffs: Record<string, number>;
@@ -18,6 +42,17 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
   const [error, setError] = useState("");
 
   const sorted = [...students].sort((a, b) => b.totalPct - a.totalPct);
+  // For every boundary: the lowest student who made it, the highest who didn't, and anyone within 0.5 below it.
+  const checks = [...gradingScale].sort((a, b) => b.gpaValue - a.gpaValue).filter((g) => (cutoffs[g.letter] ?? 0) > 0).map((g) => {
+    const cut = cutoffs[g.letter] ?? 0;
+    const above = sorted.filter((x) => x.totalPct >= cut);
+    const below = sorted.filter((x) => x.totalPct < cut);
+    const lowestIn = above[above.length - 1] || null, highestOut = below[0] || null;
+    const near = below.filter((x) => cut - x.totalPct <= NEAR);
+    return { letter: g.letter, cut, lowestIn, highestOut, near };
+  });
+  const nearAll = checks.flatMap((c) => c.near.map((x) => ({ ...x, letter: c.letter, short: r2(c.cut - x.totalPct) })));
+  const nearSet = new Set(nearAll.map((x) => x.rollNumber));
   const maxScore = Math.max(100, ...sorted.map((s) => s.totalPct));
   const minScore = Math.min(0, ...sorted.map((s) => s.totalPct));
   const range = maxScore - minScore || 1;
@@ -55,6 +90,7 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
   function onMouseUp() { setDragging(null); }
 
   async function save() {
+    if (nearAll.length && !confirm(`Please check: ${nearAll.length} student(s) are within ${NEAR} marks below a grade boundary:\n\n${nearAll.map((x) => `${x.rollNumber} ${x.name}: ${x.totalPct}% — ${x.short} below ${x.letter}`).join("\n")}\n\nSave these boundaries anyway?`)) return;
     setLoading(true); setError("");
     try {
       const payload = gradingScale.map((s) => ({ letter: s.letter, minPercent: cutoffs[s.letter] ?? 0 }));
@@ -84,6 +120,16 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
         boundary line into a gap between bars to set that grade's cutoff there.
       </p>
       {error && <div className="err">{error}</div>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCutoffs(bellCurveCutoffs(sorted.map((x) => x.totalPct), gradingScale))} title="Set every boundary from the class mean and standard deviation">Bell curve</button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCutoffs(initialCutoffs)}>Undo changes</button>
+      </div>
+      {nearAll.length > 0 && (
+        <div className="err" style={{ background: "#FFF1F0" }}>
+          <b>Please check:</b> {nearAll.length} student{nearAll.length > 1 ? "s are" : " is"} within {NEAR} marks below a boundary —{" "}
+          {nearAll.map((x) => `${x.rollNumber} ${x.name} ${x.totalPct}% (${x.short} below ${x.letter})`).join("; ")}. They show red in the chart.
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <div
           ref={containerRef}
@@ -100,7 +146,7 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
             const barTop = pctToY(s.totalPct);
             const x = 10 + i * (barWidth + BAR_GAP);
             return (
-              <div key={i} style={{ position: "absolute", left: x, top: barTop, width: barWidth, height: HEIGHT - barTop, background: "var(--brass)", opacity: 0.55, borderRadius: "2px 2px 0 0" }} title={`${s.rollNumber} — ${s.totalPct}%`} />
+              <div key={i} style={{ position: "absolute", left: x, top: barTop, width: barWidth, height: HEIGHT - barTop, background: nearSet.has(s.rollNumber) ? "#c93c3c" : "var(--brass)", opacity: nearSet.has(s.rollNumber) ? 0.9 : 0.55, borderRadius: "2px 2px 0 0" }} title={`${s.rollNumber} ${s.name} — ${s.totalPct}%${nearSet.has(s.rollNumber) ? " · just below a boundary" : ""}`} />
             );
           })}
 
@@ -120,6 +166,25 @@ export default function GradeBoundaryEditor({ apiEndpoint, students, gradingScal
             );
           })}
         </div>
+      </div>
+      <div style={{ overflowX: "auto", marginTop: 12 }}>
+        <table style={{ fontSize: 12.5 }}>
+          <thead><tr><th>Grade</th><th>Boundary</th><th>Lowest who made it</th><th>Highest below it</th><th>Gap at the line</th></tr></thead>
+          <tbody>
+            {checks.map((c) => {
+              const gap = c.lowestIn && c.highestOut ? r2(c.lowestIn.totalPct - c.highestOut.totalPct) : null;
+              return (
+                <tr key={c.letter} style={{ background: c.near.length ? "#FFF1F0" : undefined }}>
+                  <td><b>{c.letter}</b></td>
+                  <td>{r1(c.cut)}%</td>
+                  <td>{c.lowestIn ? <>{c.lowestIn.rollNumber} · {c.lowestIn.totalPct}% <span className="small-note">(+{r2(c.lowestIn.totalPct - c.cut)})</span></> : "—"}</td>
+                  <td style={{ color: c.near.length ? "#c93c3c" : undefined, fontWeight: c.near.length ? 600 : undefined }}>{c.highestOut ? <>{c.highestOut.rollNumber} · {c.highestOut.totalPct}% <span className="small-note">(−{r2(c.cut - c.highestOut.totalPct)})</span></> : "—"}</td>
+                  <td>{gap !== null ? `${gap} marks between them` : "—"}{gap !== null && gap < 1 ? <span className="small-note"> — tight: move the line into a wider gap?</span> : null}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
       <button onClick={save} disabled={loading} className="btn btn-brass" style={{ marginTop: 12 }}>{loading ? "Saving…" : "Save Boundaries"}</button>
     </div>

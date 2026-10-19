@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import DegreePlanGenerator from "./DegreePlanGenerator";
 
 type Done = { courseCode: string; courseTitle: string; creditHours: number; termName: string; termYear: number; grade: string; gpaPoints: number | null; semesterNumber: number; failed: boolean; lowGrade: boolean; superseded: boolean; courseId: string | null; retakePlanned: boolean };
-type Plan = { courseId: string; code: string; title: string; creditHours: number; courseType: string; nativeSemesterNumber: number | null; plannedSemesterNumber: number; hypotheticalGrade: string | null; currentlyEnrolled: boolean; kind: "new" | "retake" | "improvement"; previousGrade: string | null };
+type Plan = { courseId: string; code: string; title: string; creditHours: number; courseType: string; nativeSemesterNumber: number | null; plannedSemesterNumber: number; hypotheticalGrade: string | null; currentlyEnrolled: boolean; kind: "new" | "retake" | "improvement"; previousGrade: string | null; source?: string | null; plannedBatch?: string | null; summer?: boolean };
 type Scheme = {
   student: { id: string; name: string; rollNumber: string; currentSemesterNumber: number; batch: string };
   programSemesters: number; maxSemester: number; minCredits: number; maxCredits: number;
@@ -171,9 +172,33 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const gradeColor = (c: Done) => (c.failed ? "#B3261E" : c.lowGrade ? "#B7791F" : c.superseded ? "var(--slate)" : "var(--sage)");
   const tag = (t: string, bg: string, fg: string) => <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: bg, color: fg, marginLeft: 6, whiteSpace: "nowrap" }}>{t}</span>;
 
+  // Grades for a semester GPA target: start every course at the lowest pass and raise the biggest courses first, a step
+  // at a time, until the semester's GPA reaches the target.
+  async function semesterTarget(sem: number, goal: number) {
+    if (!data) return;
+    const todo = data.planned.filter((p) => p.plannedSemesterNumber === sem && p.creditHours > 0);
+    const scale = data.gradingScale.filter((g) => g.gpaValue > 0).sort((a, b) => a.gpaValue - b.gpaValue);
+    if (!todo.length || !scale.length) return;
+    const idx = new Map(todo.map((p) => [p.courseId, 0]));
+    const gpa = () => todo.reduce((a, p) => a + scale[idx.get(p.courseId)!].gpaValue * p.creditHours, 0) / todo.reduce((a, p) => a + p.creditHours, 0);
+    const order = todo.slice().sort((a, b) => b.creditHours - a.creditHours);
+    let guard = 0;
+    while (gpa() < goal - 1e-9 && guard++ < 500) {
+      const c = order.filter((p) => idx.get(p.courseId)! < scale.length - 1).sort((a, b) => idx.get(a.courseId)! - idx.get(b.courseId)! || b.creditHours - a.creditHours)[0];
+      if (!c) break;
+      idx.set(c.courseId, idx.get(c.courseId)! + 1);
+    }
+    if (gpa() < goal - 1e-9) { setError(`A ${goal.toFixed(2)} GPA can't be reached in semester ${sem} even with the top grade in every course.`); return; }
+    setBusy("grades");
+    const r = await fetch("/api/degree-scheme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ studentId, action: "grades", grades: todo.map((p) => ({ courseId: p.courseId, grade: scale[idx.get(p.courseId)!].letter })) }) });
+    if (!r.ok) setError((await r.json().catch(() => ({}))).error || "Could not save.");
+    await load(); setBusy(""); onChange?.();
+  }
+
   return (
     <div>
       {error && <div className="err">{error}</div>}
+      <DegreePlanGenerator studentId={studentId} onApplied={() => { load(); onChange?.(); }} />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         {[
           ["CGPA now", calc.real !== null ? calc.real.toFixed(2) : "—", calc.real !== null && calc.real < 2 ? "#B3261E" : undefined],
@@ -300,6 +325,12 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                 <header>
                   <b>Semester {sem}</b>{term && <span className="tr-termname">{term}</span>}
                   <span className={`tr-chip ${state}`}>{state === "done" ? "Completed" : state === "cur" ? "Current" : sem > data.programSemesters ? "Extra semester" : "Planned"}</span>
+                  {state !== "done" && todo.some((p) => p.creditHours > 0) && (
+                    <select className="tr-grade" value="" disabled={!!busy} onChange={(e) => e.target.value && semesterTarget(sem, Number(e.target.value))} title="Fill in the grades needed for this semester's GPA" style={{ marginLeft: 8 }}>
+                      <option value="">GPA target…</option>
+                      {[2, 2.5, 3, 3.5, 4].map((g) => <option key={g} value={g}>{g.toFixed(2)}</option>)}
+                    </select>
+                  )}
                   <span className="tr-load" style={{ color: over ? "#B3261E" : undefined }}>{doneCr > 0 && `${doneCr} CH taken`}{doneCr > 0 && plannedCr > 0 && " · "}{plannedCr > 0 && `${plannedCr} CH planned`}{over && ` — over the ${data.maxCredits} CH limit`}</span>
                 </header>
                 {!done.length && !todo.length ? <p style={{ fontSize: 12, color: "var(--slate)", margin: 0, padding: "8px 18px" }}>Nothing here yet — move courses into this semester with the &quot;Sem&quot; boxes.</p> : <>
@@ -351,6 +382,8 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                             {p.kind === "retake" && tag(`Retake (was ${p.previousGrade})`, "#FBEAEA", "#B3261E")}
                             {p.kind === "improvement" && tag(`Repeat to improve ${p.previousGrade}`, "#FBEED2", "#96650F")}
                             {p.currentlyEnrolled && tag("Enrolled now", "#E8F3EC", "#2E7D4F")}
+                            {p.source && tag(p.source === "SYSTEM" ? "suggested by the system" : p.source === "STUDENT" ? "suggested by the student" : "set by the advisor", "#F1F1EE", "var(--slate)")}
+                            {p.summer && tag("Summer", "#FFF3D6", "#7A5208")}
                             {p.kind === "new" && p.nativeSemesterNumber && p.plannedSemesterNumber !== p.nativeSemesterNumber && tag(`moved from Sem ${p.nativeSemesterNumber}`, "#F1F1EE", "var(--slate)")}
                             {j && !j.own && (j.others.length
                               ? tag(`Joins ${j.others[0].batch} (their Sem ${j.others[0].semester})${j.others.length > 1 ? ` +${j.others.length - 1}` : ""}`, "#E8F3EC", "#2E7D4F")

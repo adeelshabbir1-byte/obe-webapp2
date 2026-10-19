@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
+import { checkCurriculumChanges } from "../../../lib/curriculumWatch";
+import { chairmanIdFor } from "../../../lib/reportScope";
 import { roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
@@ -14,6 +16,8 @@ export default async function AdvisorDashboardPage() {
   // Advising is a duty given per batch, not a role: whoever a Program Lead named as a batch's Advisor sees it here,
   // whichever role they are working in right now (Instructor, Subject Expert, Program Lead, Chairman...).
   const advised = await prisma.batch.findMany({ where: { advisorId: user.id }, select: { degreeProgram: true, batchName: true } });
+  // Today's curriculum is what degree plans assume for later batches: tell advisors when it changes.
+  if (advised.length) await checkCurriculumChanges(await chairmanIdFor(user)).catch(() => []);
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>

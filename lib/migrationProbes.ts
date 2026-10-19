@@ -191,6 +191,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "role"
 },
 {
+"f": "migration_degree_planner.sql",
+"d": "============================================================================",
+"t": "GradePlanSnapshot"
+},
+{
 "f": "migration_degree_program_licensing.sql",
 "d": "Run in Supabase SQL Editor. Adds maxDegreePrograms on User (set on",
 "t": "User",

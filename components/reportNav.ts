@@ -406,6 +406,8 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/aol", "Assurance of Learning (NBEAC)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/accreditation/aas", "NCEAC AAS", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/accreditation/eligibility", "Council Eligibility (NBEAC / PEC)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"]],
+  ["/plan-requests", "Degree Plan Requests", ["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN"]],
+  ["/plan-insights", "Extra Courses to Offer", ["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN", "DEPARTMENT_COORDINATOR", "OMC"]],
   ["/ga-council-map", "GA → Council Attributes", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/qec-proformas", "QEC Proformas", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/ipe", "IPE Self-Assessment", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC"]],
