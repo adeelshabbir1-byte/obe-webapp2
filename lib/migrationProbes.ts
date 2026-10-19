@@ -648,6 +648,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "prerequisitesConfirmedAt"
 },
 {
+"f": "migration_process_flow.sql",
+"d": "Accreditation process tracker (NCEAC Manual Figure 1): status and dates of each step per visit cycle. Safe to rerun.",
+"t": "AccreditationStep"
+},
+{
 "f": "migration_program_lead.sql",
 "d": "Program Lead: sits under a Head of Department and is responsible for one program.",
 "t": "User",

@@ -5586,3 +5586,18 @@ model ParentLink {
 
   @@index([studentId])
 }
+
+// One step of the council's accreditation process for a visit cycle (lib/accreditation/processFlow.ts).
+model AccreditationStep {
+  id          String    @id
+  cycleId     String
+  stepKey     String
+  status      String    @default("PENDING") // PENDING | DONE | RETURNED
+  doneOn      DateTime?
+  expectedOn  DateTime?
+  note        String?
+  updatedById String?
+  updatedAt   DateTime  @default(now())
+
+  @@unique([cycleId, stepKey])
+}

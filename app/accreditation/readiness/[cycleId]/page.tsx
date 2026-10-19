@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { navForRole } from "../../../../components/reportNav";
 import { roleLabel } from "../../../../lib/reportScope";
 import { prisma } from "../../../../lib/db";
+import ProcessTracker from "../../../../components/ProcessTracker";
 import Shell from "../../../../components/Shell";
 import { BODIES, type BodyKey } from "../../../../lib/accreditation/bodies";
 import { CATALOGUE } from "../../../../lib/accreditation/catalogue";
@@ -49,6 +50,7 @@ export default async function CyclePage({ params }: { params: { cycleId: string 
         </div>
       </div>
       {managing && <div className="card"><VisitSettings id={c.id} title={c.title} visitDate={day(c.visitDate)} status={c.status} /></div>}
+      {body === "NCEAC" && <ProcessTracker cycleId={c.id} canEdit={managing || c.leadId === user.id} />}
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table style={{ fontSize: 12.5 }}>
