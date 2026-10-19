@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { setupDemo, coursesStep, activityStep, finishDemo, deletePass, demoSummary } from "../../../../lib/demoInstitute";
-import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys } from "../../../../lib/demoCampus";
+import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys, campusBbaContent } from "../../../../lib/demoCampus";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (b.step === "finishBatch") { await finishDemo([String(b.demoBatchId)]); return NextResponse.json({ ok: true }); }
     if (b.step === "campus") {
       const part = String(b.part);
-      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : part === "surveys" ? await campusSurveys() : null;
+      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : part === "surveys" ? await campusSurveys() : part === "content" ? await campusBbaContent() : null;
       return NextResponse.json({ done, summary: part === "activity" ? await demoSummary() : undefined });
     }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }

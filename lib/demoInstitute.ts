@@ -5,6 +5,7 @@ import { termIndex } from "./termLogic";
 import { courseFamily, suggestedWeights } from "./ploWeightMath";
 import { recomputeCourseRows } from "./lectureWeights";
 import { BBA_SCHEME, bbaPlos } from "./demoBba";
+import { BBA_CONTENT, topicForLecture } from "./demoBbaContent";
 
 // "My Dream Institute": a demo copy of a real institute for presentations. Two batches (BS CS, BS AI) in their 5th
 // semester in Fall 2026, curriculum copied from the real institute, fake people, semesters 1-4 completed with approved
@@ -99,7 +100,8 @@ export async function setupDemo(superUserId: string, sources: { sourceBatchId: s
 type Plan = { clos: { code: string; statement: string; bloom: string; plo: number | null }[]; rows: { n: number; topic: string; sub: string | null; clo: number | null }[] };
 
 /** The course content: real CLO statements and topics when the source course has them, a sensible generic plan otherwise. */
-async function planFor(src: { id: string; title: string; courseType: string } | null, title: string, courseType: string, ploNumbers: number[]): Promise<Plan> {
+async function planFor(src: { id: string; title: string; courseType: string } | null, title: string, courseType: string, ploNumbers: number[], code?: string): Promise<Plan> {
+  const known = !src && code ? BBA_CONTENT[code] : undefined;
   const [sClos, sRows] = src ? await Promise.all([
     prisma.cLO.findMany({ where: { courseId: src.id, source: "SE" }, orderBy: { orderIndex: "asc" }, select: { id: true, statement: true, bloomLevel: true, mappedPlo: { select: { number: true } } } }),
     prisma.lectureRow.findMany({ where: { courseId: src.id, source: "SE" }, orderBy: { lectureNumber: "asc" }, select: { lectureNumber: true, topic: true, subtopic: true, cloId: true } }),
@@ -107,6 +109,7 @@ async function planFor(src: { id: string; title: string; courseType: string } | 
   const fam = courseFamily(courseType);
   const fallbackPlos = ploNumbers.length ? ploNumbers : fam === "GENERAL" ? [7, 8] : [2, 3];
   const clos = sClos.length >= 2 ? sClos.slice(0, 6).map((c, i) => ({ code: `CLO-${i + 1}`, statement: c.statement, bloom: c.bloomLevel || "C3", plo: c.mappedPlo?.number ?? fallbackPlos[i % fallbackPlos.length] }))
+    : known ? known.clos.map((c, i) => ({ code: `CLO-${i + 1}`, statement: c.statement, bloom: c.bloom, plo: fallbackPlos[i % fallbackPlos.length] }))
     : [["Explain the core concepts and terminology of", "C2"], ["Apply the main techniques of", "C3"], ["Analyse problems using", "C4"], ["Design and evaluate solutions with", "C5"]].map(([v, b], i) => ({ code: `CLO-${i + 1}`, statement: `${v} ${title}.`, bloom: b, plo: fallbackPlos[i % fallbackPlos.length] }));
   const idx = new Map(sClos.slice(0, 6).map((c, i) => [c.id, i]));
   const byNo = new Map(sRows.map((r) => [r.lectureNumber, r]));
@@ -116,7 +119,7 @@ async function planFor(src: { id: string; title: string; courseType: string } | 
     if (n === 16) return { n, topic: "Midterm Exam", sub: null, clo: null };
     if (n === 32) return { n, topic: "Final Exam Review", sub: null, clo: null };
     const s = byNo.get(n);
-    const topic = s?.topic?.trim() && !/exam|review/i.test(s.topic) ? s.topic.trim() : `${title} — Unit ${Math.ceil(n / 4)}, part ${((n - 1) % 4) + 1}`;
+    const topic = s?.topic?.trim() && !/exam|review/i.test(s.topic) ? s.topic.trim() : known ? topicForLecture(known.topics, n) : `${title} — Unit ${Math.ceil(n / 4)}, part ${((n - 1) % 4) + 1}`;
     const clo = s?.cloId && idx.has(s.cloId) ? idx.get(s.cloId)! : quarter(n);
     return { n, topic, sub: s?.subtopic || null, clo };
   });
@@ -156,7 +159,7 @@ export async function coursesStep(demoBatchId: string, sourceBatchId: string, se
     const offered = semester <= CURRENT;
     const teacher = teacherIds[(k + semester) % teacherIds.length];
     const ploNumbers = s.ploMappings.map((m) => m.plo.number).filter((n) => ploId.has(n)).sort((a, b) => a - b);
-    const plan = await planFor(s.id ? s : null, s.title, s.courseType, ploNumbers);
+    const plan = await planFor(s.id ? s : null, s.title, s.courseType, ploNumbers, s.code);
     const course = await prisma.course.create({ data: {
       code: s.code, title: s.title, creditHours: s.creditHours, courseType: s.courseType, coordinatorId: db_.coordinatorId, batchId: demoBatchId, semesterNumber: semester,
       catalogDescription: s.catalogDescription, subjectExpertId: teacher, instructorId: offered ? teacher : null, templateStatus: "approved",

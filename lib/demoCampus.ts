@@ -7,6 +7,7 @@ import { FLOWS } from "./accreditation/processFlow";
 import { EXPENSE_CATEGORIES, fiscalYearNow } from "./resources";
 import { seed as seedVisitDay } from "./visitDay";
 import { BBA_PLOS } from "./demoBba";
+import { BBA_CONTENT, topicForLecture } from "./demoBbaContent";
 
 // Dream University, completed for an NCEAC and an NBEAC visit:
 //  • a business school with a BBA (NBEAC) beside the computing programs (NCEAC), a Dean over both, HODs, Student
@@ -491,4 +492,26 @@ export async function campusSurveys() {
     }
   }
   return made;
+}
+
+/** Real Management Sciences content for BBA courses built earlier with placeholder CLOs and topics (kept in place, so
+ * marks and attainment stay linked): CLO statements and Bloom levels, and every lecture's topic. */
+export async function campusBbaContent() {
+  const s = await scope();
+  const bba = s.batches.find((b) => /BBA/.test(b.degreeProgram));
+  if (!bba) return 0;
+  const courses = await prisma.course.findMany({ where: { batchId: bba.id }, select: { id: true, code: true, title: true } });
+  let n = 0;
+  for (const c of courses) {
+    const k = BBA_CONTENT[c.code];
+    if (!k) continue;
+    const clos = await prisma.cLO.findMany({ where: { courseId: c.id }, select: { id: true, orderIndex: true, statement: true } });
+    if (clos.some((x) => x.statement === k.clos[x.orderIndex]?.statement)) continue; // already done
+    for (const x of clos) { const v = k.clos[x.orderIndex]; if (v) await prisma.cLO.update({ where: { id: x.id }, data: { statement: v.statement, bloomLevel: v.bloom } }); }
+    const rows = await prisma.lectureRow.findMany({ where: { courseId: c.id }, select: { id: true, lectureNumber: true, topic: true } });
+    for (const r of rows) if (r.lectureNumber !== 16 && r.lectureNumber !== 32 && /Unit \d+, part/.test(r.topic || "")) await prisma.lectureRow.update({ where: { id: r.id }, data: { topic: topicForLecture(k.topics, r.lectureNumber) } });
+    await prisma.course.update({ where: { id: c.id }, data: { catalogDescription: `${c.title}: ${k.topics.slice(0, 6).join(", ").toLowerCase()} and more.` } as never });
+    n++;
+  }
+  return n;
 }
