@@ -45,7 +45,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
         <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontSize: 21, margin: 0 }}>{s.name}</h1>
-            <div style={{ fontSize: 13, color: "var(--slate)" }}>{s.rollNumber} · {s.batch ? `${s.batch.degreeProgram} — ${s.batch.batchName}` : ""} · Semester {s.currentSemesterNumber}</div>
+            <div style={{ fontSize: 13, color: "var(--slate)" }}>{s.rollNumber} · {s.batch ? `${s.batch.degreeProgram} — ${s.batch.batchName}` : ""} · Semester {s.currentSemesterNumber} · <Link href={`/prediction/student/${s.id}`}>Prediction</Link></div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 18, alignItems: "center" }}>
             <div style={{ textAlign: "center" }}><div style={{ fontSize: 11.5, color: "var(--slate)" }}>CGPA</div><div style={{ fontSize: 22, fontWeight: 700 }}>{cgpa !== null ? cgpa.toFixed(2) : "—"}</div></div>

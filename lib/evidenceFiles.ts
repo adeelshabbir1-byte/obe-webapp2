@@ -10,6 +10,7 @@ export const MEETING_KINDS: Record<string, string> = {
   OMC: "OMC meeting", BOS: "BOS meeting", BPF: "BPF meeting", FACULTY: "Faculty meeting", IAB: "Industrial advisory board",
   // Statutory bodies the NBEAC SAR asks about (Table 1.4).
   SENATE: "Senate", SYNDICATE: "Syndicate / Board of Governors", ACADEMIC_COUNCIL: "Academic Council", SELECTION_BOARD: "Selection Board", BASR: "BASR", FINANCE_PLANNING: "Finance & Planning Committee",
+  ALUMNI: "Alumni meeting", STUDENT: "Student meeting",
   OTHER: "Other meeting",
 };
 export const FILE_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];

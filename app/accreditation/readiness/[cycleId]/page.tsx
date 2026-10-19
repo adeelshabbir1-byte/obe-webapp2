@@ -50,6 +50,7 @@ export default async function CyclePage({ params }: { params: { cycleId: string 
         </div>
       </div>
       {managing && <div className="card"><VisitSettings id={c.id} title={c.title} visitDate={day(c.visitDate)} status={c.status} /></div>}
+      <p style={{ margin: "0 0 10px" }}><Link href={`/accreditation/visit-day/${c.id}`} className="btn btn-ghost btn-sm">Visit day plan, checklist and mock visit →</Link></p>
       {["NCEAC", "PEC", "NBEAC"].includes(body) && <ProcessTracker cycleId={c.id} canEdit={managing || c.leadId === user.id} />}
 
       <div className="card" style={{ overflowX: "auto" }}>

@@ -36,7 +36,7 @@ export default async function EarlyWarningPage({ searchParams }: { searchParams:
       <div className="card" style={{ overflowX: "auto" }}>
         {shown.length === 0 ? <p className="small-note">No student at risk.</p> : (
           <table style={{ fontSize: 13 }}><thead><tr><th>Risk</th><th>Student</th><th>Batch</th><th>Why</th><th></th></tr></thead>
-            <tbody>{shown.map((r) => <tr key={r.studentId}><td style={{ color: COLOR[r.level], fontWeight: 700 }}>{r.level.toLowerCase()} ({r.points})</td><td>{r.name} <span className="small-note">{r.roll}</span></td><td className="small-note">{r.batch}</td><td style={{ fontSize: 12.5 }}>{r.reasons.join(" · ") || "—"}</td><td>{r.advisorId === user.id && <Link href={`/advisor/students/${r.studentId}`} className="small-note">open</Link>}</td></tr>)}</tbody></table>
+            <tbody>{shown.map((r) => <tr key={r.studentId}><td style={{ color: COLOR[r.level], fontWeight: 700 }}>{r.level.toLowerCase()} ({r.points})</td><td>{r.name} <span className="small-note">{r.roll}</span></td><td className="small-note">{r.batch}</td><td style={{ fontSize: 12.5 }}>{r.reasons.join(" · ") || "—"}</td><td style={{ whiteSpace: "nowrap" }}>{r.advisorId === user.id && <Link href={`/advisor/students/${r.studentId}`} className="small-note">open</Link>} <Link href={`/prediction/student/${r.studentId}`} className="small-note">prediction</Link></td></tr>)}</tbody></table>
         )}
       </div>
     </Shell>

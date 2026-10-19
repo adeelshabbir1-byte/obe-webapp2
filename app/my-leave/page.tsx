@@ -6,6 +6,7 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
 import { sdb, substituteOptions, type ShortLeaveRow, type SubRow } from "../../lib/shortLeave";
 import { getTimetableEntries } from "../../lib/timetableView";
+import { balances, details, DEFAULT_POLICIES } from "../../lib/leaveRules";
 import { LeaveRequestForm, WithdrawLeave, CoverClass, SubstituteAnswer } from "../../components/ShortLeaveControls";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function MyLeavePage() {
     classes = leaves.length ? ((await sdb.substituteClass.findMany({ where: { leaveId: { in: leaves.map((l) => l.id) } }, orderBy: { date: "asc" } })) as SubRow[]) : [];
     duties = (await sdb.substituteClass.findMany({ where: { substituteId: me.id, status: { in: ["ASSIGNED", "ACCEPTED", "DONE"] } }, orderBy: { date: "asc" }, take: 60 })) as SubRow[];
   } catch { missing = true; }
+  const bal = chairmanId && !missing ? await balances(me.id, chairmanId).catch(() => []) : [];
+  const det = await details(leaves.map((l) => l.id));
+  const typeLabel = new Map(DEFAULT_POLICIES.map((p) => [p.kind, p.label]));
   const ids = Array.from(new Set([...classes.map((c) => c.substituteId), ...duties.map((d) => d.originalId)].filter((x): x is string => !!x)));
   const names = new Map((ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
   const entries = chairmanId ? await getTimetableEntries(chairmanId) : [];
@@ -43,7 +47,15 @@ export default async function MyLeavePage() {
         or a make-up date, and your Chairman approves and arranges the rest. Classes you take for others are listed here too.
       </p>
       {missing && <div className="err">The short leave tables are not in the database yet — run prisma/migration_short_leave.sql in Supabase.</div>}
-      {!missing && <div className="card"><h3 style={{ marginTop: 0 }}>Ask for leave</h3><LeaveRequestForm /></div>}
+      {!missing && <div className="card"><h3 style={{ marginTop: 0 }}>Ask for leave</h3><LeaveRequestForm kinds={DEFAULT_POLICIES.map((p) => [p.kind, p.label])} />
+        {bal.length > 0 && (
+          <table style={{ fontSize: 12.5, marginTop: 8 }}>
+            <thead><tr><th>Type ({new Date().getUTCFullYear()})</th><th style={{ textAlign: "center" }}>Allowed</th><th style={{ textAlign: "center" }}>Carried</th><th style={{ textAlign: "center" }}>Used</th><th style={{ textAlign: "center" }}>Pending</th><th style={{ textAlign: "center" }}>Left</th><th>Approval</th></tr></thead>
+            <tbody>{bal.map((b) => <tr key={b.kind}><td>{b.label}</td><td style={{ textAlign: "center" }}>{b.left === null ? "as needed" : b.perYear}</td><td style={{ textAlign: "center" }}>{b.carried || "—"}</td><td style={{ textAlign: "center" }}>{b.used}</td><td style={{ textAlign: "center" }}>{b.pending || "—"}</td><td style={{ textAlign: "center", fontWeight: 600 }}>{b.left === null ? "—" : b.left}</td><td className="small-note">{b.needsDean ? "HOD → Dean" : "HOD"}{b.maxDays ? ` · up to ${b.maxDays} days at a time` : ""}</td></tr>)}</tbody>
+          </table>
+        )}
+        <p className="small-note" style={{ marginBottom: 0 }}>Working days count (Sundays excluded). Your classes in the leave must be covered — substitute, make-up or cancelled — before it is approved.</p>
+      </div>}
 
       {duties.length > 0 && (
         <div className="card" style={{ overflowX: "auto" }}>
@@ -62,7 +74,7 @@ export default async function MyLeavePage() {
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <b>{day(l.fromDate)}{l.toDate.getTime() !== l.fromDate.getTime() ? ` – ${day(l.toDate)}` : ""}</b>
               <span className={`badge ${cls}`}>{t}</span>
-              <span style={{ fontSize: 12.5, color: "var(--slate)" }}>{l.reason}{l.decisionNote ? ` · ${l.decisionNote}` : ""}</span>
+              <span style={{ fontSize: 12.5, color: "var(--slate)" }}>{det.get(l.id) ? `${typeLabel.get(det.get(l.id)!.kind) || det.get(l.id)!.kind}, ${det.get(l.id)!.days} day(s)${det.get(l.id)!.deanStatus === "PENDING" ? " — HOD approved, with the Dean" : ""} · ` : ""}{l.reason}{l.decisionNote ? ` · ${l.decisionNote}` : ""}</span>
               {["PENDING", "APPROVED"].includes(l.status) && new Date(l.toDate) >= today && <span style={{ marginLeft: "auto" }}><WithdrawLeave id={l.id} /></span>}
             </div>
             {cs.length === 0 ? <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 0 }}>No classes in these days.</p> : (

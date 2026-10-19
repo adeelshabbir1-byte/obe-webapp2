@@ -98,6 +98,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "AdmissionCriteria"
 },
 {
+"f": "migration_campus_ops.sql",
+"d": "Campus operations: visit day, mock visit, FDP, leave types, facility booking, meetings, faculty meals, past data for prediction. Safe to rer",
+"t": "HistoricalRecord"
+},
+{
 "f": "migration_can_teach.sql",
 "d": "Outside Subject Experts (industry / other institute) design courses but never teach",
 "t": "User",

@@ -62,7 +62,7 @@ export async function saveWish(facultyId: string, maxSections: number | null, re
 /* ---------------- Teaching history ---------------- */
 
 /** The term now being allocated: the one most offered courses are stamped with. */
-async function currentTerm(coordinatorIds: string[]) {
+export async function currentTerm(coordinatorIds: string[]) {
   const offered = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) }, isOffered: true, offeredTermName: { in: ["Fall", "Spring"] } }, select: { offeredTermName: true, offeredTermYear: true } });
   const count = new Map<number, number>();
   for (const c of offered) if (c.offeredTermName && c.offeredTermYear) { const i = termIndex(c.offeredTermName, c.offeredTermYear); count.set(i, (count.get(i) || 0) + 1); }
@@ -270,8 +270,32 @@ export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: 
   }
   const proposals = Array.from(out.values()).sort((a, b) => a.label.localeCompare(b.label) || b.sections - a.sections);
   const loads = pool.map((i) => ({ id: i.id, name: i.name, capacity: cap(i), assigned: used.get(i.id) || 0, wish: wish.get(i.id) || null, designation: rankOf.get(i.id) || "", specialization: specOf(i), unavailable: away.get(i.id) ? `${away.get(i.id)!.hours} h/week (${away.get(i.id)!.days.join(", ")})` : "" })).sort((a, b) => a.name.localeCompare(b.name));
+  // Hiring gaps: what nobody in the pool can or will take, courses resting on one willing teacher, and by area.
+  const unfilledBy = new Map<string, number>();
+  for (const p of proposals) if (visiting && p.instructorId === visiting.id) unfilledBy.set(p.rowId, (unfilledBy.get(p.rowId) || 0) + p.sections);
+  const areaOf = (r: MatrixRow) => r.interestCodes.map((c) => domainOf.get(c)).find(Boolean) || r.courseType || "General";
+  const gapRows = m.rows.filter((r) => unfilledBy.has(r.id)).map((r) => ({ label: r.label, batch: r.batchLabel, sections: unfilledBy.get(r.id)!, area: areaOf(r), willing: willing(r) }));
+  const thin = m.rows.filter((r) => r.sectionsNeeded > 0 && willing(r) === 1 && !unfilledBy.has(r.id)).map((r) => ({ label: r.label, area: areaOf(r), only: pool.find((i) => score(r, i).s > 0)?.name || "" }));
+  const areas = new Map<string, { area: string; sections: number; courses: number; thin: number; experts: number }>();
+  for (const g of gapRows) { const a = areas.get(g.area) || { area: g.area, sections: 0, courses: 0, thin: 0, experts: 0 }; a.sections += g.sections; a.courses++; areas.set(g.area, a); }
+  for (const g of thin) { const a = areas.get(g.area) || { area: g.area, sections: 0, courses: 0, thin: 0, experts: 0 }; a.thin++; areas.set(g.area, a); }
+  for (const a of Array.from(areas.values())) a.experts = pool.filter((i) => specMatch(specOf(i), a.area, a.area)).length;
+  const unfilledTotal = gapRows.reduce((a, g) => a + g.sections, 0);
+  const loadsAvg = pool.length ? pool.reduce((a, i) => a + i.normalLoad, 0) / pool.length : 3;
+  const spare = loads.reduce((a, l) => a + Math.max(0, l.capacity - l.assigned), 0);
+  const hiring = {
+    unfilledSections: unfilledTotal, spareSections: spare,
+    fteNeeded: unfilledTotal ? Math.ceil(unfilledTotal / Math.max(1, Math.round(loadsAvg))) : 0,
+    rows: gapRows, thin,
+    areas: Array.from(areas.values()).sort((a, b) => b.sections - a.sections || b.thin - a.thin),
+    advice: [
+      ...Array.from(areas.values()).filter((a) => a.sections > 0).sort((a, b) => b.sections - a.sections).map((a) => `Hire in ${a.area}: ${a.sections} section(s) of ${a.courses} course(s) have no willing teacher${a.experts ? ` (only ${a.experts} faculty with this specialization)` : " (no faculty with this specialization)"}.`),
+      ...(spare > 0 && unfilledTotal > 0 ? [`${spare} section(s) of room is left with teachers who did not mark these courses — ask them to add priorities before hiring.`] : []),
+      ...(thin.length ? [`${thin.length} course(s) rest on a single willing teacher — train a second teacher or hire to cover leave.`] : []),
+    ],
+  };
   const t = termOf(now);
-  return { term: `${t.name} ${t.year}`, prev: `${termOf(now - 1).name} ${termOf(now - 1).year}`, lastYear: `${t.name} ${t.year - 1}`, keepExisting: opts.keepExisting, proposals, loads, unfilled: proposals.filter((p) => visiting && p.instructorId === visiting.id).reduce((a, p) => a + p.sections, 0) };
+  return { hiring, term: `${t.name} ${t.year}`, prev: `${termOf(now - 1).name} ${termOf(now - 1).year}`, lastYear: `${t.name} ${t.year - 1}`, keepExisting: opts.keepExisting, proposals, loads, unfilled: proposals.filter((p) => visiting && p.instructorId === visiting.id).reduce((a, p) => a + p.sections, 0) };
 }
 
 /** Apply the chosen suggestions: section counts added to (or, with keepExisting off, replacing) the matrix. */

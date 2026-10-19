@@ -9,16 +9,17 @@ async function post(url: string, body: unknown) {
   return r.ok ? null : d.error || "Something went wrong.";
 }
 
-export function LeaveRequestForm() {
+export function LeaveRequestForm({ kinds = [] }: { kinds?: [string, string][] }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
-  const [f, setF] = useState({ fromDate: today, toDate: today, reason: "" });
+  const [f, setF] = useState({ fromDate: today, toDate: today, reason: "", kind: "CASUAL" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <div>
       {error && <div className="err">{error}</div>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        {kinds.length > 0 && <div className="field"><label>Type</label><select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}>{kinds.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>}
         <div className="field"><label>First day</label><input type="date" value={f.fromDate} onChange={(e) => setF({ ...f, fromDate: e.target.value, toDate: e.target.value > f.toDate ? e.target.value : f.toDate })} /></div>
         <div className="field"><label>Last day</label><input type="date" min={f.fromDate} value={f.toDate} onChange={(e) => setF({ ...f, toDate: e.target.value })} /></div>
         <div className="field" style={{ flex: "1 1 260px" }}><label>Reason</label><input value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="e.g. conference in Lahore, family emergency" /></div>

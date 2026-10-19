@@ -4,7 +4,8 @@ import { useState } from "react";
 
 type Proposal = { key: string; kind: string; rowId: string; label: string; batchLabel: string; instructorId: string; instructorName: string; sections: number; score: number; reasons: string[] };
 type Load = { id: string; name: string; capacity: number; assigned: number; wish: { maxSections: number | null; remarks: string; updatedAt: string } | null; designation: string; specialization: string; unavailable: string };
-type Data = { term: string; prev: string; lastYear: string; keepExisting: boolean; proposals: Proposal[]; loads: Load[]; unfilled: number };
+type Data = { term: string; prev: string; lastYear: string; keepExisting: boolean; proposals: Proposal[]; loads: Load[]; unfilled: number; hiring?: Hiring };
+type Hiring = { unfilledSections: number; spareSections: number; fteNeeded: number; rows: { label: string; batch: string; sections: number; area: string }[]; thin: { label: string; area: string; only: string }[]; areas: { area: string; sections: number; courses: number; thin: number; experts: number }[]; advice: string[] };
 
 /** The suggested allocation: preferences, times taught, last semester and last year, within each teacher's load. */
 export default function AutoAllocation({ onApplied }: { onApplied?: () => void }) {
@@ -80,6 +81,20 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
             )}
             {data.proposals.length > 0 && <div style={{ marginTop: 10 }}><button type="button" className="btn btn-brass btn-sm" disabled={!!busy || picked.size === 0} onClick={apply}>{busy === "apply" ? "Applying…" : `Apply ${picked.size} line${picked.size === 1 ? "" : "s"}`}</button></div>}
           </div>
+          {data.hiring && (data.hiring.unfilledSections > 0 || data.hiring.thin.length > 0) && (
+            <div className="card" style={{ overflowX: "auto" }}>
+              <b style={{ fontSize: 13 }}>Hiring gaps — {data.hiring.unfilledSections} section(s) without a teacher{data.hiring.fteNeeded ? ` · about ${data.hiring.fteNeeded} faculty to hire` : ""} · {data.hiring.spareSections} section(s) of room left in the pool</b>
+              <ul style={{ fontSize: 12.5, margin: "6px 0" }}>{data.hiring.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
+              {data.hiring.areas.length > 0 && (
+                <table style={{ fontSize: 12.5 }}>
+                  <thead><tr><th>Area (weak first)</th><th style={{ textAlign: "center" }}>Open sections</th><th style={{ textAlign: "center" }}>Courses</th><th style={{ textAlign: "center" }}>One-teacher courses</th><th style={{ textAlign: "center" }}>Specialists</th></tr></thead>
+                  <tbody>{data.hiring.areas.map((a) => <tr key={a.area}><td>{a.area}</td><td style={{ textAlign: "center" }}>{a.sections}</td><td style={{ textAlign: "center" }}>{a.courses}</td><td style={{ textAlign: "center" }}>{a.thin}</td><td style={{ textAlign: "center", color: a.experts === 0 ? "#c93c3c" : undefined }}>{a.experts}</td></tr>)}</tbody>
+                </table>
+              )}
+              {data.hiring.rows.length > 0 && <p className="small-note" style={{ margin: "6px 0 0" }}>Hire for: {data.hiring.rows.map((r) => `${r.label} (${r.sections})`).join(" · ")}</p>}
+              {data.hiring.thin.length > 0 && <p className="small-note" style={{ margin: "4px 0 0" }}>Single-teacher courses: {data.hiring.thin.map((r) => `${r.label} — ${r.only}`).join(" · ")}</p>}
+            </div>
+          )}
           <div className="card" style={{ overflowX: "auto" }}>
             <b style={{ fontSize: 13 }}>Teachers&apos; load after this suggestion</b>
             <table style={{ fontSize: 12.5, marginTop: 6 }}>

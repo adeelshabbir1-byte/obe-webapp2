@@ -5601,3 +5601,215 @@ model AccreditationStep {
 
   @@unique([cycleId, stepKey])
 }
+
+// One line of the accreditation visit day: a timed plan step (PLAN) or an arrangement to check (CHECK).
+model VisitDayItem {
+  id String @id
+  chairmanId String
+  cycleId String
+  kind String @default("PLAN")
+  dayDate DateTime?
+  startTime String?
+  endTime String?
+  title String
+  place String?
+  category String?
+  ownerId String?
+  status String @default("PENDING")
+  note String? @db.Text
+  orderNo Int @default(0)
+  updatedById String?
+  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([cycleId, kind])
+}
+
+// A finding of a mock visit; its recommendation is a task with an owner and a due date.
+model MockVisitFinding {
+  id String @id
+  chairmanId String
+  cycleId String
+  area String
+  finding String @db.Text
+  recommendation String @db.Text
+  severity String @default("MEDIUM")
+  ownerId String?
+  dueDate DateTime?
+  status String @default("OPEN")
+  doneNote String? @db.Text
+  createdById String
+  createdAt DateTime @default(now())
+  closedAt DateTime?
+  @@index([cycleId])
+  @@index([ownerId])
+}
+
+// A Faculty Development Program session: workshop, seminar or training.
+model FdpSession {
+  id String @id
+  chairmanId String
+  title String
+  kind String @default("WORKSHOP")
+  topic String?
+  date DateTime
+  hours Float @default(0)
+  facilitator String?
+  venue String?
+  audience String? @db.Text
+  reason String? @db.Text
+  status String @default("PLANNED")
+  createdById String
+  createdAt DateTime @default(now())
+  @@index([chairmanId, date])
+}
+
+// Who attended an FDP session, and the certificate issued.
+model FdpAttendance {
+  id String @id
+  sessionId String
+  userId String
+  attended Boolean @default(true)
+  certificateNo String?
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@unique([sessionId, userId])
+}
+
+// Development hours a teacher earned outside the institute (their own entry).
+model FdpExternal {
+  id String @id
+  chairmanId String
+  userId String
+  title String
+  organizer String?
+  date DateTime
+  hours Float @default(0)
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+// The yearly FDP hours each teacher should reach.
+model FdpTarget {
+  id String @id
+  chairmanId String
+  hoursPerYear Float @default(20)
+  updatedAt DateTime @default(now())
+  @@unique([chairmanId])
+}
+
+// Leave allowance per type: days a year, how many may carry forward, and whether the Dean must also approve.
+model LeavePolicy {
+  id String @id
+  chairmanId String
+  kind String
+  perYear Float @default(0)
+  carryMax Float @default(0)
+  needsDean Boolean @default(false)
+  maxDays Float?
+  updatedAt DateTime @default(now())
+  @@unique([chairmanId, kind])
+}
+
+// Type and days of a ShortLeave, and the Dean's step when the type needs it.
+model LeaveDetail {
+  id String @id
+  leaveId String
+  kind String
+  days Float @default(1)
+  deanStatus String @default("NONE")
+  hodId String?
+  hodAt DateTime?
+  deanId String?
+  deanAt DateTime?
+  deanNote String?
+  @@unique([leaveId])
+}
+
+// A booking of a hall, room, masjid, ground or other facility, checked for clashes.
+model FacilityBooking {
+  id String @id
+  chairmanId String
+  resource String
+  roomId String?
+  date DateTime
+  startTime String
+  endTime String
+  purpose String
+  bookedById String
+  status String @default("BOOKED")
+  createdAt DateTime @default(now())
+  @@index([chairmanId, date])
+}
+
+// Schedule details of a meeting: venue, time, agenda and who is invited (alumni / student / any).
+model MeetingExtra {
+  id String @id
+  meetingId String
+  venue String?
+  startTime String?
+  agenda String? @db.Text
+  inviteesJson String? @db.Text
+  attendedJson String? @db.Text
+  status String @default("SCHEDULED")
+  @@unique([meetingId])
+}
+
+// An action item from a meeting's minutes.
+model MeetingAction {
+  id String @id
+  meetingId String
+  text String @db.Text
+  ownerId String?
+  dueDate DateTime?
+  status String @default("OPEN")
+  doneAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([meetingId])
+  @@index([ownerId])
+}
+
+// A meal on the faculty menu for a day, with its price.
+model FacultyMeal {
+  id String @id
+  chairmanId String
+  date DateTime
+  item String
+  price Float @default(0)
+  cutoff String?
+  createdById String
+  createdAt DateTime @default(now())
+  @@index([chairmanId, date])
+}
+
+// A faculty member's order of a menu item; the month's bill adds these up.
+model MealOrder {
+  id String @id
+  mealId String
+  userId String
+  qty Int @default(1)
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@unique([mealId, userId])
+}
+
+// Past years' course results uploaded for prediction (students who may no longer be in the system).
+model HistoricalRecord {
+  id String @id
+  chairmanId String
+  program String
+  intakeYear Int
+  rollNumber String
+  semester Int
+  termName String?
+  termYear Int?
+  courseCode String
+  creditHours Float @default(3)
+  marksPct Float?
+  attendancePct Float?
+  grade String?
+  gpaPoints Float?
+  outcome String?
+  uploadedAt DateTime @default(now())
+  @@index([chairmanId, program])
+  @@index([chairmanId, courseCode])
+}

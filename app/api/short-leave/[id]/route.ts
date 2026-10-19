@@ -3,6 +3,8 @@ import { getSignedInUser, getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
 import { sdb, canDecideLeave, type ShortLeaveRow, type SubRow } from "../../../../lib/shortLeave";
+import { prisma } from "../../../../lib/db";
+import { details, policies, setDetail } from "../../../../lib/leaveRules";
 
 // POST { action: "approve" | "reject" | "cancel", note } — the Chairman decides; the teacher can withdraw it.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -21,9 +23,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await notifyUsers(subs.map((s) => s.substituteId), { kind: "ASSIGNMENT", title: `Substitute class no longer needed`, body: `${me.name} withdrew their leave; you don't need to take their classes.`, href: "/my-leave" });
     return NextResponse.json({ ok: true });
   }
-  if (!(await canDecideLeave(user, l))) return NextResponse.json({ error: "You can't decide this leave." }, { status: 403 });
   if (b.action !== "approve" && b.action !== "reject") return NextResponse.json({ error: "unknown action" }, { status: 400 });
   const approve = b.action === "approve";
+  const det = (await details([l.id])).get(l.id);
+  const pol = det ? (await policies(l.chairmanId)).find((p) => p.kind === det.kind) : null;
+  if (user.role === "DEAN") {
+    // The Dean's step: only for types that need it, after the HOD, for teachers of the Dean's faculty.
+    const t = await prisma.user.findUnique({ where: { id: l.userId }, select: { department_: { select: { facultyId: true } } } });
+    if (!det || det.deanStatus !== "PENDING" || user.managedById !== l.chairmanId || !user.facultyId || t?.department_?.facultyId !== user.facultyId) return NextResponse.json({ error: "This leave is not waiting for the Dean." }, { status: 403 });
+    await setDetail(l.id, { deanStatus: approve ? "APPROVED" : "REJECTED", deanId: user.id, deanAt: new Date(), deanNote: note });
+  } else {
+    if (!(await canDecideLeave(user, l))) return NextResponse.json({ error: "You can't decide this leave." }, { status: 403 });
+    if (approve) {
+      const open = await sdb.substituteClass.count({ where: { leaveId: l.id, status: { in: ["NEEDED", "DECLINED"] } } });
+      if (open) return NextResponse.json({ error: `Arrange cover for ${open} class(es) first — a substitute, a make-up date, or cancel the class.` }, { status: 409 });
+    }
+    if (approve && det && pol?.needsDean && user.role === "HEAD_OF_DEPARTMENT" && det.deanStatus !== "APPROVED") {
+      await setDetail(l.id, { deanStatus: "PENDING", hodId: user.id, hodAt: new Date() });
+      const t = await prisma.user.findUnique({ where: { id: l.userId }, select: { name: true, department_: { select: { facultyId: true } } } });
+      const deans = t?.department_?.facultyId ? await prisma.user.findMany({ where: { role: "DEAN", managedById: l.chairmanId, facultyId: t.department_.facultyId, isActive: true }, select: { id: true } }) : [];
+      if (deans.length) {
+        await notifyUsers(deans.map((d) => d.id), { kind: "REQUEST", title: `${pol.label} for ${t?.name}: HOD approved, needs the Dean`, body: `${det.days} working day(s).`, href: "/leave-approvals" });
+        await notifyUsers([l.userId], { kind: "REQUEST", title: "Your leave: HOD approved, now with the Dean", href: "/my-leave" });
+        return NextResponse.json({ ok: true, waiting: "DEAN" });
+      }
+    }
+    if (det) await setDetail(l.id, { hodId: user.id, hodAt: new Date() });
+  }
   await sdb.shortLeave.update({ where: { id: l.id }, data: { status: approve ? "APPROVED" : "REJECTED", approverId: user.id, decidedAt: new Date(), decisionNote: note } });
   if (!approve) await sdb.substituteClass.updateMany({ where: { leaveId: l.id }, data: { status: "CANCELLED" } });
   await writeAuditLog({ actorUserId: user.id, action: approve ? "SHORT_LEAVE_APPROVED" : "SHORT_LEAVE_REJECTED", entityType: "User", entityId: l.userId, metadata: { leaveId: l.id, note } });

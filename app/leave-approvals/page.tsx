@@ -7,6 +7,8 @@ import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
 import { sdb, substituteOptions, canDecideLeave, type ShortLeaveRow, type SubRow } from "../../lib/shortLeave";
 import { getTimetableEntries } from "../../lib/timetableView";
 import { LeaveDecision, CoverClass } from "../../components/ShortLeaveControls";
+import { details, DEFAULT_POLICIES, policies } from "../../lib/leaveRules";
+import { ActionForm } from "../../components/fyp/FypClient";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,6 +25,8 @@ export default async function LeaveApprovalsPage() {
   try { leaves = (await sdb.shortLeave.findMany({ where: { chairmanId, OR: [{ status: "PENDING" }, { status: "APPROVED", toDate: { gte: new Date(today.getTime() - 7 * 864e5) } }] }, orderBy: { fromDate: "asc" }, take: 200 })) as ShortLeaveRow[]; } catch { missing = true; }
   const mine: ShortLeaveRow[] = [];
   for (const l of leaves) if (user.role === "DEAN" || (await canDecideLeave(user, l))) mine.push(l);
+  const det = await details(mine.map((l) => l.id));
+  const typeLabel = new Map(DEFAULT_POLICIES.map((p) => [p.kind, p.label]));
   const classes = mine.length ? ((await sdb.substituteClass.findMany({ where: { leaveId: { in: mine.map((l) => l.id) } }, orderBy: { date: "asc" } })) as SubRow[]) : [];
   const ids = Array.from(new Set([...mine.map((l) => l.userId), ...classes.map((c) => c.substituteId)].filter((x): x is string => !!x)));
   const names = new Map((ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
@@ -51,6 +55,13 @@ export default async function LeaveApprovalsPage() {
         <div className={`stat ${uncovered.length ? "stat-warn" : ""}`}><div style={{ fontSize: 24, fontWeight: 700, color: uncovered.length ? "var(--rust)" : undefined }}>{uncovered.length}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Coming classes not yet covered</div></div>
         <div className="stat"><div style={{ fontSize: 24, fontWeight: 700 }}>{todays.length}</div><div style={{ fontSize: 12, color: "var(--slate)" }}>Substitute / make-up arrangements today</div></div>
       </div>
+      {user.role === "CHAIRMAN" && !missing && (
+        <details className="card"><summary style={{ cursor: "pointer", fontWeight: 600 }}>Leave types and limits</summary>
+          <table style={{ fontSize: 12.5, marginTop: 8 }}><thead><tr><th>Type</th><th>Days a year</th><th>Carry forward (max)</th><th>Max at a time</th><th>Dean approves too</th></tr></thead>
+            <tbody>{(await policies(chairmanId)).map((p) => <tr key={p.kind}><td>{p.label}</td><td colSpan={4}><ActionForm url="/api/leave-policy" fixed={{ kind: p.kind }} submit="Save" initial={{ perYear: p.perYear, carryMax: p.carryMax, maxDays: p.maxDays ?? "", needsDean: p.needsDean }} fields={[{ name: "perYear", label: "Days/yr", type: "number", width: 70 }, { name: "carryMax", label: "Carry", type: "number", width: 70 }, { name: "maxDays", label: "Max", type: "number", width: 70 }, { name: "needsDean", label: "Dean", type: "checkbox" }]} /></td></tr>)}</tbody>
+          </table>
+        </details>
+      )}
       {mine.length === 0 && !missing && <div className="card"><p style={{ margin: 0, color: "var(--slate)" }}>No leave requests right now.</p></div>}
       {mine.map((l) => {
         const cs = classes.filter((c) => c.leaveId === l.id);
@@ -59,9 +70,10 @@ export default async function LeaveApprovalsPage() {
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <b>{names.get(l.userId) || "—"}</b>
               <span>{day(l.fromDate)}{l.toDate.getTime() !== l.fromDate.getTime() ? ` – ${day(l.toDate)}` : ""}</span>
-              <span className={`badge ${l.status === "APPROVED" ? "badge-ok" : "badge-warn"}`}>{l.status === "APPROVED" ? "Approved" : "Waiting"}</span>
+              <span className={`badge ${l.status === "APPROVED" ? "badge-ok" : "badge-warn"}`}>{l.status === "APPROVED" ? "Approved" : det.get(l.id)?.deanStatus === "PENDING" ? "HOD approved — with the Dean" : "Waiting"}</span>
+              {det.get(l.id) && <span className="small-note">{typeLabel.get(det.get(l.id)!.kind) || det.get(l.id)!.kind} · {det.get(l.id)!.days} working day(s)</span>}
               <span style={{ fontSize: 12.5, color: "var(--slate)" }}>{l.reason}</span>
-              {canAct && l.status === "PENDING" && <span style={{ marginLeft: "auto" }}><LeaveDecision id={l.id} /></span>}
+              {l.status === "PENDING" && (user.role === "DEAN" ? det.get(l.id)?.deanStatus === "PENDING" : det.get(l.id)?.deanStatus !== "PENDING") && <span style={{ marginLeft: "auto" }}><LeaveDecision id={l.id} /></span>}
             </div>
             {cs.length > 0 && (
               <table style={{ fontSize: 12.5, marginTop: 8 }}><thead><tr><th>When</th><th>Class</th><th>Room</th><th>Cover</th></tr></thead>
