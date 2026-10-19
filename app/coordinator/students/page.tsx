@@ -1,3 +1,4 @@
+import { syncSemesters } from "../../../lib/semesterSync";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -13,6 +14,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
+  await syncSemesters([user.id]).catch(() => 0); // students follow the calendar semester unless held back
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const batchId = searchParams.batchId || batches[0]?.id || "";
   const students = batchId ? await prisma.student.findMany({ where: { batchId }, orderBy: { rollNumber: "asc" } }) : [];

@@ -38,6 +38,8 @@ export function semesterOfTerm(startTerm: string, startYear: number, termName: s
 }
 
 export async function loadScheme(studentId: string) {
+  const pre = await prisma.student.findUnique({ where: { id: studentId }, select: { batch: { select: { coordinatorId: true } } } });
+  if (pre?.batch) await import("./semesterSync").then((m) => m.syncSemesters([pre.batch!.coordinatorId])).catch(() => 0); // semester follows the calendar
   const student = await prisma.student.findUnique({ where: { id: studentId }, include: { batch: true } });
   if (!student?.batch) return null;
   const batch = student.batch;

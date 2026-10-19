@@ -38,11 +38,21 @@ export async function POST(req: NextRequest) {
   const heldBackSet = new Set(heldBackIds);
   const toAdvance = students.filter((s) => !heldBackSet.has(s.id));
 
-  if (toAdvance.length > 0) {
+  // Never past the batch's calendar semester (the term change already moves students there on its own).
+  const ct = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
+  const { computeCurrentSemesterNumber } = await import("../../../../../lib/termLogic");
+  const cap = ct ? computeCurrentSemesterNumber(batch, ct) : Infinity;
+  const movable = toAdvance.filter((s) => s.currentSemesterNumber < cap);
+  if (movable.length > 0) {
     await prisma.$transaction(
-      toAdvance.map((s) => prisma.student.update({ where: { id: s.id }, data: { currentSemesterNumber: { increment: 1 } } }))
+      movable.map((s) => prisma.student.update({ where: { id: s.id }, data: { currentSemesterNumber: { increment: 1 } } }))
     );
   }
+
+  // Held back is remembered, so the automatic calendar sync keeps them behind (one more semester each time).
+  const { holdBacks, setHoldBack } = await import("../../../../../lib/semesterSync");
+  const prior = await holdBacks(Array.from(heldBackSet));
+  for (const id of Array.from(heldBackSet)) if (students.some((s) => s.id === id)) await setHoldBack(id, (prior.get(id)?.lag || 0) + 1, typeof body.reason === "string" ? body.reason.slice(0, 300) : null, user.id).catch(() => {});
 
   await writeAuditLog({
     actorUserId: user.id, action: "STUDENTS_SEMESTER_ADVANCED", entityType: "Batch", entityId: batch.id,

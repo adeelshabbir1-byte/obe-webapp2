@@ -8,6 +8,7 @@ import Shell from "../../../../components/Shell";
 import AdvisorStudentPlanner from "../../../../components/AdvisorStudentPlanner";
 import { computeCgpa, standingFromCgpa } from "../../../../lib/academicStanding";
 import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
+import { syncSemesters, holdBacks } from "../../../../lib/semesterSync";
 import AdvisorCourseStatus from "../../../../components/AdvisorCourseStatus";
 import { liveCourseStatus, plannedVsActual } from "../../../../lib/studentCourseStatus";
 import { ActionButton } from "../../../../components/fyp/FypClient";
@@ -26,6 +27,9 @@ export default async function AdvisorStudentPage({ params }: { params: { student
     include: { batch: true, enrollments: { where: { course: { isOffered: true } }, include: { course: { select: { code: true, title: true, creditHours: true } } } } },
   });
   if (!s || s.batch?.advisorId !== user.id) notFound();
+  // The student's semester follows the calendar (unless held back) — bring it up to date before showing anything.
+  if (s.batch && (await syncSemesters([s.batch.coordinatorId])) > 0) s.currentSemesterNumber = (await prisma.student.findUnique({ where: { id: s.id }, select: { currentSemesterNumber: true } }))?.currentSemesterNumber ?? s.currentSemesterNumber;
+  const held = (await holdBacks([s.id])).get(s.id);
   const cgpa = await computeCgpa(s.id);
   const [label, tone] = STANDING[standingFromCgpa(cgpa)] || ["—", "badge-neutral"];
   const ct = s.batch ? await prisma.currentTerm.findUnique({ where: { coordinatorId: s.batch.coordinatorId } }) : null;
@@ -54,8 +58,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
       </div>
       {expected !== null && expected > 0 && expected !== s.currentSemesterNumber && (
         <div className="err" style={{ background: "#FFF8EC", color: "#7A5208" }}>
-          The student&apos;s record says <b>semester {s.currentSemesterNumber}</b>, but by the calendar ({ct!.termName} {ct!.year}) this batch is in <b>semester {expected}</b>.
-          {s.currentSemesterNumber < expected ? " If the student is not held back, the Program Lead should advance the batch (Students → Advance semester); the degree plan below uses the recorded semester." : ""}
+          The student is in <b>semester {s.currentSemesterNumber}</b>; by the calendar ({ct!.termName} {ct!.year}) the batch is in <b>semester {expected}</b>{held ? <> — held back by the Program Lead{held.reason ? ` (${held.reason})` : ""}.</> : "."}
         </div>
       )}
       <AdvisorCourseStatus courses={live} history={history} />

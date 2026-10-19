@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
-import { termIndex, computeCurrentSemesterNumber } from "../../../../lib/termLogic";
+import { syncSemesters } from "../../../../lib/semesterSync";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -47,25 +47,9 @@ export async function PUT(req: NextRequest) {
 
   if (body.mode !== "rewrite") await prisma.course.updateMany({ where: { coordinatorId: user.id, isOffered: true, offeredTermName: null }, data: { offeredTermName: current.termName, offeredTermYear: current.year } });
 
-  // Moving to a later term moves every student of this program's batches on by the same number of semesters, so a
-  // student's "current semester" never stays behind the calendar (it used to stay at 1 until someone pressed
-  // "Advance semester"). A student held back keeps their gap; nobody is moved past their batch's own semester.
-  let studentsAdvanced = 0;
-  if (body.mode !== "rewrite" && previous && body.termName !== "Summer" && previous.termName !== "Summer") {
-    const delta = termIndex(current.termName, current.year) - termIndex(previous.termName, previous.year);
-    if (delta > 0) {
-      const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, select: { id: true, startTerm: true, startYear: true } });
-      for (const b of batches) {
-        const expected = computeCurrentSemesterNumber(b, current);
-        if (expected < 1) continue;
-        const students = await prisma.student.findMany({ where: { batchId: b.id, currentSemesterNumber: { lt: expected } }, select: { id: true, currentSemesterNumber: true } });
-        for (const st of students) {
-          await prisma.student.update({ where: { id: st.id }, data: { currentSemesterNumber: Math.min(expected, st.currentSemesterNumber + delta) } });
-          studentsAdvanced++;
-        }
-      }
-    }
-  }
+  // Students follow the calendar: everyone is moved to their batch's semester for the new term, except the gap of a
+  // student the Program Lead held back (see lib/semesterSync.ts).
+  const studentsAdvanced = body.mode !== "rewrite" ? await syncSemesters([user.id]) : 0;
 
   await writeAuditLog({
     actorUserId: user.id, action: body.mode === "rewrite" ? "CURRENT_TERM_REWRITTEN" : "CURRENT_TERM_SET",

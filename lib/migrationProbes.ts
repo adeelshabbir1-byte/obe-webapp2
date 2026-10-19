@@ -720,6 +720,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "planTerm"
 },
 {
+"f": "migration_semester_sync.sql",
+"d": "Students held back by the Program Lead: how many semesters behind their batch's calendar semester they stay.",
+"t": "StudentHoldBack"
+},
+{
 "f": "migration_short_leave.sql",
 "d": "Short leave (a few days) and how each class in it is covered: substitute teacher, make-up class, or cancelled.",
 "t": "SubstituteClass"

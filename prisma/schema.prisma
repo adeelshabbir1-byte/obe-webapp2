@@ -5524,3 +5524,13 @@ model IndustryExpert {
 
   @@index([alumniId])
 }
+
+// A student the Program Lead held back stays `lag` semesters behind the batch's calendar semester (lib/semesterSync.ts).
+model StudentHoldBack {
+  id        String   @id
+  studentId String   @unique
+  lag       Int      @default(1)
+  reason    String?
+  setById   String?
+  updatedAt DateTime @default(now())
+}
