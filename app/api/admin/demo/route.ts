@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { setupDemo, coursesStep, activityStep, finishDemo, deletePass, demoSummary } from "../../../../lib/demoInstitute";
+import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity } from "../../../../lib/demoCampus";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,6 +24,13 @@ export async function POST(req: Request) {
       if (b.step === "activity") return NextResponse.json({ done: await activityStep(String(b.demoBatchId), Number(b.semester)) });
       const teachers = await prisma.user.findMany({ where: { managedById: batch.coordinatorId, role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] as never } }, orderBy: { username: "asc" }, select: { id: true } });
       return NextResponse.json({ done: await coursesStep(String(b.demoBatchId), String(b.sourceBatchId), Number(b.semester), teachers.map((t) => t.id)) });
+    }
+    if (b.step === "business") return NextResponse.json({ batch: await addBusinessSchool() });
+    if (b.step === "finishBatch") { await finishDemo([String(b.demoBatchId)]); return NextResponse.json({ ok: true }); }
+    if (b.step === "campus") {
+      const part = String(b.part);
+      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : null;
+      return NextResponse.json({ done, summary: part === "activity" ? await demoSummary() : undefined });
     }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }
     if (b.step === "delete") return NextResponse.json(await deletePass());

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 type Source = { id: string; name: string; batches: { id: string; label: string; degree: string; idx: number }[] };
 type Summary = { createdAt: string; batches: string[]; courses: number; students: number; marks: number; transcripts: number };
 
-const LOGINS = ["dream.head — Institute Head", "dream.omc — OMC", "dream.lead.cs / dream.lead.ai — Program Leads", "dream.assigner — Course Assigner", "dream.se — Subject Expert (also teaches)", "dream.instructor — Instructor", "Students: DRM-CS-24-001 … 030, DRM-AI-24-001 … 030"];
+const LOGINS = ["dream.head — Institute Head (Vice Chancellor)", "dream.dean — Dean", "dream.hod.cs / dream.hod.bba — HODs", "dream.omc — OMC", "dream.lead.cs / dream.lead.ai — Program Leads (NCEAC)", "dream.lead.bba — Program Lead BBA (NBEAC)", "dream.sa / dream.facilities / dream.finance / dream.librarian — Student Affairs, Facilities, Finance, Library", "dream.b1 … dream.b6 — Business School teachers", "dream.assigner — Course Assigner", "dream.se — Subject Expert (also teaches)", "dream.instructor — Instructor", "Students: DRM-CS-24-001 … 030, DRM-AI-24-001 … 030, DRM-BB-24-001 … 030"];
 
 export default function DemoInstituteRunner({ summary, sources, password }: { summary: Summary | null; sources: Source[]; password: string }) {
   const router = useRouter();
@@ -39,14 +39,38 @@ export default function DemoInstituteRunner({ summary, sources, password }: { su
       for (const b of made) for (let s = 1; s <= 8; s++) steps.push({ step: "courses", demoBatchId: b.demoBatchId, sourceBatchId: b.sourceBatchId, semester: s, label: `Courses, semester ${s}` });
       for (const b of made) for (let s = 1; s <= 5; s++) steps.push({ step: "activity", demoBatchId: b.demoBatchId, semester: s, label: s < 5 ? `Marks and results, semester ${s}` : "Semester 5 in progress" });
       steps.push({ step: "finish", label: "Outcome Flow weights and CQI notes" });
+      await runSteps(steps, false);
+      await complete();
+    } catch (e) { setErr(`${e instanceof Error ? e.message : e}. You can delete and build again.`); }
+    setBusy(false);
+  }
+
+  async function runSteps(steps: Record<string, unknown>[], keepBusy = true) {
       for (let i = 0; i < steps.length; i++) {
         setMsg(`${steps[i].label} (${i + 1}/${steps.length})`);
         await call(steps[i]);
         setPct(Math.round(((i + 1) / steps.length) * 100));
       }
-      setMsg("Done.");
-      router.refresh();
-    } catch (e) { setErr(`${e instanceof Error ? e.message : e}. You can delete and build again.`); }
+      if (keepBusy) setMsg("Done.");
+  }
+
+  /** The business school (BBA, NBEAC) and the campus / accreditation data — also adds them to a demo built earlier. */
+  async function complete() {
+    setMsg("Adding the business school (BBA, NBEAC)…");
+    const { batch } = await call({ step: "business" });
+    const steps: Record<string, unknown>[] = [];
+    for (let s = 1; s <= 8; s++) steps.push({ step: "courses", demoBatchId: batch.demoBatchId, sourceBatchId: batch.sourceBatchId, semester: s, label: `BBA courses, semester ${s}` });
+    for (let s = 1; s <= 5; s++) steps.push({ step: "activity", demoBatchId: batch.demoBatchId, semester: s, label: s < 5 ? `BBA marks and results, semester ${s}` : "BBA semester 5 in progress" });
+    steps.push({ step: "finishBatch", demoBatchId: batch.demoBatchId, label: "BBA outcome weights" });
+    for (const [part, label] of [["people", "Faculty profiles, rooms, labs, library, budget"], ["students", "Admissions, surveys, alumni, societies, evaluations, CQI"], ["accreditation", "NBEAC registers, SAR profile, NCEAC and NBEAC visits"], ["activity", "Meetings, FDP, leave, bookings, meals"]]) steps.push({ step: "campus", part, label });
+    await runSteps(steps);
+    setMsg("Done — Dream University is ready for NCEAC and NBEAC.");
+    router.refresh();
+  }
+
+  async function completeOnly() {
+    setBusy(true); setErr(""); setPct(0);
+    try { await complete(); } catch (e) { setErr(String(e instanceof Error ? e.message : e)); }
     setBusy(false);
   }
 
@@ -74,6 +98,7 @@ export default function DemoInstituteRunner({ summary, sources, password }: { su
           <b>The demo institute exists</b> <span style={{ color: "var(--slate)", fontSize: 13 }}>(built {new Date(summary.createdAt).toLocaleString()})</span>
           <div style={{ fontSize: 13, margin: "8px 0" }}>{summary.batches.join(" · ")} — {summary.courses} courses, {summary.students} students, {summary.marks.toLocaleString()} marks, {summary.transcripts.toLocaleString()} transcript lines.</div>
           <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-brass" disabled={busy} onClick={completeOnly}>Complete for NCEAC + NBEAC (add BBA and campus data)</button>
             <button className="btn" disabled={busy} onClick={() => remove(true)}>Reset (delete and build again)</button>
             <button className="btn" disabled={busy} style={{ background: "#B42318" }} onClick={() => remove(false)}>Delete</button>
           </div>

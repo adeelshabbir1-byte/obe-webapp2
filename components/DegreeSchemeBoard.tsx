@@ -171,7 +171,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const semOptions = Array.from({ length: Math.max(last + 2, data.maxSemester) - cur + 1 }, (_, i) => cur + i);
   const finish = Math.max(cur, ...data.planned.map((p) => p.plannedSemesterNumber));
   // Row colours: passed green, failed red, dropped orange, replaced grey, to study blue, being studied now amber.
-  const ROW = { pass: "rgba(46,157,91,.10)", fail: "rgba(214,69,69,.12)", drop: "rgba(224,140,30,.16)", old: "rgba(120,120,120,.08)", todo: "rgba(59,130,246,.09)", now: "rgba(224,165,38,.16)" };
+  const ROW = { pass: "#C8EBD4", fail: "#F8C9C9", drop: "#FBD9A8", old: "#E0E0E0", todo: "#CFE0FA", now: "#FFE49A" };
   const doneBg = (c: Done) => (c.superseded ? ROW.old : c.withdrawn ? ROW.drop : c.failed ? ROW.fail : ROW.pass);
   const att = (code: string) => data.attendance?.[code.trim().toUpperCase()];
   const gradeColor = (c: Done) => (c.failed ? "#B3261E" : c.lowGrade ? "#B7791F" : c.superseded ? "var(--slate)" : "var(--sage)");

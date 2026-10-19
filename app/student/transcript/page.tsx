@@ -5,6 +5,8 @@ import { standingFromCgpa } from "../../../lib/academicStanding";
 import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
 import StudentShell from "../../../components/StudentShell";
 import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
+import ThisSemester from "../../../components/ThisSemester";
+import { studentNow } from "../../../lib/studentNow";
 
 export default async function StudentTranscriptPage() {
   const student = await getAuthenticatedStudent();
@@ -13,9 +15,11 @@ export default async function StudentTranscriptPage() {
 
   const report = await computeStudentTranscriptReport(student.id);
   const standing = standingFromCgpa(report.cgpa);
+  const now = await studentNow(student.id).catch(() => []);
 
   return (
     <StudentShell studentName={student.name}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}><ThisSemester rows={now} /></div>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: 10 }}>
           <h1 style={{ fontSize: 22 }}>My Transcript</h1>

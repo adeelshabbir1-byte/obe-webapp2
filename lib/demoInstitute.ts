@@ -4,6 +4,7 @@ import { hashPassword } from "./auth";
 import { termIndex } from "./termLogic";
 import { courseFamily, suggestedWeights } from "./ploWeightMath";
 import { recomputeCourseRows } from "./lectureWeights";
+import { BBA_SCHEME, bbaPlos } from "./demoBba";
 
 // "My Dream Institute": a demo copy of a real institute for presentations. Two batches (BS CS, BS AI) in their 5th
 // semester in Fall 2026, curriculum copied from the real institute, fake people, semesters 1-4 completed with approved
@@ -142,7 +143,9 @@ function instrumentsFor(n: number) {
 export async function coursesStep(demoBatchId: string, sourceBatchId: string, semester: number, teacherIds: string[]) {
   const [db_, srcCourses, plos] = await Promise.all([
     prisma.batch.findUnique({ where: { id: demoBatchId }, select: { coordinatorId: true } }),
-    prisma.course.findMany({ where: { batchId: sourceBatchId, semesterNumber: semester }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, catalogDescription: true, ploMappings: { select: { plo: { select: { number: true } } } } } }),
+    sourceBatchId === "BUILTIN:BBA"
+      ? Promise.resolve(BBA_SCHEME.filter((x) => x[0] === semester).map(([, code, title, creditHours, courseType]) => ({ id: "", code, title, creditHours, courseType, catalogDescription: null as string | null, ploMappings: bbaPlos(code, courseType).map((number) => ({ plo: { number } })) })))
+      : prisma.course.findMany({ where: { batchId: sourceBatchId, semesterNumber: semester }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, catalogDescription: true, ploMappings: { select: { plo: { select: { number: true } } } } } }),
     prisma.pLO.findMany({ where: { batchId: demoBatchId }, select: { id: true, number: true } }),
   ]);
   if (!db_) throw new Error("Demo batch missing.");
@@ -153,7 +156,7 @@ export async function coursesStep(demoBatchId: string, sourceBatchId: string, se
     const offered = semester <= CURRENT;
     const teacher = teacherIds[(k + semester) % teacherIds.length];
     const ploNumbers = s.ploMappings.map((m) => m.plo.number).filter((n) => ploId.has(n)).sort((a, b) => a - b);
-    const plan = await planFor(s, s.title, s.courseType, ploNumbers);
+    const plan = await planFor(s.id ? s : null, s.title, s.courseType, ploNumbers);
     const course = await prisma.course.create({ data: {
       code: s.code, title: s.title, creditHours: s.creditHours, courseType: s.courseType, coordinatorId: db_.coordinatorId, batchId: demoBatchId, semesterNumber: semester,
       catalogDescription: s.catalogDescription, subjectExpertId: teacher, instructorId: offered ? teacher : null, templateStatus: "approved",
@@ -260,13 +263,14 @@ export async function activityStep(demoBatchId: string, semester: number) {
 }
 
 /** Step 4: suggested Course->PLO weights, PLO->PEO links and a few CQI notes. */
-export async function finishDemo() {
+export async function finishDemo(onlyBatchIds?: string[]) {
   const s = await demoScope();
   if (!s) return;
-  for (const b of s.batches) {
+  for (const b of s.batches.filter((x) => !onlyBatchIds || onlyBatchIds.includes(x.id))) {
     const plos = await prisma.pLO.findMany({ where: { batchId: b.id }, select: { id: true, number: true, ploMappings: { select: { course: { select: { id: true, courseType: true, creditHours: true } } } } } });
     const rows = plos.flatMap((p) => { const w = suggestedWeights(p.ploMappings.map((m) => ({ id: m.course.id, courseType: m.course.courseType, creditHours: m.course.creditHours })), p.number); return Object.entries(w).map(([courseId, weightPct]) => ({ batchId: b.id, ploId: p.id, courseId, weightPct, source: "SUGGESTED", updatedById: s.head.id })); });
     if (rows.length) await db.coursePloWeight?.createMany({ data: rows, skipDuplicates: true }).catch(() => null);
+    if (onlyBatchIds) continue; // CQI notes of an added program come with the campus data
     const weak = await prisma.course.findMany({ where: { batchId: b.id, semesterNumber: { lte: 4 } }, take: 3, orderBy: { code: "asc" }, select: { id: true, code: true } });
     await prisma.cqiRecord.createMany({ data: weak.map((c, i) => ({ chairmanId: s.head.id, authorId: b.coordinatorId, batchId: b.id, courseId: c.id, sourceType: "CLO", sourceReference: `CLO-${i + 2}`, finding: `${c.code}: fewer than 60% of students reached CLO-${i + 2} in the final exam.`, actionTaken: i === 2 ? null : "Two extra problem-solving sessions and a revision quiz added before the final.", status: i === 0 ? "closed" : i === 1 ? "in-progress" : "open", metricBefore: 48 + i * 4 })) as never });
   }
@@ -297,6 +301,14 @@ export async function deletePass() {
   const byTable = new Map<string, string[]>();
   for (const c of cols) if (c.column_name !== "id") byTable.set(c.table_name, [...(byTable.get(c.table_name) || []), c.column_name]);
   const hasId = new Set(cols.filter((c) => c.column_name === "id").map((c) => c.table_name));
+  // Rows the institute owns directly (alumni, visits, meetings, societies, buildings, FDP sessions …), so the rows that
+  // point at them go too.
+  for (const t of Array.from(hasId)) {
+    for (const col of ["chairmanId", "cycleId", "meetingId", "sessionId", "alumniId", "societyId", "labId", "mealId", "leaveId"]) {
+      if (!(byTable.get(t) || []).includes(col)) continue;
+      try { add(await prisma.$queryRawUnsafe<{ id: string }[]>(`SELECT "id" FROM "${t}" WHERE "${col}" = ANY($1::text[])`, Array.from(ids).concat(s.head.id))); } catch { /* skip */ }
+    }
+  }
   // One statement per table: rows pointing at a demo id, then the demo rows themselves. FK order is handled by repeating calls.
   const sweep = async (all: string[]) => {
     let removed = 0;
