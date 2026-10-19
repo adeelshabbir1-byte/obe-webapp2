@@ -119,27 +119,39 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEK_HOURS = DAYS.length * 12; // the availability grid: 8:00–20:00, Monday to Saturday
 const HOURS_PER_SECTION = 3;
 
-/** Students' teacher rating (1–5) per course code and teacher, from past offerings that teacher taught alone. */
+/** Students' teacher rating (1–5) per course code and teacher. When several teachers shared a course, each student's
+ * answer goes to the teacher who marked most of that student's attendance (their section's teacher). */
 async function ratings(coordinatorIds: string[]): Promise<Map<string, Map<string, { avg: number; n: number }>>> {
   const out = new Map<string, Map<string, { avg: number; n: number }>>();
   const ev = (prisma as unknown as Record<string, any>).courseEvaluation;
   const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) } }, select: { id: true, code: true, instructorId: true, sectionAssignments: { select: { instructorId: true } } } });
-  let rows: { courseId: string; answersJson: string }[] = [];
-  try { rows = await ev.findMany({ where: { kind: "TEACHER", courseId: { in: courses.map((c) => c.id).concat(["none"]) } }, select: { courseId: true, answersJson: true } }); } catch { return out; }
+  let rows: { courseId: string; studentId: string; answersJson: string }[] = [];
+  try { rows = await ev.findMany({ where: { kind: "TEACHER", courseId: { in: courses.map((c) => c.id).concat(["none"]) } }, select: { courseId: true, studentId: true, answersJson: true } }); } catch { return out; }
   if (!rows.length) return out;
+  const teachersOf = new Map(courses.map((c) => [c.id, Array.from(new Set([...c.sectionAssignments.map((a) => a.instructorId), ...(c.instructorId ? [c.instructorId] : [])]))]));
+  // Shared courses: whose section each student was in, from who marked their attendance.
+  const shared = courses.filter((c) => (teachersOf.get(c.id) || []).length > 1 && rows.some((r) => r.courseId === c.id)).map((c) => c.id);
+  const marks = shared.length ? await prisma.attendanceRecord.groupBy({ by: ["courseId", "studentId", "markedById"], where: { courseId: { in: shared } }, _count: { _all: true } }).catch(() => []) : [];
+  const sectionTeacher = new Map<string, string>(); // courseId|studentId -> teacher
+  const bestCount = new Map<string, number>();
+  for (const m of marks) {
+    if (!(teachersOf.get(m.courseId) || []).includes(m.markedById)) continue; // marked by someone who isn't one of its teachers
+    const k = `${m.courseId}|${m.studentId}`, n = m._count._all;
+    if (n > (bestCount.get(k) || 0)) { bestCount.set(k, n); sectionTeacher.set(k, m.markedById); }
+  }
+  const codeOf = new Map(courses.map((c) => [c.id, c.code]));
   const sum = new Map<string, { t: number; n: number }>();
-  for (const c of courses) {
-    const teachers = Array.from(new Set([...c.sectionAssignments.map((a) => a.instructorId), ...(c.instructorId ? [c.instructorId] : [])]));
-    if (teachers.length !== 1) continue; // several teachers: the rating can't be told apart
-    for (const r of rows.filter((x) => x.courseId === c.id)) {
-      let a: Record<string, number> = {};
-      try { a = JSON.parse(r.answersJson); } catch { continue; }
-      const v = Object.values(a).map(Number).filter((x) => x > 0 && x <= 5);
-      if (!v.length) continue;
-      const k = `${c.code}|${teachers[0]}`;
-      const cur = sum.get(k) || { t: 0, n: 0 };
-      cur.t += v.reduce((x, y) => x + y, 0) / v.length; cur.n++; sum.set(k, cur);
-    }
+  for (const r of rows) {
+    const ts = teachersOf.get(r.courseId) || [];
+    const who = ts.length === 1 ? ts[0] : sectionTeacher.get(`${r.courseId}|${r.studentId}`);
+    if (!who) continue; // shared course and no attendance for this student: can't tell whose section
+    let a: Record<string, number> = {};
+    try { a = JSON.parse(r.answersJson); } catch { continue; }
+    const v = Object.values(a).map(Number).filter((x) => x > 0 && x <= 5);
+    if (!v.length) continue;
+    const k = `${codeOf.get(r.courseId)}|${who}`;
+    const cur = sum.get(k) || { t: 0, n: 0 };
+    cur.t += v.reduce((x, y) => x + y, 0) / v.length; cur.n++; sum.set(k, cur);
   }
   for (const [k, { t, n }] of Array.from(sum.entries())) {
     if (n < 5) continue; // too few answers to count (as on the evaluation reports)

@@ -28,3 +28,40 @@ export async function evalSummary(courseIds: string[]) {
   }
   return out;
 }
+
+/** Teacher evaluations split by teacher. When several teachers taught sections of a course, each student's answer goes
+ * to the teacher who marked most of that student's attendance (the teacher of their section). */
+export async function teacherRatings(courseIds: string[]) {
+  const ids = courseIds.concat(["none"]);
+  const [rows, courses] = await Promise.all([
+    evdb.courseEvaluation.findMany({ where: { courseId: { in: ids }, kind: "TEACHER" }, select: { courseId: true, studentId: true, answersJson: true } }).catch(() => []) as Promise<{ courseId: string; studentId: string; answersJson: string }[]>,
+    prisma.course.findMany({ where: { id: { in: ids } }, select: { id: true, instructorId: true, sectionAssignments: { select: { instructorId: true } } } }),
+  ]);
+  const teachersOf = new Map(courses.map((c) => [c.id, Array.from(new Set([...c.sectionAssignments.map((a) => a.instructorId), ...(c.instructorId ? [c.instructorId] : [])]))]));
+  const shared = courses.filter((c) => (teachersOf.get(c.id) || []).length > 1).map((c) => c.id);
+  const marks = shared.length ? await prisma.attendanceRecord.groupBy({ by: ["courseId", "studentId", "markedById"], where: { courseId: { in: shared } }, _count: { _all: true } }).catch(() => []) : [];
+  const sectionTeacher = new Map<string, string>(), best = new Map<string, number>();
+  for (const m of marks) {
+    if (!(teachersOf.get(m.courseId) || []).includes(m.markedById)) continue;
+    const k = `${m.courseId}|${m.studentId}`;
+    if (m._count._all > (best.get(k) || 0)) { best.set(k, m._count._all); sectionTeacher.set(k, m.markedById); }
+  }
+  const sum = new Map<string, { t: number; n: number }>(); // courseId|teacherId (teacherId "?" = can't tell)
+  for (const r of rows) {
+    const ts = teachersOf.get(r.courseId) || [];
+    const who = ts.length === 1 ? ts[0] : sectionTeacher.get(`${r.courseId}|${r.studentId}`) || "?";
+    let a: Record<string, number> = {};
+    try { a = JSON.parse(r.answersJson); } catch { continue; }
+    const v = Object.values(a).map(Number).filter((x) => x > 0 && x <= 5);
+    if (!v.length) continue;
+    const k = `${r.courseId}|${who}`, cur = sum.get(k) || { t: 0, n: 0 };
+    cur.t += v.reduce((x, y) => x + y, 0) / v.length; cur.n++; sum.set(k, cur);
+  }
+  const out = new Map<string, { teacherId: string; n: number; overall: number | null }[]>();
+  for (const [k, { t, n }] of Array.from(sum.entries())) {
+    const [courseId, teacherId] = k.split("|");
+    if (!out.has(courseId)) out.set(courseId, []);
+    out.get(courseId)!.push({ teacherId, n, overall: n >= MIN_RESPONSES ? Math.round((10 * t) / n) / 10 : null });
+  }
+  return out;
+}
