@@ -72,7 +72,7 @@ export default function CoursePreferencesManager() {
     <div className="card">
       <h3 style={{ fontSize: 14, marginBottom: 4 }}>This semester</h3>
       <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>
-        The Course Assigner&apos;s suggested allocation keeps you within this number of sections (never above your normal load), and shows your remarks.
+        The Course Assigner&apos;s suggested allocation keeps you within this number of sections (never above your normal load), and shows your remarks. Mark the days and hours you can&apos;t teach under <a href="/faculty/my-availability">My Availability</a> — the suggestion and the timetable both respect it. Keep your designation and specialization up to date on your profile; they count too.
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
         <label style={{ fontSize: 12.5 }}>Sections I&apos;d like to teach<br />

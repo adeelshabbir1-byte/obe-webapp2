@@ -114,12 +114,77 @@ export async function experienceMap(user: MatrixUser, coordinatorIds: string[], 
 export type Proposal = { key: string; kind: "course" | "group"; rowId: string; label: string; batchLabel: string; instructorId: string; instructorName: string; sections: number; score: number; reasons: string[] };
 
 const PREF_POINTS: Record<number, number> = { 1: 40, 2: 25, 3: 10 };
+const RANK: Record<string, number> = { "professor": 5, "associate professor": 4, "assistant professor": 3, "senior lecturer": 2, "lecturer": 1 };
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEK_HOURS = DAYS.length * 12; // the availability grid: 8:00–20:00, Monday to Saturday
+const HOURS_PER_SECTION = 3;
+
+/** Students' teacher rating (1–5) per course code and teacher, from past offerings that teacher taught alone. */
+async function ratings(coordinatorIds: string[]): Promise<Map<string, Map<string, { avg: number; n: number }>>> {
+  const out = new Map<string, Map<string, { avg: number; n: number }>>();
+  const ev = (prisma as unknown as Record<string, any>).courseEvaluation;
+  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) } }, select: { id: true, code: true, instructorId: true, sectionAssignments: { select: { instructorId: true } } } });
+  let rows: { courseId: string; answersJson: string }[] = [];
+  try { rows = await ev.findMany({ where: { kind: "TEACHER", courseId: { in: courses.map((c) => c.id).concat(["none"]) } }, select: { courseId: true, answersJson: true } }); } catch { return out; }
+  if (!rows.length) return out;
+  const sum = new Map<string, { t: number; n: number }>();
+  for (const c of courses) {
+    const teachers = Array.from(new Set([...c.sectionAssignments.map((a) => a.instructorId), ...(c.instructorId ? [c.instructorId] : [])]));
+    if (teachers.length !== 1) continue; // several teachers: the rating can't be told apart
+    for (const r of rows.filter((x) => x.courseId === c.id)) {
+      let a: Record<string, number> = {};
+      try { a = JSON.parse(r.answersJson); } catch { continue; }
+      const v = Object.values(a).map(Number).filter((x) => x > 0 && x <= 5);
+      if (!v.length) continue;
+      const k = `${c.code}|${teachers[0]}`;
+      const cur = sum.get(k) || { t: 0, n: 0 };
+      cur.t += v.reduce((x, y) => x + y, 0) / v.length; cur.n++; sum.set(k, cur);
+    }
+  }
+  for (const [k, { t, n }] of Array.from(sum.entries())) {
+    if (n < 5) continue; // too few answers to count (as on the evaluation reports)
+    const [code, who] = k.split("|");
+    if (!out.has(code)) out.set(code, new Map());
+    out.get(code)!.set(who, { avg: Math.round((10 * t) / n) / 10, n });
+  }
+  return out;
+}
+
+/** Hours a week each teacher has marked unavailable (My Availability) and on which days. */
+async function unavailable(ids: string[]) {
+  const rows = await prisma.facultyUnavailability.findMany({ where: { facultyId: { in: ids.concat(["none"]) } }, select: { facultyId: true, dayOfWeek: true, startHour: true, endHour: true } }).catch(() => []);
+  const out = new Map<string, { hours: number; days: string[] }>();
+  for (const r of rows) {
+    const x = out.get(r.facultyId) || { hours: 0, days: [] };
+    x.hours += Math.max(0, r.endHour - r.startHour);
+    if (!x.days.includes(r.dayOfWeek)) x.days.push(r.dayOfWeek);
+    out.set(r.facultyId, x);
+  }
+  for (const x of Array.from(out.values())) x.days.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
+  return out;
+}
+
+const specMatch = (spec: string | null | undefined, domain: string | null | undefined, title: string) => {
+  const sp = (spec || "").toLowerCase().trim();
+  if (sp.length < 3) return false;
+  const d = (domain || "").toLowerCase().trim(), t = title.toLowerCase();
+  return (!!d && (d === sp || d.includes(sp) || sp.includes(d))) || t.includes(sp);
+};
 
 export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: boolean }) {
   const m = await loadMatrix(user);
   const ids = m.instructors.map((i) => i.id);
-  const [exp, wish] = await Promise.all([experienceMap(user, m.coordinatorIds, ids), wishes(ids)]);
+  const codes = Array.from(new Set(m.rows.flatMap((r) => r.interestCodes)));
+  const [exp, wish, rate, away, profiles, domains] = await Promise.all([
+    experienceMap(user, m.coordinatorIds, ids), wishes(ids), ratings(m.coordinatorIds), unavailable(ids),
+    prisma.facultyProfile.findMany({ where: { userId: { in: ids.concat(["none"]) } }, select: { userId: true, designation: true, specialization: true } }).catch(() => []),
+    prisma.course.findMany({ where: { coordinatorId: { in: m.coordinatorIds.concat(["none"]) }, code: { in: codes.concat(["none"]) } }, select: { code: true, masterCourse: { select: { domain: true } } } }),
+  ]);
   const now = await currentTerm(m.coordinatorIds);
+  const rankOf = new Map(profiles.map((p) => [p.userId, p.designation || ""]));
+  const specOf = (i: { id: string; specialization: string | null }) => i.specialization || profiles.find((p) => p.userId === i.id)?.specialization || "";
+  const domainOf = new Map<string, string>();
+  for (const d of domains) if (d.masterCourse?.domain && !domainOf.has(d.code)) domainOf.set(d.code, d.masterCourse.domain);
   const visiting = m.instructors.find((i) => i.isVisiting) || null;
   const pool = m.instructors.filter((i) => !i.isVisiting && !i.outOfPool);
 
@@ -127,7 +192,10 @@ export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: 
   const used = new Map<string, number>();
   const has = new Map<string, Set<string>>(); // teacher -> row ids they already teach
   if (opts.keepExisting) for (const r of m.rows) for (const [who, n] of Object.entries(r.assignments)) { used.set(who, (used.get(who) || 0) + n); if (!has.has(who)) has.set(who, new Set()); has.get(who)!.add(r.id); }
-  const cap = (i: (typeof pool)[number]) => { const w = wish.get(i.id)?.maxSections; const base = w != null ? Math.min(w, i.normalLoad) : i.normalLoad; return Math.max(0, base - i.externalLoadCount); };
+  // Room: the wished number of sections (never above the normal load), less outside load, and no more sections than
+  // their free hours a week can hold.
+  const byHours = (id: string) => Math.floor(Math.max(0, WEEK_HOURS - (away.get(id)?.hours || 0)) / HOURS_PER_SECTION);
+  const cap = (i: (typeof pool)[number]) => { const w = wish.get(i.id)?.maxSections; const base = w != null ? Math.min(w, i.normalLoad) : i.normalLoad; return Math.max(0, Math.min(base - i.externalLoadCount, byHours(i.id))); };
   const room = (i: (typeof pool)[number]) => cap(i) - (used.get(i.id) || 0);
 
   const best = (r: MatrixRow, who: string) => {
@@ -149,6 +217,19 @@ export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: 
     if (times) { s += Math.min(times, 5) * 4; reasons.push(`taught ${times}×${e?.self && e.self >= (e?.system || 0) ? " (stated)" : ""}`); }
     if (e?.prev) { s += 15; reasons.push("taught it last semester"); }
     if (e?.lastYear) { s += 20; reasons.push("taught it this term last year"); }
+    // Students' rating of this teacher on this course before (5+ answers, taught alone).
+    let rating: { avg: number; n: number } | undefined;
+    for (const code of r.interestCodes) { const x = rate.get(code)?.get(i.id); if (x && (!rating || x.avg > rating.avg)) rating = x; }
+    if (rating && (s > 0)) {
+      if (rating.avg >= 4) { s += 10; reasons.push(`students rated ${rating.avg}/5`); }
+      else if (rating.avg >= 3.5) { s += 5; reasons.push(`students rated ${rating.avg}/5`); }
+      else if (rating.avg < 3) { s -= 10; reasons.push(`students rated only ${rating.avg}/5`); }
+    }
+    // Specialization: the course's track (or title) matches the teacher's specialization.
+    if (r.interestCodes.some((code) => specMatch(specOf(i), domainOf.get(code), r.title))) { s += r.courseType === "Elective" ? 12 : 6; reasons.push(`specialization: ${specOf(i)}`); }
+    // Seniority settles close calls between teachers who want the course.
+    const rk = RANK[(rankOf.get(i.id) || "").toLowerCase().trim()] || 0;
+    if (s > 0 && pref !== undefined && rk) { s += rk; reasons.push(rankOf.get(i.id)!); }
     if (s > 0 && has.get(i.id)?.has(r.id)) { s += 8; reasons.push("already has a section"); }
     if (s > 0) s = Math.max(1, s - Math.max(0, (has.get(i.id)?.size || 0) - (has.get(i.id)?.has(r.id) ? 1 : 0)) * 2); // spread preparations, but a willing teacher stays willing
     return { s, reasons };
@@ -176,7 +257,7 @@ export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: 
     }
   }
   const proposals = Array.from(out.values()).sort((a, b) => a.label.localeCompare(b.label) || b.sections - a.sections);
-  const loads = pool.map((i) => ({ id: i.id, name: i.name, capacity: cap(i), assigned: used.get(i.id) || 0, wish: wish.get(i.id) || null })).sort((a, b) => a.name.localeCompare(b.name));
+  const loads = pool.map((i) => ({ id: i.id, name: i.name, capacity: cap(i), assigned: used.get(i.id) || 0, wish: wish.get(i.id) || null, designation: rankOf.get(i.id) || "", specialization: specOf(i), unavailable: away.get(i.id) ? `${away.get(i.id)!.hours} h/week (${away.get(i.id)!.days.join(", ")})` : "" })).sort((a, b) => a.name.localeCompare(b.name));
   const t = termOf(now);
   return { term: `${t.name} ${t.year}`, prev: `${termOf(now - 1).name} ${termOf(now - 1).year}`, lastYear: `${t.name} ${t.year - 1}`, keepExisting: opts.keepExisting, proposals, loads, unfilled: proposals.filter((p) => visiting && p.instructorId === visiting.id).reduce((a, p) => a + p.sections, 0) };
 }

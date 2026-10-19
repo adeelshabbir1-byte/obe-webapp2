@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Proposal = { key: string; kind: string; rowId: string; label: string; batchLabel: string; instructorId: string; instructorName: string; sections: number; score: number; reasons: string[] };
-type Load = { id: string; name: string; capacity: number; assigned: number; wish: { maxSections: number | null; remarks: string; updatedAt: string } | null };
+type Load = { id: string; name: string; capacity: number; assigned: number; wish: { maxSections: number | null; remarks: string; updatedAt: string } | null; designation: string; specialization: string; unavailable: string };
 type Data = { term: string; prev: string; lastYear: string; keepExisting: boolean; proposals: Proposal[]; loads: Load[]; unfilled: number };
 
 /** The suggested allocation: preferences, times taught, last semester and last year, within each teacher's load. */
@@ -39,10 +39,12 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
     <div>
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>
-          OBEHUB suggests who teaches each section from the teachers&apos; stated priorities, how many times each has taught the course (their own figure or the
-          record here, whichever is more), who taught it last semester and in the same term last year, and each teacher&apos;s load (their wished number of
-          sections, never above the normal load). Courses with the fewest willing teachers are filled first; what nobody can take goes to Visiting Faculty.
-          Nothing changes until you apply — then edit the matrix as usual.
+          OBEHUB scores each teacher for each section: stated priority (top 40, good 25, fifty-fifty 10); times taught, their own figure or the
+          record here (4 a time, up to 20); taught it last semester (+15) or this term last year (+20); students&apos; rating of them on the course
+          (4+/5: +10, 3.5+: +5, under 3: −10); specialization match (+12 on electives, +6 otherwise); seniority to settle close calls (Professor +5 …
+          Lecturer +1); and a nudge to keep a course with one teacher and spread different courses around. A teacher never goes above their wished
+          sections, their normal load less outside load, or what their free hours (My Availability) can hold. Courses with the fewest willing
+          teachers are filled first; what nobody can take goes to Visiting Faculty. Nothing changes until you apply — then edit the matrix as usual.
         </p>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <label style={{ fontSize: 13 }}><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep allocations already made (fill only the sections still open)</label>
@@ -81,13 +83,15 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
           <div className="card" style={{ overflowX: "auto" }}>
             <b style={{ fontSize: 13 }}>Teachers&apos; load after this suggestion</b>
             <table style={{ fontSize: 12.5, marginTop: 6 }}>
-              <thead><tr><th>Teacher</th><th style={{ textAlign: "center" }}>Sections</th><th style={{ textAlign: "center" }}>Room</th><th>Their wish / remarks</th></tr></thead>
+              <thead><tr><th>Teacher</th><th>Rank · specialization</th><th style={{ textAlign: "center" }}>Sections</th><th style={{ textAlign: "center" }}>Room</th><th>Unavailable</th><th>Their wish / remarks</th></tr></thead>
               <tbody>
                 {data.loads.map((l) => (
                   <tr key={l.id}>
                     <td>{l.name}</td>
+                    <td className="small-note">{[l.designation, l.specialization].filter(Boolean).join(" · ") || "—"}</td>
                     <td style={{ textAlign: "center", fontWeight: 600, color: l.assigned > l.capacity ? "#c93c3c" : l.assigned === 0 ? "var(--slate)" : undefined }}>{l.assigned} / {l.capacity}</td>
                     <td style={{ textAlign: "center" }}>{Math.max(0, l.capacity - l.assigned)}</td>
+                    <td className="small-note">{l.unavailable || "—"}</td>
                     <td className="small-note">{l.wish ? `${l.wish.maxSections != null ? `wants ${l.wish.maxSections} section(s)` : ""}${l.wish.remarks ? `${l.wish.maxSections != null ? " · " : ""}${l.wish.remarks}` : ""} (${l.wish.updatedAt})` : "—"}</td>
                   </tr>
                 ))}
