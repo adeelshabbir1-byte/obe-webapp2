@@ -50,7 +50,7 @@ export default async function CyclePage({ params }: { params: { cycleId: string 
         </div>
       </div>
       {managing && <div className="card"><VisitSettings id={c.id} title={c.title} visitDate={day(c.visitDate)} status={c.status} /></div>}
-      {body === "NCEAC" && <ProcessTracker cycleId={c.id} canEdit={managing || c.leadId === user.id} />}
+      {["NCEAC", "PEC", "NBEAC"].includes(body) && <ProcessTracker cycleId={c.id} canEdit={managing || c.leadId === user.id} />}
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table style={{ fontSize: 12.5 }}>
