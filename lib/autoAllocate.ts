@@ -1,0 +1,219 @@
+import { randomUUID } from "crypto";
+import { prisma } from "./db";
+import { termIndex } from "./termLogic";
+import { loadMatrix, type MatrixRow, type MatrixUser } from "./assignerMatrix";
+import { isHeadFaculty } from "./departments";
+import { writeAuditLog } from "./audit";
+
+// Suggested course allocation for the Course Assigner. For every offered course (or combined class) and every section
+// still to be given, it weighs each teacher on:
+//   • their stated priority for the course (1 top, 2 good, 3 fifty-fifty)
+//   • how many times they have taught it — what they told us, or what OBEHUB has on record, whichever is more
+//   • whether they taught it last semester, and in the same term last year (continuity)
+//   • fewer different preparations: a teacher who already has a section of the course is preferred for the next one
+// and fills courses in order of how few willing teachers they have, never past a teacher's load (their wished number of
+// sections this semester if they gave one, else their normal load, less outside load). Sections nobody can take go to
+// "Visiting Faculty (to be decided)". The assigner reviews the suggestion, applies what they like and edits the matrix.
+
+const xdb = prisma as unknown as Record<string, any>;
+export const ALLOC_HINT = "Times-taught and load wishes need prisma/migration_allocation.sql — run it in Supabase.";
+
+export type Wish = { maxSections: number | null; remarks: string; updatedAt: string };
+export type Exp = { self: number | null; system: number; prev: boolean; lastYear: boolean };
+
+const termOf = (i: number) => (i % 2 === 0 ? { name: "Fall", year: i / 2 } : { name: "Spring", year: (i + 1) / 2 });
+const codeOfLabel = (label: string) => label.split(" — ")[0].trim();
+
+/* ---------------- Faculty inputs ---------------- */
+
+export async function selfExperience(facultyIds: string[]): Promise<Map<string, Map<string, number>>> {
+  const out = new Map<string, Map<string, number>>();
+  try {
+    const rows = (await xdb.facultyCourseExperience.findMany({ where: { facultyId: { in: facultyIds.concat(["none"]) } } })) as { facultyId: string; courseCode: string; timesTaught: number }[];
+    for (const r of rows) { if (!out.has(r.facultyId)) out.set(r.facultyId, new Map()); out.get(r.facultyId)!.set(r.courseCode, r.timesTaught); }
+  } catch { /* not migrated */ }
+  return out;
+}
+
+export async function wishes(facultyIds: string[]): Promise<Map<string, Wish>> {
+  try {
+    const rows = (await xdb.facultyAllocationWish.findMany({ where: { facultyId: { in: facultyIds.concat(["none"]) } } })) as { facultyId: string; maxSections: number | null; remarks: string | null; updatedAt: Date }[];
+    return new Map(rows.map((r) => [r.facultyId, { maxSections: r.maxSections, remarks: r.remarks || "", updatedAt: new Date(r.updatedAt).toISOString().slice(0, 10) }]));
+  } catch { return new Map(); }
+}
+
+export async function saveTimesTaught(facultyId: string, courseCode: string, n: number | null) {
+  if (n === null) { await xdb.facultyCourseExperience.deleteMany({ where: { facultyId, courseCode } }); return; }
+  await xdb.facultyCourseExperience.upsert({
+    where: { facultyId_courseCode: { facultyId, courseCode } },
+    create: { id: randomUUID(), facultyId, courseCode, timesTaught: n, updatedAt: new Date() },
+    update: { timesTaught: n, updatedAt: new Date() },
+  });
+}
+
+export async function saveWish(facultyId: string, maxSections: number | null, remarks: string) {
+  await xdb.facultyAllocationWish.upsert({
+    where: { facultyId },
+    create: { id: randomUUID(), facultyId, maxSections, remarks: remarks || null, updatedAt: new Date() },
+    update: { maxSections, remarks: remarks || null, updatedAt: new Date() },
+  });
+}
+
+/* ---------------- Teaching history ---------------- */
+
+/** The term now being allocated: the one most offered courses are stamped with. */
+async function currentTerm(coordinatorIds: string[]) {
+  const offered = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) }, isOffered: true, offeredTermName: { in: ["Fall", "Spring"] } }, select: { offeredTermName: true, offeredTermYear: true } });
+  const count = new Map<number, number>();
+  for (const c of offered) if (c.offeredTermName && c.offeredTermYear) { const i = termIndex(c.offeredTermName, c.offeredTermYear); count.set(i, (count.get(i) || 0) + 1); }
+  const best = Array.from(count.entries()).sort((a, b) => b[1] - a[1])[0];
+  if (best) return best[0];
+  const now = new Date();
+  return now.getMonth() >= 7 ? termIndex("Fall", now.getFullYear()) : termIndex("Spring", now.getFullYear());
+}
+
+/** Who taught which course code in which past term: snapshots of earlier offerings plus courses still carrying their last term. */
+async function history(coordinatorIds: string[], people: { id: string; name: string }[], now: number) {
+  const ids = coordinatorIds.concat(["none"]);
+  const idByName = new Map(people.map((p) => [p.name.trim().toLowerCase(), p.id]));
+  const seen = new Set<string>();
+  const recs: { code: string; who: string; term: number }[] = [];
+  const add = (code: string, who: string | undefined, term: number) => { if (!who || term >= now) return; const k = `${code}|${who}|${term}`; if (!seen.has(k)) { seen.add(k); recs.push({ code, who, term }); } };
+  const [snaps, past] = await Promise.all([
+    prisma.assignmentSnapshot.findMany({ where: { coordinatorId: { in: ids }, termName: { in: ["Fall", "Spring"] } }, select: { courseLabel: true, termName: true, termYear: true, instructorName: true } }),
+    prisma.course.findMany({ where: { coordinatorId: { in: ids }, offeredTermName: { in: ["Fall", "Spring"] }, offeredTermYear: { not: null } }, select: { code: true, offeredTermName: true, offeredTermYear: true, instructorId: true, sectionAssignments: { select: { instructorId: true } } } }),
+  ]);
+  for (const s of snaps) add(codeOfLabel(s.courseLabel), idByName.get(s.instructorName.trim().toLowerCase()), termIndex(s.termName, s.termYear));
+  for (const c of past) {
+    const t = termIndex(c.offeredTermName!, c.offeredTermYear!);
+    for (const a of c.sectionAssignments) add(c.code, a.instructorId, t);
+    if (c.instructorId) add(c.code, c.instructorId, t);
+  }
+  return recs;
+}
+
+/** Per course code and teacher: times taught (stated / on record) and whether last semester or the same term last year. */
+export async function experienceMap(user: MatrixUser, coordinatorIds: string[], instructorIds: string[]): Promise<Record<string, Record<string, Exp>>> {
+  const people = await prisma.user.findMany({ where: { id: { in: instructorIds.concat(["none"]) } }, select: { id: true, name: true } });
+  const now = await currentTerm(coordinatorIds);
+  const [recs, self] = await Promise.all([history(coordinatorIds, people, now), selfExperience(instructorIds)]);
+  const out: Record<string, Record<string, Exp>> = {};
+  const get = (code: string, who: string) => ((out[code] ||= {})[who] ||= { self: null, system: 0, prev: false, lastYear: false });
+  for (const r of recs) {
+    const e = get(r.code, r.who);
+    e.system++;
+    if (r.term === now - 1) e.prev = true;
+    if (r.term === now - 2) e.lastYear = true;
+  }
+  for (const [who, m] of Array.from(self.entries())) for (const [code, n] of Array.from(m.entries())) get(code, who).self = n;
+  return out;
+}
+
+/* ---------------- The suggestion ---------------- */
+
+export type Proposal = { key: string; kind: "course" | "group"; rowId: string; label: string; batchLabel: string; instructorId: string; instructorName: string; sections: number; score: number; reasons: string[] };
+
+const PREF_POINTS: Record<number, number> = { 1: 40, 2: 25, 3: 10 };
+
+export async function suggestAllocation(user: MatrixUser, opts: { keepExisting: boolean }) {
+  const m = await loadMatrix(user);
+  const ids = m.instructors.map((i) => i.id);
+  const [exp, wish] = await Promise.all([experienceMap(user, m.coordinatorIds, ids), wishes(ids)]);
+  const now = await currentTerm(m.coordinatorIds);
+  const visiting = m.instructors.find((i) => i.isVisiting) || null;
+  const pool = m.instructors.filter((i) => !i.isVisiting && !i.outOfPool);
+
+  // Load already taken (kept allocations) and the room left.
+  const used = new Map<string, number>();
+  const has = new Map<string, Set<string>>(); // teacher -> row ids they already teach
+  if (opts.keepExisting) for (const r of m.rows) for (const [who, n] of Object.entries(r.assignments)) { used.set(who, (used.get(who) || 0) + n); if (!has.has(who)) has.set(who, new Set()); has.get(who)!.add(r.id); }
+  const cap = (i: (typeof pool)[number]) => { const w = wish.get(i.id)?.maxSections; const base = w != null ? Math.min(w, i.normalLoad) : i.normalLoad; return Math.max(0, base - i.externalLoadCount); };
+  const room = (i: (typeof pool)[number]) => cap(i) - (used.get(i.id) || 0);
+
+  const best = (r: MatrixRow, who: string) => {
+    let pref: number | undefined, e: Exp | undefined;
+    for (const code of r.interestCodes) {
+      const p = m.priorities[code]?.[who];
+      if (p !== undefined && (pref === undefined || p < pref)) pref = p;
+      const x = exp[code]?.[who];
+      if (x) e = !e ? { ...x } : { self: Math.max(e.self || 0, x.self || 0) || null, system: e.system + x.system, prev: e.prev || x.prev, lastYear: e.lastYear || x.lastYear };
+    }
+    return { pref, e };
+  };
+  const score = (r: MatrixRow, i: (typeof pool)[number]) => {
+    const { pref, e } = best(r, i.id);
+    const times = Math.max(e?.self || 0, e?.system || 0);
+    const reasons: string[] = [];
+    let s = 0;
+    if (pref !== undefined) { s += PREF_POINTS[pref] || 0; reasons.push(pref === 1 ? "top priority" : pref === 2 ? "priority 2 (good)" : "priority 3 (fifty-fifty)"); }
+    if (times) { s += Math.min(times, 5) * 4; reasons.push(`taught ${times}×${e?.self && e.self >= (e?.system || 0) ? " (stated)" : ""}`); }
+    if (e?.prev) { s += 15; reasons.push("taught it last semester"); }
+    if (e?.lastYear) { s += 20; reasons.push("taught it this term last year"); }
+    if (s > 0 && has.get(i.id)?.has(r.id)) { s += 8; reasons.push("already has a section"); }
+    if (s > 0) s = Math.max(1, s - Math.max(0, (has.get(i.id)?.size || 0) - (has.get(i.id)?.has(r.id) ? 1 : 0)) * 2); // spread preparations, but a willing teacher stays willing
+    return { s, reasons };
+  };
+
+  const need = m.rows.map((r) => ({ r, left: Math.max(0, r.sectionsNeeded - (opts.keepExisting ? Object.values(r.assignments).reduce((a, b) => a + b, 0) : 0)) })).filter((x) => x.left > 0);
+  const willing = (r: MatrixRow) => pool.filter((i) => score(r, i).s > 0).length;
+  need.sort((a, b) => willing(a.r) - willing(b.r) || b.left - a.left);
+
+  const out = new Map<string, Proposal>();
+  const give = (r: MatrixRow, who: { id: string; name: string }, sc: number, reasons: string[]) => {
+    const key = `${r.kind}:${r.id}:${who.id}`;
+    const p = out.get(key) || { key, kind: r.kind, rowId: r.id, label: r.label, batchLabel: r.batchLabel, instructorId: who.id, instructorName: who.name, sections: 0, score: sc, reasons };
+    p.sections++; out.set(key, p);
+    used.set(who.id, (used.get(who.id) || 0) + 1);
+    if (!has.has(who.id)) has.set(who.id, new Set());
+    has.get(who.id)!.add(r.id);
+  };
+  for (const { r, left } of need) {
+    for (let k = 0; k < left; k++) {
+      const ranked = pool.filter((i) => room(i) > 0).map((i) => ({ i, ...score(r, i) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || room(b.i) - room(a.i));
+      const pick = ranked[0];
+      if (pick) give(r, pick.i, pick.s, pick.reasons);
+      else if (visiting) give(r, visiting, 0, ["no willing teacher with room left"]);
+    }
+  }
+  const proposals = Array.from(out.values()).sort((a, b) => a.label.localeCompare(b.label) || b.sections - a.sections);
+  const loads = pool.map((i) => ({ id: i.id, name: i.name, capacity: cap(i), assigned: used.get(i.id) || 0, wish: wish.get(i.id) || null })).sort((a, b) => a.name.localeCompare(b.name));
+  const t = termOf(now);
+  return { term: `${t.name} ${t.year}`, prev: `${termOf(now - 1).name} ${termOf(now - 1).year}`, lastYear: `${t.name} ${t.year - 1}`, keepExisting: opts.keepExisting, proposals, loads, unfilled: proposals.filter((p) => visiting && p.instructorId === visiting.id).reduce((a, p) => a + p.sections, 0) };
+}
+
+/** Apply the chosen suggestions: section counts added to (or, with keepExisting off, replacing) the matrix. */
+export async function applyAllocation(user: MatrixUser & { name?: string }, keys: string[], keepExisting: boolean) {
+  const s = await suggestAllocation(user, { keepExisting });
+  const chosen = s.proposals.filter((p) => keys.includes(p.key));
+  const chairmanId = user.managedById || "";
+  if (!keepExisting) {
+    // Start the chosen rows over: clear their current section counts first.
+    const rows = Array.from(new Set(chosen.map((p) => `${p.kind}:${p.rowId}`)));
+    for (const k of rows) {
+      const [kind, id] = k.split(":");
+      if (kind === "course") await prisma.courseSectionAssignment.deleteMany({ where: { courseId: id } });
+      else await prisma.groupSectionAssignment.deleteMany({ where: { groupId: id } });
+    }
+  }
+  let n = 0;
+  for (const p of chosen) {
+    const inst = await prisma.user.findUnique({ where: { id: p.instructorId } });
+    if (!inst) continue;
+    if (p.kind === "course") {
+      const course = await prisma.course.findUnique({ where: { id: p.rowId }, include: { coordinator: true } });
+      const ok = course && course.coordinator.managedById === chairmanId && (!user.departmentId || course.coordinator.departmentId === user.departmentId)
+        && ((inst.isVisitingPlaceholder && inst.managedById === chairmanId) || isHeadFaculty(inst, chairmanId) || inst.managedById === course.coordinatorId);
+      if (!ok) continue;
+      const cur = await prisma.courseSectionAssignment.findUnique({ where: { courseId_instructorId: { courseId: p.rowId, instructorId: p.instructorId } } });
+      await prisma.courseSectionAssignment.upsert({ where: { courseId_instructorId: { courseId: p.rowId, instructorId: p.instructorId } }, create: { courseId: p.rowId, instructorId: p.instructorId, sectionCount: p.sections }, update: { sectionCount: (cur?.sectionCount || 0) + p.sections } });
+    } else {
+      const g = await prisma.courseEquivalenceGroup.findUnique({ where: { id: p.rowId } });
+      if (!g || g.chairmanId !== chairmanId) continue;
+      const cur = await prisma.groupSectionAssignment.findUnique({ where: { groupId_instructorId: { groupId: p.rowId, instructorId: p.instructorId } } });
+      await prisma.groupSectionAssignment.upsert({ where: { groupId_instructorId: { groupId: p.rowId, instructorId: p.instructorId } }, create: { groupId: p.rowId, instructorId: p.instructorId, sectionCount: p.sections }, update: { sectionCount: (cur?.sectionCount || 0) + p.sections } });
+    }
+    n++;
+  }
+  await writeAuditLog({ actorUserId: user.id, action: "AUTO_ALLOCATION_APPLIED", entityType: "User", entityId: user.id, metadata: { applied: n, keepExisting } });
+  return n;
+}

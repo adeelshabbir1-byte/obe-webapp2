@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { ALLOC_HINT, saveTimesTaught, saveWish, selfExperience, wishes } from "../../../../lib/autoAllocate";
 
 const ALLOWED_ROLES = ["INSTRUCTOR", "SUBJECT_EXPERT"];
 const DEFAULT_SPECIALIZATION = "Computer Science";
@@ -33,6 +34,8 @@ export async function GET() {
 
   const preferences = await prisma.facultyCoursePreference.findMany({ where: { facultyId: user.id } });
   const priorityByCode = new Map(preferences.map((p) => [p.courseCode, p.priority]));
+  const [self, wish] = await Promise.all([selfExperience([user.id]), wishes([user.id])]);
+  const timesByCode = self.get(user.id) || new Map<string, number>();
 
   // Courses in the faculty member's own specialization surface first —
   // defaulting to Computer Science when none is set on their account,
@@ -47,7 +50,8 @@ export async function GET() {
 
   return NextResponse.json({
     mySpecialization,
-    courses: courses.map((c) => ({ code: c.code, title: c.title, courseType: c.courseType, domain: c.domain, priority: priorityByCode.get(c.code) || null })),
+    wish: wish.get(user.id) || null,
+    courses: courses.map((c) => ({ code: c.code, title: c.title, courseType: c.courseType, domain: c.domain, priority: priorityByCode.get(c.code) || null, timesTaught: timesByCode.has(c.code) ? timesByCode.get(c.code)! : null })),
   });
 }
 
@@ -56,6 +60,21 @@ export async function PUT(req: NextRequest) {
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
+  // This semester's wish: how many sections, and anything the Course Assigner should know.
+  if (body.wish) {
+    const max = body.wish.maxSections === "" || body.wish.maxSections == null ? null : parseInt(body.wish.maxSections, 10);
+    if (max !== null && (!Number.isFinite(max) || max < 0 || max > 20)) return NextResponse.json({ error: "Number of sections must be 0–20." }, { status: 400 });
+    try { await saveWish(user.id, max, String(body.wish.remarks || "").slice(0, 1000)); } catch { return NextResponse.json({ error: ALLOC_HINT }, { status: 500 }); }
+    return NextResponse.json({ ok: true });
+  }
+  // How many times they have taught a course before.
+  if ("timesTaught" in body) {
+    if (!body.courseCode) return NextResponse.json({ error: "courseCode is required" }, { status: 400 });
+    const n = body.timesTaught === "" || body.timesTaught == null ? null : parseInt(body.timesTaught, 10);
+    if (n !== null && (!Number.isFinite(n) || n < 0 || n > 99)) return NextResponse.json({ error: "Times taught must be 0–99." }, { status: 400 });
+    try { await saveTimesTaught(user.id, String(body.courseCode), n); } catch { return NextResponse.json({ error: ALLOC_HINT }, { status: 500 }); }
+    return NextResponse.json({ ok: true });
+  }
   const { courseCode, priority } = body;
   if (!courseCode) return NextResponse.json({ error: "courseCode is required" }, { status: 400 });
 

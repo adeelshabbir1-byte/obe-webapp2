@@ -45,6 +45,7 @@ export default function AssignmentMatrix() {
   const [rows, setRows] = useState<Row[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [priorities, setPriorities] = useState<Record<string, Record<string, number>>>({});
+  const [experience, setExperience] = useState<Record<string, Record<string, { self: number | null; system: number; prev: boolean; lastYear: boolean }>>>({});
   const [shortNames, setShortNames] = useState<Record<string, string>>({});
   const [uncoveredCodes, setUncoveredCodes] = useState<string[]>([]);
   const [strongCodes, setStrongCodes] = useState<string[]>([]);
@@ -85,7 +86,7 @@ export default function AssignmentMatrix() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
       setRows(data.rows); setInstructors(data.instructors);
-      setPriorities(data.priorities || {}); setUncoveredCodes(data.uncoveredCodes || []); setStrongCodes(data.strongCodes || []);
+      setPriorities(data.priorities || {}); setExperience(data.experience || {}); setUncoveredCodes(data.uncoveredCodes || []); setStrongCodes(data.strongCodes || []);
       setShortNames(data.shortNames || {});
       setLoaded(true);
     } catch (err: any) { setError("Unexpected error: " + err.message); }
@@ -464,6 +465,7 @@ export default function AssignmentMatrix() {
                           avail.label,
                           priority ? `${i.name} rated this ${PRIORITY_LABELS[priority]}` : undefined,
                           matches ? `${i.name}'s specialization matches this elective` : undefined,
+                          (() => { const e = r.interestCodes.map((c) => experience[c]?.[i.id]).filter(Boolean)[0]; if (!e) return undefined; const n = Math.max(e.self || 0, e.system); return [n ? `taught ${n}×` : "", e.prev ? "taught it last semester" : "", e.lastYear ? "taught it this term last year" : ""].filter(Boolean).join(", ") || undefined; })(),
                           needsAllocation ? "This course still needs allocation" : undefined,
                         ].filter(Boolean).join(" · ");
                         return (

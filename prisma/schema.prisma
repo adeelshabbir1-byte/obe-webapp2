@@ -5247,3 +5247,23 @@ model GaCouncilMap {
   @@unique([ploId, body])
   @@index([batchId, body])
 }
+
+// How many times a teacher says they have taught a course before (here or elsewhere) — lib/autoAllocate.ts.
+model FacultyCourseExperience {
+  id          String   @id
+  facultyId   String
+  courseCode  String
+  timesTaught Int      @default(0)
+  updatedAt   DateTime @default(now())
+
+  @@unique([facultyId, courseCode])
+}
+
+// A teacher's wish for the coming semester: how many sections, and remarks for the Course Assigner.
+model FacultyAllocationWish {
+  id          String   @id
+  facultyId   String   @unique
+  maxSections Int?
+  remarks     String?  @db.Text
+  updatedAt   DateTime @default(now())
+}

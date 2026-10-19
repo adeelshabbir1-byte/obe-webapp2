@@ -22,6 +22,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ReadinessSnapshot"
 },
 {
+"f": "migration_allocation.sql",
+"d": "============================================================================",
+"t": "FacultyAllocationWish"
+},
+{
 "f": "migration_alumni_additional_degrees.sql",
 "d": "Run in Supabase SQL Editor. Adds AlumniAdditionalDegree \u2014 further",
 "t": "AlumniAdditionalDegree"
