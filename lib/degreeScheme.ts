@@ -65,7 +65,7 @@ export async function loadScheme(studentId: string) {
     return {
       courseCode: r.courseCode, courseTitle: r.courseTitle, creditHours: r.creditHours, termName: r.termName, termYear: r.termYear, grade: r.grade, gpaPoints: r.gpaPoints,
       semesterNumber: semesterOfTerm(batch.startTerm, batch.startYear, r.termName, r.termYear),
-      failed: r.gpaPoints === 0 && r.grade !== "P", lowGrade: low, superseded: b !== r,
+      failed: r.gpaPoints === 0 && r.grade !== "P", lowGrade: low, superseded: b !== r, withdrawn: /^W/i.test(r.grade || ""),
       courseId: course?.id || null, retakePlanned: !!(course && plan.has(course.id) && passed(b)),
     };
   });
@@ -105,6 +105,24 @@ export async function loadScheme(studentId: string) {
   }
   const terms: Record<number, string> = {};
   for (let n = 1; n <= Math.max(programSemesters + 6, 16); n++) terms[n] = termLabel(baseTerm + n - 1);
+  // Attendance so far in the courses the student is taking now (keyed by course code).
+  const attendance: Record<string, { pct: number | null; attended: number; held: number; canMiss: number | null; standing: string; minPct: number }> = {};
+  {
+    const { attendancePolicy, tally, standing } = await import("./attendance");
+    const pol = await attendancePolicy(chairmanId);
+    const now = await prisma.studentEnrollment.findMany({ where: { studentId, status: { not: "WITHDRAWN" }, course: { isOffered: true } }, select: { course: { select: { id: true, code: true } } } });
+    for (const { course } of now) {
+      const [recs, plannedRows, heldRows] = await Promise.all([
+        prisma.attendanceRecord.findMany({ where: { courseId: course.id, studentId }, select: { status: true } }),
+        prisma.lectureRow.count({ where: { courseId: course.id, source: "INSTRUCTOR" } }),
+        prisma.lectureRow.count({ where: { courseId: course.id, source: "INSTRUCTOR", actualDate: { not: null } } }),
+      ]);
+      const t = tally(recs.map((r) => r.status));
+      const held = Math.max(heldRows, t.marked);
+      const st = standing(t, pol, Math.max(0, plannedRows - held));
+      attendance[key(course.code)] = { pct: st.pct, attended: t.present + (pol.lateCountsPresent ? t.late : 0), held: t.marked, canMiss: st.canMiss, standing: st.standing, minPct: pol.minPct };
+    }
+  }
   const lock = await planLock(studentId);
   const locker = lock ? await prisma.user.findUnique({ where: { id: lock.lockedById }, select: { name: true } }) : null;
   const ctx = await studentContext(studentId);
@@ -116,7 +134,7 @@ export async function loadScheme(studentId: string) {
     programSemesters, maxSemester: Math.max(programSemesters + 4, ...planned.map((p) => p.plannedSemesterNumber), ...completed.map((c) => c.semesterNumber)),
     minCredits: lead?.minCreditsPerSemester ?? 12, maxCredits: lead?.maxCreditsPerSemester ?? 18,
     gradingScale: scale.map((g) => ({ letter: g.letter, gpaValue: g.gpaValue })), completed, planned,
-    baseTerm, terms, offerings,
+    baseTerm, terms, offerings, attendance,
   };
 }
 

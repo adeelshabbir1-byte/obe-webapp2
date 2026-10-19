@@ -4,6 +4,7 @@ import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptRe
 import { standingFromCgpa } from "../../../lib/academicStanding";
 import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
 import StudentShell from "../../../components/StudentShell";
+import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
 
 export default async function StudentTranscriptPage() {
   const student = await getAuthenticatedStudent();
@@ -41,7 +42,10 @@ export default async function StudentTranscriptPage() {
           courseRows={report.courseRows} cgpa={report.cgpa} totalCredits={report.totalCredits}
           cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation} remaining={report.remaining}
         />
+        <h2 style={{ fontSize: 17, margin: "22px 0 8px" }}>Semester by semester (colour-coded)</h2>
+        <p className="small-note">Passed, failed, dropped and still-to-study courses in colour; where each moved course came from and went to; your attendance in this semester&apos;s courses.</p>
       </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}><DegreeSchemeBoard /></div>
     </StudentShell>
   );
 }

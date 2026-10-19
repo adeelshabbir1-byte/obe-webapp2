@@ -5460,3 +5460,67 @@ model SocietyPlan {
 
   @@index([societyId])
 }
+
+// ---- Alumni voice (lib/alumniVoice.ts)
+model AlumniAccess {
+  id        String   @id
+  alumniId  String   @unique
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model AlumniRequest {
+  id            String    @id
+  alumniId      String
+  requestedById String
+  token         String    @unique
+  message       String    @db.Text
+  questionsJson String    @default("[]")
+  respondedAt   DateTime?
+  answersJson   String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  @@index([requestedById])
+}
+
+model AlumniVoice {
+  id             String    @id
+  chairmanId     String
+  alumniId       String
+  kind           String    // SUGGESTION | WORKSHOP
+  program        String?
+  courseCode     String?
+  title          String
+  text           String    @db.Text
+  preferredDates String?
+  audience       String?
+  status         String    @default("OPEN")
+  reply          String?
+  scheduledFor   DateTime?
+  decidedById    String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+model AlumniVoiceComment {
+  id         String   @id
+  voiceId    String
+  authorId   String
+  authorName String
+  text       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([voiceId])
+}
+
+model IndustryExpert {
+  id          String   @id
+  userId      String   @unique
+  alumniId    String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([alumniId])
+}

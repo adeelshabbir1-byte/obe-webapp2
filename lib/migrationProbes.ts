@@ -38,6 +38,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "reviewNote"
 },
 {
+"f": "migration_alumni_voice.sql",
+"d": "Alumni voice: personal alumni corner links, faculty requests to alumni (Alumni Connector badge), alumni suggestions",
+"t": "IndustryExpert"
+},
+{
 "f": "migration_appraisals.sql",
 "d": "Faculty annual appraisal (system scorecard + reviewer ratings and remarks + the teacher's reply).",
 "t": "FacultyAppraisal"

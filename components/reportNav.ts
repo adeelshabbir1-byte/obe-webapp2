@@ -408,6 +408,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/accreditation/eligibility", "Council Eligibility (NBEAC / PEC)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"]],
   ["/omc/assessment-rules", "Assessment Rules", ["OMC", "CHAIRMAN", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"]],
   ["/societies/elections", "Society Elections", ["STUDENT_AFFAIRS", "CHAIRMAN", "INSTRUCTOR", "SUBJECT_EXPERT", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR", "LAB_ENGINEER"]],
+  ["/alumni-voice", "Alumni Voice", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "INSTRUCTOR", "SUBJECT_EXPERT", "STUDENT_AFFAIRS", "DEPARTMENT_COORDINATOR", "LAB_ENGINEER"]],
   ["/plan-requests", "Degree Plan Requests", ["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN"]],
   ["/plan-insights", "Extra Courses to Offer", ["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN", "DEPARTMENT_COORDINATOR", "OMC"]],
   ["/ga-council-map", "GA → Council Attributes", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],

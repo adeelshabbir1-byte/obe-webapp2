@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DegreePlanGenerator from "./DegreePlanGenerator";
 
-type Done = { courseCode: string; courseTitle: string; creditHours: number; termName: string; termYear: number; grade: string; gpaPoints: number | null; semesterNumber: number; failed: boolean; lowGrade: boolean; superseded: boolean; courseId: string | null; retakePlanned: boolean };
+type Done = { courseCode: string; courseTitle: string; creditHours: number; termName: string; termYear: number; grade: string; gpaPoints: number | null; semesterNumber: number; failed: boolean; lowGrade: boolean; superseded: boolean; courseId: string | null; retakePlanned: boolean; withdrawn?: boolean };
 type Plan = { courseId: string; code: string; title: string; creditHours: number; courseType: string; nativeSemesterNumber: number | null; plannedSemesterNumber: number; hypotheticalGrade: string | null; currentlyEnrolled: boolean; kind: "new" | "retake" | "improvement"; previousGrade: string | null; source?: string | null; plannedBatch?: string | null; summer?: boolean };
 type Scheme = {
   student: { id: string; name: string; rollNumber: string; currentSemesterNumber: number; batch: string };
@@ -14,6 +14,7 @@ type Scheme = {
   editedBy: "student" | "staff";
   baseTerm?: number; terms?: Record<number, string>;
   offerings?: Record<string, { term: number; batch: string; semester: number; ownBatch: boolean; sameProgram: boolean; students: number }[]>;
+  attendance?: Record<string, { pct: number | null; attended: number; held: number; canMiss: number | null; standing: string; minPct: number }>;
 };
 
 // The whole degree, semester by semester: courses already taken (with grades) and courses still to take (movable),
@@ -169,6 +170,10 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
   const last = Math.max(data.programSemesters, ...data.planned.map((p) => p.plannedSemesterNumber), ...data.completed.map((c) => c.semesterNumber), cur) + extra;
   const semOptions = Array.from({ length: Math.max(last + 2, data.maxSemester) - cur + 1 }, (_, i) => cur + i);
   const finish = Math.max(cur, ...data.planned.map((p) => p.plannedSemesterNumber));
+  // Row colours: passed green, failed red, dropped orange, replaced grey, to study blue, being studied now amber.
+  const ROW = { pass: "rgba(46,157,91,.10)", fail: "rgba(214,69,69,.12)", drop: "rgba(224,140,30,.16)", old: "rgba(120,120,120,.08)", todo: "rgba(59,130,246,.09)", now: "rgba(224,165,38,.16)" };
+  const doneBg = (c: Done) => (c.superseded ? ROW.old : c.withdrawn ? ROW.drop : c.failed ? ROW.fail : ROW.pass);
+  const att = (code: string) => data.attendance?.[code.trim().toUpperCase()];
   const gradeColor = (c: Done) => (c.failed ? "#B3261E" : c.lowGrade ? "#B7791F" : c.superseded ? "var(--slate)" : "var(--sage)");
   const tag = (t: string, bg: string, fg: string) => <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: bg, color: fg, marginLeft: 6, whiteSpace: "nowrap" }}>{t}</span>;
 
@@ -283,7 +288,10 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
       <div className="tr-sheet">
         <div className="tr-head">
           <div><div className="tr-title">Academic Record &amp; Degree Plan</div><div className="tr-sub">{data.student.name} · {data.student.rollNumber} · {data.student.batch}</div></div>
-          <div className="tr-legend"><span className="tr-key done" /> Completed <span className="tr-key cur" /> Current <span className="tr-key plan" /> Planned · <i>italic = projected from &quot;what-if&quot; grades</i></div>
+          <div className="tr-legend">
+            {([["Passed", ROW.pass], ["Failed", ROW.fail], ["Dropped / withdrawn", ROW.drop], ["Replaced by a later attempt", ROW.old], ["Studying now", ROW.now], ["Still to study", ROW.todo]] as [string, string][]).map(([l, c]) => <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 8 }}><span style={{ width: 12, height: 12, background: c, border: "1px solid var(--line)", display: "inline-block" }} />{l}</span>)}
+            <span style={{ textDecoration: "line-through", color: "var(--slate)" }}>moved out</span> · <i>italic = projected from &quot;what-if&quot; grades</i>
+          </div>
         </div>
         {(() => {
           // Running totals, semester by semester, the way a transcript prints them. Best attempt counts for CGPA.
@@ -294,7 +302,9 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
           for (let sem = 1; sem <= last; sem++) {
             const done = data.completed.filter((c) => c.semesterNumber === sem);
             const todo = data.planned.filter((p) => p.plannedSemesterNumber === sem);
-            if (!done.length && !todo.length && sem > data.programSemesters && sem !== last) continue;
+            // Courses of this semester's own scheme that were moved to another semester (shown struck out, no credit hours here).
+            const movedOut = data.planned.filter((p) => p.kind === "new" && p.nativeSemesterNumber === sem && p.plannedSemesterNumber !== sem);
+            if (!done.length && !todo.length && !movedOut.length && sem > data.programSemesters && sem !== last) continue;
             let sP = 0, sC = 0, ungraded = 0, hypo = false;
             for (const c of done) {
               if (c.gpaPoints === null) continue;
@@ -333,13 +343,13 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                   )}
                   <span className="tr-load" style={{ color: over ? "#B3261E" : undefined }}>{doneCr > 0 && `${doneCr} CH taken`}{doneCr > 0 && plannedCr > 0 && " · "}{plannedCr > 0 && `${plannedCr} CH planned`}{over && ` — over the ${data.maxCredits} CH limit`}</span>
                 </header>
-                {!done.length && !todo.length ? <p style={{ fontSize: 12, color: "var(--slate)", margin: 0, padding: "8px 18px" }}>Nothing here yet — move courses into this semester with the &quot;Sem&quot; boxes.</p> : <>
+                {!done.length && !todo.length && !movedOut.length ? <p style={{ fontSize: 12, color: "var(--slate)", margin: 0, padding: "8px 18px" }}>Nothing here yet — move courses into this semester with the &quot;Sem&quot; boxes.</p> : <>
                 <table className="tr-table">
                   <colgroup><col style={{ width: 88 }} /><col /><col style={{ width: 44 }} /><col style={{ width: 70 }} /><col style={{ width: 52 }} /><col style={{ width: 58 }} /><col style={{ width: "26%" }} /><col style={{ width: 172 }} /></colgroup>
                   <thead><tr><th>Code</th><th>Course title</th><th className="n">CH</th><th className="n">Grade</th><th className="n">GP</th><th className="n">QP</th><th>Notes</th><th className="tr-act">Semester</th></tr></thead>
                   <tbody>
                     {done.map((c, i) => (
-                      <tr key={`d${i}`} className={c.superseded ? "sup" : ""}>
+                      <tr key={`d${i}`} className={c.superseded ? "sup" : ""} style={{ background: doneBg(c) }}>
                         <td className="code">{c.courseCode}</td>
                         <td>{c.courseTitle}</td>
                         <td className="n">{c.creditHours}</td>
@@ -347,7 +357,9 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                         <td className="n">{c.gpaPoints !== null ? c.gpaPoints.toFixed(2) : "—"}</td>
                         <td className="n">{c.gpaPoints !== null ? (c.gpaPoints * c.creditHours).toFixed(2) : "—"}</td>
                         <td className="notes">
-                          {c.failed && tag("Failed — retake needed", "#FBEAEA", "#B3261E")}
+                          {c.withdrawn && tag("Dropped", "#FDEBD3", "#8A4B08")}
+                          {(c.failed || c.withdrawn) && (() => { const again = data.planned.find((p) => p.code.trim().toUpperCase() === c.courseCode.trim().toUpperCase()); return again ? tag(`→ planned again in Sem ${again.plannedSemesterNumber}`, "#EEF2FA", "#1B4F8A") : null; })()}
+                          {c.failed && !c.withdrawn && tag("Failed — retake needed", "#FBEAEA", "#B3261E")}
                           {c.lowGrade && !c.retakePlanned && tag("Low grade — can be repeated", "#FBEED2", "#96650F")}
                           {c.retakePlanned && tag("Repeat planned", "#EEF2FA", "#1B4F8A")}
                           {c.superseded && tag("replaced by a later attempt", "#F1F1EE", "var(--slate)")}
@@ -366,7 +378,7 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                       const v = pts(p.hypotheticalGrade);
                       const j = joins(p);
                       return (
-                        <tr key={p.courseId} className="plan">
+                        <tr key={p.courseId} className="plan" style={{ background: p.currentlyEnrolled ? ROW.now : ROW.todo }}>
                           <td className="code">{p.code}</td>
                           <td>{p.title}</td>
                           <td className="n">{p.creditHours}</td>
@@ -382,9 +394,10 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                             {p.kind === "retake" && tag(`Retake (was ${p.previousGrade})`, "#FBEAEA", "#B3261E")}
                             {p.kind === "improvement" && tag(`Repeat to improve ${p.previousGrade}`, "#FBEED2", "#96650F")}
                             {p.currentlyEnrolled && tag("Enrolled now", "#E8F3EC", "#2E7D4F")}
+                            {p.currentlyEnrolled && (() => { const a = att(p.code); if (!a || a.pct === null) return tag("Attendance: not marked yet", "#F1F1EE", "var(--slate)"); const bad = a.pct < a.minPct, near = !bad && a.pct < a.minPct + 5; return tag(`Attendance ${a.pct}% (${a.attended}/${a.held})${a.canMiss !== null ? ` · can miss ${a.canMiss}` : ""}`, bad ? "#FBEAEA" : near ? "#FBEED2" : "#E8F3EC", bad ? "#B3261E" : near ? "#96650F" : "#2E7D4F"); })()}
                             {p.source && tag(p.source === "SYSTEM" ? "suggested by the system" : p.source === "STUDENT" ? "suggested by the student" : "set by the advisor", "#F1F1EE", "var(--slate)")}
                             {p.summer && tag("Summer", "#FFF3D6", "#7A5208")}
-                            {p.kind === "new" && p.nativeSemesterNumber && p.plannedSemesterNumber !== p.nativeSemesterNumber && tag(`moved from Sem ${p.nativeSemesterNumber}`, "#F1F1EE", "var(--slate)")}
+                            {p.kind === "new" && p.nativeSemesterNumber && p.plannedSemesterNumber !== p.nativeSemesterNumber && tag(`came from Sem ${p.nativeSemesterNumber}${data.terms?.[p.nativeSemesterNumber] ? ` (${data.terms[p.nativeSemesterNumber]})` : ""}`, "#EEF2FA", "#1B4F8A")}
                             {j && !j.own && (j.others.length
                               ? tag(`Joins ${j.others[0].batch} (their Sem ${j.others[0].semester})${j.others.length > 1 ? ` +${j.others.length - 1}` : ""}`, "#E8F3EC", "#2E7D4F")
                               : tag("No batch takes it this term", "#FBEAEA", "#B3261E"))}
@@ -402,6 +415,16 @@ export default function DegreeSchemeBoard({ studentId, onChange }: { studentId?:
                         </tr>
                       );
                     })}
+                    {movedOut.map((p) => (
+                      <tr key={`m${p.courseId}`} style={{ color: "var(--slate)" }}>
+                        <td className="code" style={{ textDecoration: "line-through" }}>{p.code}</td>
+                        <td style={{ textDecoration: "line-through" }}>{p.title}</td>
+                        <td className="n" title="Not counted in this semester">({p.creditHours})</td>
+                        <td className="n">—</td><td className="n" /><td className="n" />
+                        <td className="notes">{tag(`moved to Sem ${p.plannedSemesterNumber}${data.terms?.[p.plannedSemesterNumber] ? ` (${data.terms[p.plannedSemesterNumber]})` : ""} — not counted here`, "#F1F1EE", "var(--slate)")}</td>
+                        <td className="tr-act" />
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
                 <footer>

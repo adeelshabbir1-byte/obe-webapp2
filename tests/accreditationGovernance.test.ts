@@ -22,10 +22,10 @@ test("programs are read to the right council from their names", () => {
     assert.equal(inferBody(p), "HEC", p);
 });
 
-test("only the three councils are accepted", () => {
-  assert.deepEqual([...BODY_KEYS].sort(), ["HEC", "NBEAC", "NCEAC"]);
+test("only the four councils are accepted", () => {
+  assert.deepEqual([...BODY_KEYS].sort(), ["HEC", "NBEAC", "NCEAC", "PEC"]);
   for (const b of BODY_KEYS) assert.ok(isBody(b));
-  for (const b of ["", "nceac", "PEC", null, undefined, 3]) assert.ok(!isBody(b as unknown as string), String(b));
+  for (const b of ["", "nceac", "pec", "ABET", null, undefined, 3]) assert.ok(!isBody(b as unknown as string), String(b));
 });
 
 // ------------------------------------------------------------------------------------------------ standards
@@ -86,7 +86,7 @@ test("a task of one council is never found under another", () => {
     const same = taskDef(o, t.code);
     if (same) assert.notEqual(same, t, `${b} ${t.code} leaks into ${o}`);
   }
-  assert.equal(taskDef("PEC", "1.1"), null);
+  assert.equal(taskDef("ABET", "1.1"), null);
 });
 
 test("councils use their own frameworks: NCEAC criteria, NBEAC SAR forms and registers", () => {
