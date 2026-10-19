@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { bestAttemptTotals } from "./cgpaMath";
 import { attendancePolicy, tally, percentage } from "./attendance";
+import { academicRules } from "./academicRules";
 
 // One risk level per student, from what the system already holds — so an advisor hears about a student in week 5,
 // not at results time:
@@ -21,6 +22,7 @@ export async function earlyWarning(chairmanId: string, opts: { batchIds?: string
     prisma.studentEnrollment.findMany({ where: { studentId: { in: sids }, status: { not: "WITHDRAWN" }, course: { isOffered: true } }, select: { studentId: true, courseId: true, course: { select: { code: true } } } }),
     attendancePolicy(chairmanId),
   ]);
+  const ar = await academicRules(chairmanId);
   const courseIds = Array.from(new Set(enrolments.map((e) => e.courseId))).concat(["none"]);
   const [att, items, marks] = await Promise.all([
     prisma.attendanceRecord.findMany({ where: { courseId: { in: courseIds }, studentId: { in: sids } }, select: { studentId: true, courseId: true, status: true } }),
@@ -55,7 +57,7 @@ export async function earlyWarning(chairmanId: string, opts: { batchIds?: string
     let pts = 0;
     const { points, credits } = bestAttemptTotals((recBy.get(s.id) || []) as never);
     const cgpa = credits ? points / credits : null;
-    if (cgpa !== null && cgpa < 2) { pts += 3; reasons.push(`CGPA ${cgpa.toFixed(2)}`); } else if (cgpa !== null && cgpa < 2.5) { pts += 1; reasons.push(`CGPA ${cgpa.toFixed(2)}`); }
+    if (cgpa !== null && cgpa < ar.probationCgpa) { pts += 3; reasons.push(`CGPA ${cgpa.toFixed(2)}`); } else if (cgpa !== null && cgpa < ar.warningCgpa) { pts += 1; reasons.push(`CGPA ${cgpa.toFixed(2)}`); }
     for (const e of enrolments.filter((x) => x.studentId === s.id)) {
       const t = tally(attBy.get(`${s.id}|${e.courseId}`) || []);
       const ap = t.marked ? percentage(t, pol) : null;

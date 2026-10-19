@@ -443,6 +443,10 @@ export async function campusActivity() {
     const menu = [["Chicken Biryani", 350], ["Daal Chawal", 220], ["Chicken Karahi with Naan", 450], ["Vegetable Pulao & Raita", 250], ["Chicken Sandwich & Tea", 280]];
     for (let k = 0; k < 7; k++) { const dt = new Date(today + k * 864e5); if (dt.getUTCDay() === 0) continue; for (const [j, [item, price]] of [menu[k % 5], menu[(k + 2) % 5]].entries()) { const id = randomUUID(); await db.facultyMeal.create({ data: { id, chairmanId: s.head, date: dt, item, price, cutoff: "11:00", createdById: s.by("dream.facilities"), createdAt: new Date() } }); for (const u of s.teachers.slice(j * 3, j * 3 + 3 + (k % 3))) await db.mealOrder.create({ data: { id: randomUUID(), mealId: id, userId: u.id, qty: 1, createdAt: new Date() } }); } }
   }
+  // Academic rules, with the OMC member holding the Controller of Examinations duty.
+  await db.academicRule.upsert({ where: { chairmanId: s.head }, create: { id: randomUUID(), chairmanId: s.head, warningCgpa: 2.5, probationCgpa: 2.0, holdCgpa: 2.0, dismissCgpa: 1.5, dismissAfterProbations: 2, minAttendanceForExam: 75, updatedById: s.head, updatedAt: new Date() }, update: {} }).catch(() => null);
+  const omc = s.users.find((u) => u.username === "dream.omc");
+  if (omc) { const u = await prisma.user.findUnique({ where: { id: omc.id }, select: { extraRoles: true } }); if (!(u?.extraRoles || []).includes("EXAM_CONTROLLER")) await prisma.user.update({ where: { id: omc.id }, data: { extraRoles: [...(u?.extraRoles || []), "EXAM_CONTROLLER"] } }); }
   // Last year's appraisals (shared).
   for (const t of s.teachers.slice(0, 8)) {
     if (await db.facultyAppraisal.count({ where: { userId: t.id, year: 2025 } }).catch(() => 1)) continue;

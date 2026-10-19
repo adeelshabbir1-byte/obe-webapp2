@@ -4,14 +4,14 @@ import { prisma } from "../../../lib/db";
 import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptReport";
 import Shell from "../../../components/Shell";
 import ReportPrintHeader from "../../../components/ReportPrintHeader";
-import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
+import TranscriptView from "../../../components/TranscriptView";
 import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 import { navForRole } from "../../../components/reportNav";
 import { bestAttemptTotals } from "../../../lib/cgpaMath";
 import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
 
 
-export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; batchId?: string; q?: string } }) {
+export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; batchId?: string; q?: string; tab?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -173,21 +173,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
         <AddHistoricalGradeForm studentId={student.id} />
       )}
       {student && belongsToCoordinator && (
-        <StudentTranscriptReport
-          studentName={student.name} rollNumber={student.rollNumber}
-          batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
-          courseRows={courseRows} cgpa={cgpa} totalCredits={totalCredits}
-          cloAgg={cloAgg} ploAgg={ploAgg} remediation={remediation} remaining={remaining}
-        />
-      )}
-      {student && belongsToCoordinator && (
-        <div className="card no-print" id="degree-plan">
-          <h3 style={{ fontSize: 15, marginTop: 0 }}>Full degree plan — every semester, taken and still to take</h3>
-          <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: -4 }}>
-            Move any remaining course to another semester, plan a retake of an F or a repeat of a D, and set target grades to see the projected CGPA. The student and the batch advisor see and can change the same plan.
-          </p>
-          <DegreeSchemeBoard studentId={student.id} />
-        </div>
+        <div id="degree-plan"><TranscriptView studentId={student.id} tab={searchParams.tab || "grades"} base={`/coordinator/student-transcript?studentId=${student.id}`} staff /></div>
       )}
     </Shell>
   );

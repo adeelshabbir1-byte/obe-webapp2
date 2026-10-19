@@ -1,3 +1,4 @@
+import StudentPhotoUpload from "../../../components/StudentPhotoUpload";
 import KeyButton from "../../../components/KeyButton";
 import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
@@ -16,6 +17,7 @@ export default async function StudentDetailsPage() {
   return (
     <StudentShell studentName={s.name}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Details</h1>
+      <StudentPhotoUpload />
       <div className="card">
         <DetailsForm fields={selfFields("student")} values={{ nationality: "Pakistani", ...v }} endpoint="/api/student/details" note="Your institute sends these to NCEAC (the national computing accreditation council) for accreditation. Fill them exactly as on your CNIC and your SSC / HSSC certificates. Dates as dd/mm/yyyy, CNIC as xxxxx-xxxxxxx-x." />
       </div>

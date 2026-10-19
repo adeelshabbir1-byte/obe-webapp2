@@ -5813,3 +5813,44 @@ model HistoricalRecord {
   @@index([chairmanId, program])
   @@index([chairmanId, courseCode])
 }
+
+// Academic standing limits of an institute, set by the Controller of Examinations or the Dean (lib/academicRules.ts).
+model AcademicRule {
+  id                     String   @id
+  chairmanId             String   @unique
+  warningCgpa            Float    @default(2.5)
+  probationCgpa          Float    @default(2.0)
+  holdCgpa               Float    @default(2.0)
+  dismissCgpa            Float    @default(1.5)
+  dismissAfterProbations Int      @default(2)
+  minAttendanceForExam   Float    @default(75)
+  updatedById            String?
+  updatedAt              DateTime @default(now())
+}
+
+// A low-CGPA student not registered automatically for a term, waiting on the advisor (lib/autoRegister.ts).
+model RegistrationHold {
+  id          String    @id
+  studentId   String
+  batchId     String
+  term        String
+  cgpa        Float     @default(0)
+  status      String    @default("PENDING") // PENDING | DECIDED
+  advisorId   String?
+  coursesJson String?
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([studentId, term])
+  @@index([advisorId, status])
+  @@index([batchId])
+}
+
+// A student's profile photo (small JPEG data URL).
+model StudentPhoto {
+  studentId String   @id
+  photo     String   @db.Text
+  updatedAt DateTime @default(now())
+}

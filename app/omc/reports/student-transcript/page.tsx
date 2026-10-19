@@ -7,9 +7,9 @@ import { computeStudentTranscriptReport } from "../../../../lib/studentTranscrip
 import { navForRole } from "../../../../components/reportNav";
 import Shell from "../../../../components/Shell";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
-import StudentTranscriptReport from "../../../../components/StudentTranscriptReport";
+import TranscriptView from "../../../../components/TranscriptView";
 
-export default async function OmcStudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; q?: string } }) {
+export default async function OmcStudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; q?: string; tab?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -55,12 +55,7 @@ export default async function OmcStudentTranscriptPage({ searchParams }: { searc
       )}
 
       {student && inScope && report && (
-        <StudentTranscriptReport
-          studentName={student.name} rollNumber={student.rollNumber}
-          batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
-          courseRows={report.courseRows} cgpa={report.cgpa} totalCredits={report.totalCredits}
-          cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation} remaining={report.remaining}
-        />
+        <TranscriptView studentId={student.id} tab={searchParams.tab || "grades"} base={`/omc/reports/student-transcript?studentId=${student.id}`} staff />
       )}
     </Shell>
   );

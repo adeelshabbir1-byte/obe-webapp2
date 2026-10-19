@@ -31,6 +31,7 @@ export default async function AdvisorDashboardPage() {
       ) : (
         <>
           <p style={{ fontSize: 12.5, marginTop: -10, marginBottom: 14 }}>You advise: <b>{advised.map((b) => `${b.degreeProgram} — ${b.batchName}`).join(", ")}</b></p>
+          <div className="card" style={{ borderLeft: "4px solid #C62828", fontSize: 13.5 }}>Low-CGPA advisees not registered automatically wait for you: <a href="/advisor/registration-holds"><b>Registration Holds →</b></a></div>
           <div className="card" style={{ borderLeft: "4px solid #7A3E9D", fontSize: 13.5 }}>Is an advisee struggling with topics from an earlier course? <a href="/remediation-flags"><b>Flag them for remediation →</b></a> As their advisor your flag comes first; the OMC and Program Lead plan a tutorial or junior-class sitting.</div>
           <AdvisorDashboard />
         </>

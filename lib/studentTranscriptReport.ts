@@ -7,7 +7,7 @@ import { getPassingCriteria } from "./passingCriteria";
 
 export type TranscriptCourseRow = {
   code: string; title: string; creditHours: number; grade: string; gpaPoints: number | null;
-  totalPct: number; termName: string; termYear: number; isCurrent: boolean; approved?: boolean;
+  totalPct: number; termName: string; termYear: number; isCurrent: boolean; approved?: boolean; courseType?: string;
 };
 export type AttainmentAgg = { attempted: number; passed: number };
 export type RemediationEntry = { ploLabel: string; courses: { code: string; title: string }[] };
@@ -47,7 +47,7 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
 
   const historical = await prisma.studentTranscriptRecord.findMany({ where: { studentId }, orderBy: [{ termYear: "asc" }] });
   for (const r of historical) {
-    courseRows.push({ code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, grade: r.grade, gpaPoints: r.gpaPoints, totalPct: r.totalPct, termName: r.termName, termYear: r.termYear, isCurrent: false });
+    courseRows.push({ code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, grade: r.grade, gpaPoints: r.gpaPoints, totalPct: r.totalPct, termName: r.termName, termYear: r.termYear, isCurrent: false, courseType: r.courseType });
     attempts.push({ courseCode: r.courseCode, creditHours: r.creditHours, gpaPoints: r.gpaPoints });
     for (const c of JSON.parse(r.cloAttainmentJson) as { code: string; passed: boolean }[]) {
       const e = cloAgg.get(c.code) || { attempted: 0, passed: 0 };
@@ -97,7 +97,7 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
     courseRows.push({
       code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: isDeficiency ? (row.totalPct >= (deficiencyPct ?? 40) ? "P" : "F") : row.grade, gpaPoints,
       totalPct: row.totalPct, termName: e.course.offeredTermName || "Current", termYear: e.course.offeredTermYear || new Date().getFullYear(), isCurrent: true,
-      approved: (await getCourseResult(e.courseId))?.status === "APPROVED",
+      approved: (await getCourseResult(e.courseId))?.status === "APPROVED", courseType: e.course.courseType,
     });
     attempts.push({ courseCode: e.course.code, creditHours: e.course.creditHours, gpaPoints });
     for (const code of result.cloCodes) {

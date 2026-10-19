@@ -33,7 +33,7 @@ export default async function Shell({
   const user = await getSignedInUser();
 
   const needAdvisor = !!user && !navLinks.some((l) => l.href === "/advisor/dashboard");
-  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises, pinRow] = await Promise.all([
+  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises, userPhoto, pinRow] = await Promise.all([
     getBrandingFor(user),
     user ? getSessionInfo(user) : null,
     user ? getRequestsCount(user) : 0,
@@ -42,6 +42,7 @@ export default async function Shell({
     user && (roleLabel === "Program Lead" || roleLabel === "Program Coordinator") ? getSidebarCurrentTerm(user) : null,
     user ? unreadCount(user.id) : 0,
     needAdvisor && user ? prisma.batch.count({ where: { advisorId: user.id } }).then((n) => n > 0).catch(() => false) : false,
+    user ? prisma.facultyProfile.findUnique({ where: { userId: user.id }, select: { photo: true } }).then((p) => p?.photo || null).catch(() => null) : null,
     user ? (((prisma as unknown as Record<string, any>).userNavPref?.findUnique({ where: { userId: user.id } }) as Promise<{ pinsJson: string } | null> | undefined)?.catch(() => null) ?? null) : null,
   ]);
   // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
@@ -62,6 +63,7 @@ export default async function Shell({
     <AppShell
       roleLabel={roleLabel}
       userName={userName}
+      userPhoto={userPhoto}
       navLinks={links}
       branding={branding}
       roleSwitch={sessionInfo?.dualCapable ? sessionInfo : null}

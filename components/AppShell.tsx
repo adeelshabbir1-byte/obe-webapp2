@@ -37,6 +37,7 @@ const PAGE_STYLE_LABELS = new Set(["Home", "Yearly summary", "Faculty details", 
 export default function AppShell({
   roleLabel,
   userName,
+  userPhoto,
   navLinks,
   branding,
   roleSwitch,
@@ -52,6 +53,7 @@ export default function AppShell({
 }: {
   roleLabel: string;
   userName: string;
+  userPhoto?: string | null;
   navLinks: NavLink[];
   branding: Branding;
   roleSwitch: SessionInfo | null;
@@ -445,7 +447,7 @@ export default function AppShell({
             </div>
           )}
           <button type="button" className="sb-user" onClick={() => setAcctOpen((o) => !o)} aria-expanded={acctOpen} aria-controls="sb-account-menu" title="Account options">
-            <span className="avatar sb-avatar" aria-hidden="true">{initials(userName)}</span>
+            <span className="avatar sb-avatar" aria-hidden="true" style={userPhoto ? { background: `center / cover no-repeat url(${userPhoto})` } : undefined}>{userPhoto ? "" : initials(userName)}</span>
             <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
               <span className="sb-user-name">{userName}</span>
               <span className="sb-user-role">{roleLabel}{otherRoles.length > 0 ? ` · ${otherRoles.length} other role${otherRoles.length > 1 ? "s" : ""}` : ""}</span>
@@ -470,7 +472,7 @@ export default function AppShell({
             <HelpButton />
             <NotificationBell initialUnread={unreadNotifications} />
             <span className="tb-hello">Hello, <b>{greetingName(userName)}</b></span>
-            <span className="avatar" title={userName} aria-hidden="true">{initials(userName)}</span>
+            <a href="/faculty/profile" className="avatar" title={`${userName} — my profile`} style={userPhoto ? { background: `center / cover no-repeat url(${userPhoto})` } : { textDecoration: "none" }}>{userPhoto ? "" : initials(userName)}</a>
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={loggingOut} aria-label="Sign out" title="Sign out">
               <LogOut size={17} />
             </button>

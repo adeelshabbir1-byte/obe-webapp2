@@ -1,55 +1,20 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
-import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptReport";
-import { standingFromCgpa } from "../../../lib/academicStanding";
-import StudentTranscriptReport from "../../../components/StudentTranscriptReport";
 import StudentShell from "../../../components/StudentShell";
-import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
-import ThisSemester from "../../../components/ThisSemester";
-import { studentNow } from "../../../lib/studentNow";
+import TranscriptView from "../../../components/TranscriptView";
 
-export default async function StudentTranscriptPage() {
+export const dynamic = "force-dynamic";
+
+export default async function StudentTranscriptPage({ searchParams }: { searchParams: { tab?: string } }) {
   const student = await getAuthenticatedStudent();
   if (!student) redirect("/student/login");
   if (student.mustChangePassword) redirect("/student/change-password");
-
-  const report = await computeStudentTranscriptReport(student.id);
-  const standing = standingFromCgpa(report.cgpa);
-  const now = await studentNow(student.id).catch(() => []);
-
   return (
     <StudentShell studentName={student.name}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}><ThisSemester rows={now} /></div>
-      <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: 10 }}>
-          <h1 style={{ fontSize: 22 }}>My Transcript</h1>
-        </div>
-        <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 20 }}>
-          Two separate records: your course grades and GPA/CGPA (Transcript 1), and which Course/Program Learning
-          Outcomes you've met so far (Transcript 2).
-        </p>
-        {standing !== "GOOD_STANDING" && (
-          <div className="card" style={{ borderColor: "var(--rust)", background: "#FFF5F0", marginBottom: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--rust)", marginBottom: 4 }}>
-              {standing === "PROBATION" ? "You're on Academic Probation" : "Academic Warning"}
-            </p>
-            <p style={{ fontSize: 12, color: "var(--slate)" }}>
-              Your CGPA is {report.cgpa?.toFixed(2)}, below the {standing === "PROBATION" ? "2.00" : "2.50"} threshold.
-              Your batch Advisor will review your course load and may recommend dropping or adding a course —
-              check your Degree Plan for any changes they've made.
-            </p>
-          </div>
-        )}
-        <StudentTranscriptReport
-          studentName={student.name} rollNumber={student.rollNumber}
-          batchLabel={`${student.batch.degreeProgram} (${student.batch.batchName})`}
-          courseRows={report.courseRows} cgpa={report.cgpa} totalCredits={report.totalCredits}
-          cloAgg={report.cloAgg} ploAgg={report.ploAgg} remediation={report.remediation} remaining={report.remaining}
-        />
-        <h2 style={{ fontSize: 17, margin: "22px 0 8px" }}>Semester by semester (colour-coded)</h2>
-        <p className="small-note">Passed, failed, dropped and still-to-study courses in colour; where each moved course came from and went to; your attendance in this semester&apos;s courses.</p>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <h1 style={{ fontSize: 22, marginBottom: 8 }}>My Transcript</h1>
+        <TranscriptView studentId={student.id} tab={searchParams.tab || "now"} base="/student/transcript" />
       </div>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}><DegreeSchemeBoard /></div>
     </StudentShell>
   );
 }

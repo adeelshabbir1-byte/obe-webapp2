@@ -1,5 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import PersonAvatar from "../../../../components/PersonAvatar";
+import { studentPhotos } from "../../../../lib/studentPhotos";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { roleLabel } from "../../../../lib/reportScope";
@@ -44,7 +46,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
       <div className="card" style={{ marginTop: 10 }}>
         <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ fontSize: 21, margin: 0 }}>{s.name}</h1>
+            <h1 style={{ fontSize: 21, margin: 0 }}><PersonAvatar name={s.name} photo={(await studentPhotos([s.id])).get(s.id)} size={44} />{s.name}</h1>
             <div style={{ fontSize: 13, color: "var(--slate)" }}>{s.rollNumber} · {s.batch ? `${s.batch.degreeProgram} — ${s.batch.batchName}` : ""} · Semester {s.currentSemesterNumber} · <Link href={`/prediction/student/${s.id}`}>Prediction</Link></div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 18, alignItems: "center" }}>

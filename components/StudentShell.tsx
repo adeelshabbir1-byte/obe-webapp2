@@ -37,6 +37,11 @@ const NAV = [
 
 /** Header + tab navigation shared by every student-portal page. */
 export default function StudentShell({ studentName, children }: { studentName?: string; children: React.ReactNode }) {
+  const [photo, setPhoto] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => fetch("/api/student/photo").then((r) => r.json()).then((d) => setPhoto(d.photo || null)).catch(() => null);
+    load(); window.addEventListener("student-photo", load); return () => window.removeEventListener("student-photo", load);
+  }, []);
   const pathname = usePathname();
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
@@ -75,6 +80,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <HelpButton audience="student" />
             {studentName && <span className="tb-hello">Hello, <b>{greetingName(studentName)}</b></span>}
+            {studentName && <Link href="/student/details" className="avatar" title="My details and photo" style={photo ? { background: `center / cover no-repeat url(${photo})` } : { textDecoration: "none", fontSize: 13 }}>{photo ? "" : studentName.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</Link>}
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={leaving} aria-label="Sign out" title="Sign out">
               <LogOut size={17} />
             </button>

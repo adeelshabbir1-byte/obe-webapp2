@@ -6,6 +6,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "StaffDetail"
 },
 {
+"f": "migration_academic_rules.sql",
+"d": "Academic rules (Controller of Examinations), registration holds of low-CGPA students, and student photos. Safe to rerun.",
+"t": "StudentPhoto"
+},
+{
 "f": "migration_accreditation_governance.sql",
 "d": "Accreditation governance: each program bound to its council (NCEAC / NBEAC / HEC), the institute's thresholds per",
 "t": "FacultyProfile",
