@@ -23,6 +23,7 @@ const NAV = [
   { href: "/student/cv", label: "My Profile & CV" },
   { href: "/student/fees", label: "My Fees" },
   { href: "/student/activities", label: "Societies & Activities" },
+  { href: "/student/elections", label: "Society Elections" },
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
   { href: "/student/portfolio", label: "My Portfolio" },

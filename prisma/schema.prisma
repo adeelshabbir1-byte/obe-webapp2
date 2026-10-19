@@ -5339,3 +5339,124 @@ model GradePlanSnapshot {
 
   @@index([studentId])
 }
+
+// ---- OMC assessment rules (lib/assessmentRules.ts)
+model AssessmentRule {
+  id          String   @id
+  chairmanId  String
+  label       String
+  typesJson   String   @default("[]")
+  level       String   @default("COURSE") // COURSE | CLO
+  minPct      Float?
+  maxPct      Float?
+  courseKind  String   @default("ALL") // ALL | THEORY | LAB
+  program     String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model AssessmentRuleApproval {
+  id            String   @id
+  courseId      String
+  source        String
+  ruleId        String
+  scope         String
+  value         Float
+  status        String
+  note          String?
+  decidedById   String?
+  decidedByName String?
+  decidedAt     DateTime @default(now())
+
+  @@index([courseId])
+}
+
+// ---- FYP extras (lib/fypScaling.ts)
+model FypCycleExtra {
+  id              String   @id
+  cycleId         String   @unique
+  coSupervisorPct Float    @default(0)
+  scaling         String   @default("NONE") // NONE | ZSCORE | SHIFT
+  minEvaluators   Int      @default(1)
+  minMeetings     Int      @default(0)
+  updatedAt       DateTime @default(now())
+}
+
+model FypCoSupervisor {
+  id        String   @id
+  groupId   String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---- Society elections (lib/elections.ts)
+model SocietyElection {
+  id            String   @id
+  chairmanId    String
+  societyId     String
+  title         String
+  positionsJson String   @default("[]")
+  voterScope    String   @default("SOCIETY") // SOCIETY | DEPARTMENT | ALL
+  term          String
+  applyFrom     DateTime
+  applyTo       DateTime
+  voteFrom      DateTime
+  voteTo        DateTime
+  minCgpa       Float?
+  minSemester   Int?
+  published     Boolean  @default(false)
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model ElectionCandidate {
+  id            String   @id
+  electionId    String
+  studentId     String
+  position      String
+  manifesto     String   @db.Text
+  plan          String   @db.Text
+  videoUrl      String?
+  advisorStatus String   @default("PENDING")
+  headStatus    String   @default("PENDING")
+  note          String?
+  votes         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([electionId])
+}
+
+model ElectionBallot {
+  id         String   @id
+  electionId String
+  position   String
+  studentId  String
+  castAt     DateTime @default(now())
+
+  @@unique([electionId, position, studentId])
+}
+
+model SocietyPlan {
+  id           String    @id
+  societyId    String
+  studentId    String
+  term         String
+  kind         String    // YEAR_PLAN | EVENT_REPORT
+  eventId      String?
+  text         String    @db.Text
+  participants Int?
+  status       String    @default("PENDING")
+  note         String?
+  decidedById  String?
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([societyId])
+}

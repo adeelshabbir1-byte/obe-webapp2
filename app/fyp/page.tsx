@@ -33,7 +33,9 @@ export default async function FypHubPage({ searchParams }: { searchParams: { tab
     const depts = new Map((await prisma.department.findMany({ where: { chairmanId: acc.chairmanId }, select: { id: true, name: true } })).map((d) => [d.id, d.name]));
     const proposals = await prisma.fypProposal.findMany({ where: { proposerId: user.id }, orderBy: { createdAt: "desc" } });
     const apps = await prisma.fypApplication.findMany({ where: { proposalId: { in: proposals.map((p) => p.id).concat(["none"]) } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] });
-    const supervised = await prisma.fypGroup.findMany({ where: { supervisorId: user.id }, orderBy: { name: "asc" } });
+    // Groups this person supervises or co-supervises.
+    const coIds = await (prisma as unknown as Record<string, any>).fypCoSupervisor.findMany({ where: { userId: user.id }, select: { groupId: true } }).then((r: { groupId: string }[]) => r.map((x) => x.groupId)).catch(() => [] as string[]);
+    const supervised = await prisma.fypGroup.findMany({ where: { OR: [{ supervisorId: user.id }, { id: { in: coIds.concat(["none"]) } }] }, orderBy: { name: "asc" } });
     const myPanels = await prisma.fypPanelMember.findMany({ where: { userId: user.id }, select: { panelId: true, role: true } });
     const panels = await prisma.fypPanel.findMany({ where: { id: { in: myPanels.map((m) => m.panelId).concat(["none"]) } } });
     const panelGroups = await prisma.fypGroup.findMany({ where: { panelId: { in: panels.map((p) => p.id).concat(["none"]) } }, orderBy: { name: "asc" } });

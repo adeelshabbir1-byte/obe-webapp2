@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { ensureInstructorCopy } from "../../../../../lib/instructorCopy";
 import { suggestClOReweighting } from "../../../../../lib/resultMate";
+import AssessmentRuleBanner from "../../../../../components/AssessmentRuleBanner";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
@@ -62,6 +63,7 @@ export default async function InstructorInstrumentsPage({ params }: { params: { 
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={updated.id} active="instruments" code={updated.code} title={updated.title} />
+      <AssessmentRuleBanner courseId={updated.id} source="INSTRUCTOR" />
       <PrereqTopicChecks courseId={updated.id} source="INSTRUCTOR" />
 
       <AssessmentsManager

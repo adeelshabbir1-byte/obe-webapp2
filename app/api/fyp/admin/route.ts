@@ -64,6 +64,25 @@ export async function POST(req: NextRequest) {
         await audit("FypCycle", c.id, { title });
         return NextResponse.json({ cycle: c });
       }
+      case "cycleExtra": {
+        if (!managesCycle || !cycle) return bad("forbidden", 403);
+        const { saveCycleExtra, FYP_EXTRA_HINT } = await import("../../../../lib/fypScaling");
+        const x = { coSupervisorPct: Math.max(0, Math.min(50, num(b.coSupervisorPct, 0))), scaling: (["NONE", "ZSCORE", "SHIFT"].includes(String(b.scaling)) ? String(b.scaling) : "NONE") as "NONE" | "ZSCORE" | "SHIFT", minEvaluators: Math.max(1, Math.min(6, Math.round(num(b.minEvaluators, 1)))), minMeetings: Math.max(0, Math.min(60, Math.round(num(b.minMeetings, 0)))) };
+        try { await saveCycleExtra(cycle.id, x); } catch { return bad(FYP_EXTRA_HINT, 500); }
+        await audit("FypCycle", cycle.id, x);
+        return NextResponse.json({ ok: true });
+      }
+      case "coSupervisor": {
+        if (!managesCycle || !cycle) return bad("forbidden", 403);
+        const g = await prisma.fypGroup.findFirst({ where: { id: String(b.groupId || ""), cycleId: cycle.id } });
+        if (!g) return bad("group not found", 404);
+        const uid = b.userId ? String(b.userId) : null;
+        if (uid && uid === g.supervisorId) return bad("The supervisor can't also be the co-supervisor.");
+        const { setCoSupervisor, FYP_EXTRA_HINT } = await import("../../../../lib/fypScaling");
+        try { await setCoSupervisor(g.id, uid); } catch { return bad(FYP_EXTRA_HINT, 500); }
+        await audit("FypGroup", g.id, { coSupervisor: uid || "" });
+        return NextResponse.json({ ok: true });
+      }
       case "updateCycle": {
         if (!managesCycle || !cycle) return bad("forbidden", 403);
         const sp = num(b.supervisorPct, cycle.supervisorPct), ip = num(b.internalPct, cycle.internalPct), ep = num(b.externalPct, cycle.externalPct);

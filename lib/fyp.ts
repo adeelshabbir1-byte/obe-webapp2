@@ -45,7 +45,7 @@ const FALLBACK_GPA: Record<string, number> = { A: 4, "A-": 3.67, "B+": 3.33, B: 
 export const EXTENSIONS: Record<string, { label: string; days: number }> = { TWO_WEEKS: { label: "2 weeks", days: 14 }, FOUR_WEEKS: { label: "4 weeks", days: 28 }, SEMESTER: { label: "Next semester", days: 120 } };
 export const REQUISITION_KINDS: Record<string, string> = { FUNDING: "Funding", HARDWARE: "Hardware components", LAB_EQUIPMENT: "Lab equipment", REIMBURSEMENT: "Reimbursement" };
 export const ARTIFACT_KINDS: Record<string, string> = { THESIS_DRAFT: "Thesis draft", SIMILARITY_REPORT: "Similarity report (Turnitin / iThenticate)", REPOSITORY: "Code repository", DEMO_VIDEO: "Demo video", OTHER: "Other" };
-export const ROLE_TEXT: Record<string, string> = { SUPERVISOR: "Supervisor", INTERNAL: "Internal panel", EXTERNAL: "External panel" };
+export const ROLE_TEXT: Record<string, string> = { SUPERVISOR: "Supervisor", CO_SUPERVISOR: "Co-supervisor", INTERNAL: "Internal panel", EXTERNAL: "External panel" };
 
 export type Cutoff = { letter: string; minPct: number };
 export const cutoffsOf = (c: { cutoffsJson: string }): Cutoff[] => { try { const x = JSON.parse(c.cutoffsJson); return Array.isArray(x) && x.length ? x : DEFAULT_CUTOFFS; } catch { return DEFAULT_CUTOFFS; } };
@@ -124,8 +124,9 @@ export async function studentCycle(studentId: string) {
 // Evaluation
 
 /** How this person may evaluate a group: as its supervisor, or as a member of its panel (never both). */
-export async function evaluatorRoleFor(userId: string, group: { id?: string; supervisorId: string | null; panelId: string | null }, milestoneId?: string): Promise<"SUPERVISOR" | "INTERNAL" | null> {
+export async function evaluatorRoleFor(userId: string, group: { id?: string; supervisorId: string | null; panelId: string | null }, milestoneId?: string): Promise<"SUPERVISOR" | "CO_SUPERVISOR" | "INTERNAL" | null> {
   if (group.supervisorId === userId) return "SUPERVISOR";
+  if (group.id) { const { coSupervisors } = await import("./fypScaling"); if ((await coSupervisors([group.id])).get(group.id) === userId) return "CO_SUPERVISOR"; }
   // A presentation may have its own panel for this group; otherwise the group's panel.
   let panelIds = [group.panelId].filter((x): x is string => !!x);
   if (group.id) {
@@ -187,10 +188,11 @@ export type StudentResult = {
   byMilestone: { milestoneId: string; title: string; weightPct: number; pct: number | null; byRole: Record<string, number | null> }[];
   plo: { label: string; pct: number; passed: boolean }[];
   missing: string[];
+  rawTotalPct?: number | null; meetings?: { held: number; attended: number; dates: string[] }; fewMeetings?: boolean;
 };
 
 /** Every student's result from the scores so far: evaluators averaged per role, roles weighted by the cycle's split, milestones by their weight. */
-export async function computeResults(cycleId: string): Promise<{ rows: StudentResult[]; passPct: number }> {
+export async function computeResults(cycleId: string, opts: { scaling?: "NONE" | "ZSCORE" | "SHIFT" } = {}): Promise<{ rows: StudentResult[]; passPct: number; evaluatorStats?: import("./fypScaling").EvaluatorStat[] }> {
   const cycle = await prisma.fypCycle.findUnique({ where: { id: cycleId } });
   if (!cycle) return { rows: [], passPct: 50 };
   const [milestones, criteria, groups] = await Promise.all([
@@ -203,7 +205,25 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
   const students = new Map((await prisma.student.findMany({ where: { id: { in: members.map((m) => m.studentId).concat(["none"]) } }, select: { id: true, name: true, rollNumber: true } })).map((s) => [s.id, s]));
   const scores = await prisma.fypScore.findMany({ where: { groupId: { in: groups.map((g) => g.id).concat(["none"]) } } });
   const crit = new Map(criteria.map((c) => [c.id, c]));
-  const roleWeight: Record<string, number> = { SUPERVISOR: cycle.supervisorPct, INTERNAL: cycle.internalPct, EXTERNAL: cycle.externalPct };
+  const fx = await import("./fypScaling");
+  const extra = await fx.cycleExtra(cycleId);
+  const coSup = await fx.coSupervisors(groups.map((g) => g.id));
+  const roleWeight: Record<string, number> = { SUPERVISOR: cycle.supervisorPct, CO_SUPERVISOR: extra.coSupervisorPct, INTERNAL: cycle.internalPct, EXTERNAL: cycle.externalPct };
+  // Each evaluator's % per student per milestone, for the strict / lenient correction.
+  const marks: import("./fypScaling").Mark[] = [];
+  {
+    const keyed = new Map<string, { m: string; e: string; r: string; s: string; got: number; max: number }>();
+    for (const x of scores) {
+      const k = `${x.milestoneId}|${x.evaluatorKey}|${x.studentId}`;
+      const cur = keyed.get(k) || { m: x.milestoneId, e: x.evaluatorKey, r: x.evaluatorRole, s: x.studentId, got: 0, max: 0 };
+      cur.got += x.score; cur.max += crit.get(x.criterionId)?.maxScore || 0; keyed.set(k, cur);
+    }
+    for (const v of Array.from(keyed.values())) if (v.max > 0) marks.push({ milestoneId: v.m, evaluatorKey: v.e, role: v.r, studentId: v.s, pct: (100 * v.got) / v.max });
+  }
+  const mode = opts.scaling ?? extra.scaling;
+  const sc = fx.scaler(marks, mode);
+  const raw = mode !== "NONE" ? await computeResults(cycleId, { scaling: "NONE" }) : null;
+  const meetings = await fx.meetingsOf(groups.map((g) => g.id));
   const cutoffs = cutoffsOf(cycle);
   const { supervisionPct } = await import("./fypPlus");
   const supervision = await supervisionPct(groups.map((g) => g.id));
@@ -214,13 +234,13 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
       const mine = scores.filter((s) => s.studentId === m.studentId);
       const byMilestone = milestones.map((ms) => {
         const here = mine.filter((s) => s.milestoneId === ms.id);
-        const byRole: Record<string, number | null> = { SUPERVISOR: null, INTERNAL: null, EXTERNAL: null };
+        const byRole: Record<string, number | null> = { SUPERVISOR: null, CO_SUPERVISOR: null, INTERNAL: null, EXTERNAL: null };
         for (const role of Object.keys(byRole)) {
           const evaluators = Array.from(new Set(here.filter((s) => s.evaluatorRole === role).map((s) => s.evaluatorKey)));
           const pcts = evaluators.map((e) => {
             const ss = here.filter((s) => s.evaluatorKey === e);
             const max = ss.reduce((n, s) => n + (crit.get(s.criterionId)?.maxScore || 0), 0);
-            return max > 0 ? (100 * ss.reduce((n, s) => n + s.score, 0)) / max : null;
+            return max > 0 ? sc.adjust({ milestoneId: ms.id, evaluatorKey: e, role, studentId: m.studentId, pct: (100 * ss.reduce((n, s) => n + s.score, 0)) / max }) : null;
           }).filter((x): x is number => x !== null);
           byRole[role] = pcts.length ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
         }
@@ -228,6 +248,8 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
         const scored = Object.entries(byRole).filter(([r, v]) => v !== null && roleWeight[r] > 0);
         const w = scored.reduce((n, [r]) => n + roleWeight[r], 0);
         let pct = w > 0 ? scored.reduce((n, [r, v]) => n + (v as number) * roleWeight[r], 0) / w : null;
+        // Too few evaluators marked this student (e.g. panel members missed the presentation): not counted yet.
+        if (extra.minEvaluators > 1 && (((ms as unknown as { evaluatorMode?: string }).evaluatorMode || "PANEL") === "PANEL") && ms.kind !== "SUPERVISION" && new Set(here.map((s) => s.evaluatorKey)).size < extra.minEvaluators) pct = null;
         if (ms.kind === "SUPERVISION") pct = supervision.get(`${g.id}|${m.studentId}`) ?? null; // from the meeting log
         else if (mode === "SUPERVISOR_ONLY") pct = byRole.SUPERVISOR;
         else if (mode === "SINGLE") { const any = Object.values(byRole).filter((v): v is number => v !== null); pct = any.length ? any.reduce((a, b) => a + b, 0) / any.length : null; }
@@ -238,7 +260,8 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
       const total = wsum > 0 ? Math.round((done.reduce((n, x) => n + (x.pct as number) * x.weightPct, 0) / wsum) * 10) / 10 : null;
       const missing = byMilestone.filter((x) => x.pct === null).map((x) => x.title);
       // Missing roles on the evaluated milestones (e.g. no external score yet) are worth knowing before consolidating.
-      for (const x of done) { const ms = milestones.find((y) => y.id === x.milestoneId) as unknown as { kind: string; evaluatorMode?: string }; if (ms.kind === "SUPERVISION" || (ms.evaluatorMode && ms.evaluatorMode !== "PANEL")) continue; for (const [r, v] of Object.entries(x.byRole)) if (v === null && roleWeight[r] > 0) missing.push(`${x.title}: ${ROLE_TEXT[r].toLowerCase()}`); }
+      for (const x of done) { const ms = milestones.find((y) => y.id === x.milestoneId) as unknown as { kind: string; evaluatorMode?: string }; if (ms.kind === "SUPERVISION" || (ms.evaluatorMode && ms.evaluatorMode !== "PANEL")) continue; for (const [r, v] of Object.entries(x.byRole)) if (v === null && roleWeight[r] > 0 && (r !== "CO_SUPERVISOR" || coSup.has(g.id))) missing.push(`${x.title}: ${ROLE_TEXT[r].toLowerCase()}`); }
+      for (const x of byMilestone) if (x.pct === null && extra.minEvaluators > 1 && !missing.includes(x.title)) missing.push(`${x.title} (fewer than ${extra.minEvaluators} evaluators)`);
       const ploMap = new Map<number, { got: number; max: number }>();
       for (const s of mine) {
         const c = crit.get(s.criterionId);
@@ -249,10 +272,12 @@ export async function computeResults(cycleId: string): Promise<{ rows: StudentRe
       }
       const plo = Array.from(ploMap.entries()).sort((a, b) => a[0] - b[0]).map(([n, e]) => { const pct = e.max ? Math.round((1000 * e.got) / e.max) / 10 : 0; return { label: `GA-${n}`, pct, passed: pct >= passPct }; });
       const complete = missing.length === 0 && byMilestone.length > 0;
-      rows.push({ studentId: m.studentId, name: st?.name || "", rollNumber: st?.rollNumber || "", groupId: g.id, groupName: g.name, totalPct: total, complete, grade: total === null ? null : letterFor(total, cutoffs), byMilestone, plo, missing });
+      const meet = meetings(g.id, m.studentId);
+      rows.push({ studentId: m.studentId, name: st?.name || "", rollNumber: st?.rollNumber || "", groupId: g.id, groupName: g.name, totalPct: total, complete, grade: total === null ? null : letterFor(total, cutoffs), byMilestone, plo, missing,
+        rawTotalPct: raw ? raw.rows.find((r) => r.studentId === m.studentId && r.groupId === g.id)?.totalPct ?? null : total, meetings: meet, fewMeetings: extra.minMeetings > 0 && meet.attended < extra.minMeetings });
     }
   }
-  return { rows, passPct };
+  return { rows, passPct, evaluatorStats: sc.stats };
 }
 
 /** Every weighted milestone has a score, but some evaluator role is absent (e.g. no external at the mid-term). */

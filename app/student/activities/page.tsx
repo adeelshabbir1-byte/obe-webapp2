@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import { prisma } from "../../../lib/db";
+import SocietyDateCheck from "../../../components/SocietyDateCheck";
 import StudentShell from "../../../components/StudentShell";
 import { ActionButton, ActionForm } from "../../../components/fyp/FypClient";
 import { EVENT_CATEGORIES, sessionNow } from "../../../lib/studentActivities";
@@ -53,6 +54,10 @@ export default async function StudentActivitiesPortal() {
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Propose an event</h3>
                 <p className="small-note" style={{ marginTop: 0 }}>As {mySocieties.map((s) => `${s.position} of ${s.name}`).join(", ")} ({sessionNow()}), you can propose events. Student Affairs approves them and books the room, equipment and budget.</p>
+                <div style={{ border: "1px solid var(--line)", padding: "8px 10px", margin: "0 0 10px" }}>
+                  <b style={{ fontSize: 13 }}>Check a date first</b> <span className="small-note">— university holidays, exams, national days, other events, and which batches have class at that time.</span>
+                  <SocietyDateCheck />
+                </div>
                 <ActionForm url={API} fixed={{ action: "propose" }} submit="Send proposal" collapsed openLabel="New event proposal" done="Sent for approval."
                   initial={{ societyId: mySocieties[0].id, category: "Workshop" }}
                   fields={[
@@ -63,6 +68,16 @@ export default async function StudentActivitiesPortal() {
                     { name: "equipment", label: "Equipment needed (projector, mics, laptops…)", width: 320 }, { name: "budgetRequested", label: "Budget requested (PKR)", type: "number", width: 150 },
                     { name: "guests", label: "Guests / speakers", width: 260 }, { name: "description", label: "What happens, who it is for, and why", type: "textarea" },
                   ]} />
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                  <ActionForm url="/api/student/society-plan" fixed={{ action: "yearPlan" }} submit="Send to the advisor" collapsed openLabel="Plan for the year" done="Sent — the society's advisor approves it."
+                    initial={{ societyId: mySocieties[0].id }} fields={[{ name: "societyId", label: "Society", type: "select", options: mySocieties.map((s) => [s.id, s.name]), width: 220 }, { name: "text", label: "Events and goals month by month, budget, who does what", type: "textarea" }]} />
+                  {d.proposals.some((e) => e.status === "APPROVED" && e.eventDate.getTime() <= Date.now()) && (
+                    <ActionForm url="/api/student/society-plan" fixed={{ action: "report" }} submit="Send to the advisor" collapsed openLabel="Report an event held" done="Sent — the society's advisor approves it."
+                      initial={{ societyId: mySocieties[0].id }} fields={[{ name: "societyId", label: "Society", type: "select", options: mySocieties.map((s) => [s.id, s.name]), width: 220 },
+                        { name: "eventId", label: "Event", type: "select", options: d.proposals.filter((e) => e.status === "APPROVED" && e.eventDate.getTime() <= Date.now()).map((e) => [e.id, `${e.title} (${e.eventDate.toISOString().slice(0, 10)})`]), width: 300 },
+                        { name: "participants", label: "How many took part", type: "number", width: 130 }, { name: "text", label: "What happened, outcomes, photos link, feedback", type: "textarea" }]} />
+                  )}
+                </div>
               </div>
             )}
 

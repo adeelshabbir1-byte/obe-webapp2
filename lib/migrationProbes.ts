@@ -43,6 +43,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "FacultyAppraisal"
 },
 {
+"f": "migration_assessment_rules.sql",
+"d": "OMC's limits on assessment types (course total or per CLO) and the OMC / HOD approvals of courses outside them.",
+"t": "AssessmentRuleApproval"
+},
+{
 "f": "migration_assigner_hat.sql",
 "d": "Lets any teacher be given the Course Assigner role for a chosen semester.",
 "t": "User",
@@ -334,6 +339,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_fyp.sql",
 "d": "============================================================================",
 "t": "FypArtifact"
+},
+{
+"f": "migration_fyp_elections.sql",
+"d": "FYP: co-supervisors, the FYP head's extra settings (co-supervisor share, evaluator scaling, evaluators needed,",
+"t": "SocietyPlan"
 },
 {
 "f": "migration_fyp_plan.sql",

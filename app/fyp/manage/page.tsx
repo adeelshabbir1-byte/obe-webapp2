@@ -7,6 +7,7 @@ import { roleLabel } from "../../../lib/reportScope";
 import Shell from "../../../components/Shell";
 import { ActionButton, ActionForm, ExternalLinkForm } from "../../../components/fyp/FypClient";
 import { MilestonesEditor, PanelPicker, RenewExternalLink, RubricEditor } from "../../../components/fyp/FypAdminClient";
+import { cycleExtra, coSupervisors, MIN_N, CAP } from "../../../lib/fypScaling";
 import { computeResults, cutoffsOf, onlyRoleGaps, EXTENSIONS, facultyOf, fypAccess, MILESTONE_KINDS, panelAvailability, REQUISITION_KINDS } from "../../../lib/fyp";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,7 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
   const panelName = new Map(panels.map((p) => [p.id, p.name]));
   const peopleIds = [...proposals.map((p) => p.proposerId), ...groups.map((g) => g.supervisorId)].filter((x): x is string => !!x);
   const people = new Map((await prisma.user.findMany({ where: { id: { in: peopleIds.concat(["none"]) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+  const coSup = await coSupervisors(groups.map((g) => g.id));
   const ms = cycle && tab === "setup" ? await prisma.fypMilestone.findMany({ where: { cycleId: cycle.id }, orderBy: [{ orderIndex: "asc" }, { dueDate: "asc" }] }) : [];
   const cr = cycle && tab === "setup" ? await prisma.fypRubricCriterion.findMany({ where: { cycleId: cycle.id }, orderBy: { orderIndex: "asc" } }) : [];
   const memberNames = (gid: string) => members.filter((m) => m.groupId === gid && m.status === "JOINED").map((m) => students.get(m.studentId)?.name || "?");
@@ -158,6 +160,18 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                 ) : (
                   <p className="small-note">Supervisor {cycle.supervisorPct}% · internal panel {cycle.internalPct}% · external panel {cycle.externalPct}% · groups of {cycle.minGroupSize}–{cycle.maxGroupSize} · CGPA ≥ {cycle.minCgpa}, {cycle.minCreditHours}+ credits · posted as {cycle.courseCode} {cycle.courseTitle} ({cycle.creditHours} cr), {cycle.termName} {cycle.termYear}.</p>
                 )}
+                {manages && (await (async () => { const x = await cycleExtra(cycle.id); return (
+                  <div style={{ borderTop: "1px solid var(--line)", marginTop: 10, paddingTop: 8 }}>
+                    <b style={{ fontSize: 13 }}>Co-supervisor, fair marking and meetings</b>
+                    <ActionForm url="/api/fyp/admin" fixed={{ action: "cycleExtra", cycleId: cycle.id }} submit="Save" done="Saved." initial={{ coSupervisorPct: x.coSupervisorPct, scaling: x.scaling, minEvaluators: x.minEvaluators, minMeetings: x.minMeetings }}
+                      fields={[
+                        { name: "coSupervisorPct", label: "Co-supervisor share %", type: "number", width: 110 },
+                        { name: "scaling", label: "Strict / lenient evaluators", type: "select", options: [["NONE", "No correction"], ["ZSCORE", "Scale (average and spread)"], ["SHIFT", "Shift to the overall average"]], width: 220 },
+                        { name: "minEvaluators", label: "Evaluators needed per presentation", type: "number", width: 150 },
+                        { name: "minMeetings", label: "Supervision meetings expected", type: "number", width: 150 },
+                      ]} />
+                    <p className="small-note" style={{ margin: "4px 0 0" }}>The co-supervisor&apos;s share counts beside the supervisor&apos;s, internal and external shares (each milestone is the weighted average of the roles that marked). Correction applies to internal and external evaluators only, per milestone, to those who marked at least {MIN_N} students, by at most {CAP} marks out of 100. Absent panel members are never counted; a presentation needs the number of evaluators set here before it counts.</p>
+                  </div>); })())}
               </div>
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Milestones</h3>
@@ -236,7 +250,8 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                       return (
                         <tr key={g.id}>
                           <td><b>{g.name}</b><div className="small-note">{memberNames(g.id).join(", ")}</div></td>
-                          <td>{g.proposalId ? proposalTitle.get(g.proposalId) : "—"}<div className="small-note">{g.supervisorId ? people.get(g.supervisorId) : "no supervisor"}</div></td>
+                          <td>{g.proposalId ? proposalTitle.get(g.proposalId) : "—"}<div className="small-note">{g.supervisorId ? people.get(g.supervisorId) : "no supervisor"}{coSup.get(g.id) ? ` · co-supervisor ${facultyName.get(coSup.get(g.id)!) || ""}` : ""}</div>
+                            {manages && <ActionForm url="/api/fyp/admin" fixed={{ action: "coSupervisor", cycleId: cycle.id, groupId: g.id }} submit="Save" collapsed openLabel={coSup.get(g.id) ? "Change co-supervisor" : "Add co-supervisor"} initial={{ userId: coSup.get(g.id) || "" }} fields={[{ name: "userId", label: "Co-supervisor", type: "select", options: [["", "— none —"], ...facultyOptions] }]} />}</td>
                           <td>{manages ? <PanelPicker cycleId={cycle.id} groupId={g.id} panelId={g.panelId} panels={panels.map((p) => ({ id: p.id, name: p.name }))} /> : g.panelId ? panelName.get(g.panelId) : "—"}</td>
                           <td className="small-note">Draft {a.some((x) => x.kind === "THESIS_DRAFT") ? "✓" : "✗"} · similarity {sim ? <span style={{ color: (sim.similarityPct ?? 0) > 19 ? "var(--rust)" : undefined }}>{sim.similarityPct ?? "?"}%</span> : "✗"} · repo {a.some((x) => x.kind === "REPOSITORY") ? "✓" : "✗"}</td>
                           <td>
@@ -351,7 +366,11 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
       })())}
 
       {!missing && cycle && tab === "results" && (await (async () => {
-        const { rows, passPct } = await computeResults(cycle.id);
+        const { rows, passPct, evaluatorStats } = await computeResults(cycle.id);
+        const xs = await cycleExtra(cycle.id);
+        const evName = new Map((await prisma.user.findMany({ where: { id: { in: (evaluatorStats || []).map((e) => e.evaluatorKey).filter((k) => !k.startsWith("ext:")).concat(["none"]) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+        const extNames = new Map((await prisma.fypExternal.findMany({ where: { id: { in: (evaluatorStats || []).map((e) => e.evaluatorKey).filter((k) => k.startsWith("ext:")).map((k) => k.slice(4)).concat(["none"]) } }, select: { id: true, name: true } })).map((u) => [`ext:${u.id}`, u.name]));
+        const msTitle = new Map((rows[0]?.byMilestone || []).map((m) => [m.milestoneId, m.title]));
         const saved = new Map((await prisma.fypResult.findMany({ where: { cycleId: cycle.id } })).map((r) => [r.studentId, r]));
         const heads = rows[0]?.byMilestone || [];
         const waiting = Array.from(saved.values()).filter((r) => r.status === "CONSOLIDATED").length;
@@ -381,7 +400,7 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
               {rows.length === 0 ? <p className="small-note">No active groups yet.</p> : (
                 <div style={{ overflowX: "auto" }}>
                   <table>
-                    <thead><tr><th>Student</th><th>Group</th>{heads.map((m) => <th key={m.milestoneId}>{m.title} ({m.weightPct}%)</th>)}<th>Total</th><th>Grade</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Student</th><th>Group</th>{heads.map((m) => <th key={m.milestoneId}>{m.title} ({m.weightPct}%)</th>)}<th>Total</th>{xs.scaling !== "NONE" && <th title="Before the strict / lenient correction">Raw</th>}<th>Grade</th><th>Meetings</th><th>Status</th></tr></thead>
                     <tbody>{rows.map((r) => {
                       const s = saved.get(r.studentId);
                       return (
@@ -390,7 +409,9 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                           <td><Link href={`/fyp/groups/${r.groupId}`}>{r.groupName}</Link></td>
                           {r.byMilestone.map((x) => <td key={x.milestoneId}>{x.pct ?? "—"}</td>)}
                           <td><b>{r.totalPct ?? "—"}</b></td>
+                          {xs.scaling !== "NONE" && <td className="small-note">{r.rawTotalPct ?? "—"}{r.rawTotalPct != null && r.totalPct != null && r.rawTotalPct !== r.totalPct ? ` (${r.totalPct > r.rawTotalPct ? "+" : ""}${Math.round((r.totalPct - r.rawTotalPct) * 10) / 10})` : ""}</td>}
                           <td>{s ? s.grade : r.grade || "—"}</td>
+                          <td className="small-note" title={r.meetings?.dates.join(", ")} style={{ color: r.fewMeetings ? "var(--rust)" : undefined }}>{r.meetings ? `${r.meetings.attended}/${r.meetings.held} attended` : "—"}{r.meetings?.dates.length ? <div>{r.meetings.dates.slice(-4).join(", ")}{r.meetings.dates.length > 4 ? "…" : ""}</div> : null}{r.fewMeetings ? <div>below {xs.minMeetings}</div> : null}</td>
                           <td>{s ? <span className={`badge ${RESULT[s.status]?.[1] || "badge-neutral"}`}>{RESULT[s.status]?.[0] || s.status}</span> : r.complete ? <span className="badge badge-neutral">Ready</span> : <span className="small-note" style={{ color: "var(--rust)" }}>Missing: {r.missing.slice(0, 2).join("; ")}{r.missing.length > 2 ? "…" : ""}</span>}</td>
                         </tr>
                       );
@@ -399,6 +420,19 @@ export default async function FypManagePage({ searchParams }: { searchParams: { 
                 </div>
               )}
             </div>
+            {(evaluatorStats || []).length > 0 && (
+              <details className="card">
+                <summary style={{ cursor: "pointer", fontWeight: 600 }}>How strict each evaluator marks {xs.scaling === "NONE" ? "(no correction applied — set it under the cycle rules)" : xs.scaling === "ZSCORE" ? "(scaling applied)" : "(shift applied)"}</summary>
+                <table style={{ fontSize: 12.5, marginTop: 6 }}>
+                  <thead><tr><th>Milestone</th><th>Evaluator</th><th style={{ textAlign: "center" }}>Students</th><th style={{ textAlign: "center" }}>Their average</th><th style={{ textAlign: "center" }}>Everyone&apos;s</th><th>Tendency</th><th>Corrected</th></tr></thead>
+                  <tbody>{(evaluatorStats || []).sort((a, b) => (msTitle.get(a.milestoneId) || "").localeCompare(msTitle.get(b.milestoneId) || "") || a.mean - b.mean).map((e) => {
+                    const d = Math.round((e.mean - e.overall) * 10) / 10;
+                    return <tr key={e.milestoneId + e.evaluatorKey}><td>{msTitle.get(e.milestoneId) || "—"}</td><td>{evName.get(e.evaluatorKey) || extNames.get(e.evaluatorKey) || "—"}</td><td style={{ textAlign: "center" }}>{e.n}</td><td style={{ textAlign: "center" }}>{Math.round(e.mean * 10) / 10}</td><td style={{ textAlign: "center" }}>{Math.round(e.overall * 10) / 10}</td>
+                      <td style={{ color: Math.abs(d) >= 5 ? "var(--rust)" : undefined }}>{Math.abs(d) < 2 ? "in line" : d > 0 ? `lenient (+${d})` : `strict (${d})`}</td><td className="small-note">{e.adjusted ? "yes" : e.n < MIN_N ? `no — fewer than ${MIN_N} students` : "no"}</td></tr>;
+                  })}</tbody>
+                </table>
+              </details>
+            )}
             {ploAgg.size > 0 && (
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>GA attainment from the FYP</h3>

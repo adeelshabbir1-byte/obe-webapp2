@@ -3,6 +3,7 @@ import { closWithPlo } from "../../../../../lib/assessmentWeights";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import AssessmentRuleBanner from "../../../../../components/AssessmentRuleBanner";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
@@ -69,6 +70,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   return (
     <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
+      <AssessmentRuleBanner courseId={course.id} source="SE" />
       <PrereqTopicChecks courseId={course.id} source="SE" />
 
       {!weightsComplete && (
