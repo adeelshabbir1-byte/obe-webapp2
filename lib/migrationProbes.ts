@@ -588,6 +588,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "planKey"
 },
 {
+"f": "migration_platform_plus.sql",
+"d": "Campus-management API keys, the written question bank, read-only links for visiting panels and for parents.",
+"t": "ParentLink"
+},
+{
 "f": "migration_platform_settings.sql",
 "d": "Run in Supabase SQL Editor. Adds the PlatformSettings singleton table for",
 "t": "PlatformSettings"

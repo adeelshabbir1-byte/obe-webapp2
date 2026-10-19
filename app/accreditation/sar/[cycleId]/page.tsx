@@ -8,6 +8,7 @@ import { roleLabel } from "../../../../lib/reportScope";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { BODIES, type BodyKey } from "../../../../lib/accreditation/bodies";
 import { sarData, sarGaps, chapters } from "../../../../lib/sarBuilder";
+import KeyButton from "../../../../components/KeyButton";
 import ChapterTabs from "../../../../components/sar/ChapterTabs";
 import { chapterStatuses } from "../../../../lib/sarStatus";
 
@@ -38,6 +39,7 @@ export default async function SarPage({ params }: { params: { cycleId: string } 
         <a className="btn btn-secondary" href={`/api/accreditation/cycles/${c.id}/dossier`}>Download evidence dossier (ZIP)</a>
         <a className="btn btn-secondary" href={`/accreditation/visit/${c.id}`}>Visit plan, findings, implementation plan</a>
         <span className="small-note">{gaps.length ? `${gaps.length} items still missing` : "Complete"}</span>
+        {edit && <span style={{ marginLeft: "auto" }}><KeyButton url="/api/visit-panel" body={{ action: "create", cycleId: c.id, days: 7, label: "Visiting panel" }} label="Read-only link for the visiting panel (7 days)" /></span>}
       </div>
       <ChapterTabs cycleId={c.id} userId={user.id} canEdit={edit} statuses={statuses}
         chapters={chs.map((ch) => ({ key: ch.key, title: ch.title, prompt: ch.prompt, text: d.narr.get(ch.key) || "", gaps: gaps.filter((g) => g.ch === ch.key && !g.text.startsWith("Narrative")).map((g) => g.text) }))} />

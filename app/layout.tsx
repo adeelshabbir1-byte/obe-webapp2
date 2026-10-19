@@ -5,6 +5,7 @@ import { Sora, Figtree } from "next/font/google";
 import SaveShortcut from "../components/SaveShortcut";
 import NavProgress from "../components/NavProgress";
 import TourBar from "../components/TourBar";
+import PwaRegister from "../components/PwaRegister";
 
 // Self-hosted via next/font: no render-blocking request to Google at runtime,
 // no layout shift, and the files are served from our own origin with
@@ -15,6 +16,9 @@ const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree", displa
 export const metadata: Metadata = {
   title: { default: "OBE Curriculum Governance", template: "%s · OBE Curriculum Governance" },
   description: "Outcome-based education: curriculum governance, assessment and accreditation in one place.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+  appleWebApp: { capable: true, title: "OBEHUB", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -28,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${sora.variable} ${figtree.variable}`}>
       <body>
         <SaveShortcut />
+        <PwaRegister />
         <Suspense fallback={null}>
           <NavProgress />
         </Suspense>

@@ -5534,3 +5534,55 @@ model StudentHoldBack {
   setById   String?
   updatedAt DateTime @default(now())
 }
+
+// ---- Platform extras (lib/integrationKeys.ts, lib/questionBank.ts, lib/visitorPass.ts, lib/parentLink.ts)
+model InstituteApiKey {
+  id         String    @id
+  chairmanId String
+  label      String
+  keyHash    String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([keyHash])
+}
+
+model QuestionBankItem {
+  id          String   @id
+  chairmanId  String
+  courseCode  String
+  cloCode     String
+  bloom       String
+  kind        String   @default("SHORT")
+  marks       Float
+  text        String   @db.Text
+  usedCount   Int      @default(0)
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, courseCode])
+}
+
+model VisitorPass {
+  id          String    @id
+  cycleId     String
+  token       String    @unique
+  label       String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+}
+
+model ParentLink {
+  id          String    @id
+  studentId   String
+  token       String    @unique
+  createdById String
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([studentId])
+}

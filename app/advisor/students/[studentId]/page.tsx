@@ -9,6 +9,7 @@ import AdvisorStudentPlanner from "../../../../components/AdvisorStudentPlanner"
 import { computeCgpa, standingFromCgpa } from "../../../../lib/academicStanding";
 import { computeCurrentSemesterNumber } from "../../../../lib/termLogic";
 import { syncSemesters, holdBacks } from "../../../../lib/semesterSync";
+import KeyButton from "../../../../components/KeyButton";
 import AdvisorCourseStatus from "../../../../components/AdvisorCourseStatus";
 import { liveCourseStatus, plannedVsActual } from "../../../../lib/studentCourseStatus";
 import { ActionButton } from "../../../../components/fyp/FypClient";
@@ -61,6 +62,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
           The student is in <b>semester {s.currentSemesterNumber}</b>; by the calendar ({ct!.termName} {ct!.year}) the batch is in <b>semester {expected}</b>{held ? <> — held back by the Program Lead{held.reason ? ` (${held.reason})` : ""}.</> : "."}
         </div>
       )}
+      <div style={{ marginTop: 8 }}><KeyButton url="/api/parent-link" body={{ studentId: s.id, action: "create" }} label="Parent / guardian link" /></div>
       <AdvisorCourseStatus courses={live} history={history} />
       {live.length > 0 && <div style={{ marginTop: 8 }}><ActionButton url={`/api/advisor/students/${s.id}/freeze-grades`} body={{}} label="Save target grades as this semester's plan" className="btn btn-secondary btn-sm" done="Saved (only courses without a saved plan)." /></div>}
       <h2 style={{ fontSize: 16, margin: "18px 0 8px" }}>Degree plan</h2>

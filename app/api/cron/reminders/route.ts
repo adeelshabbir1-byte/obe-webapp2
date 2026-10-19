@@ -30,8 +30,10 @@ export async function GET(req: NextRequest) {
   const inactive = await runInactivityCheck(now).catch(() => 0);
   // QR attendance sessions whose time ran out while nobody had the page open: mark the absentees and the shortages.
   const attendanceClosed = await closeDueSessions().catch(() => 0);
+  // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
+  const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed });
+  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
