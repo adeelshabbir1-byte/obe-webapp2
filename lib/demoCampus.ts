@@ -454,3 +454,41 @@ export async function campusActivity() {
   }
   return true;
 }
+
+/** Indirect evidence for the outcomes reports: stakeholder surveys with questions mapped to PLOs, and course-exit CLO
+ * self-ratings for finished courses. */
+export async function campusSurveys() {
+  const s = await scope();
+  let made = 0;
+  for (const b of s.batches) {
+    const plos = await prisma.pLO.findMany({ where: { batchId: b.id }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } });
+    if (!plos.length) continue;
+    let templates = await prisma.surveyTemplate.findMany({ where: { coordinatorId: b.coordinatorId }, select: { id: true, stakeholderType: true } });
+    if (!templates.length) { await prisma.surveyTemplate.createMany({ data: ["STUDENT", "ALUMNI", "EMPLOYER"].map((t) => ({ coordinatorId: b.coordinatorId, title: `${t} survey`, stakeholderType: t })) }); templates = await prisma.surveyTemplate.findMany({ where: { coordinatorId: b.coordinatorId }, select: { id: true, stakeholderType: true } }); }
+    const students = await prisma.student.findMany({ where: { batchId: b.id }, select: { id: true, name: true }, take: 25 });
+    const alumni = await prisma.alumni.findMany({ where: { chairmanId: s.head, degreeProgram: b.degreeProgram }, select: { id: true, name: true }, take: 15 });
+    const employers = await prisma.employer.findMany({ where: { chairmanId: s.head }, select: { id: true, organizationName: true }, take: 8 });
+    for (const t of templates) {
+      if (await prisma.surveyQuestion.count({ where: { surveyTemplateId: t.id } })) continue;
+      const verb = t.stakeholderType === "EMPLOYER" ? "Our graduates employed by you demonstrate" : t.stakeholderType === "ALUMNI" ? "The program prepared me for" : "This program is developing my";
+      await prisma.surveyQuestion.createMany({ data: plos.map((p, i) => ({ surveyTemplateId: t.id, text: `${verb}: ${p.title.toLowerCase()}`, mappedPloId: p.id, orderIndex: i })) });
+      const qs = await prisma.surveyQuestion.findMany({ where: { surveyTemplateId: t.id }, select: { id: true } });
+      const who = t.stakeholderType === "STUDENT" ? students.map((x) => ({ label: x.name, studentId: x.id })) : t.stakeholderType === "ALUMNI" ? alumni.map((x) => ({ label: x.name, alumniId: x.id })) : employers.map((x) => ({ label: x.organizationName, employerId: x.id }));
+      const r = rng(`survey-${t.id}`);
+      for (const w of who) {
+        const resp = await prisma.surveyResponse.create({ data: { surveyTemplateId: t.id, token: randomUUID(), respondentType: t.stakeholderType, respondentLabel: w.label, studentId: (w as { studentId?: string }).studentId || null, alumniId: (w as { alumniId?: string }).alumniId || null, employerId: (w as { employerId?: string }).employerId || null, submittedAt: d("2026-05-20") } });
+        await prisma.surveyAnswer.createMany({ data: qs.map((q) => ({ surveyResponseId: resp.id, questionId: q.id, ratingValue: Math.max(1, Math.min(5, Math.round(3.7 + (r() - 0.5) * 2.4))) })) });
+        made++;
+      }
+    }
+    // Course-exit CLO self-ratings for finished courses.
+    const finished = await prisma.course.findMany({ where: { batchId: b.id, semesterNumber: { lte: 4 }, isOffered: true }, select: { id: true, studentEnrollments: { select: { studentId: true }, take: 22 } } });
+    for (const c of finished) {
+      if (await db.courseExitResponse.count({ where: { courseId: c.id } }).catch(() => 1)) continue;
+      const clos = await prisma.cLO.findMany({ where: { courseId: c.id, source: "INSTRUCTOR" }, select: { id: true } });
+      const r = rng(`exit-${c.id}`);
+      await db.courseExitResponse.createMany({ data: c.studentEnrollments.map((e) => ({ id: randomUUID(), courseId: c.id, studentId: e.studentId, ratingsJson: JSON.stringify(Object.fromEntries(clos.map((cl) => [cl.id, Math.max(1, Math.min(5, Math.round(3.8 + (r() - 0.5) * 2.2)))]))), createdAt: new Date() })), skipDuplicates: true }).catch(() => null);
+    }
+  }
+  return made;
+}

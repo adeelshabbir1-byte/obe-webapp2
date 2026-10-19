@@ -5,6 +5,8 @@ import { reviewBatchWhere } from "../../../lib/reviewScope";
 import { outcomesData, FORMATS } from "../../../lib/outcomesReport";
 import { SOURCES } from "../../../lib/indirectPlo";
 import PrintButton from "../../../components/PrintButton";
+import { bodyOfProgram } from "../../../lib/accreditation/bodies";
+import { chairmanIdFor } from "../../../lib/reportScope";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,10 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
   if (!where) redirect("/dashboard");
   const batches = await prisma.batch.findMany({ where, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { startYear: "desc" }] });
   const sel = batches.find((b) => b.id === searchParams.batch) || batches[0];
-  const fk = FORMATS[searchParams.format || ""] ? searchParams.format! : "NCEAC";
+  // Default: the council the program is bound to (BBA → NBEAC, computing → NCEAC); the dropdown can still switch.
+  const council = sel ? (await bodyOfProgram(await chairmanIdFor(user), sel.degreeProgram).catch(() => null))?.body : null;
+  const fk = FORMATS[searchParams.format || ""] ? searchParams.format! : council && FORMATS[council] ? council : "NCEAC";
+  const pre = fk === "ABET" ? "SO" : fk === "NBEAC" ? "LG" : fk === "PEC" ? "PLO" : "GA";
   const f = FORMATS[fk];
   const d = sel ? await outcomesData(sel.id) : null;
   const th = { border: "1px solid #999", padding: "4px 6px", background: "#EEF2F6", textAlign: "left" as const, fontSize: 12 };
@@ -28,7 +33,7 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
       <form className="no-print card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <a href="/dashboard" className="btn btn-secondary btn-sm">← Back</a>
         <select name="batch" defaultValue={sel?.id}>{batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}</select>
-        <select name="format" defaultValue={fk}>{Object.entries(FORMATS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select>
+        <select name="format" defaultValue={searchParams.format || ""}><option value="">Program&apos;s own council ({council || "NCEAC"})</option>{Object.entries(FORMATS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select>
         <button className="btn btn-sm">Build report</button>
         {d && <a className="btn btn-secondary btn-sm" href={`/api/accreditation/outcomes-bundle?batch=${d.batch.id}&format=${fk}`}>Download evidence bundle (ZIP)</a>}
         <PrintButton />
@@ -45,7 +50,7 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
           <h2 style={{ fontSize: 16 }}>{f.sections[1]}</h2>
           <p>Each {f.outcome} is assessed directly (share of students&apos; course results meeting it) and indirectly (share of survey ratings of 3 or more out of 5). Target: blended attainment ≥ {d.plo.target}%.</p>
           <table style={{ borderCollapse: "collapse", width: "100%" }}><thead><tr><th style={th}>{f.outcome}</th>{f.outcomes.length > 0 && <th style={th}>{fk} attribute</th>}{SOURCES.map(([k, v]) => <th key={k} style={th}>{v} ({d.plo.weights[k]})</th>)}<th style={th}>Blended</th><th style={th}>Met</th></tr></thead>
-            <tbody>{d.plo.rows.map((r) => <tr key={r.number}><td style={td}>GA-{r.number}: {r.title}</td>{f.outcomes.length > 0 && <td style={td}>{f.outcomes[r.number - 1] ? `${fk === "ABET" ? "SO" : "GA"} ${r.number} — ${f.outcomes[r.number - 1]}` : "—"}</td>}
+            <tbody>{d.plo.rows.map((r) => <tr key={r.number}><td style={td}>{pre}-{r.number}: {r.title}</td>{f.outcomes.length > 0 && <td style={td}>{f.outcomes[r.number - 1] ? `${fk === "ABET" ? "SO" : "GA"} ${r.number} — ${f.outcomes[r.number - 1]}` : "—"}</td>}
               {SOURCES.map(([k]) => <td key={k} style={td}>{r.cells[k] ? `${r.cells[k]!.pct}% (n=${r.cells[k]!.n})` : "—"}</td>)}<td style={{ ...td, fontWeight: 700 }}>{r.blended ?? "—"}{r.blended !== null ? "%" : ""}</td><td style={td}>{r.met === null ? "—" : r.met ? "Yes" : "No"}</td></tr>)}</tbody></table>
           {f.outcomes.length > 0 && <p style={{ fontSize: 12 }}><i>{fk} attributes are matched to the program&apos;s GAs by number; keep GA numbering aligned with the {fk} list.</i></p>}
 
