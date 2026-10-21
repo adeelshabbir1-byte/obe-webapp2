@@ -1,4 +1,4 @@
-# OBEHUB — Build Prompt for the Pending Queue (21 items)
+# OBEHUB — Build Prompt for the Pending Queue (33 items)
 
 > Paste this whole document to the developer / AI that will build the next round. It describes the system as it is, the rules every change must follow, and every queued feature in full. Build all items; do not drop any detail.
 
@@ -156,6 +156,49 @@
 
 ---
 
+## PART C2 — Further items 22–33 (MS/PhD is deliberately left out — do not build it)
+
+### 22. Previous-data upload templates (bulk onboarding of a real university) — HIGH PRIORITY
+- One **Data Import** page for the Institute Head / Program Lead with a downloadable Excel **template for each kind of past data**, each with an instructions sheet, one example row, data validation (dropdowns, dates) and a column legend:
+  faculty (profile, designation, qualifications, joining date, employment type); students (roll no., name, CNIC, batch, program, status, contact); **past transcripts** (student, course code, title, credit hours, term, year, marks %, grade, grade points); curriculum / scheme of studies (semester, code, title, credit hours, type, prerequisites); CLOs with PLO mapping per course; lecture plans; assessment plans; past course allocation (term, course, section, teacher); past results summaries; rooms and labs; alumni and employers; survey results; past attendance summaries (optional).
+- Accept the owner's real files as they are where possible — samples already provided: `Enrolled_Students.xlsx`, `BS CS 8 Semester Plan.xlsx`, `Course-Allocation-Fall-26.xlsx`, `Curriculum and Transcripts comparisons.xlsx`, `NCEAC Autogenerator 23-1 Discrete Structures.xlsx`, `Annex-A (BSCS Fall 2026).pdf`. Offer a **column-mapping step** (match their headers to ours, remembered for next time).
+- **Dry run first:** show what will be created / updated / skipped and every row error (with row number and reason) before anything is saved; then import in batches (no timeouts on large files), idempotent (re-uploading updates instead of duplicating), with an import log and an undo of the last import.
+- Past transcripts feed CGPA, the degree audit, prediction and the intake/graduation figures automatically.
+- Demo: provide filled sample templates for Dream University.
+
+### 23. Notifications for students and parents
+- In-app notifications on the student portal plus email (and SMS where configured): registration done / held, advisor decisions, results published, attendance falling below the limit, fee due, feedback window open, status changes; parents get the summary via their link. Students can choose which ones they receive.
+
+### 24. Multi-campus
+- One university, several campuses: shared curriculum and rules, separate students, rooms, timetables and staff per campus; campus filter on every report; campus-wise figures for the councils. (Owner to confirm "one institute with campuses"; build it that way unless told otherwise.)
+
+### 25. Urdu interface
+- Urdu for menus and the student and parent pages (right-to-left layout, Nastaleeq font), switchable per user; English stays the default for staff pages and official reports.
+
+### 26. Student fee accounts and online payment
+- Fee structure per program and semester, challans, dues, fines, scholarships and concessions applied, payments (bank, JazzCash, Easypaisa gateways where configured), receipts; fee clearance linked to registration, exams and degree issuance (item 13) and refunds (item 16).
+
+### 27. LMS link
+- Sync courses, enrolments and marks with Google Classroom and Moodle (pull assignment/quiz marks into OBEHUB assessments, push class lists), so teachers do not enter marks twice.
+
+### 28. Backups and restore per institute
+- Scheduled export of one institute's data (all tables) to a downloadable archive, and a tested restore of one institute without affecting others; backup log visible to the Super User.
+
+### 29. Security review
+- Login rate limiting and lock-out, review of every API route's permission checks, field-level protection for CNIC/grades/health data, data-retention rules, data export on request, security headers; a written checklist of what was verified.
+
+### 30. Speed
+- Set the Vercel region next to the Supabase region (e.g. Mumbai `bom1` or Singapore `sin1` — check where Supabase is); cache or pre-compute heavy pages (prediction, faculty ranking, readiness, outcomes report) nightly; test with a large university (10,000+ students) and fix slow queries.
+
+### 31. Real-data testing round
+- Run every recent feature (demo loader steps, automatic registration, academic rules, transcript tabs, visit day, FDP, leave, booking, meetings, meals, performance report, prediction, NCEAC exports) against the live database with a pilot institute; fix the errors found; add automated tests for the core calculations.
+
+### 32. Training material
+- A short guide and a 3–5 minute video per role (Institute Head, Dean, HOD, Program Lead, Subject Expert, teacher, advisor, Controller of Examinations, QEC, student), a "first week" checklist for a new institute, and in-app "what to do next" tips.
+
+### 33. Phone app on the Play Store (on hold — owner said "not yet")
+- Keep the installable web app; when approved, wrap it for the Play Store with push notifications.
+
 ## PART D — Files the owner is providing
 - NCEAC portal screenshots, sample university documents, and the NCEAC student and faculty upload format files — all used by item 21 (Part F). They will be attached with this prompt or uploaded to the Claude project "OBE".
 - Earlier uploads already available in the session: `Annex-A (BSCS Fall 2026).pdf`, `BS CS 8 Semester Plan.xlsx`, `Course-Allocation-Fall-26.xlsx`, `Curriculum and Transcripts comparisons.xlsx`, `Enrolled_Students.xlsx`, `NCEAC Autogenerator 23-1 Discrete Structures.xlsx` — use them as samples of the real data shapes.
@@ -178,7 +221,7 @@
 5. **Demo:** fill Dream University so that both downloads are complete and pass validation.
 
 ## PART E — Suggested build order
-1. Items 3, 4, 2, 1 (daily use) → 2. Item 21 (NCEAC portal data and exports, as soon as the files are available), items 6, 7, 9, 8 (accreditation) → 3. Items 5, 10–20. Deploy each batch as soon as it is ready, with demo data, and list changed files and the SQL to run.
+1. Item 22 (previous-data upload templates), items 3, 4, 2, 1, 23 (daily use) → 2. Item 21 (NCEAC portal data and exports, as soon as the files are available), items 6, 7, 9, 8 (accreditation) → 3. Items 5, 10–20 → 4. Items 28, 29, 30, 31 before a real university goes live → 5. Items 24–27, 32 → 6. Item 33 only when the owner approves. Deploy each batch as soon as it is ready, with demo data, and list changed files and the SQL to run.
 
 ---
 
