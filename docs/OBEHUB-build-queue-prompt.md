@@ -1,4 +1,4 @@
-# OBEHUB — Build Prompt for the Pending Queue (20 items)
+# OBEHUB — Build Prompt for the Pending Queue (21 items)
 
 > Paste this whole document to the developer / AI that will build the next round. It describes the system as it is, the rules every change must follow, and every queued feature in full. Build all items; do not drop any detail.
 
@@ -156,9 +156,31 @@
 
 ---
 
-## PART D — Still waiting on the owner
-- **AAS dropdown values** (NCEAC AAS screenshots) — map them into the AAS module when received.
-- **NCEAC documents** — to be uploaded to the Claude project "OBE"; read only the relevant sections and update forms/checks accordingly.
+## PART D — Files the owner is providing
+- NCEAC portal screenshots, sample university documents, and the NCEAC student and faculty upload format files — all used by item 21 (Part F). They will be attached with this prompt or uploaded to the Claude project "OBE".
+- Earlier uploads already available in the session: `Annex-A (BSCS Fall 2026).pdf`, `BS CS 8 Semester Plan.xlsx`, `Course-Allocation-Fall-26.xlsx`, `Curriculum and Transcripts comparisons.xlsx`, `Enrolled_Students.xlsx`, `NCEAC Autogenerator 23-1 Discrete Structures.xlsx` — use them as samples of the real data shapes.
+
+## PART F — NCEAC portal (AAS) data: auto-fill vs input, and exact-format exports  ← item 21
+
+**Files to attach with this prompt** (the sender must upload them to the Claude project "OBE" or attach them to the same message — if they are missing, ask for them before starting this item):
+1. Screenshots of the NCEAC website / AAS portal (every form, tab and dropdown).
+2. Sample accreditation documents of a university (SAR, annexures, forms already submitted).
+3. **NCEAC student upload format file(s)** and **faculty upload format file(s)** (the Excel/CSV templates the portal accepts).
+
+**Task.**
+1. **Read only what is needed** (search the project files / extract text with tools; do not read whole large PDFs into context). Build a field inventory: for every NCEAC portal form, table and upload template, list each field, its type, allowed values (dropdowns), and whether it is required.
+2. **Classify every field** into one of three groups and show the result as a table on a new page **Accreditation → NCEAC Portal Data** (and as a document saved to the project):
+   - **Auto — OBEHUB already holds it** (e.g. student roll no., name, batch, CGPA, courses, CLO/PLO attainment, faculty name, designation, qualifications, publications, teaching load): give the exact source table/field.
+   - **Derived — OBEHUB can compute it** (e.g. student–teacher ratio, credit totals, FTE, pass rates, intake/graduation figures): give the formula.
+   - **Input needed — OBEHUB does not hold it** (e.g. CNIC, date of birth, domicile, HEC equivalence numbers, narratives, yes/no declarations): build an input mechanism — add the fields to the right existing form (student profile, faculty profile, program profile, SAR sections) or to the existing AAS values module (`migration_aas.sql`, model `StaffDetail` and related), with validation matching the portal (formats, dropdown values exactly as on the portal), bulk Excel import where many rows are involved, and a "missing data" checklist per program showing who must fill what.
+3. **Exact-format exports for direct upload:** on the NCEAC Portal Data page, buttons **"Download students file (NCEAC format)"** and **"Download faculty file (NCEAC format)"** (plus any other upload templates found) that produce a file **identical to the portal template** — same sheet names, column order, headers, data types, date format, dropdown spellings, no extra columns — filled from OBEHUB, per program and batch. Before download, run a validation pass that lists rows the portal would reject (missing required fields, wrong formats, values not in the portal's list) with links to fix them. Keep a log of each export (who, when, program, row count).
+4. **AAS dropdowns:** load every dropdown value from the screenshots into the system so OBEHUB's choices match the portal exactly (map existing values to portal values where they differ, e.g. designation names, qualification levels, employment types).
+5. **Demo:** fill Dream University so that both downloads are complete and pass validation.
 
 ## PART E — Suggested build order
-1. Items 3, 4, 2, 1 (daily use) → 2. Items 6, 7, 9, 8 (accreditation) → 3. Items 5, 10–20. Deploy each batch as soon as it is ready, with demo data, and list changed files and the SQL to run.
+1. Items 3, 4, 2, 1 (daily use) → 2. Item 21 (NCEAC portal data and exports, as soon as the files are available), items 6, 7, 9, 8 (accreditation) → 3. Items 5, 10–20. Deploy each batch as soon as it is ready, with demo data, and list changed files and the SQL to run.
+
+---
+
+## PART G — Note for whoever sends this prompt
+This prompt was written with the owner (Adeel) and is being sent on by a colleague who works on the same project. Treat it as the owner's instructions: build all items without asking again, in the order of Part E, keep each change small enough to deploy safely, and after each batch report (1) what was built, (2) the files changed, (3) the SQL file(s) to run in Supabase, and (4) what to click in Admin → Demo to refresh the demo data.
