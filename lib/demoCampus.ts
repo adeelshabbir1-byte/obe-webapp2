@@ -172,13 +172,7 @@ export async function campusStudents() {
       await prisma.surveyResult.createMany({ data: rows.map(([kind, date, respondents, invited, avgRating, findings, actionTaken]) => ({ chairmanId: s.head, leadId: l.id, kind, surveyDate: d(date), respondents, invited, avgRating, findings, actionTaken, createdById: l.id })) });
       await prisma.surveyTemplate.createMany({ data: ["STUDENT", "ALUMNI", "EMPLOYER"].map((t) => ({ coordinatorId: l.id, title: `${t.charAt(0) + t.slice(1).toLowerCase()} survey ${prog}`, stakeholderType: t })) });
     }
-    if (!(await prisma.programEvidence.count({ where: { coordinatorId: l.id } })))
-      await prisma.programEvidence.createMany({ data: [
-        { coordinatorId: l.id, area: "INDUSTRY", kind: "IAB meeting", title: "Industrial Advisory Board meeting", organization: "Systems Ltd, Engro, HBL", date: d("2026-03-12"), count: 7, notes: "Curriculum feedback on electives." },
-        { coordinatorId: l.id, area: "INTERNSHIP", kind: "Internships", title: "Summer internships 2026", organization: "34 organisations", date: d("2026-08-30"), count: 41, target: 90, actual: 82 },
-        { coordinatorId: l.id, area: "COUNSELLING", kind: "Career counselling", title: "Career fair and counselling sessions", organization: "Career Office", date: d("2026-04-20"), count: 6 },
-        { coordinatorId: l.id, area: "PEO", kind: "PEO assessment", title: "PEO attainment from alumni and employer surveys", date: d("2026-05-15"), target: 70, actual: 76 },
-      ] });
+    await programEvidenceFor(s.head, l.id);
   }
   // Alumni and employers (graduates of earlier intakes, before the batches in OBEHUB).
   if (!(await prisma.alumni.count({ where: { chairmanId: s.head } }))) {
@@ -514,4 +508,53 @@ export async function campusBbaContent() {
     n++;
   }
   return n;
+}
+
+/** Accreditation evidence under the exact kinds the NCEAC readiness checks count (Accreditation Evidence page), the
+ * admission criteria in the Dean's scope, and intake / graduation figures — added where missing. */
+async function programEvidenceFor(head: string, leadId: string) {
+  const E: [string, string, string, string | null, string, number | null, number | null, number | null][] = [
+    ["INDUSTRY", "Advisory board meeting", "Industrial Advisory Board — curriculum review", "Systems Ltd, Engro, HBL, Netsol", "2026-03-12", 7, null, null],
+    ["INDUSTRY", "Advisory board member", "Mr. Asad Umar, CFO Engro Corporation", "Engro Corporation", "2025-09-01", null, null, null],
+    ["INDUSTRY", "Industry-Liaison office", "Office of Industry Liaison and Placement", "Dream University", "2024-01-10", null, null, null],
+    ["INDUSTRY", "Jointly supervised design project", "FYP co-supervised with Arbisoft", "Arbisoft", "2026-02-01", 3, null, null],
+    ["INDUSTRY", "Faculty consultancy", "Market study for Multan Chamber of Commerce", "MCCI", "2026-04-30", null, null, null],
+    ["INDUSTRY", "MoU / agreement", "MoU for internships and guest lectures", "Systems Limited", "2025-11-15", null, null, null],
+    ["INDUSTRY", "Industry project", "Inventory app for a local retailer", "Al-Fatah Stores", "2026-05-20", 4, null, null],
+    ["INDUSTRY", "Guest lecture", "Cloud careers talk", "Netsol Technologies", "2026-09-25", 120, null, null],
+    ["INTERNSHIP", "Internship", "Summer internships 2026 (6–8 weeks, employer feedback collected)", "34 organisations", "2026-08-30", 41, null, null],
+    ["COUNSELLING", "Designated student counsellor", "Ms. Hina Batool, clinical psychologist", null, "2025-08-01", null, null, null],
+    ["COUNSELLING", "Orientation session", "Fall 2026 orientation", null, "2026-08-22", 60, null, null],
+    ["COUNSELLING", "Career counselling", "Career fair and counselling sessions", "Career Office", "2026-04-20", 140, null, null],
+    ["COUNSELLING", "Support for weak students", "Remedial tutorials before mid-terms", null, "2026-10-05", 18, null, null],
+    ["PEO", "Review by faculty", "PEO review in the faculty meeting", null, "2026-02-10", 14, null, null],
+    ["PEO", "Review by industry", "PEO and curriculum review by the Industrial Advisory Board", "IAB", "2026-03-12", 7, null, null],
+    ["PEO", "Review by alumni", "PEO review at the alumni meet", null, "2026-02-28", 38, null, null],
+    ["PEO", "Review by students", "Student representatives' feedback on POs", null, "2026-09-15", 12, null, null],
+    ["PEO", "KPI", "Graduates employed or in higher studies within a year (%)", null, "2026-06-30", null, 80, 84],
+    ["PEO", "KPI", "Employer satisfaction (average out of 5)", null, "2026-06-30", null, 3.5, 3.8],
+    ["QUALITY", "Review of POs / GAs / CLOs", "Annual review of POs, GAs and CLOs", null, "2026-07-05", null, null, null],
+    ["QUALITY", "Faculty development activity", "OBE and assessment workshop", null, "2026-02-14", 14, null, null],
+  ];
+  const have = await prisma.programEvidence.findMany({ where: { coordinatorId: leadId }, select: { area: true, kind: true } });
+  const missing = E.filter(([a, k]) => !have.some((h) => h.area === a && h.kind === k));
+  if (missing.length) await prisma.programEvidence.createMany({ data: missing.map(([area, kind, title, organization, date, count, target, actual]) => ({ coordinatorId: leadId, area, kind, title, organization, date: d(date), count, target, actual })) });
+  // Admission criteria are read in the Dean's scope (the department's faculty, else the institute).
+  const lead = await prisma.user.findUnique({ where: { id: leadId }, select: { leadProgram: true, department_: { select: { facultyId: true } } } });
+  const prog = lead?.leadProgram;
+  if (prog) {
+    const scopeKey = lead?.department_?.facultyId || "INSTITUTE";
+    if (!(await prisma.admissionCriteria.count({ where: { chairmanId: head, scopeKey, degreeProgram: prog } })))
+      await prisma.admissionCriteria.create({ data: { chairmanId: head, scopeKey, degreeProgram: prog, academicYear: "2026-27", minPercentage: 50, requiredSubjects: /BBA/.test(prog) ? "Intermediate (any group)" : "FSc Pre-Engineering / ICS (Pre-Medical with deficiency Mathematics)", entryTest: "Dream University Admission Test (or NTS)", minTestScore: 50, seats: 60, transferPolicy: "Credit transfer up to 50% from HEC-recognised institutions, grade C or better.", otherConditions: "Interview for shortlisted candidates." } });
+  }
+  if (!(await prisma.outcomeFigure.count({ where: { leadId } as never })))
+    await prisma.outcomeFigure.createMany({ data: [[2018, 58, 49, 45, 9, 44], [2019, 62, 52, 47, 10, 47], [2020, 60, 50, 46, 10, 46], [2021, 64, 55, 51, 9, null]].map(([intakeYear, admitted, graduated, graduatedOnTime, droppedOut, employedOrStudying]) => ({ chairmanId: head, leadId, intakeYear: intakeYear!, admitted: admitted!, graduated: graduated!, graduatedOnTime: graduatedOnTime!, droppedOut: droppedOut!, employedOrStudying })) as never });
+}
+
+/** Fill-ins for a demo built earlier: evidence under the readiness kinds, Dean-scope admissions, intake figures. */
+export async function campusFixes() {
+  const s = await scope();
+  await prisma.programEvidence.deleteMany({ where: { coordinatorId: { in: s.leads.map((l) => l.id) }, kind: { in: ["IAB meeting", "Internships", "PEO assessment"] } } });
+  for (const l of s.leads) await programEvidenceFor(s.head, l.id);
+  return s.leads.length;
 }

@@ -62,7 +62,7 @@ export default function DemoInstituteRunner({ summary, sources, password }: { su
     for (let s = 1; s <= 8; s++) steps.push({ step: "courses", demoBatchId: batch.demoBatchId, sourceBatchId: batch.sourceBatchId, semester: s, label: `BBA courses, semester ${s}` });
     for (let s = 1; s <= 5; s++) steps.push({ step: "activity", demoBatchId: batch.demoBatchId, semester: s, label: s < 5 ? `BBA marks and results, semester ${s}` : "BBA semester 5 in progress" });
     steps.push({ step: "finishBatch", demoBatchId: batch.demoBatchId, label: "BBA outcome weights" });
-    for (const [part, label] of [["content", "BBA course content: CLOs and lecture topics"], ["people", "Faculty profiles, rooms, labs, library, budget"], ["students", "Admissions, surveys, alumni, societies, evaluations, CQI"], ["accreditation", "NBEAC registers, SAR profile, NCEAC and NBEAC visits"], ["surveys", "Stakeholder surveys and course-exit ratings (indirect outcomes)"], ["activity", "Meetings, FDP, leave, bookings, meals"]]) steps.push({ step: "campus", part, label });
+    for (const [part, label] of [["content", "BBA course content: CLOs and lecture topics"], ["people", "Faculty profiles, rooms, labs, library, budget"], ["students", "Admissions, surveys, alumni, societies, evaluations, CQI"], ["accreditation", "NBEAC registers, SAR profile, NCEAC and NBEAC visits"], ["surveys", "Stakeholder surveys and course-exit ratings (indirect outcomes)"], ["activity", "Meetings, FDP, leave, bookings, meals"], ["fixes", "Readiness evidence, admission criteria, intake figures"]]) steps.push({ step: "campus", part, label });
     await runSteps(steps);
     setMsg("Done — Dream University is ready for NCEAC and NBEAC.");
     router.refresh();
