@@ -7316,3 +7316,20 @@ model StudentAlertPref {
   parentWeekly Boolean  @default(true)
   updatedAt    DateTime @default(now())
 }
+
+// Quality Office registers (lib/qaOffice.ts). kind = PROGRAM_PROPOSAL | STAGES | PQR | CITIZEN | RANKING | DEPT_REVIEW |
+// AWARENESS | AFFILIATE | QA_PLAN | QA_PROFILE | ACTION; refId links an ACTION / STAGES row to its parent (or "IPE-<n>").
+model QaRecord {
+  id          String   @id
+  chairmanId  String
+  kind        String
+  refId       String?
+  dataJson    String   @default("{}")
+  createdById String
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  @@index([chairmanId, kind])
+  @@index([refId])
+}

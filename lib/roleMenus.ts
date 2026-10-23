@@ -11,14 +11,14 @@ export const CORE: Record<string, [string, string[]][]> = {
     ["Today", ["/home", "/approvals", "/head-dashboard", "/deadlines"]],
     ["People & structure", ["/chairman/org-chart", "/chairman/people", "/leave-approvals"]],
     ["Academics", ["/results-approval", "/academic-calendar", "/academic-rules"]],
-    ["Accreditation", ["/accreditation-overview", "/accreditation/readiness"]],
+    ["Accreditation", ["/accreditation-overview", "/accreditation/readiness", "/quality-office"]],
     ["Institute", ["/chairman/institute-settings", "/data-import", "/controller", "/chairman/backups", "/billing"]],
   ],
   DEAN: [
     ["Today", ["/dean/overview", "/approvals", "/head-dashboard", "/deadlines"]],
     ["Faculty & departments", ["/dean/approvals", "/leave-approvals", "/teacher-performance", "/dean/curricula"]],
     ["Academics", ["/results-approval", "/academic-calendar", "/admission-criteria"]],
-    ["Accreditation", ["/accreditation-overview", "/accreditation/readiness"]],
+    ["Accreditation", ["/accreditation-overview", "/accreditation/readiness", "/quality-office"]],
   ],
   HEAD_OF_DEPARTMENT: [
     ["Today", ["/hod/department", "/approvals", "/head-dashboard", "/deadlines"]],
@@ -97,7 +97,7 @@ const VIEW = new Set([
   "/my-payslips", "/benefits", "/signed-documents", "/internationalisation", "/qec-proformas", "/risk", "/head-dashboard", "/coordinator/hec-comparison",
   "/coordinator/assignment-history", "/coordinator/report-bundles", "/my-obe", "/instructor/peers", "/coordinator/deficiency-status", "/plan-insights",
   "/evaluations", "/exit-surveys", "/faculty-survey", "/aol", "/complex-problems", "/policy-history", "/coordinator/labs-overview", "/library-inventory", "/lab-inventory",
-  "/courses-in-degree", "/who-does-what", "/ga-coverage", "/where-courses-used",
+  "/courses-in-degree", "/who-does-what", "/ga-coverage", "/where-courses-used", "/program-spec",
 ]);
 
 /** Split a role's flat menu into the main menu (core + duties), other work pages, and view-only reports. Null = role not curated. */

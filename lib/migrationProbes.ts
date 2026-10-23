@@ -812,6 +812,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "designerId"
 },
 {
+"f": "migration_qa_office.sql",
+"d": "Quality Office registers (lib/qaOffice.ts): new program approvals, PQR, Citizen Portal complaints, rankings data,",
+"t": "QaRecord"
+},
+{
 "f": "migration_qaa.sql",
 "d": "HEC QAA self-assessment cycle of a program: Program Team -> SAR -> Assessment Team visit and report ->",
 "t": "QaaAction"

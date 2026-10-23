@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
       case "ipe": {
-        if (!["CHAIRMAN", "DEAN"].includes(user.role) || !cid) return NextResponse.json({ error: "The Institute Head (or a Dean) fills the IPE self-assessment." }, { status: 403 });
+        if ((!["CHAIRMAN", "DEAN"].includes(user.role) && !(user.extraRoles || []).some((x) => x === "QEC_INCHARGE" || x === "QEC_MEMBER")) || !cid) return NextResponse.json({ error: "The Institute Head, a Dean or the QEC fills the IPE self-assessment." }, { status: 403 });
         const standard = Math.round(num(b.standard) || 0);
         if (!IPE_STANDARDS.some(([n]) => n === standard)) return NextResponse.json({ error: "Unknown standard." }, { status: 400 });
         const score = num(b.score);

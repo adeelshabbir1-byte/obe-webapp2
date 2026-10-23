@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
   const studentAlerts = await import("../../../../lib/studentAlerts").then((m) => m.dailyStudentAlerts(now)).catch(() => 0);
   // Sundays: a stored backup of every institute (kept 8 weeks).
   const backups = await import("../../../../lib/instituteBackup").then((m) => m.weeklyBackups(now)).catch(() => 0);
-  void statusApplied; void backups;
+  const qa = await import("../../../../lib/qaOffice").then((m) => m.remindQa(now)).catch(() => 0);
+  void statusApplied; void backups; void qa;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
