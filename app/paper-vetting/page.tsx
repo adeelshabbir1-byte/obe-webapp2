@@ -6,8 +6,9 @@ import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import { roleLabel } from "../../lib/reportScope";
 import { reviewBatchWhere } from "../../lib/reviewScope";
-import { ActionButton } from "../../components/fyp/FypClient";
 import VettingReport from "../../components/VettingReport";
+import VettingDecision from "../../components/VettingDecision";
+import { checklistOf, repeatCheck } from "../../lib/moderation";
 import { vtdb, paperOf, type Vetting } from "../../lib/paperVetting";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +33,12 @@ export default async function PaperVettingReview({ searchParams }: { searchParam
     const qs = JSON.parse(sel.questionsJson) as Record<string, string>;
     const rows = items.map((i) => ({ no: i.questionNo, clo: (i.cloId && code.get(i.cloId)) || "no CLO", level: i.cognitiveLevel || "", marks: i.marks, text: qs[i.id] || "" }));
     const c = cOf.get(sel.courseId)!;
+    const repeats = await repeatCheck(sel.courseId, sel.examType).catch(() => []);
     detail = <>
       <div className="card"><h3 style={{ marginTop: 0 }}>{c.code} {c.title} — {sel.examType} paper</h3>
         <p className="small-note">{c.instructor?.name} · {c.batch?.batchName} · round {sel.round}{sel.teacherNote ? ` · note: ${sel.teacherNote}` : ""}</p>
         {rows.map((r) => <div key={r.no} style={{ fontSize: 13.5, margin: "6px 0" }}><b>Q{r.no}</b> <span className="small-note">{r.clo} · {r.level} · {r.marks} marks</span><div style={{ whiteSpace: "pre-wrap" }}>{r.text || <i className="small-note">question text not written</i>}</div></div>)}
-        {sel.status === "SUBMITTED" && <div style={{ display: "flex", gap: 8, marginTop: 8 }}><ActionButton url="/api/paper-vetting" body={{ action: "decide", id: sel.id, approve: true }} label="Approve paper" askNote="Comments (optional)" /><ActionButton url="/api/paper-vetting" body={{ action: "decide", id: sel.id, approve: false }} label="Return for improvement" className="btn btn-secondary btn-sm" askNote="What should be improved?" noteRequired /></div>}
+        {sel.status === "SUBMITTED" && <VettingDecision id={sel.id} items={checklistOf(sel.systemJson, repeats, null)} />}
         {sel.status !== "SUBMITTED" && <p><b>{sel.status === "APPROVED" ? "Approved" : sel.status === "RETURNED" ? "Returned" : sel.status}</b>{sel.reviewNote ? `: ${sel.reviewNote}` : ""}</p>}
       </div>
       <VettingReport systemJson={sel.systemJson} aiJson={sel.aiJson} items={rows} />

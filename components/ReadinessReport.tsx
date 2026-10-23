@@ -2,6 +2,7 @@ import { STATE_COLOUR, STATE_TEXT, colour, pct, rate, word, type State } from ".
 import type { computeReadiness } from "../lib/readiness";
 import type { Recipient } from "../lib/requests";
 import AskForAction from "./AskForAction";
+import HowCalculated from "./HowCalculated";
 
 export type AskInfo = { leadId: string; programName: string; recipients: Recipient[] };
 
@@ -32,6 +33,14 @@ export default function ReadinessReport({ data, sarHref, ask }: { data: Awaited<
   return (
     <>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation Status</h1>
+      <HowCalculated shows="The program's readiness for an NCEAC review against the nine criteria of the NCEAC Accreditation Manual, counted live from the program's records.">
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li>Each criterion is a list of checks, such as &ldquo;every offered course has its CLOs mapped&rdquo;. A check's % is how many of its items are done (for example 18 of 20 courses = 90%).</li>
+          <li>A criterion's score is the average of its checks that have something to count; the overall score is the average of the criteria that have a score.</li>
+          <li>The rating bands are indicative: 90%+ G Good, 75%+ S Satisfactory, 60%+ C Concern, 40%+ W Weakness, below 40% D Deficient. Thresholds such as credit hours, students per computer and faculty load come from the NCEAC standards under Visit Readiness › Programs, councils &amp; standards.</li>
+          <li>Items marked as manual cannot be counted by the system; they are listed for you to confirm.</li>
+        </ul>
+      </HowCalculated>
       {sarHref && <p style={{ margin: "0 0 8px" }}><a className="btn" href={sarHref}>Self-Assessment Report (print / PDF)</a></p>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         How ready your program is for an outcome-based accreditation review such as NCEAC, counted live from your own records.

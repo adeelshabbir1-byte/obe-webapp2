@@ -13,6 +13,7 @@ import { groupOf } from "../../../../lib/accreditation/catalogue";
 import { assignablePeople, canWorkOn, def as taskDefOf, govScope, inScope, parseData, taskProgress } from "../../../../lib/accreditation/governance";
 import { SourceLoader, dataScore, sourcesForTask } from "../../../../lib/accreditation/sources";
 import { KINDS, SECTIONS } from "../../../../lib/sarRegistry";
+import { approverFor } from "../../../../lib/approvers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Accreditation task" };
@@ -29,14 +30,19 @@ export default async function TaskPage({ params }: { params: { id: string } }) {
   const cycle = await prisma.accreditationCycle.findUnique({ where: { id: t.cycleId } });
   if (!cycle) notFound();
   const s = await govScope(user);
-  const managing = !!s?.canManage && inScope(s, cycle);
+  const managing = (!!s?.canManage && inScope(s, cycle)) || (await approverFor(cycle.chairmanId, "HEAD_OF_DEPARTMENT", { departmentId: cycle.departmentId })).ids.includes(user.id);
   const viewing = managing || (!!s && inScope(s, cycle)) || t.assigneeId === user.id;
   const d = taskDefOf(cycle.body, t.code);
   if (!viewing || !d) notFound();
   const body = cycle.body as BodyKey;
   const loader = await new SourceLoader({ chairmanId: cycle.chairmanId, leadId: cycle.leadId, program: cycle.program, departmentId: cycle.departmentId, body }).init();
   const results = await sourcesForTask(loader, d);
-  const progress = taskProgress(d, t, dataScore(results));
+  const dataPct = dataScore(results);
+  const progress = taskProgress(d, t, dataPct);
+  // The parts of the % shown under "How is this % worked out?".
+  const checks = results.flatMap((r) => r.checks).filter((c) => c.total > 0);
+  const tickedNow = d.checklist.filter((c) => parseData(t).checked?.[c]).length;
+  const dataPts = Math.round(70 * (dataPct === null ? (d.checklist.length ? tickedNow / d.checklist.length : 0) : dataPct / 100));
   const working = canWorkOn(user.id, t, cycle);
   const [files, events, people] = await Promise.all([
     prisma.accreditationTaskFile.findMany({ where: { taskId: t.id }, select: { id: true, title: true, fileName: true, size: true, uploadedById: true }, orderBy: { createdAt: "asc" } }),
@@ -76,6 +82,20 @@ export default async function TaskPage({ params }: { params: { id: string } }) {
           {t.assigneeId && <span>Access until {day(t.accessUntil)}{t.accessUntil && t.accessUntil < new Date() ? " (ended)" : ""}</span>}
           {managing && <AssignControl taskId={t.id} assigneeId={t.assigneeId} status={t.status} canManage={cycle.status === "OPEN"} people={people.map((p) => ({ id: p.id, name: p.name, label: p.label, suggested: p.roles.some((r) => d.suggested.includes(r)) }))} />}
         </div>
+        <details style={{ marginTop: 10, fontSize: 13 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, color: "#1F4E8C" }}>How is this {progress}% worked out?</summary>
+          <table style={{ fontSize: 12.5, marginTop: 6 }}><tbody>
+            <tr><td>Data in the system{dataPct === null ? " (no automatic checks for this task — the confirmations below count instead)" : ""}</td><td style={{ textAlign: "right" }}><b>{dataPts}</b> of 70</td></tr>
+            <tr><td>Signed off by the person working on it</td><td style={{ textAlign: "right" }}><b>{t.status === "SUBMITTED" || t.status === "APPROVED" ? 15 : 0}</b> of 15</td></tr>
+            <tr><td>Approved by the Institute Head, Dean or Chairman</td><td style={{ textAlign: "right" }}><b>{t.status === "APPROVED" ? 15 : 0}</b> of 15</td></tr>
+          </tbody></table>
+          {t.status === "APPROVED" && <p className="small-note" style={{ margin: "4px 0" }}>An approved task counts as 100%: the approver has confirmed it is complete.</p>}
+          {dataPct !== null ? (
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              {checks.map((c) => <li key={c.label} style={{ color: c.done >= c.total ? "#1E7B45" : "#C62828" }}>{c.label}: {c.done} of {c.total}{c.done < c.total && c.href ? <> — <Link href={c.href} style={{ color: "inherit", fontWeight: 600 }}>{c.hint || "fix it"}</Link></> : " ✓"}</li>)}
+            </ul>
+          ) : <p className="small-note" style={{ margin: "4px 0 0" }}>Confirmations ticked: {tickedNow} of {d.checklist.length}.</p>}
+        </details>
         {t.status === "RETURNED" && t.reviewNote && <div className="err" style={{ marginTop: 10 }}>Returned: {t.reviewNote}</div>}
         {t.assigneeId === user.id && !working && t.status !== "APPROVED" && t.status !== "SUBMITTED" && <div className="err" style={{ marginTop: 10 }}>Your access to this task has ended. Ask your Chairman or Dean to extend it.</div>}
         <div className="small-note" style={{ marginTop: 10 }}>Where the data is kept: {d.pages.map((p, i) => <span key={p.href}>{i ? " · " : ""}<Link href={p.href}>{p.label}</Link></span>)}</div>

@@ -51,12 +51,16 @@ export async function earlyWarning(chairmanId: string, opts: { batchIds?: string
     if (xs.length) classAvg.set(cid, xs.reduce((a, b) => a + b, 0) / xs.length);
   }
   const bName = new Map(batches.map((b) => [b.id, b]));
+  // Risk of dropping out: the Controller of Examinations' dismissal rule already met (CGPA below the dismissal limit
+  // after the set number of probation semesters).
+  const dropRisk = new Set((await import("./studentStatus").then((m) => m.dismissalSuggestions(chairmanId, opts.batchIds)).catch(() => [])).map((d) => d.studentId));
   const out: Risk[] = [];
   for (const s of students) {
     const reasons: string[] = [];
     let pts = 0;
     const { points, credits } = bestAttemptTotals((recBy.get(s.id) || []) as never);
     const cgpa = credits ? points / credits : null;
+    if (dropRisk.has(s.id)) { pts += 3; reasons.push("Risk of dropping out: meets the dismissal rule"); }
     if (cgpa !== null && cgpa < ar.probationCgpa) { pts += 3; reasons.push(`CGPA ${cgpa.toFixed(2)}`); } else if (cgpa !== null && cgpa < ar.warningCgpa) { pts += 1; reasons.push(`CGPA ${cgpa.toFixed(2)}`); }
     for (const e of enrolments.filter((x) => x.studentId === s.id)) {
       const t = tally(attBy.get(`${s.id}|${e.courseId}`) || []);

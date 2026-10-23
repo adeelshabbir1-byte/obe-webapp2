@@ -9,6 +9,7 @@ import { experienceSummary, yearsOfService } from "./facultyProfile";
 import { MEETING_KINDS } from "./evidenceFiles";
 import { loadProfile, type SarScope } from "./sarAccess";
 import { APPENDICES, kindDef, type AreaKey } from "./sarRegistry";
+import { titlesFor } from "./titles";
 
 // The NBEAC Self-Assessment Report (SAR v4.0) for one business school (a department), built from everything the system
 // holds: the accreditation registers and profiles, and the programs, courses, students, faculty, results, FYPs,
@@ -36,6 +37,7 @@ const nonNull = <T,>(x: T | null): x is T => x !== null;
 
 export async function buildNbeacSar(user: { id: string; role: string }, scope: SarScope, departmentId: string): Promise<SarDoc | null> {
   const chairmanId = scope.chairmanId;
+  const titles = await titlesFor(chairmanId);
   const dept = await prisma.department.findFirst({ where: { id: departmentId, chairmanId }, select: { id: true, name: true, facultyId: true } });
   if (!dept) return null;
   const t = new Date().getFullYear();
@@ -135,7 +137,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
     "Program level and launch date are set on each program's Program Profile."));
   const contact = (p: string, fallback: { name: string; email: string | null } | null, title: string): Cell[] => [title, s(CONTACTS[`${p}Name`]) || fallback?.name || "", s(CONTACTS[`${p}Designation`]), s(CONTACTS[`${p}TelOff`]), s(CONTACTS[`${p}TelCell`]), s(CONTACTS[`${p}Email`]) || fallback?.email || ""];
   f1.push(table("Table C", "Contact information (attach the CVs in Appendix A)", ["Role", "Name", "Designation", "Tel (office)", "Tel (cell)", "Email"],
-    [contact("dean", deanUser, "Dean"), contact("head", hodUser, "Head of business school"), contact("focal", null, "Focal person for NBEAC")].filter((r) => r[1]), area("governance")));
+    [contact("dean", deanUser, titles.DEAN.title), contact("head", hodUser, "Head of business school"), contact("focal", null, "Focal person for NBEAC")].filter((r) => r[1]), area("governance")));
   const schoolVision = s(SCHOOL.vision) || s(profiles[0]?.departmentVision), schoolMission = s(SCHOOL.mission) || s(profiles[0]?.departmentMission);
   f1.push(table("Table 1.1", "Approved vision and mission of the HEI and the business school", ["", "Statement", "Approving authority", "Date of approval"],
     [["HEI vision", s(HEI.vision), s(HEI.vmAuthority), s(HEI.vmDate)], ["HEI mission", s(HEI.mission), s(HEI.vmAuthority), s(HEI.vmDate)], ["Business school vision", schoolVision, s(SCHOOL.vmAuthority), s(SCHOOL.vmDate)], ["Business school mission", schoolMission, s(SCHOOL.vmAuthority), s(SCHOOL.vmDate)]].filter((r) => r[1]), area("governance")));
@@ -160,7 +162,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
     policies.map((p) => [s(p.data.category), p.title, s(p.data.approvedBy), iso(p.recordDate), s(p.data.reviewDate)]), area("policies")));
   f1.push(appendix(["1E"], "Organograms of the business school and the parent institution"));
   const managers: [string, string, string][] = [];
-  if (deanUser) managers.push(["Dean", deanUser.id, deanUser.name]);
+  if (deanUser) managers.push([titles.DEAN.title, deanUser.id, deanUser.name]);
   if (hodUser) managers.push(["Chairperson / HOD", hodUser.id, hodUser.name]);
   const mgrRecords = managers.length ? await prisma.facultyRecord.findMany({ where: { userId: { in: managers.map((m) => m[1]) }, kind: { in: ["EDUCATION", "EXPERIENCE"] } } }) : [];
   const mgrProfiles = managers.length ? await prisma.facultyProfile.findMany({ where: { userId: { in: managers.map((m) => m[1]) } } }) : [];
@@ -407,7 +409,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
   f4.push(appendix(["4A"], "Faculty workload policy"));
   f4.push(table("Table 4.2a", "Workload time allocation (hours per week)", ["Semester", "Faculty", "Designation", "Teaching", "Research", "Services", "Managerial"], recs("WORKLOAD_ALLOCATION").map((r) => [s(r.year), r.title, s(r.data.designation), n(r.data.teaching), n(r.data.research), n(r.data.service), n(r.data.managerial)]), area("faculty")));
   const fyHeads = cycles.length ? await prisma.fypStaff.findMany({ where: { departmentId: dept.id } }).catch(() => []) : [];
-  const roleDuty = (id: string) => { const u = fUsers.find((x) => x.id === id); return [u?.role === "HEAD_OF_DEPARTMENT" ? "Chairman / HOD" : u?.role === "DEAN" ? "Dean" : u?.role === "PROGRAM_COORDINATOR" ? "Program Lead" : u?.role === "OMC" ? "OMC member" : "", fyHeads.find((x) => x.userId === id) ? (fyHeads.find((x) => x.userId === id)!.role === "HEAD" ? "FYP Head" : "FYP Committee") : ""].filter(Boolean).join(", "); };
+  const roleDuty = (id: string) => { const u = fUsers.find((x) => x.id === id); return [u?.role === "HEAD_OF_DEPARTMENT" ? titles.HEAD_OF_DEPARTMENT.title : u?.role === "DEAN" ? titles.DEAN.title : u?.role === "PROGRAM_COORDINATOR" ? titles.PROGRAM_LEAD.title : u?.role === "OMC" ? "OMC member" : "", fyHeads.find((x) => x.userId === id) ? (fyHeads.find((x) => x.userId === id)!.role === "HEAD" ? "FYP Head" : "FYP Committee") : ""].filter(Boolean).join(", "); };
   f4.push(table("Table 4.2b", "Faculty workload executed", ["Semester", "Faculty", "Designation", "Credit hours taught", "Research work produced (this year)", "Committee works", "Administrative duties"],
     [nowTerm, nowTerm - 1].flatMap((term) => permanent.map((f) => { const L = loadIn(f.id, term); if (!L.total) return null; const pubs = fRecords.filter((r) => r.userId === f.id && r.kind === "PUBLICATION" && r.startYear === t).length; const comm = recs("COMMITTEE").filter((c) => s(c.data.composition).toLowerCase().includes(f.name.toLowerCase())).map((c) => c.title).join("; "); return [termLabel(term), f.name, prof(f.id)?.designation || "", L.total, pubs, comm, roleDuty(f.id)]; }).filter(nonNull)), "/coordinator/load-report"));
   f4.push(appendix(["4B"], "Faculty hiring policy")); f4.push(appendix(["4C"], "Documentation of the last faculty hiring"));

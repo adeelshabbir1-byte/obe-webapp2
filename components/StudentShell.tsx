@@ -9,6 +9,7 @@ import { greetingName } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
 import HelpButton from "./help/HelpButton";
 import { AttendanceWarning } from "./attendance/StudentAttendance";
+import FeedbackReminder from "./FeedbackReminder";
 
 const NAV = [
   { href: "/student/registration", label: "Course Registration" },
@@ -87,7 +88,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
           </div>
         </div>
       </header>
-      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{children}</main>
+      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{pathname !== "/student/course-survey" && <FeedbackReminder />}{children}</main>
     </div>
   );
 }

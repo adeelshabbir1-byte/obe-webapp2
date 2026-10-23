@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { setupDemo, coursesStep, activityStep, finishDemo, deletePass, demoSummary } from "../../../../lib/demoInstitute";
+import { campusGovernance } from "../../../../lib/demoGovernance";
+import { campusNceacPortal } from "../../../../lib/demoNceacPortal";
+import { campusComplexProblems } from "../../../../lib/demoComplex";
+import { campusUgPolicy } from "../../../../lib/demoUgPolicy";
+import { campusHemis } from "../../../../lib/demoHemis";
+import { campusCourseFiles } from "../../../../lib/demoCourseFiles";
+import { campusLabTheory } from "../../../../lib/demoLabTheory";
+import { campusModeration } from "../../../../lib/demoModeration";
+import { campusRegisters } from "../../../../lib/demoRegisters";
 import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys, campusBbaContent, campusFixes } from "../../../../lib/demoCampus";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +38,7 @@ export async function POST(req: Request) {
     if (b.step === "finishBatch") { await finishDemo([String(b.demoBatchId)]); return NextResponse.json({ ok: true }); }
     if (b.step === "campus") {
       const part = String(b.part);
-      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : part === "surveys" ? await campusSurveys() : part === "content" ? await campusBbaContent() : part === "fixes" ? await campusFixes() : null;
+      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : part === "surveys" ? await campusSurveys() : part === "content" ? await campusBbaContent() : part === "fixes" ? await campusFixes() : part === "governance" ? await campusGovernance() : part === "nceac" ? await campusNceacPortal() : part === "complex" ? await campusComplexProblems() : part === "ugpolicy" ? await campusUgPolicy() : part === "hemis" ? await campusHemis() : part === "coursefiles" ? await campusCourseFiles() : part === "labs" ? await campusLabTheory() : part === "moderation" ? await campusModeration() : part === "registers" ? await campusRegisters() : null;
       return NextResponse.json({ done, summary: part === "activity" ? await demoSummary() : undefined });
     }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }

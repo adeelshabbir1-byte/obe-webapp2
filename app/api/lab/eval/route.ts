@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { labAccessFor } from "../../../../lib/labAccess";
+import { labMarksLocked } from "../../../../lib/labTheory";
 import { labSessions } from "../../../../lib/labSessions";
 import { scoreFor } from "../../../../lib/rubrics";
 
@@ -11,6 +12,7 @@ export async function PUT(req: Request) {
   const b = await req.json().catch(() => ({}));
   const access = user ? await labAccessFor(user, String(b.labCourseId || "")) : null;
   if (!access || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const lk = await labMarksLocked(access.lab.id); if (lk) return NextResponse.json({ error: lk }, { status: 409 }); }
   const labNumber = Number(b.labNumber);
   const session = (await labSessions(access.lab.id)).find((s) => s.labNumber === labNumber);
   if (!session?.criteria) return NextResponse.json({ error: "This lab session has no rubric." }, { status: 400 });

@@ -4,6 +4,7 @@ import { studentOfParentToken } from "../../../lib/parentLink";
 import { liveCourseStatus } from "../../../lib/studentCourseStatus";
 import { computeCgpa, standingFromCgpa } from "../../../lib/academicStanding";
 import { attendancePolicy, tally, percentage } from "../../../lib/attendance";
+import { STUDENT_STATUS_LABEL } from "../../../lib/studentStatus";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Parent view" };
@@ -12,7 +13,7 @@ export const metadata = { title: "Parent view" };
 export default async function ParentPage({ params }: { params: { token: string } }) {
   const sid = await studentOfParentToken(params.token);
   if (!sid) notFound();
-  const s = await prisma.student.findUnique({ where: { id: sid }, select: { id: true, name: true, rollNumber: true, currentSemesterNumber: true, batch: { select: { degreeProgram: true, batchName: true, coordinator: { select: { managedById: true } } } } } });
+  const s = await prisma.student.findUnique({ where: { id: sid }, select: { id: true, name: true, rollNumber: true, status: true, statusDate: true, statusReason: true, currentSemesterNumber: true, batch: { select: { degreeProgram: true, batchName: true, coordinator: { select: { managedById: true } } } } } });
   if (!s) notFound();
   const [courses, cgpa, records, invoices, pol] = await Promise.all([
     liveCourseStatus(s.id).catch(() => []), computeCgpa(s.id),
@@ -28,6 +29,7 @@ export default async function ParentPage({ params }: { params: { token: string }
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <div style={box}>
           <h1 style={{ fontSize: 20, margin: 0 }}>{s.name}</h1>
+          {s.status !== "ACTIVE" && <div style={{ background: s.status === "GRADUATED" ? "#E8F5EC" : "#FDECEA", color: s.status === "GRADUATED" ? "#1E7B45" : "#9B1C1C", borderRadius: 8, padding: "6px 10px", margin: "6px 0", fontSize: 13.5, fontWeight: 600 }}>Status: {STUDENT_STATUS_LABEL[s.status] || s.status}{s.statusDate ? ` since ${s.statusDate.toISOString().slice(0, 10)}` : ""}{s.statusReason ? ` — ${s.statusReason}` : ""}</div>}
           <div className="small-note">{s.rollNumber} · {s.batch?.degreeProgram} — {s.batch?.batchName} · semester {s.currentSemesterNumber}</div>
           <div style={{ marginTop: 8, fontSize: 14 }}>CGPA <b>{cgpa !== null ? cgpa.toFixed(2) : "—"}</b> · <b style={{ color: standing === "GOOD_STANDING" ? "#23894f" : "#c93c3c" }}>{standing === "GOOD_STANDING" ? "good standing" : standing === "WARNING" ? "academic warning" : "probation"}</b></div>
         </div>

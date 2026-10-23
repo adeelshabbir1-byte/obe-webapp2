@@ -6,7 +6,9 @@ import Shell from "../../../components/Shell";
 import FacultyProfileForm from "../../../components/FacultyProfileForm";
 import DetailsForm from "../../../components/DetailsForm";
 import { staffDetails } from "../../../lib/aas";
-import { selfFields } from "../../../lib/aasFields";
+import { selfFields, canonValues } from "../../../lib/aasFields";
+import { portalLists } from "../../../lib/nceacPortal";
+import { chairmanIdFor } from "../../../lib/reportScope";
 import { completeness, experienceSummary, EXPERIENCE_HEADS, ymText } from "../../../lib/facultyProfile";
 
 const LABEL: Record<string, string> = { INSTRUCTOR: "Course Instructor", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", CHAIRMAN: "Institute Head" };
@@ -51,7 +53,7 @@ export default async function FacultyProfilePage() {
       />
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Details for NCEAC (Faculty Directory)</h3>
-        <DetailsForm fields={selfFields("staff")} values={{ type: "Local", country: "Pakistan", ...((await staffDetails([user.id])).get(user.id) || {}) }} endpoint="/api/my-details" note="NCEAC's accreditation system asks for these about every teacher. Highest degree only. Dates as dd/mm/yyyy; CNIC as xxxxx-xxxxxxx-x (foreign faculty: passport number). Anything blank here is taken from your profile above." />
+        <DetailsForm fields={selfFields("staff", await portalLists(await chairmanIdFor(user).catch(() => null)))} values={canonValues("staff", { type: "Local", country: "Pakistan", ...((await staffDetails([user.id])).get(user.id) || {}) })} endpoint="/api/my-details" note="NCEAC's accreditation system asks for these about every teacher. Highest degree only. Dates as dd/mm/yyyy; CNIC as xxxxx-xxxxxxx-x (foreign faculty: passport number). Anything blank here is taken from your profile above." />
       </div>
     </Shell>
   );

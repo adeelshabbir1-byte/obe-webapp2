@@ -6,6 +6,8 @@ import { CATALOGUE } from "./accreditation/catalogue";
 import { outcomesData } from "./outcomesReport";
 import { SOURCES } from "./indirectPlo";
 import { cdb, parseArr, KNOWLEDGE } from "./complexProblems";
+import { complexCoverage } from "./complexCoverage";
+import { docsWithVersions, trailText, KINDS as POLICY_KINDS } from "./policyHistory";
 import { evalSummary } from "./evaluations";
 
 // One-click Self-Assessment Report for a visit, in the council's chapter order, filled from everything the system holds.
@@ -95,7 +97,8 @@ export async function sarData(cycleId: string) {
   const prevFindings = prevCycle ? ((await db.visitItem.findMany({ where: { cycleId: prevCycle.id, kind: "FINDING" } }).catch(() => [])) as { dataJson: string; status: string }[]) : [];
   const tasks = await prisma.accreditationTask.findMany({ where: { cycleId }, select: { code: true, status: true, dataJson: true } });
   const rooms = await prisma.room.findMany({ where: { chairmanId: c.chairmanId }, select: { type: true, capacity: true } });
-  return { c, body, head, lead, narr: new Map(narr.map((n) => [n.sectionKey, n.text])), batches, out, courses, latestByCode, clos, plos, ploNum, rows, tags, know, staff, profiles, records, students, placements, exits, cqi, complaints, labs, evals, items, prevCycle, prevFindings, tasks, rooms };
+  const complex = recent[0] ? await complexCoverage(c.chairmanId, recent[0].id).catch(() => null) : null;
+  return { complex, c, body, head, lead, narr: new Map(narr.map((n) => [n.sectionKey, n.text])), batches, out, courses, latestByCode, clos, plos, ploNum, rows, tags, know, staff, profiles, records, students, placements, exits, cqi, complaints, labs, evals, items, prevCycle, prevFindings, tasks, rooms };
 }
 export type SarData = NonNullable<Awaited<ReturnType<typeof sarData>>>;
 
@@ -184,6 +187,13 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
     kids.push(h2(d.body === "PEC" ? "Complex engineering problems" : "Complex computing problems"));
     const tc = new Map<string, number>(); for (const t of d.tags) tc.set(t.courseId, (tc.get(t.courseId) || 0) + 1);
     kids.push(table(["Course", "Complex-problem assessments"], d.courses.filter((x) => tc.get(x.id)).map((x) => [x.code, tc.get(x.id)])));
+    // Coverage of the complex-problem attributes and students' results on them (Complex Problems → Coverage matrix).
+    const cx = d.complex;
+    if (cx) {
+      kids.push(p(`${cx.batch.batchName}: ${cx.coursesWithComplex} of ${cx.courses.length} courses have a ${cx.word}; ${cx.students.faced} of ${cx.students.total} students have faced one${cx.attainment !== null ? `; on average ${cx.attainment}% of students scored at least half the marks on these assessments` : ""}.${cx.gaps.attrs.length ? ` Attributes not yet covered: ${cx.gaps.attrs.join(", ")}.` : ""}`));
+      kids.push(table(["Attribute", "Assessments, labs and projects covering it"], cx.attrs.map(([k, n]) => [`${k} ${n}`, cx.attrCount[k]])));
+      if (cx.fyp.length) kids.push(table(["Final year project", "Attributes", "Knowledge areas"], cx.fyp.map((g) => [g.name, g.attrs.join(", ") || "—", g.knowledge.join(", ") || "—"])));
+    }
   }
   for (const o of d.out.slice(0, 1)) { kids.push(h2(`Course CLO results — ${o.batch.batchName}`)); kids.push(table(["Course", "Term", "Students", "Failed", "CLOs (% meeting)"], o.courses.map((x) => [`${x.code} ${x.title}`, x.term, x.n, x.fails, x.clos.map((cl) => `${cl.code} ${cl.pct}%`).join(", ")]))); }
   const ev = d.courses.map((x) => ({ x, e: d.evals.get(x.id)! })).filter((r) => r.e.COURSE.n || r.e.TEACHER.n);
@@ -267,6 +277,14 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
   }
 
   // Appendix C: criteria checklist
+  // Appendix: the approval trail of the institute's and the program's policies and curriculum (Policy Version History).
+  const pols = await docsWithVersions(d.c.chairmanId, d.c.program).catch(() => null);
+  if (pols && pols.length) {
+    kids.push(new Paragraph({ children: [new PageBreak()] })); kids.push(h1("Appendix — Approval trail of policies and curriculum"));
+    kids.push(table(["Document", "Current version", "Approval trail", "Effective from"], pols.map((x) => [`${x.title} (${POLICY_KINDS[x.kind] || x.kind})`, x.current?.version || "—", x.current ? trailText(x.current) : "—", x.current?.effectiveFrom ? new Date(x.current.effectiveFrom).toLocaleDateString("en-GB") : "—"])));
+    const older = pols.flatMap((x) => x.versions.filter((v) => v.id !== x.current?.id).map((v) => [x.title, v.version, trailText(v), v.effectiveFrom ? new Date(v.effectiveFrom).toLocaleDateString("en-GB") : "—"]));
+    if (older.length) { kids.push(h2("Earlier versions")); kids.push(table(["Document", "Version", "Approval trail", "Effective from"], older)); }
+  }
   kids.push(new Paragraph({ children: [new PageBreak()] })); kids.push(h1("Appendix C — Criteria Checklist"));
   const cat = CATALOGUE[d.body];
   const tOf = new Map(d.tasks.map((t) => [t.code, t]));

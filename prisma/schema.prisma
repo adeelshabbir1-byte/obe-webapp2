@@ -4065,6 +4065,7 @@ model OrgPosition {
   holderId     String?
   coversJson   String   @default("[]")
   orderIndex   Int      @default(0)
+  offAt        DateTime? // switched off: the institute does not have this position; its powers pass upwards
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
 
@@ -4082,6 +4083,7 @@ model OrgPositionLog {
   action     String   // ASSIGNED | REMOVED
   byId       String
   at         DateTime @default(now())
+  reason     String?
 
   @@index([positionId])
 }
@@ -5853,4 +5855,740 @@ model StudentPhoto {
   studentId String   @id
   photo     String   @db.Text
   updatedAt DateTime @default(now())
+}
+
+// The institute's own name for each position (VC, Rector, Director of School …), and whether it has the position at all.
+model InstituteTitle {
+  id          String   @id
+  chairmanId  String
+  key         String   // INSTITUTE_HEAD | DEAN | HEAD_OF_DEPARTMENT | PROGRAM_LEAD | DEPARTMENT_COORDINATOR | EXAM_CONTROLLER | QEC_INCHARGE | OMC | COURSE_ASSIGNER | BATCH_ADVISOR
+  title       String
+  enabled     Boolean  @default(true)
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, key])
+}
+
+// Someone holding a position for a set period (the holder on leave); they get its approvals until toDate.
+model OrgActing {
+  id         String    @id
+  chairmanId String
+  positionId String
+  userId     String
+  fromDate   DateTime
+  toDate     DateTime
+  reason     String?
+  byId       String
+  endedAt    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([chairmanId])
+  @@index([positionId])
+}
+
+// A position (with its branch) moved under another one, and what it changed — so the move can be undone.
+model OrgMove {
+  id           String    @id
+  chairmanId   String
+  positionId   String
+  fromParentId String?
+  toParentId   String?
+  effectsJson  String    @default("[]")
+  byId         String
+  at           DateTime  @default(now())
+  undoneAt     DateTime?
+
+  @@index([chairmanId])
+}
+
+// A student feedback question of the institute (QEC In-charge). `key` is its identity across rewording, so answers stay
+// comparable term to term; the HEC questions (lib/evaluations.ts EVAL) are version 1.
+model FeedbackQuestion {
+  id          String    @id
+  chairmanId  String
+  kind        String    // COURSE | TEACHER
+  key         String
+  groupName   String    @default("General")
+  weight      Float     @default(1)
+  orderIndex  Int       @default(0)
+  text        String
+  version     Int       @default(1)
+  retiredAt   DateTime?
+  fdpTopic    String?   // the FDP workshop topic that helps when this question scores low
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+
+  @@unique([chairmanId, kind, key])
+}
+
+// Every wording a question has had.
+model FeedbackQuestionVersion {
+  id         String   @id
+  questionId String
+  version    Int
+  text       String
+  byId       String?
+  createdAt  DateTime @default(now())
+
+  @@index([questionId])
+}
+
+// The feedback window (weeks of the semester) and the minimum answers before a teacher sees results.
+model FeedbackSettings {
+  id           String   @id
+  chairmanId   String   @unique
+  fromWeek     Int?
+  toWeek       Int?
+  minResponses Int      @default(5)
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+}
+
+// A teacher invited to an FDP session because one feedback question scored low, with that question's score at the time.
+model FeedbackFdpInvite {
+  id          String   @id
+  chairmanId  String
+  sessionId   String
+  userId      String
+  questionKey String
+  scoreBefore Float?
+  invitedAt   DateTime @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+// A change of a student's status, raised by the Program Lead or batch advisor and approved by the Chairman/HoD and the
+// Controller of Examinations (or whoever covers them, lib/approvers.ts).
+model StudentStatusRequest {
+  id              String    @id
+  chairmanId      String
+  studentId       String
+  type            String    // DROPPED | LEFT | FREEZE | TRANSFER_INTERNAL | TRANSFER_OUT | TRANSFER_IN | RUSTICATED | READMISSION
+  effectiveDate   DateTime
+  reason          String
+  fromStatus      String?
+  freezeSemesters Int?
+  targetBatchId   String?
+  otherInstitute  String?
+  caseReference   String?
+  docName         String?
+  docType         String?
+  docData         String?   // base64 supporting document (PDF / image)
+  creditsJson     String    @default("[]")
+  suggested       Boolean   @default(false)
+  feeOverride     Boolean   @default(false)
+  status          String    @default("PENDING") // PENDING | APPROVED | APPLIED | REJECTED | CANCELLED
+  stage           String    @default("HOD")     // HOD | CONTROLLER | DONE
+  raisedById      String
+  raisedAs        String
+  appliedAt       DateTime?
+  effectsJson     String    @default("[]")
+  decidedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([chairmanId])
+  @@index([studentId])
+}
+
+model StudentStatusApproval {
+  id        String   @id
+  requestId String
+  stage     String
+  byId      String
+  decision  String   // APPROVED | REJECTED
+  remarks   String?
+  covering  String?  // "Dean's approvals → Chairman (no Dean)" when someone covered the position
+  at        DateTime @default(now())
+
+  @@index([requestId])
+}
+
+// A course carried over (internal transfer) or brought in from another university (transfer in).
+model StudentTransferCredit {
+  id          String    @id
+  requestId   String
+  studentId   String
+  fromCode    String
+  fromTitle   String
+  creditHours Int
+  grade       String?
+  toCode      String?
+  status      String    @default("PENDING") // PENDING | ACCEPTED | REJECTED | MATCHED
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+
+  @@index([requestId])
+}
+
+// The institute's rules for status changes.
+model StudentStatusPolicy {
+  id               String   @id
+  chairmanId       String   @unique
+  transferMinGrade String   @default("C")
+  transferMaxPct   Int      @default(50)
+  dropDeadlineWeek Int      @default(8)
+  readOnlyDays     Int      @default(180)
+  updatedById      String?
+  updatedAt        DateTime @default(now())
+}
+
+// How long a student who left keeps read-only access to the portal (transcript, fees).
+model StudentAccess {
+  studentId     String    @id
+  readOnlyUntil DateTime?
+  reason        String?
+  updatedAt     DateTime  @default(now())
+}
+
+// NCEAC portal data (prisma/migration_nceac_portal.sql): each NCEAC-format file downloaded.
+model NceacExportLog {
+  id            String   @id
+  chairmanId    String
+  kind          String   // students | faculty | courses
+  program       String
+  batchId       String?
+  batchName     String?
+  rowCount      Int      @default(0)
+  rejectedCount Int      @default(0)
+  byId          String
+  createdAt     DateTime @default(now())
+
+  @@index([chairmanId, createdAt])
+}
+
+// A final year project group (kind FYP, refId = FypGroup.id) or a lab task (kind LAB, refId = "<labCourseId>:<labNumber>")
+// tagged with complex-problem attributes and knowledge areas (prisma/migration_complex_profiles.sql).
+model ComplexTarget {
+  id          String   @id
+  chairmanId  String
+  kind        String
+  refId       String
+  courseId    String?
+  attrsJson   String   @default("[]") @db.Text
+  note        String?  @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([kind, refId])
+  @@index([chairmanId])
+}
+
+// HEC UG Policy 2023: a program's course marked as meeting a General Education requirement (prisma/migration_ug_policy.sql).
+model PolicyCourseMap {
+  id          String   @id
+  chairmanId  String
+  program     String
+  courseCode  String
+  requirement String   // ARTS | NATURAL | SOCIAL | ENGLISH | EXPOSITORY | QR | ISLAMIC | IDEOLOGY | ICT | ENTREPRENEURSHIP | CIVICS | NONE
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, program, courseCode])
+}
+
+// HEC HEMIS (prisma/migration_hemis.sql): the institute's code (program "") and each program's code, level and discipline.
+model HemisCode {
+  id          String   @id
+  chairmanId  String
+  program     String   @default("")
+  code        String
+  level       String?
+  discipline  String?
+  years       Int?
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, program])
+}
+
+// Each HEMIS file downloaded: which data set(s), how many rows, how many the checks would reject, by whom.
+model HemisExportLog {
+  id         String   @id
+  chairmanId String
+  dataset    String
+  rows       Int      @default(0)
+  rejected   Int      @default(0)
+  byId       String
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId, createdAt])
+}
+
+// Lab under the theory instructor (prisma/migration_lab_theory.sql): whether the lab's marks go into the theory result,
+// with what weight, and the theory instructor's approval (which locks the lab marks).
+model LabTheorySetting {
+  labCourseId       String    @id
+  theoryCourseId    String?
+  intoTheory        Boolean   @default(false)
+  weightPct         Float     @default(20)
+  instrumentId      String?   // the theory course's "Lab" assessment the marks go into
+  oldWeightsJson    String?   @db.Text // the theory assessments' weights before the Lab item was added (to undo)
+  approvedAt        DateTime?
+  approvedById      String?
+  changeRequest     String?   @db.Text
+  changeRequestedAt DateTime?
+  updatedById       String?
+  updatedAt         DateTime  @default(now())
+
+  @@index([theoryCourseId])
+}
+
+// A reminder sent about a lab manual not yet approved before its session (one per session and day).
+model LabManualReminder {
+  id          String   @id
+  labCourseId String
+  labNumber   Int
+  sentOn      String
+  createdAt   DateTime @default(now())
+
+  @@unique([labCourseId, labNumber, sentOn])
+}
+
+// Moderation (prisma/migration_moderation.sql): an outside examiner's temporary access to vet final papers and results.
+model ExternalExaminer {
+  id            String    @id
+  chairmanId    String
+  name          String
+  email         String
+  organisation  String?
+  designation   String?
+  courseIdsJson String    @default("[]") @db.Text
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdById   String
+  createdAt     DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// A vetter's checklist with a paper decision (INTERNAL) or an external examiner's remarks on a paper or result (EXTERNAL).
+model ModerationRemark {
+  id            String   @id
+  chairmanId    String
+  kind          String   // PAPER | RESULT
+  courseId      String
+  examType      String?
+  round         Int?
+  byKind        String   // INTERNAL | EXTERNAL
+  byUserId      String?
+  examinerId    String?
+  decision      String   // OK | CHANGES (external); APPROVED | RETURNED (internal)
+  comments      String?  @db.Text
+  checklistJson String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@index([courseId])
+}
+
+// HEC QAA self-assessment of a program (prisma/migration_qaa.sql).
+model QaaCycle {
+  id                 String    @id
+  chairmanId         String
+  program            String
+  title              String
+  ptFormedAt         DateTime?
+  sarDueAt           DateTime?
+  sarSubmittedAt     DateTime?
+  atVisitAt          DateTime?
+  atReportAt         DateTime?
+  planApprovedAt     DateTime?
+  closedAt           DateTime?
+  programTeamJson    String    @default("[]") @db.Text
+  assessmentTeamJson String    @default("[]") @db.Text
+  documentsJson      String    @default("[]") @db.Text
+  atSummary          String?   @db.Text
+  createdById        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// A finding of the Assessment Team and the action planned for it, with its progress.
+model QaaAction {
+  id             String    @id
+  cycleId        String
+  finding        String    @db.Text
+  action         String    @db.Text
+  ownerId        String?
+  dueDate        DateTime?
+  status         String    @default("OPEN") // OPEN | IN_PROGRESS | DONE
+  progressPct    Int       @default(0)
+  progressNote   String?   @db.Text
+  doneAt         DateTime?
+  lastRemindedOn String?
+  updatedAt      DateTime  @default(now())
+
+  @@index([cycleId])
+}
+
+// A plagiarism check of an FYP, thesis or research paper (prisma/migration_plagiarism.sql).
+model PlagiarismRecord {
+  id              String   @id
+  chairmanId      String
+  kind            String   // FYP | THESIS | PAPER
+  title           String
+  program         String?
+  authors         String
+  fypGroupId      String?
+  supervisorId    String?
+  tool            String   @default("Turnitin")
+  similarityPct   Float
+  singleSourcePct Float?
+  thresholdPct    Float    @default(19)
+  decision        String   @default("ACCEPTED") // ACCEPTED | REVISE | REJECTED | MISCONDUCT
+  actionTaken     String?  @db.Text
+  reportFileName  String?
+  reportMime      String?
+  reportData      String?  @db.Text // base64 of the report, up to about 3 MB
+  checkedAt       DateTime
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// Degree issuance (prisma/migration_degrees.sql): each office's clearance of a graduating student.
+model DegreeClearance {
+  studentId      String    @id
+  chairmanId     String
+  libraryAt      DateTime?
+  libraryById    String?
+  libraryNote    String?
+  feeAt          DateTime?
+  feeById        String?
+  feeNote        String?
+  hostelAt       DateTime?
+  hostelById     String?
+  hostelNote     String?
+  departmentAt   DateTime?
+  departmentById String?
+  departmentNote String?
+  updatedAt      DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+model Convocation {
+  id         String   @id
+  chairmanId String
+  title      String
+  date       DateTime
+  venue      String?
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// The degree serial register (also degrees issued before OBEHUB, with no student record).
+model DegreeIssue {
+  id            String    @id
+  chairmanId    String
+  studentId     String?
+  rollNumber    String
+  studentName   String
+  fatherName    String?
+  program       String
+  degreeTitle   String
+  cgpa          Float?
+  serialNo      String
+  issuedAt      DateTime
+  convocationId String?
+  issuedById    String
+  cancelledAt   DateTime?
+  cancelNote    String?
+  createdAt     DateTime  @default(now())
+
+  @@unique([chairmanId, serialNo])
+  @@index([chairmanId, rollNumber])
+}
+
+// A request to verify a degree (HEC, an employer, another university, an embassy) and the answer given.
+model DegreeVerification {
+  id            String    @id
+  chairmanId    String
+  requesterKind String    // HEC | EMPLOYER | UNIVERSITY | EMBASSY | OTHER
+  requesterName String
+  reference     String?
+  rollNumber    String?
+  serialNo      String?
+  studentName   String?
+  receivedAt    DateTime
+  degreeIssueId String?
+  response      String?   // VERIFIED | NOT_FOUND | MISMATCH
+  responseNote  String?   @db.Text
+  respondedAt   DateTime?
+  respondedById String?
+  createdById   String
+  createdAt     DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// NBEAC Standard 4 (prisma/migration_faculty_sufficiency.sql): a reviewer's AQ / PQ / OTHER decision for a teacher.
+model FacultyQualification {
+  userId     String   @id
+  chairmanId String
+  status     String   // AQ | PQ | OTHER
+  note       String?  @db.Text
+  setById    String
+  updatedAt  DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// The institute's limits for the faculty sufficiency ratios.
+model FacultySufficiencyRule {
+  chairmanId String   @id
+  rulesJson  String   @db.Text
+  updatedAt  DateTime @default(now())
+}
+
+// Mandatory committees (prisma/migration_committees.sql).
+model Committee {
+  id         String    @id
+  chairmanId String
+  kind       String    // HARASSMENT | GRIEVANCE | DISABILITY | DISCIPLINE | OTHER
+  name       String
+  policyRef  String?
+  termStart  DateTime?
+  termEnd    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+model CommitteeMember {
+  id           String    @id
+  committeeId  String
+  userId       String?
+  name         String
+  role         String    @default("MEMBER") // CHAIR | SECRETARY | MEMBER | EXTERNAL | FOCAL
+  gender       String?
+  organisation String?
+  fromDate     DateTime?
+  toDate       DateTime?
+
+  @@index([committeeId])
+}
+
+model CommitteeMeeting {
+  id          String   @id
+  committeeId String
+  date        DateTime
+  agenda      String?  @db.Text
+  decisions   String?  @db.Text
+  attendees   Int?
+  createdById String
+
+  @@index([committeeId])
+}
+
+// A case the committee handled — confidential: no names, seen only by its members and the institute head.
+model CommitteeCase {
+  id          String    @id
+  committeeId String
+  caseNo      String
+  receivedAt  DateTime
+  category    String
+  status      String    @default("RECEIVED") // RECEIVED | INQUIRY | DECIDED | CLOSED | APPEAL
+  outcome     String?   @db.Text
+  notes       String?   @db.Text
+  closedAt    DateTime?
+  createdById String
+  updatedAt   DateTime  @default(now())
+
+  @@index([committeeId])
+}
+
+// Fee refunds (prisma/migration_fee_refunds.sql): the refund schedule ([{ uptoDay, pct }]) of an institute.
+model FeeRefundRule {
+  chairmanId  String   @id
+  rulesJson   String   @db.Text
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
+
+// A student's refund when they leave: worked out from the schedule, approved and paid by the Finance Officer.
+model FeeRefundCase {
+  id              String    @id
+  chairmanId      String
+  studentId       String
+  statusRequestId String?
+  reason          String
+  withdrawalDate  DateTime
+  classesStart    DateTime?
+  dayNo           Int?
+  invoiceId       String?
+  tuitionPaid     Float     @default(0)
+  nonRefundable   Float     @default(0)
+  securityDeposit Float     @default(0)
+  refundPct       Float     @default(0)
+  refundAmount    Float     @default(0)
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED | PAID
+  decidedById     String?
+  decidedAt       DateTime?
+  paidAt          DateTime?
+  paymentRef      String?
+  note            String?   @db.Text
+  createdAt       DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// A student with a disability (prisma/migration_disabilities.sql): the category and details are confidential; teachers
+// and the exam office see only the accommodations.
+model DisabilityRecord {
+  studentId    String    @id
+  chairmanId   String
+  category     String
+  details      String?   @db.Text
+  extraTimePct Int       @default(0)
+  seating      String?
+  materials    String?
+  assistive    String?
+  other        String?   @db.Text
+  validUntil   DateTime?
+  verified     Boolean   @default(false)
+  recordedById String
+  updatedAt    DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// Policy version history (prisma/migration_policy_history.sql): a policy, manual or curriculum.
+model PolicyDoc {
+  id          String   @id
+  chairmanId  String
+  kind        String   // POLICY | MANUAL | CURRICULUM | SOP
+  title       String
+  program     String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// One approved version, with its approval trail (Board of Studies, Academic Council).
+model PolicyVersion {
+  id            String    @id
+  docId         String
+  version       String
+  summary       String?   @db.Text
+  bosMeeting    String?
+  bosDate       DateTime?
+  bosMinute     String?
+  acMeeting     String?
+  acDate        DateTime?
+  acMinute      String?
+  effectiveFrom DateTime?
+  link          String?
+  fileName      String?
+  fileMime      String?
+  fileData      String?   @db.Text
+  createdById   String
+  createdAt     DateTime  @default(now())
+
+  @@index([docId])
+}
+
+// Faculty development funding (prisma/migration_fdp_funding.sql).
+model FdpFunding {
+  id             String    @id
+  chairmanId     String
+  userId         String
+  kind           String    // STUDY_LEAVE | SCHOLARSHIP | CONFERENCE | TRAINING
+  sponsor        String    // INSTITUTE | HEC | OTHER
+  sponsorName    String?
+  purpose        String    // the degree, or the conference / training
+  place          String?   // university or venue
+  country        String?
+  feeAmount      Float     @default(0)
+  stipendAmount  Float     @default(0)
+  travelAmount   Float     @default(0)
+  otherAmount    Float     @default(0)
+  sanctionedAt   DateTime?
+  startDate      DateTime?
+  expectedReturn DateTime?
+  actualReturn   DateTime?
+  bondYears      Float     @default(0)
+  status         String    @default("ACTIVE") // ACTIVE | RETURNED | COMPLETED | DISCONTINUED | BOND_BROKEN
+  refundDue      Float?
+  refundPaid     Float?
+  notes          String?   @db.Text
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// A progress report a funded teacher sends each semester.
+model FdpProgress {
+  id            String   @id
+  fundingId     String
+  term          String
+  report        String   @db.Text
+  submittedById String
+  submittedAt   DateTime @default(now())
+  reviewNote    String?  @db.Text
+  reviewedById  String?
+
+  @@index([fundingId])
+}
+
+// Employee benefits (prisma/migration_benefits.sql): a benefit plan of the institute.
+model BenefitPlan {
+  id                String    @id
+  chairmanId        String
+  kind              String    // HEALTH | PROVIDENT_FUND | PENSION | LEAVE_ENCASHMENT | FEE_CONCESSION | TRANSPORT | HOUSING | OTHER
+  name              String
+  provider          String?
+  policyNo          String?
+  coverage          String?   @db.Text
+  limitAmount       Float?
+  dependants        String?
+  premium           Float?
+  employerSharePct  Float?
+  employeeSharePct  Float?
+  eligibility       String?
+  renewalDate       DateTime?
+  active            Boolean   @default(true)
+  lastRenewalNotice String?
+  createdAt         DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+model BenefitEnrolment {
+  id              String    @id
+  planId          String
+  userId          String
+  dependantsCount Int?
+  amount          Float?
+  startDate       DateTime?
+  endDate         DateTime?
+  note            String?
+
+  @@unique([planId, userId])
+}
+
+model BenefitClaim {
+  id          String    @id
+  planId      String
+  userId      String
+  date        DateTime
+  amount      Float
+  description String    @db.Text
+  status      String    @default("SUBMITTED") // SUBMITTED | APPROVED | REJECTED | PAID
+  decidedById String?
+  decidedAt   DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([planId])
 }

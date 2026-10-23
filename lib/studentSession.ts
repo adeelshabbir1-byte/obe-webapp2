@@ -49,6 +49,15 @@ export async function getAuthenticatedStudent() {
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
   const { passwordHash, ...safeStudent } = session.student;
+  // A student who left, was dropped, froze, transferred out or was rusticated keeps read-only access (transcript, fees):
+  // nothing can be changed, and once the institute's access period ends the portal is closed (lib/studentStatus.ts).
+  if (["LEFT", "DROPPED", "FROZEN", "TRANSFERRED", "RUSTICATED"].includes(session.student.status)) {
+    let method = "GET", p = "";
+    try { method = headers().get("x-method") || "GET"; p = headers().get("x-pathname") || ""; } catch { /* outside a request */ }
+    if (method !== "GET" && !/^\/api\/student\/(logout|login)/.test(p)) return null;
+    const acc = await (prisma as unknown as Record<string, any>).studentAccess?.findUnique({ where: { studentId: session.student.id } }).catch(() => null);
+    if (acc?.readOnlyUntil && new Date(acc.readOnlyUntil) < new Date()) return null;
+  }
   // Licensing: student pages of a module the institute has not bought are closed.
   let reqPath = "";
   try { reqPath = headers().get("x-pathname") || ""; } catch { reqPath = ""; }

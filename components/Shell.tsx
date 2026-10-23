@@ -8,6 +8,7 @@ import { navForRole } from "./reportNav";
 import { instituteOfUser, lockedModules } from "../lib/moduleLocks";
 import { moduleForPath } from "../lib/modules";
 import { defaultWork, ROLE_WORK_LABEL } from "../lib/navDefaults";
+import { applyTitles, titlesFor } from "../lib/titles";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -49,7 +50,17 @@ export default async function Shell({
   // Licensing: links to modules the institute has not bought are left out of the menu.
   const off = user && user.role !== "SUPER_USER" ? await lockedModules(await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null)) : new Set<string>();
   const licensed = off.size ? navLinks.filter((l) => { const m = moduleForPath(l.href); return !m || !off.has(m.key); }) : navLinks;
-  const links = advises ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }] : licensed;
+  // Duties held as hats (lib/duties.ts) add their pages to whichever role the person is working in.
+  const hats = ((user as { extraRoles?: string[] } | null)?.extraRoles || []);
+  const dutyLinks = [
+    ...(hats.includes("QEC_INCHARGE") ? [{ href: "/evaluations", label: "Course & Teacher Evaluations" }, { href: "/evaluations/questionnaires", label: "Feedback Questionnaires" }, { href: "/qaa", label: "QAA Self-Assessment" }, { href: "/plagiarism", label: "Plagiarism Records" }, { href: "/policy-history", label: "Policy Version History" }, { href: "/committees", label: "Committees" }, { href: "/faculty-sufficiency", label: "Faculty Qualification & Sufficiency" }] : []),
+    ...(hats.includes("EXAM_CONTROLLER") ? [{ href: "/academic-rules", label: "Academic Rules & Registration" }, { href: "/status-changes", label: "Student Status Changes" }, { href: "/degrees", label: "Degrees" }, { href: "/accommodations", label: "Student Accommodations" }] : []),
+  ].filter((l) => !licensed.some((x) => x.href === l.href));
+  const rawLinks = [...(advises ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }, ...(licensed.some((l) => l.href === "/status-changes") ? [] : [{ href: "/status-changes", label: "Student Status Changes" }])] : licensed), ...dutyLinks.filter((l) => !(advises && l.href === "/status-changes"))];
+  // The institute's own position titles (VC, Director of School …) replace the default names in the menu and role label.
+  const titles = await titlesFor(user && user.role !== "SUPER_USER" ? await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null) : null);
+  const links = rawLinks.map((l) => ({ ...l, label: applyTitles(l.label, titles) }));
+  const shownRole = applyTitles(roleLabel, titles);
   // "My work": the person's pins, else the role's default list. People with more than one role also get each other role's work list.
   let pins: string[] | null = null;
   try { pins = pinRow ? JSON.parse(pinRow.pinsJson) : null; } catch { pins = null; }
@@ -61,7 +72,7 @@ export default async function Shell({
 
   return (
     <AppShell
-      roleLabel={roleLabel}
+      roleLabel={shownRole}
       userName={userName}
       userPhoto={userPhoto}
       navLinks={links}

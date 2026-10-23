@@ -3,6 +3,8 @@ import { prisma } from "./db";
 import { completeness } from "./facultyProfile";
 import { fiscalYearNow, labRatio } from "./resources";
 import { computeHecComparison } from "./hecCompare";
+import { outcomeFiguresFor } from "./studentStatus";
+import { complexCoverage } from "./complexCoverage";
 
 // How ready one program is for an outcome-based accreditation review, counted live from that Program Lead's records.
 export type State = "ok" | "partial" | "missing" | "na";
@@ -172,7 +174,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
     : 0;
 
   const [outcomeRows, surveyRows] = await Promise.all([
-    prisma.outcomeFigure.findMany({ where: { leadId: user.id } as never, select: { intakeYear: true, admitted: true, graduated: true } }),
+    outcomeFiguresFor(user.id),
     prisma.surveyResult.findMany({ where: { leadId: user.id, surveyDate: { gte: yearAgo } } as never, select: { kind: true } }),
   ]) as unknown as [{ intakeYear: number; admitted: number; graduated: number }[], { kind: string }[]];
   const surveyKinds = new Set(surveyRows.map((s) => s.kind));
@@ -216,6 +218,10 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const minAdmission = admissionRows.filter((r) => r.minPercentage !== null && (r.minPercentage as number) >= 50).length;
   const transferSet = admissionRows.filter((r) => !!r.transferPolicy?.trim()).length;
   const EV = "/coordinator/evidence";
+  // Complex computing problems per batch (Complex Problems page): every student faced one; an open-ended lab exists.
+  const covs = (await Promise.all(scopeBatches.map((b) => complexCoverage(chairmanId, b.id).catch(() => null)))).filter((c): c is NonNullable<typeof c> => !!c);
+  const complexOk = covs.filter((c) => (c.complexAssessments > 0 || c.fyp.some((f) => f.attrs.includes("P1"))) && c.students.missing.length === 0).length;
+  const oelOk = covs.filter((c) => c.oel.some((o) => o.openEnded || o.attrs.length)).length;
 
   const areas: Criterion[] = [
     { no: 1, title: "Program Objectives (POs)", manual: ["POs approved by the university's statutory body (Board of Studies / Academic Council): keep the minutes", "POs published (website or prospectus) and shown to be consistent with the institution's mission and the needs of stakeholders"], checks: [
@@ -249,6 +255,8 @@ export async function computeReadiness(user: { id: string; managedById: string |
       colCheck("plo", "CLOs mapped to GAs (3.e)", "Map every CLO to one GA.", "/omc/reports/audit"),
       { label: "Industry took part in reviewing the curriculum (3.f)", done: Math.min(ev("PEO", "Review by industry").length + ev("INDUSTRY", "Advisory board meeting").length, 1), total: 1, hint: "Record the review under Accreditation Evidence.", href: EV },
       { label: "Faculty with office hours announced (3.g)", done: withOfficeHours, total: faculty.length, hint: "Ask faculty to fill in their office hours under My Profile.", href: "/faculty-report" },
+      { label: "Batches where every student has faced a complex computing problem (3.b, 3.k)", done: complexOk, total: scopeBatches.length, hint: "Tag the complex assessments, open-ended labs and final year projects on the Complex Problems page.", href: "/complex-problems" },
+      { label: "Batches with an open-ended lab (3.i)", done: oelOk, total: scopeBatches.length, hint: "Mark at least one lab task as open-ended in each batch's lab courses.", href: "/complex-problems" },
       { label: "Supervised internship recorded: 6 to 8 weeks with employer feedback (3.h)", done: Math.min(ev("INTERNSHIP").length, 1), total: 1, hint: "Record where students did internships.", href: EV },
     ] },
     { no: 4, title: "Students", manual: ["Annual intake in line with the maximum NCEAC allows for your faculty strength (4.b)", "Students' workload, policies on harassment and plagiarism, student discipline", "Quality of the process for evaluating student performance and taking corrective measures (4.i)", "Student organisations that give experience in management and governance"], checks: [

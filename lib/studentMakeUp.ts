@@ -16,7 +16,7 @@ export async function makeUpPlan(student: { id: string; batchId: string; current
   const crit = await getPassingCriteria(chairmanId);
   const records = await prisma.studentTranscriptRecord.findMany({ where: { studentId: student.id }, orderBy: [{ termYear: "asc" }, { termName: "asc" }] });
   const taken = new Set(records.map((r) => r.courseCode.toUpperCase()));
-  const passed = new Set(records.filter((r) => (r.gpaPoints ?? 0) > 0 || r.grade === "P").map((r) => r.courseCode.toUpperCase()));
+  const passed = new Set(records.filter((r) => (r.gpaPoints ?? 0) > 0 || (r.grade === "P" || r.grade === "TR" || r.grade === "IT")).map((r) => r.courseCode.toUpperCase()));
 
   // Courses still ahead and the PLOs their CLOs serve.
   const ahead = await prisma.course.findMany({

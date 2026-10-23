@@ -66,12 +66,24 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
     });
   }
 
+  // A lab whose marks went into its theory course has no transcript line of its own; the theory course's line
+  // carries the lab's credit hours too (lib/labTheory.ts).
+  const { labGoesIntoTheory, mergedLabCredits } = await import("./labTheory");
+  const intoTheory = course.courseType === "Lab" && (await labGoesIntoTheory(courseId).catch(() => false));
+  const labCredits = course.courseType === "Lab" ? 0 : await mergedLabCredits(courseId).catch(() => 0);
+
   // Preserve each individual student's grade and CLO/PLO attainment before
   // their marks get wiped below — this is what makes a per-student
   // transcript possible across multiple semesters.
-  await snapshotStudentTranscripts(courseId, {
+  // The merged lab is recorded as "IT" (included in theory): 0 credit hours and no grade points, so it shows as done
+  // in the degree audit without a grade or credits of its own.
+  if (intoTheory) {
+    const enrolled = await prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, select: { studentId: true } });
+    if (enrolled.length) await prisma.studentTranscriptRecord.createMany({ data: enrolled.map((e) => ({ studentId: e.studentId, coordinatorId: course.coordinatorId, courseCode: course.code, courseTitle: course.title, creditHours: 0, courseType: course.courseType, termName: course.offeredTermName!, termYear: course.offeredTermYear!, totalPct: 0, grade: "IT", gpaPoints: null, cloAttainmentJson: "[]", ploAttainmentJson: "[]" })) });
+  }
+  if (!intoTheory) await snapshotStudentTranscripts(courseId, {
     coordinatorId: course.coordinatorId, code: course.code, title: course.title,
-    creditHours: course.creditHours, courseType: course.courseType,
+    creditHours: course.creditHours + labCredits, courseType: course.courseType,
     offeredTermName: course.offeredTermName, offeredTermYear: course.offeredTermYear,
     batch: course.batch ? { startTerm: course.batch.startTerm, startYear: course.batch.startYear } : null,
   }, criteria);
@@ -81,12 +93,12 @@ export async function snapshotAttainmentAndResetIfTermChanging(courseId: string,
   // so they need their own transcript entry here: a "W" grade, no GPA
   // points (never affects CGPA), so the course surfaces on "Courses
   // Remaining" as dropped rather than just vanishing with no record.
-  const withdrawn = await prisma.studentEnrollment.findMany({ where: { courseId, status: "WITHDRAWN" } });
+  const withdrawn = intoTheory ? [] : await prisma.studentEnrollment.findMany({ where: { courseId, status: "WITHDRAWN" } });
   if (withdrawn.length > 0) {
     await prisma.studentTranscriptRecord.createMany({
       data: withdrawn.map((w) => ({
         studentId: w.studentId, coordinatorId: course.coordinatorId,
-        courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
+        courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours + labCredits, courseType: course.courseType,
         termName: course.offeredTermName!, termYear: course.offeredTermYear!,
         totalPct: 0, grade: "W", gpaPoints: null,
         cloAttainmentJson: "[]", ploAttainmentJson: "[]",
@@ -146,6 +158,7 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
     }
   }
   const gpaByLetter = new Map(gradingScale.map((g) => [g.letter, g.gpaValue]));
+  const ofMax = (v: number | undefined, max: number | undefined) => (max ? Math.round((1000 * (v || 0)) / max) / 10 : 0);
 
   // A non-credit deficiency course (creditHours 0, e.g. Maths-I) is just
   // Pass/Fail against its own pass mark: no letter grade, no GPA points,
@@ -161,8 +174,10 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
       totalPct: r.totalPct,
       grade: isDeficiency ? (r.totalPct >= deficiencyPct ? "P" : "F") : r.grade,
       gpaPoints: isDeficiency ? null : gpaByLetter.get(r.grade) ?? null,
-      cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: r.byClo[code] || 0, passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * (criteria.cloPct / 100) }))),
-      ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: r.byPlo[label] || 0, passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * (criteria.ploPct / 100) }))),
+      // pct is the student's % of what the outcome was worth (every reader of these records treats it as a percentage);
+      // the marks themselves are shares of the whole course, so they are divided by the outcome's own weight.
+      cloAttainmentJson: JSON.stringify(result.cloCodes.map((code) => ({ code, pct: ofMax(r.byClo[code], cloMaxWeight[code]), passed: (r.byClo[code] || 0) >= (cloMaxWeight[code] || 0) * (criteria.cloPct / 100) }))),
+      ploAttainmentJson: JSON.stringify(result.ploLabels.map((label) => ({ label, pct: ofMax(r.byPlo[label], ploMaxWeight[label]), passed: (r.byPlo[label] || 0) >= (ploMaxWeight[label] || 0) * (criteria.ploPct / 100) }))),
     })),
   });
 }

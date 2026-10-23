@@ -37,10 +37,16 @@ export async function GET(req: NextRequest) {
     let n = 0; for (const h of heads) n += (await runAutoRegistration(h.id).catch(() => ({ registered: 0 }))).registered;
     return { registered: n, reminded: await remindHolds().catch(() => 0) };
   })().catch(() => null);
+  // Student status changes approved earlier whose effective date has come.
+  const statusApplied = await import("../../../../lib/studentStatus").then((m) => m.applyDue()).catch(() => 0);
+  const labManuals = await import("../../../../lib/labTheory").then((m) => m.remindUnapprovedManuals(now)).catch(() => 0);
+  const qaa = await import("../../../../lib/qaa").then((m) => m.remindQaa(now)).catch(() => 0);
+  const renewals = await import("../../../../lib/benefits").then((m) => m.remindRenewals(now)).catch(() => 0);
+  void statusApplied;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly, autoReg });
+  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, emailed, bell, inactive, attendanceClosed });
+  return NextResponse.json({ sent: data.length, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.

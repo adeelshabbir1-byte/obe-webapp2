@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-type Row = { id: string; code: string; title: string; batch: string; kept: boolean; note: string };
+type Row = { id: string; code: string; title: string; batch: string; teacher?: string; kept: boolean; note: string; done?: number; missing?: string[] };
 
+/** Each course's file: complete or what is missing, the PDF, the Excel folder sheet, and where a hard copy is kept. */
 export default function CourseFolderManager({ rows }: { rows: Row[] }) {
   const [list, setList] = useState(rows);
   const [msg, setMsg] = useState("");
@@ -12,24 +13,22 @@ export default function CourseFolderManager({ rows }: { rows: Row[] }) {
     const res = await fetch("/api/coordinator/course-folders", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId: r.id, kept: r.kept, note: r.note }) });
     if (!res.ok) { const d = await res.json().catch(() => ({})); setMsg(d.error || "Something went wrong"); }
   }
-  function change(id: string, patch: Partial<Row>, saveNow: boolean) {
-    const next = list.map((r) => (r.id === id ? { ...r, ...patch } : r));
-    setList(next);
-    if (saveNow) save(next.find((r) => r.id === id) as Row);
-  }
-  const kept = list.filter((r) => r.kept).length;
+  const change = (id: string, note: string) => setList(list.map((r) => (r.id === id ? { ...r, note } : r)));
   return (
     <div className="card" style={{ overflowX: "auto" }}>
-      <p style={{ marginTop: 0 }}><b>{kept}</b> of {list.length} course folders kept. {msg && <span style={{ color: "#b3261e" }}>{msg}</span>}</p>
-      <table>
-        <thead><tr><th>Kept</th><th>Course</th><th>Batch</th><th>Where it is kept</th><th>Folder file</th></tr></thead>
+      {msg && <p style={{ marginTop: 0, color: "#b3261e" }}>{msg}</p>}
+      <table className="table">
+        <thead><tr><th>Course</th><th>Semester</th><th>Teacher</th><th>Course file</th><th>Download</th><th>Hard copy kept at</th></tr></thead>
         <tbody>{list.map((r) => (
           <tr key={r.id}>
-            <td><input type="checkbox" checked={r.kept} onChange={(e) => change(r.id, { kept: e.target.checked }, true)} /></td>
-            <td>{r.code} {r.title}</td><td>{r.batch}</td>
-            <td><input value={r.note} placeholder="e.g. Room 12 cabinet, or LMS link" style={{ width: 260, padding: "5px 8px", border: "1px solid var(--line)" }}
-              onChange={(e) => change(r.id, { note: e.target.value }, false)} onBlur={() => save(r)} /></td>
-            <td><a className="btn" style={{ fontSize: 12 }} href={`/api/coordinator/course-folders/export?courseId=${r.id}`}>Download Excel</a></td>
+            <td><b>{r.code}</b> {r.title}</td><td>{r.batch}</td><td>{r.teacher || "—"}</td>
+            <td style={{ minWidth: 220 }}>
+              <span style={{ fontWeight: 700, color: r.kept ? "#1E6B3A" : "#B3261E" }}>{r.kept ? "✓ Complete" : `${r.done ?? 0} of 10 parts`}</span>
+              {!r.kept && !!r.missing?.length && <div style={{ fontSize: 12, color: "var(--slate)" }}>Missing: {r.missing.join(", ")}</div>}
+            </td>
+            <td style={{ whiteSpace: "nowrap" }}><a className="btn btn-brass btn-sm" href={`/api/course-file?courseId=${r.id}`}>PDF</a> <a className="btn btn-secondary btn-sm" href={`/api/coordinator/course-folders/export?courseId=${r.id}`}>Excel</a></td>
+            <td><input value={r.note} placeholder="e.g. Room 12 cabinet, or LMS link" aria-label={`Where the ${r.code} folder is kept`} style={{ width: 220, padding: "5px 8px", border: "1px solid var(--line)" }}
+              onChange={(e) => change(r.id, e.target.value)} onBlur={() => save(r)} /></td>
           </tr>
         ))}</tbody>
       </table>

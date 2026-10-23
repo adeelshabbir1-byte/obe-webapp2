@@ -7,6 +7,7 @@ import Shell from "../../components/Shell";
 import PrintButton from "../../components/PrintButton";
 import { REPORT_VIEWER_ROLES, reportPeople } from "../../lib/facultyProfile";
 import { termReport, ranking, parseTerm, termLabel } from "../../lib/teacherPerformance";
+import HowCalculated from "../../components/HowCalculated";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,6 +31,15 @@ export default async function TeacherPerformancePage({ searchParams }: { searchP
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      <HowCalculated shows="One teacher's term: what they taught, how their students did, what students said, and what they delivered.">
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li><b>Class results</b>: mean grade points, pass rate and the share of A and F grades of the teacher's own sections, next to the other sections of the same course this term and the course's past offerings.</li>
+          <li><b>CLO attainment</b>: for each course, the share of students who attained each CLO; CLOs below 60% are flagged as weak.</li>
+          <li><b>Student feedback</b>: the average of the students' 1–5 answers for this teacher; shown only from 5 answers. When sections of one course are shared, each answer goes to the teacher who marked that student's attendance.</li>
+          <li><b>Delivery</b>: lectures with an actual date recorded out of the lectures planned; attendance sessions marked.</li>
+          <li>Deadlines met, FYP groups supervised, FDP hours and alumni reached come from those modules; the trend shows the last four terms.</li>
+        </ul>
+      </HowCalculated>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
         <h1 style={{ fontSize: 22, margin: "0 0 4px" }}>Faculty Performance Report — {termLabel(t)}</h1>
         <span className="small-note no-print"><Link href={q(prev)}>← {prev.replace("-", " ")}</Link> · <Link href={q(next)}>{next.replace("-", " ")} →</Link>
@@ -54,7 +64,7 @@ export default async function TeacherPerformancePage({ searchParams }: { searchP
               <span className="no-print" style={{ display: "flex", gap: 6 }}><a className="btn btn-ghost btn-sm" href={`/api/teacher-performance?term=${termKey}&user=${r.teacher.id}`}>Download Word</a><PrintButton /></span>
             </div>
             <div className="stat-grid" style={{ marginTop: 8 }}>
-              <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{r.rating ? `${r.rating.avg}/5` : "—"}</div><div className="small-note">Student feedback{r.rating ? ` (${r.rating.n})` : ""}</div></div>
+              <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{r.rating ? `${r.rating.avg}/5` : "—"}</div><div className="small-note">Student feedback{r.rating ? ` (${r.rating.n})` : ""}</div>{r.feedback?.shown && r.feedback.adjusted !== null && <div className="small-note">adjusted for batch strictness: <b>{r.feedback.adjusted}/5</b> · total {r.feedback.total}/100</div>}</div>
               <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{n(r.cloAvg, "%")}</div><div className="small-note">Students reaching CLOs</div></div>
               <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{n(r.delivery.pct, "%")}</div><div className="small-note">Lectures delivered</div></div>
               <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{r.deadlines?.rate != null ? `${r.deadlines.rate}%` : "—"}</div><div className="small-note">Deadlines on time</div></div>

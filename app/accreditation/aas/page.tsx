@@ -53,7 +53,8 @@ export default async function AasPage({ searchParams }: { searchParams: { progra
       <label style={{ fontSize: 12 }}>Batch (Student Directory)<br /><select name="batch" defaultValue={ctx.batchId || ""}>{ctx.batches.map((b) => <option key={b.id} value={b.id}>{b.batchName}</option>)}</select></label>
       <button className="btn btn-secondary btn-sm">Show</button>
       <a className="btn btn-brass btn-sm" href={`/api/accreditation/aas?file=workbook&${qs}`}>⬇ AAS workbook (all sections)</a>
-      <a className="btn btn-brass btn-sm" href={`/api/accreditation/aas?file=students&${qs}`}>⬇ Student Directory (AAS upload)</a>
+      <a className="btn btn-brass btn-sm" href={`/api/accreditation/nceac-portal?file=students&${qs}`}>⬇ Students file (NCEAC upload format)</a>
+      <a className="btn btn-secondary btn-sm" href={`/accreditation/nceac-portal?${qs}`}>NCEAC Portal Data: checks, faculty file, field inventory →</a>
     </form>
     <div className="card" style={{ borderLeft: `4px solid ${rules.every((r) => r[1]) ? "#2E7D4F" : "#B3261E"}` }}>
       <h3 style={{ marginTop: 0 }}>Can the application be submitted?</h3>

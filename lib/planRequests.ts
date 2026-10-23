@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "./db";
 import { notifyUsers } from "./notifications";
+import { approverFor } from "./approvers";
 
 // Requests a course advisor makes for one student's degree plan, and who decides them:
 //   SUMMER_LOAD — up to 12 credit hours in a summer (the policy allows 9)   → the Program Lead of the student's program
@@ -21,11 +22,11 @@ export async function approversFor(studentId: string, kind: string): Promise<str
   const lead = s?.batch?.coordinatorId, chairmanId = s?.batch?.coordinator?.managedById || "", deptId = s?.batch?.coordinator?.departmentId || null;
   if (!lead) return [];
   if (kind === "SUMMER_LOAD") return [lead];
-  const dept = deptId ? await prisma.department.findUnique({ where: { id: deptId }, select: { facultyId: true } }) : null;
-  const deans = dept?.facultyId ? await prisma.user.findMany({ where: { role: "DEAN", managedById: chairmanId, facultyId: dept.facultyId }, select: { id: true } }) : [];
-  if (kind === "SUMMER_NEW") return deans.length ? deans.map((d) => d.id) : [chairmanId];
-  const hods = deptId ? await prisma.user.findMany({ where: { role: "HEAD_OF_DEPARTMENT", managedById: chairmanId, departmentId: deptId }, select: { id: true } }) : [];
-  return [...hods.map((h) => h.id), ...deans.map((d) => d.id), chairmanId].filter(Boolean);
+  // The Dean / the Chairman-HoD, or whoever acts for or covers them (lib/approvers.ts).
+  const dean = await approverFor(chairmanId, "DEAN", { departmentId: deptId });
+  if (kind === "SUMMER_NEW") return dean.ids.length ? dean.ids : [chairmanId];
+  const hod = await approverFor(chairmanId, "HEAD_OF_DEPARTMENT", { departmentId: deptId });
+  return Array.from(new Set([...hod.ids, ...dean.ids, chairmanId])).filter(Boolean);
 }
 
 export async function createRequest(studentId: string, kind: string, d: { courseCode?: string | null; termKey?: string | null; value?: number | null; note?: string | null }, by: { id: string; name: string }) {

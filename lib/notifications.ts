@@ -11,6 +11,16 @@ const EMAIL_KINDS = new Set(["ASSIGNMENT", "RESULT", "GRADE_CHANGE", "TEMPLATE",
 export async function notifyUsers(userIds: (string | null | undefined)[], n: { kind: string; title: string; body?: string; href?: string; exceptId?: string | null }) {
   const ids = Array.from(new Set(userIds.filter((x): x is string => !!x && x !== n.exceptId)));
   if (!ids.length) return;
+  // The institute's own position titles (VC, Director of School …) in place of the default names.
+  try {
+    const first = await prisma.user.findUnique({ where: { id: ids[0] }, select: { id: true, role: true, managedById: true } });
+    if (first && first.role !== "SUPER_USER") {
+      const { instituteOfUser } = await import("./moduleLocks");
+      const { titlesFor, applyTitles } = await import("./titles");
+      const t = await titlesFor(await instituteOfUser({ id: first.id, role: first.role, managedById: first.managedById }));
+      n = { ...n, title: applyTitles(n.title, t), body: n.body ? applyTitles(n.body, t) : n.body };
+    }
+  } catch { /* defaults */ }
   try {
     await ndb.notification.createMany({ data: ids.map((userId) => ({ id: randomUUID(), userId, kind: n.kind, title: n.title.slice(0, 300), body: n.body?.slice(0, 2000) || null, href: n.href || null })) });
   } catch { return; }

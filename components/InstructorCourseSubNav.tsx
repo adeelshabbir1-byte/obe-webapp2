@@ -36,6 +36,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
           <SectionLinkBanner courseId={courseId} />
         </div>
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}><RefreshPlanButton courseId={courseId} />
+        <a href={`/api/course-file?courseId=${courseId}`} className="btn btn-brass btn-sm no-print" title="The whole course file (outline, CLOs, plan, attendance, assessments, samples, results, attainment, CQI, feedback) as one PDF">⬇ Course file (PDF)</a>
         <Link href="/instructor/courses" className="btn btn-secondary btn-sm no-print">← Back to courses</Link></span>
       </div>
       <nav className="tabs no-print" aria-label="Course sections" style={{ marginBottom: 0 }}>

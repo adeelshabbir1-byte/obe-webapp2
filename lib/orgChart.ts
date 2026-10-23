@@ -8,10 +8,13 @@ export const ORG_ROLES: { value: string; label: string; scope: "none" | "faculty
   { value: "PROGRAM_LEAD", label: "Program Lead", scope: "program" },
   { value: "OMC", label: "OMC member", scope: "none" },
   { value: "COURSE_ASSIGNER", label: "Course Assigner", scope: "none" },
+  { value: "EXAM_CONTROLLER", label: "Controller of Examinations", scope: "none" },
+  { value: "QEC_INCHARGE", label: "QEC In-charge", scope: "none" },
 ];
 export const roleLabelOf = (r: string) => ORG_ROLES.find((x) => x.value === r)?.label || r;
 
-export type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; orderIndex: number };
+export type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; orderIndex: number; offAt?: Date | string | null };
+export type Acting = { id: string; positionId: string; userId: string; fromDate: string; toDate: string; reason: string | null };
 const odb = prisma as unknown as Record<string, any>;
 
 export async function loadChart(chairmanId: string) {
@@ -31,7 +34,17 @@ export async function loadChart(chairmanId: string) {
   const profs = await prisma.facultyProfile.findMany({ where: { userId: { in: people.map((p) => p.id) } }, select: { userId: true, designation: true, employmentType: true } });
   const prof = new Map(profs.map((p) => [p.userId, p]));
   const progs = Array.from(new Map(programs.map((p) => [p.name, { name: p.name, departmentId: p.coordinator.departmentId }])).values());
-  return { missing, positions, faculties, departments, programs: progs, people: people.map((p) => ({ id: p.id, name: p.name, email: p.email, role: p.role, departmentId: p.departmentId, designation: prof.get(p.id)?.designation || null, employmentType: prof.get(p.id)?.employmentType || null })) };
+  // Acting holders now or later, since-when of each holder, and the last move (for undo).
+  const now = new Date();
+  const acting: Acting[] = missing ? [] : ((await odb.orgActing.findMany({ where: { chairmanId, endedAt: null, toDate: { gte: now } }, orderBy: { fromDate: "asc" } }).catch(() => [])) as { id: string; positionId: string; userId: string; fromDate: Date; toDate: Date; reason: string | null }[])
+    .map((a) => ({ id: a.id, positionId: a.positionId, userId: a.userId, fromDate: a.fromDate.toISOString().slice(0, 10), toDate: a.toDate.toISOString().slice(0, 10), reason: a.reason }));
+  const since: Record<string, string> = {};
+  if (!missing && positions.length) {
+    const logs = (await odb.orgPositionLog.findMany({ where: { positionId: { in: positions.map((p) => p.id) }, action: "ASSIGNED" }, orderBy: { at: "desc" } }).catch(() => [])) as { positionId: string; userId: string; at: Date }[];
+    for (const p of positions) { const l = logs.find((x) => x.positionId === p.id && x.userId === p.holderId); if (l) since[p.id] = l.at.toISOString().slice(0, 10); }
+  }
+  const lastMove = missing ? null : ((await odb.orgMove.findFirst({ where: { chairmanId, undoneAt: null }, orderBy: { at: "desc" } }).catch(() => null)) as { id: string; positionId: string; at: Date } | null);
+  return { missing, positions: positions.map((p) => ({ ...p, offAt: p.offAt ? new Date(p.offAt).toISOString().slice(0, 10) : null })), acting, since, lastMove: lastMove ? { id: lastMove.id, title: positions.find((p) => p.id === lastMove.positionId)?.title || "", at: lastMove.at.toISOString().slice(0, 10) } : null, faculties, departments, programs: progs, people: people.map((p) => ({ id: p.id, name: p.name, email: p.email, role: p.role, departmentId: p.departmentId, designation: prof.get(p.id)?.designation || null, employmentType: prof.get(p.id)?.employmentType || null })) };
 }
 
 /** Duties every institute needs covered; for each, who covers it now or a suggestion (the nearest position above). */

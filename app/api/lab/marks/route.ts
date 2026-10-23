@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { labAccessFor } from "../../../../lib/labAccess";
+import { labMarksLocked } from "../../../../lib/labTheory";
 import { writeAuditLog } from "../../../../lib/audit";
 
 // The Lab Engineer saves the marks of one lab session for the whole class.
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
   }
   const access = await labAccessFor(user, body.courseId);
   if (!access || access.as !== "ENGINEER") return NextResponse.json({ error: "only the Lab Engineer of this lab can enter marks" }, { status: 403 });
+  { const lk = await labMarksLocked(access.lab.id); if (lk) return NextResponse.json({ error: lk }, { status: 409 }); }
 
   const enrolled = await prisma.studentEnrollment.findMany({ where: { courseId: access.lab.id, status: "ACTIVE" }, select: { studentId: true } });
   const allowed = new Set<string>(enrolled.map((e) => e.studentId));

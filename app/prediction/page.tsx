@@ -7,6 +7,7 @@ import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import HistoryUpload from "../../components/HistoryUpload";
 import { buildModel, validate, difficulty, atRisk, UPLOAD_COLUMNS } from "../../lib/prediction";
+import HowCalculated from "../../components/HowCalculated";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -37,6 +38,15 @@ export default async function PredictionPage({ searchParams }: { searchParams: {
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      <HowCalculated shows="Predictions from past results — every number comes with the reason behind it. They are estimates to guide advising, never grades.">
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li><b>Course grade</b>: for each course, a straight line fitted between past students' grade points and their CGPA before the course (needs 8 or more past students); otherwise the student's CGPA shifted by how much harder or easier the course has been than average.</li>
+          <li><b>Fail risk</b>: of past students with a CGPA within ±0.3 of this student's who took the course, the share who failed.</li>
+          <li><b>Term GPA</b>: the predicted grades of the enrolled courses, weighted by credit hours. <b>Final CGPA</b>: the remaining credits at the student's recent term GPAs.</li>
+          <li><b>Dropout / on-time graduation</b>: what happened to past students with a similar CGPA after the same number of terms.</li>
+          <li>Accuracy is checked by fitting on all terms except the last two and testing on those two.</li>
+        </ul>
+      </HowCalculated>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Performance Prediction{title ? ` — ${title}` : ""}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>
         Learned from {m.data.records.toLocaleString()} past course results of {m.data.students.toLocaleString()} students ({m.data.finished} finished their studies){m.data.uploaded > 0 ? `, including ${m.data.uploaded.toLocaleString()} uploaded past-year results` : ""}.

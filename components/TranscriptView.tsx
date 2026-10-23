@@ -7,6 +7,8 @@ import { prisma } from "../lib/db";
 import ThisSemester from "./ThisSemester";
 import DegreeSchemeBoard from "./DegreeSchemeBoard";
 import PrintButton from "./PrintButton";
+import HowCalculated from "./HowCalculated";
+import { StatusBadge } from "./Meaning";
 
 // One student's record in tabs — the same for the student, the advisor and the program staff.
 export const TABS: [string, string][] = [["now", "This semester"], ["grades", "Grades transcript"], ["plo", "PLO transcript"], ["audit", "Degree audit"], ["plan", "Semester plan"]];
@@ -39,6 +41,10 @@ export default async function TranscriptView({ studentId, tab, base, staff = fal
       <div role="tablist" className="tabs no-print" style={{ marginBottom: 12, flexWrap: "wrap" }}>
         {TABS.map(([k, l]) => <Link key={k} role="tab" className="tab" aria-selected={t === k} href={`${base}${sep}tab=${k}`} scroll={false}>{l}</Link>)}
       </div>
+      {t === "now" && <HowCalculated shows="The courses the student is registered in this semester, with attendance and marks so far.">Attendance is the share of lectures held so far that the student attended (late counts as present unless the OMC's attendance policy says otherwise); marks so far are the weighted marks of the assessments already marked, out of what has been assessed. Nothing here is a final grade.</HowCalculated>}
+      {t === "grades" && <HowCalculated shows="Every course attempted, by term, with grade, grade points and GPA.">GPA is the credit-hour weighted average of the grade points of a term. CGPA uses every term, but when a course was taken more than once only the <b>best attempt</b> counts. Non-credit deficiency courses and W (withdrawn) carry no grade points. Standing follows the Controller of Examinations&apos; limits shown below the tabs.</HowCalculated>}
+      {t === "plo" && <HowCalculated shows="For every GA (PLO), each course that assessed it, the student's % in it, and whether the GA is attained overall.">In each course, the student&apos;s GA % is the marks they got on the questions mapped (through CLOs) to the GA, out of what those questions were worth. Overall, a GA is <b>attained</b> when the credit-hour weighted average of those course %s is at or above the GA pass mark (50% unless the OMC or the program&apos;s council standard sets another).</HowCalculated>}
+      {t === "audit" && <HowCalculated shows="The program's requirements by course type against what the student has passed, is taking, failed or still has to take.">Graduation checks: total credits, the minimum CGPA, every GA attained and every deficiency course passed. Record checks flag duplicate entries, a grade that disagrees with its grade points, credit hours that differ from the curriculum, and courses outside the scheme of studies.</HowCalculated>}
       {t === "now" && <NowTab studentId={studentId} />}
       {t === "grades" && <GradesTab rows={report.courseRows} remaining={report.remaining} />}
       {t === "plo" && <PloTab studentId={studentId} />}
@@ -127,7 +133,7 @@ async function PloTab({ studentId }: { studentId: string }) {
                 </div>
               )}</td>
               <td style={{ textAlign: "center" }}>{l.courses.length}</td>
-              <td style={{ textAlign: "center" }}>{l.attained === null ? "—" : l.attained ? chip("Attained", GOOD) : chip("Not attained", BAD)}</td>
+              <td style={{ textAlign: "center" }}>{l.attained === null ? "—" : <StatusBadge status={l.attained ? "ATTAINED" : "NOT_ATTAINED"} meaning={l.attained ? `The credit-weighted average of this GA across its courses (${l.avg}%) is at or above the 50% pass mark.` : `The credit-weighted average of this GA across its courses (${l.avg}%) is below the 50% pass mark. A remediation or a later course mapped to this GA can make it up.`} />}</td>
             </tr>
           ))}</tbody>
         </table>
