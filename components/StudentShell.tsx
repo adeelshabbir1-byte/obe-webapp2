@@ -28,6 +28,7 @@ const NAV = [
   { href: "/student/activities", label: "Societies & Activities" },
   { href: "/student/elections", label: "Society Elections" },
   { href: "/student/transcript", label: "My Transcript" },
+  { href: "/student/recheck", label: "Result Re-checking" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
   { href: "/student/portfolio", label: "My Portfolio" },
   { href: "/student/course-survey", label: "Course Surveys & Evaluations" },

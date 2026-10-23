@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
+import StudentPicker from "../../components/StudentPicker";
 import Shell from "../../components/Shell";
 import PrintButton from "../../components/PrintButton";
 import SignOffBlock from "../../components/SignOffBlock";
@@ -27,19 +28,11 @@ export default async function OfficialTranscript({ searchParams }: { searchParam
   const batches = await prisma.batch.findMany({ where: batchWhere, select: { id: true } });
   const ids = batches.map((b) => b.id).concat(["none"]);
   const q = (searchParams.q || "").trim();
-  const matches = q ? await prisma.student.findMany({ where: { batchId: { in: ids }, OR: [{ name: { contains: q, mode: "insensitive" } }, { rollNumber: { contains: q, mode: "insensitive" } }] }, select: { id: true, name: true, rollNumber: true, batch: { select: { degreeProgram: true, batchName: true } } }, take: 25 }) : [];
   const student = searchParams.studentId ? await prisma.student.findFirst({ where: { id: searchParams.studentId, batchId: { in: ids } }, select: { id: true, name: true, rollNumber: true, status: true, batchId: true, batch: { select: { degreeProgram: true, batchName: true } } } }) : null;
   const inst = await prisma.user.findUnique({ where: { id: w.chairmanId }, select: { instituteName: true } });
 
   const shell = (body: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>{body}</Shell>;
-  const finder = (
-    <form method="get" className="card no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginBottom: 10 }}>
-      <label style={{ fontSize: 13 }}>Student (name or roll number)<br /><input name="q" className="input" defaultValue={q} placeholder="e.g. DRM-CS-24-001" /></label>
-      <button className="btn btn-brass btn-sm" type="submit">Find</button>
-      {matches.length > 0 && <div style={{ flexBasis: "100%", display: "flex", gap: 6, flexWrap: "wrap" }}>{matches.map((m) => <a key={m.id} className="btn btn-secondary btn-sm" href={`/official-transcript?studentId=${m.id}`}>{m.rollNumber} · {m.name} · {m.batch.degreeProgram}</a>)}</div>}
-      {q && !matches.length && <span className="small-note">No student found in your area.</span>}
-    </form>
-  );
+  const finder = <StudentPicker current={student?.id || null} />;
   if (!student) return shell(<><h1 style={{ fontSize: 22, marginBottom: 6 }}>Official Transcript</h1><p className="small-note">Find a student to print a numbered, signed transcript with a QR code anyone can check.</p>{finder}</>);
 
   const doc = await transcriptDoc(w.chairmanId, student.id, { userId: user.id, exam: w.exam });

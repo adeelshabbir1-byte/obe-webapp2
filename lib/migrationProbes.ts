@@ -330,6 +330,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ExamPublishLog"
 },
 {
+"f": "migration_exam_controller.sql",
+"d": "Controller of Examinations: result publication, re-checking requests, debarred (short attendance) lists.",
+"t": "DebarEntry"
+},
+{
 "f": "migration_exam_date_ranges.sql",
 "d": "Run in Supabase SQL Editor. Converts midterm/final from single dates to",
 "t": "Course",
@@ -676,6 +681,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_org_chart.sql",
 "d": "Organisation chart (hierarchy view) and its history. Safe to run more than once.",
 "t": "OrgPositionLog"
+},
+{
+"f": "migration_org_members.sql",
+"d": "Members listed under a committee position on the organisation chart (OMC members under the OMC Convener, QEC members under the QEC Convener)",
+"t": "OrgMember"
 },
 {
 "f": "migration_org_titles.sql",

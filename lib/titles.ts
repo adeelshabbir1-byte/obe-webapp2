@@ -10,7 +10,7 @@ import { prisma } from "./db";
 const tdb = prisma as unknown as Record<string, any>;
 export const TITLES_HINT = "Position titles need prisma/migration_org_titles.sql — run it in Supabase.";
 
-export type TitleKey = "INSTITUTE_HEAD" | "DEAN" | "HEAD_OF_DEPARTMENT" | "PROGRAM_LEAD" | "DEPARTMENT_COORDINATOR" | "EXAM_CONTROLLER" | "QEC_INCHARGE" | "OMC" | "COURSE_ASSIGNER" | "BATCH_ADVISOR";
+export type TitleKey = "INSTITUTE_HEAD" | "DEAN" | "HEAD_OF_DEPARTMENT" | "PROGRAM_LEAD" | "DEPARTMENT_COORDINATOR" | "EXAM_CONTROLLER" | "QEC_INCHARGE" | "OMC_CONVENER" | "OMC" | "COURSE_ASSIGNER" | "BATCH_ADVISOR";
 export const TITLE_KEYS: { key: TitleKey; label: string; default: string; examples: string; canSwitchOff: boolean; roles: string[] }[] = [
   { key: "INSTITUTE_HEAD", label: "Head of the institute", default: "Institute Head", examples: "Vice Chancellor, Rector, Director, Principal, President", canSwitchOff: false, roles: ["CHAIRMAN"] },
   { key: "DEAN", label: "Head of a faculty / school", default: "Dean", examples: "Dean, Director of School", canSwitchOff: true, roles: ["DEAN"] },
@@ -18,7 +18,8 @@ export const TITLE_KEYS: { key: TitleKey; label: string; default: string; exampl
   { key: "PROGRAM_LEAD", label: "Person in charge of a program", default: "Program Lead", examples: "Program Coordinator, Program In-charge", canSwitchOff: false, roles: ["PROGRAM_COORDINATOR"] },
   { key: "DEPARTMENT_COORDINATOR", label: "Department's assistant to the program leads", default: "Program Coordinator", examples: "Department Coordinator, Academic Coordinator", canSwitchOff: true, roles: ["DEPARTMENT_COORDINATOR"] },
   { key: "EXAM_CONTROLLER", label: "Examinations", default: "Controller of Examinations", examples: "Controller of Examinations, Registrar (Exams)", canSwitchOff: true, roles: [] },
-  { key: "QEC_INCHARGE", label: "Quality enhancement", default: "QEC In-charge", examples: "QEC In-charge, Director QEC, Quality Assurance Head", canSwitchOff: true, roles: [] },
+  { key: "QEC_INCHARGE", label: "Quality enhancement", default: "QEC Convener", examples: "QEC Convener, QEC In-charge, Director QEC, Director Quality Assurance", canSwitchOff: true, roles: [] },
+  { key: "OMC_CONVENER", label: "Head of a department's outcome committee", default: "OMC Convener", examples: "OMC Convener, OBE Committee Convener", canSwitchOff: true, roles: [] },
   { key: "OMC", label: "Outcome committee", default: "OMC Member", examples: "OMC Member, OBE Committee Member", canSwitchOff: false, roles: ["OMC"] },
   { key: "COURSE_ASSIGNER", label: "Course allocation", default: "Course Assigner", examples: "Course Assigner, Timetable In-charge", canSwitchOff: false, roles: ["COURSE_ASSIGNER"] },
   { key: "BATCH_ADVISOR", label: "Batch mentor", default: "Batch Advisor", examples: "Batch Advisor, Class Mentor, Tutor", canSwitchOff: false, roles: [] },
@@ -54,7 +55,7 @@ export async function saveTitles(chairmanId: string, rows: { key: string; title:
   }
 }
 
-const ROLE_KEY: Record<string, TitleKey> = { CHAIRMAN: "INSTITUTE_HEAD", DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_COORDINATOR: "PROGRAM_LEAD", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", OMC: "OMC", COURSE_ASSIGNER: "COURSE_ASSIGNER", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE" };
+const ROLE_KEY: Record<string, TitleKey> = { CHAIRMAN: "INSTITUTE_HEAD", DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_COORDINATOR: "PROGRAM_LEAD", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", OMC: "OMC", COURSE_ASSIGNER: "COURSE_ASSIGNER", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE", OMC_CONVENER: "OMC_CONVENER" };
 /** The institute's name for a role (null when the role has no position title). */
 export function roleTitle(role: string, t: Titles): string | null { const k = ROLE_KEY[role]; return k ? t[k].title : null; }
 export const titleKeyOfRole = (role: string): TitleKey | null => ROLE_KEY[role] || null;

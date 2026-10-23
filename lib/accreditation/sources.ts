@@ -1,3 +1,4 @@
+import { labToolCheck } from "../gaCoverage";
 import { prisma } from "../db";
 import { completeness } from "../facultyProfile";
 import { fiscalYearNow, labRatio } from "../resources";
@@ -161,7 +162,8 @@ async function plos(l: SourceLoader): Promise<SourceResult> {
     rows: batches.map((b) => { const mine = rows.filter((r) => r.batchId === b.id); return [b.batchName, mine.length, mine.filter((r) => r.status === "approved").length, mine.filter((r) => covered.has(r.id)).length]; }),
     checks: [chk("Batches with GAs", batches.filter((b) => rows.some((r) => r.batchId === b.id)).length, batches.length, "Write or import the GAs.", "/coordinator/plos"),
       chk("GAs approved", rows.filter((r) => r.status === "approved").length, rows.length, "Send the GAs for approval.", "/coordinator/plos"),
-      chk("GAs taught by at least one course", rows.filter((r) => covered.has(r.id)).length, rows.length, "Map courses to every GA.", "/omc/plo-matrix")],
+      chk("GAs taught by at least one course", rows.filter((r) => covered.has(r.id)).length, rows.length, "Map courses to every GA.", "/omc/plo-matrix"),
+      ...(l.ctx.body === "NCEAC" || l.ctx.body === "PEC" ? await (async () => { const t = await labToolCheck(batches.map((b) => b.id)); return t.labs ? [chk("Lab courses mapped to the Modern Tool Usage GA", t.ok, t.labs, "Map a CLO of each lab to the tool-usage GA (GA-5).", "/ga-coverage")] : []; })() : [])],
     gaps: [],
   };
 }

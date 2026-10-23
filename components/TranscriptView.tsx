@@ -88,7 +88,7 @@ function GradesTab({ rows, remaining }: { rows: TranscriptCourseRow[]; remaining
                 <thead><tr><th>Code</th><th>Course</th><th>Type</th><th style={{ textAlign: "center" }}>CH</th><th style={{ textAlign: "center" }}>Marks</th><th style={{ textAlign: "center" }}>Grade</th><th style={{ textAlign: "center" }}>Points</th></tr></thead>
                 <tbody>{xs.map((r, i) => (
                   <tr key={i} style={{ background: r.gpaPoints === 0 ? "#FDE2E2" : undefined }}>
-                    <td><b>{r.code}</b></td><td>{r.title}{r.isCurrent && !r.approved ? <span className="small-note"> (provisional)</span> : null}</td>
+                    <td><b>{r.code}</b></td><td>{r.title}{r.isCurrent ? <span className="small-note"> {r.published ? "(final — published)" : r.approved ? "(approved — awaiting publication)" : "(provisional)"}</span> : null}</td>
                     <td>{r.courseType ? chip(r.courseType, TYPE_COLOR[r.courseType] || "#555") : "—"}</td>
                     <td style={{ textAlign: "center" }}>{r.creditHours}</td><td style={{ textAlign: "center" }}>{r.totalPct.toFixed(1)}%</td>
                     <td style={{ textAlign: "center", fontWeight: 800, fontSize: 15, color: gradeColor(r.grade) }}>{r.grade}</td>

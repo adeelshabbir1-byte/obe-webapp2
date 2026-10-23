@@ -8,6 +8,9 @@ export async function examChairman(user: { id: string; role: string; managedById
   if (user.role === "CHAIRMAN") return user.id;
   const cid = await chairmanIdFor(user).catch(() => "");
   if (!cid) return null;
+  // The Controller of Examinations runs the exam branch.
+  const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true } }).catch(() => null);
+  if (me?.extraRoles?.includes("EXAM_CONTROLLER")) return cid;
   const n = (await ebdb.examStaff.count({ where: { chairmanId: cid, userId: user.id } }).catch(() => 0)) as number;
   return n ? cid : null;
 }

@@ -8,6 +8,7 @@ import { EXPENSE_CATEGORIES, fiscalYearNow } from "./resources";
 import { seed as seedVisitDay } from "./visitDay";
 import { BBA_PLOS } from "./demoBba";
 import { BBA_CONTENT, topicForLecture } from "./demoBbaContent";
+import { isLab, toolGa } from "./gaCoverage";
 
 // Dream University, completed for an NCEAC and an NBEAC visit:
 //  • a business school with a BBA (NBEAC) beside the computing programs (NCEAC), a Dean over both, HODs, Student
@@ -556,5 +557,19 @@ export async function campusFixes() {
   const s = await scope();
   await prisma.programEvidence.deleteMany({ where: { coordinatorId: { in: s.leads.map((l) => l.id) }, kind: { in: ["IAB meeting", "Internships", "PEO assessment"] } } });
   for (const l of s.leads) await programEvidenceFor(s.head, l.id);
+  // Computing labs develop Modern Tool Usage: the last CLO of every lab maps to the tool-usage GA (GA-5).
+  for (const b of s.batches.filter((x) => !/BBA/.test(x.degreeProgram))) {
+    const plos = await prisma.pLO.findMany({ where: { batchId: b.id }, select: { id: true, number: true, title: true } });
+    const tool = toolGa(plos);
+    if (!tool) continue;
+    const cs = await prisma.course.findMany({ where: { batchId: b.id }, select: { id: true, code: true, title: true, courseType: true } });
+    for (const c of cs.filter(isLab)) {
+      for (const source of ["SE", "INSTRUCTOR"]) {
+        const last = await prisma.cLO.findFirst({ where: { courseId: c.id, source }, orderBy: { orderIndex: "desc" }, select: { id: true } });
+        if (last) await prisma.cLO.update({ where: { id: last.id }, data: { mappedPloId: tool.id } });
+      }
+      await prisma.coursePloMapping.createMany({ data: [{ courseId: c.id, ploId: tool.id, assignedById: b.coordinatorId, source: "MANUAL" }] as never, skipDuplicates: true });
+    }
+  }
   return s.leads.length;
 }

@@ -6,21 +6,25 @@ export const ORG_ROLES: { value: string; label: string; scope: "none" | "faculty
   { value: "HEAD_OF_DEPARTMENT", label: "Chairman / HoD", scope: "department" },
   { value: "DEPARTMENT_COORDINATOR", label: "Department Program Coordinator", scope: "department" },
   { value: "PROGRAM_LEAD", label: "Program Lead", scope: "program" },
+  { value: "OMC_CONVENER", label: "OMC Convener (department's OMC, members listed under it)", scope: "department" },
   { value: "OMC", label: "OMC member", scope: "none" },
   { value: "COURSE_ASSIGNER", label: "Course Assigner", scope: "none" },
   { value: "EXAM_CONTROLLER", label: "Controller of Examinations", scope: "none" },
-  { value: "QEC_INCHARGE", label: "QEC In-charge", scope: "none" },
+  { value: "QEC_INCHARGE", label: "QEC Convener (members listed under it)", scope: "none" },
 ];
 export const roleLabelOf = (r: string) => ORG_ROLES.find((x) => x.value === r)?.label || r;
 
-export type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; orderIndex: number; offAt?: Date | string | null };
+export type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; orderIndex: number; offAt?: Date | string | null; members?: string[] };
+/** Positions whose box lists members (a committee under its convener). */
+export const GROUP_ROLES = ["OMC_CONVENER", "QEC_INCHARGE"];
 export type Acting = { id: string; positionId: string; userId: string; fromDate: string; toDate: string; reason: string | null };
 const odb = prisma as unknown as Record<string, any>;
 
 export async function loadChart(chairmanId: string) {
   let rows: (Omit<Position, "covers"> & { coversJson: string })[] = [], missing = false;
   try { rows = await odb.orgPosition.findMany({ where: { chairmanId }, orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }] }); } catch { missing = true; }
-  const positions: Position[] = rows.map(({ coversJson, ...p }) => { let covers: string[] = []; try { covers = JSON.parse(coversJson); } catch { covers = []; } return { ...p, covers }; });
+  const mem = missing ? [] : ((await odb.orgMember.findMany({ where: { positionId: { in: rows.map((r) => r.id).concat("none") } }, orderBy: { addedAt: "asc" } }).catch(() => [])) as { positionId: string; userId: string }[]);
+  const positions: Position[] = rows.map(({ coversJson, ...p }) => { let covers: string[] = []; try { covers = JSON.parse(coversJson); } catch { covers = []; } return { ...p, covers, members: mem.filter((m) => m.positionId === p.id).map((m) => m.userId) }; });
   const [faculties, departments, programs, people] = await Promise.all([
     prisma.faculty.findMany({ where: { chairmanId }, select: { id: true, name: true } }),
     prisma.department.findMany({ where: { chairmanId }, select: { id: true, name: true, facultyId: true }, orderBy: { name: "asc" } }),

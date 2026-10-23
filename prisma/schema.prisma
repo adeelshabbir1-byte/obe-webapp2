@@ -7232,3 +7232,60 @@ model BillingPayment {
 
   @@index([invoiceId])
 }
+
+// A member listed under a committee position on the organisation chart (OMC members under the OMC Convener, QEC
+// members under the QEC Convener).
+model OrgMember {
+  id         String   @id
+  positionId String
+  userId     String
+  addedById  String?
+  addedAt    DateTime @default(now())
+
+  @@unique([positionId, userId])
+  @@index([userId])
+}
+
+// A course result made visible to students as final by the Controller of Examinations (after it was approved).
+model ResultPublication {
+  courseId      String    @id
+  chairmanId    String
+  publishedAt   DateTime  @default(now())
+  publishedById String
+  recheckUntil  DateTime?
+
+  @@index([chairmanId])
+}
+
+// A student's request to have a published result re-checked. PENDING -> UPHELD (no change) | CHANGED (grade change made) | REJECTED.
+model ResultRecheck {
+  id          String    @id @default(cuid())
+  chairmanId  String
+  courseId    String
+  studentId   String
+  reason      String
+  status      String    @default("PENDING")
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([courseId, studentId])
+  @@index([chairmanId, status])
+}
+
+// Short attendance: a student debarred from one course's paper in an exam session (or condoned by the Controller).
+model DebarEntry {
+  id          String   @id @default(cuid())
+  sessionId   String
+  courseId    String
+  studentId   String
+  pct         Float
+  status      String   @default("DEBARRED") // DEBARRED | CONDONED
+  note        String?
+  decidedById String?
+  createdAt   DateTime @default(now())
+
+  @@unique([sessionId, courseId, studentId])
+  @@index([studentId])
+}

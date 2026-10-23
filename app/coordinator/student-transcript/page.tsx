@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { computeStudentTranscriptReport } from "../../../lib/studentTranscriptReport";
+import StudentPicker from "../../../components/StudentPicker";
 import Shell from "../../../components/Shell";
 import ReportPrintHeader from "../../../components/ReportPrintHeader";
 import TranscriptView from "../../../components/TranscriptView";
@@ -22,9 +23,6 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   const batchIds = batches.map((b) => b.id);
 
   const q = searchParams.q || "";
-  const matches = q
-    ? await prisma.student.findMany({ where: { batchId: { in: batchIds }, OR: [{ name: { contains: q, mode: "insensitive" } }, { rollNumber: { contains: q, mode: "insensitive" } }] }, include: { batch: true }, take: 20 })
-    : [];
 
   const student = searchParams.studentId ? await prisma.student.findUnique({ where: { id: searchParams.studentId }, include: { batch: true } }) : null;
   const belongsToCoordinator = student && batchIds.includes(student.batchId);
@@ -87,22 +85,10 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Student Transcript" />
+      <StudentPicker current={student?.id || null} />
       <div className="card no-print">
-        <form method="GET" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-          <input name="q" defaultValue={q} placeholder="Search by name or roll number..." style={{ flex: 1, padding: "7px 10px", border: "1px solid var(--line)" }} />
-          <button type="submit" className="btn btn-brass">Search</button>
-        </form>
-        {matches.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            {matches.map((m) => (
-              <a key={m.id} href={`/coordinator/student-transcript?studentId=${m.id}`} style={{ display: "block", padding: "6px 4px", fontSize: 13, color: "var(--brass-dark)", textDecoration: "none", borderBottom: "1px solid var(--line)" }}>
-                {m.name} — {m.rollNumber} ({m.batch.degreeProgram} — {m.batch.batchName})
-              </a>
-            ))}
-          </div>
-        )}
         <form method="GET" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <label style={{ fontSize: 11.5, color: "var(--slate)" }}>Or view a whole batch:</label>
+          <label style={{ fontSize: 11.5, color: "var(--slate)" }}>Batch summary (CGPA and GA results of a whole batch):</label>
           <select name="batchId" defaultValue={selectedBatchId} style={{ padding: "6px 8px", border: "1px solid var(--line)", fontSize: 12.5 }}>
             <option value="">— Select a batch —</option>
             {batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}

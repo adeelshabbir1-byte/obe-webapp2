@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
-import { ORG_ROLES } from "../../../../lib/orgChart";
+import { ORG_ROLES, GROUP_ROLES } from "../../../../lib/orgChart";
 import { notifyUsers } from "../../../../lib/notifications";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +102,56 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     // Switch a position off (the institute does not have it) or on again.
+    // Committee members listed under a convener's box. OMC members get the OMC hat (the OMC pages, scoped to their
+    // department); QEC members get the QEC_MEMBER hat (read access to the quality pages).
+    if (b.action === "addMember" || b.action === "removeMember") {
+      const p = await mine(String(b.id)); if (!p) return NextResponse.json({ error: "not found" }, { status: 404 });
+      if (!GROUP_ROLES.includes(p.role)) return NextResponse.json({ error: "Only a convener's position lists members." }, { status: 400 });
+      const u = await prisma.user.findFirst({ where: { id: String(b.userId || ""), OR: [{ managedById: chairmanId }, { managedBy: { managedById: chairmanId } }] }, select: { id: true, name: true, role: true, extraRoles: true, departmentId: true } });
+      if (!u) return NextResponse.json({ error: "Choose someone of this institute." }, { status: 400 });
+      const omc = p.role === "OMC_CONVENER";
+      if (b.action === "addMember") {
+        if (omc && p.departmentId && u.departmentId && u.departmentId !== p.departmentId) return NextResponse.json({ error: `${u.name} belongs to another department; an OMC member reviews only their own department's courses.` }, { status: 400 });
+        await odb.orgMember.upsert({ where: { positionId_userId: { positionId: p.id, userId: u.id } }, create: { id: randomUUID(), positionId: p.id, userId: u.id, addedById: user.id, addedAt: new Date() }, update: {} });
+        if (omc) { if (u.role !== "OMC") await prisma.user.update({ where: { id: u.id }, data: { omcHat: true, ...(p.departmentId && !u.departmentId ? { departmentId: p.departmentId } : {}) } as never }); }
+        else await prisma.user.update({ where: { id: u.id }, data: { extraRoles: Array.from(new Set([...(u.extraRoles || []), "QEC_MEMBER"])) } });
+        await notifyUsers([u.id], { kind: "ROLE", title: `You are a member of: ${p.title}`, href: omc ? "/omc/queue" : "/evaluations" });
+      } else {
+        await odb.orgMember.deleteMany({ where: { positionId: p.id, userId: u.id } });
+        const still = await odb.orgMember.count({ where: { userId: u.id, positionId: { in: (await odb.orgPosition.findMany({ where: { chairmanId, role: p.role }, select: { id: true } })).map((x: { id: string }) => x.id) } } });
+        if (!still) {
+          if (omc && u.role !== "OMC" && !(u.extraRoles || []).includes("OMC_CONVENER")) await prisma.user.update({ where: { id: u.id }, data: { omcHat: false } as never });
+          if (!omc) await prisma.user.update({ where: { id: u.id }, data: { extraRoles: (u.extraRoles || []).filter((x) => x !== "QEC_MEMBER") } });
+        }
+      }
+      await writeAuditLog({ actorUserId: user.id, action: b.action === "addMember" ? "ORG_MEMBER_ADDED" : "ORG_MEMBER_REMOVED", entityType: "OrgPosition", entityId: p.id, metadata: { title: p.title, userId: u.id } }).catch(() => null);
+      return NextResponse.json({ ok: true });
+    }
+    // Add the conveners the chart is missing: an OMC Convener per department (under the department's Dean, else the
+    // Institute Head) with that department's current OMC members, and a QEC Convener under the Institute Head.
+    if (b.action === "conveners") {
+      const all = await odb.orgPosition.findMany({ where: { chairmanId } });
+      const root = all.find((x: { parentId: string | null }) => !x.parentId);
+      if (!root) return NextResponse.json({ error: "Build the chart first." }, { status: 409 });
+      const depts = await prisma.department.findMany({ where: { chairmanId }, select: { id: true, name: true, facultyId: true } });
+      let made = 0;
+      for (const d of depts) {
+        if (all.some((x: { role: string; departmentId: string | null }) => x.role === "OMC_CONVENER" && x.departmentId === d.id)) continue;
+        const dean = all.find((x: { role: string; facultyId: string | null }) => x.role === "DEAN" && d.facultyId && x.facultyId === d.facultyId);
+        const id = randomUUID();
+        const conv = await prisma.user.findFirst({ where: { extraRoles: { has: "OMC_CONVENER" }, departmentId: d.id, OR: [{ managedById: chairmanId }, { managedBy: { managedById: chairmanId } }] }, select: { id: true } });
+        await odb.orgPosition.create({ data: { id, chairmanId, title: `OMC Convener, ${d.name}`, role: "OMC_CONVENER", departmentId: d.id, parentId: (dean || root).id, holderId: conv?.id || null, orderIndex: 900 + made } });
+        const members = await prisma.user.findMany({ where: { departmentId: d.id, isActive: true, OR: [{ role: "OMC" }, { omcHat: true }], AND: [{ OR: [{ managedById: chairmanId }, { managedBy: { managedById: chairmanId } }] }] } as never, select: { id: true } });
+        for (const m of members) if (m.id !== conv?.id) await odb.orgMember.create({ data: { id: randomUUID(), positionId: id, userId: m.id, addedById: user.id, addedAt: new Date() } }).catch(() => null);
+        made++;
+      }
+      if (!all.some((x: { role: string }) => x.role === "QEC_INCHARGE")) {
+        const q = await prisma.user.findFirst({ where: { extraRoles: { has: "QEC_INCHARGE" }, OR: [{ managedById: chairmanId }, { managedBy: { managedById: chairmanId } }] }, select: { id: true } });
+        await odb.orgPosition.create({ data: { id: randomUUID(), chairmanId, title: "QEC Convener", role: "QEC_INCHARGE", parentId: root.id, holderId: q?.id || null, orderIndex: 990 } });
+        made++;
+      }
+      return NextResponse.json({ ok: true, made });
+    }
     if (b.action === "off") {
       const p = await mine(String(b.id)); if (!p) return NextResponse.json({ error: "not found" }, { status: 404 });
       await odb.orgPosition.update({ where: { id: p.id }, data: { offAt: b.on ? null : new Date() } });

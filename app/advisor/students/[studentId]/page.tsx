@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import StudentPicker from "../../../../components/StudentPicker";
 import PersonAvatar from "../../../../components/PersonAvatar";
 import { studentPhotos } from "../../../../lib/studentPhotos";
 import { getAuthenticatedUser } from "../../../../lib/session";
@@ -43,6 +44,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <Link href="/advisor/dashboard" style={{ fontSize: 13 }}>← All advisees</Link>
+      <StudentPicker current={s.id} template="/advisor/students/{id}" label="Another student" />
       <div className="card" style={{ marginTop: 10 }}>
         <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <div>

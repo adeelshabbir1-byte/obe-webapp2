@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "./Meaning";
 
-type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; offAt?: string | null };
+type Position = { id: string; parentId: string | null; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; covers: string[]; offAt?: string | null; members?: string[] };
 type Person = { id: string; name: string; email: string; role: string; departmentId: string | null; designation: string | null; employmentType: string | null };
 type Duty = { duty: string; scope: string; coveredBy: string | null; vacant: boolean; suggest: { positionId: string; role: string; title: string } | null };
 type Acting = { id: string; positionId: string; userId: string; fromDate: string; toDate: string; reason: string | null };
@@ -86,7 +86,7 @@ export default function OrgChartEditor(p: Props) {
     let r;
     if (role === "OMC") r = await post("/api/chairman/omc-hat", { userId, ...(revoke ? { action: "REVOKE" } : {}) });
     else if (role === "COURSE_ASSIGNER") r = await post("/api/chairman/assigner-hat", { userId, ...(revoke ? { action: "REVOKE" } : { term: "ALWAYS" }) });
-    else if (role === "EXAM_CONTROLLER" || role === "QEC_INCHARGE") r = await post("/api/org/duty", { duty: role, userId, revoke });
+    else if (role === "EXAM_CONTROLLER" || role === "QEC_INCHARGE" || role === "OMC_CONVENER") r = await post("/api/org/duty", { duty: role, userId, revoke });
     else if (revoke) r = await post("/api/chairman/give-role", { userId, action: "REVOKE", role: role === "PROGRAM_LEAD" ? "PROGRAM_COORDINATOR" : role });
     else r = await post("/api/chairman/give-role", { userId, role, facultyId: pos.facultyId, departmentId: pos.departmentId, program: pos.program });
     if (!r.ok && /already holds|already/i.test(r.error || "")) return { ok: true };
@@ -182,6 +182,13 @@ export default function OrgChartEditor(p: Props) {
             : h ? <div className="h">{h.name}{others > 0 && <span className="more" title={holds(h.id).filter((x) => x.id !== pos.id).map((x) => x.title).join(", ")}>+{others} more</span>}</div>
               : <div className="v">Vacant</div>}
         {p.coverage[pos.id] && <div className="c">{p.coverage[pos.id]}</div>}
+        {!!pos.members?.length && (
+          <div style={{ marginTop: 4, borderTop: "1px solid #EEE3E5", paddingTop: 3, fontSize: 11 }}>
+            <div style={{ color: "#5E5457", fontWeight: 600 }}>Members ({pos.members.length})</div>
+            {pos.members.slice(0, 6).map((m) => <div key={m}>• {person.get(m)?.name || "—"}</div>)}
+            {pos.members.length > 6 && <div style={{ color: "#5E5457" }}>+{pos.members.length - 6} more</div>}
+          </div>
+        )}
         <button type="button" className="add" title="Add a position below" onClick={(e) => { e.stopPropagation(); setEdit({ isNew: true, parentId: pos.id, title: "", role: "NONE" }); }}>+</button>
       </div>
     );
@@ -235,6 +242,7 @@ export default function OrgChartEditor(p: Props) {
               <button role="tab" className="tab" aria-selected={view === "list"} onClick={() => setView("list")}>List</button>
             </div>
             <span className="small-note">Click a box to assign or change. Drag a box onto another to move it (with its branch). Drag a person from the list onto a box to give them the position.</span>
+            {(!p.positions.some((x) => x.role === "QEC_INCHARGE") || p.departments.some((d) => !p.positions.some((x) => x.role === "OMC_CONVENER" && x.departmentId === d.id))) && <button className="btn btn-sm" disabled={busy} onClick={() => act({ action: "conveners" })}>+ Add OMC &amp; QEC Conveners</button>}
             {p.lastMove && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act({ action: "undo", moveId: p.lastMove!.id }, `Undo the last move (${p.lastMove!.title}, ${p.lastMove!.at})?`)}>↶ Undo last move</button>}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 260px", gap: 14, alignItems: "start" }} className="org-grid">
@@ -333,6 +341,31 @@ export default function OrgChartEditor(p: Props) {
     </div>
   );
 
+  function Members({ pos }: { pos: Position }) {
+    const [find, setFind] = useState("");
+    const mem = pos.members || [];
+    const pool = p.people.filter((x) => !mem.includes(x.id) && x.id !== pos.holderId && (pos.role !== "OMC_CONVENER" || !pos.departmentId || !x.departmentId || x.departmentId === pos.departmentId) && (!find || `${x.name} ${x.email} ${x.designation || ""}`.toLowerCase().includes(find.toLowerCase()))).slice(0, 10);
+    return (
+      <>
+        <h4 style={{ margin: "14px 0 4px" }}>Members <span className="small-note" style={{ fontWeight: 400 }}>— {pos.role === "OMC_CONVENER" ? "the department's OMC members, under this Convener" : "members of the Quality Enhancement Cell"}</span></h4>
+        {mem.length === 0 && <p className="small-note" style={{ margin: 0 }}>No members yet.</p>}
+        {mem.map((m) => (
+          <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "3px 0", borderBottom: "1px solid #F1EBEC" }}>
+            <span><b>{person.get(m)?.name || "—"}</b> <span className="small-note">{person.get(m)?.designation || ""}</span></span>
+            <button className="act act-danger" disabled={busy} onClick={() => act({ action: "removeMember", id: pos.id, userId: m }, `Remove ${person.get(m)?.name} from ${pos.title}?`)}>Remove</button>
+          </div>
+        ))}
+        <input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search a person to add…" style={{ width: "100%", marginTop: 6 }} aria-label="Search a member to add" />
+        {find && pool.map((x) => (
+          <div key={x.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "3px 0" }}>
+            <span>{x.name} <span className="small-note">{x.designation || x.email}</span></span>
+            <button className="act" disabled={busy} onClick={() => act({ action: "addMember", id: pos.id, userId: x.id })}>Add</button>
+          </div>
+        ))}
+      </>
+    );
+  }
+
   function PositionDialog({ pos }: { pos: Position }) {
     const [search, setSearch] = useState("");
     const [reason, setReason] = useState("");
@@ -393,6 +426,8 @@ export default function OrgChartEditor(p: Props) {
               <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} disabled={busy || !actUser || !to} onClick={async () => { if (await act({ action: "acting", id: pos.id, userId: actUser, fromDate: from, toDate: to, reason: actReason })) setOpen(null); }}>Set acting holder</button>
             </>
           )}
+
+          {["OMC_CONVENER", "QEC_INCHARGE"].includes(pos.role) && !pos.offAt && <Members pos={pos} />}
 
           <h4 style={{ margin: "14px 0 4px" }}>Position</h4>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

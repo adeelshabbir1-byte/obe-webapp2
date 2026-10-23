@@ -63,6 +63,9 @@ export async function canDecide(user: { id: string; role: string; managedById: s
   if (course.instructorId === user.id) return false; // nobody approves their own result
   // Someone acting for the Chairman/HoD, or covering the position while it is vacant or switched off.
   if ((await approversFor(courseId)).ids.includes(user.id)) return true;
+  // The Controller of Examinations also decides grade changes (after publication) for the institute's courses.
+  const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true } });
+  if (me?.extraRoles?.includes("EXAM_CONTROLLER")) { const { chairmanIdFor } = await import("./reportScope"); if ((await chairmanIdFor(user as never).catch(() => null)) === course.coordinator?.managedById) return true; }
   if (!APPROVER_ROLES.includes(user.role)) return false;
   if (user.role === "CHAIRMAN") return course.coordinator?.managedById === user.id;
   return course.coordinator?.managedById === user.managedById && !!user.departmentId && course.coordinator?.departmentId === user.departmentId;

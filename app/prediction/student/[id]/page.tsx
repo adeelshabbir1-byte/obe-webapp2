@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { navForRole } from "../../../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../../../lib/reportScope";
 import { prisma } from "../../../../lib/db";
+import StudentPicker from "../../../../components/StudentPicker";
 import Shell from "../../../../components/Shell";
 import { buildModel, studentPrediction } from "../../../../lib/prediction";
 
@@ -27,6 +28,7 @@ export default async function StudentPredictionPage({ params }: { params: { id: 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <p className="small-note" style={{ margin: 0 }}><Link href="/prediction">← Prediction</Link></p>
+      <StudentPicker current={params.id} template="/prediction/student/{id}" label="Another student" />
       <h1 style={{ fontSize: 22, margin: "4px 0" }}>{p.student.name} <span className="small-note">{p.student.roll} · {p.student.batch}</span></h1>
       <div className="stat-grid">
         <div className="stat"><div style={{ fontSize: 22, fontWeight: 700 }}>{p.cgpa ?? "—"}</div><div className="small-note">CGPA now ({p.terms} term(s), {p.credits} credits)</div></div>

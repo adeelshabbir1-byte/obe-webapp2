@@ -35,6 +35,7 @@ export default async function StudentExamsPage() {
     <StudentShell studentName={student.name}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h1 style={{ fontSize: 22, marginBottom: 6 }}>My Exams</h1>
+        <p><a className="btn btn-sm" href="/admit-card" target="_blank">Print my admit card</a> <a className="btn btn-sm btn-secondary" href="/student/recheck">Result re-checking</a></p>
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginBottom: 16 }}>Your papers, rooms and seat numbers. Bring your student card and be in your seat 15 minutes early.</p>
         {sessions.length === 0 && <div className="card"><p style={{ margin: 0, color: "var(--slate)" }}>No date sheet has been published yet.</p></div>}
         {sessions.map((s) => {

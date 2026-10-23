@@ -26,10 +26,11 @@ const CHAIN: Record<PositionKey, PositionKey[]> = {
   DEPARTMENT_COORDINATOR: ["DEPARTMENT_COORDINATOR", "HEAD_OF_DEPARTMENT", "DEAN", "INSTITUTE_HEAD"],
   EXAM_CONTROLLER: ["EXAM_CONTROLLER", "INSTITUTE_HEAD"],
   QEC_INCHARGE: ["QEC_INCHARGE", "INSTITUTE_HEAD"],
+  OMC_CONVENER: ["OMC_CONVENER", "HEAD_OF_DEPARTMENT", "DEAN", "INSTITUTE_HEAD"],
 };
 /** The chart role a position carries for each key. */
-const CHART_ROLE: Record<PositionKey, string> = { INSTITUTE_HEAD: "ROOT", DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE" };
-export const DUTY_HAT: Partial<Record<PositionKey, string>> = { EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE" };
+const CHART_ROLE: Record<PositionKey, string> = { INSTITUTE_HEAD: "ROOT", DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE", OMC_CONVENER: "OMC_CONVENER" };
+export const DUTY_HAT: Partial<Record<PositionKey, string>> = { EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE", OMC_CONVENER: "OMC_CONVENER" };
 
 type Pos = { id: string; parentId: string | null; role: string; covers: string[]; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; offAt: Date | null };
 type Chart = { positions: Pos[]; acting: Map<string, string[]> };
@@ -72,6 +73,10 @@ async function holders(chairmanId: string, key: PositionKey, scope: Scope): Prom
     if (!scope.program) return [];
     return ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), hatWhere("PROGRAM_COORDINATOR") as never, { leadProgram: scope.program }] }, select: { id: true } }));
   }
+  if (key === "OMC_CONVENER") {
+    if (!scope.departmentId) return [];
+    return ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), { extraRoles: { has: "OMC_CONVENER" } }, { departmentId: scope.departmentId }] }, select: { id: true } }));
+  }
   const hat = DUTY_HAT[key];
   return hat ? ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), { extraRoles: { has: hat } }] }, select: { id: true } })) : [];
 }
@@ -82,7 +87,7 @@ function positionFor(chart: Chart, key: PositionKey, scope: Scope, facultyId: st
   const has = (p: Pos) => (role === "ROOT" ? !p.parentId : p.role === role || p.covers.includes(role));
   const fits = (p: Pos) =>
     key === "DEAN" ? !!facultyId && p.facultyId === facultyId
-      : key === "HEAD_OF_DEPARTMENT" || key === "DEPARTMENT_COORDINATOR" ? !!scope.departmentId && p.departmentId === scope.departmentId
+      : key === "HEAD_OF_DEPARTMENT" || key === "DEPARTMENT_COORDINATOR" || key === "OMC_CONVENER" ? !!scope.departmentId && p.departmentId === scope.departmentId
         : key === "PROGRAM_LEAD" ? (!!scope.program && p.program === scope.program) || (!!scope.leadId && p.holderId === scope.leadId)
           : true;
   return chart.positions.find((p) => has(p) && fits(p)) || null;
@@ -147,7 +152,7 @@ export async function approverIds(chairmanId: string, requested: PositionKey, sc
 export async function coverageNotes(chairmanId: string): Promise<Record<string, string>> {
   const [titles, chart] = await Promise.all([titlesFor(chairmanId), chartOf(chairmanId)]);
   const out: Record<string, string> = {};
-  const keyOf: Record<string, PositionKey> = { DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE" };
+  const keyOf: Record<string, PositionKey> = { DEAN: "DEAN", HEAD_OF_DEPARTMENT: "HEAD_OF_DEPARTMENT", PROGRAM_LEAD: "PROGRAM_LEAD", DEPARTMENT_COORDINATOR: "DEPARTMENT_COORDINATOR", EXAM_CONTROLLER: "EXAM_CONTROLLER", QEC_INCHARGE: "QEC_INCHARGE", OMC_CONVENER: "OMC_CONVENER" };
   const names = new Map((await prisma.user.findMany({ where: { id: { in: chart.positions.map((p) => p.holderId).filter((x): x is string => !!x).concat(Array.from(chart.acting.values()).flat(), [chairmanId]) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   for (const p of chart.positions) {
     const key = keyOf[p.role];
