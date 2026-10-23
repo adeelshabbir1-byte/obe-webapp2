@@ -11,6 +11,17 @@ export async function POST(req: Request) {
   if (!acc.finance) return NextResponse.json({ error: "Only Finance manages student fees." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   try {
+    if (b.action === "settings") {
+      const { saveFinanceSetting } = await import("../../../lib/feeClearance");
+      const s = (k: string) => String(b[k] || "").trim().slice(0, 120);
+      await saveFinanceSetting(acc.chairmanId, { bank: { bank: s("bank"), title: s("title"), account: s("account"), iban: s("iban"), branch: s("branch"), jazzcash: s("jazzcash"), easypaisa: s("easypaisa"), onebill: s("onebill") }, blockAdmitCard: b.blockAdmitCard === true, blockRegistration: b.blockRegistration === true, blockDegree: b.blockDegree !== false, minDue: Number(b.minDue) || 0 });
+      return NextResponse.json({ ok: true, message: "Saved." });
+    }
+    if (b.action === "claim") {
+      const { decideClaim } = await import("../../../lib/feeClearance");
+      await decideClaim(acc.chairmanId, user.id, String(b.id || ""), b.ok === true, String(b.note || ""));
+      return NextResponse.json({ ok: true, message: b.ok ? "Verified and posted." : "Rejected; the student was told." });
+    }
     if (b.action === "issue") {
       const due = new Date(String(b.dueDate || "") + "T00:00:00Z");
       if (!b.batchId || !b.termName || !(Number(b.termYear) > 2000) || isNaN(due.getTime())) return NextResponse.json({ error: "Choose the batch, term and due date." }, { status: 400 });

@@ -1,3 +1,5 @@
+import NextStepTip from "./NextStepTip";
+import { guideFor } from "../lib/roleGuides";
 import { getSignedInUser } from "../lib/session";
 import { getBrandingFor } from "../lib/branding";
 import { getRequestsCount, getSessionInfo, getSidebarCurrentTerm } from "../lib/shellData";
@@ -109,6 +111,7 @@ export default async function Shell({
           <a href="/billing" style={{ fontWeight: 700 }}>Plan and invoices →</a>
         </div>
       )}
+      {guideFor(role) && <NextStepTip role={role} steps={guideFor(role)!.steps} />}
       {children}
     </AppShell>
   );

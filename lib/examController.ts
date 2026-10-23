@@ -37,12 +37,13 @@ export async function publicationOf(courseId: string) {
 
 /** Approved results of offered courses, with whether each is published. */
 export async function resultBoard(chairmanId: string) {
-  const courses = await prisma.course.findMany({ where: { ...instituteCourses(chairmanId), isOffered: true }, select: { id: true, code: true, title: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } }, _count: { select: { studentEnrollments: true } } }, orderBy: { code: "asc" } });
-  const ids = courses.map((c) => c.id);
+  const courses = await prisma.course.findMany({ where: { ...instituteCourses(chairmanId), isOffered: true }, select: { id: true, code: true, title: true, batchId: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } }, _count: { select: { studentEnrollments: true } } }, orderBy: { code: "asc" } });
+  const keep = new Set(await (await import("./campus")).filterBatchesByCampus(Array.from(new Set(courses.map((c) => c.batchId || "")))));
+  const ids = courses.filter((c) => keep.has(c.batchId || "")).map((c) => c.id);
   const results = (await xdb.courseResult.findMany({ where: { courseId: { in: ids.concat("none") } }, select: { courseId: true, status: true, decidedAt: true } }).catch(() => [])) as { courseId: string; status: string; decidedAt: Date | null }[];
   const st = new Map(results.map((r) => [r.courseId, r]));
   const pub = await publications(ids);
-  return courses.map((c) => ({ ...c, status: st.get(c.id)?.status || "DRAFT", approvedAt: st.get(c.id)?.decidedAt || null, published: pub.get(c.id) || null }));
+  return courses.filter((c) => ids.includes(c.id)).map((c) => ({ ...c, status: st.get(c.id)?.status || "DRAFT", approvedAt: st.get(c.id)?.decidedAt || null, published: pub.get(c.id) || null }));
 }
 
 /** Publish approved results. Only APPROVED results can be published (approval is the OMC / HOD step before this). */

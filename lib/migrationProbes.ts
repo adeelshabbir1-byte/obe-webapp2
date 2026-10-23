@@ -90,6 +90,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "AttendanceThreshold"
 },
 {
+"f": "migration_batch5.sql",
+"d": "Prompt 3 batch 5: campuses, fee settings and online payment claims, Moodle link.",
+"t": "LmsCourseLink"
+},
+{
 "f": "migration_batches.sql",
 "d": "Run in Supabase SQL Editor. Adds Batch/cohort support: a course now",
 "t": "Course",

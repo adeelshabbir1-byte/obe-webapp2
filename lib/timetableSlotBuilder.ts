@@ -32,7 +32,7 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     return { allowedDays: allowedDays && allowedDays.length > 0 ? allowedDays : ["Mon", "Tue", "Wed", "Thu", "Fri"], dayStartHour, dayEndHour };
   }
 
-  const [courseSections, groupSections, rooms] = await Promise.all([
+  const [courseSections, groupSections, roomsAll] = await Promise.all([
     // Only sections of courses that are offered NOW — a course that is no longer offered (an earlier semester of a batch that has moved on)
     // can leave its old sections behind, and those must not take up room hours or be scheduled again.
     prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds }, isOffered: true } }, include: { course: { include: { batch: true } } } }),
@@ -42,6 +42,8 @@ export async function buildSlots(user: { id: string; managedById: string | null 
     }),
     prisma.room.findMany({ where: scope.roomWhere }),
   ]);
+  // Multi-campus: batches are timetabled only into rooms of their own campus.
+  const rooms = await (await import("./campus")).campusRooms(roomsAll, batchIds);
 
   // "Visiting Faculty (to be decided)" is a placeholder, not one person: give every visiting section its own
   // virtual teacher so two visiting courses can never be flagged as the same teacher clashing.

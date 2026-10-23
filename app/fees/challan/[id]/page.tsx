@@ -1,3 +1,4 @@
+import { financeSetting } from "../../../../lib/feeClearance";
 import { notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
@@ -22,6 +23,7 @@ export default async function ChallanPage({ params }: { params: { id: string } }
     edb.feePayment.findMany({ where: { invoiceId: inv.id }, orderBy: { paidAt: "asc" } }) as Promise<{ amount: number; method: string; reference: string | null; paidAt: Date }[]>,
   ]);
   const lines = JSON.parse(inv.linesJson) as FeeLine[];
+  const fs = await financeSetting(inv.chairmanId);
   return (
     <main style={{ background: "#EEE", minHeight: "100vh", padding: 10 }}>
       <div className="no-print" style={{ textAlign: "center" }}><PrintButton /></div>
@@ -35,6 +37,10 @@ export default async function ChallanPage({ params }: { params: { id: string } }
           {pays.map((p, i) => <tr key={i}><td className="small-note">Paid {p.paidAt.toISOString().slice(0, 10)} ({p.method.toLowerCase()}{p.reference ? `, ${p.reference}` : ""})</td><td style={{ textAlign: "right" }}>− {money(p.amount)}</td></tr>)}
           <tr><td><b>Balance</b></td><td style={{ textAlign: "right" }}><b>{money(balanceOf(inv))}</b></td></tr>
         </tbody></table>
+        {balanceOf(inv) > 0 && (fs.bank.bank || fs.bank.jazzcash || fs.bank.easypaisa || fs.bank.onebill) && <div style={{ marginTop: 12, borderTop: "1px dashed #999", paddingTop: 8, fontSize: 12 }}>
+          {fs.bank.bank && <div>Deposit at <b>{fs.bank.bank}</b>{fs.bank.branch ? `, ${fs.bank.branch}` : ""} — {fs.bank.title}, A/c <b>{fs.bank.account}</b>{fs.bank.iban ? `, IBAN ${fs.bank.iban}` : ""}</div>}
+          {fs.bank.jazzcash && <div>JazzCash: {fs.bank.jazzcash}</div>}{fs.bank.easypaisa && <div>Easypaisa: {fs.bank.easypaisa}</div>}{fs.bank.onebill && <div>1Bill: {fs.bank.onebill} — reference {inv.id.slice(-8).toUpperCase()}</div>}
+          <div className="small-note">After paying online, enter the transaction number in the student portal (My Fees).</div></div>}
       </div>
     </main>
   );

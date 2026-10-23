@@ -21,5 +21,7 @@ export async function visibleBatchIds(user: U): Promise<string[]> {
     prisma.batch.findMany({ where: { advisorId: user.id }, select: { id: true } }),
     prisma.course.findMany({ where: { OR: [{ instructorId: user.id }, { sectionAssignments: { some: { instructorId: user.id } } }], batchId: { not: null } }, select: { batchId: true } }),
   ]);
-  return Array.from(new Set([...scoped.map((b) => b.id), ...advised.map((b) => b.id), ...taught.map((c) => c.batchId!)]));
+  const ids = Array.from(new Set([...scoped.map((b) => b.id), ...advised.map((b) => b.id), ...taught.map((c) => c.batchId!)]));
+  // The campus filter (multi-campus universities) narrows every list built on this.
+  return (await import("./campus")).filterBatchesByCampus(ids);
 }

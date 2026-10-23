@@ -7,7 +7,8 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel } from "../../lib/reportScope";
 import { erpAccess, edb, money } from "../../lib/erp";
 import { balanceOf } from "../../lib/fees";
-import { ActionForm } from "../../components/fyp/FypClient";
+import { ActionForm, ActionButton } from "../../components/fyp/FypClient";
+import { financeSetting } from "../../lib/feeClearance";
 
 export const dynamic = "force-dynamic";
 type Inv = { id: string; studentId: string; termName: string; termYear: number; amount: number; discount: number; fine: number; paid: number; dueDate: Date; status: string };
@@ -30,12 +31,27 @@ export default async function FeesPage({ searchParams }: { searchParams: { statu
   const billed = invs.reduce((t, i) => t + i.amount - i.discount + i.fine, 0), got = invs.reduce((t, i) => t + i.paid, 0);
   const overdue = invs.filter((i) => i.status !== "PAID" && i.dueDate < new Date());
   const y = new Date().getFullYear();
+  const fs = await financeSetting(acc.chairmanId);
+  const claims = ((await edb.paymentClaim.findMany({ where: { chairmanId: acc.chairmanId, status: "PENDING" }, orderBy: { createdAt: "asc" }, take: 200 }).catch(() => [])) as { id: string; studentId: string; amount: number; method: string; reference: string; paidOn: Date | null; createdAt: Date }[]);
+  const cst = new Map((await prisma.student.findMany({ where: { id: { in: claims.map((c) => c.studentId).concat("none") } }, select: { id: true, name: true, rollNumber: true } })).map((s) => [s.id, s]));
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Student Fees</h1>
       <p className="small-note">Fee amounts come from <Link href="/chairman/finance">Finance → Fees &amp; scholarships</Link> (per program and intake). Every invoice, concession, fine and payment is posted to the accounts automatically.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10 }}>
         {[["Billed", money(billed)], ["Collected", money(got)], ["Outstanding", money(billed - got)], ["Overdue invoices", String(overdue.length)]].map(([l, v]) => <div key={l} className="card" style={{ margin: 0 }}><div className="small-note">{l}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{v}</div></div>)}
+      </div>
+      {claims.length > 0 && <div className="card" id="claims" style={{ borderLeft: "5px solid #B26A00" }}>
+        <h3 style={{ marginTop: 0 }}>Payments reported by students — check against the bank statement ({claims.length})</h3>
+        <table style={{ fontSize: 12.5 }}><thead><tr><th>Reported</th><th>Student</th><th>Paid by</th><th>Transaction / slip</th><th>Paid on</th><th>Amount</th><th></th></tr></thead>
+          <tbody>{claims.map((c) => <tr key={c.id}><td>{c.createdAt.toISOString().slice(0, 10)}</td><td>{cst.get(c.studentId)?.rollNumber} {cst.get(c.studentId)?.name}</td><td>{c.method}</td><td><b>{c.reference}</b></td><td>{c.paidOn ? c.paidOn.toISOString().slice(0, 10) : "—"}</td><td>{money(c.amount)}</td>
+            <td style={{ whiteSpace: "nowrap" }}><ActionButton url="/api/fees" body={{ action: "claim", id: c.id, ok: true }} label="Verified" /> <ActionButton url="/api/fees" body={{ action: "claim", id: c.id, ok: false }} label="Reject" className="btn btn-secondary btn-sm" askNote="Why? (e.g. not in the bank statement)" noteRequired /></td></tr>)}</tbody></table>
+      </div>}
+      <div className="card">
+        <ActionForm url="/api/fees" fixed={{ action: "settings" }} submit="Save" collapsed openLabel="Payment details and fee clearance rules"
+          initial={{ ...fs.bank, blockAdmitCard: fs.blockAdmitCard, blockRegistration: fs.blockRegistration, blockDegree: fs.blockDegree, minDue: fs.minDue }}
+          fields={[{ name: "bank", label: "Bank" }, { name: "branch", label: "Branch" }, { name: "title", label: "Account title" }, { name: "account", label: "Account no." }, { name: "iban", label: "IBAN" }, { name: "jazzcash", label: "JazzCash (till / merchant no.)" }, { name: "easypaisa", label: "Easypaisa (till / merchant no.)" }, { name: "onebill", label: "1Bill biller name / code" },
+            { name: "blockAdmitCard", label: "Hold the admit card while fee is due", type: "checkbox" }, { name: "blockRegistration", label: "Hold self-registration while fee is due", type: "checkbox" }, { name: "blockDegree", label: "Hold the degree while fee is due", type: "checkbox" }, { name: "minDue", label: "Ignore dues up to (Rs)", type: "number" }]} />
       </div>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Issue invoices</h3>

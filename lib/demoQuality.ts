@@ -53,3 +53,31 @@ export async function campusQuality() {
   } catch { out.push("Controller demo skipped — run prisma/migration_exam_controller.sql"); }
   return out;
 }
+
+/** Dream University on two campuses, fee payment details and clearance rules, and a student's reported payment. */
+export async function campusMultiFees() {
+  const head = await prisma.user.findUnique({ where: { username: DEMO_HEAD }, select: { id: true } });
+  if (!head) throw new Error("Build the demo institute first.");
+  const H = head.id;
+  const db = prisma as unknown as Record<string, any>;
+  const out: string[] = [];
+  try {
+    if (!(await db.campus.count({ where: { chairmanId: H } }))) {
+      const id = randomUUID();
+      await db.campus.create({ data: { id, chairmanId: H, name: "City Campus", city: "Lahore", code: "CC" } });
+      const bba = await prisma.batch.findMany({ where: { coordinator: { managedById: H }, degreeProgram: { contains: "BBA" } }, select: { id: true } });
+      for (const b of bba) await db.campusLink.upsert({ where: { kind_refId: { kind: "BATCH", refId: b.id } }, create: { kind: "BATCH", refId: b.id, campusId: id }, update: { campusId: id } });
+      const rooms = await prisma.room.findMany({ where: { chairmanId: H }, select: { id: true }, orderBy: { name: "desc" }, take: 3 });
+      for (const r of rooms) await db.campusLink.upsert({ where: { kind_refId: { kind: "ROOM", refId: r.id } }, create: { kind: "ROOM", refId: r.id, campusId: id }, update: { campusId: id } });
+      out.push(`City Campus with ${bba.length} BBA batch(es) and ${rooms.length} rooms`);
+    }
+    await db.financeSetting.upsert({ where: { chairmanId: H }, create: { chairmanId: H, bankJson: JSON.stringify({ bank: "Bank Alfalah", branch: "Gulberg, Lahore", title: "Dream University Fee Account", account: "0123-4567890-1", iban: "PK36ALFH0123004567890123", jazzcash: "Till 00123456", easypaisa: "Till 7654321", onebill: "DREAMUNI" }), blockAdmitCard: true, blockRegistration: false, blockDegree: true, minDue: 5000 }, update: {} });
+    out.push("Fee payment details; admit cards and degrees held for dues above Rs 5,000");
+    const inv = (await db.feeInvoice.findFirst({ where: { chairmanId: H, status: "UNPAID" }, select: { id: true, studentId: true, amount: true } })) as { id: string; studentId: string; amount: number } | null;
+    if (inv && !(await db.paymentClaim.count({ where: { invoiceId: inv.id } }))) {
+      await db.paymentClaim.create({ data: { id: randomUUID(), chairmanId: H, invoiceId: inv.id, studentId: inv.studentId, amount: Math.round(inv.amount / 2), method: "JAZZCASH", reference: `JC${Date.now().toString().slice(-9)}`, paidOn: new Date() } });
+      out.push("A JazzCash payment reported by a student, waiting for Finance");
+    }
+  } catch { throw new Error("Run prisma/migration_batch5.sql first."); }
+  return out;
+}

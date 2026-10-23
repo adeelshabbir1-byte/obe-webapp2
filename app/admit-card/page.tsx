@@ -22,6 +22,8 @@ export default async function AdmitCard({ searchParams }: { searchParams: { sess
     const st = await getAuthenticatedStudent();
     if (!st) redirect("/student/login");
     ids = [st.id];
+    const fee = await (await import("../../lib/feeClearance")).feeBlock(st.id, "admitCard");
+    if (fee) return <div style={{ maxWidth: 600, margin: "40px auto", padding: 20, fontFamily: "Arial", border: "2px solid #C62828", borderRadius: 6 }}><b>Admit card withheld</b><p>{fee}</p><a href="/student/fees">Go to My Fees</a></div>;
     const s = await prisma.student.findUnique({ where: { id: st.id }, select: { batch: { select: { coordinator: { select: { managedById: true } } } } } });
     const cid = s?.batch.coordinator.managedById || "";
     if (!sessionId) sessionId = ((await xdb.examSession.findFirst({ where: { chairmanId: cid, status: "PUBLISHED" }, orderBy: { startDate: "desc" }, select: { id: true } }).catch(() => null)) as { id: string } | null)?.id || "";
@@ -32,6 +34,7 @@ export default async function AdmitCard({ searchParams }: { searchParams: { sess
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", padding: 16, fontFamily: "Arial, sans-serif" }}>
       <div className="no-print" style={{ marginBottom: 12 }}><PrintButton /></div>
+      {await Promise.all(data.cards.map(async (c) => ({ c, fee: await (await import("../../lib/feeClearance")).feeBlock(c.student.id, "admitCard") }))).then((xs) => xs.filter((x) => x.fee).length ? <p className="no-print" style={{ color: "#C62828" }}>Fee outstanding (cards marked WITHHELD): {xs.filter((x) => x.fee).map((x) => x.c.student.rollNumber).join(", ")}</p> : null)}
       {data.cards.map((c) => (
         <div key={c.student.id} style={{ border: "2px solid #0D2A4A", borderRadius: 6, padding: 16, marginBottom: 18, pageBreakInside: "avoid", breakInside: "avoid" }}>
           <div style={{ textAlign: "center", borderBottom: "1px solid #999", paddingBottom: 6, marginBottom: 10 }}>

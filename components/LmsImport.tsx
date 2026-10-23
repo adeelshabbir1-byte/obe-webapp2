@@ -20,9 +20,21 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
     const t = title.toLowerCase().replace(/[^a-z0-9]/g, "");
     return instruments.find((i) => i.label.toLowerCase().replace(/[^a-z0-9]/g, "") === t) || instruments.find((i) => t.includes(i.label.toLowerCase().replace(/[^a-z0-9]/g, "")));
   }
+  const [mid, setMid] = useState("");
+  async function fromMoodle() {
+    setMsg(""); setSheet(null); setBusy(true);
+    const r = await fetch(`/api/lms/moodle?courseId=${courseId}&moodleCourseId=${encodeURIComponent(mid)}`);
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) { setMsg(d.error || "Moodle did not answer."); return; }
+    await onText(d.csv);
+  }
   async function onFile(f: File | undefined) {
     setMsg(""); setSheet(null); if (!f) return;
-    const res = readGradebook(await f.text());
+    await onText(await f.text());
+  }
+  async function onText(text: string) {
+    const res = readGradebook(text);
     if ("error" in res) { setMsg(res.error); return; }
     setSheet(res);
     const m: Record<number, { instrumentId: string; outOf: string }> = {};
@@ -52,6 +64,7 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
       <p className="small-note">Moodle: Grades → Export → Plain text file. Google Classroom: Grades → Download as CSV. Canvas: Grades → Export. Students are matched by roll number (ID number / username), then by name. Each score is rescaled to the assessment&apos;s own marks, so CLO and GA attainment update automatically.</p>
       <TemplateLink name="lms-gradebook" />{" "}
       <input type="file" accept=".csv,.txt,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
+      <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><span className="small-note">or pull from Moodle — course id</span><input value={mid} onChange={(e) => setMid(e.target.value.replace(/\D/g, ""))} style={{ width: 80 }} placeholder="e.g. 245" /><button type="button" className="btn btn-secondary btn-sm" disabled={!mid || busy} onClick={fromMoodle}>Fetch grades</button></div>
       {sheet && (
         <>
           <p className="small-note">{sheet.source} file · {sheet.rows.length} students · {sheet.gradeCols.length} grade columns</p>

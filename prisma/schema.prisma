@@ -7333,3 +7333,64 @@ model QaRecord {
   @@index([chairmanId, kind])
   @@index([refId])
 }
+
+// Multi-campus: a university's campuses; CampusLink places a batch, room or staff member on one (none = main campus).
+model Campus {
+  id         String   @id
+  chairmanId String
+  name       String
+  city       String?
+  code       String?
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId])
+}
+model CampusLink {
+  kind     String // BATCH | ROOM | USER
+  refId    String
+  campusId String
+
+  @@id([kind, refId])
+  @@index([campusId])
+}
+
+// Finance settings: bank details on challans and what an unpaid fee holds back (admit card, registration, degree).
+model FinanceSetting {
+  chairmanId        String   @id
+  bankJson          String   @default("{}")
+  blockAdmitCard    Boolean  @default(false)
+  blockRegistration Boolean  @default(false)
+  blockDegree       Boolean  @default(true)
+  minDue            Float    @default(0)
+  updatedAt         DateTime @default(now())
+}
+model PaymentClaim {
+  id          String    @id
+  chairmanId  String
+  invoiceId   String
+  studentId   String
+  amount      Float
+  method      String // BANK | JAZZCASH | EASYPAISA | 1BILL
+  reference   String
+  paidOn      DateTime?
+  status      String    @default("PENDING") // PENDING | VERIFIED | REJECTED
+  note        String?
+  decidedById String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([method, reference])
+  @@index([chairmanId, status])
+}
+
+// Moodle link: the institute's Moodle site and web-service token; each course's Moodle course id.
+model LmsConfig {
+  chairmanId  String   @id
+  moodleUrl   String?
+  moodleToken String?
+  updatedAt   DateTime @default(now())
+}
+model LmsCourseLink {
+  courseId       String    @id
+  moodleCourseId Int
+  lastSyncAt     DateTime?
+}

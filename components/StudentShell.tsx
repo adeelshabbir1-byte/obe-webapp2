@@ -12,6 +12,7 @@ import GlobalSearch from "./GlobalSearch";
 import StudentBell from "./StudentBell";
 import { AttendanceWarning } from "./attendance/StudentAttendance";
 import FeedbackReminder from "./FeedbackReminder";
+import { NAV_UR, UI_UR, URDU_FONT, urduStyle } from "../lib/urdu";
 
 const NAV = [
   { href: "/student/registration", label: "Course Registration" },
@@ -58,6 +59,11 @@ export default function StudentShell({ studentName, children }: { studentName?: 
     fetch("/api/student/modules").then((r) => r.json()).then((d) => setOff(Array.isArray(d.locked) ? d.locked : [])).catch(() => {});
     try { if (new URLSearchParams(window.location.search).get("locked")) setLockedNote("That part of the portal is not available at your institute."); } catch { /* ignore */ }
   }, []);
+  // Urdu (right-to-left) menus, chosen per student and remembered in a cookie.
+  const [ur, setUr] = useState(false);
+  useEffect(() => { try { setUr(/(?:^|; )lang=ur/.test(document.cookie)); } catch { /* ignore */ } }, []);
+  const toggleLang = () => { try { document.cookie = `lang=${ur ? "en" : "ur"}; path=/; max-age=31536000; samesite=lax`; } catch { /* ignore */ } setUr(!ur); };
+  const L = (href: string, label: string) => (ur && NAV_UR[href]) || label;
   const nav = off.length ? NAV.filter((l) => { const m = moduleForPath(l.href); return !m || !off.includes(m.key); }) : NAV;
 
   async function logout() {
@@ -71,23 +77,25 @@ export default function StudentShell({ studentName, children }: { studentName?: 
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }} lang={ur ? "ur" : "en"}>
+      {ur && <link rel="stylesheet" href={URDU_FONT} />}
       <header className="st-top no-print">
         <div className="st-top-inner">
           <Link href="/student/registration" className="st-brand" aria-label="OBEHUB student portal">
             <img className="sb-mark" src={BRAND.mark.src} alt="" {...sized(BRAND.mark, 28)} />
             <img className="sb-word" src={BRAND.wordmark.src} alt="OBEHUB" {...sized(BRAND.wordmark, 18)} />
           </Link>
-          <nav className="st-nav" aria-label="Student portal">
+          <nav className="st-nav" aria-label="Student portal" style={ur ? urduStyle : undefined}>
             {nav.map((n) => (
-              <Link key={n.href} href={n.href} aria-current={pathname === n.href ? "page" : undefined}>{n.label}</Link>
+              <Link key={n.href} href={n.href} aria-current={pathname === n.href ? "page" : undefined}>{L(n.href, n.label)}</Link>
             ))}
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {studentName && <GlobalSearch pages={NAV} student />}
             <HelpButton audience="student" />
             {studentName && <StudentBell />}
-            {studentName && <span className="tb-hello">Hello, <b>{greetingName(studentName)}</b></span>}
+            <button type="button" className="tb-icon-btn" onClick={toggleLang} title={ur ? "English" : "اردو"} style={{ width: "auto", padding: "0 8px", fontSize: 13 }}>{ur ? "English" : "اردو"}</button>
+            {studentName && <span className="tb-hello" style={ur ? urduStyle : undefined}>{ur ? UI_UR.Hello : "Hello"}, <b>{greetingName(studentName)}</b></span>}
             {studentName && <Link href="/student/details" className="avatar" title="My details and photo" style={photo ? { background: `center / cover no-repeat url(${photo})` } : { textDecoration: "none", fontSize: 13 }}>{photo ? "" : studentName.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</Link>}
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={leaving} aria-label="Sign out" title="Sign out">
               <LogOut size={17} />
