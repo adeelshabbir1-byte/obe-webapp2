@@ -44,7 +44,7 @@
 
 ---
 
-## PART C — The 20 queued features
+## PART C — Items 1–20
 
 ### 1. Student status changes: drop, leave, freeze, transfer in/out, readmission
 **Today:** a Program Lead can mark a student Left / Dropped / Graduated with a reason; exit survey is triggered.
