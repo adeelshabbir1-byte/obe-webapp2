@@ -174,6 +174,19 @@ export async function courseFilePdf(courseId: string): Promise<{ bytes: Uint8Arr
     if (comments.length) { d.h2("Some comments (students are not named)"); for (const c of comments) d.text(`- ${c}`, { size: 8.5, indent: 6 }); }
   } else d.note("No student feedback yet.");
 
+  // Sign-off from the recorded result approvals: the teacher who submitted the result and the person who approved it.
+  if (chairmanId) {
+    const res = (await (prisma as unknown as Record<string, any>).courseResult.findUnique({ where: { courseId } }).catch(() => null)) as { status: string; submittedById: string | null; submittedAt: Date | null; decidedById: string | null; decidedAt: Date | null } | null;
+    const { issueDocument, signersFrom } = await import("./signoff");
+    const issued = await issueDocument({
+      chairmanId, kind: "COURSE_FILE", title: `${course.code} ${course.title}${term ? ` (${term})` : ""}`, holderName: course.instructor?.name || null, holderRef: `${course.batch?.degreeProgram || ""} ${course.batch?.batchName || ""}`.trim() || null, sourceRef: `coursefile:${courseId}`,
+      content: { courseId, term, parts: status.done, missing: status.missing, result: res?.status || null, decidedAt: res?.decidedAt || null },
+      summary: { "Course": `${course.code} ${course.title}`, "Program": `${course.batch?.degreeProgram || ""} ${course.batch?.batchName || ""}`.trim(), "Term": term || "—", "Course file": status.complete ? "Complete" : `Missing: ${status.missing.join(", ")}`, "Result": res?.status === "APPROVED" ? "Approved" : res?.status ? res.status.toLowerCase() : "not submitted" },
+      signers: await signersFrom(chairmanId, [{ userId: res?.submittedById, role: "Result submitted", at: res?.submittedAt }, ...(res?.status === "APPROVED" ? [{ userId: res.decidedById, role: "Result approved", at: res.decidedAt }] : [])]),
+    });
+    d.h1("Sign-off");
+    await d.signOff(issued);
+  }
   const bytes = await d.save();
   return { bytes, filename: `Course File - ${course.code} ${course.title}${term ? ` - ${term}` : ""}.pdf`.replace(/[^\w .()-]+/g, "") };
 }

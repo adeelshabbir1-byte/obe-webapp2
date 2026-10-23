@@ -2,6 +2,7 @@ export const ADMIN_NAV = [
   { href: "/admin/users", label: "Manage Chairmen" },
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/modules", label: "Institute Modules" },
+  { href: "/admin/billing", label: "Billing" },
   { href: "/admin/curricula", label: "Master Curricula" },
   { href: "/admin/master-experts", label: "Master Curriculum Experts" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },

@@ -14,6 +14,7 @@ import type { SessionInfo } from "../lib/shellData";
 import BusyBanner from "./BusyBanner";
 import NotificationBell from "./NotificationBell";
 import HelpButton from "./help/HelpButton";
+import GlobalSearch from "./GlobalSearch";
 
 type NavLink = { href: string; label: string };
 
@@ -45,6 +46,7 @@ export default function AppShell({
   isAlumniCustodian,
   currentTerm,
   requestsCount,
+  approvalsCount = 0,
   unreadNotifications = 0,
   pins = null,
   defaultPins = [],
@@ -61,6 +63,7 @@ export default function AppShell({
   isAlumniCustodian: boolean;
   currentTerm: { termName: string; year: number } | null;
   requestsCount: number;
+  approvalsCount?: number;
   unreadNotifications?: number;
   pins?: string[] | null;
   defaultPins?: string[];
@@ -163,21 +166,7 @@ export default function AppShell({
         .sort((a, b) => Number(!norm(a.label).startsWith(q)) - Number(!norm(b.label).startsWith(q)))
     : [];
   useEffect(() => { setHit(0); }, [query]);
-  // "/" or Ctrl+K (Cmd+K on Mac) jumps to the search box from anywhere on the page.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
-      if ((e.key === "k" && (e.ctrlKey || e.metaKey)) || (e.key === "/" && !typing)) {
-        e.preventDefault();
-        setNavOpen(true);
-        searchRef.current?.focus();
-        searchRef.current?.select();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  // "/" and Ctrl+K now open the search box in the top bar (GlobalSearch); this box filters the menu only.
   function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); return; }
     if (!results.length) return;
@@ -300,7 +289,6 @@ export default function AppShell({
             <Search size={15} aria-hidden="true" />
             <input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onSearchKey}
               placeholder="Find a page…" aria-label="Find a page" aria-controls="sb-results" autoComplete="off" spellCheck={false} />
-            {!query && <kbd title="Press / or Ctrl+K from anywhere">/</kbd>}
           </div>
         )}
 
@@ -336,6 +324,7 @@ export default function AppShell({
                     <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
                     <span className="nl-label">{n.label}</span>
                     {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
+                    {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
                     {star(n.href)}
                   </Link>
                 );
@@ -405,6 +394,7 @@ export default function AppShell({
                       <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
                       <span className="nl-label">{n.label}</span>
                       {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
+                    {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
                       {star(n.href)}
                     </Link>
                   );
@@ -469,6 +459,7 @@ export default function AppShell({
             <div className="tb-crumb">{crumb}</div>
           </div>
           <div className="tb-right">
+            <GlobalSearch pages={navLinks} />
             <HelpButton />
             <NotificationBell initialUnread={unreadNotifications} />
             <span className="tb-hello">Hello, <b>{greetingName(userName)}</b></span>

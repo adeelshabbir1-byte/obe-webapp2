@@ -91,6 +91,33 @@ export class PdfDoc {
     });
     this.y = base - 22;
   }
+  /** The sign-off block: one column per recorded approval (signature image if uploaded), the stamp, the number and the QR. */
+  async signOff(issued: import("./signoff").Issued | null) {
+    if (!issued) { this.note("Document numbering is not set up yet (run prisma/migration_signoff.sql)."); return; }
+    const { qrMatrix } = await import("./signoff");
+    const m = qrMatrix(issued.url), n = m.length, qs = 78, cell = qs / n;
+    this.need(qs + 40);
+    this.page.drawLine({ start: { x: M, y: this.y - 4 }, end: { x: W - M, y: this.y - 4 }, thickness: 0.6, color: LINE });
+    const top = this.y - 10, base = top - qs;
+    const qx = W - M - qs;
+    this.page.drawRectangle({ x: qx - 2, y: base - 2, width: qs + 4, height: qs + 4, color: rgb(1, 1, 1) });
+    m.forEach((row, r) => row.forEach((d, c) => { if (d) this.page.drawRectangle({ x: qx + c * cell, y: base + (n - 1 - r) * cell, width: cell + 0.05, height: cell + 0.05, color: rgb(0, 0, 0) }); }));
+    const info = [`Document No. ${issued.docNo}`, `Issued ${new Date(issued.issuedAt).toLocaleString("en-GB")}`, "Scan to verify, or open", issued.url.replace(/\?h=.*/, "")];
+    info.forEach((t, i) => { const lines = this.wrap(t, i ? 7 : 8, 150, i ? this.font : this.bold); lines.forEach((l, j) => this.page.drawText(l, { x: qx - 156, y: top - 9 - (i * 10) - j * 8, size: i ? 7 : 8, font: i ? this.font : this.bold, color: INK })); });
+    if (issued.revoked) this.page.drawText("REVOKED - NOT VALID", { x: qx - 156, y: base, size: 9, font: this.bold, color: RED });
+    const colW = 130; let x = M;
+    const embed = async (url: string) => { try { const b = Buffer.from(url.split(",")[1] || "", "base64"); return url.startsWith("data:image/png") ? await this.doc.embedPng(b) : await this.doc.embedJpg(b); } catch { return null; } };
+    for (const s of issued.signers.slice(0, 3)) {
+      const img = s.userId && issued.signatures[s.userId] ? await embed(issued.signatures[s.userId]) : null;
+      if (img) { const sc = Math.min(110 / img.width, 30 / img.height); this.page.drawImage(img, { x, y: base + 36, width: img.width * sc, height: img.height * sc }); }
+      this.page.drawLine({ start: { x, y: base + 33 }, end: { x: x + colW - 12, y: base + 33 }, thickness: 0.6, color: INK });
+      const rows: [string, number, PDFFont][] = [[s.name, 8.5, this.bold], [s.title, 7.5, this.font], [`${s.role} - ${new Date(s.at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`, 6.8, this.font]];
+      let yy = base + 24; for (const [t, sz, f] of rows) { for (const l of this.wrap(t, sz, colW - 12, f).slice(0, 2)) { this.page.drawText(l, { x, y: yy, size: sz, font: f, color: INK }); yy -= sz + 2; } }
+      x += colW;
+    }
+    if (issued.stamp && x + 70 < qx - 160) { const st = await embed(issued.stamp); if (st) { const sc = Math.min(64 / st.width, 64 / st.height); this.page.drawImage(st, { x, y: base + 4, width: st.width * sc, height: st.height * sc, opacity: 0.9 }); } }
+    this.y = base - 12;
+  }
   async save() {
     const pages = this.doc.getPages();
     pages.forEach((p, i) => { p.drawText(`${this.footer}  -  page ${i + 1} of ${pages.length}`, { x: M, y: 22, size: 7.5, font: this.font, color: MUTED }); });

@@ -4,11 +4,12 @@ export const DEFAULT_WORK: Record<string, string[]> = {
   INSTRUCTOR: ["/instructor/courses", "/instructor/timetable", "/deadlines", "/exams", "/my-obe", "/outcome-flow"],
   SUBJECT_EXPERT: ["/subjectexpert/courses", "/deadlines", "/faculty/topic-workspace", "/follow-ups", "/outcome-flow"],
   PROGRAM_COORDINATOR: ["/coordinator/batches", "/coordinator/semester", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/students", "/outcome-flow", "/deadlines", "/requests"],
-  CHAIRMAN: ["/home", "/results-approval", "/leave-approvals", "/risk", "/chairman/people", "/outcome-flow", "/deadlines"],
-  OMC: ["/omc/queue", "/omc/instructor-review", "/omc/plo-requests", "/omc/plo-weights", "/outcome-flow", "/chairman/cqi"],
-  DEAN: ["/dean/overview", "/dean/approvals", "/results-approval", "/risk", "/leave-approvals", "/outcome-flow"],
-  HEAD_OF_DEPARTMENT: ["/hod/department", "/results-approval", "/leave-approvals", "/risk", "/hod/borrow-teacher", "/outcome-flow"],
+  CHAIRMAN: ["/home", "/head-dashboard", "/approvals", "/results-approval", "/leave-approvals", "/risk", "/chairman/people", "/outcome-flow", "/deadlines"],
+  OMC: ["/omc/queue", "/approvals", "/omc/instructor-review", "/omc/plo-requests", "/omc/plo-weights", "/outcome-flow", "/chairman/cqi"],
+  DEAN: ["/dean/overview", "/head-dashboard", "/approvals", "/dean/approvals", "/results-approval", "/risk", "/leave-approvals", "/outcome-flow"],
+  HEAD_OF_DEPARTMENT: ["/hod/department", "/head-dashboard", "/approvals", "/results-approval", "/leave-approvals", "/risk", "/hod/borrow-teacher", "/outcome-flow"],
   COURSE_ASSIGNER: ["/assigner/matrix", "/deadlines", "/requests"],
+  LIBRARIAN: ["/library-desk", "/library-inventory", "/library/requisitions", "/approvals"],
 };
 
 export const ROLE_WORK_LABEL: Record<string, string> = {

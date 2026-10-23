@@ -42,11 +42,23 @@ export async function GET(req: NextRequest) {
   const labManuals = await import("../../../../lib/labTheory").then((m) => m.remindUnapprovedManuals(now)).catch(() => 0);
   const qaa = await import("../../../../lib/qaa").then((m) => m.remindQaa(now)).catch(() => 0);
   const renewals = await import("../../../../lib/benefits").then((m) => m.remindRenewals(now)).catch(() => 0);
+  // Approvals inbox: daily digest, reminders after N days, notice to the position above after the escalation days.
+  const approvals = await import("../../../../lib/approvals/inbox").then((m) => m.runApprovalJobs(now)).catch(() => null);
+  // The Institute Head dashboard figures, worked out for every institute.
+  const dashboards = await import("../../../../lib/headDashboard").then((m) => m.refreshAllDashboards()).catch(() => null);
+  // Help requests past their answer time without an answer: the people answering are told once.
+  const helpSla = await import("../../../../lib/help/deskExtra").then((m) => m.remindHelpSla(now)).catch(() => 0);
+  // Counselling: reminders to both sides the day before.
+  const counselling = await import("../../../../lib/counselling").then((m) => m.remindCounselling(now)).catch(() => 0);
+  // Library: overdue reminders and reservations not collected in time.
+  const library = await import("../../../../lib/library").then((m) => m.remindLibrary(now)).catch(() => 0);
+  // Billing: invoices for the new period, reminders, overdue marking and the automatic module locks.
+  const billing = await import("../../../../lib/billing").then((m) => m.runBilling(now)).catch(() => null);
   void statusApplied;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals });
+  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -61,7 +73,7 @@ export async function GET(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals });
+  return NextResponse.json({ sent: data.length, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.

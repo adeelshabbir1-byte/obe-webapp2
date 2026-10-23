@@ -1,3 +1,4 @@
+import { NCEAC_DEFAULTS, type ReadinessStandards } from "./readinessDefaults";
 import { effectiveSum } from "./assessmentWeights";
 import { prisma } from "./db";
 import { completeness } from "./facultyProfile";
@@ -28,8 +29,7 @@ export const STATE_COLOUR: Record<State, string> = { ok: "#2E7D4F", partial: "#C
 export const STATE_TEXT: Record<State, string> = { ok: "Done", partial: "Partly done", missing: "Missing", na: "Not applicable yet" };
 
 /** NCEAC thresholds this engine checks against; the institute can tune them (Accreditation governance › Standards). */
-export type ReadinessStandards = { minCreditHours: number; maxStudentsPerComputer: number; minFullTimeFaculty: number; minPhdFaculty: number; maxFacultyLoadCh: number; maxClassSize: number };
-export const NCEAC_DEFAULTS: ReadinessStandards = { minCreditHours: 130, maxStudentsPerComputer: 3, minFullTimeFaculty: 7, minPhdFaculty: 1, maxFacultyLoadCh: 9, maxClassSize: 50 };
+export { NCEAC_DEFAULTS, type ReadinessStandards };
 
 export async function computeReadiness(user: { id: string; managedById: string | null; departmentId: string | null }, batchIdParam: string, std: ReadinessStandards = NCEAC_DEFAULTS) {
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });

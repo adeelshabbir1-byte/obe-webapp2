@@ -164,6 +164,11 @@ export async function decide(user: { id: string; name: string }, id: string, app
   const a = await stageApprovers(r, r.stage);
   if (!a.ids.includes(user.id)) throw new Error("This request is waiting for someone else.");
   if (!approve && remarks.trim().length < 3) throw new Error("Say why it is not approved.");
+  // Leaving, transfer out, dismissal: books and library fines must be cleared before the last approval.
+  if (approve && r.stage === "CONTROLLER" && ["LEFT", "TRANSFER_OUT", "DROPPED", "RUSTICATED"].includes(r.type)) {
+    const block = await (await import("./library")).libraryBlock(r.studentId);
+    if (block) throw new Error(block);
+  }
   if (approve && r.type === "LEFT" && r.stage === "CONTROLLER") {
     const due = await feesDue(r.studentId);
     if (due > 0 && !opts.feeCleared && !r.feeOverride) throw new Error(`Fee clearance: Rs ${due.toLocaleString("en-PK")} is still outstanding. Ask the Finance Officer to clear it, or tick that finance has cleared it.`);

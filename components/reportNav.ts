@@ -378,6 +378,15 @@ export const HOD_NAV = [
 
 // University ERP pages, added to each role's menu by what the role may use (see lib/erp erpAccess).
 const ERP_LINKS: [string, string, string[]][] = [
+  ["/head-dashboard", "Institute Dashboard", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"]],
+  ["/counselling", "Counselling", ["CHAIRMAN", "STUDENT_AFFAIRS"]],
+  ["/library-desk", "Library Desk", ["LIBRARIAN", "CHAIRMAN"]],
+  ["/billing", "OBEHUB Plan & Invoices", ["CHAIRMAN"]],
+  ["/research", "Research & ORIC", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT", "OMC"]],
+  ["/recruitment", "Recruitment", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "FINANCE_OFFICER"]],
+  ["/assets", "Lab Equipment & Assets", ["LAB_ENGINEER", "LAB_MANAGER", "FACILITIES_MANAGER", "CHAIRMAN", "HEAD_OF_DEPARTMENT", "DEAN"]],
+  ["/official-transcript", "Official Transcripts", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"]],
+  ["/signed-documents", "Signed Documents", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "INSTRUCTOR", "SUBJECT_EXPERT", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "LIBRARIAN", "DEPARTMENT_COORDINATOR"]],
   ["/plans", "University Planner", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN"]],
   ["/admissions", "Admissions CRM", ["CHAIRMAN", "STUDENT_AFFAIRS", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "FINANCE_OFFICER"]],
   ["/fees", "Student Fees", ["CHAIRMAN", "FINANCE_OFFICER"]],

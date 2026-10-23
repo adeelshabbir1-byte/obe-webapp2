@@ -86,6 +86,11 @@ const resolveSelf = cache(async () => {
       const inst = await instituteOfUser({ id: safeUser.id, role: safeUser.role, managedById: safeUser.managedById ?? null }).catch(() => null);
       const locked = await lockedModuleForPath(inst, reqPath).catch(() => null);
       if (locked) { if (reqPath.startsWith("/api/")) return null; redirect(`/module-locked?m=${locked}`); }
+      // Billing: an overdue institute's modules are read-only for a while — pages open, changes are refused.
+      if (!locked && reqPath.startsWith("/api/")) {
+        let method = "GET"; try { method = headers().get("x-method") || "GET"; } catch { method = "GET"; }
+        if (await (await import("./billing")).blockedWrite(inst, reqPath, method).catch(() => null)) return null;
+      }
     }
   }
   // Sign-in watch: remember that this person used the app today (throttled; never blocks the request).

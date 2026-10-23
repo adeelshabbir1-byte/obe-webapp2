@@ -62,8 +62,10 @@ export async function getAuthenticatedStudent() {
   let reqPath = "";
   try { reqPath = headers().get("x-pathname") || ""; } catch { reqPath = ""; }
   if (reqPath && session.student.batchId) {
-    const locked = await lockedModuleForPath(await instituteOfBatch(session.student.batchId).catch(() => null), reqPath).catch(() => null);
+    const inst = await instituteOfBatch(session.student.batchId).catch(() => null);
+    const locked = await lockedModuleForPath(inst, reqPath).catch(() => null);
     if (locked) { if (reqPath.startsWith("/api/")) return null; redirect(`/student/dashboard?locked=${locked}`); }
+    if (reqPath.startsWith("/api/")) { let method = "GET"; try { method = headers().get("x-method") || "GET"; } catch { method = "GET"; } if (await (await import("./billing")).blockedWrite(inst, reqPath, method).catch(() => null)) return null; }
   }
   return safeStudent;
 }

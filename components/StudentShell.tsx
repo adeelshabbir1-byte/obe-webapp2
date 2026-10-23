@@ -8,6 +8,8 @@ import { LogOut } from "lucide-react";
 import { greetingName } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
 import HelpButton from "./help/HelpButton";
+import GlobalSearch from "./GlobalSearch";
+import StudentBell from "./StudentBell";
 import { AttendanceWarning } from "./attendance/StudentAttendance";
 import FeedbackReminder from "./FeedbackReminder";
 
@@ -31,6 +33,8 @@ const NAV = [
   { href: "/student/course-survey", label: "Course Surveys & Evaluations" },
   { href: "/student/attendance", label: "My Attendance" },
   { href: "/student/placements", label: "Internships & Jobs" },
+  { href: "/student/counselling", label: "Counselling" },
+  { href: "/student/library", label: "Library" },
   { href: "/student/complaints", label: "Complaints" },
   { href: "/student/alerts", label: "Alerts & Contact" },
   { href: "/student/help", label: "Help" },
@@ -79,7 +83,9 @@ export default function StudentShell({ studentName, children }: { studentName?: 
             ))}
           </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {studentName && <GlobalSearch pages={NAV} student />}
             <HelpButton audience="student" />
+            {studentName && <StudentBell />}
             {studentName && <span className="tb-hello">Hello, <b>{greetingName(studentName)}</b></span>}
             {studentName && <Link href="/student/details" className="avatar" title="My details and photo" style={photo ? { background: `center / cover no-repeat url(${photo})` } : { textDecoration: "none", fontSize: 13 }}>{photo ? "" : studentName.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</Link>}
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={leaving} aria-label="Sign out" title="Sign out">

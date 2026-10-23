@@ -1,3 +1,4 @@
+import { delegatesOf } from "./approvals/delegation";
 import { prisma } from "./db";
 import { titlesFor, type TitleKey, type Titles } from "./titles";
 
@@ -15,7 +16,7 @@ import { titlesFor, type TitleKey, type Titles } from "./titles";
 const adb = prisma as unknown as Record<string, any>;
 export type PositionKey = Exclude<TitleKey, "OMC" | "COURSE_ASSIGNER" | "BATCH_ADVISOR">;
 export type Scope = { departmentId?: string | null; program?: string | null; leadId?: string | null; facultyId?: string | null };
-export type Approver = { ids: string[]; key: PositionKey; requested: PositionKey; covering: boolean; acting: boolean; reason: "" | "vacant" | "off"; note: string };
+export type Approver = { ids: string[]; key: PositionKey; requested: PositionKey; covering: boolean; acting: boolean; reason: "" | "vacant" | "off"; note: string; delegated?: string[] };
 
 const CHAIN: Record<PositionKey, PositionKey[]> = {
   INSTITUTE_HEAD: ["INSTITUTE_HEAD"],
@@ -97,7 +98,16 @@ function aboveHolders(chart: Chart, p: Pos | null): string[] {
   return [];
 }
 
+/** The approver, plus anyone they have delegated their approvals to for today (lib/approvals/delegation.ts). */
 export async function approverFor(chairmanId: string, requested: PositionKey, scope: Scope = {}, ctx?: { titles?: Titles; chart?: Chart }): Promise<Approver> {
+  const a = await baseApproverFor(chairmanId, requested, scope, ctx);
+  const del = await delegatesOf(a.ids);
+  if (!del.size) return a;
+  const extra = Array.from(new Set(Array.from(del.values()).flat())).filter((id) => !a.ids.includes(id));
+  return extra.length ? { ...a, ids: [...a.ids, ...extra], delegated: extra, note: `${a.note} · delegated for now` } : a;
+}
+
+async function baseApproverFor(chairmanId: string, requested: PositionKey, scope: Scope = {}, ctx?: { titles?: Titles; chart?: Chart }): Promise<Approver> {
   const titles = ctx?.titles || (await titlesFor(chairmanId));
   const chart = ctx?.chart || (await chartOf(chairmanId));
   const facultyId = await facultyOf(scope);

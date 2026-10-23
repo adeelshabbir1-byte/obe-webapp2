@@ -124,7 +124,7 @@ export function sarGaps(d: SarData) {
   return g;
 }
 
-export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filename: string } | null> {
+export async function buildSar(cycleId: string, issuerId?: string | null): Promise<{ buffer: Buffer; filename: string } | null> {
   const d = await sarData(cycleId);
   if (!d) return null;
   const gaps = sarGaps(d);
@@ -296,6 +296,21 @@ export async function buildSar(cycleId: string): Promise<{ buffer: Buffer; filen
     kids.push(table(["Item", "Status", "Notes for the panel"], ts.map((t) => { const r = tOf.get(t.code); let note = ""; try { note = (JSON.parse(r?.dataJson || "{}") as { fields?: Record<string, string> }).fields?.note || ""; } catch { note = ""; } return [`${t.code} ${t.title}`, r ? STATUS[r.status] || r.status : "—", note]; })));
   }
 
+  // Sign-off from the recorded reviews: the people who approved the criteria (latest first), then whoever issued this copy.
+  {
+    const { issueDocument, signersFrom } = await import("./signoff");
+    const { docxSignOff } = await import("./signoffDocx");
+    const reviews = await prisma.accreditationTask.findMany({ where: { cycleId, status: "APPROVED", reviewedById: { not: null } }, orderBy: { reviewedAt: "desc" }, select: { reviewedById: true, reviewedAt: true } }).catch(() => [] as { reviewedById: string | null; reviewedAt: Date | null }[]);
+    const latest = Array.from(new Map(reviews.map((r) => [r.reviewedById, r])).values()).slice(0, 2);
+    const issued = await issueDocument({
+      chairmanId: d.c.chairmanId, kind: "SAR", title: `${BODIES[d.body].name} SAR — ${d.c.program}`, holderName: d.c.program, holderRef: d.head?.instituteName || null, sourceRef: `sar:${cycleId}`,
+      content: { cycleId, tasks: d.tasks.map((t) => [t.code, t.status]).sort(), students: d.students.length, staff: d.staff.length, gaps: gaps.length },
+      summary: { "Program": d.c.program, "Council": BODIES[d.body].name, "Visit": d.c.visitDate ? new Date(d.c.visitDate).toLocaleDateString("en-GB") : "to be confirmed", "Criteria approved": `${d.tasks.filter((t) => t.status === "APPROVED").length} of ${d.tasks.length}` },
+      signers: await signersFrom(d.c.chairmanId, latest.map((r) => ({ userId: r.reviewedById, role: "Criteria reviewed and approved", at: r.reviewedAt }))),
+      issuer: issuerId ? { userId: issuerId, role: "SAR issued" } : undefined, issuedById: issuerId || null,
+    });
+    kids.push(...docxSignOff(issued));
+  }
   const doc = new Document({ creator: "OBEHUB", title: `SAR ${d.c.program}`, styles: { default: { document: { run: { font: "Calibri" } } } }, sections: [{ children: kids }] });
   const buffer = await Packer.toBuffer(doc);
   return { buffer, filename: `SAR-${d.body}-${d.c.program}-${new Date().toISOString().slice(0, 10)}.docx`.replace(/[^\w.-]+/g, "_") };

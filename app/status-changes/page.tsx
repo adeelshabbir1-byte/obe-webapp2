@@ -100,7 +100,7 @@ export default async function StatusChangesPage({ searchParams }: { searchParams
             <tbody>{listed.map((r) => (
               <tr key={r.id}><td><Link href={`/status-changes?id=${r.id}&show=${show}`}>{label(r)}</Link><div className="small-note">{sOf.get(r.studentId)?.batch.degreeProgram} — {sOf.get(r.studentId)?.batch.batchName}</div></td>
                 <td>{TYPES[r.type]?.label}{r.suggested && <span className="small-note"> (suggested by the rules)</span>}</td><td>{day(r.effectiveDate)}</td>
-                <td><StatusBadge status={r.status === "APPLIED" ? "APPROVED" : r.status === "CANCELLED" ? "CLOSED" : r.status} label={r.status === "APPLIED" ? "Applied" : r.status === "APPROVED" ? "Approved — takes effect on the date" : r.status === "CANCELLED" ? "Withdrawn" : undefined} /></td>
+                <td><StatusBadge status={r.status === "APPLIED" ? "APPROVED" : r.status === "CANCELLED" ? "CLOSED" : r.status} label={r.status === "APPLIED" ? "Applied" : r.status === "APPROVED" ? "Approved — takes effect on the date" : r.status === "CANCELLED" ? "Withdrawn" : undefined} />{["APPROVED", "APPLIED"].includes(r.status) && <div><a href={`/status-changes/letter/${r.id}`} style={{ fontSize: 12 }}>Print signed letter</a></div>}</td>
                 <td>{r.status === "PENDING" ? stageTitle(r.stage) : "—"}</td></tr>
             ))}</tbody></table>
         )}

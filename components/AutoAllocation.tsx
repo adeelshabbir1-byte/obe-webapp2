@@ -93,6 +93,7 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
             <div className="card" style={{ overflowX: "auto" }}>
               <b style={{ fontSize: 13 }}>Hiring gaps — {data.hiring.unfilledSections} section(s) without a teacher{data.hiring.fteNeeded ? ` · about ${data.hiring.fteNeeded} faculty to hire` : ""} · {data.hiring.spareSections} section(s) of room left in the pool</b>
               <ul style={{ fontSize: 12.5, margin: "6px 0" }}>{data.hiring.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
+              <a className="btn btn-secondary btn-sm" href={`/recruitment?area=${encodeURIComponent(data.hiring.rows[0]?.area || "")}&positions=${Math.max(1, Math.ceil(data.hiring.fteNeeded || 1))}`}>Ask to hire (Recruitment) →</a>
               {data.hiring.areas.length > 0 && (
                 <table style={{ fontSize: 12.5 }}>
                   <thead><tr><th>Area (weak first)</th><th style={{ textAlign: "center" }}>Open sections</th><th style={{ textAlign: "center" }}>Courses</th><th style={{ textAlign: "center" }}>One-teacher courses</th><th style={{ textAlign: "center" }}>Specialists</th></tr></thead>

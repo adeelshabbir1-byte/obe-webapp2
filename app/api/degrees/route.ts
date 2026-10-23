@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       if (!st) return NextResponse.json({ error: "Student not found." }, { status: 404 });
       if (office.key === "department" && w.lead && st.batch.coordinatorId !== w.id) return NextResponse.json({ error: "Not your program's student." }, { status: 403 });
       const undo = !!b.undo;
+      // The library clears only when no book is out and no fine is unpaid (library circulation).
+      if (office.key === "library" && !undo) { const block = await (await import("../../../lib/library")).libraryBlock(st.id); if (block) return NextResponse.json({ error: block }, { status: 400 }); }
       const data = { [`${office.key}At`]: undo ? null : new Date(), [`${office.key}ById`]: undo ? null : w.id, [`${office.key}Note`]: str(b.note, 300) || null, updatedAt: new Date() };
       await rdb.degreeClearance.upsert({ where: { studentId: st.id }, create: { studentId: st.id, chairmanId: w.chairmanId, ...data }, update: data });
       await writeAuditLog({ actorUserId: w.id, action: undo ? "DEGREE_CLEARANCE_WITHDRAWN" : "DEGREE_CLEARED", entityType: "DegreeClearance", entityId: st.id, metadata: { office: office.key } });
@@ -53,6 +55,7 @@ export async function POST(req: Request) {
       if (!st) return NextResponse.json({ error: "Student not found." }, { status: 404 });
       if (await rdb.degreeIssue.findFirst({ where: { chairmanId: w.chairmanId, studentId: st.id, cancelledAt: null } })) return NextResponse.json({ error: "A degree is already issued to this student." }, { status: 400 });
       const cl = await rdb.degreeClearance.findUnique({ where: { studentId: st.id } });
+      { const block = await (await import("../../../lib/library")).libraryBlock(st.id); if (block) return NextResponse.json({ error: block }, { status: 400 }); }
       if (!allCleared(cl)) return NextResponse.json({ error: `Not cleared yet by: ${OFFICES.filter((o) => !cl?.[`${o.key}At`]).map((o) => o.label).join(", ")}.` }, { status: 400 });
       const audit = await degreeAudit(st.id);
       if (!audit?.eligible) return NextResponse.json({ error: `The degree audit does not pass: ${(audit?.graduation || []).filter((g) => !g.ok).map((g) => g.label).join("; ") || "requirements not met"}.` }, { status: 400 });

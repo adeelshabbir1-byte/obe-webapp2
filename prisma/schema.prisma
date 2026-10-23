@@ -6592,3 +6592,643 @@ model BenefitClaim {
 
   @@index([planId])
 }
+
+// Approvals inbox (prisma/migration_approvals_inbox.sql): a person's approvals handed to someone else for a while.
+model ApprovalDelegation {
+  id          String    @id
+  chairmanId  String
+  fromUserId  String
+  toUserId    String
+  startDate   DateTime
+  endDate     DateTime
+  note        String?
+  revokedAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+// After how many days a waiting approval is reminded, and escalated to the position above.
+model ApprovalSetting {
+  id                String   @id
+  chairmanId        String
+  kind              String
+  remindAfterDays   Int      @default(3)
+  escalateAfterDays Int      @default(7)
+  updatedAt         DateTime @default(now())
+
+  @@unique([chairmanId, kind])
+}
+
+// A reminder or escalation sent about one waiting approval (so it is sent once).
+model ApprovalNudge {
+  id      String   @id
+  itemKey String
+  userId  String
+  level   String   // REMIND | ESCALATE
+  sentAt  DateTime @default(now())
+
+  @@unique([itemKey, userId, level])
+}
+
+// Head of institute dashboard: the figures, worked out nightly (one row per run; the page reads the latest).
+model DashboardSnapshot {
+  id         String   @id
+  chairmanId String
+  computedAt DateTime @default(now())
+  dataJson   String   @db.Text
+
+  @@index([chairmanId, computedAt])
+}
+
+// The Institute Head's target for each dashboard figure (traffic-light colours).
+model DashboardTarget {
+  id          String   @id
+  chairmanId  String
+  key         String
+  target      Float
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, key])
+}
+
+// Digital sign-off: every official document issued with a number, a QR code and the hash of its content.
+model SignedDocument {
+  id           String    @id
+  chairmanId   String
+  docNo        String    @unique
+  kind         String    // TRANSCRIPT | COURSE_FILE | FDP_CERTIFICATE | STATUS_LETTER | SAR | ...
+  title        String
+  holderName   String?
+  holderRef    String?   // roll number, employee name …
+  sourceRef    String?   // the record it was printed from (for re-printing the same number)
+  contentHash  String    // SHA-256 of the document's content
+  summaryJson  String    @default("{}") // what the verification page shows
+  signersJson  String    @default("[]") // [{ userId, name, title, at, role }] from the recorded approvals
+  issuedById   String?
+  issuedAt     DateTime  @default(now())
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?
+
+  @@index([chairmanId, kind])
+  @@index([sourceRef])
+}
+
+// Each scan / check of a document's QR code.
+model DocumentVerification {
+  id         String   @id
+  documentId String?
+  docNo      String
+  result     String   // GENUINE | ALTERED | REVOKED | NOT_FOUND
+  checkerId  String?
+  ipHash     String?
+  userAgent  String?
+  checkedAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
+// A signer's signature image or the institute stamp (userId null), placed only on documents they approved.
+model SignatureAsset {
+  id           String   @id
+  chairmanId   String
+  userId       String?
+  kind         String   // SIGNATURE | STAMP
+  mime         String
+  data         String   @db.Text // base64
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  @@unique([chairmanId, userId, kind])
+}
+
+// Search everywhere: each person's last searches (ownerKey = "u:<userId>" or "s:<studentId>").
+model SearchHistory {
+  id        String   @id
+  ownerKey  String
+  query     String
+  createdAt DateTime @default(now())
+
+  @@index([ownerKey, createdAt])
+}
+
+// Help desk: what the existing HelpTicket does not hold — kind, priority, screenshot, browser, SLA, tags, fix, FAQ.
+model HelpTicketExtra {
+  ticketId        String    @id
+  category        String    @default("HOW_TO") // BUG | HOW_TO | DATA_CORRECTION | FEATURE
+  priority        String    @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  screenshot      String?   @db.Text           // data URL of the page as it looked
+  browser         String?
+  pageUrl         String?
+  slaDueAt        DateTime?
+  firstResponseAt DateTime?
+  slaWarnedAt     DateTime?
+  tags            String    @default("")
+  fixNote         String?   @db.Text
+  releaseRef      String?
+  faqArticleId    String?
+  createdAt       DateTime  @default(now())
+}
+
+// Each institute's own support people (local requests reach them too) and its SLA hours per priority.
+model HelpDeskSetting {
+  chairmanId     String   @id
+  supportUserIds String   @default("[]")
+  slaHoursJson   String   @default("{}")
+  updatedById    String?
+  updatedAt      DateTime @default(now())
+}
+
+// Counselling: who counsels (batch advisors always can; Student Affairs designates the student counsellors).
+model CounsellorProfile {
+  userId         String   @id
+  chairmanId     String
+  isCounsellor   Boolean  @default(false)
+  byRequest      Boolean  @default(false) // no fixed slots: students ask for a time
+  note           String?
+  designatedById String?
+  updatedAt      DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// A time a counsellor or advisor is free (published weekly).
+model CounsellingSlot {
+  id           String   @id
+  chairmanId   String
+  counsellorId String
+  startsAt     DateTime
+  endsAt       DateTime
+  mode         String   @default("IN_PERSON") // IN_PERSON | ONLINE | EITHER
+  place        String?  // room, or the meeting link
+  createdAt    DateTime @default(now())
+
+  @@index([counsellorId, startsAt])
+}
+
+// A booking: by the student, or a call-in by the advisor (the student then picks a slot).
+model CounsellingBooking {
+  id             String    @id
+  chairmanId     String
+  studentId      String
+  counsellorId   String
+  slotId         String?
+  kind           String    @default("ACADEMIC") // ACADEMIC | CAREER | PERSONAL
+  mode           String    @default("IN_PERSON")
+  startsAt       DateTime?
+  status         String    @default("BOOKED") // REQUESTED | CALLED_IN | BOOKED | DONE | CANCELLED | NO_SHOW
+  reason         String?
+  source         String    @default("SELF") // SELF | CALL_IN | EARLY_WARNING | HOLD
+  calledById     String?
+  reminderSentAt DateTime?
+  doneAt         DateTime?
+  followUpDate   DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([counsellorId, startsAt])
+  @@index([studentId])
+}
+
+// Confidential visit notes: only the counsellor who wrote them (and the batch advisor, for academic notes) can read them.
+model CounsellingNote {
+  id        String   @id
+  bookingId String
+  authorId  String
+  kind      String
+  notes     String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+// In-app notices for students (the bell in the student portal).
+model StudentNotice {
+  id        String    @id
+  studentId String
+  kind      String
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId, createdAt])
+}
+
+// Library circulation: the catalogue (a title), its copies (accession numbers), loans, holds and the Librarian's rules.
+model LibraryTitle {
+  id         String   @id
+  chairmanId String
+  title      String
+  authors    String?
+  isbn       String?
+  edition    String?
+  publisher  String?
+  year       Int?
+  subject    String   @default("General") // Computing, Business, Mathematics …
+  callNumber String?
+  kind       String   @default("PRINT") // PRINT | EBOOK | DATABASE
+  url        String?
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId])
+  @@index([isbn])
+}
+
+model LibraryCopy {
+  id          String    @id
+  chairmanId  String
+  titleId     String
+  accessionNo String
+  location    String?
+  status      String    @default("AVAILABLE") // AVAILABLE | ON_LOAN | ON_HOLD | LOST | DAMAGED | WITHDRAWN
+  price       Float?
+  acquiredAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([chairmanId, accessionNo])
+  @@index([titleId])
+}
+
+model LibraryLoan {
+  id           String    @id
+  chairmanId   String
+  copyId       String
+  titleId      String
+  memberType   String    // STUDENT | STAFF
+  memberId     String
+  issuedAt     DateTime  @default(now())
+  dueAt        DateTime
+  returnedAt   DateTime?
+  renewals     Int       @default(0)
+  fine         Float     @default(0)
+  finePaid     Float     @default(0)
+  fineWaived   Boolean   @default(false)
+  note         String?
+  outcome      String?   // RETURNED | DAMAGED | LOST
+  remindedAt   DateTime?
+  issuedById   String?
+  returnedById String?
+
+  @@index([memberType, memberId])
+  @@index([copyId])
+  @@index([chairmanId, returnedAt])
+}
+
+model LibraryHold {
+  id         String    @id
+  chairmanId String
+  titleId    String
+  memberType String
+  memberId   String
+  status     String    @default("WAITING") // WAITING | READY | DONE | CANCELLED
+  readyAt    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([titleId, status])
+}
+
+model LibraryPolicy {
+  chairmanId   String   @id
+  studentLimit Int      @default(3)
+  studentDays  Int      @default(14)
+  staffLimit   Int      @default(10)
+  staffDays    Int      @default(30)
+  finePerDay   Float    @default(20)
+  maxRenewals  Int      @default(2)
+  holdDays     Int      @default(3)
+  catalogueFigures Boolean @default(true) // the catalogue sets the LibraryInfo figures
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+}
+
+// Asset register: every item in a lab (LabInfo) or another room, with its QR asset tag.
+model Asset {
+  id           String    @id
+  chairmanId   String
+  labId        String?
+  room         String?   // for items outside the labs
+  category     String    @default("COMPUTER") // COMPUTER | PROJECTOR | NETWORK | LAB_EQUIPMENT | FURNITURE | OTHER
+  item         String
+  makeModel    String?
+  serialNo     String?
+  assetTag     String
+  processor    String?
+  ramGb        Int?
+  storage      String?
+  gpu          String?
+  os           String?
+  spec         String?
+  purchaseDate DateTime?
+  cost         Float?
+  supplier     String?
+  warrantyEnd  DateTime?
+  custodianId  String?
+  status       String    @default("WORKING") // WORKING | FAULTY | UNDER_REPAIR | CONDEMNED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+
+  @@unique([chairmanId, assetTag])
+  @@index([labId])
+}
+
+model AssetFault {
+  id           String    @id
+  chairmanId   String
+  assetId      String
+  description  String
+  reportedBy   String?
+  reportedById String?
+  reportedAt   DateTime  @default(now())
+  status       String    @default("OPEN") // OPEN | REPAIRING | FIXED | CONDEMNED
+  stepsJson    String    @default("[]")  // [{ at, by, text }]
+  cost         Float?
+  fixedAt      DateTime?
+
+  @@index([assetId])
+  @@index([chairmanId, status])
+}
+
+// The yearly stock-taking of a lab or room, signed off by whoever counted.
+model AssetVerification {
+  id           String   @id
+  chairmanId   String
+  labId        String?
+  room         String?
+  year         Int
+  foundIds     String   @default("[]")
+  missingIds   String   @default("[]")
+  note         String?
+  verifiedById String
+  verifiedAt   DateTime @default(now())
+
+  @@index([chairmanId, year])
+}
+
+// Writing an item off: asked by the lab engineer with the condemnation committee's finding, approved by the Institute Head.
+model AssetCondemnation {
+  id            String    @id
+  chairmanId    String
+  assetId       String
+  reason        String
+  committeeNote String?
+  requestedById String
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime  @default(now())
+
+  @@index([chairmanId, status])
+}
+
+// Recruitment: a request to hire (approved HOD → Dean → Institute Head → Finance), its advertisement and online
+// application form, the applications (eligibility, scores), the selection board and its marks.
+model HiringRequest {
+  id            String    @id
+  chairmanId    String
+  departmentId  String?
+  designation   String    // LECTURER | ASSISTANT_PROFESSOR | ASSOCIATE_PROFESSOR | PROFESSOR | LAB_ENGINEER
+  area          String
+  positions     Int       @default(1)
+  justification String
+  raisedById    String
+  stage         String    @default("DEAN") // DEAN | HEAD | FINANCE | DONE
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  budgetNote    String?
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+
+  @@index([chairmanId, status])
+}
+
+model HiringApproval {
+  id        String   @id
+  requestId String
+  stage     String
+  byId      String
+  decision  String
+  note      String?
+  at        DateTime @default(now())
+
+  @@index([requestId])
+}
+
+model JobAdvert {
+  id          String   @id
+  chairmanId  String
+  requestId   String
+  title       String
+  text        String   @db.Text
+  openFrom    DateTime
+  closeAt     DateTime
+  token       String   @unique
+  status      String   @default("OPEN") // OPEN | CLOSED
+  weightsJson String   @default("{}")   // { qualification, experience, publications, interview } (per cent)
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model JobApplication {
+  id               String    @id
+  advertId         String
+  chairmanId       String
+  name             String
+  email            String
+  phone            String?
+  highestDegree    String    // PHD | MS | MASTERS16 | BACHELORS16 | OTHER
+  degreeTitle      String?
+  university       String?
+  degreeYear       Int?
+  teachingYears    Float     @default(0)
+  postPhdYears     Float     @default(0)
+  industryYears    Float     @default(0)
+  publicationsJson String    @default("[]") // [{ title, journal, year, category: W|X|Y|OTHER, doi }]
+  experienceJson   String    @default("[]") // [{ organisation, title, from, to }]
+  cvName           String?
+  cvType           String?
+  cvData           String?   @db.Text
+  eligible         Boolean   @default(false)
+  eligibilityJson  String    @default("[]")
+  override         Boolean   @default(false)
+  overrideReason   String?
+  status           String    @default("APPLIED") // APPLIED | SHORTLISTED | NOT_SHORTLISTED | SELECTED | NOT_SELECTED | OFFERED | JOINED | DECLINED
+  offerSentAt      DateTime?
+  joinedAt         DateTime?
+  userId           String?
+  submittedAt      DateTime  @default(now())
+
+  @@index([advertId])
+}
+
+model SelectionBoard {
+  id                 String    @id
+  advertId           String    @unique
+  membersJson        String    @default("[]")
+  interviewAt        DateTime?
+  venue              String?
+  recommendationJson String    @default("[]") // application ids in merit order recommended for appointment
+  recommendedAt      DateTime?
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+}
+
+model BoardMark {
+  id            String   @id
+  boardId       String
+  applicationId String
+  memberId      String
+  marks         Float
+  remarks       String?
+  at            DateTime @default(now())
+
+  @@unique([boardId, applicationId, memberId])
+}
+
+// Research office (ORIC): grant proposals, ORCID / Scholar links, imported publications to confirm, the journal list.
+model GrantProposal {
+  id              String    @id
+  chairmanId      String
+  piId            String
+  title           String
+  agency          String
+  callName        String?
+  amount          Float?
+  durationMonths  Int?
+  coInvestigators String?
+  abstract        String?   @db.Text
+  status          String    @default("DRAFT") // DRAFT | INTERNAL_REVIEW | RETURNED | SUBMITTED | AWARDED | REJECTED
+  reviewNote      String?
+  reviewedById    String?
+  submittedAt     DateTime?
+  decidedAt       DateTime?
+  awardedAmount   Float?
+  startDate       DateTime?
+  endDate         DateTime?
+  fundedRecordId  String?   // the FUNDED_PROJECT register record made when awarded
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+
+  @@index([chairmanId, status])
+}
+
+model ResearchProfile {
+  userId       String    @id
+  chairmanId   String
+  orcid        String?
+  scholarUrl   String?
+  lastImportAt DateTime?
+  updatedAt    DateTime  @default(now())
+}
+
+model PublicationCandidate {
+  id           String   @id
+  userId       String
+  source       String   // ORCID | BIBTEX | PASTE
+  dedupeKey    String
+  title        String
+  journal      String?
+  year         Int?
+  doi          String?
+  authors      String?
+  citations    Int?
+  category     String?  // W | X | Y | OTHER
+  impactFactor Float?
+  status       String   @default("PENDING") // PENDING | ADDED | IGNORED
+  studentWork  Boolean  @default(false)     // with a student (FYP / thesis)
+  recordId     String?
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, dedupeKey])
+}
+
+// The institute's journal list: HEC category and impact factor, kept by ORIC (used to fill in imported papers).
+model JournalCategory {
+  id           String   @id
+  chairmanId   String
+  title        String
+  issn         String?
+  category     String
+  impactFactor Float?
+  updatedAt    DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model ResearchSetting {
+  chairmanId  String   @id
+  oricUserIds String   @default("[]")
+  updatedAt   DateTime @default(now())
+}
+
+// Billing for institutes (the OBEHUB owner, the Super User): plans, subscriptions, invoices and payments.
+model BillingPlan {
+  id          String   @id
+  name        String
+  modulesJson String   @default("[]") // module keys included (core OBE is always included)
+  pricing     String   @default("PER_STUDENT") // PER_STUDENT | FLAT
+  price       Float    @default(0)
+  period      String   @default("TERM") // MONTHLY | TERM | YEARLY
+  active      Boolean  @default(true)
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+model Subscription {
+  chairmanId          String    @id
+  planId              String
+  status              String    @default("TRIAL") // TRIAL | ACTIVE | SUSPENDED | CANCELLED
+  trialEndsAt         DateTime?
+  startDate           DateTime  @default(now())
+  discountPct         Float     @default(0)
+  discountNote        String?
+  graceDays           Int       @default(15)   // after the due date, before modules turn read-only
+  readOnlyDays        Int       @default(15)   // read-only this long, then the modules are hidden
+  billingEmail        String?
+  lockState           String    @default("NONE") // NONE | READ_ONLY | LOCKED
+  lockedByBillingJson String    @default("[]")   // modules billing locked (unlocked again on payment)
+  lockChangedAt       DateTime?
+  updatedById         String?
+  updatedAt           DateTime  @default(now())
+}
+
+model BillingInvoice {
+  id          String    @id
+  chairmanId  String
+  number      String    @unique
+  planId      String?
+  periodStart DateTime
+  periodEnd   DateTime
+  issuedAt    DateTime  @default(now())
+  dueAt       DateTime
+  students    Int       @default(0)
+  amount      Float
+  discount    Float     @default(0)
+  total       Float
+  status      String    @default("DUE") // DUE | PAID | OVERDUE | VOID
+  paidAt      DateTime?
+  linesJson   String    @default("[]")
+  remindedAt  DateTime?
+  createdById String?
+
+  @@index([chairmanId, status])
+}
+
+model BillingPayment {
+  id           String   @id
+  invoiceId    String
+  chairmanId   String
+  amount       Float
+  method       String   @default("BANK_TRANSFER") // BANK_TRANSFER | CHEQUE | CASH | GATEWAY
+  reference    String?
+  paidOn       DateTime
+  recordedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([invoiceId])
+}

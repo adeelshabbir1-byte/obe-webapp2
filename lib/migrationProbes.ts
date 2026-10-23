@@ -53,9 +53,19 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "FacultyAppraisal"
 },
 {
+"f": "migration_approvals_inbox.sql",
+"d": "One approvals inbox: delegation of approvals for a date range, reminder / escalation settings per kind of approval,",
+"t": "ApprovalNudge"
+},
+{
 "f": "migration_assessment_rules.sql",
 "d": "OMC's limits on assessment types (course total or per CLO) and the OMC / HOD approvals of courses outside them.",
 "t": "AssessmentRuleApproval"
+},
+{
+"f": "migration_assets.sql",
+"d": "Lab equipment and assets (Prompt 2 item 6): the asset register per lab or room, faults and repairs, the yearly",
+"t": "AssetCondemnation"
 },
 {
 "f": "migration_assigner_hat.sql",
@@ -95,6 +105,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_benefits.sql",
 "d": "Employee benefits register: plans (health insurance, provident fund, pension, leave encashment, children's fee",
 "t": "BenefitClaim"
+},
+{
+"f": "migration_billing.sql",
+"d": "Billing for institutes (Prompt 2 item 9): plans, each institute's subscription (trial, discount, grace period and the",
+"t": "BillingPayment"
 },
 {
 "f": "migration_calendar.sql",
@@ -168,6 +183,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_council_tools.sql",
 "d": "============================================================================",
 "t": "GaCouncilMap"
+},
+{
+"f": "migration_counselling.sql",
+"d": "Counselling appointments (Prompt 2 item 4) and in-app notices for students (the student bell). Safe to run more than once.",
+"t": "StudentNotice"
 },
 {
 "f": "migration_course_assigner.sql",
@@ -441,6 +461,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "hasLab"
 },
 {
+"f": "migration_head_dashboard.sql",
+"d": "Head of institute dashboard (Prompt 2 item 3): figures worked out nightly, and the targets the Institute Head sets.",
+"t": "DashboardTarget"
+},
+{
 "f": "migration_hec_plo_suggestions.sql",
 "d": "Run in Supabase SQL Editor. Adds HecPloSuggestion \u2014 HEC's own suggested",
 "t": "HecPloSuggestion"
@@ -454,6 +479,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_help_center.sql",
 "d": "Help center: the institute's own guides and FAQs, help-desk requests and their replies, \"was this helpful\" votes,",
 "t": "PasswordResetToken"
+},
+{
+"f": "migration_help_desk.sql",
+"d": "Help desk upgrade (Prompt 2 item 10): kind, priority, screenshot, browser, SLA timers, tags, fix / release note and the",
+"t": "HelpDeskSetting"
 },
 {
 "f": "migration_hemis.sql",
@@ -522,6 +552,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_library.sql",
 "d": "Library inventory",
 "t": "LibraryInfo"
+},
+{
+"f": "migration_library_circulation.sql",
+"d": "Library circulation (Prompt 2 item 5): catalogue, copies with accession numbers, loans, holds, fines and the",
+"t": "LibraryPolicy",
+"c": "catalogueFigures"
 },
 {
 "f": "migration_master_curriculum_fields.sql",
@@ -789,6 +825,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RecognitionGoal"
 },
 {
+"f": "migration_recruitment.sql",
+"d": "Recruitment (Prompt 2 item 7): request to hire with its approval chain, advertisement with an online application",
+"t": "BoardMark"
+},
+{
 "f": "migration_registration_rules.sql",
 "d": "============================================================================",
 "t": "DegreePlanLock"
@@ -799,6 +840,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RemediationFlag"
 },
 {
+"f": "migration_research.sql",
+"d": "Research office / ORIC (Prompt 2 item 8): grant proposals, ORCID / Google Scholar links, imported publications waiting",
+"t": "ResearchSetting"
+},
+{
 "f": "migration_result_approval.sql",
 "d": "Result approval (submit -> approve -> locked) and grade-change requests after approval.",
 "t": "GradeChangeRequest"
@@ -807,6 +853,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_rubrics.sql",
 "d": "Marking rubrics for assessment items, with CLO per criterion, and per-student rubric marking.",
 "t": "RubricScore"
+},
+{
+"f": "migration_search.sql",
+"d": "Search everywhere (Prompt 2 item 2): trigram indexes so \"contains\" searches stay fast, and each person's recent searches.",
+"t": "SearchHistory"
 },
 {
 "f": "migration_section_link.sql",
@@ -834,6 +885,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_short_leave.sql",
 "d": "Short leave (a few days) and how each class in it is covered: substitute teacher, make-up class, or cancelled.",
 "t": "SubstituteClass"
+},
+{
+"f": "migration_signoff.sql",
+"d": "Digital sign-off with QR verification (Prompt 2 item 11). Safe to run more than once.",
+"t": "SignatureAsset"
 },
 {
 "f": "migration_specialization_history.sql",
