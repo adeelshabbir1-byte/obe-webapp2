@@ -3,6 +3,7 @@ import { getTimetableEntries, timeRangeLabel, type TimetableEntryView } from "./
 import { invigilatorPool } from "./exams";
 import { leavesOf } from "./facultyLeave";
 import { termIndex } from "./termLogic";
+import { approverFor } from "./approvers";
 
 // Short leave (a few days): the teacher's classes in those days come from the current timetable; each gets covered by
 // a substitute (someone free at that time), a make-up class, or is cancelled. Holidays in the academic calendar are skipped.
@@ -36,8 +37,9 @@ export async function classesInRange(userId: string, chairmanId: string, from: D
 /** Who should decide: the teacher's department Chairman (Head of Department), otherwise the Institute Head. */
 export async function approversForTeacher(userId: string, chairmanId: string) {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
-  const hods = u?.departmentId ? await prisma.user.findMany({ where: { role: "HEAD_OF_DEPARTMENT" as never, managedById: chairmanId, departmentId: u.departmentId, isActive: true }, select: { id: true } }) : [];
-  return hods.length ? hods.map((h) => h.id) : [chairmanId];
+  // The department's Chairman/HoD — or whoever acts for them or covers the position (lib/approvers.ts).
+  const ids = (await approverFor(chairmanId, "HEAD_OF_DEPARTMENT", { departmentId: u?.departmentId })).ids.filter((id) => id !== userId);
+  return ids.length ? ids : [chairmanId];
 }
 
 /** Teachers free for a class: no class of their own overlapping it, not on leave that day; same course first, then same department, then fewest substitutions. */
@@ -80,6 +82,8 @@ export async function syncClasses(l: ShortLeaveRow) {
 export async function canDecideLeave(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }, l: ShortLeaveRow) {
   if (user.id === l.userId) return false;
   if (user.role === "CHAIRMAN") return l.chairmanId === user.id;
+  // Acting for the Chairman/HoD, or covering the position while it is vacant or switched off.
+  if ((await approversForTeacher(l.userId, l.chairmanId)).includes(user.id)) return true;
   if (user.role !== "HEAD_OF_DEPARTMENT" || user.managedById !== l.chairmanId) return false;
   const t = await prisma.user.findUnique({ where: { id: l.userId }, select: { departmentId: true } });
   return !!t?.departmentId && t.departmentId === user.departmentId;

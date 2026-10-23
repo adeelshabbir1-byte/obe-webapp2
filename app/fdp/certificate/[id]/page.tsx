@@ -4,6 +4,8 @@ import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { FDP_KINDS } from "../../../../lib/fdp";
 import PrintButton from "../../../../components/PrintButton";
+import SignOffBlock from "../../../../components/SignOffBlock";
+import { fdpCertificateDoc } from "../../../../lib/signoffDocs";
 
 export const dynamic = "force-dynamic";
 const fdb = prisma as unknown as Record<string, any>;
@@ -17,6 +19,8 @@ export default async function Certificate({ params }: { params: { id: string } }
   const s = await fdb.fdpSession.findUnique({ where: { id: a.sessionId } });
   if (!s || (a.userId !== user.id && (await chairmanIdFor(user)) !== s.chairmanId)) notFound();
   const [who, head] = await Promise.all([prisma.user.findUnique({ where: { id: a.userId }, select: { name: true, department_: { select: { name: true } } } }), prisma.user.findUnique({ where: { id: s.chairmanId }, select: { name: true, instituteName: true } })]);
+  // Signed off by whoever organised and recorded the session (the approval on record), on the session date.
+  const issued = (await fdpCertificateDoc(a.id, user.id))?.issued ?? null;
   return (
     <div style={{ maxWidth: 820, margin: "30px auto", padding: 40, border: "6px double #8a6d2b", textAlign: "center", fontFamily: "Georgia, serif", background: "#fff", color: "#222" }}>
       <div style={{ fontSize: 14, letterSpacing: 2 }}>{head?.instituteName || ""}</div>
@@ -29,6 +33,7 @@ export default async function Certificate({ params }: { params: { id: string } }
         <span>Certificate No. {a.certificateNo}</span>
         <span style={{ borderTop: "1px solid #444", paddingTop: 4, minWidth: 200 }}>{head?.name || "Head of Institute"}</span>
       </div>
+      <SignOffBlock issued={issued} compact />
       <div style={{ marginTop: 20 }} className="no-print"><PrintButton /></div>
     </div>
   );

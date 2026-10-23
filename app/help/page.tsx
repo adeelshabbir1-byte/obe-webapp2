@@ -31,7 +31,7 @@ export default async function HelpPage({ searchParams }: { searchParams: { a?: s
           </p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Link href="/help/permissions" className="btn btn-secondary btn-sm">Who can do what</Link>
+          <Link href="/help/permissions" className="btn btn-secondary btn-sm">Who can do what</Link> <Link href="/help/glossary" className="btn btn-secondary btn-sm">Glossary</Link>
           <Link href="/help/requests" className="btn btn-secondary btn-sm">My help requests</Link>
           {canEditArticles(viewer) && <Link href="/help/manage" className="btn btn-brass btn-sm">Manage help</Link>}
         </div>

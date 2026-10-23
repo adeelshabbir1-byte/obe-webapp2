@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { writeAuditLog } from "./audit";
+import { approverFor } from "./approvers";
 
 // Result approval: Instructor submits the course result -> Chairman (Head of Department of the course's department)
 // or the Institute Head approves it, or returns it with a note. Once SUBMITTED or APPROVED, marks and grade cutoffs are
@@ -50,18 +51,19 @@ export async function approversFor(courseId: string): Promise<{ chairmanId: stri
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { coordinator: { select: { managedById: true, departmentId: true } } } });
   const chairmanId = course?.coordinator?.managedById || null;
   if (!chairmanId) return { chairmanId: null, ids: [] };
-  const hods = course?.coordinator?.departmentId
-    ? await prisma.user.findMany({ where: { role: "HEAD_OF_DEPARTMENT" as never, managedById: chairmanId, departmentId: course.coordinator.departmentId, isActive: true }, select: { id: true } })
-    : [];
-  return { chairmanId, ids: hods.length ? hods.map((h) => h.id) : [chairmanId] };
+  // The department's Chairman/HoD, or whoever acts for or covers them (lib/approvers.ts); else the Institute Head.
+  const ids = (await approverFor(chairmanId, "HEAD_OF_DEPARTMENT", { departmentId: course?.coordinator?.departmentId })).ids;
+  return { chairmanId, ids: ids.length ? ids : [chairmanId] };
 }
 
 /** May this user decide (approve / return) this course's result and its grade changes? */
 export async function canDecide(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }, courseId: string) {
-  if (!APPROVER_ROLES.includes(user.role)) return false;
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { instructorId: true, coordinator: { select: { managedById: true, departmentId: true } } } });
   if (!course) return false;
   if (course.instructorId === user.id) return false; // nobody approves their own result
+  // Someone acting for the Chairman/HoD, or covering the position while it is vacant or switched off.
+  if ((await approversFor(courseId)).ids.includes(user.id)) return true;
+  if (!APPROVER_ROLES.includes(user.role)) return false;
   if (user.role === "CHAIRMAN") return course.coordinator?.managedById === user.id;
   return course.coordinator?.managedById === user.managedById && !!user.departmentId && course.coordinator?.departmentId === user.departmentId;
 }

@@ -11,6 +11,7 @@ import { CATALOGUE } from "../../../../lib/accreditation/catalogue";
 import { assignablePeople, cycleView, govScope, inScope } from "../../../../lib/accreditation/governance";
 import { AssignControl, VisitSettings } from "../../../../components/accreditation/GovernanceParts";
 import { Bar, StatusChip, heat } from "../../../../components/accreditation/Visuals";
+import HowCalculated from "../../../../components/HowCalculated";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Accreditation visit" };
@@ -37,6 +38,13 @@ export default async function CyclePage({ params }: { params: { cycleId: string 
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+        <HowCalculated shows="How ready each program is for its accreditation visit, counted live from OBEHUB's own records.">
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>Each part of the visit (an NCEAC criterion, or an NBEAC / HEC form) is a set of tasks. A task's % is: <b>up to 70</b> for the data the system already holds (the share of its automatic checks that are done), <b>+15</b> when the person working on it signs it off, <b>+15</b> when the Head, Dean or Chairman approves it. An approved task counts 100%.</li>
+            <li>A criterion's % is the average of its tasks; the visit's % is the average of its criteria.</li>
+            <li>Red items are gaps found in the data (for example courses without a course file, unverified faculty profiles, GAs below target). Each links to the page where it is fixed.</li>
+          </ul>
+        </HowCalculated>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 12 }}>
         <div>
           <h1 style={{ fontSize: 22, marginBottom: 4 }}>{c.program} – {body} Visit Readiness: <span style={{ color: heat(v.overall) }}>{v.overall}%</span></h1>

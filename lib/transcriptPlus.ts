@@ -55,7 +55,7 @@ export async function degreeAudit(studentId: string) {
     prisma.gradingScale.findMany({ where: { coordinator: { batches: { some: { id: st.batchId } } } }, select: { letter: true, gpaValue: true } }).catch(() => []),
   ]);
   const rules = await academicRules(st.batch.coordinator.managedById);
-  const isPass = (r: { grade: string; gpaPoints: number | null }) => r.grade === "P" || (r.gpaPoints !== null && r.gpaPoints > 0);
+  const isPass = (r: { grade: string; gpaPoints: number | null }) => (r.grade === "P" || r.grade === "TR" || r.grade === "IT") || (r.gpaPoints !== null && r.gpaPoints > 0);
   const best = new Map<string, (typeof recs)[number]>();
   for (const r of recs) { const k = up(r.courseCode), b = best.get(k); if (!b || (r.gpaPoints ?? -1) > (b.gpaPoints ?? -1)) best.set(k, r); }
   const now = new Set(enr.map((e) => up(e.course.code)));

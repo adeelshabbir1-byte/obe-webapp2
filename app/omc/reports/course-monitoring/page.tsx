@@ -10,9 +10,12 @@ import Shell from "../../../../components/Shell";
 import DegreeBatchFilter from "../../../../components/DegreeBatchFilter";
 import AutoSubmitSelect from "../../../../components/AutoSubmitSelect";
 import ReportPrintHeader from "../../../../components/ReportPrintHeader";
+import { titlesFor } from "../../../../lib/titles";
+import { instituteOfUser } from "../../../../lib/moduleLocks";
 
 export default async function CourseMonitoringPage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
+  const signTitle = (await titlesFor(user ? await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }).catch(() => null) : null)).PROGRAM_LEAD.title;
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
@@ -89,7 +92,7 @@ export default async function CourseMonitoringPage({ searchParams }: { searchPar
             <SortableTable paginate={false} searchable={false}>
               <tbody>
                 <tr><td style={{ width: "50%" }}>Instructor Signature: ___________________________</td><td>Date: ___________________</td></tr>
-                <tr><td style={{ paddingTop: 20 }}>Program Coordinator Signature: ___________________________</td><td style={{ paddingTop: 20 }}>Date: ___________________</td></tr>
+                <tr><td style={{ paddingTop: 20 }}>{signTitle} Signature: ___________________________</td><td style={{ paddingTop: 20 }}>Date: ___________________</td></tr>
               </tbody>
             </SortableTable>
           </div>

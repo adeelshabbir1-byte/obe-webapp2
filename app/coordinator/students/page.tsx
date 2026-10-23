@@ -22,6 +22,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Student Directory</h1>
+      <p style={{ margin: "0 0 8px" }}><a href="/status-changes" className="btn btn-secondary btn-sm">Student status changes (drop, leave, freeze, transfer, readmission)</a></p>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>Bulk-import students per batch — this is the roster used for marks entry and results.</p>
       {batches.length === 0 ? (
         <div className="card"><p style={{ color: "var(--slate)", fontSize: 12.5 }}>Create a batch first.</p></div>

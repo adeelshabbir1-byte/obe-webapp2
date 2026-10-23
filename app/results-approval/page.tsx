@@ -7,8 +7,15 @@ import { navForRole } from "../../components/reportNav";
 import { courseScopeFor, roleLabel } from "../../lib/reportScope";
 import ResultDecision from "../../components/ResultDecision";
 import { db, RESULT_VIEW_ROLES, APPROVER_ROLES, type CourseResultRow, type GradeChangeRow, type ResultSummary } from "../../lib/resultApproval";
+import { StatusBadge } from "../../components/Meaning";
 
 const day = (d: Date | string | null) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
+const RESULT_MEANING: Record<string, string> = {
+  DRAFT: "The teacher has not submitted this course's result yet; marks can still change.",
+  RETURNED: "Sent back to the teacher with a note; marks are open again until it is resubmitted.",
+  SUBMITTED: "The teacher has submitted the result. Marks and grade cut-offs are locked until it is approved or returned. Grades shown are provisional.",
+  APPROVED: "Final. Marks and cut-offs are locked; a grade now changes only through a grade change request with a reason.",
+};
 const STATUS: Record<string, [string, string]> = { DRAFT: ["Not submitted", "badge-neutral"], RETURNED: ["Returned", "badge-no"], SUBMITTED: ["Waiting for approval", "badge-warn"], APPROVED: ["Approved", "badge-ok"] };
 
 export default async function ResultsApprovalPage({ searchParams }: { searchParams: { show?: string } }) {
@@ -132,7 +139,7 @@ export default async function ResultsApprovalPage({ searchParams }: { searchPara
                   <td style={{ fontSize: 12.5 }}>{c.batch ? `${c.batch.degreeProgram} — ${c.batch.batchName}` : "—"}</td>
                   <td style={{ fontSize: 12.5 }}>{c.instructor?.name || "—"}</td>
                   <td style={{ textAlign: "center" }}>{c._count.studentEnrollments}</td>
-                  <td><span className={`badge ${STATUS[k][1]}`}>{STATUS[k][0]}</span>{k === "RETURNED" && r?.note ? <div style={{ fontSize: 11, color: "var(--slate)", maxWidth: 240 }}>{r.note}</div> : null}</td>
+                  <td><StatusBadge status={k} label={STATUS[k][0]} meaning={RESULT_MEANING[k]} />{k === "RETURNED" && r?.note ? <div style={{ fontSize: 11, color: "var(--slate)", maxWidth: 240 }}>{r.note}</div> : null}</td>
                   <td style={{ fontSize: 12 }}>{r?.decidedAt ? `${names.get(r.decidedById || "") || "—"}, ${day(r.decidedAt)}` : "—"}</td>
                   <td style={{ fontSize: 12 }}>{gcs.length ? `${gcs.filter((g) => g.status === "APPROVED").length} approved · ${gcs.filter((g) => g.status === "PENDING").length} waiting · ${gcs.filter((g) => g.status === "REJECTED").length} rejected` : "—"}</td>
                 </tr>

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
+import { GE_REQS, pdb, UG_HINT } from "../../../lib/ugPolicy";
 import { notifyUsers } from "../../../lib/notifications";
 import { qdb, QUALITY_HINT, programsFor, canEditProgram, FACULTY_ITEMS, FACULTY_ROLES, POLICY_DEFAULTS, IPE_STANDARDS, INTL_KINDS, instituteOf, type PolicyRules } from "../../../lib/quality";
 
@@ -113,6 +114,20 @@ export async function POST(req: Request) {
         if (!kind || !title) return NextResponse.json({ error: "Choose the kind and give a title." }, { status: 400 });
         const d = (v: unknown) => { const x = v ? new Date(String(v)) : null; return x && !isNaN(x.getTime()) ? x : null; };
         await qdb.intlRecord.create({ data: { id: randomUUID(), chairmanId: cid, kind, title, partner: str(b.partner, 200) || null, country: str(b.country, 80) || null, startDate: d(b.startDate), endDate: d(b.endDate), people: num(b.people), note: str(b.note) || null, createdById: user.id } });
+        return NextResponse.json({ ok: true });
+      }
+      case "policyMap": {
+        // Mark which course meets which General Education requirement (HEC UG Policy 2023); "" clears, NONE = not General Education.
+        const p = await program(); if (!p || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        const code = str(b.courseCode, 40), reqKey = str(b.requirement, 30);
+        if (!code) return NextResponse.json({ error: "Choose a course." }, { status: 400 });
+        if (reqKey && reqKey !== "NONE" && !GE_REQS.some((r) => r.key === reqKey)) return NextResponse.json({ error: "Unknown requirement." }, { status: 400 });
+        if (!(await prisma.course.count({ where: { code, batch: { coordinatorId: p.coordinatorId, degreeProgram: p.degreeProgram } } }))) return NextResponse.json({ error: "This course is not in the program." }, { status: 404 });
+        try {
+          if (!reqKey) await pdb.policyCourseMap.deleteMany({ where: { chairmanId: cid, program: p.degreeProgram, courseCode: code } });
+          else await pdb.policyCourseMap.upsert({ where: { chairmanId_program_courseCode: { chairmanId: cid, program: p.degreeProgram, courseCode: code } }, create: { id: randomUUID(), chairmanId: cid, program: p.degreeProgram, courseCode: code, requirement: reqKey, updatedById: user.id }, update: { requirement: reqKey, updatedById: user.id, updatedAt: new Date() } });
+        } catch { return NextResponse.json({ error: UG_HINT }, { status: 500 }); }
+        await writeAuditLog({ actorUserId: user.id, action: "UG_POLICY_COURSE_MARKED", entityType: "PolicyCourseMap", entityId: `${p.degreeProgram}|${code}`, metadata: { requirement: reqKey || "cleared" } });
         return NextResponse.json({ ok: true });
       }
       case "intlDelete": {

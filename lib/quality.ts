@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { chairmanIdFor } from "./reportScope";
 import { reviewBatchWhere, REVIEW_ROLES } from "./reviewScope";
+import { GE_RULE_DEFAULTS, GE_RULE_LABELS } from "./ugPolicy";
 
 // Accreditation gaps closed in one place: PEO attainment, faculty survey, HEC Undergraduate Education Policy check,
 // grade distribution across sections, NBEAC Assurance of Learning, QEC proformas, IPE and internationalisation.
@@ -72,15 +73,16 @@ export function facultySummary(answers: { answersJson: string; departmentId: str
 
 /* ---------------- HEC Undergraduate Education Policy check ---------------- */
 
-export type PolicyRules = { minTotal: number; maxTotal: number; minGenEd: number; minIds: number; minMajor: number; capstone: number; internship: number; maxSemester: number; pecMinTotal: number; pecFydp: number };
+// Plus the credit hours of each named General Education requirement (lib/ugPolicy.ts), keys ge*.
+export type PolicyRules = { minTotal: number; maxTotal: number; minGenEd: number; minIds: number; minMajor: number; capstone: number; internship: number; maxSemester: number; pecMinTotal: number; pecFydp: number } & Record<string, number>;
 // Defaults from the HEC Undergraduate Education Policy (2023) and PEC's usual engineering limits, as we know them.
 // The Institute Head can change them to match the current policy.
-export const POLICY_DEFAULTS: PolicyRules = { minTotal: 120, maxTotal: 144, minGenEd: 30, minIds: 12, minMajor: 72, capstone: 3, internship: 3, maxSemester: 21, pecMinTotal: 130, pecFydp: 6 };
-export const POLICY_LABELS: [keyof PolicyRules, string][] = [["minTotal", "Minimum total credit hours (BS)"], ["maxTotal", "Maximum total credit hours (BS)"], ["minGenEd", "Minimum General Education credits"], ["minIds", "Minimum interdisciplinary (IDS) credits"], ["minMajor", "Minimum major (Core + Elective) credits"], ["capstone", "Capstone project credits"], ["internship", "Internship / field experience credits"], ["maxSemester", "Maximum credits in one semester"], ["pecMinTotal", "Minimum total credit hours (PEC engineering)"], ["pecFydp", "Final year design project credits (PEC)"]];
+export const POLICY_DEFAULTS: PolicyRules = { minTotal: 120, maxTotal: 144, minGenEd: 30, minIds: 12, minMajor: 72, capstone: 3, internship: 3, maxSemester: 21, pecMinTotal: 130, pecFydp: 6, ...GE_RULE_DEFAULTS };
+export const POLICY_LABELS: [string, string][] = [["minTotal", "Minimum total credit hours (BS)"], ["maxTotal", "Maximum total credit hours (BS)"], ["minGenEd", "Minimum General Education credits"], ["minIds", "Minimum interdisciplinary (IDS) credits"], ["minMajor", "Minimum major (Core + Elective) credits"], ["capstone", "Capstone project credits"], ["internship", "Internship / field experience credits"], ["maxSemester", "Maximum credits in one semester"], ["pecMinTotal", "Minimum total credit hours (PEC engineering)"], ["pecFydp", "Final year design project credits (PEC)"], ...GE_RULE_LABELS];
 
 export async function policyRules(chairmanId: string): Promise<PolicyRules> {
   const r = await qdb.policyRuleSet.findUnique({ where: { chairmanId } }).catch(() => null);
-  return { ...POLICY_DEFAULTS, ...parse<Partial<PolicyRules>>(r?.rulesJson, {}) };
+  return { ...POLICY_DEFAULTS, ...parse<Record<string, number>>(r?.rulesJson, {}) } as PolicyRules;
 }
 
 export type PolicyLine = { label: string; value: string; ok: boolean | null; note?: string };

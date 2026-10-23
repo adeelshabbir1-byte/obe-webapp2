@@ -119,12 +119,12 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEK_HOURS = DAYS.length * 12; // the availability grid: 8:00–20:00, Monday to Saturday
 const HOURS_PER_SECTION = 3;
 
-/** Students' teacher rating (1–5) per course code and teacher. When several teachers shared a course, each student's
+/** Students' teacher rating (1–5, adjusted for how strictly each batch rates) per course code and teacher. When several teachers shared a course, each student's
  * answer goes to the teacher who marked most of that student's attendance (their section's teacher). */
 async function ratings(coordinatorIds: string[]): Promise<Map<string, Map<string, { avg: number; n: number }>>> {
   const out = new Map<string, Map<string, { avg: number; n: number }>>();
   const ev = (prisma as unknown as Record<string, any>).courseEvaluation;
-  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) } }, select: { id: true, code: true, instructorId: true, sectionAssignments: { select: { instructorId: true } } } });
+  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: coordinatorIds.concat(["none"]) } }, select: { id: true, code: true, instructorId: true, batchId: true, offeredTermName: true, offeredTermYear: true, sectionAssignments: { select: { instructorId: true } } } });
   let rows: { courseId: string; studentId: string; answersJson: string }[] = [];
   try { rows = await ev.findMany({ where: { kind: "TEACHER", courseId: { in: courses.map((c) => c.id).concat(["none"]) } }, select: { courseId: true, studentId: true, answersJson: true } }); } catch { return out; }
   if (!rows.length) return out;
@@ -140,6 +140,23 @@ async function ratings(coordinatorIds: string[]): Promise<Map<string, Map<string
     if (n > (bestCount.get(k) || 0)) { bestCount.set(k, n); sectionTeacher.set(k, m.markedById); }
   }
   const codeOf = new Map(courses.map((c) => [c.id, c.code]));
+  // How generously each batch rated in each term, against the whole term: answers are adjusted to the batch's norm
+  // (the same adjusted score the evaluation reports show), so a strict batch does not count against a teacher.
+  const cOf = new Map(courses.map((c) => [c.id, c]));
+  const answerAvg = (j: string) => { try { const v = Object.values(JSON.parse(j) as Record<string, number>).map(Number).filter((x) => x > 0 && x <= 5); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; } catch { return null; } };
+  const normSum = new Map<string, { t: number; n: number }>(), termSum = new Map<string, { t: number; n: number }>();
+  for (const r of rows) {
+    const c = cOf.get(r.courseId), v = answerAvg(r.answersJson);
+    if (!c || v === null || !c.offeredTermName) continue;
+    const tk = `${c.offeredTermName}-${c.offeredTermYear}`, bk = `${c.batchId}|${tk}`;
+    const b = normSum.get(bk) || { t: 0, n: 0 }; b.t += v; b.n++; normSum.set(bk, b);
+    const t = termSum.get(tk) || { t: 0, n: 0 }; t.t += v; t.n++; termSum.set(tk, t);
+  }
+  const adjust = (courseId: string, v: number) => {
+    const c = cOf.get(courseId); if (!c?.offeredTermName) return v;
+    const tk = `${c.offeredTermName}-${c.offeredTermYear}`, b = normSum.get(`${c.batchId}|${tk}`), t = termSum.get(tk);
+    return b && t && b.n >= 5 ? Math.max(1, Math.min(5, v - b.t / b.n + t.t / t.n)) : v;
+  };
   const sum = new Map<string, { t: number; n: number }>();
   for (const r of rows) {
     const ts = teachersOf.get(r.courseId) || [];
@@ -151,7 +168,7 @@ async function ratings(coordinatorIds: string[]): Promise<Map<string, Map<string
     if (!v.length) continue;
     const k = `${codeOf.get(r.courseId)}|${who}`;
     const cur = sum.get(k) || { t: 0, n: 0 };
-    cur.t += v.reduce((x, y) => x + y, 0) / v.length; cur.n++; sum.set(k, cur);
+    cur.t += adjust(r.courseId, v.reduce((x, y) => x + y, 0) / v.length); cur.n++; sum.set(k, cur);
   }
   for (const [k, { t, n }] of Array.from(sum.entries())) {
     if (n < 5) continue; // too few answers to count (as on the evaluation reports)

@@ -53,9 +53,19 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "FacultyAppraisal"
 },
 {
+"f": "migration_approvals_inbox.sql",
+"d": "One approvals inbox: delegation of approvals for a date range, reminder / escalation settings per kind of approval,",
+"t": "ApprovalNudge"
+},
+{
 "f": "migration_assessment_rules.sql",
 "d": "OMC's limits on assessment types (course total or per CLO) and the OMC / HOD approvals of courses outside them.",
 "t": "AssessmentRuleApproval"
+},
+{
+"f": "migration_assets.sql",
+"d": "Lab equipment and assets (Prompt 2 item 6): the asset register per lab or room, faults and repairs, the yearly",
+"t": "AssetCondemnation"
 },
 {
 "f": "migration_assigner_hat.sql",
@@ -90,6 +100,16 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "Run in Supabase SQL Editor. Adds the self-referencing benchmark lineage",
 "t": "Course",
 "c": "benchmarkSourceId"
+},
+{
+"f": "migration_benefits.sql",
+"d": "Employee benefits register: plans (health insurance, provident fund, pension, leave encashment, children's fee",
+"t": "BenefitClaim"
+},
+{
+"f": "migration_billing.sql",
+"d": "Billing for institutes (Prompt 2 item 9): plans, each institute's subscription (trial, discount, grace period and the",
+"t": "BillingPayment"
 },
 {
 "f": "migration_calendar.sql",
@@ -144,6 +164,16 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "mappedPeoLabel"
 },
 {
+"f": "migration_committees.sql",
+"d": "Mandatory committees (HEC policies): members and terms, meetings, cases handled (confidential, no names) and the",
+"t": "CommitteeCase"
+},
+{
+"f": "migration_complex_profiles.sql",
+"d": "Complex problems beyond single assessments: a final year project group or a lab task tagged with complex-problem",
+"t": "ComplexTarget"
+},
+{
 "f": "migration_content_sync.sql",
 "d": "Run in Supabase SQL Editor. Adds CourseContentSyncGroup and",
 "t": "CourseContentSyncGroup",
@@ -153,6 +183,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_council_tools.sql",
 "d": "============================================================================",
 "t": "GaCouncilMap"
+},
+{
+"f": "migration_counselling.sql",
+"d": "Counselling appointments (Prompt 2 item 4) and in-app notices for students (the student bell). Safe to run more than once.",
+"t": "StudentNotice"
 },
 {
 "f": "migration_course_assigner.sql",
@@ -227,6 +262,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "DegreeProgram"
 },
 {
+"f": "migration_degrees.sql",
+"d": "Degree issuance and verification: clearance (library, fee, hostel, department), the degree serial register (also for",
+"t": "DegreeVerification"
+},
+{
 "f": "migration_department_approvals.sql",
 "d": "Step 2 of Departments: head-of-department approval of teacher assignments.",
 "t": "Course",
@@ -249,6 +289,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "Project / Lab mapped directly to a CLO, and split into parts (one per CLO). Safe to run more than once.",
 "t": "AssessmentInstrument",
 "c": "partOfId"
+},
+{
+"f": "migration_disabilities.sql",
+"d": "Students with disabilities: a confidential register with each student's accommodations (extra exam time, seating,",
+"t": "DisabilityRecord"
 },
 {
 "f": "migration_dual_role.sql",
@@ -345,6 +390,26 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "seResponseNote"
 },
 {
+"f": "migration_faculty_sufficiency.sql",
+"d": "NBEAC faculty qualification and sufficiency: a reviewer's override of a teacher's AQ / PQ classification, and the",
+"t": "FacultySufficiencyRule"
+},
+{
+"f": "migration_fdp_funding.sql",
+"d": "Faculty development funding: study leave and scholarships (amounts, sponsor, bond, progress reports, return,",
+"t": "FdpProgress"
+},
+{
+"f": "migration_fee_refunds.sql",
+"d": "Fee refunds: the institute's refund schedule (HEC fee refund policy by default) and a refund case for each student",
+"t": "FeeRefundCase"
+},
+{
+"f": "migration_feedback_questionnaires.sql",
+"d": "Student feedback questionnaires set by the QEC In-charge (questions with groups, weights and versions), the feedback",
+"t": "FeedbackFdpInvite"
+},
+{
 "f": "migration_final_boundary.sql",
 "d": "OMC guidance on the Final paper split (before vs after midterm) and the course midterm week. Safe to run more than once.",
 "t": "Course",
@@ -396,6 +461,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "hasLab"
 },
 {
+"f": "migration_head_dashboard.sql",
+"d": "Head of institute dashboard (Prompt 2 item 3): figures worked out nightly, and the targets the Institute Head sets.",
+"t": "DashboardTarget"
+},
+{
 "f": "migration_hec_plo_suggestions.sql",
 "d": "Run in Supabase SQL Editor. Adds HecPloSuggestion \u2014 HEC's own suggested",
 "t": "HecPloSuggestion"
@@ -409,6 +479,16 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_help_center.sql",
 "d": "Help center: the institute's own guides and FAQs, help-desk requests and their replies, \"was this helpful\" votes,",
 "t": "PasswordResetToken"
+},
+{
+"f": "migration_help_desk.sql",
+"d": "Help desk upgrade (Prompt 2 item 10): kind, priority, screenshot, browser, SLA timers, tags, fix / release note and the",
+"t": "HelpDeskSetting"
+},
+{
+"f": "migration_hemis.sql",
+"d": "HEC HEMIS export: the institute's and each program's HEMIS codes, and a log of every HEMIS file downloaded.",
+"t": "HemisExportLog"
 },
 {
 "f": "migration_inactivity.sql",
@@ -453,6 +533,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "LabComputerSpec"
 },
 {
+"f": "migration_lab_theory.sql",
+"d": "Lab under the theory instructor: per lab course, whether its marks go into the theory course's result (as one \"Lab\"",
+"t": "LabManualReminder"
+},
+{
 "f": "migration_labs_2.sql",
 "d": "Part 2: run after migration_labs.sql",
 "t": "Course",
@@ -467,6 +552,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_library.sql",
 "d": "Library inventory",
 "t": "LibraryInfo"
+},
+{
+"f": "migration_library_circulation.sql",
+"d": "Library circulation (Prompt 2 item 5): catalogue, copies with accession numbers, loans, holds, fines and the",
+"t": "LibraryPolicy",
+"c": "catalogueFigures"
 },
 {
 "f": "migration_master_curriculum_fields.sql",
@@ -515,6 +606,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "mfaVerified"
 },
 {
+"f": "migration_moderation.sql",
+"d": "Moderation extras: external examiners (a temporary link to vet final papers and results) and moderation remarks",
+"t": "ModerationRemark"
+},
+{
 "f": "migration_modules.sql",
 "d": "Module licensing: which modules each institute has switched off (no row = everything on). Safe to run more than once.",
 "t": "InstituteLicense",
@@ -535,6 +631,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "============================================================================",
 "t": "FypProposal",
 "c": "societalIssue"
+},
+{
+"f": "migration_nceac_portal.sql",
+"d": "NCEAC portal data: a log of every NCEAC-format file downloaded from OBEHUB (who, when, program, batch, rows).",
+"t": "NceacExportLog"
 },
 {
 "f": "migration_notifications.sql",
@@ -577,6 +678,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "OrgPositionLog"
 },
 {
+"f": "migration_org_titles.sql",
+"d": "Position titles of the institute (VC / Rector / Director \u2026), positions switched off, acting holders and moved branches",
+"t": "OrgPositionLog",
+"c": "reason"
+},
+{
 "f": "migration_paper_distribution.sql",
 "d": "Run in Supabase SQL Editor. Adds PaperDistributionItem \u2014 the final/",
 "t": "PaperDistributionItem"
@@ -590,6 +697,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_passing_criteria.sql",
 "d": "Run in Supabase SQL Editor. Adds PassingCriteria \u2014 OMC-configurable",
 "t": "PassingCriteria"
+},
+{
+"f": "migration_plagiarism.sql",
+"d": "Plagiarism records: the similarity report (e.g. Turnitin) of each final year project, thesis or research paper,",
+"t": "PlagiarismRecord"
 },
 {
 "f": "migration_plan_tasks.sql",
@@ -641,6 +753,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ProgramPeoWeight"
 },
 {
+"f": "migration_policy_history.sql",
+"d": "Policy version history: each policy, manual and curriculum, and every version with its Board of Studies and Academic",
+"t": "PolicyVersion"
+},
+{
 "f": "migration_portfolio.sql",
 "d": "Work samples (high / medium / low scripts per assessment) and student e-portfolios. Safe to run more than once.",
 "t": "StudentPortfolioItem"
@@ -680,6 +797,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "designerId"
 },
 {
+"f": "migration_qaa.sql",
+"d": "HEC QAA self-assessment cycle of a program: Program Team -> SAR -> Assessment Team visit and report ->",
+"t": "QaaAction"
+},
+{
 "f": "migration_qr_attendance.sql",
 "d": "QR attendance: live attendance sessions with a rotating encrypted QR code, each student's check-in, the institute's",
 "t": "AttendanceThreshold",
@@ -703,6 +825,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RecognitionGoal"
 },
 {
+"f": "migration_recruitment.sql",
+"d": "Recruitment (Prompt 2 item 7): request to hire with its approval chain, advertisement with an online application",
+"t": "BoardMark"
+},
+{
 "f": "migration_registration_rules.sql",
 "d": "============================================================================",
 "t": "DegreePlanLock"
@@ -713,6 +840,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RemediationFlag"
 },
 {
+"f": "migration_research.sql",
+"d": "Research office / ORIC (Prompt 2 item 8): grant proposals, ORCID / Google Scholar links, imported publications waiting",
+"t": "ResearchSetting"
+},
+{
 "f": "migration_result_approval.sql",
 "d": "Result approval (submit -> approve -> locked) and grade-change requests after approval.",
 "t": "GradeChangeRequest"
@@ -721,6 +853,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_rubrics.sql",
 "d": "Marking rubrics for assessment items, with CLO per criterion, and per-student rubric marking.",
 "t": "RubricScore"
+},
+{
+"f": "migration_search.sql",
+"d": "Search everywhere (Prompt 2 item 2): trigram indexes so \"contains\" searches stay fast, and each person's recent searches.",
+"t": "SearchHistory"
 },
 {
 "f": "migration_section_link.sql",
@@ -750,6 +887,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "SubstituteClass"
 },
 {
+"f": "migration_signoff.sql",
+"d": "Digital sign-off with QR verification (Prompt 2 item 11). Safe to run more than once.",
+"t": "SignatureAsset"
+},
+{
 "f": "migration_specialization_history.sql",
 "d": "Run in Supabase SQL Editor. Adds faculty specialization tagging and the",
 "t": "User",
@@ -760,6 +902,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "Run in Supabase SQL Editor. Adds the Student/Enrollment/Marks system for",
 "t": "AssessmentInstrument",
 "c": "maxScore"
+},
+{
+"f": "migration_student_status.sql",
+"d": "Student status changes with an approval chain (drop, leave, freeze, transfer within / out / in, rustication,",
+"t": "StudentAccess"
 },
 {
 "f": "migration_student_transcript.sql",
@@ -841,6 +988,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_training.sql",
 "d": "OBE certification: exam attempts (a passed attempt is the badge) and the institute's training rule. Safe to re-run.",
 "t": "TrainingPolicy"
+},
+{
+"f": "migration_ug_policy.sql",
+"d": "HEC Undergraduate Education Policy 2023 checker: which course of a program meets which named General Education",
+"t": "PolicyCourseMap"
 },
 {
 "f": "migration_visit.sql",

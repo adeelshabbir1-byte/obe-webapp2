@@ -7,6 +7,7 @@ import { notifyUsers } from "../../../lib/notifications";
 import { writeAuditLog } from "../../../lib/audit";
 import { vtdb, paperOf, systemCheck, aiCheck, type Vetting } from "../../../lib/paperVetting";
 import { chairmanIdFor } from "../../../lib/reportScope";
+import { checklistOf, repeatCheck, addRemark } from "../../../lib/moderation";
 
 async function aiKey(chairmanId: string) {
   const c = (await vtdb.aiConfig.findUnique({ where: { chairmanId } }).catch(() => null)) as { enabled: boolean; apiKey: string | null; model: string } | null;
@@ -30,6 +31,11 @@ export async function POST(req: Request) {
       const note = typeof b.note === "string" ? b.note.trim().slice(0, 3000) : "";
       if (!b.approve && !note) return NextResponse.json({ error: "Say what to improve." }, { status: 400 });
       await vtdb.paperVetting.update({ where: { id: v.id }, data: { status: b.approve ? "APPROVED" : "RETURNED", reviewerId: user.id, reviewNote: note || null, decidedAt: new Date() } });
+      // The vetting checklist goes into the moderation log with the decision (lib/moderation.ts).
+      try {
+        const cl = checklistOf(v.systemJson, await repeatCheck(v.courseId, v.examType), typeof b.clarity === "boolean" ? b.clarity : null);
+        await addRemark({ chairmanId: await chairmanIdFor(user), kind: "PAPER", courseId: v.courseId, examType: v.examType, round: v.round, byKind: "INTERNAL", byUserId: user.id, examinerId: null, decision: b.approve ? "APPROVED" : "RETURNED", comments: note || null, checklistJson: JSON.stringify(cl) });
+      } catch { /* migration_moderation.sql not run yet */ }
       await notifyUsers([course.instructorId], { kind: "ASSIGNMENT", title: `${v.examType} paper ${b.approve ? "approved" : "returned"}: ${course.code}`, body: note || "Approved for use.", href: `/instructor/courses/${course.id}/paper-vetting?exam=${v.examType}` });
       await writeAuditLog({ actorUserId: user.id, action: b.approve ? "PAPER_APPROVED" : "PAPER_RETURNED", entityType: "PaperVetting", entityId: v.id, metadata: { courseId: course.id, examType: v.examType, round: v.round } });
       return NextResponse.json({ ok: true });

@@ -74,6 +74,8 @@ export async function termReport(userId: string, t: Term) {
     adb.fypCoSupervisor.count({ where: { userId } }).catch(() => 0),
   ]);
   const rating = myRating(ratings as never, userId);
+  // The adjusted feedback score: allows for how strictly or generously each batch rated all its teachers this term.
+  const fb = chairmanId ? await import("./feedbackAnalysis").then((m) => m.termFeedback(chairmanId, { name: t.name, year: t.year })).then((tf) => tf.ranking.find((x) => x.teacherId === userId) || null).catch(() => null) : null;
   const planned = rows.reduce((a, r) => a + r.planned, 0), delivered = rows.reduce((a, r) => a + r.delivered, 0);
   // Trend: the last four terms before this one, light figures only.
   const trend = [];
@@ -87,7 +89,7 @@ export async function termReport(userId: string, t: Term) {
   return {
     teacher: { id: userId, name: who?.name || "—", department: who?.department_?.name || "" }, term: termLabel(t), courses: rows,
     totals: { courses: rows.length, sections: rows.reduce((a, r) => a + r.sections, 0), students: rows.reduce((a, r) => a + r.students, 0), creditHours: rows.reduce((a, r) => a + r.creditHours, 0) },
-    rating, delivery: { planned, delivered, pct: planned ? Math.round((100 * delivered) / planned) : null, attendanceSessions: rows.reduce((a, r) => a + r.attendanceSessions, 0) },
+    rating, feedback: fb ? { raw: fb.raw, adjusted: fb.adjusted, total: fb.total, n: fb.n, shown: fb.shown } : null, delivery: { planned, delivered, pct: planned ? Math.round((100 * delivered) / planned) : null, attendanceSessions: rows.reduce((a, r) => a + r.attendanceSessions, 0) },
     deadlines: card?.deadlines || null, results: card?.results || null, design: card?.design || null, recognition: card?.recognition || [],
     fyp: { groups: fyp as number, coSupervised: cosup as number }, fdpHours: fdp, alumni,
     cloAvg: avg(rows.map((r) => r.cloAvg).filter((x): x is number => x != null)), trend,

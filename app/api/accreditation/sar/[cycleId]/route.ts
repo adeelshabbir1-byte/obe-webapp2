@@ -19,7 +19,7 @@ async function access(cycleId: string) {
 export async function GET(_req: Request, { params }: { params: { cycleId: string } }) {
   const a = await access(params.cycleId);
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const r = await buildSar(params.cycleId);
+  const r = await buildSar(params.cycleId, a.user.id);
   if (!r) return NextResponse.json({ error: "not found" }, { status: 404 });
   await writeAuditLog({ actorUserId: a.user.id, action: "SAR_GENERATED", entityType: "AccreditationCycle", entityId: params.cycleId });
   return new NextResponse(r.buffer as unknown as BodyInit, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="${r.filename}"` } });

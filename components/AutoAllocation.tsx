@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import HowCalculated from "./HowCalculated";
 
 type Proposal = { key: string; kind: string; rowId: string; label: string; batchLabel: string; instructorId: string; instructorName: string; sections: number; score: number; reasons: string[] };
 type Load = { id: string; name: string; capacity: number; assigned: number; wish: { maxSections: number | null; remarks: string; updatedAt: string } | null; designation: string; specialization: string; unavailable: string };
@@ -38,6 +39,13 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
 
   return (
     <div>
+      <HowCalculated shows="A suggested allocation of every section still to be given. Nothing is saved until you apply it, and you can edit the matrix afterwards.">
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li>Each teacher gets points for each course: their stated priority for it; <b>4 points</b> per time they have taught it (up to 5 times — what they told us or what OBEHUB has on record, whichever is more); <b>+15</b> if they taught it last semester and <b>+20</b> if in the same term last year; students&apos; past rating of them on the course — the adjusted score, which allows for strict and generous batches (<b>+10</b> from 4/5, <b>+5</b> from 3.5, <b>−10</b> below 3, from 5 or more answers); a match with their specialization (<b>+12</b> for an elective, <b>+6</b> otherwise); their academic rank to settle close calls; <b>+8</b> if they already have a section of it; and a small deduction for each extra different course, to keep preparations few.</li>
+          <li>Courses with the fewest willing teachers are filled first, and nobody goes past their load: their wished number of sections if given, else their normal load less outside load.</li>
+          <li>The reasons behind each suggestion are listed beside it. Sections nobody can take go to &ldquo;Visiting Faculty (to be decided)&rdquo; and count towards the hiring need.</li>
+        </ul>
+      </HowCalculated>
       <div className="card">
         <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>
           OBEHUB scores each teacher for each section: stated priority (top 40, good 25, fifty-fifty 10); times taught, their own figure or the
@@ -85,6 +93,7 @@ export default function AutoAllocation({ onApplied }: { onApplied?: () => void }
             <div className="card" style={{ overflowX: "auto" }}>
               <b style={{ fontSize: 13 }}>Hiring gaps — {data.hiring.unfilledSections} section(s) without a teacher{data.hiring.fteNeeded ? ` · about ${data.hiring.fteNeeded} faculty to hire` : ""} · {data.hiring.spareSections} section(s) of room left in the pool</b>
               <ul style={{ fontSize: 12.5, margin: "6px 0" }}>{data.hiring.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
+              <a className="btn btn-secondary btn-sm" href={`/recruitment?area=${encodeURIComponent(data.hiring.rows[0]?.area || "")}&positions=${Math.max(1, Math.ceil(data.hiring.fteNeeded || 1))}`}>Ask to hire (Recruitment) →</a>
               {data.hiring.areas.length > 0 && (
                 <table style={{ fontSize: 12.5 }}>
                   <thead><tr><th>Area (weak first)</th><th style={{ textAlign: "center" }}>Open sections</th><th style={{ textAlign: "center" }}>Courses</th><th style={{ textAlign: "center" }}>One-teacher courses</th><th style={{ textAlign: "center" }}>Specialists</th></tr></thead>

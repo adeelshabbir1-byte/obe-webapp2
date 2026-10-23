@@ -8,6 +8,7 @@ import { sarScope } from "../sarAccess";
 import { MEETING_KINDS } from "../evidenceFiles";
 import { standardsFor, type BodyKey, type Standards } from "./bodies";
 import type { SourceKey, TaskDef } from "./catalogue";
+import { outcomeFiguresFor } from "../studentStatus";
 
 // What the system already knows for an accreditation task — so the assignee only checks it and signs off.
 // Each source returns a table, the checks it can settle against the council's standards, and named gaps (shown in red
@@ -214,7 +215,8 @@ async function surveys(l: SourceLoader): Promise<SourceResult> {
 }
 
 async function outcomes(l: SourceLoader): Promise<SourceResult> {
-  const rows = await prisma.outcomeFigure.findMany({ where: { leadId: l.ctx.leadId } as never, orderBy: { intakeYear: "desc" } }).catch(() => [] as { intakeYear: number; admitted: number; graduated: number; graduatedOnTime: number; droppedOut: number }[]);
+  // Computed from the student records; typed figures fill earlier years (lib/studentStatus.ts).
+  const rows = await outcomeFiguresFor(l.ctx.leadId).catch(() => []);
   return {
     key: "outcomes", title: "Intake and graduation figures", columns: ["Intake year", "Admitted", "Graduated", "On time", "Dropped out"],
     rows: rows.map((r) => [r.intakeYear, r.admitted, r.graduated, r.graduatedOnTime, r.droppedOut]),

@@ -68,7 +68,7 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
   const outcomeByCode = new Map<string, { code: string; title: string; creditHours: number; passed: boolean; lastGrade: string; lastTermName: string; lastTermYear: number }>();
   for (const r of historical) {
     // Non-credit deficiency courses record "P"/"F" with no GPA points.
-    const passed = r.grade === "P" || (r.gpaPoints !== null && r.gpaPoints > 0);
+    const passed = (r.grade === "P" || r.grade === "TR" || r.grade === "IT") || (r.gpaPoints !== null && r.gpaPoints > 0);
     const existing = outcomeByCode.get(r.courseCode);
     if (passed) {
       outcomeByCode.set(r.courseCode, { code: r.courseCode, title: r.courseTitle, creditHours: r.creditHours, passed: true, lastGrade: r.grade, lastTermName: r.termName, lastTermYear: r.termYear });

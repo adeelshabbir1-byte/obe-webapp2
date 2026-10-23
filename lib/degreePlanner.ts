@@ -281,7 +281,7 @@ export async function loadPlanInput(studentId: string, shared?: { offerings: Map
     savedLoads(studentId),
   ]);
   const best = new Map<string, number>();
-  for (const r of records) { const k = up(r.courseCode); const gp = r.grade === "P" ? 4 : r.gpaPoints ?? 0; best.set(k, Math.max(best.get(k) ?? -1, gp)); }
+  for (const r of records) { const k = up(r.courseCode); const gp = (r.grade === "P" || r.grade === "TR" || r.grade === "IT") ? 4 : r.gpaPoints ?? 0; best.set(k, Math.max(best.get(k) ?? -1, gp)); }
   const done = new Set(Array.from(best.entries()).filter(([, gp]) => gp > 0).map(([k]) => k));
   const retake = new Set(Array.from(best.entries()).filter(([, gp]) => gp < LOW_GRADE_POINTS).map(([k]) => k));
   const attempted = new Set(best.keys());

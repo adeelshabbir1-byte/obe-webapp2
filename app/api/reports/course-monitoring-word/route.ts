@@ -5,6 +5,8 @@ import { canViewReports, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { prisma } from "../../../../lib/db";
 import { computeTopicVariance } from "../../../../lib/varianceReport";
 import { buildDocxResponse, logoImageOptions } from "../../../../lib/docxExport";
+import { titlesFor } from "../../../../lib/titles";
+import { instituteOfUser } from "../../../../lib/moduleLocks";
 
 const PAGE_WIDTH_DXA = 12240;
 const MARGIN_DXA = 1440;
@@ -23,6 +25,7 @@ function labelValueRow(label: string, value: string) {
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
+  const signTitle = (await titlesFor(user ? await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }).catch(() => null) : null)).PROGRAM_LEAD.title;
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const courseId = req.nextUrl.searchParams.get("courseId");
@@ -75,7 +78,7 @@ export async function GET(req: NextRequest) {
         new Paragraph({ text: "" }),
         new Paragraph({ children: [new TextRun({ text: "Instructor Signature: _______________________________          Date: _______________", size: 20 })] }),
         new Paragraph({ text: "" }),
-        new Paragraph({ children: [new TextRun({ text: "Program Coordinator Signature: _______________________________          Date: _______________", size: 20 })] }),
+        new Paragraph({ children: [new TextRun({ text: `${signTitle} Signature: _______________________________          Date: _______________`, size: 20 })] }),
       ],
     }],
   });

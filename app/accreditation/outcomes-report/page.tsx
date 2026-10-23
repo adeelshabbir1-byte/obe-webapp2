@@ -7,6 +7,7 @@ import { SOURCES } from "../../../lib/indirectPlo";
 import PrintButton from "../../../components/PrintButton";
 import { bodyOfProgram } from "../../../lib/accreditation/bodies";
 import { chairmanIdFor } from "../../../lib/reportScope";
+import HowCalculated from "../../../components/HowCalculated";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,14 @@ export default async function OutcomesReport({ searchParams }: { searchParams: {
   const td = { border: "1px solid #999", padding: "4px 6px", fontSize: 12, verticalAlign: "top" as const };
   return (
     <main style={{ maxWidth: 1000, margin: "20px auto", padding: 16, fontSize: 13.5 }}>
+      <HowCalculated shows="One cohort's outcome evidence laid out in the vocabulary of the program's council (NCEAC, PEC or ABET style).">
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <li><b>GA attainment</b> comes from the direct measure (students' marks on the assessments mapped to each GA) combined with the indirect measure (surveys and course-exit ratings), as on Direct &amp; Indirect GAs.</li>
+          <li><b>Course results</b> come from the finalised transcript records of the batch: number of students, failures, and for each CLO the share of students who attained it.</li>
+          <li><b>CQI</b> lists the findings and actions recorded for the batch, with the metric before and after.</li>
+          <li>Work samples and verified portfolio items are counted from what teachers and students have uploaded.</li>
+        </ul>
+      </HowCalculated>
       <form className="no-print card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <a href="/dashboard" className="btn btn-secondary btn-sm">← Back</a>
         <select name="batch" defaultValue={sel?.id}>{batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}</select>

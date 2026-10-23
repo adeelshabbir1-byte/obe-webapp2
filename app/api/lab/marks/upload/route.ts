@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { labAccessFor } from "../../../../../lib/labAccess";
+import { labMarksLocked } from "../../../../../lib/labTheory";
 import { parseLabMarks } from "../../../../../lib/labMarksSheet";
 import { writeAuditLog } from "../../../../../lib/audit";
 
@@ -13,6 +14,7 @@ export async function POST(req: Request) {
   const file = form.get("file") as File | null;
   const access = user ? await labAccessFor(user, courseId) : null;
   if (!user || !access || access.as !== "ENGINEER") return NextResponse.json({ error: "Only the Lab Engineer of this lab can upload lab marks." }, { status: 403 });
+  { const lk = await labMarksLocked(access.lab.id); if (lk) return NextResponse.json({ error: lk }, { status: 409 }); }
   if (!file || file.size === 0) return NextResponse.json({ error: "Choose the filled-in sheet." }, { status: 400 });
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "The file is larger than 5 MB." }, { status: 400 });
   const p = await parseLabMarks(access.lab.id, file);

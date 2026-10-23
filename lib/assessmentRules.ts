@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "./db";
 import { directClos } from "./directClo";
+import { approverFor } from "./approvers";
 
 // The OMC's limits on assessment types, e.g. "Quiz + Assignment at most 25% of the course" or "of each CLO's marks at
 // most 25% from Quiz + Assignment", "Final at least 40%". A plan that breaks a rule can still be saved, but it is marked
@@ -83,7 +84,9 @@ export async function canDecide(user: { id: string; role: string; managedById: s
   const c = await prisma.course.findUnique({ where: { id: courseId }, select: { coordinator: { select: { managedById: true, departmentId: true } } } });
   if (!c || c.coordinator.managedById !== user.managedById) return false;
   if (user.role === "OMC") return true;
-  return user.role === "HEAD_OF_DEPARTMENT" && !!user.departmentId && user.departmentId === c.coordinator.departmentId;
+  if (user.role === "HEAD_OF_DEPARTMENT" && !!user.departmentId && user.departmentId === c.coordinator.departmentId) return true;
+  // Acting for the HoD, or covering the position while it is vacant or switched off.
+  return !!user.managedById && (await approverFor(user.managedById, "HEAD_OF_DEPARTMENT", { departmentId: c.coordinator.departmentId })).ids.includes(user.id);
 }
 
 /** Every offered course of these Program Leads with breaches (for the OMC / HOD list). */

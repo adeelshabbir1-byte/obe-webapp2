@@ -7,6 +7,7 @@ import { ALLOWED_TYPES, MAX_FILE_BYTES } from "../../../../../lib/evidenceFiles"
 import { accessWindow, assignablePeople, canWorkOn, def as taskDefOf, govScope, inScope, parseData } from "../../../../../lib/accreditation/governance";
 import { SourceLoader } from "../../../../../lib/accreditation/sources";
 import type { BodyKey } from "../../../../../lib/accreditation/bodies";
+import { approverFor } from "../../../../../lib/approvers";
 
 const MISSING = "Accreditation governance needs prisma/migration_accreditation_governance.sql to be run in Supabase first.";
 const dateOf = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null);
@@ -20,10 +21,12 @@ async function load(id: string) {
   const cycle = await prisma.accreditationCycle.findUnique({ where: { id: t.cycleId } });
   if (!cycle) return { user, t: null as null };
   const s = await govScope(user);
-  const managing = !!s?.canManage && inScope(s, cycle);
+  // Managers in scope, plus whoever acts for or covers the department's Chairman/HoD (lib/approvers.ts).
+  const covering = (await approverFor(cycle.chairmanId, "HEAD_OF_DEPARTMENT", { departmentId: cycle.departmentId })).ids;
+  const managing = (!!s?.canManage && inScope(s, cycle)) || covering.includes(user.id);
   const viewing = managing || (!!s && inScope(s, cycle)) || t.assigneeId === user.id;
   const d = taskDefOf(cycle.body, t.code);
-  return { user, t, cycle, s, managing, viewing, d };
+  return { user, t, cycle, s, managing, viewing, d, covering };
 }
 const event = (taskId: string, action: string, byId: string, toId?: string | null, note?: string | null) =>
   prisma.accreditationTask.update({ where: { id: taskId }, data: { updatedAt: new Date() } }).then(() => prisma.accreditationTaskEvent.create({ data: { taskId, action, byId, toId: toId || null, note: note || null } }));
@@ -48,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const x = await load(params.id);
     if (!x) return NextResponse.json({ error: "Sign in again." }, { status: 401 });
     if (!x.t || !x.viewing || !x.d) return NextResponse.json({ error: "not found" }, { status: 404 });
-    const { user, t, cycle, s, managing, d } = x;
+    const { user, t, cycle, s, managing, d, covering } = x;
     const working = canWorkOn(user.id, t, cycle);
     const now = new Date();
     const notManager = () => NextResponse.json({ error: "Only the Institute Head, the Dean or the Chairman can do this." }, { status: 403 });
@@ -132,7 +135,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         if (d.checklist.some((c) => !dd.checked?.[c])) return NextResponse.json({ error: "Tick every point of the checklist first (explain in the notes what isn't so)." }, { status: 400 });
         await prisma.accreditationTask.update({ where: { id: t.id }, data: { status: "SUBMITTED", submittedAt: now, submittedById: user.id } });
         await event(t.id, "SUBMITTED", user.id);
-        await notifyUsers([t.assignedById], { kind: "ACCREDITATION", title: `Accreditation task signed off: ${d.code} ${d.title}`, body: `${user.name} has verified it for ${cycle.title}.`, href: href(t.id), exceptId: user.id });
+        await notifyUsers([t.assignedById, ...covering], { kind: "ACCREDITATION", title: `Accreditation task signed off: ${d.code} ${d.title}`, body: `${user.name} has verified it for ${cycle.title}.`, href: href(t.id), exceptId: user.id });
         return NextResponse.json({ ok: true });
       }
       case "approve": {

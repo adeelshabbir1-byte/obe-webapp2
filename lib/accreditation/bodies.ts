@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { NCEAC_DEFAULTS, type ReadinessStandards } from "../readiness";
+import { NCEAC_DEFAULTS, type ReadinessStandards } from "../readinessDefaults";
 
 // Which accreditation council governs each program, and the thresholds the institute applies to that council's programs.
 //

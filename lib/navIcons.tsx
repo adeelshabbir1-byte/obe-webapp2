@@ -15,6 +15,17 @@ import {
 // icon for the same *kind* of thing (all reports get BarChart3, all
 // course lists get BookOpen, etc.) reads faster than novelty would.
 const ICONS_BY_LABEL: Record<string, LucideIcon> = {
+  "My Approvals": UserCheck,
+  "Institute Dashboard": Target,
+  "Signed Documents": ListChecks,
+  "Counselling": Users,
+  "Library Desk": BookOpen,
+  "Lab Equipment & Assets": Layers,
+  "Recruitment": UserPlus,
+  "Research & ORIC": Target,
+  "OBEHUB Plan & Invoices": ListChecks,
+  "Billing": ListChecks,
+  "Official Transcripts": BookOpen,
   "Faculty Onboarding": UserPlus,
   "Degree Programs & Batches": Layers,
   "Courses": BookOpen,

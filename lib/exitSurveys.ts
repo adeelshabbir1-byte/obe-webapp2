@@ -57,6 +57,11 @@ export async function onStudentStatus(studentId: string, status: string, byUserI
       const link = await createExit(cid, "STUDENT_EXIT", st.id, st.name, byUserId);
       await alertStudents(cid, [st.id], "BROADCAST", "Please tell us why you are leaving", `${appBase()}${link}`, false);
     } else if (status === "GRADUATED") {
+      // The graduate joins the alumni register (pending the Alumni Data Custodian's check, like any alumni entry).
+      const full = await prisma.student.findUnique({ where: { id: st.id }, select: { rollNumber: true, statusDate: true, batch: { select: { degreeProgram: true } } } });
+      if (full && cid && !(await prisma.alumni.findFirst({ where: { chairmanId: cid, rollNumber: full.rollNumber } }))) {
+        await prisma.alumni.create({ data: { chairmanId: cid, name: st.name, rollNumber: full.rollNumber, degreeProgram: full.batch.degreeProgram, graduationYear: (full.statusDate || new Date()).getUTCFullYear(), addedById: byUserId, status: "PENDING" } }).catch(() => null);
+      }
       const tpl = await prisma.surveyTemplate.findFirst({ where: { coordinatorId: st.batch.coordinatorId, stakeholderType: "STUDENT", title: { startsWith: "Graduating Student Exit Survey" } }, orderBy: { createdAt: "desc" } });
       if (!tpl || (await prisma.surveyResponse.count({ where: { surveyTemplateId: tpl.id, studentId: st.id } }))) return;
       const token = crypto.randomBytes(18).toString("base64url");

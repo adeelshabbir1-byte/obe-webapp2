@@ -49,12 +49,23 @@ export async function getAuthenticatedStudent() {
   if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
 
   const { passwordHash, ...safeStudent } = session.student;
+  // A student who left, was dropped, froze, transferred out or was rusticated keeps read-only access (transcript, fees):
+  // nothing can be changed, and once the institute's access period ends the portal is closed (lib/studentStatus.ts).
+  if (["LEFT", "DROPPED", "FROZEN", "TRANSFERRED", "RUSTICATED"].includes(session.student.status)) {
+    let method = "GET", p = "";
+    try { method = headers().get("x-method") || "GET"; p = headers().get("x-pathname") || ""; } catch { /* outside a request */ }
+    if (method !== "GET" && !/^\/api\/student\/(logout|login)/.test(p)) return null;
+    const acc = await (prisma as unknown as Record<string, any>).studentAccess?.findUnique({ where: { studentId: session.student.id } }).catch(() => null);
+    if (acc?.readOnlyUntil && new Date(acc.readOnlyUntil) < new Date()) return null;
+  }
   // Licensing: student pages of a module the institute has not bought are closed.
   let reqPath = "";
   try { reqPath = headers().get("x-pathname") || ""; } catch { reqPath = ""; }
   if (reqPath && session.student.batchId) {
-    const locked = await lockedModuleForPath(await instituteOfBatch(session.student.batchId).catch(() => null), reqPath).catch(() => null);
+    const inst = await instituteOfBatch(session.student.batchId).catch(() => null);
+    const locked = await lockedModuleForPath(inst, reqPath).catch(() => null);
     if (locked) { if (reqPath.startsWith("/api/")) return null; redirect(`/student/dashboard?locked=${locked}`); }
+    if (reqPath.startsWith("/api/")) { let method = "GET"; try { method = headers().get("x-method") || "GET"; } catch { method = "GET"; } if (await (await import("./billing")).blockedWrite(inst, reqPath, method).catch(() => null)) return null; }
   }
   return safeStudent;
 }

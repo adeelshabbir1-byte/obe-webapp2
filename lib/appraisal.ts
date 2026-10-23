@@ -117,6 +117,15 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
     { key: "results", label: "Course results approved", value: ids.length ? `${res.approved} of ${ids.length}` : "—", score: pct(res.approved, ids.length) },
     { key: "rubrics", label: "Assignments / projects / labs with a rubric", value: res.rubricCoverage !== null ? `${res.rubricCoverage}%` : "—", score: res.rubricCoverage },
   ];
+  // Student feedback for the year, adjusted for how strictly or generously each batch rates (see Course & Teacher Evaluations).
+  const chairmanIdFb = user?.managedById ? await import("./reportScope").then((m) => m.chairmanIdFor({ id: userId, role: "INSTRUCTOR", managedById: user.managedById })).catch(() => "") : "";
+  if (chairmanIdFb) {
+    const { termFeedback } = await import("./feedbackAnalysis");
+    const fbs = (await Promise.all([{ name: "Spring", year }, { name: "Fall", year }].map((t) => termFeedback(chairmanIdFb, t).then((tf) => tf.ranking.find((x) => x.teacherId === userId && x.shown && x.adjusted !== null) || null).catch(() => null)))).filter((x): x is NonNullable<typeof x> => !!x);
+    const n = fbs.reduce((a, f) => a + f.n, 0);
+    const adj = n ? Math.round((100 * fbs.reduce((a, f) => a + (f.adjusted as number) * f.n, 0)) / n) / 100 : null;
+    indicators.push({ key: "feedback", label: "Student feedback (adjusted for batch strictness)", value: adj !== null ? `${adj}/5 (${n} answers)` : "too few answers", score: adj !== null ? Math.round((adj / 5) * 100) : null });
+  }
   const scored = indicators.filter((i) => i.score !== null) as { score: number }[];
   return {
     teacher: { id: userId, name: user?.name || "—", department: user?.department_?.name || null }, year,

@@ -52,7 +52,7 @@ export async function loadScheme(studentId: string) {
     prisma.course.findMany({ where: { batchId: batch.id }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, isNonCredit: true, courseType: true } }),
   ]);
   const key = (c: string) => c.trim().toUpperCase();
-  const passed = (g: { grade: string; gpaPoints: number | null }) => g.grade === "P" || (g.gpaPoints !== null && g.gpaPoints > 0);
+  const passed = (g: { grade: string; gpaPoints: number | null }) => (g.grade === "P" || g.grade === "TR" || g.grade === "IT") || (g.gpaPoints !== null && g.gpaPoints > 0);
   // Best attempt per course decides whether it is done and whether it is a low grade worth repeating.
   const best = new Map<string, (typeof records)[number]>();
   for (const r of records) { const b = best.get(key(r.courseCode)); if (!b || (r.gpaPoints ?? -1) > (b.gpaPoints ?? -1)) best.set(key(r.courseCode), r); }

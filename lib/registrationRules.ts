@@ -61,7 +61,7 @@ export async function studentContext(studentId: string, termName?: string) {
   ]);
   const cgpa = await computeCgpa(studentId);
   const passed = new Map<string, number>();
-  for (const r of records) if ((r.gpaPoints !== null && r.gpaPoints > 0) || r.grade === "P") passed.set(up(r.courseCode), r.creditHours);
+  for (const r of records) if ((r.gpaPoints !== null && r.gpaPoints > 0) || (r.grade === "P" || r.grade === "TR" || r.grade === "IT")) passed.set(up(r.courseCode), r.creditHours);
   const attempted = new Set(records.map((r) => up(r.courseCode)));
   const lastSem = Math.max(8, programMax._max.semesterNumber || 0);
   return {

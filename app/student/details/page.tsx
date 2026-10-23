@@ -5,7 +5,9 @@ import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import StudentShell from "../../../components/StudentShell";
 import DetailsForm from "../../../components/DetailsForm";
 import { studentDetails } from "../../../lib/aas";
-import { selfFields } from "../../../lib/aasFields";
+import { selfFields, canonValues } from "../../../lib/aasFields";
+import { portalLists } from "../../../lib/nceacPortal";
+import { instituteOfBatch } from "../../../lib/moduleLocks";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function StudentDetailsPage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Details</h1>
       <StudentPhotoUpload />
       <div className="card">
-        <DetailsForm fields={selfFields("student")} values={{ nationality: "Pakistani", ...v }} endpoint="/api/student/details" note="Your institute sends these to NCEAC (the national computing accreditation council) for accreditation. Fill them exactly as on your CNIC and your SSC / HSSC certificates. Dates as dd/mm/yyyy, CNIC as xxxxx-xxxxxxx-x." />
+        <DetailsForm fields={selfFields("student", await portalLists(await instituteOfBatch(s.batchId).catch(() => null)))} values={canonValues("student", { nationality: "Pakistani", ...v })} endpoint="/api/student/details" note="Your institute sends these to NCEAC (the national computing accreditation council) for accreditation. Fill them exactly as on your CNIC and your SSC / HSSC certificates. Dates as dd/mm/yyyy, CNIC as xxxxx-xxxxxxx-x." />
       </div>
     <div className="card" style={{ maxWidth: 900, margin: "12px auto" }}><b>For your parents</b><p className="small-note">A read-only link showing your attendance, marks so far, results and fees. It goes to the guardian number you saved; you can turn it off.</p><KeyButton url="/api/parent-link" body={{ action: "create" }} label="Make a parent link" /> <KeyButton url="/api/parent-link" body={{ action: "revoke" }} label="Turn off parent links" /></div>
       </StudentShell>
