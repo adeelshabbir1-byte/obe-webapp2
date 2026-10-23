@@ -7289,3 +7289,30 @@ model DebarEntry {
   @@unique([sessionId, courseId, studentId])
   @@index([studentId])
 }
+
+// One run of the Data Import hub (lib/dataImport.ts): what was imported, and the ids it created so it can be undone.
+model ImportLog {
+  id             String    @id
+  chairmanId     String
+  kind           String
+  fileName       String
+  targetJson     String    @default("{}")
+  rows           Int       @default(0)
+  created        Int       @default(0)
+  skipped        Int       @default(0)
+  createdIdsJson String    @default("[]")
+  status         String    @default("DONE") // DONE | UNDONE
+  byId           String
+  createdAt      DateTime  @default(now())
+  undoneAt       DateTime?
+
+  @@index([chairmanId, createdAt])
+}
+
+// What a student wants by SMS / WhatsApp (in-app notices always appear). offJson = kinds switched off.
+model StudentAlertPref {
+  studentId    String   @id
+  offJson      String   @default("[]")
+  parentWeekly Boolean  @default(true)
+  updatedAt    DateTime @default(now())
+}

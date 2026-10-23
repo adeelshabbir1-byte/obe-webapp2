@@ -6,7 +6,7 @@ import { chairmanIdFor } from "./reportScope";
 // WhatsApp: Meta WhatsApp Cloud API (approved template with two text parameters) or Twilio WhatsApp.
 export const xdb = prisma as unknown as Record<string, any>;
 export type MsgConfig = { chairmanId: string; smsProvider: string; smsJson: string; waProvider: string; waJson: string; kindsJson: string; dailyLimit: number };
-export const ALERT_KINDS: [string, string][] = [["DEADLINE", "Deadlines and reminders"], ["ASSIGNMENT", "New assignments of work"], ["RESULT", "Result submitted / approved"], ["GRADE_CHANGE", "Grade changes"], ["QUIZ", "Online quiz opened (students)"], ["HANDIN", "New hand-in opened (students)"], ["RESULT_STUDENT", "Results published (students)"], ["BROADCAST", "Messages sent from this page"]];
+export const ALERT_KINDS: [string, string][] = [["DEADLINE", "Deadlines and reminders"], ["ASSIGNMENT", "New assignments of work"], ["RESULT", "Result submitted / approved"], ["GRADE_CHANGE", "Grade changes"], ["QUIZ", "Online quiz opened (students)"], ["HANDIN", "New hand-in opened (students)"], ["RESULT_STUDENT", "Results published (students)"], ["BROADCAST", "Messages sent from this page"], ["REGISTRATION", "Registration and advisor decisions (students)"], ["HOLD", "Registration holds (students)"], ["ATTENDANCE", "Attendance below the limit (students, weekly)"], ["FEE", "Fee invoices, dues, receipts (students)"], ["FEEDBACK", "Feedback windows (students)"], ["STATUS", "Status changes (students)"], ["EXAM", "Exams and debarred lists (students)"], ["PARENT_SUMMARY", "Weekly summary to parents / guardians"]];
 
 /** Pakistani numbers to international form: 0300-1234567 → +923001234567. */
 export function normPhone(raw: string | null | undefined): string | null {

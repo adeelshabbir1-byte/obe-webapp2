@@ -12,7 +12,7 @@ export const CORE: Record<string, [string, string[]][]> = {
     ["People & structure", ["/chairman/org-chart", "/chairman/people", "/leave-approvals"]],
     ["Academics", ["/results-approval", "/academic-calendar", "/academic-rules"]],
     ["Accreditation", ["/accreditation-overview", "/accreditation/readiness"]],
-    ["Institute", ["/chairman/institute-settings", "/billing"]],
+    ["Institute", ["/chairman/institute-settings", "/data-import", "/controller", "/chairman/backups", "/billing"]],
   ],
   DEAN: [
     ["Today", ["/dean/overview", "/approvals", "/head-dashboard", "/deadlines"]],
@@ -30,13 +30,13 @@ export const CORE: Record<string, [string, string[]][]> = {
     ["Today", ["/approvals", "/deadlines", "/requests"]],
     ["Semester", ["/coordinator/semester", "/coordinator/timetable", "/coordinator/calendar"]],
     ["Program", ["/coordinator/batches", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/plos"]],
-    ["Students", ["/coordinator/students", "/coordinator/student-transcript"]],
+    ["Students", ["/coordinator/students", "/coordinator/student-transcript", "/data-import"]],
     ["Accreditation", ["/accreditation/tasks", "/accreditation/readiness", "/coordinator/evidence"]],
   ],
   DEPARTMENT_COORDINATOR: [
     ["Today", ["/dept-coordinator/home", "/approvals", "/deadlines"]],
     ["Semester", ["/coordinator/semester", "/coordinator/timetable", "/coordinator/calendar"]],
-    ["Students", ["/coordinator/students", "/coordinator/bulk-student-upload"]],
+    ["Students", ["/coordinator/students", "/coordinator/bulk-student-upload", "/data-import"]],
     ["Accreditation", ["/accreditation/tasks", "/accreditation/readiness"]],
   ],
   OMC: [

@@ -179,9 +179,12 @@ export async function decide(user: { id: string; name: string }, id: string, app
   if (!approve) {
     await sdb.studentStatusRequest.update({ where: { id }, data: { status: "REJECTED", decidedAt: new Date() } });
     await notifyUsers([r.raisedById], { kind: "REQUEST", title: `Not approved: ${TYPES[r.type].label}`, body: `${user.name}: ${remarks}`, href: `/status-changes?id=${id}` });
+    await (await import("./studentAlerts")).tellStudents([r.studentId], "STATUS", `Not approved: ${TYPES[r.type].label}`, remarks);
     return;
   }
   await advance(id, user.id);
+  const after = (await sdb.studentStatusRequest.findUnique({ where: { id } })) as Req | null;
+  if (after?.status === "APPROVED") await (await import("./studentAlerts")).tellStudents([r.studentId], "STATUS", `Approved: ${TYPES[r.type].label}`, r.effectiveDate <= new Date() ? "It has been applied." : `It takes effect on ${r.effectiveDate.toISOString().slice(0, 10)}.`);
 }
 
 /** Decide a carried-over / transferred-in course (the Program Lead of the program the credit counts in). */

@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       const next = { ...inv, paid: inv.paid + amount };
       await edb.feeInvoice.update({ where: { id: inv.id }, data: { paid: next.paid, status: statusOf(next) } });
       await post(acc.chairmanId, user.id, `Fee received (${method.toLowerCase()})`, [[method === "CASH" ? "1000" : "1010", amount, 0], ["1100", 0, amount]], "FEE_PAYMENT", inv.id);
+      await (await import("../../../lib/studentAlerts")).tellStudents([inv.studentId], "FEE", `Fee received: Rs ${amount.toLocaleString("en-PK")}`, `Thank you. Remaining: Rs ${Math.max(0, inv.amount - inv.discount + inv.fine - next.paid).toLocaleString("en-PK")}.`, "/student/fees");
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "unknown action" }, { status: 400 });

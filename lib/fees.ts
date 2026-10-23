@@ -42,6 +42,7 @@ export async function issueForBatch(chairmanId: string, userId: string, batchId:
     const byAcct = new Map<string, number>(); lines.forEach((l) => byAcct.set(l.account, (byAcct.get(l.account) || 0) + l.amount));
     await post(chairmanId, userId, `Fee invoice ${termName} ${termYear}`, [["1100", amount, 0], ...Array.from(byAcct.entries()).map(([a, v]) => [a, 0, v] as [string, number, number])], "FEE_INVOICE", inv.id);
     made++;
+    await (await import("./studentAlerts")).tellStudents([s.id], "FEE", `Fee invoice ${termName} ${termYear}: Rs ${amount.toLocaleString("en-PK")}`, `Due on ${dueDate.toDateString()}.`, "/student/fees");
   }
   return { made };
 }

@@ -43,7 +43,7 @@ export async function attemptLogin(usernameOrEmail: string, password: string, ip
   const genericFailure = { ok: false as const, reason: "invalid_credentials" as const };
 
   if (!user || !user.isActive) {
-    await writeAuditLog({ action: "LOGIN_FAILED", metadata: { reason: "not_found_or_inactive" } });
+    await writeAuditLog({ action: "LOGIN_FAILED", metadata: { reason: "not_found_or_inactive", ip: ip?.split(",")[0].trim() || null } });
     return genericFailure;
   }
 
@@ -63,7 +63,7 @@ export async function attemptLogin(usernameOrEmail: string, password: string, ip
         lockedUntil: locked ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000) : null,
       },
     });
-    await writeAuditLog({ actorUserId: user.id, action: locked ? "ACCOUNT_TEMP_LOCKED" : "LOGIN_FAILED" });
+    await writeAuditLog({ actorUserId: user.id, action: locked ? "ACCOUNT_TEMP_LOCKED" : "LOGIN_FAILED", metadata: { ip: ip?.split(",")[0].trim() || null } });
     return genericFailure;
   }
 

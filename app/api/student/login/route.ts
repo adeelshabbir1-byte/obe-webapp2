@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/db";
 import { verifyPassword } from "../../../../lib/auth";
 import { createStudentSession } from "../../../../lib/studentSession";
 import { writeAuditLog } from "../../../../lib/audit";
+import { ipBlocked, ipOf } from "../../../../lib/rateLimit";
 
 // rollNumber is only unique WITHIN a batch (not institution-wide), so a
 // login can genuinely match more than one Student row — try each
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
   const recentFails = await prisma.auditLog.count({
     where: { action: "STUDENT_LOGIN_FAILED", createdAt: { gte: new Date(Date.now() - 15 * 60_000) }, metadata: { path: ["rollNumber"], equals: rollNumber } },
   });
+  if (await ipBlocked(ipOf(req.headers))) return NextResponse.json({ error: "Too many failed sign-ins from this network. Please wait 15 minutes." }, { status: 429 });
   if (recentFails >= 8) return NextResponse.json({ error: "Too many wrong attempts. Please wait 15 minutes and try again." }, { status: 429 });
 
   const candidates = await prisma.student.findMany({ where: { rollNumber } });
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
   // Two students with the same roll number and the same password: never guess which one is signing in.
   if (matches > 1) return NextResponse.json({ error: "More than one account matches these details. Please ask your Program Lead to fix the duplicate roll number." }, { status: 409 });
   if (!matched) {
-    await writeAuditLog({ action: "STUDENT_LOGIN_FAILED", metadata: { rollNumber } });
+    await writeAuditLog({ action: "STUDENT_LOGIN_FAILED", metadata: { rollNumber, ip: ipOf(req.headers) || null } });
     return genericError;
   }
 

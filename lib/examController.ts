@@ -159,9 +159,14 @@ export async function standingList(chairmanId: string, batchId: string) {
   const rules = await academicRules(chairmanId);
   const st = await prisma.student.findMany({ where: { batchId }, select: { id: true, name: true, rollNumber: true }, orderBy: { rollNumber: "asc" } });
   const rows = await Promise.all(st.map(async (s) => ({ ...s, cgpa: await computeCgpa(s.id) })));
-  rows.sort((a, b) => (b.cgpa ?? -1) - (a.cgpa ?? -1));
-  let pos = 0, last: number | null = -2;
-  return rows.map((r, i) => { if (r.cgpa !== last) { pos = i + 1; last = r.cgpa; } return { ...r, position: r.cgpa === null ? null : pos, standing: standingWith(r.cgpa, rules) }; });
+  return rankByCgpa(rows).map((r) => ({ ...r, standing: standingWith(r.cgpa, rules) }));
+}
+
+/** Merit order: highest CGPA first; equal CGPAs share a position (1, 2, 2, 4); no CGPA yet = no position, at the end. */
+export function rankByCgpa<T extends { cgpa: number | null }>(rows: T[]): (T & { position: number | null })[] {
+  const xs = rows.slice().sort((a, b) => (b.cgpa ?? -1) - (a.cgpa ?? -1));
+  let pos = 0, last: number | null | undefined;
+  return xs.map((r, i) => { if (r.cgpa !== last) { pos = i + 1; last = r.cgpa; } return { ...r, position: r.cgpa === null ? null : pos }; });
 }
 
 /** Dashboard counts. */

@@ -16,5 +16,6 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
   await prisma.registrationApprovalRequest.update({ where: { id: request.id }, data: { status: "REJECTED", reviewedById: user.id, reviewedAt: new Date(), reviewNote: body.note || null } });
   await writeAuditLog({ actorUserId: user.id, action: "REGISTRATION_APPROVAL_REJECTED", entityType: "Course", entityId: request.courseId, metadata: { studentId: request.studentId, note: body.note || "" } });
 
+  { const c = await prisma.course.findUnique({ where: { id: request.courseId }, select: { code: true } }); await (await import("../../../../../../lib/studentAlerts")).tellStudents([request.studentId], "REGISTRATION", `Advisor did not approve your request for ${c?.code || "the course"}`, body.note || undefined, "/student/registration"); }
   return NextResponse.json({ ok: true });
 }

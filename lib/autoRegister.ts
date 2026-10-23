@@ -75,6 +75,8 @@ export async function decideHold(holdId: string, courseIds: string[], by: { id: 
   if (!h) throw new Error("Not found.");
   if (courseIds.length) await prisma.studentEnrollment.createMany({ data: courseIds.map((courseId) => ({ studentId: h.studentId, courseId })), skipDuplicates: true });
   await adb.registrationHold.update({ where: { id: holdId }, data: { status: "DECIDED", decidedAt: new Date(), decidedById: by.id, note, coursesJson: JSON.stringify(courseIds) } });
+  const cs = courseIds.length ? await prisma.course.findMany({ where: { id: { in: courseIds } }, select: { code: true } }) : [];
+  await (await import("./studentAlerts")).tellStudents([h.studentId], "HOLD", cs.length ? `Your advisor registered you: ${cs.map((c) => c.code).join(", ")}` : "Your advisor decided your registration hold", note || undefined, "/student/registration");
   return h;
 }
 
