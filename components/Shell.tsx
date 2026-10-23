@@ -58,8 +58,11 @@ export default async function Shell({
   const dutyLinks = [
     ...(hats.includes("QEC_INCHARGE") ? [{ href: "/evaluations", label: "Course & Teacher Evaluations" }, { href: "/evaluations/questionnaires", label: "Feedback Questionnaires" }, { href: "/qaa", label: "QAA Self-Assessment" }, { href: "/plagiarism", label: "Plagiarism Records" }, { href: "/policy-history", label: "Policy Version History" }, { href: "/committees", label: "Committees" }, { href: "/faculty-sufficiency", label: "Faculty Qualification & Sufficiency" }, { href: "/signed-documents", label: "Signed Documents" }] : []),
     ...(hats.includes("EXAM_CONTROLLER") ? [{ href: "/academic-rules", label: "Academic Rules & Registration" }, { href: "/status-changes", label: "Student Status Changes" }, { href: "/degrees", label: "Degrees" }, { href: "/accommodations", label: "Student Accommodations" }, { href: "/official-transcript", label: "Official Transcripts" }, { href: "/signed-documents", label: "Signed Documents" }] : []),
-  ].filter((l) => !licensed.some((x) => x.href === l.href));
-  const rawLinks = [...(advises && needAdvisor ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }, ...(licensed.some((l) => l.href === "/status-changes") ? [] : [{ href: "/status-changes", label: "Student Status Changes" }])] : licensed), ...dutyLinks.filter((l) => !(advises && needAdvisor && l.href === "/status-changes")), ...(counsellor && !licensed.some((l) => l.href === "/counselling") ? [{ href: "/counselling", label: "Counselling" }] : [])];
+  ];
+  // Duty pages head the "My duties" group of the lighter menu (lib/roleMenus.ts).
+  const dutyHrefs = [...(advises ? ["/advisor/dashboard", "/advisor/registration-holds"] : []), ...(counsellor ? ["/counselling"] : []), ...dutyLinks.map((l) => l.href)];
+  const dutyOnly = dutyLinks.filter((l) => !licensed.some((x) => x.href === l.href));
+  const rawLinks = [...(advises && needAdvisor ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }, ...(licensed.some((l) => l.href === "/status-changes") ? [] : [{ href: "/status-changes", label: "Student Status Changes" }])] : licensed), ...dutyOnly.filter((l) => !(advises && needAdvisor && l.href === "/status-changes")), ...(counsellor && !licensed.some((l) => l.href === "/counselling") ? [{ href: "/counselling", label: "Counselling" }] : [])];
   // The institute's own position titles (VC, Director of School …) replace the default names in the menu and role label.
   const titles = await titlesFor(user && user.role !== "SUPER_USER" ? await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null) : null);
   // My Approvals: every member of staff gets it, with a count of what is waiting for them (cached for a few minutes).
@@ -85,6 +88,8 @@ export default async function Shell({
       userName={userName}
       userPhoto={userPhoto}
       navLinks={links}
+      menuRole={role}
+      dutyHrefs={dutyHrefs}
       branding={branding}
       roleSwitch={sessionInfo?.dualCapable ? sessionInfo : null}
       deptCoordinator={sessionInfo?.deptCoordinator || null}

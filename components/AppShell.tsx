@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText, CalendarDays, Home, Inbox, ChevronDown, ChevronRight, Search, History, ChevronsDownUp, ChevronsUpDown, ChevronUp, KeyRound , MessageSquarePlus, LifeBuoy, Star, RotateCcw } from "lucide-react";
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
+import { splitMenu } from "../lib/roleMenus";
 import { getNavIcon } from "../lib/navIcons";
 import { greetingName, initials } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
@@ -40,6 +41,8 @@ export default function AppShell({
   userName,
   userPhoto,
   navLinks,
+  menuRole = "",
+  dutyHrefs = [],
   branding,
   roleSwitch,
   deptCoordinator: deptCoordinatorProp,
@@ -57,6 +60,8 @@ export default function AppShell({
   userName: string;
   userPhoto?: string | null;
   navLinks: NavLink[];
+  menuRole?: string;
+  dutyHrefs?: string[];
   branding: Branding;
   roleSwitch: SessionInfo | null;
   deptCoordinator: SessionInfo["deptCoordinator"];
@@ -121,15 +126,19 @@ export default function AppShell({
       ? withRequests.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href))
       : withRequests;
   }, [navLinks, deptCoordinator]);
-  const sections = useMemo(() => groupNavLinks(links), [links]);
-  const crowded = sections.length > 2;
+  // Lighter menus: the main menu holds what this role acts on; other pages and view-only reports fold away below.
+  const allSections = useMemo(() => groupNavLinks(links), [links]);
+  const split = useMemo(() => (deptCoordinator ? null : splitMenu(menuRole, links, dutyHrefs, groupNavLinks)), [menuRole, links, dutyHrefs, deptCoordinator]);
+  const sections = split ? split.main : allSections;
+  const [extraOpen, setExtraOpen] = useState<"" | "more" | "view">("");
+  const crowded = !split && sections.length > 2;
 
   // Pages whose own menu already links to the dashboard don't get a second "Home" entry.
   const showHome = !links.some((l) => l.href === "/dashboard");
   const allLinks = useMemo(() => (showHome ? [{ href: "/dashboard", label: "Home" }, ...links] : links), [links, showHome]);
   const current = activeHref(pathname, allLinks);
   const currentLink = allLinks.find((l) => l.href === current);
-  const currentSection = sections.find((s) => s.links.some((l) => l.href === current))?.title;
+  const currentSection = allSections.find((s) => s.links.some((l) => l.href === current))?.title;
   const crumb = currentLink ? [currentSection, currentLink.label].filter(Boolean).join("  ›  ") : "Workspace";
 
   // Which sections are open is remembered per role on this computer, so the menu looks the same on every page.
@@ -161,7 +170,7 @@ export default function AppShell({
   const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const q = norm(query);
   const results = q
-    ? sections.flatMap((sec) => sec.links.map((l) => ({ ...l, section: sec.title })))
+    ? allSections.flatMap((sec) => sec.links.map((l) => ({ ...l, section: sec.title })))
         .filter((l) => q.split(" ").every((w) => norm(`${l.label} ${l.section}`).includes(w)))
         .sort((a, b) => Number(!norm(a.label).startsWith(q)) - Number(!norm(b.label).startsWith(q)))
     : [];
@@ -399,6 +408,31 @@ export default function AppShell({
                     </Link>
                   );
                 })}
+              </div>
+            );
+          })}
+          {!q && split && ([["more", "More pages", split.more], ["view", "Reports (view only)", split.view]] as const).map(([key, title, secs]) => {
+            const n = secs.reduce((a, x) => a + x.links.length, 0);
+            if (!n) return null;
+            const open = extraOpen === key || secs.some((x) => x.links.some((l) => l.href === current));
+            return (
+              <div className="sb-section" key={key}>
+                <button type="button" className="sb-section-title" data-collapsible="true" aria-expanded={open} onClick={() => setExtraOpen(extraOpen === key ? "" : key)}>
+                  <span>{title}</span><span className="sb-sec-right">{!open && <span className="sb-count">{n}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>
+                </button>
+                {open && secs.map((sec) => (
+                  <div key={sec.title}>
+                    <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".05em", opacity: 0.6, padding: "6px 14px 2px" }}>{sec.title}</div>
+                    {sec.links.map((l) => {
+                      const Icon = getNavIcon(l.label);
+                      return (
+                        <Link key={l.href} href={l.href} prefetch={false} className="nav-link nl-compact" aria-current={l.href === current ? "page" : undefined} title={l.label}>
+                          <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span><span className="nl-label">{l.label}</span>{star(l.href)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             );
           })}
