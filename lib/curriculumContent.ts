@@ -4,6 +4,7 @@ import { HEC_COURSE_SEED_CONTENT } from "../prisma/hec-course-seed-content";
 import { HEC_GE_IDS_SEED_CONTENT } from "../prisma/hec-ge-ids-seed-content";
 import { HEC_CS25_ELECTIVE_CLOS } from "./hecCs2025Clos";
 import { PU_BSCS_2021 } from "./puBscs2021";
+import { CD2023_PLOS, CD2023_COURSES } from "./computing2023Content";
 
 // Fills a master curriculum with what makes it a master copy: semester numbers, PLOs, CLOs (each mapped to a PLO)
 // and a 32-lecture plan whose lectures are mapped to CLOs. Only empty things are filled — nothing typed by a person
@@ -63,7 +64,26 @@ const PU_2021: Pack = {
     return c ? { code: c.code, description: c.description, textbook: c.textbook, reference: c.reference, prerequisite: c.prerequisite } : null;
   },
 };
-export const CONTENT_PACKS: Record<string, Pack> = { "HEC-BS-CS-2025": HEC_CS_2025, "NCEAC-BS-CS-2025": HEC_CS_2025, "PU-BSCS-2021": PU_2021 };
+// HEC/NCEAC Computing Disciplines 2023 — for the NCEAC 2023 programs (CS, SE, AI, DS, Cyber Security): its PLOs and
+// the outlines it gives (CLOs as listed; a lecture plan derived from each outline's topics). Matched by course name.
+const CD23 = new Map(Object.entries(CD2023_COURSES).map(([t, v]) => [titleKey(t), v]));
+export function cd2023(title: string) {
+  const inner = title.match(/\(([^)]+)\)/)?.[1];
+  for (const k of [titleKey(title), inner ? titleKey(inner) : ""].filter(Boolean)) {
+    const hit = CD23.get(k) || Array.from(CD23.entries()).find(([x]) => x.startsWith(`${k} `) || k.startsWith(`${x} `))?.[1];
+    if (hit) return hit;
+  }
+  return null;
+}
+const NCEAC_2023: Pack = {
+  plos: CD2023_PLOS,
+  semester: () => null,
+  content(title) {
+    const c = cd2023(title);
+    return c && (c.clos.length || c.topics.length) ? { clos: c.clos.map((x) => ({ statement: x.s, bloomLevel: x.b, plo: null })), topics: c.topics, from: "HEC/NCEAC Computing Disciplines 2023" } : null;
+  },
+};
+export const CONTENT_PACKS: Record<string, Pack> = { "NCEAC-BS-CS-2023": NCEAC_2023, "NCEAC-BS-SE-2023": NCEAC_2023, "NCEAC-BS-AI-2023": NCEAC_2023, "NCEAC-BS-DS-2023": NCEAC_2023, "NCEAC-BS-CYS-2023": NCEAC_2023, "HEC-BS-CS-2025": HEC_CS_2025, "NCEAC-BS-CS-2025": HEC_CS_2025, "PU-BSCS-2021": PU_2021 };
 export const hasContentPack = (key?: string | null) => !!key && key in CONTENT_PACKS;
 
 /** A PLO for a CLO that HEC did not tag — by what the CLO asks for (Seoul Accord PLO 2–10). */

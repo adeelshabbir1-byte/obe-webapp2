@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { writeAuditLog } from "./audit";
 import { titleKey, CONTENT_PACKS, mapLectures, suggestPlo } from "./curriculumContent";
 import { HEC_BSCS_2025_PLOS } from "../prisma/hec-bscs-2025";
+import { CD2023_PLOS } from "./computing2023Content";
 import { editionOf } from "./consortiumAgreements";
 
 // A course with the same name in any HEC curriculum — whatever the degree — shares its CLOs, PLO mapping and lecture
@@ -29,6 +30,12 @@ function fromPack(title: string): Src | null {
   const tps = k.topics.slice(0, 32), map = mapLectures(tps, k.clos.map((c) => c.statement));
   return { key: titleKey(title), fromCourseId: null, label: "HEC BS Computer Science 2025 (official document)", edition: "2025", official: true, clos: k.clos.map((c) => ({ statement: c.statement, bloomLevel: c.bloomLevel, plo: c.plo, source: c.plo ? "HEC" : null })), topics: tps.map((t, i) => ({ lectureNumber: i + 1, topic: t, subtopic: null, cloNumber: map[i] })), plos: HEC_BSCS_2025_PLOS };
 }
+function from2023(title: string): Src | null {
+  const k = CONTENT_PACKS["NCEAC-BS-SE-2023"].content(title);
+  if (!k) return null;
+  const map = mapLectures(k.topics, k.clos.map((c) => c.statement));
+  return { key: titleKey(title), fromCourseId: null, label: "HEC/NCEAC Computing Disciplines 2023 (official document)", edition: "2023", official: true, clos: k.clos.map((c) => ({ statement: c.statement, bloomLevel: c.bloomLevel, plo: null, source: null })), topics: k.topics.map((t, i) => ({ lectureNumber: i + 1, topic: t, subtopic: null, cloNumber: k.clos.length ? map[i] : null })), plos: CD2023_PLOS };
+}
 /** Best source for a course: same edition first, then official, then the one with most content. */
 export function pick(cands: Src[], edition: string | null) {
   return cands.slice().sort((a, b) => Number(b.edition === edition) - Number(a.edition === edition) || Number(b.official) - Number(a.official) || (b.clos.length + b.topics.length) - (a.clos.length + a.topics.length))[0] || null;
@@ -45,8 +52,8 @@ export async function fillShared(actorId: string, curriculumId: string) {
   const done = { courses: 0, clos: 0, lectures: 0, plos: 0, other: 0 }; const labels = new Map<string, number>();
   for (const c of courses) {
     if (c._count.seedClos && c._count.seedTopics) continue;
-    const pk = fromPack(c.title);
-    const s = pick([...(by.get(titleKey(c.title)) || []), ...(pk ? [pk] : [])], edition);
+    const pk = fromPack(c.title), p23 = from2023(c.title);
+    const s = pick([...(by.get(titleKey(c.title)) || []), ...(pk ? [pk] : []), ...(p23 ? [p23] : [])], edition);
     if (!s) continue;
     // PLOs: a curriculum with none takes the source curriculum's PLO set.
     if (!plos.length && s.plos.length) {
