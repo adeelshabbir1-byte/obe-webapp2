@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const kind = kindOf(String(fd.get("kind") || ""));
     const file = fd.get("file") as File | null;
     if (!kind || !file) return NextResponse.json({ error: "Choose what you are importing and a file." }, { status: 400 });
+    if (kind.key === "faculty-details" && !["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)) return NextResponse.json({ error: "Faculty details are uploaded by the Institute Head, a Dean or a Head of Department." }, { status: 403 });
     if (file.size > 15 * 1024 * 1024) return NextResponse.json({ error: "The file is over 15 MB — split it." }, { status: 400 });
     const sheets = file.name.toLowerCase().endsWith(".csv") ? [{ name: "csv", grid: parseCsv(Buffer.from(await file.arrayBuffer()).toString("utf-8")) }] : await readWorkbookGrids(file);
     const si = Math.min(Math.max(0, Number(fd.get("sheet") || 0)), sheets.length - 1);
@@ -86,11 +87,11 @@ export async function POST(req: NextRequest) {
     if (rows.length > 20000) return NextResponse.json({ error: "Over 20,000 rows — split the file." }, { status: 400 });
     if (fd.get("action") === "dryrun") {
       const p = await dryRun(kind, rows, ctx, map);
-      return NextResponse.json({ ok: true, rows: rows.length, ready: p.ok.length, skipped: p.skipped.slice(0, 300), skippedCount: p.skipped.length, errors: p.errors.slice(0, 300), errorCount: p.errors.length });
+      return NextResponse.json({ ok: true, rows: rows.length, ready: p.ok.length, updates: p.ok.filter((o) => o.data.existing).length, skipped: p.skipped.slice(0, 300), skippedCount: p.skipped.length, errors: p.errors.slice(0, 300), errorCount: p.errors.length });
     }
     if (fd.get("action") === "commit") {
       const r = await commit(kind, file.name, rows, ctx, map);
-      return NextResponse.json({ ok: true, message: `Imported ${r.created} row(s); ${r.skipped} skipped or with problems.`, ...r, errors: r.errors.slice(0, 300) });
+      return NextResponse.json({ ok: true, message: `Imported ${r.created} new row(s)${r.updated ? `, updated ${r.updated}` : ""}; ${r.skipped} skipped or with problems.`, ...r, errors: r.errors.slice(0, 300) });
     }
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e) {

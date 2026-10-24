@@ -62,3 +62,11 @@ test("GA coverage: labs and the tool-usage GA", () => {
   assert.equal(toolGa([{ id: "1", number: 4, title: "Investigation" }, { id: "2", number: 5, title: "Modern Tool Usage" }])!.id, "2");
   assert.equal(toolGa([{ id: "9", number: 5, title: "Something" }])!.id, "9");
 });
+
+test("data import: NCEAC Teacher Data headings are matched, both email columns", () => {
+  const k = kindOf("faculty-details")!;
+  const head = ["Email Address", "Name", "Gender", "CNIC", "Date of Birth", "Phone Number", "Email", "Address", "Province", "City", "Contract Type", "Academic Rank", "Joining Date", "Leaving Date", "Degree Name", "Degree Type", "Field of Study", "Degree Awarded Country", "Degree Awarded Institute", "Degree Start Date", "Degree End Date", "Department"];
+  const m = autoMap(head, k);
+  assert.equal(m.email, 0); assert.equal(m.personalEmail, 6); assert.equal(m.department, 21);
+  assert.equal(m.rank, 11); assert.equal(m.university, 18); assert.equal(m.degreeEnd, 20); assert.equal(m.country, 17);
+});

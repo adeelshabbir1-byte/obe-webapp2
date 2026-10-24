@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 type F = { key: string; label: string; required?: boolean };
 type K = { key: string; title: string; what: string; needs: string[]; fields: F[] };
 type Parsed = { sheets: string[]; sheet: number; headerRow: number; headers: string[]; map: Record<string, number>; sample: string[][]; rows: number };
-type Dry = { rows: number; ready: number; skipped: { row: number; message: string }[]; skippedCount: number; errors: { row: number; message: string }[]; errorCount: number };
+type Dry = { rows: number; ready: number; updates?: number; skipped: { row: number; message: string }[]; skippedCount: number; errors: { row: number; message: string }[]; errorCount: number };
 
 export default function DataImportWizard({ kinds, batches, leads }: { kinds: K[]; batches: [string, string][]; leads: [string, string][] }) {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function DataImportWizard({ kinds, batches, leads }: { kinds: K[]
       {msg && <p style={{ color: msg.ok ? "#2E7D32" : "#C62828", fontWeight: 600 }}>{msg.text}</p>}
       {dry && (
         <div style={{ marginTop: 10 }}>
-          <p><b style={{ color: "#2E7D32" }}>{dry.ready} ready</b> · <b style={{ color: "#B26A00" }}>{dry.skippedCount} already there (skipped)</b> · <b style={{ color: "#C62828" }}>{dry.errorCount} with problems</b> — of {dry.rows} row(s). Nothing is saved until you press Import.</p>
+          <p><b style={{ color: "#2E7D32" }}>{dry.ready} ready</b>{dry.updates ? <> (<b>{dry.updates}</b> already have an account and will be updated)</> : null} · <b style={{ color: "#B26A00" }}>{dry.skippedCount} already there (skipped)</b> · <b style={{ color: "#C62828" }}>{dry.errorCount} with problems</b> — of {dry.rows} row(s). Nothing is saved until you press Import.</p>
           {dry.errors.length > 0 && <table style={{ fontSize: 12 }}><thead><tr><th>Row</th><th>Problem</th></tr></thead><tbody>{dry.errors.map((e, i) => <tr key={i}><td>{e.row}</td><td style={{ color: "#C62828" }}>{e.message}</td></tr>)}</tbody></table>}
           {dry.skipped.length > 0 && <details><summary className="small-note">Skipped rows</summary><ul className="small-note">{dry.skipped.map((e, i) => <li key={i}>Row {e.row}: {e.message}</li>)}</ul></details>}
         </div>

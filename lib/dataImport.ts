@@ -20,6 +20,10 @@ type Prepared = { ok: { row: number; data: Record<string, unknown> }[]; errors: 
 export type Kind = {
   key: string; title: string; what: string; needs: ("batch" | "lead")[]; model: string; fields: Field[];
   prepare: (rows: { row: number; v: Row }[], ctx: Ctx) => Promise<Prepared>;
+  /** Writes the prepared rows itself (create or update); returns the ids it created (for undo) and how many it updated. */
+  custom?: (ok: { row: number; data: Record<string, unknown> }[], ctx: Ctx) => Promise<{ createdIds: string[]; updated: number }>;
+  /** Removes what hangs off a created row before the row itself is deleted on undo. */
+  undoExtra?: (ids: string[]) => Promise<void>;
 };
 
 const num = (s: string) => { const n = Number(String(s).replace(/[,%\s]/g, "")); return Number.isFinite(n) ? n : NaN; };
@@ -57,7 +61,7 @@ export const KINDS: Kind[] = [
     },
   },
   {
-    key: "faculty", title: "Faculty", what: "Teachers and Subject Experts with their login IDs (first password 12345678; they must change it).", needs: ["lead"], model: "user",
+    key: "faculty", title: "Faculty logins only (under a Program Lead)", what: "Teachers and Subject Experts with their login IDs (first password 12345678; they must change it).", needs: ["lead"], model: "user",
     fields: [
       { key: "name", label: "Name", required: true, aliases: ["name", "faculty name", "teacher", "full name"], example: "Dr. Ayesha Malik" },
       { key: "username", label: "Login ID", required: true, aliases: ["login", "login id", "username", "user name", "employee id", "emp id", "employee no"], example: "ayesha.malik" },
@@ -87,6 +91,96 @@ export const KINDS: Kind[] = [
         out.ok.push({ row, data: { id: randomUUID(), name, username: u, email, role, passwordHash: hash, mustChangePassword: true, managedById: lead.id, departmentId: lead.departmentId } });
       }
       return out;
+    },
+  },
+  {
+    key: "faculty-details", title: "Faculty with full details (NCEAC Teacher Data format)", needs: [], model: "user",
+    what: "One row per teacher, as in NCEAC's “Teacher Data” file plus a Department column. New teachers get an account (first password 12345678); existing ones (same email) are updated. Fills the profile and the NCEAC portal details in one go.",
+    fields: [
+      { key: "email", label: "Email Address", required: true, aliases: ["email address", "email", "e mail", "official email", "account email"], example: "ayesha.malik@uni.edu.pk" },
+      { key: "name", label: "Name", required: true, aliases: ["name", "teacher name", "faculty name", "full name"], example: "Dr. Ayesha Malik" },
+      { key: "department", label: "Department", required: true, aliases: ["department", "dept", "department name"], example: "Computer Science" },
+      { key: "role", label: "Role", aliases: ["role", "type"], example: "Instructor", note: "Instructor or Subject Expert; defaults to Instructor." },
+      { key: "employeeCode", label: "Employee ID", aliases: ["employee id", "employee code", "emp id", "employee no"], example: "EMP-0142" },
+      { key: "gender", label: "Gender", aliases: ["gender", "sex"], example: "Female" },
+      { key: "cnic", label: "CNIC", aliases: ["cnic", "cnic number", "cnic passport no", "cnic no"], example: "35202-1234567-8" },
+      { key: "dob", label: "Date of Birth", aliases: ["date of birth", "dob", "birth date"], example: "1985-03-14" },
+      { key: "mobile", label: "Phone Number", aliases: ["phone number", "phone", "mobile", "mobile no", "contact"], example: "0300-1234567" },
+      { key: "personalEmail", label: "Email (contact)", aliases: ["personal email", "contact email", "email"], example: "ayesha@gmail.com", note: "The Teacher Data file's second Email column." },
+      { key: "address", label: "Address", aliases: ["address", "mailing address"], example: "House 12, Model Town" },
+      { key: "province", label: "Province", aliases: ["province"], example: "Punjab" },
+      { key: "city", label: "City", aliases: ["city"], example: "Lahore" },
+      { key: "contract", label: "Contract Type", aliases: ["contract type", "contract", "employment type", "job type"], example: "Permanent" },
+      { key: "rank", label: "Academic Rank", aliases: ["academic rank", "rank", "designation"], example: "Assistant Professor" },
+      { key: "joining", label: "Joining Date", aliases: ["joining date", "date of joining", "joined"], example: "2019-09-01" },
+      { key: "leaving", label: "Leaving Date", aliases: ["leaving date"], example: "" },
+      { key: "degree", label: "Degree Name", aliases: ["degree name", "highest degree", "degree", "qualification"], example: "PhD Computer Science" },
+      { key: "degreeType", label: "Degree Type", aliases: ["degree type"], example: "PhD" },
+      { key: "field", label: "Field of Study", aliases: ["field of study", "field", "specialization", "specialisation"], example: "Machine Learning" },
+      { key: "country", label: "Degree Awarded Country", aliases: ["degree awarded country", "awarding country", "country"], example: "Pakistan" },
+      { key: "university", label: "Degree Awarded Institute", aliases: ["degree awarded institute", "university", "institute", "name of university"], example: "University of the Punjab" },
+      { key: "degreeStart", label: "Degree Start Date", aliases: ["degree start date"], example: "2012-09-01" },
+      { key: "degreeEnd", label: "Degree End Date", aliases: ["degree end date"], example: "2016-06-30" },
+    ],
+    async prepare(rows, ctx) {
+      const depts = await prisma.department.findMany({ where: { chairmanId: ctx.chairmanId }, select: { id: true, name: true } });
+      const dept = (s: string) => { const n = norm(s); return depts.find((d) => norm(d.name) === n) || depts.find((d) => n && (norm(d.name).includes(n) || n.includes(norm(d.name)))) || null; };
+      const users = await prisma.user.findMany({ select: { id: true, email: true, username: true, managedById: true, managedBy: { select: { managedById: true } } } });
+      const byEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
+      const taken = new Set(users.map((u) => u.username.toLowerCase()));
+      const seen = new Set<string>();
+      const { parseDate, cnicOf } = await import("./nceacLists");
+      const out: Prepared = { ok: [], errors: [], skipped: [] };
+      for (const { row, v } of rows) {
+        const email = (v.email || "").trim().toLowerCase(), name = (v.name || "").trim();
+        if (!email || !name) { out.errors.push({ row, message: "Email and name are both needed." }); continue; }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { out.errors.push({ row, message: `Email "${v.email}" is not valid.` }); continue; }
+        if (seen.has(email)) { out.skipped.push({ row, message: `${email} appears twice in the file` }); continue; }
+        const d = dept(v.department || "");
+        if (!d) { out.errors.push({ row, message: `Department "${v.department}" — use one of: ${depts.map((x) => x.name).join(", ")}.` }); continue; }
+        const ex = byEmail.get(email);
+        if (ex && ex.managedById !== ctx.chairmanId && ex.managedBy?.managedById !== ctx.chairmanId) { out.errors.push({ row, message: `${email} belongs to another institute's account.` }); continue; }
+        const dates: Record<string, string> = {};
+        let bad = "";
+        for (const k of ["dob", "joining", "leaving", "degreeStart", "degreeEnd"]) { if (!v[k]) continue; const dt = parseDate(v[k]); if (!dt) { bad = `${k === "dob" ? "Date of Birth" : k} "${v[k]}" is not a date.`; break; } dates[k] = dt.toISOString().slice(0, 10); }
+        if (bad) { out.errors.push({ row, message: bad }); continue; }
+        if (v.cnic && !cnicOf(v.cnic) && !/^[A-Z0-9]{6,12}$/i.test(v.cnic.trim())) { out.errors.push({ row, message: `CNIC "${v.cnic}" — use 35202-1234567-8 (or a passport number).` }); continue; }
+        const rl = norm(v.role || "");
+        seen.add(email);
+        let username = ex?.username || email.split("@")[0].replace(/[^a-z0-9._-]/g, "");
+        if (!ex) { let u = username, i = 1; while (taken.has(u)) u = `${username}${++i}`; username = u; taken.add(u); }
+        out.ok.push({ row, data: { id: ex?.id || randomUUID(), existing: !!ex, email, name, username, departmentId: d.id, role: /subject|expert/.test(rl) ? "SUBJECT_EXPERT" : "INSTRUCTOR", cnic: v.cnic ? (cnicOf(v.cnic) || v.cnic.trim()) : "", ...Object.fromEntries(["employeeCode", "gender", "mobile", "personalEmail", "address", "province", "city", "contract", "rank", "degree", "degreeType", "field", "country", "university"].map((k) => [k, (v[k] || "").trim()])), ...dates } });
+      }
+      return out;
+    },
+    async custom(ok, ctx) {
+      const hash = await hashPassword("12345678");
+      const { saveDetail } = await import("./aas");
+      const createdIds: string[] = []; let updated = 0;
+      const emp = (c: string) => (/visit|part/i.test(c) ? "Visiting" : /contract|adhoc|ad hoc|tenure/i.test(c) ? "Contract" : c ? "Permanent" : undefined);
+      for (const { data: d } of ok) {
+        const s = (k: string) => String(d[k] || "");
+        const dt = (k: string) => (s(k) ? new Date(s(k)) : undefined);
+        const profile: Record<string, unknown> = Object.fromEntries(Object.entries({ cnic: s("cnic") || undefined, dateOfBirth: dt("dob"), gender: s("gender") || undefined, phone: s("mobile") || undefined, address: s("address") || undefined, employmentType: emp(s("contract")), designation: s("rank") || undefined, dateOfJoining: dt("joining"), employeeCode: s("employeeCode") || undefined, specialization: s("field") || undefined }).filter(([, x]) => x !== undefined));
+        if (d.existing) {
+          await prisma.user.update({ where: { id: s("id") }, data: { name: s("name"), departmentId: s("departmentId") } });
+          updated++;
+        } else {
+          await prisma.user.create({ data: { id: s("id"), email: s("email"), username: s("username"), name: s("name"), passwordHash: hash, role: s("role"), managedById: ctx.chairmanId, departmentId: s("departmentId"), mustChangePassword: true } as never });
+          createdIds.push(s("id"));
+        }
+        await prisma.facultyProfile.upsert({ where: { userId: s("id") }, create: { userId: s("id"), ...profile } as never, update: profile as never });
+        await saveDetail("staff", s("id"), Object.fromEntries(Object.entries({ name: s("name"), gender: s("gender"), cnic: s("cnic"), dob: s("dob"), mobile: s("mobile"), email: s("personalEmail") || s("email"), address: s("address"), province: s("province"), city: s("city"), contract: s("contract"), rank: s("rank"), joining: s("joining"), leaving: s("leaving"), degree: s("degree"), degreeType: s("degreeType"), field: s("field"), country: s("country"), university: s("university"), degreeStart: s("degreeStart"), degreeEnd: s("degreeEnd") }).filter(([, x]) => x)), ctx.userId).catch(() => null);
+        if (s("degree") && !(await prisma.facultyRecord.findFirst({ where: { userId: s("id"), kind: "EDUCATION", title: s("degree") } }))) {
+          await prisma.facultyRecord.create({ data: { userId: s("id"), kind: "EDUCATION", title: s("degree"), organisation: s("university") || null, startYear: s("degreeStart") ? Number(s("degreeStart").slice(0, 4)) : null, endYear: s("degreeEnd") ? Number(s("degreeEnd").slice(0, 4)) : null, category: s("degreeType") || null } as never });
+        }
+      }
+      return { createdIds, updated };
+    },
+    async undoExtra(ids) {
+      await prisma.facultyRecord.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.facultyProfile.deleteMany({ where: { userId: { in: ids } } });
+      await idb.staffDetail.deleteMany({ where: { userId: { in: ids } } }).catch(() => null);
     },
   },
   {
@@ -243,11 +337,16 @@ export async function dryRun(kind: Kind, rows: { row: number; v: Row }[], ctx: C
 export async function commit(kind: Kind, fileName: string, rows: { row: number; v: Row }[], ctx: Ctx, map: Record<string, number>) {
   const p = await dryRun(kind, rows, ctx, map);
   const data = p.ok.map((o) => o.data);
-  for (let i = 0; i < data.length; i += 500) await idb[kind.model].createMany({ data: data.slice(i, i + 500), skipDuplicates: true });
+  let createdIds: string[], updated = 0;
+  if (kind.custom) ({ createdIds, updated } = await kind.custom(p.ok, ctx));
+  else {
+    for (let i = 0; i < data.length; i += 500) await idb[kind.model].createMany({ data: data.slice(i, i + 500), skipDuplicates: true });
+    createdIds = data.map((d) => String(d.id));
+  }
   const id = randomUUID();
-  await idb.importLog.create({ data: { id, chairmanId: ctx.chairmanId, kind: kind.key, fileName: fileName.slice(0, 200), targetJson: JSON.stringify(ctx.target), rows: rows.length, created: data.length, skipped: p.skipped.length + p.errors.length, createdIdsJson: JSON.stringify(data.map((d) => d.id)), byId: ctx.userId } }).catch(() => null);
-  await writeAuditLog({ actorUserId: ctx.userId, action: "DATA_IMPORTED", entityType: "ImportLog", entityId: id, metadata: { kind: kind.key, created: data.length, skipped: p.skipped.length, errors: p.errors.length } as never });
-  return { id, created: data.length, skipped: p.skipped.length, errors: p.errors };
+  await idb.importLog.create({ data: { id, chairmanId: ctx.chairmanId, kind: kind.key, fileName: fileName.slice(0, 200), targetJson: JSON.stringify(ctx.target), rows: rows.length, created: createdIds.length, skipped: p.skipped.length + p.errors.length, createdIdsJson: JSON.stringify(createdIds), byId: ctx.userId } }).catch(() => null);
+  await writeAuditLog({ actorUserId: ctx.userId, action: "DATA_IMPORTED", entityType: "ImportLog", entityId: id, metadata: { kind: kind.key, created: createdIds.length, updated, skipped: p.skipped.length, errors: p.errors.length } as never });
+  return { id, created: createdIds.length, updated, skipped: p.skipped.length, errors: p.errors };
 }
 
 /** Undo: delete what the import created (rows that other records now depend on are kept and counted). */
@@ -257,6 +356,7 @@ export async function undo(chairmanId: string, by: string, logId: string) {
   if (log.status === "UNDONE") throw new Error("Already undone.");
   const kind = kindOf(log.kind)!;
   const ids = JSON.parse(log.createdIdsJson) as string[];
+  if (kind.undoExtra) await kind.undoExtra(ids).catch(() => null);
   let removed = 0, kept = 0;
   for (let i = 0; i < ids.length; i += 500) {
     const part = ids.slice(i, i + 500);
