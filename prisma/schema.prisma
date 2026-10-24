@@ -7910,3 +7910,13 @@ model RegLink {
   @@id([clauseId, target])
   @@index([target])
 }
+
+// Where a master course's CLOs and lecture plan were copied from: a course with the same name in another curriculum
+// (any degree), shown on the course so everyone sees the content came from e.g. "HEC BS Computer Science 2025".
+model MasterCourseSource {
+  masterCourseId String   @id
+  fromCourseId   String?
+  fromLabel      String
+  sameEdition    Boolean  @default(true)
+  copiedAt       DateTime @default(now())
+}

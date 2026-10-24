@@ -163,6 +163,7 @@ function CourseCard({ c, color, onOpen, draggable = true, extra, types, onMove }
         <span style={{ color: c.clos ? (c.mappedClos < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLO${c.mappedClos < c.clos ? ` (${c.clos - c.mappedClos} unmapped)` : ""}` : "no CLOs"}</span>
         <span style={{ color: c.lectures >= 32 ? "#2E7D32" : c.lectures ? "#B26A00" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span>
       </div>
+      {c.from && <div style={{ fontSize: 10.5, color: c.fromOtherEdition ? "#B26A00" : "#556" }} title="CLOs / lecture plan copied from the same-named course of this curriculum">from {c.from}{c.fromOtherEdition ? " (other edition)" : ""}</div>}
       {types && onMove && <select value="" aria-label={`Move ${c.title} to`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { if (e.target.value) onMove(e.target.value); }} style={{ marginTop: 4, fontSize: 11, padding: "1px 4px", width: "100%", color: "#556", background: "#F6F8FA", border: "1px solid #E1E5EA", borderRadius: 6 }}>
         <option value="">Move to…</option>{types.filter((t) => t.name !== c.category).map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}</select>}
       {extra}
@@ -349,6 +350,10 @@ function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older
               <div className="small-note" style={{ marginTop: 4 }}>{note}</div>
             </div>); })}
         </div>
+        {!locked && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
+          <button type="button" className="btn btn-sm" disabled={busy} onClick={() => post({ action: "fillShared" })}>Fill empty CLOs, PLO mapping and lecture plans from same-named courses of other curricula</button>
+          <span className="small-note">e.g. Programming Fundamentals of BS SE from Programming Fundamentals of BS CS — same edition preferred; the source is shown on each course.</span>
+        </div>}
         {!locked && packs.length > 0 && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
           {packs.map((p) => <button key={p.key} type="button" className="btn btn-sm" disabled={busy} onClick={() => post({ action: "fillContent", pack: p.key })}>Fill empty semesters, PLOs, CLOs and lecture plans from {p.label}</button>)}
           <span className="small-note">Only empty things are filled; nothing already entered changes. Edit CLOs and lectures in the full editor.</span>

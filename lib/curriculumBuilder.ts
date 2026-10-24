@@ -5,6 +5,7 @@ import { findOwningChairmanId } from "./institutionCurriculum";
 import { TEMPLATES, KINDS, kindInfo, autoPlace, normTitle, parseReq, reqPresent, type Kind } from "./curriculumTemplates";
 import { saveMeta, propose } from "./curriculumLibrary";
 import { fillContent, hasContentPack } from "./curriculumContent";
+import { fillShared } from "./curriculumShare";
 
 // Curriculum Builder: who may build, the board's data, and every change made on it. A curriculum is built in four
 // steps — its types (categories with targets), placing courses into them, sorting the elective list into tracks,
@@ -31,7 +32,7 @@ export async function canBuild(user: U, c?: { chairmanId: string | null; authori
 }
 
 export type BType = { id: string; name: string; kind: Kind; minCourses: number | null; minCredits: number | null; maxCredits: number | null; required: string[]; note: string | null; position: number; prefilled: boolean };
-export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number; lectures: number; mappedClos: number };
+export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number; lectures: number; mappedClos: number; from: string | null; fromOtherEdition: boolean };
 export type BTrack = { id: string; name: string; minCourses: number | null; position: number };
 
 export async function loadBoard(id: string) {
@@ -43,12 +44,13 @@ export async function loadBoard(id: string) {
   ]);
   const links = (await bdb.masterCourseTrack.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } })) as { masterCourseId: string; trackId: string }[];
   const labs = new Map(((await bdb.masterCourseLab.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; labCredits: number }[]).map((l) => [l.masterCourseId, l.labCredits]));
+  const srcs = new Map(((await bdb.masterCourseSource.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; fromLabel: string; sameEdition: boolean }[]).map((s) => [s.masterCourseId, s]));
   const owner = c.chairmanId ? await prisma.user.findUnique({ where: { id: c.chairmanId }, select: { instituteName: true, name: true } }) : null;
   return {
     curriculum: { id: c.id, title: c.title, version: c.version, authority: c.authority, status: c.status, chairmanId: c.chairmanId, owner: owner?.instituteName || owner?.name || null, reference: c.sourceReference, plos: c._count.plos },
     types: types.map((t) => ({ ...t, required: (() => { try { return JSON.parse(t.requiredJson) as string[]; } catch { return []; } })() })) as BType[],
     tracks,
-    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos, lectures: x._count.seedTopics, mappedClos: x.seedClos.length })) as BCourse[],
+    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos, lectures: x._count.seedTopics, mappedClos: x.seedClos.length, from: srcs.get(x.id)?.fromLabel || null, fromOtherEdition: srcs.get(x.id) ? !srcs.get(x.id)!.sameEdition : false })) as BCourse[],
   };
 }
 
@@ -180,6 +182,7 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
   const num = (k: string) => (a[k] === "" || a[k] == null ? null : Math.max(0, Math.round(Number(a[k]))) || null);
   const course = async () => { const x = await prisma.masterCourse.findFirst({ where: { id: s("courseId"), masterCurriculumId: c.id } }); if (!x) throw new Error("Course not found."); return x; };
   switch (a.action) {
+    case "fillShared": return fillShared(user.id, c.id);
     case "fillContent": {
       const key = s("pack", 60);
       const types = (await bdb.curriculumType.findMany({ where: { curriculumId: c.id } })) as { name: string; kind: string }[];

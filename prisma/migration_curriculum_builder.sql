@@ -68,3 +68,12 @@ CREATE TABLE IF NOT EXISTS "MasterCourseLab" (
   "masterCourseId" TEXT PRIMARY KEY,
   "labCredits" INTEGER NOT NULL DEFAULT 0
 );
+
+-- Where a master course's CLOs / lecture plan were copied from (a same-named course of another curriculum).
+CREATE TABLE IF NOT EXISTS "MasterCourseSource" (
+  "masterCourseId" TEXT PRIMARY KEY,
+  "fromCourseId" TEXT,
+  "fromLabel" TEXT NOT NULL,
+  "sameEdition" BOOLEAN NOT NULL DEFAULT true,
+  "copiedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
