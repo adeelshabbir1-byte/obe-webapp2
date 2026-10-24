@@ -3,7 +3,7 @@
 export const TEACHER_EXTRA_ROLES = ["HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"] as const;
 export const DUAL_CAPABLE_PRIMARY = ["SUBJECT_EXPERT", ...TEACHER_EXTRA_ROLES];
 export const DUAL_ROLE_LABEL: Record<string, string> = {
-  INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
+  INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "University Subject Expert", HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
 };
 type Hats = { rawRole: string; secondaryRole?: string | null; tertiaryRole?: string | null; extraRoles?: string[] | null; assignerHat?: boolean; omcHat?: boolean };
 

@@ -36,7 +36,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
   for (const r of course.lectureRows) if (r.cloId && isTeachingTopic(r.topic)) cloHitCounts[r.cloId] = (cloHitCounts[r.cloId] || 0) + 1;
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="schedule" code={course.code} title={course.title} status={course.templateStatus} />
       <PrereqTopicChecks courseId={course.id} source="SE" />
       <div className="card no-print" style={{ display: "flex", justifyContent: "flex-end" }}>

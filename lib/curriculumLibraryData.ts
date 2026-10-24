@@ -36,7 +36,7 @@ export async function libraryItems(user: U) {
     const owner = c.chairmanId ? ownerName.get(c.chairmanId) || "Institute" : c.authority;
     return {
       id: c.id, title: c.title, authority: c.authority, version: c.version, status: c.status, chairmanId: c.chairmanId, parentId: c.parentCurriculumId,
-      owner, kind: !c.chairmanId ? "Official" : c.chairmanId === uni ? "Your university's" : c.chairmanId === sc.chairmanId ? "Your institute's" : "Institute",
+      owner, kind: !c.chairmanId ? "National" : c.chairmanId === uni ? "Your university's" : c.chairmanId === sc.chairmanId ? "University (yours)" : "University",
       code: m?.code || p.code, named: !!m, level: m?.level || p.level, programCode: m?.programCode || p.programCode, programName: m?.programName || p.programName,
       discipline: m?.discipline || p.discipline, notificationNo: m?.notificationNo || c.sourceReference || null, effective: m?.effectiveYear ? `${m.effectiveTerm || ""} ${m.effectiveYear}`.trim() : null,
       locks: m ? { scheme: m.lockScheme, ga: m.lockGa, clo: m.lockClo } : { scheme: true, ga: true, clo: true },

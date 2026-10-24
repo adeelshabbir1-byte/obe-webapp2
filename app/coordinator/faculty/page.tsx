@@ -26,7 +26,7 @@ export default async function CoordinatorFacultyPage() {
     select: { id: true, name: true, username: true, role: true, leadProgram: true, secondaryRole: true, tertiaryRole: true },
   }) : [];
   const roleName: Record<string, string> = { PROGRAM_COORDINATOR: "Program Lead", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator" };
-  const hatName: Record<string, string> = { INSTRUCTOR: "Teaches", SUBJECT_EXPERT: "Subject Expert" };
+  const hatName: Record<string, string> = { INSTRUCTOR: "Teaches", SUBJECT_EXPERT: "University Subject Expert" };
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>

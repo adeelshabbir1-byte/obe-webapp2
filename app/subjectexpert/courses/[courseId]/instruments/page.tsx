@@ -68,7 +68,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   const canSubmit = weightsComplete && course.clos.length > 0 && course.lectureRows.length > 0 && badPloCount === 0 && coverage.short.length === 0;
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
       <AssessmentRuleBanner courseId={course.id} source="SE" />
       <PrereqTopicChecks courseId={course.id} source="SE" />

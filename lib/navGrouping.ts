@@ -3,9 +3,12 @@ type Section = { title: string; links: Link[] };
 
 // The same headings are used for every role, in the same order, so the menu looks alike wherever you sign in.
 // First matching rule wins, which lets Shell group any flat nav array without each page changing how it passes navLinks.
-const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "University Operations", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
+const ORDER = ["Daily pages", "Review & Approval", "Semester & Timetable", "Programs & Courses", "Students", "People & Structure", "Curriculum & Outcomes", "National", "Consortium", "Curriculum Maps", "Policies & Rules", "Accreditation", "Facilities & Calendar", "University Operations", "Reports & Analytics", "Community", "Settings", "Platform", "More"];
 
 const RULES: { match: (h: string) => boolean; section: string }[] = [
+  // Level words first (see the naming convention): National = HEC / council level shared by all; Consortium = between universities.
+  { match: (h) => /^\/(curricula(\/builder)?|national-bank|public-library|regulations|master-design)$/.test(h), section: "National" },
+  { match: (h) => /^\/(consortium(\/.*)?|catalog)$/.test(h), section: "Consortium" },
   { match: (h) => /^\/(home|deadlines|semester-plan|dashboard|requests|learn|learn\/certification)$/.test(h) || /^\/chairman\/faculty-workload$/.test(h)
       || /^\/(instructor\/(courses|timetable|labs)|subjectexpert\/courses|lab-engineer\/labs|faculty\/(my-availability|profile|course-preferences|topic-workspace)|dean\/overview|hod\/department|dept-coordinator\/home)$/.test(h) || h === "/fyp", section: "Daily pages" },
 

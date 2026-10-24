@@ -30,7 +30,7 @@ export default async function CurriculumSync({ searchParams }: { searchParams: {
   const v = (x: unknown) => (x === null || x === undefined || x === "" ? "—" : String(x));
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>My curriculum vs the master</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>University Curriculum vs National</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0, maxWidth: "80ch" }}>Courses imported from a master curriculum stay linked to it. A course you have not changed follows the master: when the master is corrected, you see the change here and apply it with one click. A course you changed keeps your version, marked “You changed it”, and can return to the master any time. Nothing changes until you choose.</p>
       <form className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <select name="batch" defaultValue={sel?.id}>{batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}</select>

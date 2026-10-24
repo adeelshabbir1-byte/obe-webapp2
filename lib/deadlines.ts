@@ -45,7 +45,7 @@ export const DEADLINE_KINDS: Record<string, string> = {
 export const COURSE_KINDS = Object.keys(DEADLINE_KINDS).filter((k) => k !== "CUSTOM");
 export const ROLE_LABEL: Record<string, string> = {
   DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", PROGRAM_COORDINATOR: "Program Lead",
-  SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager",
+  SUBJECT_EXPERT: "University Subject Expert", INSTRUCTOR: "Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager",
 };
 /** The role a piece of course work belongs to. null = the setter chooses (papers) or it is a free task. */
 export const KIND_ROLE: Record<string, string | null> = {

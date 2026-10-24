@@ -43,7 +43,7 @@ export default async function Vacancies({ searchParams }: { searchParams: { cour
   ];
   return shell(<>
     <p className="small-note" style={{ margin: 0 }}><Link href="/consortium">← Consortium</Link></p>
-    <h1 style={{ fontSize: 22, margin: "4px 0" }}>Visiting faculty</h1>
+    <h1 style={{ fontSize: 22, margin: "4px 0" }}>Consortium Faculty Posts</h1>
     <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>No teacher for a course? Post it here instead of advertising on your website. Faculty registered by other member universities see it and apply. You compare them on what OBEHUB knows — qualifications, how often they taught this course or its equivalent, and (only if they agree) their sections&apos; CLO attainment and student feedback — with a clash check against their own timetable. The person you hire teaches this course only, with your CLOs, lecture plan and course file.</p>
     <div className="card"><ActionForm showMessage url="/api/consortium/vacancies" fixed={{ action: "post" }} submit="Post vacancy" collapsed={!searchParams.course} openLabel="+ Post a teaching vacancy" initial={{ courseId: searchParams.course || "", term: terms()[0], showPay: true, payBasis: "per course" }}
       fields={[{ name: "courseId", label: "Course", type: "select", width: 420, options: [["", "—"], ...courses.map((c) => [c.id, `${c.batch?.batchName || ""} · ${c.code} ${c.title} (${c.creditHours}${labOf(c) ? ` = ${c.creditHours - labOf(c)}+${labOf(c)}` : ""} CH)`] as [string, string])] }, ...fields]} /></div>

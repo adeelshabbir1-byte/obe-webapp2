@@ -36,7 +36,7 @@ export default async function Regulations({ searchParams }: { searchParams: { q?
   const unbacked = RULES.filter((x) => !backed.has(`rule:${x.key}`));
   const tabBtn = (k: string, l: string) => <Link href={`?tab=${k}`} className={tab === k ? "btn btn-sm" : "btn btn-secondary btn-sm"}>{l}</Link>;
   return shell(<>
-    <h1 style={{ fontSize: 22, marginBottom: 4 }}>Regulations Library</h1>
+    <h1 style={{ fontSize: 22, marginBottom: 4 }}>National Regulations</h1>
     <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>The official documents OBEHUB applies — HEC, NCEAC, NBEAC and PEC policies, notifications, curricula and manuals — with the clauses the portal relies on and a screenshot of each. Wherever the portal applies a rule you will see a 📄 link to its clause. The Super Admin, Institute Heads and Deans submit documents; the Super Admin or a Curriculum Builder publishes them. Consortium MoUs appear once both universities confirm them and the Super Admin accepts.</p>
     {user.role === "SUPER_USER" && <div className="card" style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
       {!storageReady() && <span className="err" style={{ margin: 0 }}>File storage is not set up — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.</span>}

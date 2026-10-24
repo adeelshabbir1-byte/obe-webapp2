@@ -7,7 +7,7 @@ import type { PersonRow } from "../lib/institutePeople";
 type Opt = { id: string; name: string };
 const LEADER_LABEL: Record<string, string> = { DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator" };
 const STAFF: Record<string, string> = { LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager" };
-const TEACH: Record<string, string> = { SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer" };
+const TEACH: Record<string, string> = { SUBJECT_EXPERT: "University Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer" };
 
 async function post(url: string, body: unknown, method = "POST") {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

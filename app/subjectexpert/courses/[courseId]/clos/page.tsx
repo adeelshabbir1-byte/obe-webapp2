@@ -50,7 +50,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
   const panel = await ploPanel(course.id);
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} status={course.templateStatus} />
       {course.benchmarkSource && (
         <div className="card" style={{ borderColor: "var(--brass)" }}>

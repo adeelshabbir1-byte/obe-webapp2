@@ -8,6 +8,7 @@ import { degreeSortKey, degreeGroupLabel } from "../../../lib/degreeGroup";
 import { navForRole } from "../../../components/reportNav";
 import CurriculumWorkbookImport from "../../../components/CurriculumWorkbookImport";
 import { adminCan, adminNavFor } from "../../../lib/platformTeam";
+import CurriculaTabs from "../../../components/CurriculaTabs";
 
 
 export default async function AdminCurriculaPage() {
@@ -26,7 +27,9 @@ export default async function AdminCurriculaPage() {
 
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curricula</h1>
+      <CurriculaTabs active="admin" showAdmin />
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>National Curricula — Admin</h1>
+      <p style={{ fontSize: 13, margin: "0 0 6px", fontWeight: 600 }}>Upload council curricula, assign them to institutes, review courses institutes add.</p>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Manage the official curricula and choose which institutes each one is assigned to — institutes only see the curricula you assign to them. Grouped by degree, so every BSCS curriculum sits together. Clone a curriculum as a
         new version when it's updated — the original stays intact for batches that already imported it.

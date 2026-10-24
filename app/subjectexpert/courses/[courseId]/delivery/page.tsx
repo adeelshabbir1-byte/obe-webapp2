@@ -29,7 +29,7 @@ export default async function DeliveryPage({ params }: { params: { courseId: str
   const total = course.lectureRows.length;
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="delivery" code={course.code} title={course.title} status={course.templateStatus} />
 
       <div className="card">

@@ -14,6 +14,21 @@ const nextConfig = {
     // Saving anything calls router.refresh(), which fetches fresh data straight away.
     staleTimes: { dynamic: 30, static: 180 },
   },
+  // Level-first names (National / University / Consortium / Shared / My): the new addresses show the same pages, and
+  // every old address keeps working as before.
+  async rewrites() {
+    return [
+      { source: "/national-curricula", destination: "/curricula?show=national" },
+      { source: "/university-curricula", destination: "/curricula?show=university" },
+      { source: "/national-releases", destination: "/national-bank" },
+      { source: "/national-regulations", destination: "/regulations" },
+      { source: "/national-regulations/:id", destination: "/regulations/:id" },
+      { source: "/shared-courses", destination: "/public-library" },
+      { source: "/consortium-courses", destination: "/catalog" },
+      { source: "/consortium-courses/:id", destination: "/catalog/:id" },
+      { source: "/admin/national-subject-experts", destination: "/admin/master-experts" },
+    ];
+  },
   async headers() {
     return [
       {

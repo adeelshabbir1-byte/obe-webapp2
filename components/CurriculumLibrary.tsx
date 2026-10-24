@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { LibItem } from "../lib/curriculumLibraryData";
 
 const FILTERS: [keyof LibItem, string][] = [["kind", "Owner type"], ["owner", "Owner / authority"], ["discipline", "Discipline"], ["level", "Level"], ["programName", "Program"], ["status", "Status"]];
-const KIND_COLOR: Record<string, string> = { Official: "#1565C0", "Your university's": "#7A2E3B", "Your institute's": "#2E7D32", Institute: "#6B7177" };
+const KIND_COLOR: Record<string, string> = { National: "#1565C0", "Your university's": "#7A2E3B", "University (yours)": "#2E7D32", University: "#6B7177" };
 
 /** The curriculum library: filters on the left, one card per program with its versions (newest first). */
 export default function CurriculumLibrary({ items, canTidy }: { items: LibItem[]; canTidy: boolean }) {

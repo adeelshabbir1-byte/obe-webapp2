@@ -28,10 +28,9 @@ export default async function MasterExpertsPage({ searchParams }: { searchParams
 
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curriculum Experts</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>National Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Create Subject Experts who belong to no institute and design courses of the official Master Curriculum for every institute. Then assign each
-        course to the expert who should write it.
+        A National Subject Expert is a University Subject Expert one level up: a platform account (no institute) who designs one course of the national curriculum — CLOs and GA mapping, outline, books, lecture plan, assessments — for every university. Create them here, assign each national course to one, and put them in a national curriculum team on the <a href="/admin/team">Platform Team</a> page.
       </p>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Curriculum Builders</h3>

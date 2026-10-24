@@ -31,7 +31,7 @@ export default async function GraduationPage() {
   const uni = (id: string) => heads.find((h) => h.id === id)?.instituteName || heads.find((h) => h.id === id)?.name || "—";
   return shell(<>
     <p className="small-note" style={{ margin: 0 }}><Link href="/consortium/agreements">← Agreements</Link></p>
-    <h1 style={{ fontSize: 22, margin: "4px 0" }}>Joint degree students and graduation</h1>
+    <h1 style={{ fontSize: 22, margin: "4px 0" }}>Joint Degrees — students and graduation</h1>
     <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>The lead university runs each student&apos;s degree audit from the transcript (results brought in from partners included). When it passes, every university&apos;s Chairman approves, and the lead issues the jointly awarded degree record — printable for degree issuance and HEC attestation. <Sources targets={["page:grading", "rule:minCgpaGraduate", "rule:minCreditsMajor", "page:joint"]} /></p>
     {!ags.length && <div className="card small-note">No launched joint programme.</div>}
     {ags.map((a) => { const lead = a.parties.find((p) => p.role === "LEAD")!; const isLead = me === lead.chairmanId; const ss = students.filter((s) => links.some((l) => l.batchId === s.batchId && l.agreementId === a.id)); return (

@@ -10,7 +10,7 @@ export default async function MasterDesignPage({ params }: { params: { courseId:
   if (user.mustChangePassword) redirect("/change-password");
   if (user.role !== "SUBJECT_EXPERT" || !user.isPlatformExpert) redirect("/dashboard");
   return (
-    <Shell roleLabel="Master Curriculum Expert" userName={user.name} navLinks={[{ href: "/master-design", label: "My Master Courses" }]}>
+    <Shell roleLabel="National Subject Expert" userName={user.name} navLinks={[{ href: "/master-design", label: "My National Courses" }, { href: "/platform", label: "My Platform Roles" }]}>
       <MasterCourseEditor courseId={params.courseId} />
     </Shell>
   );

@@ -18,8 +18,8 @@ export default async function MasterDesignHome() {
   });
 
   return (
-    <Shell roleLabel="Master Curriculum Expert" userName={user.name} navLinks={[{ href: "/master-design", label: "My Master Courses" }]}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Master Courses</h1>
+    <Shell roleLabel="National Subject Expert" userName={user.name} navLinks={[{ href: "/master-design", label: "My National Courses" }, { href: "/platform", label: "My Platform Roles" }]}>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>My National Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Courses assigned to you by the platform administrator. What you write here — description, books, CLOs and the lecture plan — becomes the starting
         point for this course at every institute that adopts the Master Curriculum.

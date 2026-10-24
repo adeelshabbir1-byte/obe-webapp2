@@ -11,7 +11,7 @@ type Req = {
 };
 
 const STATUS_COLOR: Record<string, string> = { PENDING: "#96650F", APPROVED: "var(--sage)", REJECTED: "#b3261e", CANCELLED: "var(--slate)" };
-const KIND_LABEL: Record<string, string> = { INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert" };
+const KIND_LABEL: Record<string, string> = { INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "University Subject Expert" };
 
 export default function BorrowTeacher() {
   const [kinds, setKinds] = useState<string[]>([]);

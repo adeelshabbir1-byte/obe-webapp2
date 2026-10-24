@@ -90,7 +90,7 @@ export default async function SubjectExpertCoursesPage() {
   }
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Assigned Courses</h1>
       <TrainingBanner user={user} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>

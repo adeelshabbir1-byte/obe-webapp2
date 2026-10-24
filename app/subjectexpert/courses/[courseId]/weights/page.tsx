@@ -26,7 +26,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
   });
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="weights" code={course.code} title={course.title} status={course.templateStatus} />
 
       {pendingException && pendingException.status === "pending" && (

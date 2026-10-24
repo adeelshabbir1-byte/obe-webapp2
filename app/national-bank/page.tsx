@@ -34,7 +34,7 @@ export default async function NationalBankPage({ searchParams }: { searchParams:
   const head = <>
     <div style={{ background: HEC_GREEN, color: "#fff", borderRadius: 10, padding: "16px 18px", marginBottom: 12 }}>
       <div style={{ fontSize: 12, letterSpacing: ".08em", opacity: 0.9 }}>NATIONAL CURRICULUM BANK</div>
-      <h1 style={{ fontSize: 22, margin: "4px 0", color: "#fff" }}>{authority} curriculum, built together</h1>
+      <h1 style={{ fontSize: 22, margin: "4px 0", color: "#fff" }}>National Releases — {authority} curriculum, built together</h1>
       <div style={{ fontSize: 13.5, opacity: 0.95 }}>Green = {authority}&apos;s national releases. Every other colour is one university&apos;s own flavour of the framework, shared so others can build on it. When your course is imported, you get the credit.</div>
     </div>
     <nav className="tabs" style={{ marginBottom: 10 }}>{tabs.map(([k, v]) => <a key={k} className="tab" href={`/national-bank?tab=${k}`} aria-current={tab === k ? "page" : undefined}>{v}</a>)}</nav>

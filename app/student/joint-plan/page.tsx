@@ -17,7 +17,7 @@ export default async function JointPlan() {
   const shell = (x: React.ReactNode) => <StudentShell studentName={st.name}>{x}</StudentShell>;
   const p = await planFor(st.id).catch(() => undefined);
   if (p === undefined) return shell(<div className="err">{CONSORTIUM_HINT}</div>);
-  if (!p) return shell(<><h1 style={{ fontSize: 22 }}>Joint degree plan</h1><div className="card">You are not in a joint degree programme. Single courses at other universities: <Link href="/student/consortium">Courses at Other Universities</Link>.</div></>);
+  if (!p) return shell(<><h1 style={{ fontSize: 22 }}>My Joint Degree Plan</h1><div className="card">You are not in a joint degree programme. Single courses at other universities: <Link href="/student/consortium">Courses at Other Universities</Link>.</div></>);
   const v = validatePlan({ ...p, home: p.lead });
   const au = await audit(st.id);
   const g = (await cdb.consortiumGraduation.findFirst({ where: { studentId: st.id, agreementId: p.agreement.id } }).catch(() => null)) as Graduation | null;

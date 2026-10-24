@@ -38,7 +38,7 @@ export default async function Teaching() {
   const applied = new Set(mine.map((a) => a.vacancyId));
   const line = (v: Vacancy) => { const c = C(v); return <><b>{c?.code} {c?.title}</b> <span className="small-note">{uni(v.chairmanId)} · {v.term} · {v.mode === "ONLINE" ? "online" : "on campus"} · {c?.creditHours}{c && labOf(c) ? ` (${c.creditHours - labOf(c)}+${labOf(c)})` : ""} CH{v.schedule ? ` · ${v.schedule}` : ""}{v.pay && v.showPay ? ` · PKR ${v.pay.toLocaleString()} ${v.payBasis || ""}` : ""}{v.deadline ? ` · apply by ${v.deadline.toISOString().slice(0, 10)}` : ""}</span></>; };
   return shell(<>
-    <h1 style={{ fontSize: 22, marginBottom: 4 }}>Teaching posts at other universities</h1>
+    <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Teaching Posts at other universities</h1>
     <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Member universities post courses they need a visiting teacher for. The host sees your qualifications and how often you taught the course on OBEHUB; your CLO attainment and student feedback only if you tick them. If your university asks for a NOC to teach elsewhere, your Chairman decides first.</p>
     {!e.ok && <div className="card" style={{ borderLeft: "4px solid #B26A00" }}>{e.why}</div>}
 

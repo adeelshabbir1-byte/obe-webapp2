@@ -5,7 +5,7 @@ import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import PublicCourseLibrary from "../../components/PublicCourseLibrary";
 
-const ROLE_LABEL: Record<string, string> = { SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", PROGRAM_COORDINATOR: "Program Coordinator", OMC: "OMC", CHAIRMAN: "Institute Head", SUPER_USER: "Super User" };
+const ROLE_LABEL: Record<string, string> = { SUBJECT_EXPERT: "University Subject Expert", INSTRUCTOR: "Course Instructor", PROGRAM_COORDINATOR: "Program Coordinator", OMC: "OMC", CHAIRMAN: "Institute Head", SUPER_USER: "Super User" };
 
 export default async function PublicLibraryPage() {
   const user = await getAuthenticatedUser();
@@ -19,7 +19,7 @@ export default async function PublicLibraryPage() {
 
   return (
     <Shell roleLabel={ROLE_LABEL[user.role]} userName={user.name} navLinks={nav}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>National Course Catalog</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Shared Courses</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Courses that teachers and Subject Experts from any institute (or from industry) have chosen to share. Search for one and import it into
         a course of your own — you get an independent copy you can edit freely; the original is never changed. Its author gets the credit, and HEC can choose it for the national release (see the <a href="/national-bank" style={{ color: "#1E7B3C", fontWeight: 600 }}>National Curriculum Bank</a>).

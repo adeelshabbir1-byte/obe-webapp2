@@ -38,7 +38,7 @@ export default async function SePaperDistributionPage({ params }: { params: { co
   const suggestedBefore = (policy as unknown as { finalBeforeMidtermPct: number | null } | null)?.finalBeforeMidtermPct ?? null;
 
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="paper-distribution" code={course.code} title={course.title} status={course.templateStatus} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 16 }}>
         Plan the Midterm and Final papers' question distribution. Already set the question numbers against topics

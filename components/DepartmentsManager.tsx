@@ -12,7 +12,7 @@ type Person = { id: string; name: string; role: string; departmentId: string | n
 
 const ROLE_NAME: Record<string, string> = {
   PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", COURSE_ASSIGNER: "Course Assigner", OMC: "OMC Member",
-  HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "Subject Expert", LAB_ENGINEER: "Lab Engineer",
+  HEAD_OF_DEPARTMENT: "Chairman", DEAN: "Dean", INSTRUCTOR: "Teacher", SUBJECT_EXPERT: "University Subject Expert", LAB_ENGINEER: "Lab Engineer",
 };
 
 const TABS: [string, string][] = [["depts", "Departments"], ["rooms", "Rooms"], ["people", "People"], ["leads", "Program Leads"], ["roles", "Give a role"], ["accounts", "Add accounts"]];

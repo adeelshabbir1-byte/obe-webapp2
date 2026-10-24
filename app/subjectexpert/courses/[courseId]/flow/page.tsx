@@ -16,7 +16,7 @@ export default async function SeFlowPage({ params }: { params: { courseId: strin
   const course = await prisma.course.findUnique({ where: { id: params.courseId }, select: { id: true, code: true, title: true, templateStatus: true, subjectExpertId: true } });
   if (!course || course.subjectExpertId !== user.id) notFound();
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="flow" code={course.code} title={course.title} status={course.templateStatus} />
       <CourseFlowPanel courseId={course.id} source="SE" />
     </Shell>

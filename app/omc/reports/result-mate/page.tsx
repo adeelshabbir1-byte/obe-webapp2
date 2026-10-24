@@ -31,11 +31,18 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
   const coordinatorIds = await coordinatorIdsFor(user);
   let courses = await prisma.course.findMany({
     where: { AND: [courseScopeFor(user), { instructorId: { not: null } }] },
-    include: { batch: true, instructor: true },
+    include: { batch: true, instructor: true, coordinator: { select: { managedById: true, managedBy: { select: { instituteName: true, name: true } } } } },
     orderBy: { code: "asc" },
   });
 
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  // A university OMC also sees its affiliated colleges' batches and courses — name the college on them.
+  const collegeIds = (user as { collegeIds?: string[] }).collegeIds || [];
+  const collegeOfBatch = new Map<string, string>();
+  if (collegeIds.length) {
+    const cb = await prisma.batch.findMany({ where: { id: { in: allBatches.map((b) => b.id) }, coordinator: { managedById: { in: collegeIds } } }, select: { id: true, coordinator: { select: { managedBy: { select: { instituteName: true, name: true } } } } } });
+    for (const b of cb) collegeOfBatch.set(b.id, b.coordinator.managedBy?.instituteName || b.coordinator.managedBy?.name || "college");
+  }
   const notMine = !!searchParams.batchId && (user.role === "INSTRUCTOR" || user.role === "SUBJECT_EXPERT") && !allBatches.some((b) => b.id === searchParams.batchId);
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
@@ -83,10 +90,10 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
         Relative grading, based on the class mean and standard deviation.
       </p>
       <div className="card no-print">
-        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
+        <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: collegeOfBatch.get(b.id) ? `${b.batchName} — ${collegeOfBatch.get(b.id)}` : b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
         <div style={{ marginTop: 10 }}>
         <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
-        <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}` }))} />
+        <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}${collegeIds.includes(c.coordinator.managedById || "") ? ` (${c.coordinator.managedBy?.instituteName || c.coordinator.managedBy?.name})` : ""}` }))} />
         </div>
       </div>
 

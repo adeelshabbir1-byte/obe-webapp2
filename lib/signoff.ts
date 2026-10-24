@@ -55,7 +55,7 @@ export async function signersFrom(chairmanId: string, rows: { userId: string | n
   const ids = rows.map((r) => r.userId).filter((x): x is string => !!x);
   const users = await prisma.user.findMany({ where: { id: { in: ids.concat(["none"]) } }, select: { id: true, name: true, role: true } });
   const titles = await titlesFor(chairmanId).catch(() => null);
-  const ROLE_TITLE: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Head of Department", PROGRAM_COORDINATOR: "Program Lead", INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", OMC: "OMC", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", LIBRARIAN: "Librarian" };
+  const ROLE_TITLE: Record<string, string> = { CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Head of Department", PROGRAM_COORDINATOR: "Program Lead", INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "University Subject Expert", OMC: "OMC", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", LIBRARIAN: "Librarian" };
   const out: Signer[] = [];
   const seen = new Set<string>();
   for (const r of rows) {

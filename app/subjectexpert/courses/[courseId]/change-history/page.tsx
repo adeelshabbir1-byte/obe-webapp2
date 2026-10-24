@@ -17,7 +17,7 @@ export default async function ChangeHistoryPage({ params }: { params: { courseId
   if (!course || course.subjectExpertId !== user.id) notFound();
   const items = await loadChangeItems({ courseId: course.id });
   return (
-    <Shell roleLabel="Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} status={course.templateStatus} />
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Change history</h2>
       <TemplateChangeHistory items={items} showCourse={false} />

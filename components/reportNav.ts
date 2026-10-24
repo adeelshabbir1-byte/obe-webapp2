@@ -116,7 +116,7 @@ export const INSTRUCTOR_NAV = [
   { href: "/faculty/my-availability", label: "My Availability" },
   { href: "/faculty/course-preferences", label: "My Course Priorities" },
   { href: "/omc/reports", label: "Reports" },
-  { href: "/public-library", label: "National Course Catalog" },
+  { href: "/public-library", label: "Shared Courses" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/deadlines", label: "Deadlines" },
   { href: "/accreditation", label: "Accreditation Data" },
@@ -135,7 +135,7 @@ export const SUBJECT_EXPERT_NAV = [
   { href: "/follow-ups", label: "Topic Follow-ups" },            // what earlier courses ask of my courses, and what was done
   { href: "/faculty/topic-workspace", label: "Topic Workspace" },     // move topics between two or three of my assigned courses
   { href: "/coordinator/prerequisite-map", label: "Prerequisite Map" }, // what students already know before my course (view only)
-  { href: "/public-library", label: "National Course Catalog" },        // other institutes' course outlines, for reference
+  { href: "/public-library", label: "Shared Courses" },        // other institutes' course outlines, for reference
   { href: "/deadlines", label: "Deadlines" },                         // my tasks, dates and who waits on me
   { href: "/faculty/profile", label: "My Profile" },                  // qualifications shown on the course documents
   { href: "/appraisals", label: "My Appraisal" },                     // the yearly appraisal, once the reviewer shares it
@@ -189,7 +189,7 @@ export const COORDINATOR_NAV = [
   { href: "/omc/course-repositioning", label: "Course Repositioning" },
   { href: "/coordinator/feedforward-digest", label: "Feed-Forward Digest" },
   { href: "/omc/reports", label: "OMC Reports" },
-  { href: "/public-library", label: "National Course Catalog" },
+  { href: "/public-library", label: "Shared Courses" },
   { href: "/faculty/profile", label: "My Profile" },
   { href: "/faculty-report", label: "Faculty Directory" },
   { href: "/lab-inventory", label: "Lab Inventory" },
@@ -379,15 +379,15 @@ export const HOD_NAV = [
 // University ERP pages, added to each role's menu by what the role may use (see lib/erp erpAccess).
 const ERP_LINKS: [string, string, string[]][] = [
   ["/head-dashboard", "Institute Dashboard", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"]],
-  ["/regulations", "Regulations Library", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "DEPARTMENT_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "OMC", "COURSE_ASSIGNER", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"]],
+  ["/regulations", "National Regulations", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "DEPARTMENT_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "OMC", "COURSE_ASSIGNER", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"]],
   ["/consortium", "Consortium", ["CHAIRMAN"]],
   ["/consortium/agreements", "Consortium Agreements", ["CHAIRMAN", "SUBJECT_EXPERT"]],
   ["/consortium/offerings", "Consortium Courses", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
   ["/consortium/applications", "Consortium Students", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "SUBJECT_EXPERT", "FINANCE_OFFICER"]],
-  ["/consortium/vacancies", "Visiting Faculty Posts", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
-  ["/consortium/teaching", "Teaching Posts Elsewhere", ["CHAIRMAN", "INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEAN", "OMC"]],
+  ["/consortium/vacancies", "Consortium Faculty Posts", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
+  ["/consortium/teaching", "My Teaching Posts (other universities)", ["CHAIRMAN", "INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEAN", "OMC"]],
   ["/consortium/exams", "Consortium Exams", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
-  ["/consortium/graduation", "Joint Degree Graduation", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT"]],
+  ["/consortium/graduation", "Joint Degrees — Graduation", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT"]],
   ["/counselling", "Counselling", ["CHAIRMAN", "STUDENT_AFFAIRS"]],
   ["/library-desk", "Library Desk", ["LIBRARIAN", "CHAIRMAN"]],
   ["/billing", "OBEHUB Plan & Invoices", ["CHAIRMAN"]],
@@ -454,8 +454,8 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/chairman/campuses", "Campuses", ["CHAIRMAN"]],
   ["/dean/course-codes", "Course-Code System", ["CHAIRMAN", "DEAN"]],
   ["/coordinator/course-codes", "Course Codes", ["PROGRAM_COORDINATOR", "OMC"]],
-  ["/coordinator/curriculum-sync", "My Curriculum vs Master", ["PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"]],
-  ["/curricula", "Curriculum Library", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"]],
+  ["/coordinator/curriculum-sync", "University Curriculum vs National", ["PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"]],
+  ["/curricula", "Curricula (National · University)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"]],
   ["/chairman/affiliates", "Affiliated Colleges", ["CHAIRMAN"]],
   ["/affiliates/marks", "Affiliated Colleges — Marks", ["CHAIRMAN"]],
   ["/college/design", "Course Design from University (colleges)", ["CHAIRMAN", "PROGRAM_COORDINATOR"]],
@@ -482,7 +482,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/ipe", "IPE Self-Assessment", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC"]],
   ["/internationalisation", "Internationalisation", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "STUDENT_AFFAIRS", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/admin/migrations", "Database updates", ["CHAIRMAN", "SUPER_USER"]],
-  ["/national-bank", "National Curriculum Bank", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "DEPARTMENT_COORDINATOR", "SUPER_USER"]],
+  ["/national-bank", "National Releases", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "DEPARTMENT_COORDINATOR", "SUPER_USER"]],
   ["/remediation-flags", "Flag for Remediation", ["INSTRUCTOR", "SUBJECT_EXPERT", "OMC", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN", "LAB_ENGINEER", "DEPARTMENT_COORDINATOR"]],
   ["/portfolio-review", "Portfolio Review", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/my-payslips", "My Payslips", ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT", "DEPARTMENT_COORDINATOR"]],

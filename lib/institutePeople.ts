@@ -2,7 +2,7 @@ import { prisma } from "./db";
 
 export const ROLE_TEXT: Record<string, string> = {
   CHAIRMAN: "Institute Head", DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator",
-  COURSE_ASSIGNER: "Course Assigner", OMC: "OMC member", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager",
+  COURSE_ASSIGNER: "Course Assigner", OMC: "OMC member", SUBJECT_EXPERT: "University Subject Expert", INSTRUCTOR: "Course Instructor", LAB_ENGINEER: "Lab Engineer", LAB_MANAGER: "Lab Manager", LIBRARIAN: "Librarian", FINANCE_OFFICER: "Finance Officer", STUDENT_AFFAIRS: "Student Affairs", FACILITIES_MANAGER: "Facilities Manager",
 };
 const ORDER = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 

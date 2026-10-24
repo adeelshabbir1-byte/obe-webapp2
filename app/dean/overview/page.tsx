@@ -7,7 +7,7 @@ import Link from "next/link";
 import { reportPeople } from "../../../lib/facultyProfile";
 import { appraiseesFor } from "../../../lib/appraisal";
 
-const ROLE_TEXT: Record<string, string> = { INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "Subject Expert", PROGRAM_COORDINATOR: "Program Lead", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", DEAN: "Dean", LAB_ENGINEER: "Lab Engineer" };
+const ROLE_TEXT: Record<string, string> = { INSTRUCTOR: "Instructor", SUBJECT_EXPERT: "University Subject Expert", PROGRAM_COORDINATOR: "Program Lead", HEAD_OF_DEPARTMENT: "Chairman", DEPARTMENT_COORDINATOR: "Program Coordinator", DEAN: "Dean", LAB_ENGINEER: "Lab Engineer" };
 
 export default async function DeanOverviewPage() {
   const user = await requireDean();

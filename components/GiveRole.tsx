@@ -32,7 +32,7 @@ export default function GiveRole({ teachers, roles, faculties = [], departments 
   }
 
   // Anyone can hold any combination of roles, so leaders who do not yet hold the chosen role are offered too.
-  const LABEL: Record<string, string> = { DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Instructor" };
+  const LABEL: Record<string, string> = { DEAN: "Dean", HEAD_OF_DEPARTMENT: "Chairman", PROGRAM_COORDINATOR: "Program Lead", DEPARTMENT_COORDINATOR: "Program Coordinator", SUBJECT_EXPERT: "University Subject Expert", INSTRUCTOR: "Instructor" };
   const target = role === "PROGRAM_LEAD" ? "PROGRAM_COORDINATOR" : role;
   const extraLeaders = (["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(target) ? leaders.filter((l) => !l.holds.includes(target) || target === "PROGRAM_COORDINATOR") : [])
     .map((l) => ({ id: l.id, name: `${l.name} (${l.holds.map((h) => LABEL[h] || h).join(" + ")})`, departmentName: l.departmentName }));

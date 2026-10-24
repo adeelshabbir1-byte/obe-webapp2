@@ -22,7 +22,7 @@ export default async function Catalog({ searchParams }: { searchParams: { q?: st
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}>
       <header style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "#1565C0", letterSpacing: 0.4 }}>OBEHUB CONSORTIUM</div>
-        <h1 style={{ fontSize: 26, margin: "2px 0 4px" }}>Course catalog</h1>
+        <h1 style={{ fontSize: 26, margin: "2px 0 4px" }}>Consortium Courses — public catalog</h1>
         <p style={{ color: "var(--slate, #556)", fontSize: 14, margin: 0 }}>Courses {heads.length} member universit{heads.length === 1 ? "y opens" : "ies open"} to each other&apos;s students — on campus or online. A course counts toward your degree when your own university recognises it; final exams are proctored on a campus or exam centre. <Link href="/student/login">Student sign-in</Link></p>
       </header>
       {joint.length > 0 && <section style={{ marginBottom: 14 }}><h2 style={{ fontSize: 18, margin: "0 0 8px" }}>Joint degree programmes</h2>
