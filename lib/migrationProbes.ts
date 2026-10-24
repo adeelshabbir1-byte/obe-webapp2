@@ -241,7 +241,8 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 {
 "f": "migration_curriculum_builder.sql",
 "d": "Curriculum Builder: the course types of a curriculum (its own categories with targets), elective tracks, the",
-"t": "CourseCodeScheme"
+"t": "CourseCodeScheme",
+"c": "separator"
 },
 {
 "f": "migration_curriculum_library.sql",

@@ -52,3 +52,13 @@ CREATE TABLE IF NOT EXISTS "CourseCodeScheme" (
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "CourseCodeScheme_chairmanId_idx" ON "CourseCodeScheme"("chairmanId");
+
+-- A batch course's values when it was last in step with its master course (to tell "the master changed" from
+-- "the Program Lead changed it").
+CREATE TABLE IF NOT EXISTS "CourseMasterSync" (
+  "courseId" TEXT PRIMARY KEY,
+  "baseJson" TEXT NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE "CourseCodeScheme" ADD COLUMN IF NOT EXISTS "separator" TEXT NOT NULL DEFAULT '';

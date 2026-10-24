@@ -190,6 +190,9 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       await prisma.masterCurriculum.update({ where: { id: c.id }, data: { status: "PUBLISHED" } });
       if (a.supersede) await prisma.masterCurriculum.updateMany({ where: { id: s("supersede") }, data: { status: "SUPERSEDED" } });
       await writeAuditLog({ actorUserId: user.id, action: "CURRICULUM_PUBLISHED", entityType: "MasterCurriculum", entityId: c.id });
+      // Program Leads whose batches use this curriculum review any changes (nothing changes in their batches by itself).
+      const users = await prisma.course.findMany({ where: { masterCourse: { masterCurriculumId: c.id } }, select: { coordinatorId: true, batchId: true }, distinct: ["batchId"] });
+      if (users.length) { const { notifyUsers } = await import("./notifications"); await notifyUsers(Array.from(new Set(users.map((u) => u.coordinatorId))), { kind: "CURRICULUM", title: `Master curriculum updated: ${c.title} ${c.version}`, body: "Review what changed for your batches; nothing changes until you apply it.", href: "/coordinator/curriculum-sync" }); }
       return "Published.";
     }
     case "reopen": { await prisma.masterCurriculum.update({ where: { id: c.id }, data: { status: "DRAFT" } }); return "Back to draft."; }

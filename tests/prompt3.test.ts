@@ -103,3 +103,9 @@ test("builder: courses are placed into a template's types", async () => {
   const total = t.types.reduce((s, x) => s + (["ELECTIVE_LIST", "IDS_LIST", "NONCREDIT"].includes(x.kind) ? 0 : x.minCredits || 0), 0);
   assert.ok(total >= 120 && total <= 144, `template total ${total}`);
 });
+
+test("course codes: prefix, year digit and sequence", async () => {
+  const { sample } = await import("../lib/courseCodes");
+  assert.equal(sample({ prefix: "CS", digits: 4, separator: "-" }, 1, 1), "CS-1001");
+  assert.equal(sample({ prefix: "MT", digits: 3, separator: "" }, 2, 3), "MT203");
+});

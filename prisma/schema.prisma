@@ -7486,10 +7486,18 @@ model CourseCodeScheme {
   program       String?
   prefix        String
   digits        Int      @default(4)
+  separator     String   @default("")
   effectiveTerm String?
   effectiveYear Int?
   setById       String
   updatedAt     DateTime @default(now())
 
   @@index([chairmanId])
+}
+
+// A batch course's code, title, credit hours, semester and type when it was last in step with its master course.
+model CourseMasterSync {
+  courseId  String   @id
+  baseJson  String
+  updatedAt DateTime @default(now())
 }

@@ -16,7 +16,7 @@ export const CORE: Record<string, [string, string[]][]> = {
   ],
   DEAN: [
     ["Today", ["/dean/overview", "/approvals", "/head-dashboard", "/deadlines"]],
-    ["Faculty & departments", ["/dean/approvals", "/leave-approvals", "/teacher-performance", "/dean/curricula"]],
+    ["Faculty & departments", ["/dean/course-codes", "/dean/approvals", "/leave-approvals", "/teacher-performance", "/dean/curricula"]],
     ["Academics", ["/results-approval", "/academic-calendar", "/admission-criteria"]],
     ["Accreditation", ["/accreditation-overview", "/accreditation/readiness", "/quality-office"]],
   ],
@@ -29,7 +29,7 @@ export const CORE: Record<string, [string, string[]][]> = {
   PROGRAM_COORDINATOR: [
     ["Today", ["/approvals", "/deadlines", "/requests"]],
     ["Semester", ["/coordinator/semester", "/coordinator/timetable", "/coordinator/calendar"]],
-    ["Program", ["/coordinator/batches", "/curricula", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/plos"]],
+    ["Program", ["/coordinator/batches", "/curricula", "/coordinator/curriculum-sync", "/coordinator/course-codes", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/plos"]],
     ["Students", ["/coordinator/students", "/coordinator/student-transcript", "/data-import"]],
     ["Accreditation", ["/accreditation/tasks", "/accreditation/readiness", "/coordinator/evidence"]],
   ],
