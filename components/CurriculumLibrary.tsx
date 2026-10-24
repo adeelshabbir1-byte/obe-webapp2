@@ -31,6 +31,7 @@ export default function CurriculumLibrary({ items, canTidy }: { items: LibItem[]
         ))}
         <label style={{ fontSize: 12.5 }}><input type="checkbox" checked={old} onChange={(e) => setOld(e.target.checked)} /> Show superseded versions</label>
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setF({}); setQ(""); }}>Clear filters</button>
+        {canTidy && <Link className="btn btn-brass btn-sm" href="/curricula/builder">Curriculum Builder</Link>}
         {canTidy && <Link className="btn btn-sm" href="/curricula/tidy">Name &amp; tidy up{unnamed ? ` (${unnamed} unnamed)` : ""}</Link>}
         {pick.length === 2 ? <Link className="btn btn-brass btn-sm" href={`/curricula/compare?a=${pick[0]}&b=${pick[1]}`}>Compare the two</Link> : <span className="small-note">Tick two versions to compare them.</span>}
       </aside>

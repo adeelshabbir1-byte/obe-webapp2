@@ -7430,3 +7430,66 @@ model InstituteAffiliation {
 
   @@index([universityId])
 }
+
+// Curriculum Builder (lib/curriculumBuilder.ts). A curriculum's own course types (its categories) with their targets:
+// kind says how the type behaves (CORE, GE, IDS, SUPPORTING, LAB, CAPSTONE, INTERNSHIP, ELECTIVE_SLOT, ELECTIVE_LIST,
+// IDS_LIST, NONCREDIT); requiredJson = course titles the type must contain. MasterCourse.category holds the type's name.
+model CurriculumType {
+  id           String  @id
+  curriculumId String
+  name         String
+  kind         String  @default("CORE")
+  minCourses   Int?
+  minCredits   Int?
+  maxCredits   Int?
+  requiredJson String  @default("[]")
+  note         String?
+  position     Int     @default(0)
+  prefilled    Boolean @default(false)
+
+  @@index([curriculumId])
+}
+
+// Specialisation tracks of a curriculum's elective list (AI, CS, SE, Cyber Security …); a course may be in several.
+model CurriculumTrack {
+  id           String @id
+  curriculumId String
+  name         String
+  minCourses   Int?
+  position     Int    @default(0)
+
+  @@index([curriculumId])
+}
+model MasterCourseTrack {
+  masterCourseId String
+  trackId        String
+
+  @@id([masterCourseId, trackId])
+  @@index([trackId])
+}
+
+// A platform user (curriculum committee member) allowed to build master curricula for some councils / programs.
+model CurriculumBuilderScope {
+  userId       String   @id
+  councilsJson String   @default("[]")
+  programsJson String   @default("[]")
+  createdById  String
+  createdAt    DateTime @default(now())
+}
+
+// A department's course-code system, set by the Dean: 2-letter prefix + 3 or 4 digits (first digit = year of study),
+// optionally per program, applied to batches from a term.
+model CourseCodeScheme {
+  id            String   @id
+  chairmanId    String
+  departmentId  String
+  program       String?
+  prefix        String
+  digits        Int      @default(4)
+  effectiveTerm String?
+  effectiveYear Int?
+  setById       String
+  updatedAt     DateTime @default(now())
+
+  @@index([chairmanId])
+}

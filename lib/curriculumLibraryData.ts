@@ -9,6 +9,8 @@ export const LIB_ROLES = ["SUPER_USER", "CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"
 /** Whose curricula this person sees: Super User all official ones and every institute's; others what their institute may use. */
 export async function libraryScope(user: U) {
   if (user.role === "SUPER_USER") return { chairmanId: null as string | null, where: {} as Record<string, unknown>, superUser: true };
+  // A Curriculum Builder (platform curriculum committee member) sees the official curricula.
+  if (await (await import("./curriculumBuilder")).builderScope(user.id)) return { chairmanId: null as string | null, where: { chairmanId: null } as Record<string, unknown>, superUser: true };
   const cid = await findOwningChairmanId(user.id);
   return { chairmanId: cid, where: cid ? await curriculaWhere(cid) : { id: "none" }, superUser: false };
 }
@@ -21,7 +23,10 @@ export async function libraryItems(user: U) {
   const owners = await prisma.user.findMany({ where: { id: { in: cs.map((c) => c.chairmanId).filter((x): x is string => !!x).concat("none") } }, select: { id: true, name: true, instituteName: true } });
   const ownerName = new Map(owners.map((o) => [o.id, o.instituteName || o.name]));
   const mcs = await prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { masterCurriculumId: true, creditHours: true, category: true } });
-  const chOf = new Map<string, number>(); for (const x of mcs) if (countsTowardDegree(x.category)) chOf.set(x.masterCurriculumId, (chOf.get(x.masterCurriculumId) || 0) + x.creditHours);
+  const defs = ((await ldb.curriculumType.findMany({ where: { curriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { curriculumId: true, name: true, kind: true } }).catch(() => [])) as { curriculumId: string; name: string; kind: string }[]);
+  const { kindInfo } = await import("./curriculumTemplates");
+  const counts = (cid: string, cat: string) => { const ds = defs.filter((d) => d.curriculumId === cid); if (!ds.length) return countsTowardDegree(cat); const d = ds.find((x) => x.name === cat); return d ? kindInfo(d.kind).counts : false; };
+  const chOf = new Map<string, number>(); for (const x of mcs) if (counts(x.masterCurriculumId, x.category)) chOf.set(x.masterCurriculumId, (chOf.get(x.masterCurriculumId) || 0) + x.creditHours);
   const used = await prisma.course.findMany({ where: { masterCourse: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } } }, select: { batchId: true, masterCourse: { select: { masterCurriculumId: true } } }, distinct: ["batchId"] });
   const batches = new Map<string, number>(); used.forEach((u) => batches.set(u.masterCourse!.masterCurriculumId, (batches.get(u.masterCourse!.masterCurriculumId) || 0) + 1));
   const uni = sc.chairmanId ? await universityOf(sc.chairmanId) : null;
@@ -43,6 +48,7 @@ export async function libraryItems(user: U) {
 /** May this person rename / set the fields of this curriculum? Super User: official ones; the owning institute: its own. */
 export async function canEditMeta(user: U, c: { chairmanId: string | null }) {
   if (user.role === "SUPER_USER") return true;
+  if (!c.chairmanId && (await (await import("./curriculumBuilder")).builderScope(user.id))) return true;
   if (!c.chairmanId || !["CHAIRMAN", "DEAN", "OMC"].includes(user.role)) return false;
   return (await findOwningChairmanId(user.id)) === c.chairmanId;
 }

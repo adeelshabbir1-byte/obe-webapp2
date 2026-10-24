@@ -3,6 +3,7 @@ export const ADMIN_NAV = [
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/modules", label: "Institute Modules" },
   { href: "/admin/billing", label: "Billing" },
+  { href: "/curricula/builder", label: "Curriculum Builder" },
   { href: "/curricula", label: "Curriculum Library" },
   { href: "/admin/curricula", label: "Master Curricula (upload, assign)" },
   { href: "/admin/affiliations", label: "Affiliated Colleges" },

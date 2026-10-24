@@ -19,7 +19,7 @@ export default async function CurriculumPage({ params, searchParams }: { params:
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (!LIB_ROLES.includes(user.role)) redirect("/home");
+  if (!LIB_ROLES.includes(user.role) && !(user.extraRoles || []).includes("CURRICULUM_BUILDER")) redirect("/home");
   const d = await curriculumDetail(params.id);
   if (!d) notFound();
   const sc = await libraryScope(user);
@@ -43,7 +43,7 @@ export default async function CurriculumPage({ params, searchParams }: { params:
         <span>{d.c.status.toLowerCase()}</span>
         {m?.effectiveYear && <span>effective from {m.effectiveTerm} {m.effectiveYear}</span>}
         {d.c.chairmanId && d.colleges.length > 0 && <span>followed by {d.colleges.length} affiliated college(s)</span>}
-        {edit && <Link href={`/curricula/${d.c.id}/types`}><b>Course types</b> (GE, IDS, Core, Elective slots and lists)</Link>}
+        {edit && <Link href={`/curricula/builder/${d.c.id}`}><b>Open in Curriculum Builder</b></Link>}
         {editLink && <Link href={editLink}>Edit courses, CLOs and topics</Link>}
         <a href={`/api/master-curriculum/${d.c.id}/download`}>Download</a>
       </div>

@@ -16,7 +16,7 @@ const COL: Record<string, string> = { Added: "#2E7D32", Removed: "#C62828", Same
 export default async function Compare({ searchParams }: { searchParams: { a?: string; b?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
-  if (!LIB_ROLES.includes(user.role)) redirect("/home");
+  if (!LIB_ROLES.includes(user.role) && !(user.extraRoles || []).includes("CURRICULUM_BUILDER")) redirect("/home");
   const sc = await libraryScope(user);
   for (const id of [searchParams.a, searchParams.b]) { const c = id ? await prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, chairmanId: true } }) : null; if (!c || (!sc.superUser && !(await canUseCurriculum(c, sc.chairmanId)))) redirect("/curricula"); }
   const r = await compareCurricula(searchParams.a!, searchParams.b!);

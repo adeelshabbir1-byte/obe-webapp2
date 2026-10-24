@@ -4,6 +4,8 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import PlatformExpertsManager from "../../../components/PlatformExpertsManager";
 import { ADMIN_NAV } from "../../../components/adminNav";
+import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
+import { bdb } from "../../../lib/curriculumBuilder";
 
 export default async function MasterExpertsPage({ searchParams }: { searchParams: { curriculumId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -16,6 +18,9 @@ export default async function MasterExpertsPage({ searchParams }: { searchParams
     prisma.user.findMany({ where: { role: "SUBJECT_EXPERT", isPlatformExpert: true }, orderBy: { createdAt: "desc" } }),
     prisma.masterCurriculum.findMany({ where: { chairmanId: null }, orderBy: [{ title: "asc" }, { version: "desc" }] }),
   ]);
+  const scopes = ((await bdb.curriculumBuilderScope.findMany({}).catch(() => [])) as { userId: string; councilsJson: string; programsJson: string }[]);
+  const sc = new Map(scopes.map((s) => [s.userId, s]));
+  const j = (s?: string) => { try { return (JSON.parse(s || "[]") as string[]).join(", "); } catch { return ""; } };
   const curriculumId = searchParams.curriculumId || curricula[0]?.id || "";
   const courses = curriculumId ? await prisma.masterCourse.findMany({ where: { masterCurriculumId: curriculumId }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] }) : [];
 
@@ -26,6 +31,15 @@ export default async function MasterExpertsPage({ searchParams }: { searchParams
         Create Subject Experts who belong to no institute and design courses of the official Master Curriculum for every institute. Then assign each
         course to the expert who should write it.
       </p>
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Curriculum Builders</h3>
+        <p className="small-note" style={{ marginTop: 0 }}>A Curriculum Builder is a curriculum-committee member (later: HEC&apos;s own experts) who builds the <b>structure</b> of official curricula in the <a href="/curricula/builder">Curriculum Builder</a> — course types, placing courses, elective tracks — and submits them for you to publish. Limit each to councils (e.g. NCEAC) and programs, or leave empty for all. Subject Experts below still write each course&apos;s CLOs and topics.</p>
+        <table style={{ fontSize: 13 }}><thead><tr><th>Expert</th><th>Builder?</th><th>Councils / programs</th><th></th></tr></thead>
+          <tbody>{experts.map((e) => { const s = sc.get(e.id); return (
+            <tr key={e.id}><td>{e.name}</td><td>{s ? <b style={{ color: "#2E7D32" }}>Yes</b> : "No"}</td><td className="small-note">{s ? `${j(s.councilsJson) || "all councils"} · ${j(s.programsJson) || "all programs"}` : "—"}</td>
+              <td><ActionForm url="/api/admin/curriculum-builders" fixed={{ userId: e.id, on: true }} fields={[{ name: "councils", label: "Councils (comma separated)" }, { name: "programs", label: "Programs (comma separated)" }]} initial={{ councils: j(s?.councilsJson), programs: j(s?.programsJson) }} submit={s ? "Save scope" : "Make Curriculum Builder"} collapsed openLabel={s ? "Edit scope" : "Make builder"} />
+                {s && <ActionButton url="/api/admin/curriculum-builders" body={{ userId: e.id, on: false }} label="Remove" className="btn btn-secondary btn-sm" />}</td></tr>); })}</tbody></table>
+      </div>
       <PlatformExpertsManager
         experts={experts.map((e) => ({ id: e.id, name: e.name, username: e.username, organization: e.organization }))}
         curricula={curricula.map((c) => ({ id: c.id, label: `${c.title} (${c.version})` }))}

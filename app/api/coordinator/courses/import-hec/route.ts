@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
     include: { courses: true },
   });
   if (!curriculum) return NextResponse.json({ error: "curriculum not found" }, { status: 404 });
+  // A curriculum made in the Curriculum Builder has its own type names: each becomes the batch's standard course type.
+  const typeDefs = ((await (prisma as unknown as Record<string, any>).curriculumType.findMany({ where: { curriculumId: curriculum.id } }).catch(() => [])) as { name: string; kind: string }[]);
+  const { kindInfo } = await import("../../../../../lib/curriculumTemplates");
+  const batchTypeOf = (cat: string) => { const d = typeDefs.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : cat; };
 
   // Defense in depth: the frontend only ever offers this institution's
   // own curriculum (via findOwnInstitutionCurriculum), but this endpoint
@@ -98,12 +102,12 @@ export async function POST(req: NextRequest) {
       // title instead of whatever its master template happened to be
       // titled — this is the same rule already applied as a one-time
       // bulk rename to existing data, now applied automatically here too.
-      const title = mc.category === "Elective" ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : mc.title;
+      const title = batchTypeOf(mc.category) === "Elective" && !typeDefs.length ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : batchTypeOf(mc.category) === "Elective" && /^elective\b/i.test(mc.title) ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : mc.title;
 
       const newCourse = await prisma.course.create({
         data: {
           code, title, creditHours: mc.creditHours,
-          courseType: mc.category, semesterNumber: mc.semesterNumber,
+          courseType: batchTypeOf(mc.category), semesterNumber: mc.semesterNumber,
           textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
           coordinatorId: ownerId, batchId: batch.id, masterCourseId: mc.id,
         },

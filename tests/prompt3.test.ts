@@ -87,3 +87,19 @@ test("credit hours count elective slots, not the elective list", async () => {
   assert.equal(countedCredits(cs), 11);
   assert.equal(typeKey("Major"), "Core"); assert.equal(typeKey("general education / other"), "General Education");
 });
+
+test("builder: courses are placed into a template's types", async () => {
+  const { TEMPLATES, autoPlace } = await import("../lib/curriculumTemplates");
+  const t = TEMPLATES.find((x) => x.key === "NCEAC-BS-CS-2023")!;
+  const types = t.types.map((x) => ({ name: x.name, kind: x.kind, required: x.required || [] }));
+  const at = (title: string, category = "Major") => autoPlace({ title, category }, types);
+  assert.equal(at("Data Structures"), "Computing Core");
+  assert.equal(at("Theory of Automata"), "Domain Core");
+  assert.equal(at("Calculus & Analytical Geometry"), "Mathematics & Supporting");
+  assert.equal(at("Functional English", "General Education"), "General Education");
+  assert.equal(at("Deep Learning", "Domain Elective"), "Elective list");
+  assert.equal(at("CS Elective-III", "Elective"), "Domain Elective slots");
+  assert.equal(at("Final Year Project - I"), "Computing Core");
+  const total = t.types.reduce((s, x) => s + (["ELECTIVE_LIST", "IDS_LIST", "NONCREDIT"].includes(x.kind) ? 0 : x.minCredits || 0), 0);
+  assert.ok(total >= 120 && total <= 144, `template total ${total}`);
+});

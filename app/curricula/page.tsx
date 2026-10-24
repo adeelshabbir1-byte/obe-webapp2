@@ -16,7 +16,7 @@ export default async function Curricula() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (!LIB_ROLES.includes(user.role)) redirect("/home");
+  if (!LIB_ROLES.includes(user.role) && !(user.extraRoles || []).includes("CURRICULUM_BUILDER")) redirect("/home");
   const items = await libraryItems(user);
   const cid = user.role === "SUPER_USER" ? null : await findOwningChairmanId(user.id);
   const uni = cid ? await universityOf(cid) : null;
