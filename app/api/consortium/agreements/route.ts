@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { CONSORTIUM_HINT, cdb } from "../../../../lib/consortium";
+import { saveGradeMap } from "../../../../lib/consortiumTransfer";
 import { propose, respond, manualPair, decide, adoptClos, autoPair, refresh, institutionOf, loadAgreement } from "../../../../lib/consortiumAgreements";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
       }
       case "decide": return ok(await decide(user, str(b.id, 60), b.ok === true || b.ok === "true", str(b.note, 500)));
       case "adopt": return ok(await adoptClos(user.id, me, str(b.id, 60)));
+      case "gradeMap": return ok(await saveGradeMap(user, str(b.agreementId, 60), str(b.map, 1000)));
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) {

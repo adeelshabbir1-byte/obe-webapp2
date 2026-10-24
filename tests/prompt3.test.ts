@@ -210,3 +210,11 @@ test("consortium equivalence: edition, evidence, two-sided approval", async () =
   assert.equal(statusFrom({ kind: "CREDIT_RECOGNITION" } as never, eq, { U1: { se: ok, chair: ok } }), "APPROVED");
   assert.equal(statusFrom(ag, eq, { U2: { se: { ...ok, ok: false } } }), "REJECTED");
 });
+
+test("consortium transfer: grade points by agreement map, else home scale, else host", async () => {
+  const { convert } = await import("../lib/consortiumTransfer");
+  const scale = new Map([["A", 4], ["B+", 3.5]]);
+  assert.deepEqual(convert("a", 4, { A: 3.9 }, scale), { points: 3.9, basis: "agreement grade map" });
+  assert.deepEqual(convert("B+", 3.3, null, scale), { points: 3.5, basis: "home grading scale" });
+  assert.deepEqual(convert("C", 2, null, scale), { points: 2, basis: "host grade points" });
+});

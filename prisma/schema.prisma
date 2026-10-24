@@ -7794,3 +7794,16 @@ model ConsortiumExamBooking {
 
   @@index([centreId])
 }
+
+// Consortium phase 7. A visiting student's result copied from the host's transcript to the home transcript.
+model ConsortiumTransfer {
+  applicationId String   @id
+  hostRecordId  String
+  homeRecordId  String
+  hostGrade     String
+  hostPoints    Float?
+  homePoints    Float?
+  basis         String   // how the grade points were converted (agreement map / home scale / host points)
+  byId          String
+  at            DateTime @default(now())
+}

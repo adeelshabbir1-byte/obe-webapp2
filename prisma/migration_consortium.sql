@@ -268,3 +268,17 @@ CREATE TABLE IF NOT EXISTS "ConsortiumExamBooking" (
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "ConsortiumExamBooking_centreId_idx" ON "ConsortiumExamBooking"("centreId");
+
+-- Phase 7: a visiting student's result, copied from the host's transcript to their own university's transcript
+-- (the host's letter grade, with grade points converted under the agreement's grade map).
+CREATE TABLE IF NOT EXISTS "ConsortiumTransfer" (
+  "applicationId" TEXT PRIMARY KEY,
+  "hostRecordId" TEXT NOT NULL,
+  "homeRecordId" TEXT NOT NULL,
+  "hostGrade" TEXT NOT NULL,
+  "hostPoints" DOUBLE PRECISION,
+  "homePoints" DOUBLE PRECISION,
+  "basis" TEXT NOT NULL,
+  "byId" TEXT NOT NULL,
+  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

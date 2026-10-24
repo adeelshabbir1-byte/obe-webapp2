@@ -10,6 +10,7 @@ import { cdb, CONSORTIUM_HINT, type Centre } from "../../../lib/consortium";
 import { institutionOf, type Approvals } from "../../../lib/consortiumAgreements";
 import { modeLabel, OFFER_ROLES, type Offering } from "../../../lib/consortiumOfferings";
 import { type Application } from "../../../lib/consortiumApplications";
+import { status as resultStatus } from "../../../lib/consortiumTransfer";
 import { curriculaWhere } from "../../../lib/curriculumLibrary";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,8 @@ export default async function Applications({ searchParams }: { searchParams: { t
   // Home courses an approved course can count as: the student's programme's curricula of ours.
   const curs = me ? await prisma.masterCurriculum.findMany({ where: { ...(await curriculaWhere(me)), status: "PUBLISHED" }, select: { id: true, title: true, version: true, courses: { select: { id: true, code: true, title: true, creditHours: true }, orderBy: { code: "asc" } } } }) : [];
   const optsFor = (prog?: string) => curs.filter((c) => !prog || c.title.toLowerCase() === prog.toLowerCase()).flatMap((c) => c.courses.map((x) => [x.id, `${x.code} ${x.title} (${x.creditHours} CH) — ${c.title} ${c.version}`] as [string, string]));
+  const results = new Map<string, Awaited<ReturnType<typeof resultStatus>>>();
+  for (const a of all.filter((x) => x.homeChairmanId === me && x.status === "ACCEPTED")) results.set(a.id, await resultStatus(a).catch(() => ({ state: "NOT_ENROLLED" as const })));
   const tabBtn = (k: string, l: string) => <Link href={`?tab=${k}`} className={tab === k ? "btn btn-sm" : "btn btn-secondary btn-sm"}>{l}</Link>;
   const pending = { host: hostRows.filter((a) => a.status === "APPLIED" || a.paymentStatus === "CLAIMED").length, home: homeRows.filter((a) => a.creditStatus === "PENDING").length };
   const apText = (ap: Approvals) => { const x = me ? ap[me] : undefined; return [x?.se ? `SE ${x.se.name} ${x.se.ok ? "✓" : "✗"}` : "SE —", x?.chair ? `Chairman ${x.chair.name} ${x.chair.ok ? "✓" : "✗"}` : "Chairman —"].join(" · "); };
@@ -64,14 +67,16 @@ export default async function Applications({ searchParams }: { searchParams: { t
     </div>}
 
     {tab === "home" && <div className="card">
-      <p className="small-note" style={{ marginTop: 0 }}>Our students taking courses at other universities and asking for credit. A Subject Expert and the Chairman both decide. Once approved, the pairing becomes a standing equivalence (when both courses are on the same curriculum edition) and later students get it automatically.</p>
-      {!homeRows.length ? <p className="small-note">No credit requests.</p> : <table style={{ fontSize: 13 }}><thead><tr><th>Student</th><th>Course elsewhere</th><th>Credit</th><th></th></tr></thead><tbody>{homeRows.map((a) => { const s = stu(a), c = crs(a), o = off(a); const ap = JSON.parse(a.creditApprovalsJson || "{}") as Approvals; const mineDone = me ? ap[me]?.[user.role === "CHAIRMAN" ? "chair" : "se"] : null; return (
+      <p className="small-note" style={{ marginTop: 0 }}>When the host publishes a result, bring it in: the host&apos;s letter grade goes on the student&apos;s transcript with grade points converted by your agreement&apos;s grade map (else your grading scale). Our students taking courses at other universities and asking for credit. A Subject Expert and the Chairman both decide. Once approved, the pairing becomes a standing equivalence (when both courses are on the same curriculum edition) and later students get it automatically.</p>
+      {!homeRows.length ? <p className="small-note">No credit requests.</p> : <table style={{ fontSize: 13 }}><thead><tr><th>Student</th><th>Course elsewhere</th><th>Credit</th><th></th><th>Result</th></tr></thead><tbody>{homeRows.map((a) => { const s = stu(a), c = crs(a), o = off(a); const ap = JSON.parse(a.creditApprovalsJson || "{}") as Approvals; const mineDone = me ? ap[me]?.[user.role === "CHAIRMAN" ? "chair" : "se"] : null; return (
         <tr key={a.id}><td><b>{s?.name}</b> <span className="small-note">{s?.rollNumber}</span><div className="small-note">{s?.batch.degreeProgram} · {s?.batch.batchName}</div></td>
           <td><b>{c?.code}</b> {c?.title} <span className="small-note">({c?.creditHours} CH)</span><div className="small-note">{uni(a.hostChairmanId)} · {o?.term} · {a.status.toLowerCase()}</div>{o ? <Link href={`/catalog/${o.id}`} className="small-note">CLOs and details</Link> : null}</td>
           <td>{a.creditStatus === "RECOGNISED" ? <b style={{ color: "#2E7D32" }}>already recognised</b> : a.creditStatus === "APPROVED" ? <b style={{ color: "#2E7D32" }}>approved</b> : a.creditStatus === "DECLINED" ? <b style={{ color: "#C62828" }}>does not count</b> : <b style={{ color: "#B26A00" }}>to decide</b>}<div className="small-note">{apText(ap)}</div></td>
           <td>{a.creditStatus === "PENDING" && (user.role === "CHAIRMAN" || isSE) && !mineDone && <>
             <ActionForm showMessage url="/api/consortium/applications" fixed={{ action: "credit", id: a.id, ok: true }} submit={`Counts — approve as ${user.role === "CHAIRMAN" ? "Chairman" : "Subject Expert"}`} collapsed openLabel="Counts as…" initial={{ asCourseId: a.creditAsCourseId || "" }} fields={[{ name: "asCourseId", label: "Our course it counts as", type: "select", width: 420, options: [["", "—"], ...optsFor(s?.batch.degreeProgram)] }]} />
-            <ActionButton showMessage url="/api/consortium/applications" body={{ action: "credit", id: a.id, ok: false }} label="Does not count" className="btn btn-secondary btn-sm" askNote="Why? (the student sees this)" noteRequired /></>}</td></tr>); })}</tbody></table>}
+            <ActionButton showMessage url="/api/consortium/applications" body={{ action: "credit", id: a.id, ok: false }} label="Does not count" className="btn btn-secondary btn-sm" askNote="Why? (the student sees this)" noteRequired /></>}</td>
+          <td>{(() => { const r = results.get(a.id); if (!r || r.state === "NOT_ENROLLED") return <span className="small-note">—</span>; if (r.state === "TRANSFERRED") return <span style={{ color: "#2E7D32", fontWeight: 700 }}>{r.t.hostGrade}{r.t.homePoints != null ? ` · ${r.t.homePoints}` : ""}<div className="small-note" style={{ fontWeight: 400 }}>on transcript ({r.t.basis})</div></span>; if (r.state === "WAITING") return <span className="small-note">waiting for the host&apos;s result</span>;
+            return <ActionButton showMessage url="/api/consortium/applications" body={{ action: "transfer", id: a.id }} label={`Bring in ${r.rec.grade}`} confirmText={a.creditStatus === "APPROVED" || a.creditStatus === "RECOGNISED" ? "Add the host's result to the student's transcript?" : "The course does not count — add it to the transcript with 0 credit hours (not for credit)?"} />; })()}</td></tr>); })}</tbody></table>}
     </div>}
   </>);
 }

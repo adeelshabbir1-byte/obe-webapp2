@@ -51,6 +51,9 @@ export default async function AgreementPage({ params, searchParams }: { params: 
         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}><a className="btn btn-secondary btn-sm" href={`/api/consortium/agreements/${a.id}/matrix`}>Download matrix (Excel)</a>
           {a.status === "ACTIVE" && <><ActionButton showMessage url="/api/consortium/agreements" body={{ action: "autoPair", agreementId: a.id }} label="Find more pairs" className="btn btn-secondary btn-sm" /><ActionButton showMessage url="/api/consortium/agreements" body={{ action: "refreshAll", agreementId: a.id }} label="Recompare" className="btn btn-secondary btn-sm" /></>}</div></div>
     </div>
+    {user.role === "CHAIRMAN" && a.status === "ACTIVE" && <div className="card"><b>Grade conversion for your students</b> <span className="small-note">— the grade points your transcript gives each letter of {m.uni((me === lead.chairmanId ? partner : lead).chairmanId)}. Empty: your own grading scale&apos;s value for the same letter.</span>
+      <ActionForm showMessage url="/api/consortium/agreements" fixed={{ action: "gradeMap", agreementId: a.id }} submit="Save conversion" collapsed openLabel={Object.keys((JSON.parse(a.gradeMapJson || "{}") as Record<string, Record<string, number>>)[me!] || {}).length ? "Edit conversion" : "Set conversion"}
+        initial={{ map: Object.entries((JSON.parse(a.gradeMapJson || "{}") as Record<string, Record<string, number>>)[me!] || {}).map(([k, v]) => `${k}=${v}`).join(", ") }} fields={[{ name: "map", label: "Letter = points (e.g. A=4.0, A-=3.67, B+=3.33, …)", width: 520 }]} /></div>}
     {a.kind === "JOINT_DEGREE" && <p className="small-note">For the HEC NOC: every course of the joint programme needs an equivalent pair approved by both universities. The Excel matrix lists CLO coverage, contact hours, lab split, Bloom levels and each approval.</p>}
 
     {a.status === "ACTIVE" && <>
