@@ -7620,6 +7620,8 @@ model ConsortiumAgreement {
   mouEnd       DateTime?
   rulesVersion Int?      // the rules book version in force when it became active
   gradeMapJson String    @default("{}")
+  sharesJson   String    @default("{}") // joint degree: each university's share of credit hours (%)
+  launchedAt   DateTime?                // joint degree: when it opened for admission
   note         String?
   createdById  String
   createdAt    DateTime  @default(now())
@@ -7806,4 +7808,37 @@ model ConsortiumTransfer {
   basis         String   // how the grade points were converted (agreement map / home scale / host points)
   byId          String
   at            DateTime @default(now())
+}
+
+// Consortium phase 8. The lead university's batches that study a joint degree programme.
+model ConsortiumJointBatch {
+  batchId     String   @id
+  agreementId String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([agreementId])
+}
+// A joint-programme student's plan: which university they take each course of their programme at.
+model ConsortiumPlanChoice {
+  studentId  String
+  courseId   String   // the lead's batch course
+  chairmanId String   // where they take it
+  updatedAt  DateTime @default(now())
+
+  @@id([studentId, courseId])
+}
+// Joint graduation: the degree audit, each partner's approval, and the jointly awarded record.
+model ConsortiumGraduation {
+  id            String    @id
+  studentId     String
+  agreementId   String
+  auditJson     String    @default("{}")
+  approvalsJson String    @default("{}")
+  status        String    @default("AUDITED") // AUDITED | APPROVED | ISSUED
+  serial        String?
+  issuedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([studentId, agreementId])
 }

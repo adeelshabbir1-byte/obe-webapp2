@@ -20,6 +20,8 @@ export const RULES: RuleDef[] = [
   { key: "minCreditsMinor", label: "Minimum credit hours, major + minor", group: "Degree", type: "number", def: 132, unit: "CH", source: PF, stricter: "higher" },
   { key: "minGeCredits", label: "General Education, minimum", group: "Degree", type: "number", def: 30, unit: "CH", source: UG, stricter: "higher" },
   { key: "maxSemesterLoad", label: "Maximum load per regular semester", group: "Degree", type: "number", def: 21, unit: "CH", source: UG, stricter: "lower" },
+  { key: "minCgpaGraduate", label: "Minimum CGPA to graduate", group: "Degree", type: "number", def: 2, unit: "CGPA", source: UG, stricter: "higher" },
+  { key: "minPartnerSharePct", label: "Joint degree: each partner teaches at least", group: "Joint degree", type: "number", def: 10, unit: "% of credit hours", source: PF, stricter: "higher" },
   { key: "internshipRequired", label: "Internship / field experience required", group: "Degree", type: "bool", def: true, source: UG, stricter: "true" },
   { key: "minHomeResidencyPct", label: "Minimum share of credits at the degree-awarding (home) university", group: "Residency", type: "number", def: 50, unit: "%", source: PF, stricter: "higher" },
   { key: "capstoneAtHome", label: "Capstone / final year project at the home university", group: "Residency", type: "bool", def: true, source: PF, stricter: "true" },

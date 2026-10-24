@@ -9,6 +9,8 @@ import { ActionForm, ActionButton } from "../../../../components/fyp/FypClient";
 import { CONSORTIUM_HINT } from "../../../../lib/consortium";
 import { matrix, institutionOf, KIND_LABEL, requiredSides, type Approval } from "../../../../lib/consortiumAgreements";
 import { countsTowardDegree } from "../../../../lib/courseTypes";
+import { launchChecks, sharesOf } from "../../../../lib/consortiumJoint";
+import { cdb } from "../../../../lib/consortium";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agreement" };
@@ -38,6 +40,11 @@ export default async function AgreementPage({ params, searchParams }: { params: 
   const paired = new Set(m.rows.flatMap((r) => [r.courseA, r.courseB]));
   const [unA, unB] = await Promise.all([lead, partner].map((p) => p.curriculumId ? prisma.masterCourse.findMany({ where: { masterCurriculumId: p.curriculumId }, select: { id: true, code: true, title: true, category: true }, orderBy: { code: "asc" } }) : Promise.resolve([])));
   const openA = unA.filter((c) => !paired.has(c.id) && countsTowardDegree(c.category)), openB = unB.filter((c) => !paired.has(c.id));
+  const jc = a.kind === "JOINT_DEGREE" ? await launchChecks(a.id) : null;
+  const shares = sharesOf(a);
+  const isLeadHead = user.role === "CHAIRMAN" && me === lead.chairmanId;
+  const leadBatches = jc && me === lead.chairmanId && a.launchedAt ? await prisma.batch.findMany({ where: { degreeProgram: { not: "Consortium visiting students" }, coordinator: { OR: [{ id: me! }, { managedById: me! }, { managedBy: { managedById: me! } }] } }, select: { id: true, batchName: true, degreeProgram: true }, orderBy: { batchName: "desc" }, take: 60 }) : [];
+  const linked = new Set(((await cdb.consortiumJointBatch.findMany({ where: { agreementId: a.id } }).catch(() => [])) as { batchId: string }[]).map((x) => x.batchId));
   const apText = (x?: Approval) => (x ? `${x.ok ? "✓" : "✗"} ${x.name}, ${x.at.slice(0, 10)}${x.note ? ` — ${x.note}` : ""}` : "—");
   const chip = (t: string, col: string) => <span style={{ fontSize: 11, padding: "1px 7px", borderRadius: 999, border: `1px solid ${col}`, color: col, whiteSpace: "nowrap" }}>{t}</span>;
   const tab = (k: string, l: string) => <Link href={`?show=${k}`} className={show === k ? "btn btn-sm" : "btn btn-secondary btn-sm"}>{l}</Link>;
@@ -51,6 +58,16 @@ export default async function AgreementPage({ params, searchParams }: { params: 
         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}><a className="btn btn-secondary btn-sm" href={`/api/consortium/agreements/${a.id}/matrix`}>Download matrix (Excel)</a>
           {a.status === "ACTIVE" && <><ActionButton showMessage url="/api/consortium/agreements" body={{ action: "autoPair", agreementId: a.id }} label="Find more pairs" className="btn btn-secondary btn-sm" /><ActionButton showMessage url="/api/consortium/agreements" body={{ action: "refreshAll", agreementId: a.id }} label="Recompare" className="btn btn-secondary btn-sm" /></>}</div></div>
     </div>
+    {jc && <div className="card" style={{ borderLeft: `4px solid ${a.launchedAt ? "#2E7D32" : jc.ready ? "#1565C0" : "#B26A00"}` }}>
+      <h3 style={{ marginTop: 0 }}>Joint programme {a.launchedAt ? <span style={{ color: "#2E7D32", fontSize: 14 }}>— launched {a.launchedAt.toISOString().slice(0, 10)}</span> : jc.ready ? <span style={{ color: "#1565C0", fontSize: 14 }}>— ready to launch</span> : <span style={{ color: "#B26A00", fontSize: 14 }}>— before launch</span>}</h3>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 4, fontSize: 13 }}>{jc.checks.map((c) => <li key={c.label}><b style={{ color: c.ok ? "#2E7D32" : c.label.includes("recommended") ? "#B26A00" : "#C62828", display: "inline-block", width: 16 }}>{c.ok ? "✓" : "✗"}</b> {c.label} <span className="small-note">— {c.detail}</span></li>)}</ul>
+      {isLeadHead && !a.launchedAt && <ActionForm showMessage url="/api/consortium/joint" fixed={{ action: "shares", agreementId: a.id }} submit="Save shares" collapsed openLabel="Set each university's share" initial={Object.fromEntries(a.parties.map((p) => [`share_${p.chairmanId}`, shares[p.chairmanId] ?? (p.role === "LEAD" ? 60 : 40)]))}
+        fields={a.parties.map((p) => ({ name: `share_${p.chairmanId}`, label: `${m.uni(p.chairmanId)} (% of credit hours)`, type: "number" as const, width: 140 }))} />}
+      {isLeadHead && !a.launchedAt && <div style={{ marginTop: 6 }}><ActionButton showMessage url="/api/consortium/joint" body={{ action: "launch", agreementId: a.id }} label="Launch the programme" confirmText="Launch? It shows on the public catalog and you can link the batches you admit." /></div>}
+      {a.launchedAt && me === lead.chairmanId && <div style={{ marginTop: 8 }}><b style={{ fontSize: 13 }}>Batches studying this programme</b> <span className="small-note">— {m.uni(lead.chairmanId)} admits the students; linked batches see their joint plan in the student portal.</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>{leadBatches.map((b) => <ActionButton key={b.id} showMessage url="/api/consortium/joint" body={{ action: "link", agreementId: a.id, batchId: b.id, on: !linked.has(b.id) }} label={`${linked.has(b.id) ? "✓ " : "+ "}${b.batchName} · ${b.degreeProgram}`} className={linked.has(b.id) ? "btn btn-sm" : "btn btn-secondary btn-sm"} />)}</div>
+        <p className="small-note"><Link href="/consortium/graduation">Joint students and graduation →</Link></p></div>}
+    </div>}
     {user.role === "CHAIRMAN" && a.status === "ACTIVE" && <div className="card"><b>Grade conversion for your students</b> <span className="small-note">— the grade points your transcript gives each letter of {m.uni((me === lead.chairmanId ? partner : lead).chairmanId)}. Empty: your own grading scale&apos;s value for the same letter.</span>
       <ActionForm showMessage url="/api/consortium/agreements" fixed={{ action: "gradeMap", agreementId: a.id }} submit="Save conversion" collapsed openLabel={Object.keys((JSON.parse(a.gradeMapJson || "{}") as Record<string, Record<string, number>>)[me!] || {}).length ? "Edit conversion" : "Set conversion"}
         initial={{ map: Object.entries((JSON.parse(a.gradeMapJson || "{}") as Record<string, Record<string, number>>)[me!] || {}).map(([k, v]) => `${k}=${v}`).join(", ") }} fields={[{ name: "map", label: "Letter = points (e.g. A=4.0, A-=3.67, B+=3.33, …)", width: 520 }]} /></div>}

@@ -282,3 +282,34 @@ CREATE TABLE IF NOT EXISTS "ConsortiumTransfer" (
   "byId" TEXT NOT NULL,
   "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Phase 8: joint degree programmes — each university's share, launch, the lead's batches that study the joint
+-- programme, a student's plan of where to take each course, and joint graduation.
+ALTER TABLE "ConsortiumAgreement" ADD COLUMN IF NOT EXISTS "sharesJson" TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE "ConsortiumAgreement" ADD COLUMN IF NOT EXISTS "launchedAt" TIMESTAMP(3);
+CREATE TABLE IF NOT EXISTS "ConsortiumJointBatch" (
+  "batchId" TEXT PRIMARY KEY,
+  "agreementId" TEXT NOT NULL,
+  "createdById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ConsortiumJointBatch_agreementId_idx" ON "ConsortiumJointBatch"("agreementId");
+CREATE TABLE IF NOT EXISTS "ConsortiumPlanChoice" (
+  "studentId" TEXT NOT NULL,
+  "courseId" TEXT NOT NULL,
+  "chairmanId" TEXT NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY ("studentId", "courseId")
+);
+CREATE TABLE IF NOT EXISTS "ConsortiumGraduation" (
+  "id" TEXT PRIMARY KEY,
+  "studentId" TEXT NOT NULL,
+  "agreementId" TEXT NOT NULL,
+  "auditJson" TEXT NOT NULL DEFAULT '{}',
+  "approvalsJson" TEXT NOT NULL DEFAULT '{}',
+  "status" TEXT NOT NULL DEFAULT 'AUDITED',
+  "serial" TEXT,
+  "issuedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumGraduation_student_key" ON "ConsortiumGraduation"("studentId", "agreementId");

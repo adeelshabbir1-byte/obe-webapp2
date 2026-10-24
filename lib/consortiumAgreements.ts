@@ -13,7 +13,7 @@ import { canUseCurriculum } from "./curriculumLibrary";
 // approved at each university by its Subject Expert and its Chairman. JOINT_DEGREE needs both universities;
 // CREDIT_RECOGNITION only the university that grants the credit (party A, the proposer).
 
-export type Agreement = { id: string; kind: "JOINT_DEGREE" | "CREDIT_RECOGNITION"; title: string; programme: string | null; edition: string; status: string; mouStart: Date | null; mouEnd: Date | null; rulesVersion: number | null; gradeMapJson: string; note: string | null; createdById: string; createdAt: Date };
+export type Agreement = { id: string; kind: "JOINT_DEGREE" | "CREDIT_RECOGNITION"; title: string; programme: string | null; edition: string; status: string; mouStart: Date | null; mouEnd: Date | null; rulesVersion: number | null; gradeMapJson: string; sharesJson?: string; launchedAt?: Date | null; note: string | null; createdById: string; createdAt: Date };
 export type Party = { agreementId: string; chairmanId: string; role: string; curriculumId: string | null; status: string; decidedAt: Date | null };
 export type Approval = { by: string; name: string; at: string; ok: boolean; note?: string };
 export type Approvals = Record<string, { se?: Approval; chair?: Approval }>; // keyed by chairmanId

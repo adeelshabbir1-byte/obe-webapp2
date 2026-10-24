@@ -218,3 +218,21 @@ test("consortium transfer: grade points by agreement map, else home scale, else 
   assert.deepEqual(convert("B+", 3.3, null, scale), { points: 3.5, basis: "home grading scale" });
   assert.deepEqual(convert("C", 2, null, scale), { points: 2, basis: "host grade points" });
 });
+
+test("joint degree plan: rules engine checks credits, load, residency, capstone, partner share", async () => {
+  const { validatePlan } = await import("../lib/consortiumJoint");
+  const { DEFAULT_RULES } = await import("../lib/consortium");
+  const mk = (id: string, sem: number, ch: number, extra: Record<string, unknown> = {}) => ({ id, code: id, title: id, ch, semester: sem, capstone: false, major: false, internship: false, options: [{ chairmanId: "B", label: "B", offered: null }], ...extra });
+  const courses = Array.from({ length: 40 }, (_, i) => mk(`C${i}`, Math.floor(i / 5) + 1, 3)).concat([mk("FYP", 8, 6, { capstone: true }), mk("INT", 7, 3, { internship: true })]);
+  const base = { courses, home: "A", partners: ["B"], names: { A: "Uni A", B: "Uni B" }, rules: DEFAULT_RULES, residency: { minHomeResidencyPct: null, capstoneAtHome: true, majorsAtHome: false }, shares: { A: 70, B: 30 } };
+  const none = validatePlan({ ...base, choice: {} });
+  assert.equal(none.total, 129);
+  assert.ok(!none.checks.find((c) => c.rule === "Taken at Uni B")!.ok); // B's 30% share not met
+  const choice = Object.fromEntries(courses.slice(0, 13).map((c) => [c.id, "B"]));
+  const good = validatePlan({ ...base, choice });
+  assert.ok(good.ok, JSON.stringify(good.checks.filter((c) => !c.ok)));
+  const bad = validatePlan({ ...base, choice: { ...choice, FYP: "B" } });
+  assert.ok(!bad.checks.find((c) => c.rule === "Capstone at the lead university")!.ok);
+  const tooMuch = validatePlan({ ...base, choice: Object.fromEntries(courses.slice(0, 30).map((c) => [c.id, "B"])) });
+  assert.ok(!tooMuch.checks.find((c) => c.rule === "Taken at Uni A")!.ok);
+});

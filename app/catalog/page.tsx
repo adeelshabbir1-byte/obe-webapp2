@@ -13,6 +13,11 @@ export default async function Catalog({ searchParams }: { searchParams: { q?: st
   const rows = await catalog(searchParams).catch(() => null);
   const members = ((await cdb.consortiumMember.findMany({ where: { status: "ACTIVE" }, select: { chairmanId: true } }).catch(() => [])) as { chairmanId: string }[]);
   const heads = await prisma.user.findMany({ where: { id: { in: members.map((m) => m.chairmanId) } }, select: { id: true, instituteName: true, name: true }, orderBy: { instituteName: "asc" } });
+  // Launched joint degree programmes.
+  const joint = ((await cdb.consortiumAgreement.findMany({ where: { kind: "JOINT_DEGREE", status: "ACTIVE", launchedAt: { not: null } }, orderBy: { launchedAt: "desc" } }).catch(() => [])) as { id: string; title: string; programme: string | null; edition: string; sharesJson: string }[]);
+  const jparties = (await cdb.consortiumAgreementParty.findMany({ where: { agreementId: { in: joint.map((x) => x.id) } } }).catch(() => [])) as { agreementId: string; chairmanId: string; role: string }[];
+  const jheads = await prisma.user.findMany({ where: { id: { in: jparties.map((p) => p.chairmanId) } }, select: { id: true, instituteName: true, name: true } });
+  const jn = (id: string) => jheads.find((h) => h.id === id)?.instituteName || jheads.find((h) => h.id === id)?.name || "—";
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}>
       <header style={{ marginBottom: 14 }}>
@@ -20,6 +25,11 @@ export default async function Catalog({ searchParams }: { searchParams: { q?: st
         <h1 style={{ fontSize: 26, margin: "2px 0 4px" }}>Course catalog</h1>
         <p style={{ color: "var(--slate, #556)", fontSize: 14, margin: 0 }}>Courses {heads.length} member universit{heads.length === 1 ? "y opens" : "ies open"} to each other&apos;s students — on campus or online. A course counts toward your degree when your own university recognises it; final exams are proctored on a campus or exam centre. <Link href="/student/login">Student sign-in</Link></p>
       </header>
+      {joint.length > 0 && <section style={{ marginBottom: 14 }}><h2 style={{ fontSize: 18, margin: "0 0 8px" }}>Joint degree programmes</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>{joint.map((jd) => { const ps = jparties.filter((p) => p.agreementId === jd.id).sort((a) => (a.role === "LEAD" ? -1 : 1)); const sh = (() => { try { return JSON.parse(jd.sharesJson || "{}") as Record<string, number>; } catch { return {}; } })(); return (
+          <div key={jd.id} className="card" style={{ margin: 0, borderTop: "4px solid #B8860B" }}><div style={{ fontSize: 12, fontWeight: 700, color: "#B8860B" }}>JOINT DEGREE · {jd.edition} curriculum</div><div style={{ fontSize: 17, fontWeight: 800 }}>{jd.title}</div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>Awarded jointly by {ps.map((p) => `${jn(p.chairmanId)}${sh[p.chairmanId] ? ` (${sh[p.chairmanId]}%)` : ""}`).join(" and ")}</div>
+            <div className="small-note" style={{ marginTop: 4 }}>Admission through {jn(ps.find((p) => p.role === "LEAD")?.chairmanId || "")}.</div></div>); })}</div></section>}
       <form method="get" className="card" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", margin: "0 0 14px" }}>
         <label style={{ fontSize: 12, display: "grid", gap: 3 }}>Search<input name="q" defaultValue={searchParams.q || ""} placeholder="course, code or university" style={{ width: 240 }} /></label>
         <label style={{ fontSize: 12, display: "grid", gap: 3 }}>University<select name="uni" defaultValue={searchParams.uni || ""}><option value="">All</option>{heads.map((h) => <option key={h.id} value={h.id}>{h.instituteName || h.name}</option>)}</select></label>
