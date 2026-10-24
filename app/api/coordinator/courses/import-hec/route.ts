@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
   // A curriculum made in the Curriculum Builder has its own type names: each becomes the batch's standard course type.
   const typeDefs = ((await (prisma as unknown as Record<string, any>).curriculumType.findMany({ where: { curriculumId: curriculum.id } }).catch(() => [])) as { name: string; kind: string }[]);
   const { kindInfo } = await import("../../../../../lib/curriculumTemplates");
+  const labOf = new Map(((await (prisma as unknown as Record<string, any>).masterCourseLab.findMany({ where: { masterCourseId: { in: curriculum.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; labCredits: number }[]).map((l) => [l.masterCourseId, l.labCredits]));
   const batchTypeOf = (cat: string) => { const d = typeDefs.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : cat; };
 
   // Defense in depth: the frontend only ever offers this institution's
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
         data: {
           code, title, creditHours: mc.creditHours,
           courseType: batchTypeOf(mc.category), semesterNumber: mc.semesterNumber,
+          ...(typeDefs.length ? { hasLab: (labOf.get(mc.id) || 0) > 0, labPct: mc.creditHours ? Math.round((100 * (labOf.get(mc.id) || 0)) / mc.creditHours) : 0 } : {}),
           textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
           coordinatorId: ownerId, batchId: batch.id, masterCourseId: mc.id,
         },

@@ -7501,3 +7501,9 @@ model CourseMasterSync {
   baseJson  String
   updatedAt DateTime @default(now())
 }
+
+// The lab part of a master course's credit hours (Programming Fundamentals 4 = 3 theory + 1 lab).
+model MasterCourseLab {
+  masterCourseId String @id
+  labCredits     Int    @default(0)
+}

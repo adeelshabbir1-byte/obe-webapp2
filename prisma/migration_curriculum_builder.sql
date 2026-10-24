@@ -62,3 +62,9 @@ CREATE TABLE IF NOT EXISTS "CourseMasterSync" (
 );
 
 ALTER TABLE "CourseCodeScheme" ADD COLUMN IF NOT EXISTS "separator" TEXT NOT NULL DEFAULT '';
+
+-- Theory / lab split of a master course's credit hours (e.g. 4 = 3 theory + 1 lab).
+CREATE TABLE IF NOT EXISTS "MasterCourseLab" (
+  "masterCourseId" TEXT PRIMARY KEY,
+  "labCredits" INTEGER NOT NULL DEFAULT 0
+);

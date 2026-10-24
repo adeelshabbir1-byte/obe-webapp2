@@ -88,20 +88,21 @@ test("credit hours count elective slots, not the elective list", async () => {
   assert.equal(typeKey("Major"), "Core"); assert.equal(typeKey("general education / other"), "General Education");
 });
 
-test("builder: courses are placed into a template's types", async () => {
-  const { TEMPLATES, autoPlace } = await import("../lib/curriculumTemplates");
+test("builder: NCEAC 2023 CS template matches the official document and places courses", async () => {
+  const { TEMPLATES, autoPlace, parseReq, reqPresent } = await import("../lib/curriculumTemplates");
   const t = TEMPLATES.find((x) => x.key === "NCEAC-BS-CS-2023")!;
+  const counted = t.types.filter((x) => x.kind !== "ELECTIVE_LIST");
+  assert.equal(counted.reduce((s, x) => s + (x.minCredits || 0), 0), 130);
+  assert.equal(counted.reduce((s, x) => s + (x.minCourses || 0), 0), 44);
+  for (const x of counted) if ((x.required || []).length) assert.equal(x.required!.reduce((s, r) => s + (parseReq(r).ch || 0), 0), x.minCredits, x.name);
+  assert.deepEqual(parseReq("Programming Fundamentals 4 (3+1)"), { title: "Programming Fundamentals", ch: 4, theory: 3, lab: 1 });
+  assert.ok(reqPresent("Quantitative Reasoning I (Discrete Structures) 3", ["Discrete Structures"]));
   const types = t.types.map((x) => ({ name: x.name, kind: x.kind, required: x.required || [] }));
-  const at = (title: string, category = "Major") => autoPlace({ title, category }, types);
-  assert.equal(at("Data Structures"), "Computing Core");
-  assert.equal(at("Theory of Automata"), "Domain Core");
-  assert.equal(at("Calculus & Analytical Geometry"), "Mathematics & Supporting");
-  assert.equal(at("Functional English", "General Education"), "General Education");
-  assert.equal(at("Deep Learning", "Domain Elective"), "Elective list");
-  assert.equal(at("CS Elective-III", "Elective"), "Domain Elective slots");
-  assert.equal(at("Final Year Project - I"), "Computing Core");
-  const total = t.types.reduce((s, x) => s + (["ELECTIVE_LIST", "IDS_LIST", "NONCREDIT"].includes(x.kind) ? 0 : x.minCredits || 0), 0);
-  assert.ok(total >= 120 && total <= 144, `template total ${total}`);
+  assert.equal(autoPlace({ title: "Data Structures", category: "Major" }, types), "Computing Core");
+  assert.equal(autoPlace({ title: "Theory of Automata", category: "Major" }, types), "Domain Core");
+  assert.equal(autoPlace({ title: "Linear Algebra", category: "Major" }, types), "Mathematics & Supporting Courses");
+  assert.equal(autoPlace({ title: "Calculus and Analytic Geometry", category: "Major" }, types), "General Education");
+  assert.equal(autoPlace({ title: "Cloud Computing", category: "Domain Elective" }, types), "Domain Elective list");
 });
 
 test("course codes: prefix, year digit and sequence", async () => {

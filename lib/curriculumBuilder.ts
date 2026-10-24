@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "./db";
 import { writeAuditLog } from "./audit";
 import { findOwningChairmanId } from "./institutionCurriculum";
-import { TEMPLATES, KINDS, kindInfo, autoPlace, normTitle, type Kind } from "./curriculumTemplates";
+import { TEMPLATES, KINDS, kindInfo, autoPlace, normTitle, parseReq, reqPresent, type Kind } from "./curriculumTemplates";
 import { saveMeta, propose } from "./curriculumLibrary";
 
 // Curriculum Builder: who may build, the board's data, and every change made on it. A curriculum is built in four
@@ -30,7 +30,7 @@ export async function canBuild(user: U, c?: { chairmanId: string | null; authori
 }
 
 export type BType = { id: string; name: string; kind: Kind; minCourses: number | null; minCredits: number | null; maxCredits: number | null; required: string[]; note: string | null; position: number; prefilled: boolean };
-export type BCourse = { id: string; code: string; title: string; creditHours: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number };
+export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number };
 export type BTrack = { id: string; name: string; minCourses: number | null; position: number };
 
 export async function loadBoard(id: string) {
@@ -41,12 +41,13 @@ export async function loadBoard(id: string) {
     bdb.curriculumTrack.findMany({ where: { curriculumId: id }, orderBy: { position: "asc" } }) as Promise<BTrack[]>,
   ]);
   const links = (await bdb.masterCourseTrack.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } })) as { masterCourseId: string; trackId: string }[];
+  const labs = new Map(((await bdb.masterCourseLab.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; labCredits: number }[]).map((l) => [l.masterCourseId, l.labCredits]));
   const owner = c.chairmanId ? await prisma.user.findUnique({ where: { id: c.chairmanId }, select: { instituteName: true, name: true } }) : null;
   return {
     curriculum: { id: c.id, title: c.title, version: c.version, authority: c.authority, status: c.status, chairmanId: c.chairmanId, owner: owner?.instituteName || owner?.name || null, reference: c.sourceReference },
     types: types.map((t) => ({ ...t, required: (() => { try { return JSON.parse(t.requiredJson) as string[]; } catch { return []; } })() })) as BType[],
     tracks,
-    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos })) as BCourse[],
+    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos })) as BCourse[],
   };
 }
 
@@ -69,6 +70,24 @@ export async function autoPlaceAll(curriculumId: string, all = false) {
   return n;
 }
 
+const SHORT: Record<string, string> = { GE: "GE", CORE: "CC", SUPPORTING: "MS", LAB: "LB", IDS: "ES", ELECTIVE_SLOT: "DE", ELECTIVE_LIST: "EL", IDS_LIST: "IL", CAPSTONE: "CP", INTERNSHIP: "IN", NONCREDIT: "NC" };
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+/** Create the template's courses: every required course with its credit hours and lab part, and the elective slots. */
+async function seedCourses(curriculumId: string, types: { name: string; kind: Kind; minCourses?: number | null; minCredits?: number | null; required?: string[] }[]) {
+  const used = new Set<string>(); let domainCore = 0;
+  for (const t of types) {
+    let n = 0; const pre = t.kind === "CORE" && domainCore++ > 0 ? "DC" : SHORT[t.kind] || "CR";
+    const make = async (title: string, ch: number, lab: number) => {
+      let code = ""; do { code = `${pre}-${String(++n).padStart(2, "0")}`; } while (used.has(code)); used.add(code);
+      const mc = await prisma.masterCourse.create({ data: { masterCurriculumId: curriculumId, code, title, creditHours: ch, category: t.name } });
+      if (lab > 0) await bdb.masterCourseLab.create({ data: { masterCourseId: mc.id, labCredits: lab } }).catch(() => null);
+    };
+    for (const r of t.required || []) { const q = parseReq(r); await make(q.title, q.ch ?? 3, q.lab ?? 0); }
+    if (t.kind === "ELECTIVE_SLOT") for (let i = 0; i < (t.minCourses || 0); i++) await make(`${t.name} ${ROMAN[i] || i + 1}`, Math.round((t.minCredits || 3 * (t.minCourses || 1)) / (t.minCourses || 1)), 0);
+    if (t.kind === "IDS" && !(t.required || []).length) for (let i = 0; i < (t.minCourses || 0); i++) await make(`${t.name} ${ROMAN[i] || i + 1}`, Math.round((t.minCredits || 3) / (t.minCourses || 1)), 0);
+  }
+}
+
 /** Start a curriculum: from a template (types only), from an existing curriculum (its courses copied), or both. */
 export async function startCurriculum(user: U, o: { program: string; council: string; version: string; templateKey?: string; sourceId?: string }) {
   const tpl = TEMPLATES.find((t) => t.key === o.templateKey) || null;
@@ -84,8 +103,9 @@ export async function startCurriculum(user: U, o: { program: string; council: st
   }
   if (tpl) {
     await writeTypes(c.id, tpl.types, true);
+    if (!src) await seedCourses(c.id, tpl.types);
     for (const [i, name] of tpl.tracks.entries()) await bdb.curriculumTrack.create({ data: { id: randomUUID(), curriculumId: c.id, name, position: i } });
-    await autoPlaceAll(c.id, true);
+    if (src) await autoPlaceAll(c.id, true); // a copied curriculum's courses are sorted into the template's types
   }
   const p = propose({ ...c, chairmanId }, null);
   await saveMeta(c.id, user.id, { code: tpl?.key && !src ? tpl.key.replace(/-\d{4}$/, `-${version.match(/\d{4}/)?.[0] || version}`) : p.code, level: p.level, programCode: p.programCode, programName: p.programName, discipline: p.discipline }).catch(() => null);
@@ -97,8 +117,7 @@ export function checks(b: NonNullable<Awaited<ReturnType<typeof loadBoard>>>) {
   const per = b.types.map((t) => {
     const cs = b.courses.filter((c) => c.category === t.name);
     const ch = cs.reduce((s, c) => s + c.creditHours, 0);
-    const have = new Set(cs.map((c) => normTitle(c.title)));
-    const missing = t.required.filter((r) => !have.has(normTitle(r)) && !cs.some((c) => { const a = normTitle(c.title), q = normTitle(r); return a.length > 6 && (a.includes(q) || q.includes(a)); }));
+    const missing = t.required.filter((r) => !reqPresent(r, cs.map((c) => c.title)));
     const counts = kindInfo(t.kind).counts;
     const okCh = !counts || ((t.minCredits == null || ch >= t.minCredits) && (t.maxCredits == null || ch <= t.maxCredits));
     const okN = t.minCourses == null || cs.length >= t.minCourses;
@@ -131,15 +150,19 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       if (a.creditHours !== undefined) { const ch = Number(a.creditHours); if (!Number.isInteger(ch) || ch < 0 || ch > 12) throw new Error("Credit hours must be 0–12."); data.creditHours = ch; }
       if (a.semesterNumber !== undefined) { const sm = a.semesterNumber === "" || a.semesterNumber === null ? null : Number(a.semesterNumber); if (sm !== null && (!Number.isInteger(sm) || sm < 1 || sm > 12)) throw new Error("Semester must be 1–12."); data.semesterNumber = sm; }
       await prisma.masterCourse.update({ where: { id: x.id }, data });
+      if (a.lab !== undefined) { const lab = Math.max(0, Math.round(Number(a.lab) || 0)); if (lab > Number(data.creditHours ?? x.creditHours)) throw new Error("The lab part can't be more than the credit hours."); await bdb.masterCourseLab.upsert({ where: { masterCourseId: x.id }, create: { masterCourseId: x.id, labCredits: lab }, update: { labCredits: lab } }); }
       return "Saved.";
     }
     case "addCourse": {
-      const title = s("title"); if (!title) throw new Error("Give the course a title.");
+      const rq = parseReq(s("title"));
+      if (rq.ch != null && a.creditHours === undefined) { a.creditHours = rq.ch; a.lab = rq.lab ?? 0; }
+      const title = rq.title; if (!title) throw new Error("Give the course a title.");
       let code = s("code", 20).toUpperCase();
       if (!code) { const n = await prisma.masterCourse.count({ where: { masterCurriculumId: c.id } }); code = `NEW-${String(n + 1).padStart(3, "0")}`; }
       if (await prisma.masterCourse.findFirst({ where: { masterCurriculumId: c.id, code } })) throw new Error(`${code} is already used in this curriculum.`);
       const ch = Number(a.creditHours ?? 3);
-      await prisma.masterCourse.create({ data: { masterCurriculumId: c.id, code, title, creditHours: Number.isInteger(ch) && ch >= 0 && ch <= 12 ? ch : 3, category: s("type", 60) || "Unplaced", semesterNumber: num("semesterNumber") } });
+      const made = await prisma.masterCourse.create({ data: { masterCurriculumId: c.id, code, title, creditHours: Number.isInteger(ch) && ch >= 0 && ch <= 12 ? ch : 3, category: s("type", 60) || "Unplaced", semesterNumber: num("semesterNumber") } });
+      if (Number(a.lab) > 0) await bdb.masterCourseLab.upsert({ where: { masterCourseId: made.id }, create: { masterCourseId: made.id, labCredits: Number(a.lab) }, update: { labCredits: Number(a.lab) } });
       return `${title} added.`;
     }
     case "removeCourse": {

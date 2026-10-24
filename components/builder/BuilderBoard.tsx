@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KINDS, kindInfo, normTitle } from "../../lib/curriculumTemplates";
+import { KINDS, kindInfo, reqPresent, parseReq, splitText } from "../../lib/curriculumTemplates";
 import type { BType, BCourse, BTrack } from "../../lib/curriculumBuilder";
 
 type Cur = { id: string; title: string; version: string; authority: string; status: string; chairmanId: string | null; owner: string | null; reference: string | null };
@@ -10,7 +10,7 @@ const STEPS = [["types", "1  Course types"], ["place", "2  Place courses"], ["tr
 const STATUS: Record<string, [string, string]> = { DRAFT: ["Draft", "#B26A00"], SUBMITTED: ["Waiting to publish", "#1565C0"], PUBLISHED: ["Published", "#2E7D32"], SUPERSEDED: ["Superseded", "#6B7177"] };
 const UNPLACED = "__unplaced";
 
-export default function BuilderBoard(props: { cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[] }) {
+export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[] }) {
   const router = useRouter();
   const [step, setStep] = useState(STEPS.some(([k]) => k === props.step) ? props.step : props.types.length ? "place" : "types");
   const [courses, setCourses] = useState(props.courses);
@@ -18,7 +18,8 @@ export default function BuilderBoard(props: { cur: Cur; types: BType[]; tracks: 
   const [busy, setBusy] = useState(false);
   useEffect(() => setCourses(props.courses), [props.courses]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
-  const locked = props.cur.status === "PUBLISHED" || props.cur.status === "SUPERSEDED";
+  const locked = !props.canEdit;
+  const published = props.cur.status === "PUBLISHED" || props.cur.status === "SUPERSEDED";
 
   async function post(body: Record<string, unknown>, refresh = true) {
     setBusy(true);
@@ -36,8 +37,7 @@ export default function BuilderBoard(props: { cur: Cur; types: BType[]; tracks: 
     const per = new Map(props.types.map((t) => {
       const cs = courses.filter((c) => c.category === t.name);
       const ch = cs.reduce((s, c) => s + c.creditHours, 0);
-      const have = cs.map((c) => normTitle(c.title));
-      const missing = t.required.filter((r) => { const q = normTitle(r); return !have.some((a) => a === q || (a.length > 6 && (a.includes(q) || q.includes(a)))); });
+      const missing = t.required.filter((r) => !reqPresent(r, cs.map((c) => c.title)));
       const counts = kindInfo(t.kind).counts;
       const chOk = !counts || ((t.minCredits == null || ch >= t.minCredits) && (t.maxCredits == null || ch <= t.maxCredits));
       const nOk = t.minCourses == null || cs.length >= t.minCourses;
@@ -82,7 +82,8 @@ export default function BuilderBoard(props: { cur: Cur; types: BType[]; tracks: 
         </div>
       </div>
       <nav className="bb-steps" aria-label="Steps">{STEPS.map(([k, l]) => <button key={k} type="button" className="bb-step" aria-current={step === k ? "step" : undefined} onClick={() => setStep(k)}>{l}</button>)}</nav>
-      {locked && <div className="card" style={{ margin: 0, borderLeft: "4px solid #2E7D32", fontSize: 13.5 }}>This version is {st.toLowerCase()} and read-only. To change it, start a new version from it{props.canPublish ? <> or <button type="button" className="btn btn-secondary btn-sm" onClick={() => post({ action: "reopen" })}>reopen it as a draft</button></> : ""}.</div>}
+      {published && !locked && <div className="card" style={{ margin: 0, borderLeft: "4px solid #1565C0", fontSize: 13.5 }}>This version is <b>{st.toLowerCase()}</b>: your changes go to the master straight away. Program Leads whose batches use it see them under “My Curriculum vs Master” and decide whether to apply them.</div>}
+      {locked && <div className="card" style={{ margin: 0, borderLeft: "4px solid #6B7177", fontSize: 13.5 }}>You can look at this curriculum but not change it.</div>}
       {step === "types" && <TypesStep types={props.types} templates={props.templates} post={post} busy={busy} locked={locked} onDone={() => setStep("place")} />}
       {step === "place" && <PlaceStep types={props.types} courses={courses} setCourses={setCourses} live={live} post={post} locked={locked} />}
       {step === "tracks" && <TracksStep types={props.types} tracks={props.tracks} courses={courses} setCourses={setCourses} post={post} locked={locked} />}
@@ -148,23 +149,25 @@ function TypesStep({ types, templates, post, busy, locked, onDone }: { types: BT
 }
 
 // ============================================================ Step 2: place courses
-function CourseCard({ c, color, onOpen, draggable = true, extra }: { c: BCourse; color: string; onOpen: () => void; draggable?: boolean; extra?: React.ReactNode }) {
+function CourseCard({ c, color, onOpen, draggable = true, extra, types, onMove }: { c: BCourse; color: string; onOpen: () => void; draggable?: boolean; extra?: React.ReactNode; types?: BType[]; onMove?: (to: string) => void }) {
   return (
     <div className="bb-card" draggable={draggable} tabIndex={0} role="button" aria-label={`${c.code} ${c.title}, ${c.creditHours} credit hours. Press Enter to edit.`}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; }}
       onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }} style={{ borderLeft: `4px solid ${color}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
         <span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11.5, fontWeight: 700, color: "#556" }}>{c.code}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 800 }}>{c.creditHours} CH{c.semesterNumber ? <span style={{ fontWeight: 500, color: "#778" }}> · S{c.semesterNumber}</span> : null}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 800 }} title={c.lab ? `${c.creditHours - c.lab} theory + ${c.lab} lab credit hours` : undefined}>{splitText(c.creditHours, c.lab)} CH{c.semesterNumber ? <span style={{ fontWeight: 500, color: "#778" }}> · S{c.semesterNumber}</span> : null}</span>
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.3 }}>{c.title}</div>
+      {types && onMove && <select value="" aria-label={`Move ${c.title} to`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { if (e.target.value) onMove(e.target.value); }} style={{ marginTop: 4, fontSize: 11, padding: "1px 4px", width: "100%", color: "#556", background: "#F6F8FA", border: "1px solid #E1E5EA", borderRadius: 6 }}>
+        <option value="">Move to…</option>{types.filter((t) => t.name !== c.category).map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}</select>}
       {extra}
     </div>
   );
 }
 
 function Editor({ c, types, post, close, locked }: { c: BCourse; types: BType[]; post: Post; close: () => void; locked: boolean }) {
-  const [v, setV] = useState({ code: c.code, title: c.title, creditHours: String(c.creditHours), semesterNumber: c.semesterNumber ? String(c.semesterNumber) : "", type: c.category });
+  const [v, setV] = useState({ code: c.code, title: c.title, creditHours: String(c.creditHours), lab: String(c.lab || 0), semesterNumber: c.semesterNumber ? String(c.semesterNumber) : "", type: c.category });
   return (
     <div role="dialog" aria-label={`Edit ${c.code}`} style={{ position: "fixed", inset: 0, background: "rgba(13,42,74,.35)", display: "grid", placeItems: "center", zIndex: 40, padding: 16 }} onClick={close}>
       <div className="card" style={{ margin: 0, width: "min(520px, 100%)", display: "grid", gap: 10 }} onClick={(e) => e.stopPropagation()}>
@@ -174,11 +177,13 @@ function Editor({ c, types, post, close, locked }: { c: BCourse; types: BType[];
           <label>Type<br /><select value={v.type} disabled={locked} onChange={(e) => setV({ ...v, type: e.target.value })} style={{ width: "100%" }}>{types.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}</select></label>
           <label style={{ gridColumn: "1 / -1" }}>Title<br /><input value={v.title} disabled={locked} onChange={(e) => setV({ ...v, title: e.target.value })} style={{ width: "100%" }} /></label>
           <label>Credit hours<br /><input type="number" min={0} max={12} value={v.creditHours} disabled={locked} onChange={(e) => setV({ ...v, creditHours: e.target.value })} style={{ width: "100%" }} /></label>
+          <label>Of which lab<br /><input type="number" min={0} max={12} value={v.lab} disabled={locked} onChange={(e) => setV({ ...v, lab: e.target.value })} style={{ width: "100%" }} /></label>
           <label>Semester<br /><input type="number" min={1} max={12} value={v.semesterNumber} disabled={locked} onChange={(e) => setV({ ...v, semesterNumber: e.target.value })} style={{ width: "100%" }} /></label>
+          <div className="small-note" style={{ alignSelf: "end" }}>{Number(v.lab) > 0 ? `${Number(v.creditHours) - Number(v.lab)} theory + ${v.lab} lab credit hours (lab = 3 contact hours a week per credit hour)` : "No lab"}</div>
         </div>
         <div className="small-note">{c.prerequisite ? `Prerequisite: ${c.prerequisite} · ` : ""}{c.clos} CLO(s) · used by {c.adopted} batch course(s)</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {!locked && <button type="button" className="btn btn-sm" onClick={async () => { const ok = await post({ action: "updateCourse", courseId: c.id, code: v.code, title: v.title, creditHours: Number(v.creditHours), semesterNumber: v.semesterNumber }); if (ok && v.type !== c.category) await post({ action: "place", courseId: c.id, type: v.type }); if (ok) close(); }}>Save</button>}
+          {!locked && <button type="button" className="btn btn-sm" onClick={async () => { const ok = await post({ action: "updateCourse", courseId: c.id, code: v.code, title: v.title, creditHours: Number(v.creditHours), lab: Number(v.lab) || 0, semesterNumber: v.semesterNumber }); if (ok && v.type !== c.category) await post({ action: "place", courseId: c.id, type: v.type }); if (ok) close(); }}>Save</button>}
           <button type="button" className="btn btn-secondary btn-sm" onClick={close}>Close</button>
           {!locked && !c.adopted && <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: "auto", color: "#B3261E" }} onClick={async () => { if (await post({ action: "removeCourse", courseId: c.id })) close(); }}>Remove course</button>}
         </div>
@@ -206,7 +211,7 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Find a course…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a course" style={{ width: 240 }} />
         {!locked && live.unplaced.length > 0 && <button type="button" className="btn btn-secondary btn-sm" onClick={() => post({ action: "autoPlace" })}>Place the {live.unplaced.length} unplaced automatically</button>}
-        <span className="small-note">Drag a card to another column. Click a card to edit it. Yellow cards are courses a column must have but doesn&apos;t — click to add.</span>
+        <span className="small-note">Drag a card to another column (or use its “Move to…”). Click a card to edit it. Yellow cards are courses the column must have but doesn&apos;t — one click adds them.</span>
       </div>
       <div className="bb-cols">
         {cols.map(({ key, t }) => {
@@ -233,8 +238,8 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
                 ) : <div style={{ fontSize: 12.5, color: "#C62828" }}>Drag each into its type</div>}
               </header>
               <div className="bb-list">
-                {t && p!.missing.map((m) => <button key={m} type="button" className="bb-ghost" disabled={locked} onClick={() => setAdding({ type: t.name, title: m, ch: "3" })}>＋ Missing: <b>{m}</b></button>)}
-                {cs.filter(match).map((c) => <CourseCard key={c.id} c={c} color={k.color} onOpen={() => setOpen(c)} draggable={!locked} />)}
+                {t && p!.missing.map((m) => { const q = parseReq(m); return <button key={m} type="button" className="bb-ghost" disabled={locked} title="Click to add it to this column" onClick={() => post({ action: "addCourse", type: t.name, title: m })}>＋ <b>{q.title}</b> <span style={{ float: "right" }}>{q.ch != null ? `${splitText(q.ch, q.lab)} CH` : ""}</span></button>; })}
+                {cs.filter(match).map((c) => <CourseCard key={c.id} c={c} color={k.color} onOpen={() => setOpen(c)} draggable={!locked} types={locked ? undefined : types} onMove={(to) => drop(to, c.id)} />)}
                 {t && !locked && (adding?.type === t.name ? (
                   <div className="bb-card" style={{ cursor: "default", display: "grid", gap: 6 }}>
                     <input autoFocus placeholder="Course title" value={adding.title} onChange={(e) => setAdding({ ...adding, title: e.target.value })} aria-label="New course title" />
@@ -280,7 +285,7 @@ function TracksStep({ types, tracks, courses, setCourses, post, locked }: { type
       </header>
       <div className="bb-list">{cs.map((c) => (
         <div key={c.id} className="bb-card" draggable={!locked} tabIndex={0} onDragStart={(e) => e.dataTransfer.setData("text/plain", `${c.id}|${id === "__none" ? "" : id}`)} style={{ borderLeft: `4px solid ${color}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11.5, fontWeight: 700 }}>{c.code}</span><span style={{ fontSize: 11.5, fontWeight: 800 }}>{c.creditHours} CH</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11.5, fontWeight: 700 }}>{c.code}</span><span style={{ fontSize: 11.5, fontWeight: 800 }}>{splitText(c.creditHours, c.lab)} CH</span></div>
           <div style={{ fontSize: 13 }}>{c.title}</div>
           {c.tracks.length > 1 && <div style={{ fontSize: 11, color: "#6A1B9A" }}>also in {c.tracks.filter((t) => t !== id).map((t) => nameOf.get(t)).join(", ")}</div>}
           {id !== "__none" && !locked && <button type="button" aria-label={`Take ${c.title} out of ${title}`} style={{ border: 0, background: "none", color: "#B3261E", fontSize: 11, padding: 0, cursor: "pointer" }} onClick={() => drop("__none", c.id, false, id)}>remove from this track</button>}
