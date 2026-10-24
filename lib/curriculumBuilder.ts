@@ -4,6 +4,7 @@ import { writeAuditLog } from "./audit";
 import { findOwningChairmanId } from "./institutionCurriculum";
 import { TEMPLATES, KINDS, kindInfo, autoPlace, normTitle, parseReq, reqPresent, type Kind } from "./curriculumTemplates";
 import { saveMeta, propose } from "./curriculumLibrary";
+import { fillContent, hasContentPack } from "./curriculumContent";
 
 // Curriculum Builder: who may build, the board's data, and every change made on it. A curriculum is built in four
 // steps — its types (categories with targets), placing courses into them, sorting the elective list into tracks,
@@ -30,11 +31,11 @@ export async function canBuild(user: U, c?: { chairmanId: string | null; authori
 }
 
 export type BType = { id: string; name: string; kind: Kind; minCourses: number | null; minCredits: number | null; maxCredits: number | null; required: string[]; note: string | null; position: number; prefilled: boolean };
-export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number };
+export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number; lectures: number; mappedClos: number };
 export type BTrack = { id: string; name: string; minCourses: number | null; position: number };
 
 export async function loadBoard(id: string) {
-  const c = await prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, title: true, version: true, authority: true, status: true, chairmanId: true, sourceReference: true, courses: { select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, category: true, prerequisiteCourse: { select: { code: true } }, _count: { select: { adoptedInto: true, seedClos: true } } } } } });
+  const c = await prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, title: true, version: true, authority: true, status: true, chairmanId: true, sourceReference: true, courses: { select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, category: true, prerequisiteCourse: { select: { code: true } }, _count: { select: { adoptedInto: true, seedClos: true, seedTopics: true } }, seedClos: { where: { mappedPloId: { not: null } }, select: { id: true } } } }, _count: { select: { plos: true } } } });
   if (!c) return null;
   const [types, tracks] = await Promise.all([
     bdb.curriculumType.findMany({ where: { curriculumId: id }, orderBy: { position: "asc" } }) as Promise<(Omit<BType, "required"> & { requiredJson: string })[]>,
@@ -44,10 +45,10 @@ export async function loadBoard(id: string) {
   const labs = new Map(((await bdb.masterCourseLab.findMany({ where: { masterCourseId: { in: c.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; labCredits: number }[]).map((l) => [l.masterCourseId, l.labCredits]));
   const owner = c.chairmanId ? await prisma.user.findUnique({ where: { id: c.chairmanId }, select: { instituteName: true, name: true } }) : null;
   return {
-    curriculum: { id: c.id, title: c.title, version: c.version, authority: c.authority, status: c.status, chairmanId: c.chairmanId, owner: owner?.instituteName || owner?.name || null, reference: c.sourceReference },
+    curriculum: { id: c.id, title: c.title, version: c.version, authority: c.authority, status: c.status, chairmanId: c.chairmanId, owner: owner?.instituteName || owner?.name || null, reference: c.sourceReference, plos: c._count.plos },
     types: types.map((t) => ({ ...t, required: (() => { try { return JSON.parse(t.requiredJson) as string[]; } catch { return []; } })() })) as BType[],
     tracks,
-    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos })) as BCourse[],
+    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos, lectures: x._count.seedTopics, mappedClos: x.seedClos.length })) as BCourse[],
   };
 }
 
@@ -129,6 +130,7 @@ export async function startCurriculum(user: U, o: { program: string; council: st
       }
     }
     if (src) await autoPlaceAll(c.id, true); // a copied curriculum's courses are sorted into the template's types
+    if (hasContentPack(tpl.key)) await fillContent(c.id, tpl.key, tpl.types); // semesters, PLOs, CLOs, lecture plans
   }
   const p = propose({ ...c, chairmanId }, null);
   await saveMeta(c.id, user.id, { code: tpl?.key && !src ? tpl.key.replace(/-\d{4}$/, `-${version.match(/\d{4}/)?.[0] || version}`) : p.code, level: p.level, programCode: p.programCode, programName: p.programName, discipline: p.discipline }).catch(() => null);
@@ -152,7 +154,21 @@ export function checks(b: NonNullable<Awaited<ReturnType<typeof loadBoard>>>) {
   const listT = b.types.find((t) => t.kind === "ELECTIVE_LIST");
   const list = listT ? b.courses.filter((c) => c.category === listT.name) : [];
   const tracks = b.tracks.map((tr) => ({ id: tr.id, name: tr.name, courses: list.filter((c) => c.tracks.includes(tr.id)).length, need: tr.minCourses ?? slots }));
-  return { per, total, unplaced: unplaced.length, ready: per.every((p) => p.ok) && !unplaced.length && total >= 120 && total <= 144, slots, listCount: list.length, untracked: list.filter((c) => !c.tracks.length).length, tracks };
+  // Master-copy coverage: every counted course needs a semester, CLOs mapped to PLOs and a lecture plan; list courses need CLOs.
+  const countedNames = new Set(b.types.filter((t) => kindInfo(t.kind).counts).map((t) => t.name));
+  const counted = b.courses.filter((c) => countedNames.has(c.category));
+  const slotNames = new Set(b.types.filter((t) => t.kind === "ELECTIVE_SLOT" || t.kind === "INTERNSHIP" || t.kind === "NONCREDIT").map((t) => t.name));
+  const content = counted.filter((c) => !slotNames.has(c.category) && !/certification/i.test(c.title)); // slots take the chosen elective's content
+  const coverage = {
+    plos: b.curriculum.plos,
+    noSemester: counted.filter((c) => c.semesterNumber == null).map((c) => c.title),
+    noClos: content.filter((c) => !c.clos).map((c) => c.title),
+    unmapped: b.courses.filter((c) => c.clos > c.mappedClos).map((c) => c.title),
+    noLectures: content.filter((c) => c.lectures < 32).map((c) => c.title),
+    listNoClos: list.filter((c) => !c.clos).map((c) => c.title),
+    listNoLectures: list.filter((c) => c.lectures < 32).length,
+  };
+  return { coverage, per, total, unplaced: unplaced.length, ready: per.every((p) => p.ok) && !unplaced.length && total >= 120 && total <= 144, slots, listCount: list.length, untracked: list.filter((c) => !c.tracks.length).length, tracks };
 }
 
 /** Every change on the board. Returns a short message. */
@@ -164,6 +180,12 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
   const num = (k: string) => (a[k] === "" || a[k] == null ? null : Math.max(0, Math.round(Number(a[k]))) || null);
   const course = async () => { const x = await prisma.masterCourse.findFirst({ where: { id: s("courseId"), masterCurriculumId: c.id } }); if (!x) throw new Error("Course not found."); return x; };
   switch (a.action) {
+    case "fillContent": {
+      const key = s("pack", 60);
+      const types = (await bdb.curriculumType.findMany({ where: { curriculumId: c.id } })) as { name: string; kind: string }[];
+      const d = await fillContent(c.id, key, types);
+      return `Filled ${d.courses} courses: ${d.semesters} semesters, ${d.plos} PLOs, ${d.clos} CLOs, ${d.lectures} lectures. Nothing already entered was changed.`;
+    }
     case "place": { await course(); await prisma.masterCourse.update({ where: { id: s("courseId") }, data: { category: s("type", 60) } }); return "Moved."; }
     case "updateCourse": {
       const x = await course();

@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { KINDS, kindInfo, reqPresent, parseReq, splitText } from "../../lib/curriculumTemplates";
 import type { BType, BCourse, BTrack } from "../../lib/curriculumBuilder";
 
-type Cur = { id: string; title: string; version: string; authority: string; status: string; chairmanId: string | null; owner: string | null; reference: string | null };
+type Cur = { id: string; title: string; version: string; authority: string; status: string; chairmanId: string | null; owner: string | null; reference: string | null; plos: number };
 type Tpl = { key: string; label: string };
 const STEPS = [["types", "1  Course types"], ["place", "2  Place courses"], ["tracks", "3  Elective tracks"], ["review", "4  Review & publish"]] as const;
 const STATUS: Record<string, [string, string]> = { DRAFT: ["Draft", "#B26A00"], SUBMITTED: ["Waiting to publish", "#1565C0"], PUBLISHED: ["Published", "#2E7D32"], SUPERSEDED: ["Superseded", "#6B7177"] };
 const UNPLACED = "__unplaced";
 
-export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[] }) {
+export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[]; packs?: { key: string; label: string }[] }) {
   const router = useRouter();
   const [step, setStep] = useState(STEPS.some(([k]) => k === props.step) ? props.step : props.types.length ? "place" : "types");
   const [courses, setCourses] = useState(props.courses);
@@ -87,7 +87,7 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
       {step === "types" && <TypesStep types={props.types} templates={props.templates} post={post} busy={busy} locked={locked} onDone={() => setStep("place")} />}
       {step === "place" && <PlaceStep types={props.types} courses={courses} setCourses={setCourses} live={live} post={post} locked={locked} />}
       {step === "tracks" && <TracksStep types={props.types} tracks={props.tracks} courses={courses} setCourses={setCourses} post={post} locked={locked} />}
-      {step === "review" && <ReviewStep cur={props.cur} types={props.types} tracks={props.tracks} courses={courses} live={live} post={post} canPublish={props.canPublish} older={props.older} busy={busy} />}
+      {step === "review" && <ReviewStep cur={props.cur} types={props.types} tracks={props.tracks} courses={courses} live={live} post={post} canPublish={props.canPublish} older={props.older} busy={busy} packs={props.packs || []} locked={locked} />}
       {toast && <div role="status" className="bb-toast" style={{ background: toast.ok ? "#1E6B34" : "#B3261E" }}>{toast.text}</div>}
     </div>
   );
@@ -159,6 +159,10 @@ function CourseCard({ c, color, onOpen, draggable = true, extra, types, onMove }
         <span style={{ fontSize: 11.5, fontWeight: 800 }} title={c.lab ? `${c.creditHours - c.lab} theory + ${c.lab} lab credit hours` : undefined}>{splitText(c.creditHours, c.lab)} CH{c.semesterNumber ? <span style={{ fontWeight: 500, color: "#778" }}> · S{c.semesterNumber}</span> : null}</span>
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.3 }}>{c.title}</div>
+      <div style={{ fontSize: 10.5, color: "#778", display: "flex", gap: 6 }} title="Course learning outcomes (mapped to a PLO) and lectures in the lecture plan">
+        <span style={{ color: c.clos ? (c.mappedClos < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLO${c.mappedClos < c.clos ? ` (${c.clos - c.mappedClos} unmapped)` : ""}` : "no CLOs"}</span>
+        <span style={{ color: c.lectures >= 32 ? "#2E7D32" : c.lectures ? "#B26A00" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span>
+      </div>
       {types && onMove && <select value="" aria-label={`Move ${c.title} to`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { if (e.target.value) onMove(e.target.value); }} style={{ marginTop: 4, fontSize: 11, padding: "1px 4px", width: "100%", color: "#556", background: "#F6F8FA", border: "1px solid #E1E5EA", borderRadius: 6 }}>
         <option value="">Move to…</option>{types.filter((t) => t.name !== c.category).map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}</select>}
       {extra}
@@ -308,7 +312,7 @@ function TracksStep({ types, tracks, courses, setCourses, post, locked }: { type
 }
 
 // ============================================================ Step 4: review
-function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older, busy }: { cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean }>; total: number; unplaced: BCourse[] }; post: Post; canPublish: boolean; older: { id: string; label: string }[]; busy: boolean }) {
+function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older, busy, packs, locked }: { packs: { key: string; label: string }[]; locked: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean }>; total: number; unplaced: BCourse[] }; post: Post; canPublish: boolean; older: { id: string; label: string }[]; busy: boolean }) {
   const [sup, setSup] = useState("");
   const listT = types.find((t) => t.kind === "ELECTIVE_LIST");
   const list = listT ? courses.filter((c) => c.category === listT.name) : [];
@@ -320,8 +324,36 @@ function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older
     ["Every counted course has a semester", courses.filter((c) => types.some((t) => t.name === c.category && kindInfo(t.kind).counts) && !c.semesterNumber).length === 0, `${courses.filter((c) => types.some((t) => t.name === c.category && kindInfo(t.kind).counts) && !c.semesterNumber).length} without a semester`],
   ];
   const ok = items.every((i) => i[1]);
+  // The master copy: what Subject Experts and instructors inherit.
+  const countedT = new Set(types.filter((t) => kindInfo(t.kind).counts && !["ELECTIVE_SLOT", "INTERNSHIP", "NONCREDIT"].includes(t.kind)).map((t) => t.name));
+  const own = courses.filter((c) => countedT.has(c.category) && !/certification/i.test(c.title));
+  const master: [string, number, number, string][] = [
+    ["Required courses with CLOs", own.filter((c) => c.clos).length, own.length, "Elective slots take the chosen elective's CLOs"],
+    ["CLOs mapped to a PLO", courses.reduce((a, c) => a + c.mappedClos, 0), courses.reduce((a, c) => a + c.clos, 0), "HEC-tagged where the document tags them, otherwise suggested by the system"],
+    ["Required courses with a 32-lecture plan", own.filter((c) => c.lectures >= 32).length, own.length, "Each lecture is linked to the CLO it serves"],
+    ...(listT ? [["Track electives with CLOs", list.filter((c) => c.clos).length, list.length, "Official CLOs from the curriculum document"] as [string, number, number, string], ["Track electives with a lecture plan", list.filter((c) => c.lectures >= 32).length, list.length, "Written by the Subject Expert when the elective is first offered"] as [string, number, number, string]] : []),
+  ];
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      <div className="card" style={{ margin: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}>
+          <h3 style={{ margin: 0 }}>Master copy</h3>
+          <span className="small-note">{cur.plos ? `${cur.plos} PLOs` : "No PLOs yet"} · semester, CLOs, PLO mapping and lecture plan flow into every batch that imports this curriculum</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8, marginTop: 10 }}>
+          {master.map(([l, n, of, note]) => { const pct = of ? Math.round((n / of) * 100) : 100; return (
+            <div key={l} style={{ border: "1px solid #E1E5EA", borderRadius: 10, padding: "8px 10px" }} title={note}>
+              <div style={{ fontSize: 12, color: "#556" }}>{l}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: pct === 100 ? "#2E7D32" : pct ? "#B26A00" : "#C62828" }}>{n}<span style={{ fontSize: 12, fontWeight: 500, color: "#778" }}> / {of}</span></div>
+              <div style={{ height: 4, background: "#EEF1F4", borderRadius: 2 }}><div style={{ width: `${pct}%`, height: 4, borderRadius: 2, background: pct === 100 ? "#2E7D32" : "#E0A030" }} /></div>
+              <div className="small-note" style={{ marginTop: 4 }}>{note}</div>
+            </div>); })}
+        </div>
+        {!locked && packs.length > 0 && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
+          {packs.map((p) => <button key={p.key} type="button" className="btn btn-sm" disabled={busy} onClick={() => post({ action: "fillContent", pack: p.key })}>Fill empty semesters, PLOs, CLOs and lecture plans from {p.label}</button>)}
+          <span className="small-note">Only empty things are filled; nothing already entered changes. Edit CLOs and lectures in the full editor.</span>
+        </div>}
+      </div>
       <div className="card" style={{ margin: 0 }}>
         <h3 style={{ marginTop: 0 }}>{ok ? "Ready to publish" : "Before publishing"}</h3>
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 6 }}>{items.map(([l, good, d]) => <li key={l} style={{ display: "flex", gap: 10 }}><span style={{ fontWeight: 800, color: good ? "#2E7D32" : "#C62828", width: 16 }}>{good ? "✓" : "✗"}</span><span><b>{l}</b> — <span className="small-note">{d}</span></span></li>)}</ul>

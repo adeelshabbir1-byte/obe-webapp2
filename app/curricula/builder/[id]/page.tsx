@@ -7,7 +7,8 @@ import Shell from "../../../../components/Shell";
 import { prisma } from "../../../../lib/db";
 import BuilderBoard from "../../../../components/builder/BuilderBoard";
 import { canBuild, loadBoard, BUILDER_HINT } from "../../../../lib/curriculumBuilder";
-import { TEMPLATES } from "../../../../lib/curriculumTemplates";
+import { TEMPLATES, normTitle } from "../../../../lib/curriculumTemplates";
+import { hasContentPack } from "../../../../lib/curriculumContent";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Curriculum Builder" };
@@ -30,7 +31,8 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
     <>
       <p className="small-note" style={{ margin: "0 0 6px" }}><Link href="/curricula/builder">← Curriculum Builder</Link> · <Link href={`/curricula/${b.curriculum.id}`}>Library view</Link>{user.role === "SUPER_USER" && <> · <Link href={`/admin/curricula/${b.curriculum.id}`}>CLOs, topics and GAs (full editor)</Link></>}</p>
       <BuilderBoard canEdit cur={b.curriculum} types={b.types} tracks={b.tracks} courses={b.courses} step={searchParams.step || ""} canPublish={canPublish}
-        templates={TEMPLATES.map((t) => ({ key: t.key, label: `${t.council} ${t.version} — ${t.program}` }))} older={older.map((o) => ({ id: o.id, label: `${o.authority} ${o.version}` }))} />
+        templates={TEMPLATES.map((t) => ({ key: t.key, label: `${t.council} ${t.version} — ${t.program}` }))} older={older.map((o) => ({ id: o.id, label: `${o.authority} ${o.version}` }))}
+        packs={TEMPLATES.filter((t) => hasContentPack(t.key) && normTitle(t.program) === normTitle(b.curriculum.title)).map((t) => ({ key: t.key, label: `${t.council} ${t.version}` }))} />
     </>
   );
 }

@@ -121,3 +121,27 @@ test("HEC BS CS 2025: 130 CH and 14 tracks with shared electives", async () => {
   assert.ok(new Set(all).size < all.length); // e.g. Machine Learning sits in several tracks
   assert.equal(parseReq("Embedded Programming 4 (3+1)").lab, 1);
 });
+
+test("HEC CS 2025 master content: semesters, CLOs, lecture plans resolve for every required course", async () => {
+  const { TEMPLATES, HEC_CS_2025_TRACKS, parseReq } = await import("../lib/curriculumTemplates");
+  const { CONTENT_PACKS, mapLectures, suggestPlo } = await import("../lib/curriculumContent");
+  const pack = CONTENT_PACKS["HEC-BS-CS-2025"];
+  const t = TEMPLATES.find((x) => x.key === "HEC-BS-CS-2025")!;
+  const miss: string[] = [];
+  for (const ty of t.types) for (const r of ty.required || []) {
+    const title = parseReq(r).title;
+    if (ty.kind === "IDS_LIST") continue;
+    if (!pack.semester(title, ty.kind, 0)) miss.push("sem " + title);
+    if (["Professional Certification", "Field Experience", "Final Year Project"].includes(title)) continue;
+    const c = pack.content(title);
+    if (!c || !c.clos.length) miss.push("clo " + title); else if (c.topics.length < 32) miss.push("lec " + title);
+  }
+  assert.deepEqual(miss, []);
+  const el = Object.values(HEC_CS_2025_TRACKS).flat().map((x) => parseReq(x).title);
+  assert.equal(el.filter((x) => !pack.content(x)?.clos.length).length, 0);
+  assert.equal(pack.semester("Specialization Electives V", "ELECTIVE_SLOT", 4), 7);
+  const m = mapLectures(["Linked lists", "Stacks and queues", "Graph traversal"], ["Implement linked lists and stacks", "Traverse graphs"]);
+  assert.deepEqual(m, [1, 1, 2]);
+  assert.equal(suggestPlo("Discuss ethical issues of AI", "C2"), 9);
+  assert.equal(suggestPlo("Design a distributed system", "C6"), 4);
+});
