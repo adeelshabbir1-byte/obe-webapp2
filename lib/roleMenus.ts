@@ -97,7 +97,7 @@ const VIEW = new Set([
   "/my-payslips", "/benefits", "/signed-documents", "/internationalisation", "/qec-proformas", "/risk", "/head-dashboard", "/coordinator/hec-comparison",
   "/coordinator/assignment-history", "/coordinator/report-bundles", "/my-obe", "/instructor/peers", "/coordinator/deficiency-status", "/plan-insights",
   "/evaluations", "/exit-surveys", "/faculty-survey", "/aol", "/complex-problems", "/policy-history", "/coordinator/labs-overview", "/library-inventory", "/lab-inventory",
-  "/courses-in-degree", "/who-does-what", "/ga-coverage", "/where-courses-used", "/program-spec",
+  "/courses-in-degree", "/who-does-what", "/process-map", "/ga-coverage", "/where-courses-used", "/program-spec",
 ]);
 
 /** Split a role's flat menu into the main menu (core + duties), other work pages, and view-only reports. Null = role not curated. */
