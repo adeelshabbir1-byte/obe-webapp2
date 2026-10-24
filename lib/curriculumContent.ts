@@ -1,3 +1,4 @@
+import { CD2023_BOOKS } from "./computing2023Books";
 import { prisma } from "./db";
 import { HEC_BSCS_2025_COURSES, HEC_BSCS_2025_PLOS } from "../prisma/hec-bscs-2025";
 import { HEC_COURSE_SEED_CONTENT } from "../prisma/hec-course-seed-content";
@@ -20,7 +21,7 @@ type Pack = {
   semester: (title: string, kind: string, index: number) => number | null;
   content: (title: string) => { clos: { statement: string; bloomLevel: string; plo: number | null }[]; topics: string[]; from?: string } | null;
   /** The curriculum's own code, outline and prerequisite for a course (a university's document). */
-  details?: (title: string) => { code: string; description: string | null; textbook: string | null; reference: string | null; prerequisite: string | null } | null;
+  details?: (title: string) => { code: string | null; description: string | null; textbook: string | null; reference: string | null; prerequisite: string | null } | null;
 };
 
 /** Title key that survives "&"/"and", plurals, dashes and bracketed notes ("(IDS I, Mandatory)"). */
@@ -67,6 +68,16 @@ const PU_2021: Pack = {
 // HEC/NCEAC Computing Disciplines 2023 — for the NCEAC 2023 programs (CS, SE, AI, DS, Cyber Security): its PLOs and
 // the outlines it gives (CLOs as listed; a lecture plan derived from each outline's topics). Matched by course name.
 const CD23 = new Map(Object.entries(CD2023_COURSES).map(([t, v]) => [titleKey(t), v]));
+const CD23B = new Map(Object.entries(CD2023_BOOKS).map(([t, v]) => [titleKey(t), v]));
+/** The 2023 document's outline text and reference books for a course, matched by name like cd2023(). */
+export function cd2023Books(title: string) {
+  const inner = title.match(/\(([^)]+)\)/)?.[1];
+  for (const k of [titleKey(title), inner ? titleKey(inner) : ""].filter(Boolean)) {
+    const hit = CD23B.get(k) || Array.from(CD23B.entries()).find(([x]) => x.startsWith(`${k} `) || k.startsWith(`${x} `))?.[1];
+    if (hit) return hit;
+  }
+  return null;
+}
 export function cd2023(title: string) {
   const inner = title.match(/\(([^)]+)\)/)?.[1];
   for (const k of [titleKey(title), inner ? titleKey(inner) : ""].filter(Boolean)) {
@@ -81,6 +92,9 @@ const NCEAC_2023: Pack = {
   content(title) {
     const c = cd2023(title);
     return c && (c.clos.length || c.topics.length) ? { clos: c.clos.map((x) => ({ statement: x.s, bloomLevel: x.b, plo: null })), topics: c.topics, from: "HEC/NCEAC Computing Disciplines 2023" } : null;
+  },  details(title) {
+    const b = cd2023Books(title); const c = cd2023(title);
+    return b || c ? { code: null, description: b?.outline || null, textbook: b?.textbook || null, reference: b?.references.length ? b.references.join("\n") : null, prerequisite: c?.pre && !/^(none|nil|-)$/i.test(c.pre) ? c.pre : null } : null;
   },
 };
 export const CONTENT_PACKS: Record<string, Pack> = { "NCEAC-BS-CS-2023": NCEAC_2023, "NCEAC-BS-SE-2023": NCEAC_2023, "NCEAC-BS-AI-2023": NCEAC_2023, "NCEAC-BS-DS-2023": NCEAC_2023, "NCEAC-BS-CYS-2023": NCEAC_2023, "HEC-BS-CS-2025": HEC_CS_2025, "NCEAC-BS-CS-2025": HEC_CS_2025, "PU-BSCS-2021": PU_2021 };
@@ -129,7 +143,7 @@ export async function fillContent(curriculumId: string, packKey: string, types: 
     for (const c of courses) {
       const d = pack.details(c.title); if (!d) continue;
       const data: Record<string, unknown> = {};
-      if (/^[A-Z]{2}-\d{2}$/.test(c.code) && d.code !== c.code && !codes.has(d.code)) { codes.delete(c.code); codes.add(d.code); data.code = d.code; }
+      if (d.code && /^[A-Z]{2}-\d{2}$/.test(c.code) && d.code !== c.code && !codes.has(d.code)) { codes.delete(c.code); codes.add(d.code); data.code = d.code; }
       if (!c.catalogDescription && d.description) data.catalogDescription = d.description;
       if (!c.textbook && d.textbook) data.textbook = d.textbook.slice(0, 1000);
       if (!c.referenceMaterial && d.reference) data.referenceMaterial = d.reference;

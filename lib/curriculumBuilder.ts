@@ -5,7 +5,7 @@ import { findOwningChairmanId } from "./institutionCurriculum";
 import { TEMPLATES, KINDS, kindInfo, autoPlace, normTitle, parseReq, reqPresent, type Kind } from "./curriculumTemplates";
 import { saveMeta, propose } from "./curriculumLibrary";
 import { fillContent, hasContentPack } from "./curriculumContent";
-import { fillShared } from "./curriculumShare";
+import { fillShared, exchangeAll } from "./curriculumShare";
 
 // Curriculum Builder: who may build, the board's data, and every change made on it. A curriculum is built in four
 // steps — its types (categories with targets), placing courses into them, sorting the elective list into tracks,
@@ -32,11 +32,11 @@ export async function canBuild(user: U, c?: { chairmanId: string | null; authori
 }
 
 export type BType = { id: string; name: string; kind: Kind; minCourses: number | null; minCredits: number | null; maxCredits: number | null; required: string[]; note: string | null; position: number; prefilled: boolean };
-export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number; lectures: number; mappedClos: number; from: string | null; fromOtherEdition: boolean };
+export type BCourse = { id: string; code: string; title: string; creditHours: number; lab: number; semesterNumber: number | null; category: string; prerequisite: string | null; tracks: string[]; adopted: number; clos: number; lectures: number; mappedClos: number; from: string | null; fromOtherEdition: boolean; outline: string; textbook: string; references: string };
 export type BTrack = { id: string; name: string; minCourses: number | null; position: number };
 
 export async function loadBoard(id: string) {
-  const c = await prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, title: true, version: true, authority: true, status: true, chairmanId: true, sourceReference: true, courses: { select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, category: true, prerequisiteCourse: { select: { code: true } }, _count: { select: { adoptedInto: true, seedClos: true, seedTopics: true } }, seedClos: { where: { mappedPloId: { not: null } }, select: { id: true } } } }, _count: { select: { plos: true } } } });
+  const c = await prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, title: true, version: true, authority: true, status: true, chairmanId: true, sourceReference: true, courses: { select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, category: true, catalogDescription: true, textbook: true, referenceMaterial: true, prerequisiteCourse: { select: { code: true } }, _count: { select: { adoptedInto: true, seedClos: true, seedTopics: true } }, seedClos: { where: { mappedPloId: { not: null } }, select: { id: true } } } }, _count: { select: { plos: true } } } });
   if (!c) return null;
   const [types, tracks] = await Promise.all([
     bdb.curriculumType.findMany({ where: { curriculumId: id }, orderBy: { position: "asc" } }) as Promise<(Omit<BType, "required"> & { requiredJson: string })[]>,
@@ -50,7 +50,7 @@ export async function loadBoard(id: string) {
     curriculum: { id: c.id, title: c.title, version: c.version, authority: c.authority, status: c.status, chairmanId: c.chairmanId, owner: owner?.instituteName || owner?.name || null, reference: c.sourceReference, plos: c._count.plos },
     types: types.map((t) => ({ ...t, required: (() => { try { return JSON.parse(t.requiredJson) as string[]; } catch { return []; } })() })) as BType[],
     tracks,
-    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos, lectures: x._count.seedTopics, mappedClos: x.seedClos.length, from: srcs.get(x.id)?.fromLabel || null, fromOtherEdition: srcs.get(x.id) ? !srcs.get(x.id)!.sameEdition : false })) as BCourse[],
+    courses: c.courses.map((x) => ({ id: x.id, code: x.code, title: x.title, creditHours: x.creditHours, lab: labs.get(x.id) || 0, semesterNumber: x.semesterNumber, category: x.category, prerequisite: x.prerequisiteCourse?.code || null, tracks: links.filter((l) => l.masterCourseId === x.id).map((l) => l.trackId), adopted: x._count.adoptedInto, clos: x._count.seedClos, lectures: x._count.seedTopics, mappedClos: x.seedClos.length, from: srcs.get(x.id)?.fromLabel || null, fromOtherEdition: srcs.get(x.id) ? !srcs.get(x.id)!.sameEdition : false, outline: x.catalogDescription || "", textbook: x.textbook || "", references: x.referenceMaterial || "" })) as BCourse[],
   };
 }
 
@@ -183,6 +183,7 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
   const course = async () => { const x = await prisma.masterCourse.findFirst({ where: { id: s("courseId"), masterCurriculumId: c.id } }); if (!x) throw new Error("Course not found."); return x; };
   switch (a.action) {
     case "fillShared": return fillShared(user.id, c.id);
+    case "exchangeAll": if (user.role !== "SUPER_USER") throw new Error("Only the Super Admin runs this across the library."); return exchangeAll(user.id);
     case "fillContent": {
       const key = s("pack", 60);
       const types = (await bdb.curriculumType.findMany({ where: { curriculumId: c.id } })) as { name: string; kind: string }[];
@@ -196,6 +197,9 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       if (a.code !== undefined) { const code = s("code", 20).toUpperCase(); if (!code) throw new Error("A course needs a code."); if (code !== x.code && (await prisma.masterCourse.findFirst({ where: { masterCurriculumId: c.id, code } }))) throw new Error(`${code} is already used in this curriculum.`); data.code = code; }
       if (a.title !== undefined) { if (!s("title")) throw new Error("A course needs a title."); data.title = s("title"); }
       if (a.creditHours !== undefined) { const ch = Number(a.creditHours); if (!Number.isInteger(ch) || ch < 0 || ch > 12) throw new Error("Credit hours must be 0–12."); data.creditHours = ch; }
+      if (a.outline !== undefined) data.catalogDescription = String(a.outline || "").slice(0, 20000) || null;
+      if (a.textbook !== undefined) data.textbook = String(a.textbook || "").slice(0, 1000) || null;
+      if (a.references !== undefined) data.referenceMaterial = String(a.references || "").slice(0, 5000) || null;
       if (a.semesterNumber !== undefined) { const sm = a.semesterNumber === "" || a.semesterNumber === null ? null : Number(a.semesterNumber); if (sm !== null && (!Number.isInteger(sm) || sm < 1 || sm > 12)) throw new Error("Semester must be 1–12."); data.semesterNumber = sm; }
       await prisma.masterCourse.update({ where: { id: x.id }, data });
       if (a.lab !== undefined) { const lab = Math.max(0, Math.round(Number(a.lab) || 0)); if (lab > Number(data.creditHours ?? x.creditHours)) throw new Error("The lab part can't be more than the credit hours."); await bdb.masterCourseLab.upsert({ where: { masterCourseId: x.id }, create: { masterCourseId: x.id, labCredits: lab }, update: { labCredits: lab } }); }
