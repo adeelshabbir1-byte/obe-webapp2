@@ -75,6 +75,8 @@ export default async function SemesterHealthPage() {
           <StatCard label="Waiting for a visiting teacher to be decided" value={visitingPending} warn={visitingPending > 0} />
           <StatCard label="Faculty Over Their Load Limit" value={overLoaded} warn={overLoaded > 0} />
         </div>
+        {visitingPending > 0 && <div className="card" style={{ marginTop: 10 }}><b>Waiting for a visiting teacher</b> — post them on the consortium board so faculty of other member universities can apply:
+          <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13 }}>{offeredCourses.filter((c) => c.instructor?.isVisitingPlaceholder).map((c) => <li key={c.id}>{c.code} {c.title} — <a href={`/consortium/vacancies?course=${c.id}`}>Post for visiting faculty</a></li>)}</ul></div>}
       </div>
 
       <div className="card">

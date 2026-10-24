@@ -383,6 +383,8 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/consortium/agreements", "Consortium Agreements", ["CHAIRMAN", "SUBJECT_EXPERT"]],
   ["/consortium/offerings", "Consortium Courses", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
   ["/consortium/applications", "Consortium Students", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "SUBJECT_EXPERT", "FINANCE_OFFICER"]],
+  ["/consortium/vacancies", "Visiting Faculty Posts", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
+  ["/consortium/teaching", "Teaching Posts Elsewhere", ["CHAIRMAN", "INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEAN", "OMC"]],
   ["/counselling", "Counselling", ["CHAIRMAN", "STUDENT_AFFAIRS"]],
   ["/library-desk", "Library Desk", ["LIBRARIAN", "CHAIRMAN"]],
   ["/billing", "OBEHUB Plan & Invoices", ["CHAIRMAN"]],

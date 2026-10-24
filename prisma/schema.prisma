@@ -7720,3 +7720,49 @@ model ConsortiumApplication {
   @@index([homeChairmanId])
   @@index([studentId])
 }
+
+// Consortium phase 5. A teaching vacancy: a member posts a course it has no teacher for (from course allocation);
+// registered faculty of other member universities apply; the host offers the course to one of them.
+model ConsortiumVacancy {
+  id             String    @id
+  chairmanId     String
+  courseId       String
+  term           String
+  mode           String    @default("ON_CAMPUS") // ON_CAMPUS | ONLINE
+  schedule       String?
+  pay            Int?
+  payBasis       String?   // "per course" | "per credit hour" | "per lecture"
+  showPay        Boolean   @default(true)
+  requirements   String?
+  deadline       DateTime?
+  status         String    @default("OPEN") // OPEN | FILLED | CLOSED
+  filledByUserId String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  @@index([status])
+  @@index([chairmanId])
+}
+// APPLIED | SHORTLISTED | OFFERED | ACCEPTED | DECLINED (by the teacher) | REJECTED (by the host) | WITHDRAWN.
+// nocStatus: the applicant's own university's permission to teach elsewhere, when it asks for one.
+model ConsortiumVacancyApplication {
+  id             String    @id
+  vacancyId      String
+  applicantId    String
+  homeChairmanId String
+  status         String    @default("APPLIED")
+  coverNote      String?
+  shareJson      String    @default("{}") // what the applicant lets the host see: attainment, feedback
+  nocStatus      String    @default("NOT_REQUIRED") // NOT_REQUIRED | PENDING | APPROVED | DECLINED
+  nocById        String?
+  nocAt          DateTime?
+  nocNote        String?
+  hostNote       String?
+  decidedById    String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([vacancyId, applicantId])
+  @@index([applicantId])
+  @@index([homeChairmanId])
+}

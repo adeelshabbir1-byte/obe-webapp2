@@ -199,3 +199,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumApplication_offering_student_key" O
 CREATE INDEX IF NOT EXISTS "ConsortiumApplication_host_idx" ON "ConsortiumApplication"("hostChairmanId");
 CREATE INDEX IF NOT EXISTS "ConsortiumApplication_home_idx" ON "ConsortiumApplication"("homeChairmanId");
 CREATE INDEX IF NOT EXISTS "ConsortiumApplication_student_idx" ON "ConsortiumApplication"("studentId");
+
+-- Phase 5: teaching vacancies for visiting faculty. A member posts a course it has no teacher for; registered faculty
+-- of other member universities apply; the host shortlists on platform-verified records and offers the course.
+CREATE TABLE IF NOT EXISTS "ConsortiumVacancy" (
+  "id" TEXT PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL,
+  "courseId" TEXT NOT NULL,
+  "term" TEXT NOT NULL,
+  "mode" TEXT NOT NULL DEFAULT 'ON_CAMPUS',
+  "schedule" TEXT,
+  "pay" INTEGER,
+  "payBasis" TEXT,
+  "showPay" BOOLEAN NOT NULL DEFAULT true,
+  "requirements" TEXT,
+  "deadline" TIMESTAMP(3),
+  "status" TEXT NOT NULL DEFAULT 'OPEN',
+  "filledByUserId" TEXT,
+  "createdById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ConsortiumVacancy_status_idx" ON "ConsortiumVacancy"("status");
+CREATE INDEX IF NOT EXISTS "ConsortiumVacancy_chairmanId_idx" ON "ConsortiumVacancy"("chairmanId");
+CREATE TABLE IF NOT EXISTS "ConsortiumVacancyApplication" (
+  "id" TEXT PRIMARY KEY,
+  "vacancyId" TEXT NOT NULL,
+  "applicantId" TEXT NOT NULL,
+  "homeChairmanId" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'APPLIED',
+  "coverNote" TEXT,
+  "shareJson" TEXT NOT NULL DEFAULT '{}',
+  "nocStatus" TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
+  "nocById" TEXT,
+  "nocAt" TIMESTAMP(3),
+  "nocNote" TEXT,
+  "hostNote" TEXT,
+  "decidedById" TEXT,
+  "decidedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_key" ON "ConsortiumVacancyApplication"("vacancyId", "applicantId");
+CREATE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_applicant_idx" ON "ConsortiumVacancyApplication"("applicantId");
+CREATE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_home_idx" ON "ConsortiumVacancyApplication"("homeChairmanId");

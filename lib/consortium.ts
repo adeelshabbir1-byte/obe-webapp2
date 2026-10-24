@@ -96,9 +96,9 @@ export async function decideMember(actorId: string, chairmanId: string, status: 
   await writeAuditLog({ actorUserId: actorId, action: `CONSORTIUM_MEMBER_${status}`, entityType: "ConsortiumMember", entityId: chairmanId, metadata: { note: note || null } });
 }
 /** The university's own residency rules — each must be at least as strict as the rules book. */
-export async function saveResidency(actorId: string, chairmanId: string, v: { minHomeResidencyPct?: unknown; capstoneAtHome?: unknown; majorsAtHome?: unknown }) {
+export async function saveResidency(actorId: string, chairmanId: string, v: { minHomeResidencyPct?: unknown; capstoneAtHome?: unknown; majorsAtHome?: unknown; visitingNoc?: unknown }) {
   const { rules } = await rulesOn();
-  const out = { minHomeResidencyPct: Number(v.minHomeResidencyPct), capstoneAtHome: v.capstoneAtHome === true, majorsAtHome: v.majorsAtHome === true };
+  const out = { minHomeResidencyPct: Number(v.minHomeResidencyPct), capstoneAtHome: v.capstoneAtHome === true, majorsAtHome: v.majorsAtHome === true, visitingNoc: v.visitingNoc === true };
   if (!Number.isFinite(out.minHomeResidencyPct) || out.minHomeResidencyPct > 100) throw new Error("Give the share of credits at your university (0–100).");
   for (const k of ["minHomeResidencyPct", "capstoneAtHome"] as const) {
     const d = RULES.find((r) => r.key === k)!;
@@ -255,7 +255,7 @@ export async function lookupPerson(cnicIn: string) {
 }
 
 function safeJson(s: string) { try { return JSON.parse(s) as Record<string, unknown>; } catch { return {}; } }
-export const residencyOf = (m: Member | null) => ({ minHomeResidencyPct: null as number | null, capstoneAtHome: false, majorsAtHome: false, ...(m ? safeJson(m.residencyJson) : {}) }) as { minHomeResidencyPct: number | null; capstoneAtHome: boolean; majorsAtHome: boolean };
+export const residencyOf = (m: Member | null) => ({ minHomeResidencyPct: null as number | null, capstoneAtHome: false, majorsAtHome: false, visitingNoc: false, ...(m ? safeJson(m.residencyJson) : {}) }) as { minHomeResidencyPct: number | null; capstoneAtHome: boolean; majorsAtHome: boolean; visitingNoc: boolean };
 
 const FACULTY_ROLES = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "LAB_MANAGER", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEAN", "DEPARTMENT_COORDINATOR", "OMC", "COURSE_ASSIGNER"];
 /** Everyone in this institute who can teach (walks the managedBy chain down three levels). */

@@ -95,11 +95,11 @@ export default async function ConsortiumPage() {
     </div>
 
     <div className="card">
-      <h3 style={{ marginTop: 0 }}>Residency — what your students must take at your university</h3>
+      <h3 style={{ marginTop: 0 }}>Your university&apos;s own rules</h3>
       <p className="small-note" style={{ marginTop: 0 }}>For degrees your university awards. The consortium minimum is {String(rules.minHomeResidencyPct)}% of credits{rules.capstoneAtHome ? " and the capstone at home" : ""}; yours can be stricter.</p>
       <ActionForm showMessage url="/api/consortium" fixed={{ action: "residency" }} submit="Save residency rules"
-        initial={{ minHomeResidencyPct: res.minHomeResidencyPct ?? rules.minHomeResidencyPct, capstoneAtHome: res.capstoneAtHome || rules.capstoneAtHome === true, majorsAtHome: res.majorsAtHome }}
-        fields={[{ name: "minHomeResidencyPct", label: "Credits at our university, at least (%)", type: "number", width: 120 }, { name: "capstoneAtHome", label: "Capstone / FYP at our university", type: "checkbox" }, { name: "majorsAtHome", label: "All major core courses at our university", type: "checkbox" }]} />
+        initial={{ minHomeResidencyPct: res.minHomeResidencyPct ?? rules.minHomeResidencyPct, capstoneAtHome: res.capstoneAtHome || rules.capstoneAtHome === true, majorsAtHome: res.majorsAtHome, visitingNoc: res.visitingNoc }}
+        fields={[{ name: "minHomeResidencyPct", label: "Credits at our university, at least (%)", type: "number", width: 120 }, { name: "capstoneAtHome", label: "Capstone / FYP at our university", type: "checkbox" }, { name: "majorsAtHome", label: "All major core courses at our university", type: "checkbox" }, { name: "visitingNoc", label: "Our faculty need our NOC to teach at another university", type: "checkbox" }]} />
     </div>
 
     <div className="card">
@@ -128,6 +128,6 @@ export default async function ConsortiumPage() {
           fields={[{ name: "name", label: "Full name" }, { name: "email", label: "Email", width: 220 }, { name: "cnic", label: "CNIC", placeholder: "12345-1234567-1", width: 170 }, { name: "employer", label: "Current employer" }, { name: "designation", label: "Designation" }, { name: "highestDegree", label: "Highest degree (e.g. MS Computer Science, NUST)", width: 280 }, { name: "hecAttestationNo", label: "HEC attestation no." }, { name: "reason", label: "Why your university vouches for this person", type: "textarea" }]} />
       </>}
     </div>
-    <p className="small-note"><Link href="/consortium/agreements">Agreements and course equivalence →</Link> · <Link href="/consortium/offerings">Courses open to the consortium →</Link> · <Link href="/consortium/applications">Consortium students →</Link> · <Link href="/catalog">Public catalog →</Link></p>
+    <p className="small-note"><Link href="/consortium/agreements">Agreements and course equivalence →</Link> · <Link href="/consortium/offerings">Courses open to the consortium →</Link> · <Link href="/consortium/applications">Consortium students →</Link> · <Link href="/consortium/vacancies">Visiting faculty posts →</Link> · <Link href="/consortium/teaching">Teaching posts elsewhere →</Link> · <Link href="/catalog">Public catalog →</Link></p>
   </>);
 }
