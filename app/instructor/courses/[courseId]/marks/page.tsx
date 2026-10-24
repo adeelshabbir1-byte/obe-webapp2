@@ -11,6 +11,7 @@ import { chairmanIdFor } from "../../../../../lib/reportScope";
 import SimpleBarChart from "../../../../../components/SimpleBarChart";
 import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
+import AffiliateMarksNote from "../../../../../components/AffiliateMarksNote";
 import LmsImport from "../../../../../components/LmsImport";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
@@ -145,6 +146,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="marks" code={course.code} title={course.title} />
+      <AffiliateMarksNote courseId={course.id} />
       <ResultPrecheck courseId={course.id} />
       <ResultApprovalPanel
         courseId={course.id}

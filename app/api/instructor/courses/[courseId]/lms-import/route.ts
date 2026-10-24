@@ -5,6 +5,7 @@ import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { normKey } from "../../../../../../lib/lmsImport";
+import { collegeMarksBlock } from "../../../../../../lib/affiliates";
 
 type Body = { source?: string; rows: { key: string; name?: string; scores: Record<string, string> }[]; map: { col: string; instrumentId: string; outOf: number }[]; overwrite?: boolean };
 
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const b = (await req.json().catch(() => null)) as Body | null;
   if (!b || !Array.isArray(b.rows) || !Array.isArray(b.map) || !b.map.length) return NextResponse.json({ error: "Map at least one column to an assessment." }, { status: 400 });
   const insts = await prisma.assessmentInstrument.findMany({ where: { courseId: course.id, source: "INSTRUCTOR", id: { in: b.map.map((m) => m.instrumentId) } } });
+  { const uniOnly = await collegeMarksBlock(course.id, insts.map((i) => i.id)); if (uniOnly) return NextResponse.json({ error: uniOnly }, { status: 409 }); }
   const iOf = new Map(insts.map((i) => [i.id, i]));
   const enr = await prisma.studentEnrollment.findMany({ where: { courseId: course.id }, select: { student: { select: { id: true, rollNumber: true, name: true } } } });
   const byRoll = new Map(enr.map((e) => [normKey(e.student.rollNumber), e.student.id]));

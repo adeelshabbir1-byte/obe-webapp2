@@ -145,6 +145,11 @@ export const getAuthenticatedUser = cache(async () => {
       }
     }
   }
+  // The university's OMC also looks after its affiliated colleges' courses.
+  if (base.role === "OMC" && base.managedById) {
+    const rows = (await (prisma as unknown as Record<string, any>).instituteAffiliation.findMany({ where: { universityId: base.managedById, status: "ACTIVE" }, select: { collegeId: true } }).catch(() => [])) as { collegeId: string }[];
+    if (rows.length) return { ...base, collegeIds: rows.map((r) => r.collegeId) };
+  }
   return base;
 });
 

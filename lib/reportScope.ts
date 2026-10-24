@@ -13,8 +13,11 @@ export function courseScopeFor(user: { id: string; role: string; managedById: st
   switch (user.role) {
     case "SUPER_USER":
       return {}; // platform-wide — no institution restriction
-    case "OMC":
-      return { coordinator: { managedById: user.managedById || "" }, ...(omcCourseScope(user) as Prisma.CourseWhereInput) };
+    case "OMC": {
+      const own: Prisma.CourseWhereInput = { coordinator: { managedById: user.managedById || "" }, ...(omcCourseScope(user) as Prisma.CourseWhereInput) };
+      const colleges = (user as { collegeIds?: string[] }).collegeIds || [];
+      return colleges.length ? { OR: [own, { coordinator: { managedById: { in: colleges } } }] } : own;
+    }
     case "DEPARTMENT_COORDINATOR":
       return { coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } };
     case "DEAN":
@@ -56,7 +59,9 @@ export async function coordinatorIdsFor(user: { id: string; role: string; manage
   if (user.role === "OMC" || user.role === "CHAIRMAN") {
     const chairmanId = user.role === "OMC" ? user.managedById || "" : user.id;
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, ...deptScope(user) } });
-    return coordinators.map((c) => c.id);
+    const colleges = user.role === "OMC" ? (user as { collegeIds?: string[] }).collegeIds || [] : [];
+    const collegeLeads = colleges.length ? await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: { in: colleges } }, select: { id: true } }) : [];
+    return coordinators.map((c) => c.id).concat(collegeLeads.map((c) => c.id));
   }
   // SE/Instructor: whichever coordinator(s) own the courses they're attached to.
   const courses = await prisma.course.findMany({

@@ -7920,3 +7920,24 @@ model MasterCourseSource {
   sameEdition    Boolean  @default(true)
   copiedAt       DateTime @default(now())
 }
+
+// Affiliated colleges (lib/affiliates.ts): the design a college course took from the university's Subject Expert
+// (fingerprint tells when the university changed it since), and the university's marks distribution per college / course.
+model AffiliateCourseSync {
+  courseId     String   @id
+  fromCourseId String
+  fingerprint  String
+  syncedAt     DateTime @default(now())
+}
+
+model AffiliateMarksPolicy {
+  id           String   @id
+  universityId String
+  collegeId    String?
+  courseKey    String?
+  headsJson    String   @default("[]")
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+
+  @@index([universityId])
+}

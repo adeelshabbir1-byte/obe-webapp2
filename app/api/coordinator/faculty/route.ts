@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
+import { collegeRoleBlock } from "../../../../lib/affiliates";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
   if (!body.username || !body.password || !body.name || !body.email || !body.role) {
     return NextResponse.json({ error: "name, email, username, password, role are required" }, { status: 400 });
   }
+  { const no = await collegeRoleBlock(user.managedById, body.role); if (no) return NextResponse.json({ error: no }, { status: 409 }); }
   if (!["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"].includes(body.role)) {
     return NextResponse.json({ error: "role must be SUBJECT_EXPERT, INSTRUCTOR, LAB_ENGINEER or LAB_MANAGER" }, { status: 400 });
   }

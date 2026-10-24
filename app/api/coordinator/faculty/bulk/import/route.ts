@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { hashPassword } from "../../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { collegeRoleBlock } from "../../../../../../lib/affiliates";
 
 const DEFAULT_TEMP_PASSWORD = "12345678"; // same fixed default already used by "Reset All Faculty Passwords"
 
@@ -26,6 +27,7 @@ function placeholderEmail(username: string): string {
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const collegeNoSe = await collegeRoleBlock(user.managedById, "SUBJECT_EXPERT");
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
       skippedRows.push({ row: r, reason: `Role must be "Subject Expert" or "Course Instructor" (got "${rawRole}")` });
       continue;
     }
+    if (role === "SUBJECT_EXPERT" && collegeNoSe) { skippedRows.push({ row: r, reason: collegeNoSe }); continue; }
 
     const email = placeholderEmail(username);
     if (allEmails.has(email.toLowerCase())) {

@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { collegeMarksBlock } from "../../../../../../lib/affiliates";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -16,6 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (!studentId || !instrumentId || score === undefined) return NextResponse.json({ error: "studentId, instrumentId, score are required" }, { status: 400 });
 
   const instrument = await prisma.assessmentInstrument.findUnique({ where: { id: instrumentId } });
+  { const uniOnly = await collegeMarksBlock(course.id, [instrumentId]); if (uniOnly) return NextResponse.json({ error: uniOnly }, { status: 409 }); }
   if (!instrument || instrument.courseId !== course.id || instrument.source !== "INSTRUCTOR") return NextResponse.json({ error: "invalid instrument" }, { status: 400 });
 
   const numScore = parseFloat(score);

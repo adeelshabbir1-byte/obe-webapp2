@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { collegeRoleBlock } from "../../../../lib/affiliates";
 
 // The Institute Head makes a faculty member an OMC member as well (same login, a role to choose at sign-in), or takes it back.
 export async function POST(req: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
   });
   if (!person) return NextResponse.json({ error: "person not found" }, { status: 404 });
   const give = body.action !== "REVOKE";
+  if (give) { const no = await collegeRoleBlock(user.id, "OMC"); if (no) return NextResponse.json({ error: no }, { status: 409 }); }
   await prisma.user.update({ where: { id: person.id }, data: { omcHat: give } });
   await prisma.session.updateMany({ where: { userId: person.id }, data: { activeRole: null } });
   await writeAuditLog({ actorUserId: user.id, action: give ? "OMC_HAT_GIVEN" : "OMC_HAT_REMOVED", entityType: "User", entityId: person.id });

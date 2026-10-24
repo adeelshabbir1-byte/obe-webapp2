@@ -8,6 +8,7 @@ import { handlingAccess } from "../../../../../../lib/courseOwners";
 import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../../lib/contentSync";
 import { pastTermError } from "../../../../../../lib/courseTerm";
 import { leaveBlock } from "../../../../../../lib/facultyLeave";
+import { collegeRoleBlock } from "../../../../../../lib/affiliates";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
@@ -23,6 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const subjectExpertId = body.subjectExpertId || null;
+  if (subjectExpertId) { const no = await collegeRoleBlock(user.managedById, "SUBJECT_EXPERT"); if (no) return NextResponse.json({ error: no }, { status: 409 }); }
 
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 400) : "";
 

@@ -18,6 +18,7 @@ import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
 import { resultLockMessage } from "../../../../lib/resultApproval";
 import ResultMateMarks from "../../../../components/ResultMateMarks";
 import MarksGrid from "../../../../components/MarksGrid";
+import AffiliateMarksNote from "../../../../components/AffiliateMarksNote";
 
 export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -90,6 +91,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
       </div>
 
       {notMine && <div className="card"><p className="small-note" style={{ margin: 0 }}>You don&apos;t teach a course in that batch. Pick one of your batches above.</p></div>}
+      {course && <AffiliateMarksNote courseId={course.id} />}
       {course && (
         <div className="card">
           <p style={{ fontSize: 12.5 }}><b>Course:</b> {course.code} — {course.title} &nbsp; <b>Instructor:</b> {course.instructor?.name || "—"}</p>

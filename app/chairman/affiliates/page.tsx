@@ -24,7 +24,7 @@ export default async function Affiliates() {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Affiliated colleges</h1>
       {uni && <div className="card">Your institute is itself affiliated to another university; see <Link href="/curricula">Curriculum Library</Link>.</div>}
-      <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Colleges linked to your university by OBEHUB (ask the Super User to add one). They follow your own curricula — publish a new version in the <Link href="/curricula">Curriculum Library</Link> with an “effective from” term and they are told. Inspections and renewals are kept in the <Link href="/quality-office/affiliate">Quality Office</Link>.</p>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Colleges linked to your university by OBEHUB (ask the Super User to add one). They follow your own curricula — publish a new version in the <Link href="/curricula">Curriculum Library</Link> with an “effective from” term and they are told. Inspections and renewals are kept in the <Link href="/quality-office/affiliate">Quality Office</Link>. Colleges have no Subject Experts and no OMC: your Subject Experts design each course and your OMC monitors the colleges&apos; courses too. Set each course&apos;s marks distribution and enter your own parts (e.g. the final) under <Link href="/affiliates/marks">Affiliated Colleges — Marks</Link>.</p>
       {cols.length === 0 ? <div className="card small-note">No colleges linked yet.</div> : cols.map((c) => {
         const bs = batches.filter((b) => b.coordinator.managedById === c.collegeId);
         return (

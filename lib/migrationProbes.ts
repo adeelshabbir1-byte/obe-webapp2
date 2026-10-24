@@ -22,6 +22,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ProgramProfile"
 },
 {
+"f": "migration_affiliates.sql",
+"d": "Affiliated colleges: course design taken from the university's Subject Expert, and the university's marks distribution (who enters each head)",
+"t": "AffiliateMarksPolicy"
+},
+{
 "f": "migration_all_features.sql",
 "d": "Evidence files, meeting minutes, change log, outcome figures, surveys, readiness snapshots",
 "t": "ReadinessSnapshot"
