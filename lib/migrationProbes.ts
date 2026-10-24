@@ -181,7 +181,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 {
 "f": "migration_consortium.sql",
 "d": "OBEHUB Consortium, phase 1: the Super Admin's rules book (HEC minimums, versioned by effective date), member",
-"t": "ConsortiumVacancyApplication"
+"t": "ConsortiumExamBooking"
 },
 {
 "f": "migration_content_sync.sql",

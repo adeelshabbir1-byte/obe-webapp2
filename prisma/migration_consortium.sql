@@ -241,3 +241,30 @@ CREATE TABLE IF NOT EXISTS "ConsortiumVacancyApplication" (
 CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_key" ON "ConsortiumVacancyApplication"("vacancyId", "applicantId");
 CREATE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_applicant_idx" ON "ConsortiumVacancyApplication"("applicantId");
 CREATE INDEX IF NOT EXISTS "ConsortiumVacancyApplication_home_idx" ON "ConsortiumVacancyApplication"("homeChairmanId");
+
+-- Phase 6: the exam-centre network. A university approves which centres (its own and other members') its students may
+-- sit consortium exams at; the host lists the centres it accepts on each course. A student's seat is booked at a
+-- centre both approve; the centre records attendance (biometric / ID), the invigilator and the recording.
+CREATE TABLE IF NOT EXISTS "ConsortiumCentreApproval" (
+  "chairmanId" TEXT NOT NULL,
+  "centreId" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'APPROVED',
+  "byId" TEXT NOT NULL,
+  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "note" TEXT,
+  PRIMARY KEY ("chairmanId", "centreId")
+);
+CREATE TABLE IF NOT EXISTS "ConsortiumExamBooking" (
+  "applicationId" TEXT PRIMARY KEY,
+  "centreId" TEXT NOT NULL,
+  "examOn" TIMESTAMP(3),
+  "seatNo" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'BOOKED',
+  "method" TEXT,
+  "invigilator" TEXT,
+  "recordingRef" TEXT,
+  "markedById" TEXT,
+  "markedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ConsortiumExamBooking_centreId_idx" ON "ConsortiumExamBooking"("centreId");

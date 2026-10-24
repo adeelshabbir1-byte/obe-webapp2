@@ -7766,3 +7766,31 @@ model ConsortiumVacancyApplication {
   @@index([applicantId])
   @@index([homeChairmanId])
 }
+
+// Consortium phase 6. Which exam centres a university lets its students use (its own, or other members').
+model ConsortiumCentreApproval {
+  chairmanId String
+  centreId   String
+  status     String   @default("APPROVED") // APPROVED | REVOKED
+  byId       String
+  at         DateTime @default(now())
+  note       String?
+
+  @@id([chairmanId, centreId])
+}
+// A visiting student's final-exam seat at a centre; the centre records attendance, the invigilator and the recording.
+model ConsortiumExamBooking {
+  applicationId String    @id
+  centreId      String
+  examOn        DateTime?
+  seatNo        String?
+  status        String    @default("BOOKED") // BOOKED | PRESENT | ABSENT
+  method        String?   // BIOMETRIC | ID_CARD
+  invigilator   String?
+  recordingRef  String?
+  markedById    String?
+  markedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([centreId])
+}

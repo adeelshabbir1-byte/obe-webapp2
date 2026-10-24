@@ -60,6 +60,11 @@ export default async function ConsortiumPage() {
   const sponsored = affs.filter((a) => a.kind === "SPONSORED");
   const sUsers = await prisma.user.findMany({ where: { id: { in: sponsored.map((a) => a.userId) } }, select: { id: true, name: true, email: true } });
   const res = residencyOf(m);
+  const activeIds = ((await cdb.consortiumMember.findMany({ where: { status: "ACTIVE" }, select: { chairmanId: true } })) as { chairmanId: string }[]).map((x) => x.chairmanId).filter((x) => x !== user.id);
+  const others = (await cdb.examCentre.findMany({ where: { chairmanId: { in: activeIds }, status: "ACTIVE" }, orderBy: [{ city: "asc" }, { name: "asc" }] })) as Centre[];
+  const approvedSet = new Set(((await cdb.consortiumCentreApproval.findMany({ where: { chairmanId: user.id, status: "APPROVED" } }).catch(() => [])) as { centreId: string }[]).map((x) => x.centreId));
+  const otherHeads = await prisma.user.findMany({ where: { id: { in: Array.from(new Set(others.map((c) => c.chairmanId))) } }, select: { id: true, instituteName: true, name: true } });
+  const uniName = (id: string) => otherHeads.find((h) => h.id === id)?.instituteName || otherHeads.find((h) => h.id === id)?.name || "—";
   const registered = people.filter((p) => affOf.get(p.id)?.status === "ACTIVE").length;
   const odl = nocs.filter((n) => n.kind === "ODL_INSTITUTIONAL").map((n) => nocState(n)).find((s) => s.state !== "EXPIRED");
   const status = m.status === "ACTIVE" ? <b style={{ color: "#2E7D32" }}>Member</b> : m.status === "SUSPENDED" ? <b style={{ color: "#C62828" }}>Suspended{m.decisionNote ? ` — ${m.decisionNote}` : ""}</b> : <b style={{ color: "#B26A00" }}>Application waiting for the Super Admin</b>;
@@ -92,6 +97,15 @@ export default async function ConsortiumPage() {
           <td><ActionForm showMessage url="/api/consortium" fixed={{ action: "centre", id: c.id }} submit="Save" collapsed openLabel="Edit" initial={{ ...c }} fields={[{ name: "name", label: "Name" }, { name: "city", label: "City" }, { name: "seats", label: "Seats", type: "number", width: 80 }, { name: "cctv", label: "CCTV", type: "checkbox" }, { name: "biometric", label: "Biometric / ID", type: "checkbox" }, { name: "status", label: "Status", type: "select", options: [["ACTIVE", "Open"], ["CLOSED", "Closed"]] }]} /></td></tr>); })}</tbody></table>}
       <ActionForm showMessage url="/api/consortium" fixed={{ action: "centre" }} submit="Add centre" collapsed openLabel="+ Add an exam centre" initial={{ cctv: true, biometric: true }}
         fields={[{ name: "name", label: "Name (e.g. Main Campus Exam Hall)", width: 260 }, ...(campuses.length ? [{ name: "campusId", label: "Campus", type: "select" as const, options: [["", "—"] as [string, string], ...campuses.map((x) => [x.id, x.name] as [string, string])] }] : []), { name: "city", label: "City" }, { name: "address", label: "Address", width: 260 }, { name: "seats", label: "Seats", type: "number", width: 80 }, { name: "cctv", label: "CCTV with recording", type: "checkbox" }, { name: "biometric", label: "Biometric / ID attendance", type: "checkbox" }]} />
+    </div>
+
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Other universities&apos; centres your students may use</h3>
+      <p className="small-note" style={{ marginTop: 0 }}>Your students sit a consortium exam only at a centre {rules.centreBothApprove ? "both you and the course's university approve" : "the course's university lists"}. Your own centres are always approved.</p>
+      {!others.length ? <p className="small-note" style={{ margin: 0 }}>No other member has added exam centres yet.</p> : <table style={{ fontSize: 13 }}><tbody>{others.map((c) => { const on = approvedSet.has(c.id); const g = centreGaps(c, rules); return (
+        <tr key={c.id}><td><b>{c.name}</b><div className="small-note">{uniName(c.chairmanId)}{c.city ? ` · ${c.city}` : ""} · {c.seats} seats</div></td><td className="small-note" style={{ color: g.length ? "#B26A00" : "#2E7D32" }}>{g.length ? g.join("; ") : "CCTV and biometric attendance"}</td>
+          <td style={{ fontWeight: 700, color: on ? "#2E7D32" : "#6B7177" }}>{on ? "Approved" : "Not approved"}</td>
+          <td><ActionButton showMessage url="/api/consortium/exams" body={{ action: "approve", centreId: c.id, on: !on }} label={on ? "Withdraw approval" : "Approve"} className={on ? "btn btn-secondary btn-sm" : "btn btn-brass btn-sm"} /></td></tr>); })}</tbody></table>}
     </div>
 
     <div className="card">
@@ -128,6 +142,6 @@ export default async function ConsortiumPage() {
           fields={[{ name: "name", label: "Full name" }, { name: "email", label: "Email", width: 220 }, { name: "cnic", label: "CNIC", placeholder: "12345-1234567-1", width: 170 }, { name: "employer", label: "Current employer" }, { name: "designation", label: "Designation" }, { name: "highestDegree", label: "Highest degree (e.g. MS Computer Science, NUST)", width: 280 }, { name: "hecAttestationNo", label: "HEC attestation no." }, { name: "reason", label: "Why your university vouches for this person", type: "textarea" }]} />
       </>}
     </div>
-    <p className="small-note"><Link href="/consortium/agreements">Agreements and course equivalence →</Link> · <Link href="/consortium/offerings">Courses open to the consortium →</Link> · <Link href="/consortium/applications">Consortium students →</Link> · <Link href="/consortium/vacancies">Visiting faculty posts →</Link> · <Link href="/consortium/teaching">Teaching posts elsewhere →</Link> · <Link href="/catalog">Public catalog →</Link></p>
+    <p className="small-note"><Link href="/consortium/agreements">Agreements and course equivalence →</Link> · <Link href="/consortium/offerings">Courses open to the consortium →</Link> · <Link href="/consortium/applications">Consortium students →</Link> · <Link href="/consortium/vacancies">Visiting faculty posts →</Link> · <Link href="/consortium/teaching">Teaching posts elsewhere →</Link> · <Link href="/consortium/exams">Consortium exams →</Link> · <Link href="/catalog">Public catalog →</Link></p>
   </>);
 }

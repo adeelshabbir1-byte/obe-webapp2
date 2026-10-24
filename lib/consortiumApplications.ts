@@ -6,6 +6,7 @@ import { cdb, isActiveMember, rulesOn } from "./consortium";
 import { catalog, OFFER_ROLES, type Offering } from "./consortiumOfferings";
 import { recognisedAt, editionOf, institutionOf, refresh, type Approvals } from "./consortiumAgreements";
 import { findOwningChairmanId } from "./institutionCurriculum";
+import { usableCentres, book } from "./consortiumExams";
 
 // Consortium phase 4: a student of a member university applies for another member's course.
 //  1. The student applies from their own portal (seats, deadline and exam centre checked; the fee is the host's).
@@ -34,7 +35,9 @@ export async function apply(studentId: string, offeringId: string, f: { wantsCre
   if (!o.open) throw new Error("Applications for this course have closed.");
   if (!o.seatsLeft) throw new Error("The course is full.");
   if (await cdb.consortiumApplication.findFirst({ where: { offeringId, studentId } })) throw new Error("You have already applied for this course.");
-  if (o.centres.length && !o.centres.some((c) => c.id === f.examCentreId)) throw new Error("Choose where you will sit the final exam.");
+  const usable = await usableCentres(home, (await cdb.consortiumOffering.findUnique({ where: { id: offeringId } })) as Offering);
+  if (!usable.length) throw new Error("None of this course's exam centres is approved by your university yet — ask your Chairman to approve one (Consortium page).");
+  if (!usable.some((c) => c.id === f.examCentreId)) throw new Error("Choose an exam centre both universities approve.");
   const rec = o.course.masterCourseId ? await recognisedAt(home, o.course.masterCourseId) : [];
   const creditStatus = rec.length ? "RECOGNISED" : f.wantsCredit ? "PENDING" : "NOT_REQUESTED";
   const id = randomUUID();
@@ -93,8 +96,9 @@ export async function hostDecide(user: { id: string; role: string }, appId: stri
   const hs = await prisma.student.create({ data: { batchId: batch.id, name: st.name, rollNumber: roll, passwordHash: await hashPassword(temp), mustChangePassword: true } });
   await prisma.studentEnrollment.create({ data: { studentId: hs.id, courseId: course.id } });
   await cdb.consortiumApplication.update({ where: { id: appId }, data: { status: "ACCEPTED", hostNote: note?.trim().slice(0, 500) || null, decidedById: user.id, decidedAt: new Date(), hostStudentId: hs.id, hostLogin: roll, tempSecret: temp } });
+  const seat = await book({ ...a, status: "ACCEPTED" });
   await writeAuditLog({ actorUserId: user.id, action: "CONSORTIUM_STUDENT_ENROLLED", entityType: "ConsortiumApplication", entityId: appId, metadata: { hostStudentId: hs.id, courseId: course.id } });
-  return `Accepted and enrolled as visiting student ${roll}. The student sees their sign-in for your portal in their own portal.`;
+  return `Accepted and enrolled as visiting student ${roll}.${seat ? ` Exam seat at ${seat.name}.` : " No exam seat yet (centre full or none approved by the student's university)."} The student sees their sign-in for your portal in their own portal.`;
 }
 export async function verifyPayment(user: { id: string; role: string }, appId: string, ok: boolean) {
   const a = (await cdb.consortiumApplication.findUnique({ where: { id: appId } })) as Application | null;
