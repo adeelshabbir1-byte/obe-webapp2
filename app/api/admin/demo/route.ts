@@ -21,6 +21,7 @@ import { campusRecruitment } from "../../../../lib/demoRecruitment";
 import { campusResearch } from "../../../../lib/demoResearch";
 import { campusBilling } from "../../../../lib/demoBilling";
 import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys, campusBbaContent, campusFixes } from "../../../../lib/demoCampus";
+import { adminCan } from "../../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -28,7 +29,7 @@ export const maxDuration = 60;
 // One step of building or removing the demo institute per call (Super User only); the page drives the steps.
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
-  if (!user || !user.mfaVerified || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !user.mfaVerified || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   try {
     if (b.step === "setup") {

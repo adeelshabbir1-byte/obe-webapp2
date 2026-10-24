@@ -4,6 +4,7 @@ import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import { checkDatabase, fixScript, settingsCheck, type Issue } from "../../../lib/systemHealth";
 import { FixScript, CheckAgain } from "../../../components/SystemHealthControls";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,8 @@ export default async function SystemHealthPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "SECURITY"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   let result: Awaited<ReturnType<typeof checkDatabase>> | null = null, error = "";
   try { result = await checkDatabase(); } catch (e) { error = e instanceof Error ? e.message : String(e); }
@@ -31,7 +33,7 @@ export default async function SystemHealthPage() {
   const tables = Array.from(new Set(breaks.map((i) => i.table)));
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>System Health</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         Checks the live database against what this version of the app expects — every table, column, choice list and unique rule — and

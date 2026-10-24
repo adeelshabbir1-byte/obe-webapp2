@@ -7,6 +7,7 @@ import AssignByInstitute from "../../../components/AssignByInstitute";
 import { degreeSortKey, degreeGroupLabel } from "../../../lib/degreeGroup";
 import { navForRole } from "../../../components/reportNav";
 import CurriculumWorkbookImport from "../../../components/CurriculumWorkbookImport";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 
 export default async function AdminCurriculaPage() {
@@ -14,7 +15,8 @@ export default async function AdminCurriculaPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   // Official (shared) curricula only - institutes' own copies are theirs, not managed here.
   const curricula = (await prisma.masterCurriculum.findMany({
@@ -23,7 +25,7 @@ export default async function AdminCurriculaPage() {
   })).sort((a, b) => degreeSortKey(a).localeCompare(degreeSortKey(b)) || a.authority.localeCompare(b.authority) || b.version.localeCompare(a.version));
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curricula</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Manage the official curricula and choose which institutes each one is assigned to — institutes only see the curricula you assign to them. Grouped by degree, so every BSCS curriculum sits together. Clone a curriculum as a

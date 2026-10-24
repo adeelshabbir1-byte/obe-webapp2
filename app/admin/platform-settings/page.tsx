@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import PlatformSettingsForm from "../../../components/PlatformSettingsForm";
 import { navForRole } from "../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 
 export default async function PlatformSettingsPage() {
@@ -11,12 +12,13 @@ export default async function PlatformSettingsPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "SECURITY"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const settings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Platform Settings</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Institute name and logos shown across every page and report. Only you can change these.

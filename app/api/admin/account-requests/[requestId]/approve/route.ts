@@ -5,6 +5,7 @@ import { prisma } from "../../../../../../lib/db";
 import { hashPassword } from "../../../../../../lib/auth";
 import { cloneGrandCurriculaForChairman } from "../../../../../../lib/cloneCurriculum";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 function slugifyUsername(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "chairman";
@@ -16,7 +17,7 @@ function slugifyUsername(name: string) {
 // happen together automatically on approval.
 export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const request = await prisma.accountRequest.findUnique({ where: { id: params.requestId } });
   if (!request) return NextResponse.json({ error: "not found" }, { status: 404 });

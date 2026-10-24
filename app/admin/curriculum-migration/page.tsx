@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import AutoSubmitSelect from "../../../components/AutoSubmitSelect";
 import { navForRole } from "../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 
 export default async function CurriculumMigrationPage({ searchParams }: { searchParams: { fromId?: string; toId?: string } }) {
@@ -11,7 +12,8 @@ export default async function CurriculumMigrationPage({ searchParams }: { search
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const curricula = await prisma.masterCurriculum.findMany({ orderBy: [{ title: "asc" }, { version: "desc" }] });
 
@@ -62,7 +64,7 @@ export default async function CurriculumMigrationPage({ searchParams }: { search
   }
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Curriculum Version Migration</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Compare two versions of the same curriculum and see which batches are still on the older one.

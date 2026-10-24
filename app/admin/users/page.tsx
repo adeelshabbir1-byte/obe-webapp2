@@ -6,18 +6,20 @@ import CreateUserForm from "../../../components/CreateUserForm";
 import ChairmenBrandingManager from "../../../components/ChairmenBrandingManager";
 import HeadPasswordReset from "../../../components/HeadPasswordReset";
 import { navForRole } from "../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export default async function AdminUsersPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, ["ONBOARDING", "SUPPORT"]))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Manage Institute Heads</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create the Institute Head account(s) who each run a department's accreditation pipeline. Each is its own

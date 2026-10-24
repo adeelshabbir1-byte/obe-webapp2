@@ -7,6 +7,7 @@ import { roleLabel } from "../../../lib/reportScope";
 import Shell from "../../../components/Shell";
 import FeedbackAdminRow from "../../../components/FeedbackAdminRow";
 import { CATEGORIES, STATUSES, type FeedbackRow } from "../../../lib/feedback";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "SUPPORT"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
   const filter = searchParams.status && STATUSES[searchParams.status] ? searchParams.status : "";
   let rows: FeedbackRow[] = [], counts: { status: string; _count: { _all: number } }[] = [], missing = false;
   try {
@@ -29,7 +31,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   const countOf = (s: string) => counts.find((c) => c.status === s)?._count._all || 0;
 
   return (
-    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>System Feedback</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>Ideas and problems sent by users of every institute. Answer each one; recognise the ones that improved the system — the sender gets the System Improver badge.</p>
       {missing && <div className="err">The feedback table is not in the database yet — run prisma/migration_oct2026_features.sql.</div>}

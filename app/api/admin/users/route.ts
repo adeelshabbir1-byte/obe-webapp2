@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
+import { adminCan } from "../../../../lib/platformTeam";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") {
+  if (!user || !(await adminCan(user, "ONBOARDING"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const chairmen = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, orderBy: { createdAt: "desc" } });
@@ -15,7 +16,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") {
+  if (!user || !(await adminCan(user, "ONBOARDING"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

@@ -81,6 +81,7 @@ export async function POST(req: Request) {
     }
     if (b.action === "removeCourse") { if (rel.status !== "DRAFT") return NextResponse.json({ error: "Published releases can't change." }, { status: 400 }); await nbdb.nationalReleaseCourse.deleteMany({ where: { id: String(b.id || ""), releaseId: rel.id } }); return NextResponse.json({ ok: true }); }
     if (b.action === "publish") {
+      { const pt = await import("../../../lib/platformTeam"); if (user.role !== "CHAIRMAN" && (await pt.teamScope(user.id)) && !(await pt.isConvener(user.id))) return NextResponse.json({ error: "The team's Convener publishes a national release." }, { status: 403 }); }
       if (!(await nbdb.nationalReleaseCourse.count({ where: { releaseId: rel.id } }))) return NextResponse.json({ error: "Add courses first." }, { status: 400 });
       await nbdb.nationalRelease.updateMany({ where: { framework: rel.framework, discipline: rel.discipline, status: "PUBLISHED", id: { not: rel.id } }, data: { status: "RETIRED" } });
       await nbdb.nationalRelease.update({ where: { id: rel.id }, data: { status: "PUBLISHED", publishedAt: new Date() } });

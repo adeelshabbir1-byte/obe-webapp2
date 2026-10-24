@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { invalidateInstituteBranding } from "../../../../../../lib/branding";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 export async function PUT(req: NextRequest, { params }: { params: { chairmanId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const chairman = await prisma.user.findUnique({ where: { id: params.chairmanId } });
   if (!chairman || chairman.role !== "CHAIRMAN") return NextResponse.json({ error: "not found" }, { status: 404 });

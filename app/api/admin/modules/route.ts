@@ -4,13 +4,14 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { MODULE_KEYS, PACKAGES } from "../../../../lib/modules";
 import { forgetLocks } from "../../../../lib/moduleLocks";
+import { adminCan } from "../../../../lib/platformTeam";
 
 const mdb = prisma as unknown as Record<string, any>;
 
 // POST { chairmanId, on: string[] (modules switched on), packageKey?, note?, validUntil? } — Super User only.
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
-  if (!user || !user.mfaVerified || user.role !== "SUPER_USER") return NextResponse.json({ error: "Only the Super User sets institute modules." }, { status: 403 });
+  if (!user || !user.mfaVerified || !(await adminCan(user, "BILLING"))) return NextResponse.json({ error: "Only the Super User sets institute modules." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   const chairmanId = String(b.chairmanId || "");
   const inst = await prisma.user.findFirst({ where: { id: chairmanId, role: "CHAIRMAN" }, select: { id: true, name: true } });

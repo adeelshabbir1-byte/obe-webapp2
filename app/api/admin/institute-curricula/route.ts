@@ -4,11 +4,12 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { cloneGrandCurriculumForChairman } from "../../../../lib/cloneCurriculum";
 import { degreeGroupLabel, degreeSortKey } from "../../../../lib/degreeGroup";
+import { adminCan } from "../../../../lib/platformTeam";
 
 // Super User, institute-first: pick an institute, tick the curricula it should get, save once.
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = new URL(req.url).searchParams.get("chairmanId");
 
   if (!chairmanId) {
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 // unticking only stops the official one being offered - an institute's own copy is never deleted.
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   if (!body.chairmanId || !Array.isArray(body.curriculumIds)) return NextResponse.json({ error: "chairmanId and curriculumIds are required" }, { status: 400 });
 

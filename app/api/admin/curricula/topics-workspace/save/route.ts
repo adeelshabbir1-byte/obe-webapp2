@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 // Commits the whole workspace arrangement at once: for each course
 // involved, replaces its entire topic list with whatever the client
@@ -14,7 +15,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // is assigned from array order.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   const courses = body.courses;

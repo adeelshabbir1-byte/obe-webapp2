@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { hashPassword } from "../../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 // The Super User sets a new password for an Institute Head (e.g. a forgotten one). Their open sessions are signed out.
 export async function PUT(req: NextRequest, { params }: { params: { chairmanId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, ["ONBOARDING", "SUPPORT"]))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const head = await prisma.user.findUnique({ where: { id: params.chairmanId } });
   if (!head || head.role !== "CHAIRMAN") return NextResponse.json({ error: "Institute Head not found" }, { status: 404 });
   const b = await req.json().catch(() => ({}));

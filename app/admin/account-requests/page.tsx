@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import AccountRequestsManager from "../../../components/AccountRequestsManager";
 import { navForRole } from "../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 
 export default async function AccountRequestsPage() {
@@ -11,7 +12,8 @@ export default async function AccountRequestsPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "ONBOARDING"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const requests = await prisma.accountRequest.findMany({
     include: { reviewedBy: { select: { name: true } } },
@@ -19,7 +21,7 @@ export default async function AccountRequestsPage() {
   });
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Account Requests</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Requests submitted publicly at <code>/request-account</code>. Approving one creates the Institute Head

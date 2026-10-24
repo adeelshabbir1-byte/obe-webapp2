@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { adminCan } from "../../../../lib/platformTeam";
 
 // Without this, Next.js's build-time static optimizer sees a GET
 // handler with no dynamic API calls (no cookies/headers — this route
@@ -25,7 +26,7 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const existing = await getOrCreate();
   const body = await req.json();

@@ -7,6 +7,7 @@ import { str, num, dateOrNull } from "../../../lib/registers";
 import { PdfDoc } from "../../../lib/pdfDoc";
 import { MODULE_KEYS } from "../../../lib/modules";
 import { bdb, BILL_HINT, PERIODS, invoiceFor, recordPayment, applyLocks, type Invoice, type Plan } from "../../../lib/billing";
+import { adminCan } from "../../../lib/platformTeam";
 
 /** GET ?invoice=<id> — the invoice as a PDF (the Super User, or the institute's own Head). */
 export async function GET(req: Request) {
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
-  if (!user || !user.mfaVerified || user.role !== "SUPER_USER") return NextResponse.json({ error: "Only the Super User manages billing." }, { status: 403 });
+  if (!user || !user.mfaVerified || !(await adminCan(user, "BILLING"))) return NextResponse.json({ error: "Only the Super User manages billing." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   try {
     switch (b.action) {

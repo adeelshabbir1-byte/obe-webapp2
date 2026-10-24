@@ -6,6 +6,7 @@ import CurriculumDetailManager from "../../../../components/CurriculumDetailMana
 import OfficialCurriculumCloTools from "../../../../components/OfficialCurriculumCloTools";
 import Link from "next/link";
 import { navForRole } from "../../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../../lib/platformTeam";
 
 
 export default async function CurriculumDetailPage({ params }: { params: { curriculumId: string } }) {
@@ -13,7 +14,8 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const curriculum = await prisma.masterCurriculum.findUnique({
     where: { id: params.curriculumId },
@@ -30,7 +32,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   for (const s of suggestions) ploNumbersByCode.set(s.courseCode, [...(ploNumbersByCode.get(s.courseCode) || []), s.ploNumber]);
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22 }}>{curriculum.authority} {curriculum.title} ({curriculum.version})</h1>

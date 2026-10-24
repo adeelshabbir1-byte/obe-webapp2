@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId } });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });

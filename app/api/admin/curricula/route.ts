@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { adminCan } from "../../../../lib/platformTeam";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curricula = await prisma.masterCurriculum.findMany({
     orderBy: [{ authority: "asc" }, { title: "asc" }, { version: "desc" }],
@@ -16,7 +17,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   if (!body.authority || !body.title || !body.version) {

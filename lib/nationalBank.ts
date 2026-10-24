@@ -14,6 +14,11 @@ export function instituteColor(name: string | null | undefined) {
 
 /** Is this person part of the national authority (HEC): its head, or anyone in its institute? Returns the authority's id. */
 export async function nationalMember(user: { id: string; role: string; managedById: string | null }) {
+  // A national curriculum team member (National Subject Expert) sits on the National Releases committee of their area.
+  if (await (await import("./platformTeam")).teamScope(user.id)) {
+    const a = (await nbdb.nationalAuthority.findFirst({}).catch(() => null)) as { chairmanId: string; name: string } | null;
+    if (a) return a;
+  }
   const cid = user.role === "CHAIRMAN" ? user.id : await chairmanIdFor(user).catch(() => "");
   if (!cid) return null;
   const a = (await nbdb.nationalAuthority.findUnique({ where: { chairmanId: cid } }).catch(() => null)) as { chairmanId: string; name: string } | null;

@@ -8,6 +8,7 @@ import { prisma } from "../../../lib/db";
 import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
 import CnicLookup from "../../../components/consortium/CnicLookup";
 import { RULES, ruleSets, rulesOn, cdb, CONSORTIUM_HINT, type Member } from "../../../lib/consortium";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Consortium" };
@@ -19,8 +20,9 @@ export default async function ConsortiumAdmin() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "SUPER_USER") redirect("/consortium");
-  const shell = (x: React.ReactNode) => <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>{x}</Shell>;
+  if (!(await adminCan(user, "CONSORTIUM_ODL"))) redirect("/consortium");
+  const adminNav = await adminNavFor(user);
+  const shell = (x: React.ReactNode) => <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>{x}</Shell>;
   const sets = await ruleSets().catch(() => null);
   if (!sets) return shell(<div className="err">{CONSORTIUM_HINT}</div>);
   const now = await rulesOn();

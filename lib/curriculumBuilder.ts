@@ -18,7 +18,7 @@ type U = { id: string; role: string };
 
 export async function builderScope(userId: string) {
   const r = (await bdb.curriculumBuilderScope.findUnique({ where: { userId } }).catch(() => null)) as { councilsJson: string; programsJson: string } | null;
-  if (!r) return null;
+  if (!r) { const t = await (await import("./platformTeam")).teamScope(userId); return t ? { councils: t.councils, programs: t.programs } : null; }
   const p = (s: string) => { try { return JSON.parse(s) as string[]; } catch { return []; } };
   return { councils: p(r.councilsJson), programs: p(r.programsJson) };
 }

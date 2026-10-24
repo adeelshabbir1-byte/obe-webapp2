@@ -1,4 +1,5 @@
 export const ADMIN_NAV = [
+  { href: "/admin/team", label: "Platform Team" },
   { href: "/admin/users", label: "Manage Institute Heads" },
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/modules", label: "Institute Modules" },
@@ -19,4 +20,6 @@ export const ADMIN_NAV = [
   { href: "/admin/report-bundles", label: "Report Bundles" },
   { href: "/admin/landing-page", label: "Landing Page" },
   { href: "/public-library", label: "National Course Catalog" },
+  { href: "/admin/shared-courses", label: "Shared Courses Moderation" },
+  { href: "/admin/analytics", label: "Platform Analytics" },
 ];

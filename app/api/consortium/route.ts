@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
   const ok = (message: string, extra: Record<string, unknown> = {}) => NextResponse.json({ ok: true, message, ...extra });
   try {
     if (["rules", "member", "lookup"].includes(b.action)) {
-      if (user.role !== "SUPER_USER") return NextResponse.json({ error: "Only the Super Admin can do this." }, { status: 403 });
+      // Rules-book versions stay with the Super Admin; admitting members goes to the Consortium & ODL Manager; CNIC look-up to the Security officer.
+      const pt = await import("../../../lib/platformTeam");
+      const may = user.role === "SUPER_USER" || (b.action === "member" && (await pt.adminCan(user, "CONSORTIUM_ODL"))) || (b.action === "lookup" && (await pt.adminCan(user, "SECURITY")));
+      if (!may) return NextResponse.json({ error: b.action === "rules" ? "Only the Super Admin changes the rules book." : "Your platform role doesn't include this." }, { status: 403 });
       if (b.action === "rules") { const v = await saveRuleSet(user.id, { label: str(b.label, 120), effectiveFrom: str(b.effectiveFrom, 30), note: str(b.note, 500), rules: b }); return ok(`Rules book version ${v} saved.`); }
       if (b.action === "member") { await decideMember(user.id, str(b.chairmanId, 60), b.status, str(b.note, 500)); return ok(b.status === "ACTIVE" ? "Admitted to the consortium." : "Saved."); }
       const p = await lookupPerson(str(b.cnic, 20));

@@ -6,13 +6,15 @@ import PlatformExpertsManager from "../../../components/PlatformExpertsManager";
 import { ADMIN_NAV } from "../../../components/adminNav";
 import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
 import { bdb } from "../../../lib/curriculumBuilder";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export default async function MasterExpertsPage({ searchParams }: { searchParams: { curriculumId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
 
   const [experts, curricula] = await Promise.all([
     prisma.user.findMany({ where: { role: "SUBJECT_EXPERT", isPlatformExpert: true }, orderBy: { createdAt: "desc" } }),
@@ -25,7 +27,7 @@ export default async function MasterExpertsPage({ searchParams }: { searchParams
   const courses = curriculumId ? await prisma.masterCourse.findMany({ where: { masterCurriculumId: curriculumId }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] }) : [];
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={ADMIN_NAV}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Master Curriculum Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Create Subject Experts who belong to no institute and design courses of the official Master Curriculum for every institute. Then assign each

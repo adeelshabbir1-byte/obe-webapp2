@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 // Builds a leaner, program-specific master curriculum from the grand
 // HEC curriculum: copies the specified courses (the shared core plus
@@ -13,7 +14,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // clonable per-institute exactly like the grand one.
 export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { title, degreeProgram, courseIds } = body;

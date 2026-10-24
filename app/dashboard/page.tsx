@@ -52,7 +52,7 @@ export default async function Dashboard() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
 
-  if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect("/master-design");
+  if (user.role === "SUBJECT_EXPERT" && user.isPlatformExpert) redirect((await (await import("../../lib/platformTeam")).rolesOf(user.id)).length ? "/platform" : "/master-design");
 
   // A dual-capable Subject Expert who hasn't picked a role for this session yet.
   if (isDualCapable(user.rawRole, user.secondaryRole, user.assignerHat || user.omcHat) && !user.roleChosen) {

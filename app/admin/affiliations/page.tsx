@@ -5,6 +5,7 @@ import Shell from "../../../components/Shell";
 import { prisma } from "../../../lib/db";
 import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
 import { ldb, LIB_HINT } from "../../../lib/curriculumLibrary";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Affiliated colleges" };
@@ -14,7 +15,8 @@ export default async function Affiliations() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "ONBOARDING"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
   const heads = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, select: { id: true, name: true, instituteName: true }, orderBy: { instituteName: "asc" } });
   const nm = new Map(heads.map((h) => [h.id, h.instituteName || h.name]));
   const rows = (await ldb.instituteAffiliation.findMany({ orderBy: { createdAt: "desc" } }).catch(() => null)) as { collegeId: string; universityId: string; status: string; since: Date | null; note: string | null }[] | null;
@@ -22,7 +24,7 @@ export default async function Affiliations() {
   const byUni = new Map<string, typeof rows>();
   for (const r of rows || []) byUni.set(r.universityId, (byUni.get(r.universityId) || []).concat(r));
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Affiliated colleges</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Each college is registered as its own institute (its own Institute Head, people, students and results) and linked here to its affiliating university. The college then sees the university&apos;s own curricula and must follow them: the scheme of studies, GAs and CLOs are locked for it, and a new version the university makes effective (e.g. from Fall 2027) applies to the college&apos;s batches from that term.</p>
       {!rows ? <div className="err">{LIB_HINT}</div> : <>

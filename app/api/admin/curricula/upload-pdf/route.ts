@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { parseCurriculumText } from "../../../../../lib/curriculumPdfParser";
 import { extractPdfText } from "../../../../../lib/pdfText";
+import { adminCan } from "../../../../../lib/platformTeam";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

@@ -762,6 +762,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "PlatformSettings"
 },
 {
+"f": "migration_platform_team.sql",
+"d": "Platform team: national curriculum teams (Convener + National Subject Experts) and the other platform roles",
+"t": "PlatformRole"
+},
+{
 "f": "migration_plo_batch_scope.sql",
 "d": "Run in Supabase SQL Editor. Re-scopes PLO from (coordinator + degreeProgram)",
 "t": "PLO",

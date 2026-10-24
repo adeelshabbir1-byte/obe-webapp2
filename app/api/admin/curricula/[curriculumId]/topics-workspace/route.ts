@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 // Fetches the full topic list for 2-3 chosen courses at once, for the
 // cross-course topic redistribution workspace.
 export async function GET(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const courseIdsParam = req.nextUrl.searchParams.get("courseIds");
   if (!courseIdsParam) return NextResponse.json({ error: "courseIds query param is required" }, { status: 400 });

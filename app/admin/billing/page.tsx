@@ -8,6 +8,7 @@ import { navForRole } from "../../../components/reportNav";
 import { MODULES } from "../../../lib/modules";
 import { bdb, BILL_HINT, PERIODS, usageOf, revenue, type Plan, type Sub, type Invoice } from "../../../lib/billing";
 import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
+import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
 const TABS: [string, string][] = [["institutes", "Institutes"], ["invoices", "Invoices"], ["plans", "Plans"], ["revenue", "Revenue"]];
@@ -20,7 +21,8 @@ export default async function AdminBilling({ searchParams }: { searchParams: { t
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "SUPER_USER") redirect("/dashboard");
+  if (!(await adminCan(user, "BILLING"))) redirect("/dashboard");
+  const adminNav = await adminNavFor(user);
   const tab = TABS.some(([k]) => k === searchParams.tab) ? searchParams.tab! : "institutes";
   let missing = false, plans: Plan[] = [], subs: Sub[] = [], invoices: Invoice[] = [];
   try {
@@ -37,7 +39,7 @@ export default async function AdminBilling({ searchParams }: { searchParams: { t
   const payments = tab === "invoices" && !missing ? ((await bdb.billingPayment.findMany({ where: { invoiceId: { in: invoices.map((i) => i.id).concat(["none"]) } } })) as { invoiceId: string; amount: number }[]) : [];
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Billing</h1>
       <p className="small-note" style={{ marginBottom: 8 }}>Plans, each institute&apos;s subscription, invoices made each period, payments, and the automatic locks: unpaid past the grace period → the plan&apos;s modules turn read-only; after the read-only days → locked (using the module locks); paying opens them again at once.</p>
       {missing && <div className="card"><p style={{ color: "#B3261E", margin: 0 }}>{BILL_HINT}</p></div>}

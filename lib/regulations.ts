@@ -29,7 +29,8 @@ const j = <T,>(s: string, d: T): T => { try { return JSON.parse(s) as T; } catch
 // ------------------------------------------------------------------ Who may do what
 export async function canPublish(user: U, council?: string) {
   if (user.role === "SUPER_USER") return true;
-  if (!(user.extraRoles || []).includes("CURRICULUM_BUILDER")) return false;
+  if (await (await import("./platformTeam")).adminCan(user, "REGULATIONS")) return true;
+  if (!(user.extraRoles || []).includes("CURRICULUM_BUILDER") && !(await (await import("./platformTeam")).teamScope(user.id))) return false;
   const sc = await builderScope(user.id);
   return !!sc && (!council || !sc.councils.length || sc.councils.includes(council));
 }

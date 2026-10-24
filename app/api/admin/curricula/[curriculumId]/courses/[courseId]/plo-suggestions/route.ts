@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
+import { adminCan } from "../../../../../../../../lib/platformTeam";
 
 // Replaces the full set of suggested PLO numbers for this course's code.
 // HecPloSuggestion is keyed by the bare course code, shared across
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../../../../../../../lib/audit";
 // benefits every institution at once.
 export async function PUT(req: NextRequest, { params }: { params: { curriculumId: string; courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   const ploNumbers: number[] = Array.isArray(body.ploNumbers) ? body.ploNumbers.map(Number) : [];

@@ -5,11 +5,13 @@ import Shell from "../../../../../components/Shell";
 import ProgramCopyBuilder from "../../../../../components/ProgramCopyBuilder";
 import Link from "next/link";
 import { navForRole } from "../../../../../components/reportNav";
+import { adminCan, adminNavFor } from "../../../../../lib/platformTeam";
 
 
 export default async function CreateProgramPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") redirect("/login");
+  if (!user || !(await adminCan(user, "CURRICULUM"))) redirect("/login");
+  const adminNav = await adminNavFor(user);
   if (!user.mfaVerified) redirect("/mfa-verify");
 
   const curriculum = await prisma.masterCurriculum.findUnique({
@@ -19,7 +21,7 @@ export default async function CreateProgramPage({ params }: { params: { curricul
   if (!curriculum) notFound();
 
   return (
-    <Shell roleLabel="Super User" userName={user.name} navLinks={navForRole(user.role)}>
+    <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22 }}>Create Program Copy</h1>
         <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>

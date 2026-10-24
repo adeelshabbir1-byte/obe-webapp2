@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 // Bulk-stages newly-fetched/researched courses for Super User review,
 // rather than writing them straight into the curriculum. Each entry:
 // { title, source, category?, domain?, suggestedCode?, clos: [{ statement, bloomLevel }] }
 export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId } });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });

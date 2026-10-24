@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { adminCan } from "../../../../../../../lib/platformTeam";
 
 // Confirms a pending course is the SAME as an existing MasterCourse —
 // the "equate" action. Optionally merges the staged CLOs into the
@@ -9,7 +10,7 @@ import { writeAuditLog } from "../../../../../../../lib/audit";
 // statement text) rather than just discarding the duplicate.
 export async function POST(req: NextRequest, { params }: { params: { pendingId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const pending = await prisma.pendingMasterCourse.findUnique({ where: { id: params.pendingId }, include: { clos: true } });
   if (!pending) return NextResponse.json({ error: "not found" }, { status: 404 });

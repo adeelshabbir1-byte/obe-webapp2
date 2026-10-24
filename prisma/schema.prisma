@@ -7941,3 +7941,31 @@ model AffiliateMarksPolicy {
 
   @@index([universityId])
 }
+
+// Platform team (lib/platformTeam.ts): national curriculum teams per discipline area — a Convener and the National
+// Subject Experts — whose councils/programs are their builder scope; and the other platform roles (Billing, Support …).
+model PlatformTeam {
+  id           String   @id
+  name         String
+  councilsJson String   @default("[]")
+  programsJson String   @default("[]")
+  createdAt    DateTime @default(now())
+}
+
+model PlatformTeamMember {
+  teamId String
+  userId String
+  role   String @default("MEMBER") // CONVENER | MEMBER
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+model PlatformRole {
+  userId      String
+  role        String // CONSORTIUM_ODL | REGULATIONS | BILLING | ONBOARDING | SUPPORT | SECURITY | SHARED_MODERATOR | ANALYTICS
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@id([userId, role])
+}

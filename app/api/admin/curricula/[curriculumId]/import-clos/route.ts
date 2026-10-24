@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { importClosIntoMasterCurriculum } from "../../../../../../lib/masterClos";
+import { adminCan } from "../../../../../../lib/platformTeam";
 
 export const maxDuration = 300;
 
 // Super User: load CLOs and PLO mapping from Excel into an official (shared) curriculum, so every institute benefits.
 export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const c = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId }, select: { id: true, chairmanId: true } });
   if (!c) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (c.chairmanId) return NextResponse.json({ error: "This is an institute's own copy; open the official curriculum instead." }, { status: 400 });
