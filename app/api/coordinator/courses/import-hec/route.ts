@@ -4,7 +4,6 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
-import { officialCurriculumIsAssigned } from "../../../../../lib/curriculumAccess";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 
 export async function POST(req: NextRequest) {
@@ -48,10 +47,12 @@ export async function POST(req: NextRequest) {
   // means the same thing whether a Coordinator or OMC triggers it.
   const owningChairmanId = await findOwningChairmanId(ownerId);
   // An official (shared) curriculum may only be imported once the Super User has assigned it to this institute.
-  const curriculumBelongsHere = curriculum.chairmanId === null ? await officialCurriculumIsAssigned(curriculum.id, owningChairmanId) : curriculum.chairmanId === owningChairmanId;
+  const curriculumBelongsHere = await (await import("../../../../../lib/curriculumLibrary")).canUseCurriculum(curriculum, owningChairmanId);
   if (!curriculumBelongsHere) {
     return NextResponse.json({ error: "that curriculum doesn't belong to your institution" }, { status: 403 });
   }
+  // An affiliated college follows the university's version that applies from the batch's intake term.
+  if (owningChairmanId) { const v = await (await import("../../../../../lib/curriculumLibrary")).versionForIntake(owningChairmanId, curriculum, batch.startTerm, batch.startYear); if (v) return NextResponse.json({ error: v }, { status: 409 }); }
 
   // Fetch everything we need ONCE up front, instead of once per course in
   // the loop below — the per-course version of this was slow enough on a

@@ -443,6 +443,8 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/data-import", "Data Import", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"]],
   ["/chairman/backups", "Backups", ["CHAIRMAN"]],
   ["/chairman/campuses", "Campuses", ["CHAIRMAN"]],
+  ["/curricula", "Curriculum Library", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"]],
+  ["/chairman/affiliates", "Affiliated Colleges", ["CHAIRMAN"]],
   ["/chairman/lms", "Moodle Link", ["CHAIRMAN"]],
   ["/process-map", "Process Map", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "LIBRARIAN", "FACILITIES_MANAGER", "LAB_MANAGER"]],
   ["/guide", "Getting Started", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"]],

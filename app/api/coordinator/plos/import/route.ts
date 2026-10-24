@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   const batchId = String(form.get("batchId") || "");
   const file = form.get("file") as File | null;
   if (!batchId || !file) return NextResponse.json({ error: "choose a batch and a file" }, { status: 400 });
+  { const lk = await (await import("../../../../../lib/curriculumLibrary")).batchLock(batchId, "ga"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const batch = await prisma.batch.findUnique({ where: { id: batchId } });
   if (!batch || batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
 

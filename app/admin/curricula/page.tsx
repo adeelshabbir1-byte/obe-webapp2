@@ -29,6 +29,7 @@ export default async function AdminCurriculaPage() {
         Manage the official curricula and choose which institutes each one is assigned to — institutes only see the curricula you assign to them. Grouped by degree, so every BSCS curriculum sits together. Clone a curriculum as a
         new version when it's updated — the original stays intact for batches that already imported it.
       </p>
+      <p style={{ fontSize: 13 }}><a href="/curricula">Open the Curriculum Library</a> to filter, compare versions and give every curriculum its standard code · <a href="/curricula/tidy">Name &amp; tidy up</a> · <a href="/admin/affiliations">Affiliated colleges</a></p>
       <CurriculumWorkbookImport official={true} />
       <AssignByInstitute />
       <CurriculaManager

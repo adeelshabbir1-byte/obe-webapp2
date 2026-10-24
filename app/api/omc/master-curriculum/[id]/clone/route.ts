@@ -20,6 +20,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     include: { courses: { include: { seedClos: true, seedTopics: true } }, plos: true },
   });
   if (!source) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // An affiliated college uses its university's curriculum as it is — it cannot make its own copy to change it.
+  if (source.chairmanId && source.chairmanId !== user.managedById) {
+    const uni = await (await import("../../../../../../lib/curriculumLibrary")).universityOf(user.managedById);
+    return NextResponse.json({ error: uni === source.chairmanId ? "This is your university's curriculum: affiliated colleges follow it as it is and cannot copy it to change it." : "not found" }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const newVersion = body.newVersion?.trim() || `${source.version} (your copy)`;

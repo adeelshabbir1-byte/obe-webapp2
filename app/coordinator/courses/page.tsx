@@ -6,7 +6,7 @@ import Shell from "../../../components/Shell";
 import { homeExpertsFor } from "../../../lib/homeExperts";
 import CoursesManager from "../../../components/CoursesManager";
 import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
-import { curriculaVisibleTo, degreeSortKey } from "../../../lib/curriculumAccess";
+import { degreeSortKey } from "../../../lib/curriculumAccess";
 import { navForRole } from "../../../components/reportNav";
 
 
@@ -40,7 +40,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   const owningChairmanId = await findOwningChairmanId(user.id);
   const departmentList = await prisma.department.findMany({ where: { chairmanId: owningChairmanId || "none" }, orderBy: { name: "asc" } });
   const visible = owningChairmanId
-    ? await prisma.masterCurriculum.findMany({ where: { status: "PUBLISHED", ...curriculaVisibleTo(owningChairmanId) } })
+    ? await prisma.masterCurriculum.findMany({ where: { status: "PUBLISHED", ...(await (await import("../../../lib/curriculumLibrary")).curriculaWhere(owningChairmanId)) } })
     : [];
   const copiedFrom = new Set(visible.filter((c) => c.chairmanId && c.parentCurriculumId).map((c) => c.parentCurriculumId));
   const curricula = visible

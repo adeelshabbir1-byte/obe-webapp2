@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
   if (!body.sourceBatchId || !body.targetBatchId) {
     return NextResponse.json({ error: "sourceBatchId and targetBatchId are required" }, { status: 400 });
   }
+  { const lk = await (await import("../../../../../lib/curriculumLibrary")).batchLock(String(body.targetBatchId), "ga"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   if (body.sourceBatchId === body.targetBatchId) {
     return NextResponse.json({ error: "source and target batch must be different" }, { status: 400 });
   }

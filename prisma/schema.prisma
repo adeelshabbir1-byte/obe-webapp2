@@ -7394,3 +7394,55 @@ model LmsCourseLink {
   moodleCourseId Int
   lastSyncAt     DateTime?
 }
+
+// Curriculum library (lib/curriculumNaming.ts): the standard code (NCEAC-BS-CS-2023), level, program code, discipline and
+// notification number of a curriculum, plus its earlier names (still found by search).
+model CurriculumMeta {
+  curriculumId String   @id
+  code         String
+  level        String?
+  programCode  String?
+  discipline   String?
+  notification String?
+  aliasesJson  String   @default("[]")
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+
+  @@index([code])
+}
+
+// Curriculum library (lib/curriculumLibrary.ts): standard code and filter fields of a curriculum, the term from which
+// it applies, and — for a university's own curriculum — what its affiliated colleges may not change.
+model CurriculumMeta {
+  curriculumId   String   @id
+  code           String
+  discipline     String?
+  level          String?
+  programCode    String?
+  programName    String?
+  notificationNo String?
+  effectiveTerm  String?
+  effectiveYear  Int?
+  lockScheme     Boolean  @default(true)
+  lockGa         Boolean  @default(true)
+  lockClo        Boolean  @default(true)
+  aliasesJson    String   @default("[]")
+  updatedById    String?
+  updatedAt      DateTime @default(now())
+
+  @@index([code])
+  @@index([programCode])
+}
+
+// A college (its own institute account) affiliated to a university: it follows the university's curricula.
+model InstituteAffiliation {
+  collegeId    String    @id
+  universityId String
+  status       String    @default("ACTIVE") // ACTIVE | SUSPENDED | ENDED
+  since        DateTime?
+  note         String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+
+  @@index([universityId])
+}

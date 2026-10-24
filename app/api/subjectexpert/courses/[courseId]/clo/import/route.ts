@@ -18,6 +18,7 @@ const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6"];
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
+  { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const tplLocked = templateLockResponse(course); if (tplLocked) return tplLocked;
   const blocked = await blockedAsNonBaseCourse(course.id);

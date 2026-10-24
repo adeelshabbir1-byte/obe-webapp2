@@ -16,6 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const blocked = await blockedAsNonBaseCourse(course.id);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
+  { const lk = await (await import("../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   if (!body.statement || !body.bloomLevel) {
     return NextResponse.json({ error: "statement and bloomLevel are required" }, { status: 400 });

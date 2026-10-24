@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
-import { officialCurriculumIsAssigned } from "../../../../../../lib/curriculumAccess";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
 
 // Excel download of one master curriculum: its PLOs, its courses, every course's CLOs with the PLO each is tagged to,
@@ -18,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     },
   });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const visible = curriculum.chairmanId === null ? await officialCurriculumIsAssigned(curriculum.id, user.managedById) : curriculum.chairmanId === user.managedById;
+  const visible = await (await import("../../../../../../lib/curriculumLibrary")).canUseCurriculum(curriculum, user.managedById);
   if (!visible) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // The official HEC suggestions are keyed by course code, not by a link to the course.

@@ -10,6 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course || course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  { const lk = await (await import("../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "scheme"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   const prerequisiteCourseId = body.prerequisiteCourseId || null;
   if (prerequisiteCourseId === course.id) return NextResponse.json({ error: "a course cannot be its own prerequisite" }, { status: 400 });

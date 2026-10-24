@@ -19,6 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   if (user.role === "PROGRAM_COORDINATOR" && course.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (user.role === "OMC" && (course.coordinator.managedById !== user.managedById || (user.departmentId && course.coordinator.departmentId !== user.departmentId))) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  { const lk = await (await import("../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "scheme"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   const isNonCredit = body.isNonCredit !== undefined ? !!body.isNonCredit : course.isNonCredit;
   const creditMissing = body.creditHours === undefined || body.creditHours === null || body.creditHours === "";

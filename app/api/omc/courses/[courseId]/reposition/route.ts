@@ -18,6 +18,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     return NextResponse.json({ error: "this course is already offered this semester — repositioning is only for courses that haven't started yet" }, { status: 400 });
   }
 
+  { const lk = await (await import("../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "scheme"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   const newSemester = parseInt(body.semesterNumber, 10);
   if (isNaN(newSemester) || newSemester < 1 || newSemester > 8) {

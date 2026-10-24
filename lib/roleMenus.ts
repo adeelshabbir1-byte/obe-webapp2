@@ -29,7 +29,7 @@ export const CORE: Record<string, [string, string[]][]> = {
   PROGRAM_COORDINATOR: [
     ["Today", ["/approvals", "/deadlines", "/requests"]],
     ["Semester", ["/coordinator/semester", "/coordinator/timetable", "/coordinator/calendar"]],
-    ["Program", ["/coordinator/batches", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/plos"]],
+    ["Program", ["/coordinator/batches", "/curricula", "/coordinator/courses", "/coordinator/assign-subject-experts", "/coordinator/plos"]],
     ["Students", ["/coordinator/students", "/coordinator/student-transcript", "/data-import"]],
     ["Accreditation", ["/accreditation/tasks", "/accreditation/readiness", "/coordinator/evidence"]],
   ],

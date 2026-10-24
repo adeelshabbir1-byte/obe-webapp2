@@ -10,6 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { ploId: str
   }
   const plo = await prisma.pLO.findUnique({ where: { id: params.ploId } });
   if (!plo || plo.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  { const lk = await (await import("../../../../../lib/curriculumLibrary")).batchLock(plo.batchId, "ga"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
 
   const body = await req.json();
   if (!body.title || !body.description) {
@@ -37,6 +38,7 @@ export async function DELETE(req: Request, { params }: { params: { ploId: string
   }
   const plo = await prisma.pLO.findUnique({ where: { id: params.ploId } });
   if (!plo || plo.coordinatorId !== user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  { const lk = await (await import("../../../../../lib/curriculumLibrary")).batchLock(plo.batchId, "ga"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
 
   const cloCount = await prisma.cLO.count({ where: { mappedPloId: params.ploId } });
   if (cloCount > 0) {

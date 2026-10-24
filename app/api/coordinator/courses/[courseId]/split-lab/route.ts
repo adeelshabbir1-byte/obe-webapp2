@@ -13,6 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   if (course.courseType === "Capstone Project" || /final[\s-]*year[\s-]*(design[\s-]*)?project|\bFYD?P\b/i.test(`${course.title} ${course.code}`)) return NextResponse.json({ error: "a final year project is not split into theory and lab" }, { status: 400 });
 
+  { const lk = await (await import("../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "scheme"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   const labCredit = parseInt(body.labCreditHours, 10);
   if (isNaN(labCredit) || labCredit < 1 || labCredit >= course.creditHours) {

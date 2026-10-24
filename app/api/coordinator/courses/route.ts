@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
   if (!body.code || !body.title || !body.creditHours || !body.batchId) {
     return NextResponse.json({ error: "code, title, creditHours, batchId are required" }, { status: 400 });
   }
+  { const lk = await (await import("../../../../lib/curriculumLibrary")).batchLock(String(body.batchId), "scheme"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const batch = await prisma.batch.findUnique({ where: { id: body.batchId }, include: { coordinator: true } });
   if (!batch) return NextResponse.json({ error: "invalid batch" }, { status: 400 });
   if (user.role === "PROGRAM_COORDINATOR" && batch.coordinatorId !== user.id) return NextResponse.json({ error: "invalid batch" }, { status: 400 });

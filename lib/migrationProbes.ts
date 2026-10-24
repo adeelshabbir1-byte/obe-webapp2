@@ -239,6 +239,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "CurriculumAssignment"
 },
 {
+"f": "migration_curriculum_library.sql",
+"d": "Curriculum library and affiliated colleges.",
+"t": "InstituteAffiliation"
+},
+{
 "f": "migration_data_import.sql",
 "d": "Data Import hub: one log row per import, with the ids it created (for undo).",
 "t": "StudentAlertPref"

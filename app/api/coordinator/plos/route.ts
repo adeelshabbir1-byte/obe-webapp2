@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+  { const lk = await (await import("../../../../lib/curriculumLibrary")).batchLock(String(body.batchId || ""), "ga"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   if (!body.number || !body.title || !body.description || !body.batchId) {
     return NextResponse.json({ error: "number, title, description, batchId are required" }, { status: 400 });
   }

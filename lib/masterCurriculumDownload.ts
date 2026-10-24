@@ -1,6 +1,5 @@
 import { Document, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, ShadingType, PageBreak } from "docx";
 import { prisma } from "./db";
-import { officialCurriculumIsAssigned } from "./curriculumAccess";
 import type { SheetSpec } from "./excelExport";
 
 // Full download of one master curriculum: PLOs, scheme of studies, course details, CLOs with PLOs, Course–PLO matrix
@@ -29,7 +28,7 @@ export async function loadCurriculumForDownload(user: Who, id: string) {
   if (!c) return null;
   if (user.role === "SUPER_USER") return c;
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById;
-  const ok = c.chairmanId === null ? await officialCurriculumIsAssigned(c.id, chairmanId) : c.chairmanId === chairmanId;
+  const ok = await (await import("./curriculumLibrary")).canUseCurriculum(c, chairmanId);
   return ok ? c : null;
 }
 type Curriculum = NonNullable<Awaited<ReturnType<typeof loadCurriculumForDownload>>>;

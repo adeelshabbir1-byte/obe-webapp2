@@ -70,3 +70,13 @@ test("data import: NCEAC Teacher Data headings are matched, both email columns",
   assert.equal(m.email, 0); assert.equal(m.personalEmail, 6); assert.equal(m.department, 21);
   assert.equal(m.rank, 11); assert.equal(m.university, 18); assert.equal(m.degreeEnd, 20); assert.equal(m.country, 17);
 });
+
+test("curriculum codes: official and institute curricula", async () => {
+  const { propose, ownerCode } = await import("../lib/curriculumLibrary");
+  assert.equal(propose({ id: "1", authority: "NCEAC", title: "BS Computer Science", version: "2023", chairmanId: null }).code, "NCEAC-BS-CS-2023");
+  assert.equal(propose({ id: "2", authority: "HEC", title: "BS Artificial Intelligence", version: "2025 rev", chairmanId: null }).code, "HEC-BS-AI-2025");
+  assert.equal(propose({ id: "3", authority: "NBEAC", title: "BBA (Hons)", version: "2024", chairmanId: null }).code, "NBEAC-BBA-2024");
+  assert.equal(propose({ id: "4", authority: "HEC", title: "BS Software Engineering", version: "2027", chairmanId: "x" }, "University of the Punjab").code, "UP-BS-SE-2027");
+  assert.equal(ownerCode("Punjab University"), "PU");
+  assert.equal(propose({ id: "5", authority: "PEC", title: "BSc Electrical Engineering", version: "2022", chairmanId: null }).level, "BE");
+});

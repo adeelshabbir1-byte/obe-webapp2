@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
   if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   const body = await req.json();
   if (!body.statement || !body.bloomLevel) {
     return NextResponse.json({ error: "statement and bloomLevel are required" }, { status: 400 });
@@ -51,6 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 export async function DELETE(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
+  { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const tplLocked = templateLockResponse(course); if (tplLocked) return tplLocked;
 
