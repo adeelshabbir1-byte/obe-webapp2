@@ -7507,3 +7507,101 @@ model MasterCourseLab {
   masterCourseId String @id
   labCredits     Int    @default(0)
 }
+
+// ============================================================ Consortium (lib/consortium.ts), phase 1
+// The Super Admin's rules book: HEC minimums for joint degrees, ODL and visiting courses. A new version applies
+// from its effectiveFrom date; programmes and agreements follow the version in force when they were approved.
+model ConsortiumRuleSet {
+  id            String   @id
+  version       Int      @unique
+  label         String
+  effectiveFrom DateTime
+  rulesJson     String
+  status        String   @default("ACTIVE") // ACTIVE | WITHDRAWN
+  note          String?
+  createdById   String
+  createdAt     DateTime @default(now())
+}
+
+// A university (an institute account) in the consortium. Joining is free; the Super Admin admits it.
+model ConsortiumMember {
+  chairmanId    String    @id
+  status        String    @default("APPLIED") // APPLIED | ACTIVE | SUSPENDED | DECLINED
+  country       String    @default("PK")
+  city          String?
+  website       String?
+  hecRecognized Boolean   @default(false)
+  residencyJson String    @default("{}") // the university's own (stricter) residency rules
+  contactName   String?
+  contactEmail  String?
+  note          String?
+  appliedById   String?
+  appliedAt     DateTime  @default(now())
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+
+  @@index([status])
+}
+
+// An HEC NOC or recognition a member holds: ODL_INSTITUTIONAL | JOINT_PROGRAMME | ACCREDITATION.
+model ConsortiumNoc {
+  id          String    @id
+  chairmanId  String
+  kind        String
+  number      String
+  programme   String?
+  issuedOn    DateTime?
+  expiresOn   DateTime?
+  note        String?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+
+// A place where consortium exams can be sat: a member's campus or an exam centre it runs.
+model ExamCentre {
+  id         String   @id
+  chairmanId String
+  campusId   String?
+  name       String
+  city       String?
+  address    String?
+  seats      Int      @default(0)
+  cctv       Boolean  @default(false)
+  biometric  Boolean  @default(false)
+  status     String   @default("ACTIVE") // ACTIVE | CLOSED
+  createdAt  DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+// One real person across the platform, by CNIC (13 digits). Shown only to the Super Admin.
+model ConsortiumPerson {
+  id        String   @id
+  cnic      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+// Who vouches for an account: EMPLOYEE (the institute employs them) or SPONSORED (an industry expert a Chairman
+// vouches for; lapses at expiresAt unless renewed). One person may hold accounts at several institutes.
+model ConsortiumAffiliation {
+  userId           String    @id
+  personId         String
+  chairmanId       String
+  kind             String    @default("EMPLOYEE") // EMPLOYEE | SPONSORED
+  status           String    @default("ACTIVE")   // ACTIVE | REVOKED | EXPIRED | ENDED
+  employer         String?
+  designation      String?
+  highestDegree    String?
+  hecAttestationNo String?
+  reason           String?
+  expiresAt        DateTime?
+  createdById      String
+  createdAt        DateTime  @default(now())
+
+  @@index([personId])
+  @@index([chairmanId])
+}

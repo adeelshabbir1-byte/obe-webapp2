@@ -12,8 +12,8 @@ export async function fypPost(url: string, body: Record<string, unknown>) {
 }
 
 /** A button that posts one action (optionally asking for a note or confirmation first). */
-export function ActionButton({ url, body, label, className = "btn btn-brass btn-sm", confirmText, askNote, noteRequired, done }: {
-  url: string; body: Record<string, unknown>; label: string; className?: string; confirmText?: string; askNote?: string; noteRequired?: boolean; done?: string;
+export function ActionButton({ url, body, label, className = "btn btn-brass btn-sm", confirmText, askNote, noteRequired, done, showMessage }: {
+  url: string; body: Record<string, unknown>; label: string; className?: string; confirmText?: string; askNote?: string; noteRequired?: boolean; done?: string; showMessage?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -27,6 +27,7 @@ export function ActionButton({ url, body, label, className = "btn btn-brass btn-
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
     if (done) setMsg({ ok: true, text: done });
+    else if (showMessage && typeof r.data?.message === "string") setMsg({ ok: true, text: r.data.message });
     router.refresh();
   }
   return (
@@ -39,22 +40,23 @@ export function ActionButton({ url, body, label, className = "btn btn-brass btn-
 
 type Field = { name: string; label: string; type?: "text" | "textarea" | "number" | "select" | "date" | "datetime-local" | "checkbox" | "plos"; options?: [string, string][]; width?: number; placeholder?: string; full?: boolean };
 /** A small form posting { action, ...fixed, ...fields }. */
-export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, done, collapsed, openLabel }: {
+export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, done, collapsed, openLabel, showMessage }: {
   url: string; fixed: Record<string, unknown>; fields: Field[]; initial?: Record<string, unknown>; submit: string; onDone?: (data: Record<string, unknown>) => void; done?: string; collapsed?: boolean; openLabel?: string;
+  /** Show the server's own message (e.g. a one-time password) and keep it on screen after a collapsed form closes. */ showMessage?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(!collapsed);
   const [v, setV] = useState<Record<string, unknown>>(initial);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  if (!open) return <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}>{openLabel || submit}</button>;
+  if (!open) return <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><button type="button" className="btn btn-secondary btn-sm" onClick={() => { setMsg(null); setOpen(true); }}>{openLabel || submit}</button>{showMessage && msg && <span className="small-note" style={{ color: msg.ok ? "var(--sage)" : "var(--rust)", fontWeight: 600 }}>{msg.text}</span>}</span>;
   async function go(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
     const r = await fypPost(url, { ...fixed, ...v });
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
-    setMsg(done ? { ok: true, text: done } : null);
+    setMsg(done ? { ok: true, text: done } : showMessage && typeof r.data?.message === "string" ? { ok: true, text: r.data.message } : null);
     onDone?.(r.data);
     if (collapsed) setOpen(false);
     router.refresh();

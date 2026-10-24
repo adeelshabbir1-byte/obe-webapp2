@@ -170,3 +170,23 @@ test("PU BSCS 2021: 131 CH, labs merged, mapped to HEC 2025 and NCEAC 2023", asy
   assert.ok(!meet("Compiler Construction", "Cloud Computing", "2023"));
   assert.ok(TEMPLATES.some((x) => x.key === "NCEAC-BS-CS-2025" && x.council === "NCEAC"));
 });
+
+test("consortium: rules strictness, CNIC identity, NOC expiry, exam-centre gaps", async () => {
+  const { RULES, DEFAULT_RULES, stricterOk, normCnic, fmtCnic, maskCnic, nocState, centreGaps } = await import("../lib/consortium");
+  const r = (k: string) => RULES.find((x) => x.key === k)!;
+  assert.ok(stricterOk(r("minHomeResidencyPct"), 60, 50));
+  assert.ok(!stricterOk(r("minHomeResidencyPct"), 40, 50));
+  assert.ok(stricterOk(r("maxSemesterLoad"), 18, 21));
+  assert.ok(!stricterOk(r("capstoneAtHome"), false, true));
+  assert.equal(DEFAULT_RULES.industryApplicants, false);
+  assert.equal(normCnic("35202-1234567-1"), "3520212345671");
+  assert.equal(normCnic("3520212345"), null);
+  assert.equal(fmtCnic("3520212345671"), "35202-1234567-1");
+  assert.ok(!maskCnic("3520212345671").includes("35202"));
+  const day = 86400000, now = new Date("2026-10-24");
+  assert.equal(nocState({ expiresOn: new Date(now.getTime() - day) }, now).state, "EXPIRED");
+  assert.equal(nocState({ expiresOn: new Date(now.getTime() + 30 * day) }, now).state, "EXPIRING");
+  assert.equal(nocState({ expiresOn: new Date(now.getTime() + 400 * day) }, now).state, "VALID");
+  const c = { id: "x", chairmanId: "u", campusId: null, name: "Hall", city: null, address: null, seats: 100, cctv: false, biometric: true, status: "ACTIVE" };
+  assert.equal(centreGaps(c, DEFAULT_RULES).length, 1);
+});

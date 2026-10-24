@@ -179,6 +179,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ComplexTarget"
 },
 {
+"f": "migration_consortium.sql",
+"d": "OBEHUB Consortium, phase 1: the Super Admin's rules book (HEC minimums, versioned by effective date), member",
+"t": "ConsortiumAffiliation"
+},
+{
 "f": "migration_content_sync.sql",
 "d": "Run in Supabase SQL Editor. Adds CourseContentSyncGroup and",
 "t": "CourseContentSyncGroup",

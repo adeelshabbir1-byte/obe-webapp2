@@ -47,6 +47,12 @@ export async function attemptLogin(usernameOrEmail: string, password: string, ip
     return genericFailure;
   }
 
+  // A sponsored (industry) consortium account lapses at its expiry or when its sponsor revokes it.
+  if (await (await import("./consortium")).sponsoredLapsed(user.id).catch(() => false)) {
+    await writeAuditLog({ actorUserId: user.id, action: "LOGIN_BLOCKED_SPONSOR_LAPSED" });
+    return genericFailure;
+  }
+
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     await writeAuditLog({ actorUserId: user.id, action: "LOGIN_BLOCKED_LOCKOUT" });
     return { ok: false as const, reason: "temporarily_locked" as const };
