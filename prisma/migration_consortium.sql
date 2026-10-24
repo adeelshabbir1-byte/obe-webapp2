@@ -137,3 +137,29 @@ CREATE TABLE IF NOT EXISTS "ConsortiumEquivalence" (
 CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumEquivalence_pair_key" ON "ConsortiumEquivalence"("agreementId", "courseA", "courseB");
 CREATE INDEX IF NOT EXISTS "ConsortiumEquivalence_courseB_idx" ON "ConsortiumEquivalence"("courseB");
 CREATE INDEX IF NOT EXISTS "ConsortiumEquivalence_courseA_idx" ON "ConsortiumEquivalence"("courseA");
+
+-- Phase 3: courses a member university opens to students of other member universities (public catalog).
+-- mode ON_CAMPUS (visiting seat) | LIVE_ONLINE | SELF_PACED | BLENDED (the last three are ODL).
+CREATE TABLE IF NOT EXISTS "ConsortiumOffering" (
+  "id" TEXT PRIMARY KEY,
+  "chairmanId" TEXT NOT NULL,
+  "courseId" TEXT NOT NULL,
+  "term" TEXT NOT NULL,
+  "mode" TEXT NOT NULL,
+  "seats" INTEGER NOT NULL DEFAULT 0,
+  "feePerCredit" INTEGER NOT NULL DEFAULT 0,
+  "currency" TEXT NOT NULL DEFAULT 'PKR',
+  "campusId" TEXT,
+  "schedule" TEXT,
+  "labArrangement" TEXT,
+  "deadline" TIMESTAMP(3),
+  "startsOn" TIMESTAMP(3),
+  "centresJson" TEXT NOT NULL DEFAULT '[]',
+  "about" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'OPEN',
+  "createdById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ConsortiumOffering_status_idx" ON "ConsortiumOffering"("status");
+CREATE INDEX IF NOT EXISTS "ConsortiumOffering_chairmanId_idx" ON "ConsortiumOffering"("chairmanId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumOffering_course_term_key" ON "ConsortiumOffering"("courseId", "term");

@@ -7657,3 +7657,30 @@ model ConsortiumEquivalence {
   @@index([courseB])
   @@index([courseA])
 }
+
+// Consortium phase 3. A section of a member's course opened to students of other member universities (public catalog).
+// mode ON_CAMPUS (visiting seat) | LIVE_ONLINE | SELF_PACED | BLENDED — the last three are ODL and need a valid ODL NOC.
+model ConsortiumOffering {
+  id             String    @id
+  chairmanId     String
+  courseId       String
+  term           String    // e.g. "Fall 2026"
+  mode           String
+  seats          Int       @default(0)
+  feePerCredit   Int       @default(0)
+  currency       String    @default("PKR")
+  campusId       String?
+  schedule       String?
+  labArrangement String?   // where / when the face-to-face lab sessions happen
+  deadline       DateTime?
+  startsOn       DateTime?
+  centresJson    String    @default("[]") // the host's exam centres students may choose
+  about          String?
+  status         String    @default("OPEN") // OPEN | CLOSED | WITHDRAWN
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  @@unique([courseId, term])
+  @@index([status])
+  @@index([chairmanId])
+}
