@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { TEAM_HINT, saveTeam, deleteTeam, setMember, setRole } from "../../../../lib/platformTeam";
+import { TEAM_HINT, saveTeam, deleteTeam, setMember, setRole, addStarterTeams } from "../../../../lib/platformTeam";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     let message = "";
     if (b.action === "team") message = await saveTeam(user.id, b);
+    else if (b.action === "starterTeams") message = await addStarterTeams(user.id);
     else if (b.action === "teamDelete") message = await deleteTeam(user.id, str(b.id, 60));
     else if (b.action === "member") message = await setMember(user.id, str(b.teamId, 60), str(b.userId, 60), b.role ? str(b.role, 20) : null);
     else if (b.action === "role") message = await setRole(user.id, str(b.userId, 60), str(b.role, 30), b.on !== false);

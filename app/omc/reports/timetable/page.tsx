@@ -13,7 +13,7 @@ export default async function InstitutionTimetablePage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (!canViewReports(user.role)) redirect("/dashboard");
+  if (!canViewReports(user.role) || user.role === "OMC") redirect("/dashboard"); // the OMC does not run the timetable
   if (!(await canViewReport(user, "omc.reports.timetable"))) redirect("/dashboard");
 
   const chairmanId = await chairmanIdFor(user);

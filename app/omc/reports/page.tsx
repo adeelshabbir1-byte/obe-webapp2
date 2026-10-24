@@ -17,7 +17,7 @@ export default async function ReportsHubPage() {
   const filteredSections = await Promise.all(
     REPORT_SECTIONS.map(async (section) => {
       const cards = await Promise.all(
-        section.cards.map(async (c) => ((await canViewReport(user, reportIdForHref(c.href))) ? c : null))
+        section.cards.map(async (c) => (!c.hideFor?.includes(user.role) && (await canViewReport(user, reportIdForHref(c.href))) ? c : null))
       );
       return { ...section, cards: cards.filter((c): c is NonNullable<typeof c> => c !== null) };
     })

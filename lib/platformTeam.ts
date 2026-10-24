@@ -148,3 +148,23 @@ export async function teamCurriculumWhere(user: U): Promise<Record<string, unkno
   if (!sc) return { id: "none" };
   return { chairmanId: null, ...(sc.councils.length ? { authority: { in: sc.councils } } : {}), ...(sc.programs.length ? { OR: sc.programs.map((p) => ({ title: { contains: p, mode: "insensitive" } })) } : {}) };
 }
+
+/** Which teams cover a national curriculum (same rule as inTeamScope, for a list already loaded). */
+export function teamsCovering<T extends { councils: string[]; programs: string[] }>(ts: T[], c: { authority: string; title: string }) {
+  return ts.filter((t) => (!t.councils.length || t.councils.includes(c.authority)) && (!t.programs.length || t.programs.some((p) => nt(c.title).includes(nt(p)))));
+}
+/** Starter national curriculum teams with their councils and programs preset; existing names are left alone. */
+export const STARTER_TEAMS: { name: string; councils: string; programs: string }[] = [
+  { name: "Computing", councils: "NCEAC, HEC", programs: "Computer Science, Software Engineering, Artificial Intelligence, Data Science, Cyber Security, Information Technology, Computer Engineering" },
+  { name: "Management Sciences", councils: "NBEAC, HEC", programs: "Business Administration, BBA, MBA, Accounting, Finance, Commerce, Economics, Management" },
+  { name: "Engineering", councils: "PEC", programs: "" },
+  { name: "Health Sciences", councils: "PMDC, PNC, PPC, HEC", programs: "Nursing, Pharmacy, Physiotherapy, Allied Health, Medical" },
+  { name: "Social Sciences", councils: "HEC", programs: "Psychology, Sociology, English, Education, International Relations, Political Science, Mass Communication, Law" },
+  { name: "Natural Sciences", councils: "HEC", programs: "Mathematics, Physics, Chemistry, Biology, Botany, Zoology, Statistics, Biotechnology" },
+];
+export async function addStarterTeams(actorId: string) {
+  const have = new Set(((await pdb.platformTeam.findMany({ select: { name: true } })) as { name: string }[]).map((t) => t.name.toLowerCase()));
+  let n = 0;
+  for (const t of STARTER_TEAMS) if (!have.has(t.name.toLowerCase())) { await saveTeam(actorId, t); n++; }
+  return n ? `Added ${n} starter team(s). Add each team's Convener and National Subject Experts.` : "All starter teams are already there.";
+}

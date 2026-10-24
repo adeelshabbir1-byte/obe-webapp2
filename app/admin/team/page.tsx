@@ -26,8 +26,9 @@ export default async function PlatformTeamPage() {
     <div className="card">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}>
         <h3 style={{ margin: 0 }}>National curriculum teams</h3>
+        <span style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}><ActionButton showMessage url="/api/admin/team" body={{ action: "starterTeams" }} label="Add the starter teams" className="btn btn-sm" />
         <ActionForm showMessage url="/api/admin/team" fixed={{ action: "team" }} submit="Create team" collapsed openLabel="+ New team"
-          fields={[{ name: "name", label: "Area", placeholder: "e.g. Computing" }, { name: "councils", label: "Councils (comma separated, blank = all)", placeholder: "NCEAC, HEC", width: 220 }, { name: "programs", label: "Programs (blank = all)", placeholder: "BS CS, BS SE, BS AI, BS DS, BS Cyber Security", full: true }]} />
+          fields={[{ name: "name", label: "Area", placeholder: "e.g. Computing" }, { name: "councils", label: "Councils (comma separated, blank = all)", placeholder: "NCEAC, HEC", width: 220 }, { name: "programs", label: "Programs (blank = all)", placeholder: "BS CS, BS SE, BS AI, BS DS, BS Cyber Security", full: true }]} /></span>
       </div>
       {ts.length === 0 && <p className="small-note">No teams yet — e.g. Computing (NCEAC, HEC), Management Sciences (NBEAC, HEC), Engineering (PEC).</p>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12, marginTop: 10 }}>

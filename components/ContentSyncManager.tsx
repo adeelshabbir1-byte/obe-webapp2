@@ -13,7 +13,7 @@ type GroupMember = {
   degreeProgram: string; batchName: string; semesterNumber: number | null; courseType: string;
 };
 type Group = { id: string; name: string; needsSync: boolean; createdByName?: string | null; masterCourse: { id: string; code: string; title: string } | null; members: GroupMember[] };
-type MasterCourseOption = { id: string; code: string; title: string; degreeProgram: string; hasPloSuggestions: boolean };
+type MasterCourseOption = { id: string; code: string; title: string; degreeProgram: string; hasPloSuggestions: boolean; curriculumId?: string };
 
 const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
 function typeRank(t: string): number {
@@ -261,6 +261,8 @@ export default function ContentSyncManager() {
   const [editCodeApplyAll, setEditCodeApplyAll] = useState(true);
   const [showOnlyUnlinked, setShowOnlyUnlinked] = useState(false);
   const [masterOptions, setMasterOptions] = useState<MasterCourseOption[]>([]);
+  const [curricula, setCurricula] = useState<{ id: string; label: string }[]>([]);
+  const [curFilter, setCurFilter] = useState("");
   const [pickerOpenForGroup, setPickerOpenForGroup] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
   // Selecting an HEC course no longer saves immediately — it just
@@ -271,7 +273,7 @@ export default function ContentSyncManager() {
   const [savingLinks, setSavingLinks] = useState(false);
 
   useEffect(() => {
-    fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); });
+    fetch("/api/omc/equivalence/master-course-options").then((r) => r.json()).then((d) => { if (d.options) setMasterOptions(d.options); if (d.curricula) setCurricula(d.curricula); });
   }, []);
 
   function selectPendingMasterCourse(contentSyncGroupId: string, masterCourseId: string | null) {
@@ -552,11 +554,12 @@ export default function ContentSyncManager() {
                               </div>
                             );
                           }
-                          const filtered = masterOptions.filter((o) =>
-                            !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase())
-                          ).slice(0, 30);
+                          const filtered = masterOptions.filter((o) => (!curFilter || o.curriculumId === curFilter) && (
+                            !pickerSearch || o.code.toLowerCase().includes(pickerSearch.toLowerCase()) || o.title.toLowerCase().includes(pickerSearch.toLowerCase()))
+                          ).slice(0, 40);
                           return (
                             <div style={{ background: "#F8EEF0", border: "1px solid var(--brass)", padding: 6, minWidth: 240 }}>
+                              {curricula.length > 1 && <select value={curFilter} onChange={(e) => setCurFilter(e.target.value)} aria-label="Curriculum" style={{ width: "100%", fontSize: 11, padding: 2, marginBottom: 4 }}><option value="">All {curricula.length} curricula (newest first)</option>{curricula.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select>}
                               <input
                                 autoFocus value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)}
                                 placeholder="Search HEC course code or title…"

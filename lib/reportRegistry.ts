@@ -2,7 +2,7 @@
 // the Institute Head's ACL manager, Super Admin's bundles, and Coordinator's print
 // groups all read from this list instead of duplicating it.
 
-export type ReportDef = { id: string; href: string; title: string; desc: string; hasEditActions?: boolean };
+export type ReportDef = { id: string; href: string; title: string; desc: string; hasEditActions?: boolean; hideFor?: string[] };
 type ReportCardDef = Omit<ReportDef, "id">;
 export type ReportSection = { title: string; desc: string; cards: ReportCardDef[] };
 
@@ -73,7 +73,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
     desc: "Faculty load and section-sharing efficiency.",
     cards: [
       { href: "/omc/section-utilization", title: "Combined-Section Utilization", desc: "How many sections Course Equivalence groups are saving vs. teaching separately." },
-      { href: "/omc/reports/timetable", title: "Institution Timetable", desc: "The full generated timetable across the institution, filterable by Room, Batch, Instructor, or Program/Department." },
+      { href: "/omc/reports/timetable", hideFor: ["OMC"], title: "Institution Timetable", desc: "The full generated timetable across the institution, filterable by Room, Batch, Instructor, or Program/Department." },
     ],
   },
 ];
