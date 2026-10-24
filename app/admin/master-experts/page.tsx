@@ -6,7 +6,7 @@ import PlatformExpertsManager from "../../../components/PlatformExpertsManager";
 import { ADMIN_NAV } from "../../../components/adminNav";
 import { ActionForm, ActionButton } from "../../../components/fyp/FypClient";
 import { bdb } from "../../../lib/curriculumBuilder";
-import { adminCan, adminNavFor } from "../../../lib/platformTeam";
+import { adminCan, adminNavFor, teamCurriculumWhere } from "../../../lib/platformTeam";
 
 export default async function MasterExpertsPage({ searchParams }: { searchParams: { curriculumId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -18,7 +18,7 @@ export default async function MasterExpertsPage({ searchParams }: { searchParams
 
   const [experts, curricula] = await Promise.all([
     prisma.user.findMany({ where: { role: "SUBJECT_EXPERT", isPlatformExpert: true }, orderBy: { createdAt: "desc" } }),
-    prisma.masterCurriculum.findMany({ where: { chairmanId: null }, orderBy: [{ title: "asc" }, { version: "desc" }] }),
+    prisma.masterCurriculum.findMany({ where: { chairmanId: null, ...(await teamCurriculumWhere(user)) }, orderBy: [{ title: "asc" }, { version: "desc" }] }),
   ]);
   const scopes = ((await bdb.curriculumBuilderScope.findMany({}).catch(() => [])) as { userId: string; councilsJson: string; programsJson: string }[]);
   const sc = new Map(scopes.map((s) => [s.userId, s]));

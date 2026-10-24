@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { adminCan } from "../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
 
 // Commits the whole workspace arrangement at once: for each course
 // involved, replaces its entire topic list with whatever the client
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
 
   const verified = await prisma.masterCourse.findMany({ where: { id: { in: courses.map((c: any) => c.courseId) } } });
   if (verified.length !== courses.length) return NextResponse.json({ error: "one or more courses not found" }, { status: 404 });
+  for (const v of verified) if (!(await adminCurriculum(user, v.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 });
 
   // A topic keeps its CLO link while it stays in its own course; one moved in from another course has none.
   const before = await prisma.masterCourseTopic.findMany({ where: { masterCourseId: { in: courses.map((c: any) => c.courseId) } } });

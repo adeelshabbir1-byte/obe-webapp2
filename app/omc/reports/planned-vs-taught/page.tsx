@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, courseScopeFor , batchScopeFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor , batchScopeFor, nameCollegeBatches } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
@@ -22,6 +22,7 @@ export default async function PlannedVsTaughtPage({ searchParams }: { searchPara
   const coordinatorIds = await coordinatorIdsFor(user);
   let courses = await prisma.course.findMany({ where: { AND: [courseScopeFor(user), { instructorId: { not: null } }] }, include: { batch: true, instructor: true }, orderBy: { code: "asc" } });
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  await nameCollegeBatches(user, allBatches);
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 

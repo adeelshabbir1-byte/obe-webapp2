@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor , batchScopeFor } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor , batchScopeFor, nameCollegeBatches } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
@@ -19,6 +19,7 @@ export default async function CrossInstructorComparisonPage({ searchParams }: { 
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) } });
+  await nameCollegeBatches(user, batches);
   const batchIds = batches.map((b) => b.id);
 
   // Only course codes taught by more than one instructor (across

@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import AutoSubmitSelect from "../../../components/AutoSubmitSelect";
 import { navForRole } from "../../../components/reportNav";
-import { adminCan, adminNavFor } from "../../../lib/platformTeam";
+import { adminCan, adminNavFor, teamCurriculumWhere } from "../../../lib/platformTeam";
 
 
 export default async function CurriculumMigrationPage({ searchParams }: { searchParams: { fromId?: string; toId?: string } }) {
@@ -15,7 +15,7 @@ export default async function CurriculumMigrationPage({ searchParams }: { search
   if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
   const adminNav = await adminNavFor(user);
 
-  const curricula = await prisma.masterCurriculum.findMany({ orderBy: [{ title: "asc" }, { version: "desc" }] });
+  const curricula = await prisma.masterCurriculum.findMany({ where: await teamCurriculumWhere(user), orderBy: [{ title: "asc" }, { version: "desc" }] });
 
   // Group by title so the two dropdowns only offer sensible pairs.
   const byTitle = new Map<string, typeof curricula>();

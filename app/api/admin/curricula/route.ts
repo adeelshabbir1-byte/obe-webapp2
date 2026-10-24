@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
-import { adminCan } from "../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../lib/platformTeam";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curricula = await prisma.masterCurriculum.findMany({
+    where: await teamCurriculumWhere(user),
     orderBy: [{ authority: "asc" }, { title: "asc" }, { version: "desc" }],
     include: { _count: { select: { courses: true, plos: true } } },
   });
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "authority, title, version are required" }, { status: 400 });
   }
 
+  if (!(await inTeamScope(user, { authority: body.authority, title: body.title, chairmanId: null }))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 });
   const existing = await prisma.masterCurriculum.findFirst({ where: { authority: body.authority, title: body.title, version: body.version } });
   if (existing) return NextResponse.json({ error: "a curriculum with this authority/title/version already exists" }, { status: 409 });
 

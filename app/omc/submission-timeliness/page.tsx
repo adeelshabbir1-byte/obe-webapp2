@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor , batchScopeFor } from "../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor, courseScopeFor , batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
 import { canViewReport } from "../../../lib/reportAcl";
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
@@ -25,6 +25,7 @@ export default async function SubmissionTimelinessPage({ searchParams }: { searc
   });
 
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  await nameCollegeBatches(user, allBatches);
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 

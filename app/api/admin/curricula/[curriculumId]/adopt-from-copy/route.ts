@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { copyMasterClos } from "../../../../../../lib/masterClos";
-import { adminCan } from "../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
 
 export const maxDuration = 300;
 
@@ -11,7 +11,7 @@ export const maxDuration = 300;
 // POST { fromId, onlyEmpty }: copy one institute's CLOs and PLO mapping into the official curriculum.
 async function guard(curriculumId: string) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+  if (!user || !(await adminCurriculum(user, curriculumId))) return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
   const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { id: true, chairmanId: true, parentCurriculumId: true } });
   if (!c || c.chairmanId) return { error: NextResponse.json({ error: "open an official curriculum" }, { status: 400 }) };
   return { user, c };

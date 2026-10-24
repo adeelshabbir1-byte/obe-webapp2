@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { adminCan } from "../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
 
 // Assign (or clear) the platform Subject Expert who designs a Master Curriculum course.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const course = await prisma.masterCourse.findUnique({ where: { id: params.id }, include: { masterCurriculum: true } });
+  if (course && !(await inTeamScope(user, course.masterCurriculum))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 });
   if (!course || course.masterCurriculum.chairmanId !== null) return NextResponse.json({ error: "only courses of an official (shared) curriculum can be assigned" }, { status: 404 });
 
   const body = await req.json();

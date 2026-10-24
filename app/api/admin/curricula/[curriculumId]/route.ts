@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
-import { adminCan } from "../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum } from "../../../../../lib/platformTeam";
 
 export async function DELETE(req: Request, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId } });
   if (!curriculum) return NextResponse.json({ error: "not found" }, { status: 404 });

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, courseScopeFor , batchScopeFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor , batchScopeFor, nameCollegeBatches } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
@@ -20,6 +20,7 @@ export default async function CourseOfferingMapPage({ searchParams }: { searchPa
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  await nameCollegeBatches(user, allBatches);
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const bySemester = searchParams.view === "semester";
 

@@ -6,7 +6,7 @@ import CurriculumDetailManager from "../../../../components/CurriculumDetailMana
 import OfficialCurriculumCloTools from "../../../../components/OfficialCurriculumCloTools";
 import Link from "next/link";
 import { navForRole } from "../../../../components/reportNav";
-import { adminCan, adminNavFor } from "../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, adminNavFor } from "../../../../lib/platformTeam";
 
 
 export default async function CurriculumDetailPage({ params }: { params: { curriculumId: string } }) {
@@ -14,7 +14,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
-  if (!(await adminCan(user, "CURRICULUM"))) redirect("/dashboard");
+  if (!(await adminCurriculum(user, params.curriculumId))) redirect("/dashboard");
   const adminNav = await adminNavFor(user);
 
   const curriculum = await prisma.masterCurriculum.findUnique({

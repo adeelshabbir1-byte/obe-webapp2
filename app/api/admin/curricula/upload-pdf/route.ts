@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { parseCurriculumText } from "../../../../../lib/curriculumPdfParser";
 import { extractPdfText } from "../../../../../lib/pdfText";
-import { adminCan } from "../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../lib/platformTeam";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const version = (formData.get("version") as string) || new Date().getFullYear().toString();
 
   if (!file) return NextResponse.json({ error: "a PDF file is required" }, { status: 400 });
+  if (!(await inTeamScope(user, { authority, title, chairmanId: null }))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 });
   if (!title.trim()) return NextResponse.json({ error: "a program title is required (e.g. \"BS Computer Science\")" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor , batchScopeFor } from "../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor, chairmanIdFor , batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
 import { canViewReport } from "../../../lib/reportAcl";
 import { navForRole } from "../../../components/reportNav";
 import { prisma } from "../../../lib/db";
@@ -27,6 +27,7 @@ export default async function PloReadinessPage({ searchParams }: { searchParams:
   const coordinatorIds = await coordinatorIdsFor(user);
 
   let batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" } ] });
+  await nameCollegeBatches(user, batches);
   const allBatches = batches;
   if (searchParams.batchId) batches = batches.filter((b) => b.id === searchParams.batchId);
   else if (searchParams.degree) batches = batches.filter((b) => b.degreeProgram === searchParams.degree);

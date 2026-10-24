@@ -121,3 +121,30 @@ export async function adminNavFor(user: U) {
   const { ADMIN_NAV } = await import("../components/adminNav");
   return teamNav(user, ADMIN_NAV);
 }
+
+// ---------------------------------------------------------------- per-team limits on the national curriculum admin pages
+const nt = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+/** Does a curriculum (council + program title) fall inside this person's team scope? The Super Admin: always. */
+export async function inTeamScope(user: U, c: { authority: string; title: string; chairmanId?: string | null } | null) {
+  if (!user || !c) return false;
+  if (user.role === "SUPER_USER") return true;
+  if (c.chairmanId) return false; // a university's own curriculum is not the national team's
+  const sc = await teamScope(user.id);
+  if (!sc) return false;
+  return (!sc.councils.length || sc.councils.includes(c.authority)) && (!sc.programs.length || sc.programs.some((p) => nt(c.title).includes(nt(p))));
+}
+/** Guard for /admin/curricula/<id> pages and APIs: the CURRICULUM area and that curriculum inside the team's scope. */
+export async function adminCurriculum(user: U | null | undefined, curriculumId: string | null | undefined) {
+  if (!user || !(await adminCan(user, "CURRICULUM"))) return false;
+  if (user.role === "SUPER_USER") return true;
+  if (!curriculumId) return false;
+  const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { authority: true, title: true, chairmanId: true } });
+  return inTeamScope(user, c);
+}
+/** Prisma filter for lists of national curricula a team member may manage. */
+export async function teamCurriculumWhere(user: U): Promise<Record<string, unknown>> {
+  if (user.role === "SUPER_USER") return {};
+  const sc = await teamScope(user.id);
+  if (!sc) return { id: "none" };
+  return { chairmanId: null, ...(sc.councils.length ? { authority: { in: sc.councils } } : {}), ...(sc.programs.length ? { OR: sc.programs.map((p) => ({ title: { contains: p, mode: "insensitive" } })) } : {}) };
+}

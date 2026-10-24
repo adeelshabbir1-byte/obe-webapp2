@@ -14,7 +14,7 @@ import AutoMapCloLevelAllButton from "../../../components/AutoMapCloLevelAllButt
 import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
 import PloMatrixExcelButtons from "../../../components/PloMatrixExcelButtons";
 import { deptScope } from "../../../lib/omcScope";
-import { batchScopeFor } from "../../../lib/reportScope";
+import { batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
 
 export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
   const user = await getAuthenticatedUser();
@@ -32,6 +32,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
   // Grouped by BATCH directly — a course already belongs to exactly one
   // batch, and PLOs are now scoped per batch too, so this is a clean 1:1 match.
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  await nameCollegeBatches(user, allBatches);
   // Loading every batch's PLOs/courses/HEC suggestions at once — the
   // old default when neither filter was picked — meant a sequential
   // loop over the institution's ENTIRE batch list, several queries

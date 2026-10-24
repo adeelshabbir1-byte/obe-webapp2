@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
-import { adminCan } from "../../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum } from "../../../../../../../lib/platformTeam";
 
 // Confirms a pending course is the SAME as an existing MasterCourse —
 // the "equate" action. Optionally merges the staged CLOs into the
@@ -14,6 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { pendingId: 
 
   const pending = await prisma.pendingMasterCourse.findUnique({ where: { id: params.pendingId }, include: { clos: true } });
   if (!pending) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!(await adminCurriculum(user, pending.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 });
   if (pending.status !== "PENDING") return NextResponse.json({ error: "already reviewed" }, { status: 409 });
 
   const body = await req.json();

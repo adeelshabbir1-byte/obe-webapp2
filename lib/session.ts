@@ -148,7 +148,11 @@ export const getAuthenticatedUser = cache(async () => {
   // The university's OMC also looks after its affiliated colleges' courses.
   if (base.role === "OMC" && base.managedById) {
     const rows = (await (prisma as unknown as Record<string, any>).instituteAffiliation.findMany({ where: { universityId: base.managedById, status: "ACTIVE" }, select: { collegeId: true } }).catch(() => [])) as { collegeId: string }[];
-    if (rows.length) return { ...base, collegeIds: rows.map((r) => r.collegeId) };
+    if (rows.length) {
+      // A department OMC member reviews the same-named department of each college (and college courses with no department).
+      const dept = base.departmentId ? await prisma.department.findUnique({ where: { id: base.departmentId }, select: { name: true } }).catch(() => null) : null;
+      return { ...base, collegeIds: rows.map((r) => r.collegeId), collegeDeptName: dept?.name || null };
+    }
   }
   return base;
 });

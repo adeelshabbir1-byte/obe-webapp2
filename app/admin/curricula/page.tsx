@@ -7,7 +7,7 @@ import AssignByInstitute from "../../../components/AssignByInstitute";
 import { degreeSortKey, degreeGroupLabel } from "../../../lib/degreeGroup";
 import { navForRole } from "../../../components/reportNav";
 import CurriculumWorkbookImport from "../../../components/CurriculumWorkbookImport";
-import { adminCan, adminNavFor } from "../../../lib/platformTeam";
+import { adminCan, adminNavFor, teamCurriculumWhere } from "../../../lib/platformTeam";
 import CurriculaTabs from "../../../components/CurriculaTabs";
 
 
@@ -21,7 +21,7 @@ export default async function AdminCurriculaPage() {
 
   // Official (shared) curricula only - institutes' own copies are theirs, not managed here.
   const curricula = (await prisma.masterCurriculum.findMany({
-    where: { chairmanId: null },
+    where: { chairmanId: null, ...(await teamCurriculumWhere(user)) },
     include: { _count: { select: { courses: true, plos: true, assignments: true } } },
   })).sort((a, b) => degreeSortKey(a).localeCompare(degreeSortKey(b)) || a.authority.localeCompare(b.authority) || b.version.localeCompare(a.version));
 

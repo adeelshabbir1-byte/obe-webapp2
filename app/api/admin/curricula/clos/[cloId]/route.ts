@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
-import { adminCan } from "../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
 
 export async function PUT(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const x = await prisma.masterCourseClo.findUnique({ where: { id: params.cloId }, select: { masterCourse: { select: { masterCurriculumId: true } } } }); if (!(await adminCurriculum(user, x?.masterCourse.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 }); }
 
   const body = await req.json();
   const { statement, bloomLevel, orderIndex, mappedPloId } = body;
@@ -31,6 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
 export async function DELETE(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  { const x = await prisma.masterCourseClo.findUnique({ where: { id: params.cloId }, select: { masterCourse: { select: { masterCurriculumId: true } } } }); if (!(await adminCurriculum(user, x?.masterCourse.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 }); }
 
   await prisma.masterCourseClo.delete({ where: { id: params.cloId } });
   await writeAuditLog({ actorUserId: user.id, action: "ADMIN_MASTER_COURSE_CLO_DELETED", entityType: "MasterCourseClo", entityId: params.cloId });

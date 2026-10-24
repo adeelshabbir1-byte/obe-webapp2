@@ -16,7 +16,9 @@ export function courseScopeFor(user: { id: string; role: string; managedById: st
     case "OMC": {
       const own: Prisma.CourseWhereInput = { coordinator: { managedById: user.managedById || "" }, ...(omcCourseScope(user) as Prisma.CourseWhereInput) };
       const colleges = (user as { collegeIds?: string[] }).collegeIds || [];
-      return colleges.length ? { OR: [own, { coordinator: { managedById: { in: colleges } } }] } : own;
+      const dn = (user as { collegeDeptName?: string | null }).collegeDeptName;
+      const collegeCourses: Prisma.CourseWhereInput = { coordinator: { managedById: { in: colleges }, ...(dn ? { OR: [{ department_: { name: { equals: dn, mode: "insensitive" } } }, { departmentId: null }] } : {}) } };
+      return colleges.length ? { OR: [own, collegeCourses] } : own;
     }
     case "DEPARTMENT_COORDINATOR":
       return { coordinator: { managedById: user.managedById || "", departmentId: user.departmentId || "none" } };
@@ -60,7 +62,8 @@ export async function coordinatorIdsFor(user: { id: string; role: string; manage
     const chairmanId = user.role === "OMC" ? user.managedById || "" : user.id;
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId, ...deptScope(user) } });
     const colleges = user.role === "OMC" ? (user as { collegeIds?: string[] }).collegeIds || [] : [];
-    const collegeLeads = colleges.length ? await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: { in: colleges } }, select: { id: true } }) : [];
+    const dn = (user as { collegeDeptName?: string | null }).collegeDeptName;
+    const collegeLeads = colleges.length ? await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: { in: colleges }, ...(dn ? { OR: [{ department_: { name: { equals: dn, mode: "insensitive" } } }, { departmentId: null }] } : {}) }, select: { id: true } }) : [];
     return coordinators.map((c) => c.id).concat(collegeLeads.map((c) => c.id));
   }
   // SE/Instructor: whichever coordinator(s) own the courses they're attached to.
@@ -97,4 +100,14 @@ export function batchScopeFor(user: { id: string; role: string }): Prisma.BatchW
   if (user.role === "INSTRUCTOR") return { courses: { some: { instructorId: user.id } } };
   if (user.role === "SUBJECT_EXPERT") return { courses: { some: { subjectExpertId: user.id } } };
   return {};
+}
+
+/** For a university OMC that also covers affiliated colleges: add the college's name to its batches' names in pickers. */
+export async function nameCollegeBatches<T extends { id: string; batchName?: string }>(user: { role: string }, batches: T[]): Promise<T[]> {
+  const colleges = (user as { collegeIds?: string[] }).collegeIds || [];
+  if (!colleges.length || !batches.length) return batches;
+  const cb = await prisma.batch.findMany({ where: { id: { in: batches.map((b) => b.id) }, coordinator: { managedById: { in: colleges } } }, select: { id: true, coordinator: { select: { managedBy: { select: { instituteName: true, name: true } } } } } });
+  const name = new Map(cb.map((b) => [b.id, b.coordinator.managedBy?.instituteName || b.coordinator.managedBy?.name || "college"]));
+  for (const b of batches) if (name.has(b.id) && typeof b.batchName === "string" && !b.batchName.includes(" — ")) b.batchName = `${b.batchName} — ${name.get(b.id)}`;
+  return batches;
 }

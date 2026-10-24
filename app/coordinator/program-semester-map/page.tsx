@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { courseTypeColor } from "../../../lib/courseTypeColors";
-import { coordinatorIdsFor, roleLabel , batchScopeFor } from "../../../lib/reportScope";
+import { coordinatorIdsFor, roleLabel , batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InstructorAssignCell from "../../../components/InstructorAssignCell";
@@ -17,6 +17,7 @@ export default async function ProgramSemesterMapPage({ searchParams }: { searchP
 
   const coordinatorIds = await coordinatorIdsFor(user);
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  await nameCollegeBatches(user, allBatches);
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
   const selectedDegree = searchParams.degree || degrees[0] || "";
   const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);

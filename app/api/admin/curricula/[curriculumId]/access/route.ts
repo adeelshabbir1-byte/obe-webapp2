@@ -3,12 +3,12 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { cloneGrandCurriculumForChairman } from "../../../../../../lib/cloneCurriculum";
-import { adminCan } from "../../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
 
 // Super User: which institutes (Institute Heads) an official master curriculum is assigned to.
 export async function GET(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId } });
   if (!curriculum || curriculum.chairmanId) return NextResponse.json({ error: "official curriculum not found" }, { status: 404 });
 
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: { curriculumI
 // un-assigning only stops the official one being offered - an institute's own copy is never deleted.
 export async function PUT(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   if (!Array.isArray(body.chairmanIds)) return NextResponse.json({ error: "chairmanIds is required" }, { status: 400 });
 

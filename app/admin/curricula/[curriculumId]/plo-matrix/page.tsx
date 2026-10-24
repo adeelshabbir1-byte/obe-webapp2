@@ -4,12 +4,12 @@ import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import Link from "next/link";
 import { navForRole } from "../../../../../components/reportNav";
-import { adminCan, adminNavFor } from "../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, adminNavFor } from "../../../../../lib/platformTeam";
 
 
 export default async function PloMatrixPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) redirect("/login");
+  if (!user || !(await adminCurriculum(user, params.curriculumId))) redirect("/login");
   const adminNav = await adminNavFor(user);
   if (!user.mfaVerified) redirect("/mfa-verify");
 

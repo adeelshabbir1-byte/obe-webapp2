@@ -5,7 +5,7 @@ import Shell from "../../../../../components/Shell";
 import PendingCourseReview from "../../../../../components/PendingCourseReview";
 import Link from "next/link";
 import { navForRole } from "../../../../../components/reportNav";
-import { adminCan, adminNavFor } from "../../../../../lib/platformTeam";
+import { adminCan, adminCurriculum, adminNavFor } from "../../../../../lib/platformTeam";
 
 
 function normalize(title: string) {
@@ -14,7 +14,7 @@ function normalize(title: string) {
 
 export default async function ReviewPendingPage({ params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !(await adminCan(user, "CURRICULUM"))) redirect("/login");
+  if (!user || !(await adminCurriculum(user, params.curriculumId))) redirect("/login");
   const adminNav = await adminNavFor(user);
   if (!user.mfaVerified) redirect("/mfa-verify");
 

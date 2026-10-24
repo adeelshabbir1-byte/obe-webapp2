@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { roleLabel, chairmanIdFor , batchScopeFor } from "../../../lib/reportScope";
+import { roleLabel, chairmanIdFor , batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import SurveysManager from "../../../components/SurveysManager";
@@ -20,6 +20,7 @@ export default async function SurveysPage() {
   const coordinators = chairmanId ? await prisma.user.findMany({ where: { managedById: chairmanId, role: "PROGRAM_COORDINATOR" } }) : [];
   const coordinatorIds = coordinators.map((c) => c.id);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) } });
+  await nameCollegeBatches(user, batches);
   const plos = await prisma.pLO.findMany({ where: { batchId: { in: batches.map((b) => b.id) } }, orderBy: { number: "asc" } });
   const surveys = await prisma.surveyTemplate.findMany({
     where: { coordinatorId: { in: coordinatorIds } },
