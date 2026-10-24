@@ -163,3 +163,39 @@ CREATE TABLE IF NOT EXISTS "ConsortiumOffering" (
 CREATE INDEX IF NOT EXISTS "ConsortiumOffering_status_idx" ON "ConsortiumOffering"("status");
 CREATE INDEX IF NOT EXISTS "ConsortiumOffering_chairmanId_idx" ON "ConsortiumOffering"("chairmanId");
 CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumOffering_course_term_key" ON "ConsortiumOffering"("courseId", "term");
+
+-- Phase 4: a student of one member university applies for another's course. The host accepts and enrols them (as a
+-- visiting student in its own course, so attendance, marks and CLO attainment work as for its own students); the
+-- student's own university decides whether the course counts toward their degree (Subject Expert + Chairman).
+CREATE TABLE IF NOT EXISTS "ConsortiumApplication" (
+  "id" TEXT PRIMARY KEY,
+  "offeringId" TEXT NOT NULL,
+  "hostChairmanId" TEXT NOT NULL,
+  "homeChairmanId" TEXT NOT NULL,
+  "studentId" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'APPLIED',
+  "statement" TEXT,
+  "hostNote" TEXT,
+  "decidedById" TEXT,
+  "decidedAt" TIMESTAMP(3),
+  "wantsCredit" BOOLEAN NOT NULL DEFAULT true,
+  "creditStatus" TEXT NOT NULL DEFAULT 'NOT_REQUESTED',
+  "creditAsCourseId" TEXT,
+  "creditApprovalsJson" TEXT NOT NULL DEFAULT '{}',
+  "creditNote" TEXT,
+  "examCentreId" TEXT,
+  "fee" INTEGER NOT NULL DEFAULT 0,
+  "currency" TEXT NOT NULL DEFAULT 'PKR',
+  "paymentRef" TEXT,
+  "paymentStatus" TEXT NOT NULL DEFAULT 'UNPAID',
+  "paymentVerifiedById" TEXT,
+  "paymentVerifiedAt" TIMESTAMP(3),
+  "hostStudentId" TEXT,
+  "hostLogin" TEXT,
+  "tempSecret" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumApplication_offering_student_key" ON "ConsortiumApplication"("offeringId", "studentId");
+CREATE INDEX IF NOT EXISTS "ConsortiumApplication_host_idx" ON "ConsortiumApplication"("hostChairmanId");
+CREATE INDEX IF NOT EXISTS "ConsortiumApplication_home_idx" ON "ConsortiumApplication"("homeChairmanId");
+CREATE INDEX IF NOT EXISTS "ConsortiumApplication_student_idx" ON "ConsortiumApplication"("studentId");

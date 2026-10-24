@@ -7684,3 +7684,39 @@ model ConsortiumOffering {
   @@index([status])
   @@index([chairmanId])
 }
+
+// Consortium phase 4. A student of one member university applies for another's course (an offering). The host accepts
+// and enrols them as a visiting student in its own course; the student's own university decides on credit.
+model ConsortiumApplication {
+  id                  String    @id
+  offeringId          String
+  hostChairmanId      String
+  homeChairmanId      String
+  studentId           String    // the student at their own (home) university
+  status              String    @default("APPLIED") // APPLIED | ACCEPTED | DECLINED | WITHDRAWN
+  statement           String?
+  hostNote            String?
+  decidedById         String?
+  decidedAt           DateTime?
+  wantsCredit         Boolean   @default(true)
+  creditStatus        String    @default("NOT_REQUESTED") // NOT_REQUESTED | RECOGNISED | PENDING | APPROVED | DECLINED
+  creditAsCourseId    String?   // the home curriculum course it counts as
+  creditApprovalsJson String    @default("{}")
+  creditNote          String?
+  examCentreId        String?
+  fee                 Int       @default(0)
+  currency            String    @default("PKR")
+  paymentRef          String?
+  paymentStatus       String    @default("UNPAID") // UNPAID | CLAIMED | VERIFIED | WAIVED
+  paymentVerifiedById String?
+  paymentVerifiedAt   DateTime?
+  hostStudentId       String?   // the visiting-student record at the host
+  hostLogin           String?   // roll number to sign in to the host's student portal
+  tempSecret          String?   // first password, shown once to the student, then cleared
+  createdAt           DateTime  @default(now())
+
+  @@unique([offeringId, studentId])
+  @@index([hostChairmanId])
+  @@index([homeChairmanId])
+  @@index([studentId])
+}

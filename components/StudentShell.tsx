@@ -16,6 +16,7 @@ import { NAV_UR, UI_UR, URDU_FONT, urduStyle } from "../lib/urdu";
 
 const NAV = [
   { href: "/student/registration", label: "Course Registration" },
+  { href: "/student/consortium", label: "Courses at Other Universities" },
   { href: "/student/degree-plan", label: "Degree Plan" },
   { href: "/student/dashboard", label: "Elective Choices" },
   { href: "/student/timetable", label: "My Timetable" },
