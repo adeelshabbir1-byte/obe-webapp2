@@ -7395,22 +7395,6 @@ model LmsCourseLink {
   lastSyncAt     DateTime?
 }
 
-// Curriculum library (lib/curriculumNaming.ts): the standard code (NCEAC-BS-CS-2023), level, program code, discipline and
-// notification number of a curriculum, plus its earlier names (still found by search).
-model CurriculumMeta {
-  curriculumId String   @id
-  code         String
-  level        String?
-  programCode  String?
-  discipline   String?
-  notification String?
-  aliasesJson  String   @default("[]")
-  updatedById  String?
-  updatedAt    DateTime @default(now())
-
-  @@index([code])
-}
-
 // Curriculum library (lib/curriculumLibrary.ts): standard code and filter fields of a curriculum, the term from which
 // it applies, and — for a university's own curriculum — what its affiliated colleges may not change.
 model CurriculumMeta {
