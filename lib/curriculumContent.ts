@@ -3,6 +3,7 @@ import { HEC_BSCS_2025_COURSES, HEC_BSCS_2025_PLOS } from "../prisma/hec-bscs-20
 import { HEC_COURSE_SEED_CONTENT } from "../prisma/hec-course-seed-content";
 import { HEC_GE_IDS_SEED_CONTENT } from "../prisma/hec-ge-ids-seed-content";
 import { HEC_CS25_ELECTIVE_CLOS } from "./hecCs2025Clos";
+import { PU_BSCS_2021 } from "./puBscs2021";
 
 // Fills a master curriculum with what makes it a master copy: semester numbers, PLOs, CLOs (each mapped to a PLO)
 // and a 32-lecture plan whose lectures are mapped to CLOs. Only empty things are filled — nothing typed by a person
@@ -16,7 +17,9 @@ import { HEC_CS25_ELECTIVE_CLOS } from "./hecCs2025Clos";
 type Pack = {
   plos: { number: number; title: string; description: string }[];
   semester: (title: string, kind: string, index: number) => number | null;
-  content: (title: string) => { clos: { statement: string; bloomLevel: string; plo: number | null }[]; topics: string[] } | null;
+  content: (title: string) => { clos: { statement: string; bloomLevel: string; plo: number | null }[]; topics: string[]; from?: string } | null;
+  /** The curriculum's own code, outline and prerequisite for a course (a university's document). */
+  details?: (title: string) => { code: string; description: string | null; textbook: string | null; reference: string | null; prerequisite: string | null } | null;
 };
 
 /** Title key that survives "&"/"and", plurals, dashes and bracketed notes ("(IDS I, Mandatory)"). */
@@ -43,7 +46,24 @@ const HEC_CS_2025: Pack = {
     return e ? { clos: e.map((x) => ({ statement: x.s, bloomLevel: x.b, plo: x.p })), topics: [] } : null;
   },
 };
-export const CONTENT_PACKS: Record<string, Pack> = { "HEC-BS-CS-2025": HEC_CS_2025 };
+// PU BSCS 2021: its own semesters, codes and outlines. PU's document has no CLOs or lecture plans, so a PU course
+// takes the CLOs and lecture plan of its HEC 2025 equivalent (Data Structures and Algorithms ← Data Structures …);
+// PU courses with no HEC 2025 equivalent (e.g. Compiler Construction) are left for the Subject Expert.
+const PU = new Map(PU_BSCS_2021.map((c) => [titleKey(c.title), c]));
+const PU_2021: Pack = {
+  plos: HEC_BSCS_2025_PLOS, // PU's document states no PLOs; the Seoul Accord PLOs NCEAC accredits against
+  semester: (title) => PU.get(titleKey(title))?.semester ?? null,
+  content(title) {
+    const c = PU.get(titleKey(title));
+    const k = c?.hec2025 ? HEC_CS_2025.content(c.hec2025) : null;
+    return k ? { ...k, from: c!.hec2025! } : null;
+  },
+  details(title) {
+    const c = PU.get(titleKey(title));
+    return c ? { code: c.code, description: c.description, textbook: c.textbook, reference: c.reference, prerequisite: c.prerequisite } : null;
+  },
+};
+export const CONTENT_PACKS: Record<string, Pack> = { "HEC-BS-CS-2025": HEC_CS_2025, "NCEAC-BS-CS-2025": HEC_CS_2025, "PU-BSCS-2021": PU_2021 };
 export const hasContentPack = (key?: string | null) => !!key && key in CONTENT_PACKS;
 
 /** A PLO for a CLO that HEC did not tag — by what the CLO asks for (Seoul Accord PLO 2–10). */
@@ -76,13 +96,28 @@ export function mapLectures(topics: string[], clos: string[]) {
 export async function fillContent(curriculumId: string, packKey: string, types: { name: string; kind: string }[]) {
   const pack = CONTENT_PACKS[packKey];
   if (!pack) throw new Error("No content is available for this template yet.");
-  const done = { semesters: 0, plos: 0, clos: 0, lectures: 0, courses: 0 };
+  const done = { semesters: 0, plos: 0, clos: 0, lectures: 0, courses: 0, details: 0 };
   if (!(await prisma.masterPLO.count({ where: { masterCurriculumId: curriculumId } }))) {
     await prisma.masterPLO.createMany({ data: pack.plos.map((p) => ({ masterCurriculumId: curriculumId, number: p.number, title: p.title, description: p.description })) });
     done.plos = pack.plos.length;
   }
   const plos = new Map((await prisma.masterPLO.findMany({ where: { masterCurriculumId: curriculumId }, select: { id: true, number: true } })).map((p) => [p.number, p.id]));
-  const courses = await prisma.masterCourse.findMany({ where: { masterCurriculumId: curriculumId }, orderBy: { code: "asc" }, select: { id: true, title: true, category: true, semesterNumber: true, _count: { select: { seedClos: true, seedTopics: true } } } });
+  const courses = await prisma.masterCourse.findMany({ where: { masterCurriculumId: curriculumId }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, category: true, semesterNumber: true, catalogDescription: true, textbook: true, referenceMaterial: true, prerequisiteCourseId: true, _count: { select: { seedClos: true, seedTopics: true } } } });
+  // The document's own codes, outlines and prerequisites (only where still empty / still the builder's placeholder code).
+  if (pack.details) {
+    const codes = new Set(courses.map((c) => c.code)); const idOf = new Map(courses.map((c) => [titleKey(c.title), c.id]));
+    for (const c of courses) {
+      const d = pack.details(c.title); if (!d) continue;
+      const data: Record<string, unknown> = {};
+      if (/^[A-Z]{2}-\d{2}$/.test(c.code) && d.code !== c.code && !codes.has(d.code)) { codes.delete(c.code); codes.add(d.code); data.code = d.code; }
+      if (!c.catalogDescription && d.description) data.catalogDescription = d.description;
+      if (!c.textbook && d.textbook) data.textbook = d.textbook.slice(0, 1000);
+      if (!c.referenceMaterial && d.reference) data.referenceMaterial = d.reference;
+      const pre = d.prerequisite ? idOf.get(titleKey(d.prerequisite)) : null;
+      if (!c.prerequisiteCourseId && pre && pre !== c.id) data.prerequisiteCourseId = pre;
+      if (Object.keys(data).length) { await prisma.masterCourse.update({ where: { id: c.id }, data }); done.details++; }
+    }
+  }
   const kindOf = new Map(types.map((t) => [t.name, t.kind]));
   const idx = new Map<string, number>();
   for (const c of courses) {

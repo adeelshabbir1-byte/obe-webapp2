@@ -55,11 +55,11 @@ export default function StartCurriculum({ templates, sources }: { templates: Tpl
         <div>
           {head(3, "Name the version and start")}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
-            <label>Council<br /><select value={base.council} onChange={(e) => setBase({ ...base, council: e.target.value })}>{["NCEAC", "NBEAC", "PEC", "HEC", "Other"].map((c) => <option key={c}>{c}</option>)}</select></label>
+            <label>Council<br /><select value={base.council} onChange={(e) => setBase({ ...base, council: e.target.value })}>{Array.from(new Set(["NCEAC", "NBEAC", "PEC", "HEC", base.council, "Other"])).map((c) => <option key={c}>{c}</option>)}</select></label>
             <label>Version<br /><input value={version} onChange={(e) => setVersion(e.target.value)} style={{ width: 120 }} /></label>
             <button type="button" className="btn" disabled={busy || !prog} onClick={go}>{busy ? "Setting up…" : `Open the builder for ${prog}`}</button>
           </div>
-          {base.kind === "tpl" && <p className="small-note">The course types and their targets are pre-filled from what is generally known of this curriculum — check them against the curriculum document on the first step.</p>}
+          {base.kind === "tpl" && <p className="small-note">The course types, courses, semesters and (where the document gives them) CLOs and outlines are filled from the curriculum document — check them on the first step.</p>}
           {msg && <p style={{ color: "#C62828", fontWeight: 600 }}>{msg}</p>}
         </div>
       )}

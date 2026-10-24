@@ -145,3 +145,23 @@ test("HEC CS 2025 master content: semesters, CLOs, lecture plans resolve for eve
   assert.equal(suggestPlo("Discuss ethical issues of AI", "C2"), 9);
   assert.equal(suggestPlo("Design a distributed system", "C6"), 4);
 });
+
+test("PU BSCS 2021: 131 CH, labs merged, mapped to HEC 2025 and NCEAC 2023", async () => {
+  const { TEMPLATES, kindInfo } = await import("../lib/curriculumTemplates");
+  const { PU_BSCS_2021 } = await import("../lib/puBscs2021");
+  const { CONTENT_PACKS } = await import("../lib/curriculumContent");
+  const { courseKeys } = await import("../lib/curriculumEquivalence");
+  const t = TEMPLATES.find((x) => x.key === "PU-BSCS-2021")!;
+  assert.equal(t.types.filter((x) => kindInfo(x.kind).counts).reduce((a, x) => a + (x.minCredits || 0), 0), 131);
+  assert.equal(PU_BSCS_2021.find((c) => c.code === "CC-112")!.lab, 1);
+  const pu = CONTENT_PACKS["PU-BSCS-2021"];
+  assert.equal(pu.content("Data Structures and Algorithms")!.from, "Data Structures");
+  assert.equal(pu.details!("Database Systems")!.code, "CC-312");
+  assert.equal(pu.semester("Compiler Construction", "", 0), 5);
+  const meet = (a: string, b: string) => courseKeys(a).some((k) => courseKeys(b).includes(k));
+  assert.ok(meet("Data Structures and Algorithms", "Data Structures"));
+  assert.ok(meet("Discrete Structures", "Quantitative Reasoning I (Discrete Structures)"));
+  assert.ok(meet("Computer Organization and Assembly Language", "Computer Organization and Architecture"));
+  assert.ok(!meet("Compiler Construction", "Cloud Computing"));
+  assert.ok(TEMPLATES.some((x) => x.key === "NCEAC-BS-CS-2025" && x.council === "NCEAC"));
+});

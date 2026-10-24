@@ -27,9 +27,11 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
   if (!(await canBuild(user, { chairmanId: b.curriculum.chairmanId, authority: b.curriculum.authority, title: b.curriculum.title }))) redirect(`/curricula/${params.id}`);
   const older = await prisma.masterCurriculum.findMany({ where: { id: { not: b.curriculum.id }, title: b.curriculum.title, chairmanId: b.curriculum.chairmanId, status: "PUBLISHED" }, select: { id: true, authority: true, version: true } });
   const canPublish = user.role === "SUPER_USER" || b.curriculum.chairmanId !== null;
+  // Map this curriculum against the council curricula of the same program (course-by-course equivalence).
+  const refs = await prisma.masterCurriculum.findMany({ where: { id: { not: b.curriculum.id }, chairmanId: null, status: "PUBLISHED", title: b.curriculum.title }, select: { id: true, authority: true, version: true }, orderBy: [{ authority: "asc" }, { version: "desc" }] });
   return shell(
     <>
-      <p className="small-note" style={{ margin: "0 0 6px" }}><Link href="/curricula/builder">← Curriculum Builder</Link> · <Link href={`/curricula/${b.curriculum.id}`}>Library view</Link>{user.role === "SUPER_USER" && <> · <Link href={`/admin/curricula/${b.curriculum.id}`}>CLOs, topics and GAs (full editor)</Link></>}</p>
+      <p className="small-note" style={{ margin: "0 0 6px" }}><Link href="/curricula/builder">← Curriculum Builder</Link> · <Link href={`/curricula/${b.curriculum.id}`}>Library view</Link>{refs.map((r) => <span key={r.id}> · <Link href={`/curricula/compare?a=${b.curriculum.id}&b=${r.id}`}>Map against {r.authority} {r.version}</Link></span>)}{user.role === "SUPER_USER" && <> · <Link href={`/admin/curricula/${b.curriculum.id}`}>CLOs, topics and GAs (full editor)</Link></>}</p>
       <BuilderBoard canEdit cur={b.curriculum} types={b.types} tracks={b.tracks} courses={b.courses} step={searchParams.step || ""} canPublish={canPublish}
         templates={TEMPLATES.map((t) => ({ key: t.key, label: `${t.council} ${t.version} — ${t.program}` }))} older={older.map((o) => ({ id: o.id, label: `${o.authority} ${o.version}` }))}
         packs={TEMPLATES.filter((t) => hasContentPack(t.key) && normTitle(t.program) === normTitle(b.curriculum.title)).map((t) => ({ key: t.key, label: `${t.council} ${t.version}` }))} />

@@ -1,3 +1,4 @@
+import { courseKeys } from "./curriculumEquivalence";
 import { prisma } from "./db";
 import { findOwningChairmanId } from "./institutionCurriculum";
 import { countedCredits, countsTowardDegree } from "./courseTypes";
@@ -83,18 +84,27 @@ export async function compareCurricula(a: string, b: string) {
   const [A, B] = await Promise.all([a, b].map((id) => prisma.masterCurriculum.findUnique({ where: { id }, select: { id: true, title: true, version: true, authority: true, courses: { select: { code: true, title: true, creditHours: true, semesterNumber: true, category: true } } } })));
   if (!A || !B) return null;
   const key = (x: { title: string }) => x.title.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const rows: { code: string; title: string; a: { ch: number; sem: number | null } | null; b: { ch: number; sem: number | null } | null; change: string }[] = [];
+  const rows: { code: string; title: string; a: { ch: number; sem: number | null; title: string; code: string } | null; b: { ch: number; sem: number | null; title: string; code: string } | null; change: string }[] = [];
   const usedB = new Set<number>();
+  // Versions of one curriculum match on code or title; different curricula (PU vs HEC, …) through course equivalences.
+  const sameLine = A.authority === B.authority;
+  const kb = B.courses.map((y) => courseKeys(y.title));
+  const find = (x: { code: string; title: string }) => {
+    const j = B.courses.findIndex((y, i) => !usedB.has(i) && ((sameLine && y.code === x.code) || key(y) === key(x)));
+    if (j >= 0) return j;
+    for (const k of courseKeys(x.title)) { const i = kb.findIndex((ks, n) => !usedB.has(n) && ks.includes(k)); if (i >= 0) return i; }
+    return -1;
+  };
   for (const x of A.courses) {
-    const j = B.courses.findIndex((y, i) => !usedB.has(i) && (y.code === x.code || key(y) === key(x)));
-    if (j < 0) { rows.push({ code: x.code, title: x.title + (countsTowardDegree(x.category) ? "" : " (option list)"), a: { ch: x.creditHours, sem: x.semesterNumber }, b: null, change: "Removed" }); continue; }
+    const j = find(x);
+    if (j < 0) { rows.push({ code: x.code, title: x.title + (countsTowardDegree(x.category) ? "" : " (option list)"), a: { ch: x.creditHours, sem: x.semesterNumber, title: x.title, code: x.code }, b: null, change: "Removed" }); continue; }
     usedB.add(j); const y = B.courses[j];
-    const ch = [x.creditHours !== y.creditHours ? `credit hours ${x.creditHours} → ${y.creditHours}` : "", x.semesterNumber !== y.semesterNumber ? `semester ${x.semesterNumber ?? "—"} → ${y.semesterNumber ?? "—"}` : "", x.code !== y.code ? `code ${x.code} → ${y.code}` : "", key(x) !== key(y) ? "title changed" : ""].filter(Boolean).join(", ");
-    rows.push({ code: y.code, title: y.title, a: { ch: x.creditHours, sem: x.semesterNumber }, b: { ch: y.creditHours, sem: y.semesterNumber }, change: ch || "Same" });
+    const ch = [x.creditHours !== y.creditHours ? `credit hours ${x.creditHours} → ${y.creditHours}` : "", x.semesterNumber !== y.semesterNumber ? `semester ${x.semesterNumber ?? "—"} → ${y.semesterNumber ?? "—"}` : "", sameLine && x.code !== y.code ? `code ${x.code} → ${y.code}` : "", key(x) !== key(y) ? (sameLine ? "title changed" : "equivalent") : ""].filter(Boolean).join(", ");
+    rows.push({ code: y.code, title: y.title, a: { ch: x.creditHours, sem: x.semesterNumber, title: x.title, code: x.code }, b: { ch: y.creditHours, sem: y.semesterNumber, title: y.title, code: y.code }, change: ch || "Same" });
   }
-  B.courses.forEach((y, i) => { if (!usedB.has(i)) rows.push({ code: y.code, title: y.title, a: null, b: { ch: y.creditHours, sem: y.semesterNumber }, change: "Added" }); });
+  B.courses.forEach((y, i) => { if (!usedB.has(i)) rows.push({ code: y.code, title: y.title + (countsTowardDegree(y.category) ? "" : " (option list)"), a: null, b: { ch: y.creditHours, sem: y.semesterNumber, title: y.title, code: y.code }, change: "Added" }); });
   const order = { Added: 0, Removed: 1 } as Record<string, number>;
   rows.sort((p, q) => (order[p.change] ?? (p.change === "Same" ? 3 : 2)) - (order[q.change] ?? (q.change === "Same" ? 3 : 2)) || p.code.localeCompare(q.code));
   const sum = (xs: { creditHours: number; category: string }[]) => countedCredits(xs);
-  return { A, B, rows, totals: { a: sum(A.courses), b: sum(B.courses) } };
+  return { A, B, rows, sameLine, totals: { a: sum(A.courses), b: sum(B.courses) } };
 }

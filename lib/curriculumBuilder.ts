@@ -184,7 +184,7 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       const key = s("pack", 60);
       const types = (await bdb.curriculumType.findMany({ where: { curriculumId: c.id } })) as { name: string; kind: string }[];
       const d = await fillContent(c.id, key, types);
-      return `Filled ${d.courses} courses: ${d.semesters} semesters, ${d.plos} PLOs, ${d.clos} CLOs, ${d.lectures} lectures. Nothing already entered was changed.`;
+      return `Filled ${d.courses} courses: ${d.semesters} semesters, ${d.plos} PLOs, ${d.clos} CLOs, ${d.lectures} lectures${d.details ? `, ${d.details} outlines/codes` : ""}. Nothing already entered was changed.`;
     }
     case "place": { await course(); await prisma.masterCourse.update({ where: { id: s("courseId") }, data: { category: s("type", 60) } }); return "Moved."; }
     case "updateCourse": {

@@ -390,3 +390,25 @@ export function reqPresent(req: string, titles: string[]) {
   return titles.some((x) => { const a = normTitle(x); return keys.some((q) => a === q || (q.length > 6 && a.length > 6 && (a.includes(q) || q.includes(a)))); });
 }
 
+
+// NCEAC 2025: NCEAC accredits BS CS against HEC's Revised Curriculum of Computer Science 2025 — the document was
+// notified to the NCEAC Chairman (No. HEC/NCRC/CS&IT/2025/8163). Same structure and content, NCEAC as the council.
+// NCEAC's own "Curriculum 2025 Notification" (nceac.org.pk) could not be read here; confirm nothing differs.
+const HEC25 = TEMPLATES.find((t) => t.key === "HEC-BS-CS-2025")!;
+TEMPLATES.push({ ...HEC25, key: "NCEAC-BS-CS-2025", council: "NCEAC", note: "NCEAC accredits against HEC's Revised Curriculum of Computer Science 2025 (No. HEC/NCRC/CS&IT/2025/8163) — 130 CH, 14 tracks" });
+
+// University of the Punjab — BS Computer Science for affiliated colleges, v1.0.0 (01-12-2021), 131 CH.
+// From its Scheme of Studies (lib/puBscs2021.ts holds the outlines and the HEC 2025 / NCEAC 2023 equivalents).
+TEMPLATES.push({ key: "PU-BSCS-2021", program: "BS Computer Science", council: "PU", version: "2021", total: [131, 131], verified: true,
+    note: "University of the Punjab — BS CS for affiliated colleges (v1.0.0, Dec 2021), 131 CH, with codes, semesters and outlines",
+    tracks: [],
+    types: [
+      { name: "Computing Core", kind: "CORE", minCourses: 11, minCredits: 39, required: ["Discrete Structures 3", "Programming Fundamentals 4 (3+1)", "Object Oriented Programming 4 (3+1)", "Software Engineering 3", "Data Structures and Algorithms 4 (3+1)", "Operating Systems 4 (3+1)", "Database Systems 4 (3+1)", "Computer Networks 4 (3+1)", "Final Year Project - I 3 (0+3)", "Final Year Project - II 3 (0+3)", "Information Security 3"] },
+      { name: "Domain Core", kind: "CORE", minCourses: 7, minCredits: 24, required: ["Digital Logic Design 4 (3+1)", "Computer Organization and Assembly Language 4 (3+1)", "Theory of Automata 3", "Design and Analysis of Algorithms 3", "Compiler Construction 3", "Parallel and Distributed Computing 3", "Artificial Intelligence 4 (3+1)"] },
+      { name: "Math and Science Foundation", kind: "SUPPORTING", minCourses: 4, minCredits: 12, required: ["Probability and Statistics 3", "Applied Physics 3", "Linear Algebra 3", "Calculus and Analytical Geometry 3"] },
+      { name: "General Education", kind: "GE", minCourses: 7, minCredits: 19, required: ["Introduction to Information and Communication Technologies 3 (2+1)", "English Composition and Comprehension 3", "Islamic Studies 2", "Communication and Presentation Skills 3", "Pakistan Studies 2", "Professional Practices 3", "Technical and Business Writing 3"] },
+      { name: "CS Electives", kind: "ELECTIVE_SLOT", minCourses: 5, minCredits: 16, required: ["Web Technologies 4 (3+1)", "Enterprise Application Development 3", "Mobile Application Development 3", "Software Project Management 3", "Software Quality Assurance 3"] },
+      { name: "CS Supporting", kind: "SUPPORTING", minCourses: 3, minCredits: 9, required: ["Multivariate Calculus 3", "Numerical Computing 3", "Theory of Programming Languages 3"] },
+      { name: "University Electives", kind: "IDS", minCourses: 5, minCredits: 12, required: ["Introduction to Economics 3", "Introduction to Psychology 3", "Principles of Management 3", "Arabic Language 2", "Social Service 1"] },
+      { name: "Math Deficiency", kind: "NONCREDIT", minCourses: 2, required: ["Math Deficiency - I 3", "Math Deficiency - II 3"] },
+    ] });
