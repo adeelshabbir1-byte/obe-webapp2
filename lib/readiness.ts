@@ -6,6 +6,7 @@ import { fiscalYearNow, labRatio } from "./resources";
 import { computeHecComparison } from "./hecCompare";
 import { outcomeFiguresFor } from "./studentStatus";
 import { complexCoverage } from "./complexCoverage";
+import { countedCredits } from "./courseTypes";
 
 // How ready one program is for an outcome-based accreditation review, counted live from that Program Lead's records.
 export type State = "ok" | "partial" | "missing" | "na";
@@ -131,7 +132,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const perBatch = scopeBatches.map((b) => {
     const cs = courseMeta.filter((c) => c.batchId === b.id);
     return {
-      credits: cs.filter((c) => !c.isNonCredit).reduce((n, c) => n + c.creditHours, 0),
+      credits: countedCredits(cs.filter((c) => !c.isNonCredit)),
       semesters: new Set(cs.map((c) => c.semesterNumber).filter(Boolean)).size,
       capstone: cs.some((c) => c.courseType === "Capstone Project"),
       genEd: cs.some((c) => c.courseType === "General Education"),
@@ -205,7 +206,7 @@ export async function computeReadiness(user: { id: string; managedById: string |
   const classOk = sized.filter((x) => x.students / x.secs <= std.maxClassSize).length;
   const semLoads = scopeBatches.map((b) => {
     const cs = courseMeta.filter((c) => c.batchId === b.id && !c.isNonCredit);
-    return Array.from({ length: 8 }, (_, i) => cs.filter((c) => c.semesterNumber === i + 1).reduce((n, c) => n + c.creditHours, 0));
+    return Array.from({ length: 8 }, (_, i) => countedCredits(cs.filter((c) => c.semesterNumber === i + 1)));
   });
   const semInRange = semLoads.flat().filter((x) => x >= 15 && x <= 18).length;
   const capstoneOk = scopeBatches.filter((b) => courseMeta.filter((c) => c.batchId === b.id && c.courseType === "Capstone Project").reduce((n, c) => n + c.creditHours, 0) >= 6).length;

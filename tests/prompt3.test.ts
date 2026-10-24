@@ -80,3 +80,10 @@ test("curriculum codes: official and institute curricula", async () => {
   assert.equal(ownerCode("Punjab University"), "PU");
   assert.equal(propose({ id: "5", authority: "PEC", title: "BSc Electrical Engineering", version: "2022", chairmanId: null }).level, "BE");
 });
+
+test("credit hours count elective slots, not the elective list", async () => {
+  const { countedCredits, typeKey } = await import("../lib/courseTypes");
+  const cs = [{ creditHours: 3, category: "Core" }, { creditHours: 3, category: "Elective" }, { creditHours: 3, category: "Elective" }, { creditHours: 3, category: "Domain Elective" }, { creditHours: 3, category: "Domain Elective" }, { creditHours: 3, category: "Domain Elective" }, { creditHours: 2, category: "Major" }, { creditHours: 0, category: "Certification" }];
+  assert.equal(countedCredits(cs), 11);
+  assert.equal(typeKey("Major"), "Core"); assert.equal(typeKey("general education / other"), "General Education");
+});

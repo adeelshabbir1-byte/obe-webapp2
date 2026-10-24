@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { bodyOfProgram } from "./accreditation/bodies";
 import { canon, listsWith } from "./nceacLists";
+import { countedCredits } from "./courseTypes";
 
 // NCEAC's Accreditation Automation System (AAS): the sections and fields of its Data Requirement Document, named as NCEAC
 // names them. OBEHUB fills what it already knows; people fill the rest in OBEHUB's AAS workbook and upload it back.
@@ -101,7 +102,7 @@ export async function systemRows(section: string, ctx: Ctx): Promise<Row[]> {
       const first = await prisma.batch.findFirst({ where: { degreeProgram: p.degreeProgram, coordinator: { managedById: chairmanId } }, orderBy: [{ startYear: "asc" }], select: { startYear: true, startTerm: true } });
       const last = await prisma.batch.findFirst({ where: { degreeProgram: p.degreeProgram, coordinator: { managedById: chairmanId } }, orderBy: [{ startYear: "desc" }], select: { id: true } });
       const cs = last ? await prisma.course.findMany({ where: { batchId: last.id, isNonCredit: false, trackName: null }, select: { creditHours: true } }) : [];
-      out.push({ ref: p.degreeProgram, values: { name: p.degreeProgram, department: p.department?.name || "", dualEntry: "No", startDate: first ? ddmmyyyy(termStart(first.startTerm, first.startYear)) : "", credits: cs.length ? String(cs.reduce((t, c) => t + c.creditHours, 0)) : "" } });
+      out.push({ ref: p.degreeProgram, values: { name: p.degreeProgram, department: p.department?.name || "", dualEntry: "No", startDate: first ? ddmmyyyy(termStart(first.startTerm, first.startYear)) : "", credits: cs.length ? String(countedCredits(cs)) : "" } });
     }
     return out;
   }

@@ -10,6 +10,7 @@ import { MEETING_KINDS } from "../evidenceFiles";
 import { standardsFor, type BodyKey, type Standards } from "./bodies";
 import type { SourceKey, TaskDef } from "./catalogue";
 import { outcomeFiguresFor } from "../studentStatus";
+import { countedCredits } from "../courseTypes";
 
 // What the system already knows for an accreditation task — so the assignee only checks it and signs off.
 // Each source returns a table, the checks it can settle against the council's standards, and named gaps (shown in red
@@ -135,7 +136,7 @@ async function curriculum(l: SourceLoader): Promise<SourceResult> {
   const min = l.std.minCreditHours;
   const per = batches.map((b) => {
     const cs = courses.filter((c) => c.batchId === b.id && !c.isNonCredit);
-    return { b, credits: cs.reduce((n, c) => n + c.creditHours, 0), semesters: new Set(cs.map((c) => c.semesterNumber)).size, capstone: cs.filter((c) => c.courseType === "Capstone Project").reduce((n, c) => n + c.creditHours, 0) };
+    return { b, credits: countedCredits(cs), semesters: new Set(cs.map((c) => c.semesterNumber)).size, capstone: cs.filter((c) => c.courseType === "Capstone Project").reduce((n, c) => n + c.creditHours, 0) };
   });
   let coverage: number | null = null;
   try { const h = await computeHecComparison(l.ctx.leadId, "", ""); coverage = h.empty ? null : Math.round(h.coverage as number); } catch { coverage = null; }

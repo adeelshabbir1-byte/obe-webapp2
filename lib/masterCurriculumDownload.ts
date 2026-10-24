@@ -1,6 +1,7 @@
 import { Document, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, ShadingType, PageBreak } from "docx";
 import { prisma } from "./db";
 import type { SheetSpec } from "./excelExport";
+import { countedCredits } from "./courseTypes";
 
 // Full download of one master curriculum: PLOs, scheme of studies, course details, CLOs with PLOs, Course–PLO matrix
 // and the lecture-by-lecture topics. Excel (one sheet per part) or Word (a readable curriculum document).
@@ -81,7 +82,7 @@ export function curriculumDocument(c: Curriculum) {
   const body: (Paragraph | Table)[] = [];
   body.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: `${c.title}` })] }));
   body.push(p(`${c.authority} curriculum, version ${c.version}${c.sourceReference ? ` — ${c.sourceReference}` : ""}`, { italics: true }));
-  const totalCr = c.courses.filter((k) => k.semesterNumber).reduce((s, k) => s + k.creditHours, 0);
+  const totalCr = countedCredits(c.courses.filter((k) => k.semesterNumber));
   body.push(p(`${c.courses.length} courses · ${c.plos.length} GAs · ${totalCr} credit hours placed in semesters`));
 
   body.push(h("Graduate Attributes", HeadingLevel.HEADING_1));
@@ -91,7 +92,7 @@ export function curriculumDocument(c: Curriculum) {
   const sems = Array.from(new Set(c.courses.map((k) => k.semesterNumber))).sort((a, b) => (a ?? 99) - (b ?? 99));
   for (const s of sems) {
     const list = c.courses.filter((k) => k.semesterNumber === s);
-    body.push(h(`${semLabel(s)} (${list.reduce((n, k) => n + k.creditHours, 0)} credit hours)`, HeadingLevel.HEADING_3));
+    body.push(h(`${semLabel(s)} (${countedCredits(list)} credit hours)`, HeadingLevel.HEADING_3));
     body.push(table(["Code", "Course", "Cr", "Category", "Prerequisite", "GAs"], [1000, 3300, 500, 1600, 1500, CONTENT - 7900],
       list.map((k) => [k.code, k.title, String(k.creditHours), k.category + (k.domain ? ` (${k.domain})` : ""), k.prerequisiteCourse?.code || "", coursePlos(k).map((n) => `PLO-${n}`).join(", ")])));
   }

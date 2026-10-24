@@ -88,7 +88,7 @@ export async function policyRules(chairmanId: string): Promise<PolicyRules> {
 export type PolicyLine = { label: string; value: string; ok: boolean | null; note?: string };
 /** Check one program's scheme of studies (the latest batch's courses) against the policy. */
 export function checkScheme(courses: { code: string; title: string; creditHours: number; courseType: string; semesterNumber: number | null; isNonCredit: boolean; trackName: string | null }[], rules: PolicyRules, body: string) {
-  const cs = courses.filter((c) => !c.isNonCredit && !c.trackName);
+  const cs = courses.filter((c) => !c.isNonCredit && !c.trackName && !/^domain (elective|ids)$/i.test((c.courseType || "").trim()));
   const sum = (f: (c: (typeof cs)[number]) => boolean) => cs.filter(f).reduce((s, c) => s + (c.creditHours || 0), 0);
   const type = (t: string) => (c: (typeof cs)[number]) => (c.courseType || "").toLowerCase() === t.toLowerCase();
   const total = sum(() => true), gen = sum(type("General Education")), ids = sum(type("IDS")), major = sum((c) => ["core", "elective", "lab", "capstone project"].includes((c.courseType || "").toLowerCase()));

@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { countedCredits } from "./courseTypes";
 
 // Course home: the department whose subject a course belongs to (Course.subjectHomeDepartmentId; when not set, the
 // department that offers the program). "Courses in my degree" groups a batch's courses by home department; "Where my
@@ -16,7 +17,7 @@ export async function coursesInDegree(batchId: string) {
     const g = groups.get(k) || { home, set: !!c.subjectHomeDepartmentId, courses: [], ch: 0 };
     g.courses.push(c); g.ch += c.creditHours; groups.set(k, g);
   }
-  const total = cs.reduce((a, c) => a + c.creditHours, 0);
+  const total = countedCredits(cs);
   return { program: b.degreeProgram, batch: b.batchName, ownDepartment: own, total, unset: cs.filter((c) => !c.subjectHomeDepartmentId).length, groups: Array.from(groups.values()).sort((a, b2) => b2.ch - a.ch) };
 }
 

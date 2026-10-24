@@ -9,6 +9,7 @@ import { cdb, parseArr, KNOWLEDGE } from "./complexProblems";
 import { complexCoverage } from "./complexCoverage";
 import { docsWithVersions, trailText, KINDS as POLICY_KINDS } from "./policyHistory";
 import { evalSummary } from "./evaluations";
+import { countedCredits } from "./courseTypes";
 
 // One-click Self-Assessment Report for a visit, in the council's chapter order, filled from everything the system holds.
 // Narrative text the Program Lead writes per chapter is kept (SarNarrative) and merged in on every regeneration;
@@ -177,7 +178,7 @@ export async function buildSar(cycleId: string, issuerId?: string | null): Promi
   kids.push(h1(`4. ${chs[3].title}`)); kids.push(...gapsFor("curriculum"));
   const codes = Array.from(d.latestByCode.values());
   kids.push(h2("Scheme of studies"));
-  kids.push(p(`${codes.length} courses, ${codes.reduce((s, x) => s + x.creditHours, 0)} credit hours.`));
+  kids.push(p(`${codes.length} courses, ${countedCredits(codes)} credit hours.`));
   kids.push(table(["Code", "Title", "Cr. Hrs", "Type", "GAs"], codes.map((x) => [x.code, x.title, x.creditHours, x.courseType, Array.from(new Set(d.clos.filter((cl) => cl.courseId === x.id && cl.mappedPloId).map((cl) => d.ploNum.get(cl.mappedPloId!)))).sort((a, b) => (a || 0) - (b || 0)).map((n) => `PLO-${n}`).join(", ")])));
   if (d.body === "PEC" || d.body === "NCEAC") {
     const ks = KNOWLEDGE[d.body === "PEC" ? "PEC" : "NCEAC"];

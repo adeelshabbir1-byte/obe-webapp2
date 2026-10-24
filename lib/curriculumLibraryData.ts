@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { findOwningChairmanId } from "./institutionCurriculum";
+import { countedCredits, countsTowardDegree } from "./courseTypes";
 import { curriculaWhere, metaOf, propose, displayName, universityOf, ldb, type Meta } from "./curriculumLibrary";
 
 type U = { id: string; role: string };
@@ -19,8 +20,8 @@ export async function libraryItems(user: U) {
   const meta = await metaOf(cs.map((c) => c.id));
   const owners = await prisma.user.findMany({ where: { id: { in: cs.map((c) => c.chairmanId).filter((x): x is string => !!x).concat("none") } }, select: { id: true, name: true, instituteName: true } });
   const ownerName = new Map(owners.map((o) => [o.id, o.instituteName || o.name]));
-  const ch = await prisma.masterCourse.groupBy({ by: ["masterCurriculumId"], where: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } }, _sum: { creditHours: true } });
-  const chOf = new Map(ch.map((x) => [x.masterCurriculumId, x._sum.creditHours || 0]));
+  const mcs = await prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { masterCurriculumId: true, creditHours: true, category: true } });
+  const chOf = new Map<string, number>(); for (const x of mcs) if (countsTowardDegree(x.category)) chOf.set(x.masterCurriculumId, (chOf.get(x.masterCurriculumId) || 0) + x.creditHours);
   const used = await prisma.course.findMany({ where: { masterCourse: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } } }, select: { batchId: true, masterCourse: { select: { masterCurriculumId: true } } }, distinct: ["batchId"] });
   const batches = new Map<string, number>(); used.forEach((u) => batches.set(u.masterCourse!.masterCurriculumId, (batches.get(u.masterCourse!.masterCurriculumId) || 0) + 1));
   const uni = sc.chairmanId ? await universityOf(sc.chairmanId) : null;
@@ -80,7 +81,7 @@ export async function compareCurricula(a: string, b: string) {
   const usedB = new Set<number>();
   for (const x of A.courses) {
     const j = B.courses.findIndex((y, i) => !usedB.has(i) && (y.code === x.code || key(y) === key(x)));
-    if (j < 0) { rows.push({ code: x.code, title: x.title, a: { ch: x.creditHours, sem: x.semesterNumber }, b: null, change: "Removed" }); continue; }
+    if (j < 0) { rows.push({ code: x.code, title: x.title + (countsTowardDegree(x.category) ? "" : " (option list)"), a: { ch: x.creditHours, sem: x.semesterNumber }, b: null, change: "Removed" }); continue; }
     usedB.add(j); const y = B.courses[j];
     const ch = [x.creditHours !== y.creditHours ? `credit hours ${x.creditHours} → ${y.creditHours}` : "", x.semesterNumber !== y.semesterNumber ? `semester ${x.semesterNumber ?? "—"} → ${y.semesterNumber ?? "—"}` : "", x.code !== y.code ? `code ${x.code} → ${y.code}` : "", key(x) !== key(y) ? "title changed" : ""].filter(Boolean).join(", ");
     rows.push({ code: y.code, title: y.title, a: { ch: x.creditHours, sem: x.semesterNumber }, b: { ch: y.creditHours, sem: y.semesterNumber }, change: ch || "Same" });
@@ -88,6 +89,6 @@ export async function compareCurricula(a: string, b: string) {
   B.courses.forEach((y, i) => { if (!usedB.has(i)) rows.push({ code: y.code, title: y.title, a: null, b: { ch: y.creditHours, sem: y.semesterNumber }, change: "Added" }); });
   const order = { Added: 0, Removed: 1 } as Record<string, number>;
   rows.sort((p, q) => (order[p.change] ?? (p.change === "Same" ? 3 : 2)) - (order[q.change] ?? (q.change === "Same" ? 3 : 2)) || p.code.localeCompare(q.code));
-  const sum = (xs: { creditHours: number }[]) => xs.reduce((t, x) => t + x.creditHours, 0);
+  const sum = (xs: { creditHours: number; category: string }[]) => countedCredits(xs);
   return { A, B, rows, totals: { a: sum(A.courses), b: sum(B.courses) } };
 }

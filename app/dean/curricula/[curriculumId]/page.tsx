@@ -7,6 +7,7 @@ import { loadCurriculumForDownload } from "../../../../lib/masterCurriculumDownl
 import { navForRole } from "../../../../components/reportNav";
 import Shell from "../../../../components/Shell";
 import { DeanCurriculumDecisionPanel } from "../../../../components/DeanDecisions";
+import { countedCredits } from "../../../../lib/courseTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function DeanCurriculumReviewPage({ params }: { params: { c
   const semesters = new Map<number | null, typeof c.courses>();
   for (const k of c.courses) semesters.set(k.semesterNumber, [...(semesters.get(k.semesterNumber) || []), k]);
   const order = Array.from(semesters.keys()).sort((a, b) => (a ?? 99) - (b ?? 99));
-  const credits = c.courses.reduce((n, k) => n + k.creditHours, 0);
+  const credits = countedCredits(c.courses);
   const cloCount = c.courses.reduce((n, k) => n + k.seedClos.length, 0);
   const withPlan = c.courses.filter((k) => k.seedTopics.length > 0).length;
   const plosOf = (k: (typeof c.courses)[number]) => Array.from(new Set(k.seedClos.map((l) => l.mappedPlo?.number).filter((n): n is number => n != null))).sort((a, b) => a - b);
@@ -78,7 +79,7 @@ export default async function DeanCurriculumReviewPage({ params }: { params: { c
         const list = semesters.get(sem) || [];
         return (
           <div className="card" key={String(sem)}>
-            <h3 style={{ marginTop: 0 }}>{sem ? `Semester ${sem}` : "Electives / not placed in a semester"} <span className="small-note">({list.reduce((n, k) => n + k.creditHours, 0)} credit hours)</span></h3>
+            <h3 style={{ marginTop: 0 }}>{sem ? `Semester ${sem}` : "Electives / not placed in a semester"} <span className="small-note">({countedCredits(list)} credit hours)</span></h3>
             {list.map((k) => (
               <details key={k.id} style={{ borderTop: "1px solid var(--line)", padding: "8px 0" }}>
                 <summary style={{ cursor: "pointer", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}>

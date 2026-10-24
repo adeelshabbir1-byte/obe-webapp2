@@ -1,5 +1,6 @@
 import { Document, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, AlignmentType } from "docx";
 import { prisma } from "./db";
+import { countedCredits } from "./courseTypes";
 
 const PAGE_WIDTH_DXA = 12240;
 const MARGIN_DXA = 1440;
@@ -37,7 +38,7 @@ export async function generateProgramDocument(batchId: string, coordinatorId: st
   ]);
 
   const peos: string[] = profile?.peos ? JSON.parse(profile.peos) : [];
-  const totalCredits = courses.reduce((s, c) => s + c.creditHours, 0);
+  const totalCredits = countedCredits(courses);
   const byCategory = new Map<string, { credits: number; count: number }>();
   for (const c of courses) {
     const entry = byCategory.get(c.courseType) || { credits: 0, count: 0 };
@@ -131,7 +132,7 @@ export async function generateProgramDocument(batchId: string, coordinatorId: st
           cell(c.prerequisiteCourse?.code || "None", { width: planWidths[2] }), cell(c.courseType, { width: planWidths[3] }),
           cell(String(c.creditHours), { width: planWidths[4] }),
         ] })),
-        new TableRow({ children: [cell(`Credit Hours (Semester ${sem})`, { bold: true, width: planWidths[0] + planWidths[1] + planWidths[2] + planWidths[3], shade: "F4EFE1" }), cell(String(semCourses.reduce((s, c) => s + c.creditHours, 0)), { bold: true, width: planWidths[4], shade: "F4EFE1" })] }),
+        new TableRow({ children: [cell(`Credit Hours (Semester ${sem})`, { bold: true, width: planWidths[0] + planWidths[1] + planWidths[2] + planWidths[3], shade: "F4EFE1" }), cell(String(countedCredits(semCourses)), { bold: true, width: planWidths[4], shade: "F4EFE1" })] }),
       ],
     }));
   }

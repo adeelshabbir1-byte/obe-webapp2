@@ -34,6 +34,7 @@ export default async function CurriculumDetailPage({ params }: { params: { curri
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22 }}>{curriculum.authority} {curriculum.title} ({curriculum.version})</h1>
+          <p style={{ margin: "2px 0 8px" }}><Link href={`/curricula/${curriculum.id}/types`} className="btn btn-sm">Sort courses by type (GE, IDS, Core, Elective slots / lists)</Link> <Link href={`/curricula/${curriculum.id}`} className="btn btn-secondary btn-sm">Library view</Link></p>
           <div style={{ color: "var(--slate)", fontSize: 12.5, marginTop: 3 }}>
             {curriculum.sourceReference || "No source reference"}
           </div>

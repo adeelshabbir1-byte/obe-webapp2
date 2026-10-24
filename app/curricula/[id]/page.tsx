@@ -7,6 +7,8 @@ import Shell from "../../../components/Shell";
 import { ActionForm } from "../../../components/fyp/FypClient";
 import { curriculumDetail, canEditMeta, LIB_ROLES, libraryScope } from "../../../lib/curriculumLibraryData";
 import { canUseCurriculum, propose, LEVELS, DISCIPLINES, TERMS } from "../../../lib/curriculumLibrary";
+import { typeOf } from "../../../lib/courseTypes";
+import { countedCredits } from "../../../lib/courseTypes";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Curriculum" };
@@ -26,8 +28,10 @@ export default async function CurriculumPage({ params, searchParams }: { params:
   const tab = TABS.some(([k]) => k === searchParams.tab) ? searchParams.tab! : "overview";
   const p = propose(d.c, d.owner);
   const m = d.meta;
-  const sems = Array.from(new Set(d.c.courses.map((c) => c.semesterNumber ?? 0))).sort((a, b) => a - b);
-  const total = d.c.courses.reduce((t, c) => t + c.creditHours, 0);
+  const slotCourses = d.c.courses.filter((c) => !typeOf(c.category).listFor);
+  const lists = d.c.courses.filter((c) => typeOf(c.category).listFor);
+  const sems = Array.from(new Set(slotCourses.map((c) => c.semesterNumber ?? 0))).sort((a, b) => a - b);
+  const total = countedCredits(d.c.courses);
   const editLink = user.role === "SUPER_USER" ? `/admin/curricula/${d.c.id}` : user.role === "DEAN" ? `/dean/curricula/${d.c.id}` : user.role === "OMC" ? "/omc/master-curriculum" : null;
   return (
     <Shell roleLabel={user.role === "SUPER_USER" ? "Super User" : roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -35,10 +39,11 @@ export default async function CurriculumPage({ params, searchParams }: { params:
       <h1 style={{ fontSize: 22, margin: "4px 0" }}>{d.c.title} <span style={{ fontWeight: 400 }}>— {d.owner} {d.c.version}</span></h1>
       <div className="small-note" style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontWeight: 700, color: "var(--fg, #0D2A4A)" }}>{m?.code || `${p.code} (proposed)`}</span>
-        <span>{d.c.courses.length} courses · {total} credit hours · {d.c.plos.length} GAs</span>
+        <span>{slotCourses.length} courses · {total} credit hours{lists.length ? ` · ${lists.length} in elective / IDS lists (not counted)` : ""} · {d.c.plos.length} GAs</span>
         <span>{d.c.status.toLowerCase()}</span>
         {m?.effectiveYear && <span>effective from {m.effectiveTerm} {m.effectiveYear}</span>}
         {d.c.chairmanId && d.colleges.length > 0 && <span>followed by {d.colleges.length} affiliated college(s)</span>}
+        {edit && <Link href={`/curricula/${d.c.id}/types`}><b>Course types</b> (GE, IDS, Core, Elective slots and lists)</Link>}
         {editLink && <Link href={editLink}>Edit courses, CLOs and topics</Link>}
         <a href={`/api/master-curriculum/${d.c.id}/download`}>Download</a>
       </div>
@@ -73,11 +78,13 @@ export default async function CurriculumPage({ params, searchParams }: { params:
 
       {tab === "semesters" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
-          {sems.map((s) => { const cs = d.c.courses.filter((c) => (c.semesterNumber ?? 0) === s); return (
+          {sems.map((s) => { const cs = slotCourses.filter((c) => (c.semesterNumber ?? 0) === s); return (
             <div key={s} className="card" style={{ margin: 0 }}>
-              <b>{s ? `Semester ${s}` : "Not placed"}</b> <span className="small-note">{cs.reduce((t, c) => t + c.creditHours, 0)} CH</span>
+              <b>{s ? `Semester ${s}` : "Not placed"}</b> <span className="small-note">{countedCredits(cs)} CH</span>
               <table style={{ fontSize: 12, width: "100%", marginTop: 4 }}><tbody>{cs.map((c) => <tr key={c.id}><td style={{ width: 70 }}>{c.code}</td><td>{c.title}<div className="small-note">{c.category}{c._count.seedClos ? ` · ${c._count.seedClos} CLOs` : ""}</div></td><td style={{ textAlign: "right" }}>{c.creditHours}</td></tr>)}</tbody></table>
             </div>); })}
+          {lists.length > 0 && <div className="card" style={{ margin: 0 }}><b>Lists of options</b> <span className="small-note">not counted in credit hours</span>
+            <table style={{ fontSize: 12, width: "100%", marginTop: 4 }}><tbody>{lists.map((c) => <tr key={c.id}><td style={{ width: 70 }}>{c.code}</td><td>{c.title}<div className="small-note">{typeOf(c.category).short}</div></td><td style={{ textAlign: "right" }}>{c.creditHours}</td></tr>)}</tbody></table></div>}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import QualityShell from "../../components/QualityShell";
 import PrintButton from "../../components/PrintButton";
 import { programsFor } from "../../lib/quality";
 import { qaInstitute, records, qadb } from "../../lib/qaOffice";
+import { countedCredits, countsTowardDegree } from "../../lib/courseTypes";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Program specification" };
@@ -38,9 +39,11 @@ export default async function ProgramSpec({ searchParams }: { searchParams: { p?
   for (const i of inst2) byType.set(i.type, (byType.get(i.type) || []).concat(i.marksPct));
   const nCourses = new Set(inst2.map((i) => i.courseId)).size || 1;
   let peos: string[] = []; try { peos = profile?.peos ? JSON.parse(profile.peos) : []; } catch { peos = []; }
-  const total = courses.reduce((a, c) => a + c.creditHours, 0);
-  const sems = Array.from(new Set(courses.map((c) => c.semesterNumber ?? 0))).sort((a, b) => a - b);
-  const typeCH = new Map<string, number>(); courses.forEach((c) => typeCH.set(c.courseType, (typeCH.get(c.courseType) || 0) + c.creditHours));
+  const total = countedCredits(courses);
+  const options = courses.filter((c) => !countsTowardDegree(c.courseType) && /domain/i.test(c.courseType));
+  const scheme = courses.filter((c) => !options.includes(c));
+  const sems = Array.from(new Set(scheme.map((c) => c.semesterNumber ?? 0))).sort((a, b) => a - b);
+  const typeCH = new Map<string, number>(); scheme.filter((c) => countsTowardDegree(c.courseType)).forEach((c) => typeCH.set(c.courseType, (typeCH.get(c.courseType) || 0) + c.creditHours));
   const lvl = LEVEL[profile?.programLevel || "UG16"] || LEVEL.UG16;
   const d = (x?: Date | null) => (x ? new Date(x).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—");
   const H = ({ n, t }: { n: number; t: string }) => <h3 style={{ fontSize: 15, borderBottom: "1px solid #ccc", paddingBottom: 3 }}>{n}. {t}</h3>;
@@ -77,8 +80,9 @@ export default async function ProgramSpec({ searchParams }: { searchParams: { p?
         <p>{Array.from(typeCH.entries()).map(([t, ch]) => `${t} ${ch} CH`).join(" · ")}</p>
         {sems.map((s) => (
           <div key={s} style={{ breakInside: "avoid" }}><b>{s ? `Semester ${s}` : "Not placed in a semester"}</b>
-            <table style={{ fontSize: 12.5, width: "100%" }}><tbody>{courses.filter((c) => (c.semesterNumber ?? 0) === s).map((c) => <tr key={c.id}><td style={{ width: 90 }}>{c.code}</td><td>{c.title}</td><td style={{ width: 90 }}>{c.courseType}</td><td style={{ width: 40, textAlign: "right" }}>{c.creditHours}</td></tr>)}</tbody></table></div>
+            <table style={{ fontSize: 12.5, width: "100%" }}><tbody>{scheme.filter((c) => (c.semesterNumber ?? 0) === s).map((c) => <tr key={c.id}><td style={{ width: 90 }}>{c.code}</td><td>{c.title}</td><td style={{ width: 90 }}>{c.courseType}</td><td style={{ width: 40, textAlign: "right" }}>{c.creditHours}</td></tr>)}</tbody></table></div>
         ))}
+        {options.length > 0 && <p><b>Elective / interdisciplinary options</b> (students choose these for the elective slots; not counted again): {options.map((c) => `${c.code} ${c.title}`).join("; ")}.</p>}
         <H n={6} t="Teaching, learning and assessment" />
         <p>Each course has CLOs mapped to the graduate attributes, a lecture plan and an assessment plan approved by the Outcome Management Committee; attainment is measured per CLO and GA every semester and reviewed for continuous improvement.</p>
         {byType.size > 0 && <p>Typical weight of assessments (average over {nCourses} courses): {Array.from(byType.entries()).map(([t, xs]) => `${t} ${Math.round(xs.reduce((a, b) => a + b, 0) / nCourses)}%`).join(", ")}.</p>}

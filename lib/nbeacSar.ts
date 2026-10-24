@@ -10,6 +10,7 @@ import { MEETING_KINDS } from "./evidenceFiles";
 import { loadProfile, type SarScope } from "./sarAccess";
 import { APPENDICES, kindDef, type AreaKey } from "./sarRegistry";
 import { titlesFor } from "./titles";
+import { countedCredits } from "./courseTypes";
 
 // The NBEAC Self-Assessment Report (SAR v4.0) for one business school (a department), built from everything the system
 // holds: the accreditation registers and profiles, and the programs, courses, students, faculty, results, FYPs,
@@ -186,7 +187,7 @@ export async function buildNbeacSar(user: { id: string; role: string }, scope: S
       if (!cs.length) return null;
       const byType = new Map<string, number>();
       for (const c of cs) byType.set(c.courseType || "Other", (byType.get(c.courseType || "Other") || 0) + c.creditHours);
-      return [p, Math.max(0, ...cs.map((c) => c.semesterNumber || 0)), cs.length, cs.reduce((a, c) => a + c.creditHours, 0), Array.from(byType.entries()).map(([k, v]) => `${k} ${v}`).join("; "), iso(profileOf(p)?.academicCouncilDate), iso(profileOf(p)?.hecNocDate)];
+      return [p, Math.max(0, ...cs.map((c) => c.semesterNumber || 0)), cs.length, countedCredits(cs), Array.from(byType.entries()).map(([k, v]) => `${k} ${v}`).join("; "), iso(profileOf(p)?.academicCouncilDate), iso(profileOf(p)?.hecNocDate)];
     }).filter(nonNull), "/coordinator/program-profile"));
   const codeOfId = new Map(courses.map((c) => [c.id, c.code]));
   f2.push(table("Table 2.2", "Courses of each program", ["Program", "Category", "Course title and code", "Credit hours", "Prerequisite"],
