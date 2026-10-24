@@ -8,6 +8,7 @@ export const ADMIN_NAV = [
   { href: "/admin/curricula", label: "Master Curricula (upload, assign)" },
   { href: "/admin/affiliations", label: "Affiliated Colleges" },
   { href: "/admin/consortium", label: "Consortium" },
+  { href: "/regulations", label: "Regulations Library" },
   { href: "/admin/master-experts", label: "Master Curriculum Experts" },
   { href: "/admin/curriculum-migration", label: "Version Migration" },
   { href: "/admin/platform-settings", label: "Platform Settings" },

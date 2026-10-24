@@ -7842,3 +7842,71 @@ model ConsortiumGraduation {
 
   @@unique([studentId, agreementId])
 }
+
+// ============================================================ Regulations Library (lib/regulations.ts)
+// An official document (HEC / NCEAC / NBEAC / PEC … policy, notification, curriculum, manual) or a consortium MoU.
+// SUBMITTED by the Super Admin, an Institute Head or a Dean → PUBLISHED by the Super Admin or a Curriculum Builder
+// (or REJECTED); a newer one SUPERSEDES an older one. Signed-in users see published documents.
+model RegDocument {
+  id            String    @id
+  council       String    // HEC | NCEAC | NBEAC | PEC | NAHE | CONSORTIUM | OTHER
+  kind          String    // POLICY | NOTIFICATION | CURRICULUM | MANUAL | GUIDELINES | LETTER | MOU
+  title         String
+  number        String?   // notification / letter number
+  issuedOn      DateTime?
+  effectiveFrom DateTime?
+  status        String    @default("SUBMITTED") // SUBMITTED | PUBLISHED | REJECTED | SUPERSEDED | WITHDRAWN
+  supersedesId  String?
+  url           String?   // the official web address
+  summary       String?
+  textContent   String?   // text taken from the PDF, for search
+  agreementId   String?   // an MoU: the consortium agreement it belongs to
+  confirmJson   String    @default("{}") // an MoU: each university's confirmation
+  submittedById String
+  instituteId   String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNote    String?
+  createdAt     DateTime  @default(now())
+
+  @@index([status])
+  @@index([council])
+  @@index([agreementId])
+}
+// A file of a document (the PDF, or a screenshot of the notification) in Supabase Storage bucket "regulations".
+model RegFile {
+  id          String   @id
+  docId       String
+  path        String
+  name        String
+  mime        String
+  size        Int      @default(0)
+  caption     String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([docId])
+}
+// A clause OBEHUB relies on: the quoted text, page, and optionally a screenshot of that part of the page.
+model RegClause {
+  id          String   @id
+  docId       String
+  ref         String   // e.g. "§ 4.2" or "Scheme of studies"
+  page        Int?
+  quote       String
+  imageFileId String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([docId])
+}
+// Where the portal applies a clause: "rule:odlMinF2FPct", "template:HEC-BS-CS-2025", "page:policy-check" …
+model RegLink {
+  clauseId    String
+  target      String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@id([clauseId, target])
+  @@index([target])
+}

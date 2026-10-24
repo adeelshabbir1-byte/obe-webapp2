@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../components/regulations/Sources";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import QualityShell from "../../components/QualityShell";
@@ -33,6 +34,7 @@ export default async function PolicyCheckPage() {
   }));
   return (
     <QualityShell user={user} title="HEC Policy Check" intro="Each program's scheme of studies (the courses of its newest batch) checked against the HEC Undergraduate Education Policy: total credits, General Education, interdisciplinary and major credits, capstone, internship and semester load. Engineering programs bound to PEC are checked against PEC's limits instead. The limits below are the policy as we know it; the Institute Head can change them to match the current policy. Course types come from each course's Type (General Education, IDS, Core, Elective, Capstone Project, Field Experience).">
+      <div style={{ margin: "0 0 8px" }}><Sources targets={["page:policy-check", "rule:minCreditsMajor", "rule:minGeCredits", "rule:maxSemesterLoad", "rule:internshipRequired"]} /></div>
       <HowCalculated shows="Each program's newest scheme of studies against the HEC Undergraduate Education Policy 2023.">
         <ul style={{ margin: "0 0 4px 18px", padding: 0 }}>
           <li>Credit totals add up the credit hours of each course type (General Education, IDS, Core / Elective / Lab / Capstone, Field Experience); non-credit and track courses are left out.</li>

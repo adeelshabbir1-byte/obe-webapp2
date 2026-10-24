@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
 import { navForRole } from "../../components/reportNav";
@@ -23,6 +24,7 @@ export default async function GaCoveragePage({ searchParams }: { searchParams: {
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA Coverage</h1>
+      <Sources targets={["page:ga"]} />
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Which courses teach each graduate attribute, split into theory, lab, project and general-education courses (from the course–GA map and the CLO→GA mapping). Computing and engineering programs must show Modern Tool Usage in their labs.</p>
       <form className="card" style={{ display: "flex", gap: 8 }}>
         <select name="batch" defaultValue={sel?.id}>{batches.map((b) => <option key={b.id} value={b.id}>{b.degreeProgram} — {b.batchName}</option>)}</select>

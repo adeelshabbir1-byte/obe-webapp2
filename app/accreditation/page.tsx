@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -31,6 +32,7 @@ export default async function AccreditationHub() {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
           <h1 style={{ fontSize: 22, marginBottom: 4 }}>Accreditation data</h1>
+          <Sources targets={["page:accreditation"]} />
           <p style={{ color: "var(--slate)", fontSize: 13, margin: 0, maxWidth: 900 }}>
             The NBEAC Self-Assessment Report (SAR 4.0) asks for some information the rest of the system doesn&apos;t keep — governance, policies, admissions
             figures, counselling, research, linkages, finance details and confidential cases. Keep it here; the SAR builder fills every table from it and from

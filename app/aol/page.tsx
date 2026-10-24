@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../components/regulations/Sources";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import QualityShell from "../../components/QualityShell";
@@ -33,6 +34,7 @@ export default async function AolPage({ searchParams }: { searchParams: { p?: st
   const objFields = [{ name: "code", label: "Code", placeholder: "LO1.1", width: 80 }, { name: "text", label: "Objective (what students will be able to do)", type: "textarea" as const, full: true }, { name: "ploNumber", label: "GA no.", type: "number" as const, width: 70 }, { name: "courseCode", label: "Measured in course", placeholder: "MGT401", width: 110 }, { name: "method", label: "Method / rubric", placeholder: "Case analysis, rubric R2", width: 200 }, { name: "target", label: "Target %", type: "number" as const, width: 70 }, { name: "measureYear", label: "Year measured", type: "number" as const, width: 80 }];
   return (
     <QualityShell user={user} title="Assurance of Learning" intro={intro}>
+      <div style={{ margin: "0 0 8px" }}><Sources targets={["page:aol"]} /></div>
       <form className="card" style={{ display: "flex", gap: 8 }}><select name="p" defaultValue={sel.key}>{programs.map((p) => <option key={p.key} value={p.key}>{p.degreeProgram} — {p.lead}</option>)}</select><button className="btn btn-secondary btn-sm">Show</button></form>
       {edit && <div className="card"><ActionForm url="/api/quality" fixed={{ action: "aolGoal", program: sel.key }} submit="Add learning goal" collapsed openLabel="Add a learning goal" fields={[{ name: "code", label: "Code", placeholder: `LG${goals.length + 1}`, width: 80 }, { name: "text", label: "Learning goal", type: "textarea", full: true, placeholder: "Our graduates will be effective communicators." }]} /></div>}
       {goals.length === 0 && <div className="card">No learning goals yet.</div>}

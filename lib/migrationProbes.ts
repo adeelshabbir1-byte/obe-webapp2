@@ -877,6 +877,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "DegreePlanLock"
 },
 {
+"f": "migration_regulations.sql",
+"d": "Regulations Library: official documents of HEC, NCEAC, NBEAC, PEC \u2026 (and consortium MoUs), the clauses OBEHUB",
+"t": "RegLink"
+},
+{
 "f": "migration_remediation_flags.sql",
 "d": "Remediation flags: the advisor, the course's teacher, the next course's teacher or the OMC flag students who need",
 "t": "RemediationFlag"

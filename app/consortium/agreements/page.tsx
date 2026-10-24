@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { navForRole } from "../../../components/reportNav";
@@ -42,7 +43,7 @@ export default async function Agreements() {
   return shell(<>
     <p className="small-note" style={{ margin: 0 }}><Link href="/consortium">← Consortium</Link></p>
     <h1 style={{ fontSize: 22, margin: "4px 0" }}>Agreements and course equivalence</h1>
-    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>An agreement is on one curriculum edition — a 2025 curriculum is never paired with a 2023 one. Once the partner accepts, OBEHUB pairs the courses and compares their CLOs, contact hours and lab split. At each university a Subject Expert and the Chairman approve every pair. <b>Joint degree</b>: both universities approve, and the approved matrix is what you submit to HEC for the programme NOC (agreement of at least {String(rules.mouMinYears)} years). <b>Credit recognition</b>: your university decides which of the partner&apos;s courses count for your students.</p>
+    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>An agreement is on one curriculum edition — a 2025 curriculum is never paired with a 2023 one. Once the partner accepts, OBEHUB pairs the courses and compares their CLOs, contact hours and lab split. At each university a Subject Expert and the Chairman approve every pair. <b>Joint degree</b>: both universities approve, and the approved matrix is what you submit to HEC for the programme NOC (agreement of at least {String(rules.mouMinYears)} years). <b>Credit recognition</b>: your university decides which of the partner&apos;s courses count for your students. <Sources targets={["page:joint", "rule:mouMinYears", "rule:matrixRequired", "rule:jointNocRequired"]} /></p>
 
     {head && invites.map((a) => (
       <div key={a.id} className="card" style={{ borderLeft: "4px solid #B26A00" }}>

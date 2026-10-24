@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { navForRole } from "../../../components/reportNav";
@@ -44,7 +45,7 @@ export default async function Exams({ searchParams }: { searchParams: { tab?: st
   return shell(<>
     <p className="small-note" style={{ margin: 0 }}><Link href="/consortium">← Consortium</Link></p>
     <h1 style={{ fontSize: 22, margin: "4px 0" }}>Consortium exams</h1>
-    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Final exams of consortium courses are proctored at a centre both the host and the student&apos;s own university approve. The centre&apos;s university invigilates and records each sitting: identification (biometric or ID card), the invigilator, and the CCTV recording reference (kept {String(rules.recordingYears)} years).</p>
+    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Final exams of consortium courses are proctored at a centre both the host and the student&apos;s own university approve. The centre&apos;s university invigilates and records each sitting: identification (biometric or ID card), the invigilator, and the CCTV recording reference (kept {String(rules.recordingYears)} years). <Sources targets={["page:exams", "rule:examProctored", "rule:recordingYears", "rule:centreBothApprove"]} /></p>
     <div style={{ display: "flex", gap: 6, margin: "6px 0 10px" }}>{tabBtn("centre", `At our centres (${atMine.length})`)}{tabBtn("host", `Our visiting students (${hostApps.length})`)}</div>
     {tab === "centre" && <div className="card">{!atMine.length ? <p className="small-note">No one is booked at your centres.</p> :
       <table style={{ fontSize: 13 }}><thead><tr><th>Date · seat</th><th>Student</th><th>Course (host)</th><th>Status</th><th></th></tr></thead><tbody>{atMine.map((b) => { const a = A(b.applicationId), o = O(a), c = C(o), s = S(a); return (

@@ -6,6 +6,8 @@ const nextConfig = {
     // Loaded from node_modules at runtime instead of being bundled — the PDF
     // libraries read their own files/workers and break when webpack inlines them.
     serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"],
+    // The Regulations Library's starter documents are read from disk by the API route that loads them.
+    outputFileTracingIncludes: { "/api/regulations": ["./regulations-seed/**/*"] },
     // Import only the icons actually used instead of the whole barrel.
     optimizePackageImports: ["lucide-react"],
     // Keep visited pages in the browser for 30 s, so going back or switching between recent pages is instant.

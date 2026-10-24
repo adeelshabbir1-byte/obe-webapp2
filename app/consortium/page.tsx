@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
 import { navForRole } from "../../components/reportNav";
@@ -80,7 +81,7 @@ export default async function ConsortiumPage() {
 
     <div className="card">
       <h3 style={{ marginTop: 0 }}>HEC NOCs and recognitions</h3>
-      <p className="small-note" style={{ marginTop: 0 }}>ODL courses need a valid institutional ODL NOC (HEC recognises ODL for up to {String(rules.odlNocMaxYears)} years). A joint degree needs HEC&apos;s NOC for that programme before launch. Listings stop automatically when a NOC expires.</p>
+      <p className="small-note" style={{ marginTop: 0 }}>ODL courses need a valid institutional ODL NOC (HEC recognises ODL for up to {String(rules.odlNocMaxYears)} years). A joint degree needs HEC&apos;s NOC for that programme before launch. Listings stop automatically when a NOC expires. <Sources targets={["rule:odlNocRequired", "rule:odlNocMaxYears", "rule:jointNocRequired"]} /></p>
       {nocs.length > 0 && <table style={{ fontSize: 13 }}><thead><tr><th>For</th><th>Number</th><th>Programme</th><th>Status</th><th></th></tr></thead><tbody>{nocs.map((n) => { const s = nocState(n); return (
         <tr key={n.id}><td>{NOC_KINDS.find(([k]) => k === n.kind)?.[1] || n.kind}</td><td><b>{n.number}</b>{n.issuedOn ? <div className="small-note">issued {n.issuedOn.toISOString().slice(0, 10)}</div> : null}</td><td>{n.programme || "—"}</td><td style={{ color: STATE_COL[s.state], fontWeight: 700 }}>{s.label}</td>
           <td><ActionButton showMessage url="/api/consortium" body={{ action: "nocDelete", id: n.id }} label="Remove" className="btn btn-secondary btn-sm" confirmText="Remove this NOC?" /></td></tr>); })}</tbody></table>}
@@ -90,7 +91,7 @@ export default async function ConsortiumPage() {
 
     <div className="card">
       <h3 style={{ marginTop: 0 }}>Exam centres</h3>
-      <p className="small-note" style={{ marginTop: 0 }}>Where consortium students may sit final exams: your campuses or centres you run. {rules.centreBothApprove ? "A student can use a centre only when both their own university and the course's university approve it (next phases)." : ""} HEC&apos;s ODL policy asks for invigilation by university faculty, CCTV kept {String(rules.recordingYears)} years, and biometric / ID attendance.</p>
+      <p className="small-note" style={{ marginTop: 0 }}>Where consortium students may sit final exams: your campuses or centres you run. {rules.centreBothApprove ? "A student can use a centre only when both their own university and the course's university approve it (next phases)." : ""} HEC&apos;s ODL policy asks for invigilation by university faculty, CCTV kept {String(rules.recordingYears)} years, and biometric / ID attendance. <Sources targets={["page:exams", "rule:examProctored", "rule:recordingYears"]} /></p>
       {centres.length > 0 && <table style={{ fontSize: 13 }}><thead><tr><th>Centre</th><th>Seats</th><th>Meets the exam rules?</th><th></th></tr></thead><tbody>{centres.map((c) => { const g = centreGaps(c, rules); return (
         <tr key={c.id} style={{ opacity: c.status === "CLOSED" ? 0.5 : 1 }}><td><b>{c.name}</b><div className="small-note">{[c.city, c.address, campuses.find((x) => x.id === c.campusId)?.name].filter(Boolean).join(" · ")}</div></td><td>{c.seats}</td>
           <td style={{ color: g.length ? "#B26A00" : "#2E7D32" }}>{g.length ? g.join("; ") : "Yes — CCTV and biometric attendance"}</td>
@@ -110,7 +111,7 @@ export default async function ConsortiumPage() {
 
     <div className="card">
       <h3 style={{ marginTop: 0 }}>Your university&apos;s own rules</h3>
-      <p className="small-note" style={{ marginTop: 0 }}>For degrees your university awards. The consortium minimum is {String(rules.minHomeResidencyPct)}% of credits{rules.capstoneAtHome ? " and the capstone at home" : ""}; yours can be stricter.</p>
+      <p className="small-note" style={{ marginTop: 0 }}>For degrees your university awards. The consortium minimum is {String(rules.minHomeResidencyPct)}% of credits{rules.capstoneAtHome ? " and the capstone at home" : ""}; yours can be stricter. <Sources targets={["rule:minHomeResidencyPct", "rule:capstoneAtHome"]} /></p>
       <ActionForm showMessage url="/api/consortium" fixed={{ action: "residency" }} submit="Save residency rules"
         initial={{ minHomeResidencyPct: res.minHomeResidencyPct ?? rules.minHomeResidencyPct, capstoneAtHome: res.capstoneAtHome || rules.capstoneAtHome === true, majorsAtHome: res.majorsAtHome, visitingNoc: res.visitingNoc }}
         fields={[{ name: "minHomeResidencyPct", label: "Credits at our university, at least (%)", type: "number", width: 120 }, { name: "capstoneAtHome", label: "Capstone / FYP at our university", type: "checkbox" }, { name: "majorsAtHome", label: "All major core courses at our university", type: "checkbox" }, { name: "visitingNoc", label: "Our faculty need our NOC to teach at another university", type: "checkbox" }]} />

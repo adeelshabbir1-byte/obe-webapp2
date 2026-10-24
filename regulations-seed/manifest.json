@@ -1,0 +1,48 @@
+[
+  {
+    "council": "HEC", "kind": "CURRICULUM", "title": "Revised Curriculum for Degree Programs in Computer Science (BS CS, Associate Degree Computing) 2025",
+    "number": "HEC/NCRC/CS&IT/2025/8163", "issuedOn": "2025-10-14",
+    "url": "https://www.hec.gov.pk/english/services/universities/RevisedCurricula/Documents/2025-2026/COMPUTER-SCIENCE.pdf",
+    "summary": "HEC notifies the revised Computer Science curriculum (NQF levels 5 and 6), aligned with the HEC Undergraduate Education Policy V1.1 (2023). All universities offering these programs must align their curriculum with it as the minimum benchmark; departments develop course contents within the framework. Copied to the Chairman NCEAC.",
+    "files": [
+      { "file": "HEC-Revised-Curriculum-Computer-Science-2025.pdf", "mime": "application/pdf", "caption": "Full curriculum booklet (86 pages)" },
+      { "file": "hec-cs-2025-p01-notification.png", "mime": "image/png", "caption": "Notification letter, page 1" },
+      { "file": "hec-cs-2025-p12-plos.png", "mime": "image/png", "caption": "Program Learning Outcomes, page 12" },
+      { "file": "hec-cs-2025-p14-course-load.png", "mime": "image/png", "caption": "Program structure and course load, page 14" },
+      { "file": "hec-cs-2025-p17-scheme.png", "mime": "image/png", "caption": "Scheme of studies, page 17" },
+      { "file": "hec-cs-2025-p20-internship.png", "mime": "image/png", "caption": "Semester VIII and internship note, page 20" }
+    ],
+    "clauses": [
+      { "ref": "Notification, para 2", "page": 1, "image": "hec-cs-2025-p01-notification.png", "quote": "The revised curriculum for disciplines under the domain of Computer Science is hereby notified. All universities offering these programs are required to align their Computer Science curriculum with these updated standards/framework as the minimum benchmark for quality and compliance.", "targets": ["template:HEC-BS-CS-2025", "template:NCEAC-BS-CS-2025"] },
+      { "ref": "Program Learning Outcomes / Graduate Attributes", "page": 12, "image": "hec-cs-2025-p12-plos.png", "quote": "Computing programs prepare students to attain educational objectives by ensuring that students demonstrate achievement of the following outcomes (derived from Graduate Attributes defined by Seoul Accord): 1 Academic Education … 10 Life-long Learning.", "targets": ["page:ga", "template:HEC-BS-CS-2025", "template:NCEAC-BS-CS-2025"] },
+      { "ref": "Program structure — course load", "page": 14, "image": "hec-cs-2025-p14-course-load.png", "quote": "Course Load (per semester): 15-21 credit hours for regular semesters. 1 Credit Hour (Practical Work) requires three contact hours per week throughout the semester.", "targets": ["rule:maxSemesterLoad", "rule:labsFaceToFace"] },
+      { "ref": "Scheme of Studies (Semester I–VIII)", "page": 17, "image": "hec-cs-2025-p17-scheme.png", "quote": "The suggestive scheme of studies for BS Computer Science program is given below (Semester I – VIII, 130 credit hours).", "targets": ["template:HEC-BS-CS-2025", "template:NCEAC-BS-CS-2025"] },
+      { "ref": "Note on internships", "page": 20, "image": "hec-cs-2025-p20-internship.png", "quote": "Internships of three (03) credit hours must be completed in accordance with HEC Undergraduate Education Policy V 1.1. This requirement cannot be substituted with additional coursework, capstone, research, or project work.", "targets": ["rule:internshipRequired"] }
+    ]
+  },
+  {
+    "council": "NCEAC", "kind": "MANUAL", "title": "Accreditation Manual of the National Computing Education Accreditation Council (Second Edition)",
+    "number": "Second Edition, December 2023", "issuedOn": "2023-12-01", "url": "https://www.nceac.org.pk",
+    "summary": "NCEAC's accreditation manual: the accreditation process, the Self-Assessment Report, and the nine standards (criteria) based on Seoul Accord Document D.5 — program objectives, graduate attributes, curriculum and learning process, students, faculty, facilities, institutional support, continuous improvement and industrial linkages.",
+    "files": [
+      { "file": "NCEAC-Accreditation-Manual-2023.pdf", "mime": "application/pdf", "caption": "Full manual (49 pages)" },
+      { "file": "nceac-manual-2023-p01-cover.png", "mime": "image/png", "caption": "Cover" },
+      { "file": "nceac-manual-2023-p21-criteria.png", "mime": "image/png", "caption": "Standards and criteria, page 21" },
+      { "file": "nceac-manual-2023-p22-ga.png", "mime": "image/png", "caption": "Criterion 2 — Graduate Attributes, page 22" }
+    ],
+    "clauses": [
+      { "ref": "3.2 Standards and Criteria", "page": 21, "image": "nceac-manual-2023-p21-criteria.png", "quote": "A comprehensive set of standards have been developed by NCEAC based on Seoul Accord Document D.5 … Criterion-1 Program Objectives; Criterion-2 Graduate Attributes; Criterion-3 Curriculum and Learning Process; Criterion-4 Students; Criterion-5 Faculty and Support Staff; Criterion-6 Facilities and Infrastructure; Criterion-7 Institutional Support and Financial Resources; Criterion-8 Steps to Improve the Program; Criterion-9 Industrial Linkages.", "targets": ["page:accreditation"] },
+      { "ref": "3.2.2 Criterion 2 – Graduate Attributes (GAs)", "page": 22, "image": "nceac-manual-2023-p22-ga.png", "quote": "Graduate attributes are statements that describe the set of skills, knowledge, and attitude that institute expects from its graduates … GAs defined by NCEAC are in alignment with the Graduate Attributes laid down in the Seoul Accord document D.5 for computing professionals.", "targets": ["page:ga", "page:accreditation"] }
+    ]
+  },
+  {
+    "council": "NCEAC", "kind": "GUIDELINES", "title": "Accreditation Automation System (AAS) — Data Requirement Document",
+    "number": null, "issuedOn": null, "url": "https://www.nceac.org.pk",
+    "summary": "What data NCEAC's online Accreditation Automation System needs in each field, from creating the application to submitting it.",
+    "files": [
+      { "file": "NCEAC-AAS-Data-Requirement-Document.pdf", "mime": "application/pdf", "caption": "Full document (13 pages)" },
+      { "file": "nceac-aas-p01-cover.png", "mime": "image/png", "caption": "Page 1" }
+    ],
+    "clauses": []
+  }
+]

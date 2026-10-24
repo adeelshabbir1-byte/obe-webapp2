@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { navForRole } from "../../../components/reportNav";
@@ -51,7 +52,7 @@ export default async function Offerings() {
   return shell(<>
     <p className="small-note" style={{ margin: 0 }}><Link href="/consortium">← Consortium</Link> · <Link href="/catalog">Public catalog</Link></p>
     <h1 style={{ fontSize: 22, margin: "4px 0" }}>Courses open to the consortium</h1>
-    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Open seats in your sections to students of other member universities — they appear on the public catalog. <b>On campus</b>: visiting students attend your classes. <b>ODL</b> (live online, blended, self-paced) needs your valid HEC ODL recognition{odl ? " (you have one)" : <b style={{ color: "#C62828" }}> — you have none on record</b>}, at least {String(rules.odlMinF2FBatches)} face-to-face batches of the programme, and at most {String(rules.odlMaxPerSection)} students per section. Labs stay face-to-face. Final exams are proctored at the centres you tick (students choose one their own university also approves).</p>
+    <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Open seats in your sections to students of other member universities — they appear on the public catalog. <b>On campus</b>: visiting students attend your classes. <b>ODL</b> (live online, blended, self-paced) needs your valid HEC ODL recognition{odl ? " (you have one)" : <b style={{ color: "#C62828" }}> — you have none on record</b>}, at least {String(rules.odlMinF2FBatches)} face-to-face batches of the programme, and at most {String(rules.odlMaxPerSection)} students per section. Labs stay face-to-face. Final exams are proctored at the centres you tick (students choose one their own university also approves). <Sources targets={["page:odl", "rule:odlNocRequired", "rule:odlMinF2FBatches", "rule:odlMaxPerSection", "rule:labsFaceToFace", "rule:examProctored"]} /></p>
     {!centres.length && <div className="err">Add your exam centres on the <Link href="/consortium">Consortium page</Link> first — every listing needs at least one.</div>}
 
     <div className="card">

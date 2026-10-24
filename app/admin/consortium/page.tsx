@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { navForRole } from "../../../components/reportNav";
@@ -57,7 +58,7 @@ export default async function ConsortiumAdmin() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 10 }}>
           {groups.map((g) => <div key={g} style={{ border: "1px solid var(--line, #E1E5EA)", borderRadius: 10, padding: "8px 12px" }}>
             <b style={{ fontSize: 13 }}>{g}</b>
-            <table style={{ fontSize: 12.5, marginTop: 4 }}><tbody>{RULES.filter((r) => r.group === g).map((r) => <tr key={r.key}><td>{r.label}<div className="small-note" style={{ color: r.source.startsWith("Platform") ? "#B26A00" : undefined }}>{r.source}</div></td><td style={{ fontWeight: 700, whiteSpace: "nowrap", textAlign: "right" }}>{fmt(now.rules[r.key], r.unit)}</td></tr>)}</tbody></table>
+            <table style={{ fontSize: 12.5, marginTop: 4 }}><tbody>{RULES.filter((r) => r.group === g).map((r) => <tr key={r.key}><td>{r.label}<div className="small-note" style={{ color: r.source.startsWith("Platform") ? "#B26A00" : undefined }}>{r.source} <Sources targets={[`rule:${r.key}`]} warn compact /></div></td><td style={{ fontWeight: 700, whiteSpace: "nowrap", textAlign: "right" }}>{fmt(now.rules[r.key], r.unit)}</td></tr>)}</tbody></table>
           </div>)}
         </div>
         <p className="small-note">Values marked “Platform default — confirm” are not taken from an HEC document yet; set them once you have the policy text.</p>

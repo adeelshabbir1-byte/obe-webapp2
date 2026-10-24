@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import Sources from "../../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { navForRole } from "../../../../components/reportNav";
@@ -60,6 +61,7 @@ export default async function AgreementPage({ params, searchParams }: { params: 
     </div>
     {jc && <div className="card" style={{ borderLeft: `4px solid ${a.launchedAt ? "#2E7D32" : jc.ready ? "#1565C0" : "#B26A00"}` }}>
       <h3 style={{ marginTop: 0 }}>Joint programme {a.launchedAt ? <span style={{ color: "#2E7D32", fontSize: 14 }}>— launched {a.launchedAt.toISOString().slice(0, 10)}</span> : jc.ready ? <span style={{ color: "#1565C0", fontSize: 14 }}>— ready to launch</span> : <span style={{ color: "#B26A00", fontSize: 14 }}>— before launch</span>}</h3>
+      <div style={{ marginBottom: 6 }}><Sources targets={["page:joint", "rule:mouMinYears", "rule:matrixRequired", "rule:jointNocRequired", "rule:minPartnerSharePct"]} /></div>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 4, fontSize: 13 }}>{jc.checks.map((c) => <li key={c.label}><b style={{ color: c.ok ? "#2E7D32" : c.label.includes("recommended") ? "#B26A00" : "#C62828", display: "inline-block", width: 16 }}>{c.ok ? "✓" : "✗"}</b> {c.label} <span className="small-note">— {c.detail}</span></li>)}</ul>
       {isLeadHead && !a.launchedAt && <ActionForm showMessage url="/api/consortium/joint" fixed={{ action: "shares", agreementId: a.id }} submit="Save shares" collapsed openLabel="Set each university's share" initial={Object.fromEntries(a.parties.map((p) => [`share_${p.chairmanId}`, shares[p.chairmanId] ?? (p.role === "LEAD" ? 60 : 40)]))}
         fields={a.parties.map((p) => ({ name: `share_${p.chairmanId}`, label: `${m.uni(p.chairmanId)} (% of credit hours)`, type: "number" as const, width: 140 }))} />}

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Sources from "../../../components/regulations/Sources";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { navForRole } from "../../../components/reportNav";
@@ -30,6 +31,7 @@ export default async function Builder() {
     <Shell roleLabel={user.role === "SUPER_USER" ? "Super User" : roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 24, marginBottom: 2 }}>Curriculum Builder</h1>
       <p style={{ color: "var(--slate)", fontSize: 13.5, marginTop: 0, maxWidth: "75ch" }}>Build a master curriculum in four steps: define its <b>course types</b> (with the number of courses, credit hours and the courses each must have), <b>place the courses</b> into them by dragging, sort the <b>elective list into tracks</b>, then <b>publish</b>. Every column is checked against its targets while you work.</p>
+      <div className="small-note" style={{ marginBottom: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>Council documents behind the templates: <Sources targets={TEMPLATES.map((t) => `template:${t.key}`)} /></div>
       {inWork.length > 0 && (
         <div className="card">
           <h3 style={{ marginTop: 0 }}>In progress</h3>
