@@ -110,3 +110,14 @@ test("course codes: prefix, year digit and sequence", async () => {
   assert.equal(sample({ prefix: "CS", digits: 4, separator: "-" }, 1, 1), "CS-1001");
   assert.equal(sample({ prefix: "MT", digits: 3, separator: "" }, 2, 3), "MT203");
 });
+
+test("HEC BS CS 2025: 130 CH and 14 tracks with shared electives", async () => {
+  const { TEMPLATES, HEC_CS_2025_TRACKS, parseReq, normTitle, kindInfo } = await import("../lib/curriculumTemplates");
+  const t = TEMPLATES.find((x) => x.key === "HEC-BS-CS-2025")!;
+  const ch = t.types.filter((x) => kindInfo(x.kind).counts).reduce((a, x) => a + (x.minCredits || 0), 0);
+  assert.equal(ch, 130);
+  assert.equal(Object.keys(HEC_CS_2025_TRACKS).length, 14);
+  const all = Object.values(HEC_CS_2025_TRACKS).flat().map((x) => normTitle(parseReq(x).title));
+  assert.ok(new Set(all).size < all.length); // e.g. Machine Learning sits in several tracks
+  assert.equal(parseReq("Embedded Programming 4 (3+1)").lab, 1);
+});

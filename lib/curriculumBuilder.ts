@@ -83,8 +83,12 @@ async function seedCourses(curriculumId: string, types: { name: string; kind: Ki
       if (lab > 0) await bdb.masterCourseLab.create({ data: { masterCourseId: mc.id, labCredits: lab } }).catch(() => null);
     };
     for (const r of t.required || []) { const q = parseReq(r); await make(q.title, q.ch ?? 3, q.lab ?? 0); }
-    if (t.kind === "ELECTIVE_SLOT") for (let i = 0; i < (t.minCourses || 0); i++) await make(`${t.name} ${ROMAN[i] || i + 1}`, Math.round((t.minCredits || 3 * (t.minCourses || 1)) / (t.minCourses || 1)), 0);
-    if (t.kind === "IDS" && !(t.required || []).length) for (let i = 0; i < (t.minCourses || 0); i++) await make(`${t.name} ${ROMAN[i] || i + 1}`, Math.round((t.minCredits || 3) / (t.minCourses || 1)), 0);
+    // Slots for the rest: Elective I–VIII, or IDS III–IV after the named IDS courses.
+    if (t.kind === "ELECTIVE_SLOT" || t.kind === "IDS") {
+      const req = (t.required || []).map((r) => parseReq(r));
+      const left = (t.minCourses || 0) - req.length, chLeft = (t.minCredits || 0) - req.reduce((a, r) => a + (r.ch || 0), 0);
+      for (let i = 0; i < left; i++) await make(`${t.name.replace(/ \/.*$/, "")} ${ROMAN[req.length + i] || req.length + i + 1}`, Math.max(1, Math.round(chLeft / left)), 0);
+    }
   }
 }
 
@@ -104,7 +108,26 @@ export async function startCurriculum(user: U, o: { program: string; council: st
   if (tpl) {
     await writeTypes(c.id, tpl.types, true);
     if (!src) await seedCourses(c.id, tpl.types);
-    for (const [i, name] of tpl.tracks.entries()) await bdb.curriculumTrack.create({ data: { id: randomUUID(), curriculumId: c.id, name, position: i } });
+    const trackIds = new Map<string, string>();
+    for (const [i, name] of tpl.tracks.entries()) { const tid = randomUUID(); trackIds.set(name, tid); await bdb.curriculumTrack.create({ data: { id: tid, curriculumId: c.id, name, position: i } }); }
+    // Track electives: one course per title in the elective list, linked to every track that lists it.
+    const list = tpl.types.find((t) => t.kind === "ELECTIVE_LIST");
+    if (!src && list && tpl.trackCourses) {
+      const byTitle = new Map<string, string>(); let n = 0;
+      for (const [track, items] of Object.entries(tpl.trackCourses)) {
+        const tid = trackIds.get(track); if (!tid) continue;
+        for (const it of items) {
+          const q = parseReq(it), k = normTitle(q.title);
+          let id = byTitle.get(k);
+          if (!id) {
+            const mc = await prisma.masterCourse.create({ data: { masterCurriculumId: c.id, code: `EL-${String(++n).padStart(3, "0")}`, title: q.title, creditHours: q.ch ?? 3, category: list.name } });
+            if (q.lab) await bdb.masterCourseLab.create({ data: { masterCourseId: mc.id, labCredits: q.lab } }).catch(() => null);
+            id = mc.id as string; byTitle.set(k, id);
+          }
+          await bdb.masterCourseTrack.create({ data: { masterCourseId: id, trackId: tid } }).catch(() => null);
+        }
+      }
+    }
     if (src) await autoPlaceAll(c.id, true); // a copied curriculum's courses are sorted into the template's types
   }
   const p = propose({ ...c, chairmanId }, null);
