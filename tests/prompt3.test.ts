@@ -190,3 +190,23 @@ test("consortium: rules strictness, CNIC identity, NOC expiry, exam-centre gaps"
   const c = { id: "x", chairmanId: "u", campusId: null, name: "Hall", city: null, address: null, seats: 100, cctv: false, biometric: true, status: "ACTIVE" };
   assert.equal(centreGaps(c, DEFAULT_RULES).length, 1);
 });
+
+test("consortium equivalence: edition, evidence, two-sided approval", async () => {
+  const { editionOf, evidenceOf, statusFrom } = await import("../lib/consortiumAgreements");
+  assert.equal(editionOf("2025"), "2025");
+  assert.equal(editionOf("v1.0 (2021)"), "2021");
+  assert.equal(editionOf("Fall"), null);
+  const A = { id: "a", code: "CS-201", title: "Data Structures", creditHours: 4, category: "Core", lab: 1, clos: [{ statement: "Implement linked lists, stacks and queues", bloomLevel: "C3" }, { statement: "Analyze algorithm complexity using Big O", bloomLevel: "C4" }] };
+  const B = { id: "b", code: "CC-213", title: "Data Structures and Algorithms", creditHours: 4, category: "Core", lab: 1, clos: [{ statement: "Implement stacks, queues and linked lists", bloomLevel: "C3" }] };
+  const e = evidenceOf(A, B);
+  assert.equal(e.coverBA, 100);
+  assert.equal(e.coverAB, 50);
+  assert.deepEqual(e.missingInB, ["Analyze algorithm complexity using Big O"]);
+  assert.ok(e.flags.some((f) => /70%/.test(f)));
+  const ag = { kind: "JOINT_DEGREE" } as never, eq = { chairmanA: "U1", chairmanB: "U2" } as never;
+  const ok = { by: "x", name: "x", at: "2026-10-24", ok: true };
+  assert.equal(statusFrom(ag, eq, { U1: { se: ok, chair: ok } }), "PROPOSED");
+  assert.equal(statusFrom(ag, eq, { U1: { se: ok, chair: ok }, U2: { se: ok, chair: ok } }), "APPROVED");
+  assert.equal(statusFrom({ kind: "CREDIT_RECOGNITION" } as never, eq, { U1: { se: ok, chair: ok } }), "APPROVED");
+  assert.equal(statusFrom(ag, eq, { U2: { se: { ...ok, ok: false } } }), "REJECTED");
+});

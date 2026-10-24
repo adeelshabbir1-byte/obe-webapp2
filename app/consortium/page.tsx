@@ -128,6 +128,6 @@ export default async function ConsortiumPage() {
           fields={[{ name: "name", label: "Full name" }, { name: "email", label: "Email", width: 220 }, { name: "cnic", label: "CNIC", placeholder: "12345-1234567-1", width: 170 }, { name: "employer", label: "Current employer" }, { name: "designation", label: "Designation" }, { name: "highestDegree", label: "Highest degree (e.g. MS Computer Science, NUST)", width: 280 }, { name: "hecAttestationNo", label: "HEC attestation no." }, { name: "reason", label: "Why your university vouches for this person", type: "textarea" }]} />
       </>}
     </div>
-    <p className="small-note">Next: equalising courses with partner universities, the public course catalog, and teaching posts. <Link href="/curricula">Curriculum Library</Link></p>
+    <p className="small-note"><Link href="/consortium/agreements">Agreements and course equivalence with partner universities →</Link></p>
   </>);
 }

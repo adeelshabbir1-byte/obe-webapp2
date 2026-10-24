@@ -7605,3 +7605,55 @@ model ConsortiumAffiliation {
   @@index([personId])
   @@index([chairmanId])
 }
+
+// Consortium phase 2. An agreement between member universities on one curriculum edition (never 2023 with 2025).
+// JOINT_DEGREE: a joint programme — both sides approve every course equivalence; the matrix goes to HEC for the NOC.
+// CREDIT_RECOGNITION: one university recognises another's courses for its own students — only it approves.
+model ConsortiumAgreement {
+  id           String    @id
+  kind         String
+  title        String
+  programme    String?
+  edition      String    // e.g. "2025" — both universities' curricula must be on it
+  status       String    @default("PROPOSED") // PROPOSED | ACTIVE | ENDED
+  mouStart     DateTime?
+  mouEnd       DateTime?
+  rulesVersion Int?      // the rules book version in force when it became active
+  gradeMapJson String    @default("{}")
+  note         String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+}
+model ConsortiumAgreementParty {
+  agreementId  String
+  chairmanId   String
+  role         String    @default("PARTNER") // LEAD | PARTNER
+  curriculumId String?   // the university's own curriculum the agreement uses
+  status       String    @default("INVITED") // INVITED | ACCEPTED | DECLINED
+  decidedById  String?
+  decidedAt    DateTime?
+
+  @@id([agreementId, chairmanId])
+  @@index([chairmanId])
+}
+// Course A (of university A's curriculum) is equivalent to course B (of university B's). approvalsJson holds, per
+// university, its Subject Expert's and Chairman's approval; evidenceJson the comparison (CLOs, contact hours, lab).
+model ConsortiumEquivalence {
+  id            String   @id
+  agreementId   String
+  courseA       String
+  courseB       String
+  chairmanA     String
+  chairmanB     String
+  status        String   @default("PROPOSED") // PROPOSED | APPROVED | REJECTED
+  evidenceJson  String   @default("{}")
+  approvalsJson String   @default("{}")
+  note          String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@unique([agreementId, courseA, courseB])
+  @@index([courseB])
+  @@index([courseA])
+}

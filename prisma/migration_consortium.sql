@@ -89,3 +89,51 @@ CREATE TABLE IF NOT EXISTS "ConsortiumAffiliation" (
 );
 CREATE INDEX IF NOT EXISTS "ConsortiumAffiliation_personId_idx" ON "ConsortiumAffiliation"("personId");
 CREATE INDEX IF NOT EXISTS "ConsortiumAffiliation_chairmanId_idx" ON "ConsortiumAffiliation"("chairmanId");
+
+-- Phase 2: agreements between member universities, and the course equivalences under them.
+-- kind JOINT_DEGREE: a joint programme (both sides approve every equivalence; the matrix goes to HEC for the NOC).
+-- kind CREDIT_RECOGNITION: one university recognises another's courses for its own students (only it approves).
+CREATE TABLE IF NOT EXISTS "ConsortiumAgreement" (
+  "id" TEXT PRIMARY KEY,
+  "kind" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "programme" TEXT,
+  "edition" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'PROPOSED',
+  "mouStart" TIMESTAMP(3),
+  "mouEnd" TIMESTAMP(3),
+  "rulesVersion" INTEGER,
+  "gradeMapJson" TEXT NOT NULL DEFAULT '{}',
+  "note" TEXT,
+  "createdById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS "ConsortiumAgreementParty" (
+  "agreementId" TEXT NOT NULL,
+  "chairmanId" TEXT NOT NULL,
+  "role" TEXT NOT NULL DEFAULT 'PARTNER',
+  "curriculumId" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'INVITED',
+  "decidedById" TEXT,
+  "decidedAt" TIMESTAMP(3),
+  PRIMARY KEY ("agreementId", "chairmanId")
+);
+CREATE INDEX IF NOT EXISTS "ConsortiumAgreementParty_chairmanId_idx" ON "ConsortiumAgreementParty"("chairmanId");
+CREATE TABLE IF NOT EXISTS "ConsortiumEquivalence" (
+  "id" TEXT PRIMARY KEY,
+  "agreementId" TEXT NOT NULL,
+  "courseA" TEXT NOT NULL,
+  "courseB" TEXT NOT NULL,
+  "chairmanA" TEXT NOT NULL,
+  "chairmanB" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'PROPOSED',
+  "evidenceJson" TEXT NOT NULL DEFAULT '{}',
+  "approvalsJson" TEXT NOT NULL DEFAULT '{}',
+  "note" TEXT,
+  "createdById" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "ConsortiumEquivalence_pair_key" ON "ConsortiumEquivalence"("agreementId", "courseA", "courseB");
+CREATE INDEX IF NOT EXISTS "ConsortiumEquivalence_courseB_idx" ON "ConsortiumEquivalence"("courseB");
+CREATE INDEX IF NOT EXISTS "ConsortiumEquivalence_courseA_idx" ON "ConsortiumEquivalence"("courseA");
