@@ -57,12 +57,14 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
         .bb-step{border:0;border-radius:999px;padding:8px 16px;font:600 13px inherit;cursor:pointer;background:#EEF1F5;color:#334}
         .bb-step[aria-current="step"]{background:#0D2A4A;color:#fff}
         .bb-chip{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:4px 10px;font-size:12.5px;background:#F3F5F8}
-        .bb-cols{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
-        .bb-col{flex:0 0 272px;background:#F6F8FA;border:1px solid #E1E5EA;border-radius:12px;display:flex;flex-direction:column;max-height:72vh}
+        .bb-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;padding-bottom:10px;align-items:start}
+        .bb-col{min-width:0;background:#F6F8FA;border:1px solid #E1E5EA;border-radius:12px;display:flex;flex-direction:column}
         .bb-col.over{outline:3px dashed #1565C0;outline-offset:-3px;background:#EEF4FB}
         .bb-colhead{padding:10px 12px;border-bottom:1px solid #E1E5EA;background:#fff;border-radius:12px 12px 0 0}
-        .bb-list{padding:8px;display:grid;gap:6px;overflow-y:auto}
-        .bb-card{background:#fff;border:1px solid #DDE2E8;border-radius:8px;padding:7px 9px;cursor:grab;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+        .bb-list{padding:8px;display:grid;gap:5px}
+        .bb-move{display:none}.bb-card:hover .bb-move,.bb-card:focus-within .bb-move{display:block}@media (hover:none){.bb-move{display:block}}
+        .bb-fold{border:0;background:none;cursor:pointer;color:#556;font-size:13px;padding:0 4px}
+        .bb-card{background:#fff;border:1px solid #DDE2E8;border-radius:8px;padding:5px 8px;cursor:grab;box-shadow:0 1px 0 rgba(0,0,0,.03)}
         .bb-card:hover{border-color:#9CB3CC}
         .bb-card:focus-visible{outline:2px solid #1565C0}
         .bb-bar{height:6px;border-radius:3px;background:#E6EAEF;overflow:hidden;margin-top:6px}
@@ -154,17 +156,16 @@ function CourseCard({ c, color, onOpen, draggable = true, extra, types, onMove }
     <div className="bb-card" draggable={draggable} tabIndex={0} role="button" aria-label={`${c.code} ${c.title}, ${c.creditHours} credit hours. Press Enter to edit.`}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; }}
       onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }} style={{ borderLeft: `4px solid ${color}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-        <span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11.5, fontWeight: 700, color: "#556" }}>{c.code}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 800 }} title={c.lab ? `${c.creditHours - c.lab} theory + ${c.lab} lab credit hours` : undefined}>{splitText(c.creditHours, c.lab)} CH{c.semesterNumber ? <span style={{ fontWeight: 500, color: "#778" }}> · S{c.semesterNumber}</span> : null}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "baseline" }}>
+        <span style={{ fontSize: 13, lineHeight: 1.3, minWidth: 0 }}><span style={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11, fontWeight: 700, color: "#556", marginRight: 6 }}>{c.code}</span>{c.title}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }} title={c.lab ? `${c.creditHours - c.lab} theory + ${c.lab} lab credit hours` : undefined}>{splitText(c.creditHours, c.lab)} CH{c.semesterNumber ? <span style={{ fontWeight: 500, color: "#778" }}> · S{c.semesterNumber}</span> : null}</span>
       </div>
-      <div style={{ fontSize: 13, lineHeight: 1.3 }}>{c.title}</div>
       <div style={{ fontSize: 10.5, color: "#778", display: "flex", gap: 6 }} title="Course learning outcomes (mapped to a PLO) and lectures in the lecture plan">
         <span style={{ color: c.clos ? (c.mappedClos < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLO${c.mappedClos < c.clos ? ` (${c.clos - c.mappedClos} unmapped)` : ""}` : "no CLOs"}</span>
         <span style={{ color: c.lectures >= 32 ? "#2E7D32" : c.lectures ? "#B26A00" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span>
       </div>
       {c.from && <div style={{ fontSize: 10.5, color: c.fromOtherEdition ? "#B26A00" : "#556" }} title="CLOs / lecture plan copied from the same-named course of this curriculum">from {c.from}{c.fromOtherEdition ? " (other edition)" : ""}</div>}
-      {types && onMove && <select value="" aria-label={`Move ${c.title} to`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { if (e.target.value) onMove(e.target.value); }} style={{ marginTop: 4, fontSize: 11, padding: "1px 4px", width: "100%", color: "#556", background: "#F6F8FA", border: "1px solid #E1E5EA", borderRadius: 6 }}>
+      {types && onMove && <select value="" aria-label={`Move ${c.title} to`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { if (e.target.value) onMove(e.target.value); }} className="bb-move" style={{ marginTop: 4, fontSize: 11, padding: "1px 4px", width: "100%", color: "#556", background: "#F6F8FA", border: "1px solid #E1E5EA", borderRadius: 6 }}>
         <option value="">Move to…</option>{types.filter((t) => t.name !== c.category).map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}</select>}
       {extra}
     </div>
@@ -199,6 +200,7 @@ function Editor({ c, types, post, close, locked }: { c: BCourse; types: BType[];
 
 function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: BType[]; courses: BCourse[]; setCourses: (c: BCourse[]) => void; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean; chOk: boolean; nOk: boolean }>; unplaced: BCourse[] }; post: Post; locked: boolean }) {
   const [over, setOver] = useState<string | null>(null);
+  const [folded, setFolded] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<BCourse | null>(null);
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState<{ type: string; title: string; ch: string } | null>(null);
@@ -231,7 +233,8 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
               <header className="bb-colhead" style={{ borderTop: `5px solid ${k.color}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "baseline" }}>
                   <b style={{ fontSize: 14 }}>{t ? t.name : "Not placed yet"}</b>
-                  {t && <span aria-label={p!.ok ? "requirements met" : "requirements not met"} style={{ fontWeight: 800, color: p!.ok ? "#2E7D32" : "#C62828" }}>{p!.ok ? "✓" : "✗"}</span>}
+                  <span>{t && <span aria-label={p!.ok ? "requirements met" : "requirements not met"} style={{ fontWeight: 800, color: p!.ok ? "#2E7D32" : "#C62828" }}>{p!.ok ? "✓" : "✗"}</span>}
+                    <button type="button" className="bb-fold" aria-expanded={!folded.has(key)} title={folded.has(key) ? "Show the courses" : "Hide the courses of this type"} onClick={() => setFolded((f) => { const n = new Set(f); if (n.has(key)) n.delete(key); else n.add(key); return n; })}>{folded.has(key) ? "▸" : "▾"}</button></span>
                 </div>
                 {t ? (
                   <>
@@ -242,7 +245,7 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
                   </>
                 ) : <div style={{ fontSize: 12.5, color: "#C62828" }}>Drag each into its type</div>}
               </header>
-              <div className="bb-list">
+              {!folded.has(key) && <div className="bb-list">
                 {t && p!.missing.map((m) => { const q = parseReq(m); return <button key={m} type="button" className="bb-ghost" disabled={locked} title="Click to add it to this column" onClick={() => post({ action: "addCourse", type: t.name, title: m })}>＋ <b>{q.title}</b> <span style={{ float: "right" }}>{q.ch != null ? `${splitText(q.ch, q.lab)} CH` : ""}</span></button>; })}
                 {cs.filter(match).map((c) => <CourseCard key={c.id} c={c} color={k.color} onOpen={() => setOpen(c)} draggable={!locked} types={locked ? undefined : types} onMove={(to) => drop(to, c.id)} />)}
                 {t && !locked && (adding?.type === t.name ? (
@@ -253,7 +256,7 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdding(null)}>Cancel</button></div>
                   </div>
                 ) : <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdding({ type: t.name, title: "", ch: "3" })}>+ Add a course</button>)}
-              </div>
+              </div>}
             </section>
           );
         })}

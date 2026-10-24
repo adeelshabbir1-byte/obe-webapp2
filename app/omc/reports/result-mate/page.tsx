@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, courseScopeFor, chairmanIdFor } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, courseScopeFor, chairmanIdFor , batchScopeFor } from "../../../../lib/reportScope";
 import { canViewReport, canEditReport } from "../../../../lib/reportAcl";
 import { getPassingCriteria } from "../../../../lib/passingCriteria";
 import LogCqiActionButton from "../../../../components/LogCqiActionButton";
@@ -34,7 +34,8 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     orderBy: { code: "asc" },
   });
 
-  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const notMine = !!searchParams.batchId && (user.role === "INSTRUCTOR" || user.role === "SUBJECT_EXPERT") && !allBatches.some((b) => b.id === searchParams.batchId);
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
@@ -88,6 +89,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
         </div>
       </div>
 
+      {notMine && <div className="card"><p className="small-note" style={{ margin: 0 }}>You don&apos;t teach a course in that batch. Pick one of your batches above.</p></div>}
       {course && (
         <div className="card">
           <p style={{ fontSize: 12.5 }}><b>Course:</b> {course.code} — {course.title} &nbsp; <b>Instructor:</b> {course.instructor?.name || "—"}</p>

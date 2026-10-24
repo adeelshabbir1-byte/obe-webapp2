@@ -16,14 +16,30 @@ const STATE_COL: Record<string, string> = { VALID: "#2E7D32", EXPIRING: "#B26A00
 
 // Institute Head: joining the consortium (free), the university's residency rules, its HEC NOCs, exam centres,
 // registering its faculty under their CNIC, and industry experts it vouches for.
-export default async function ConsortiumPage() {
+export default async function ConsortiumPage({ searchParams }: { searchParams: { as?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role === "SUPER_USER") redirect("/admin/consortium");
-  const shell = (x: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>{x}</Shell>;
-  if (user.role !== "CHAIRMAN") return shell(<div className="card">The Institute Head manages your university&apos;s consortium membership. Visiting courses and teaching posts open in the next phases.</div>);
-  const m = await memberOf(user.id).catch(() => undefined);
+  // Super Admin: read-only preview of one university's page, exactly as its Institute Head sees it.
+  let hid = user.id; let viewName = user.name; let preview: React.ReactNode = null;
+  if (user.role === "SUPER_USER") {
+    const heads = await prisma.user.findMany({ where: { role: "CHAIRMAN" }, select: { id: true, name: true, instituteName: true }, orderBy: { instituteName: "asc" } });
+    const pick = heads.find((h) => h.id === searchParams.as);
+    const picker = (
+      <form method="get" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <b>Previewing as</b>
+        <select name="as" defaultValue={pick?.id || ""} style={{ minWidth: 260 }}><option value="">Pick a university…</option>{heads.map((h) => <option key={h.id} value={h.id}>{h.instituteName || h.name}</option>)}</select>
+        <button className="btn btn-sm" type="submit">Show</button>
+        <Link href="/admin/consortium" className="small-note">← Back to Consortium admin</Link>
+      </form>
+    );
+    if (!pick) return <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}><h1 style={{ fontSize: 22 }}>What an Institute Head sees</h1><div className="card">{picker}<p className="small-note">Read-only: buttons are switched off in the preview.</p></div></Shell>;
+    hid = pick.id; viewName = pick.instituteName || pick.name;
+    preview = <div className="card" style={{ background: "#FFF8E1", borderColor: "#F0C36D" }}>{picker}<p className="small-note" style={{ marginBottom: 0 }}>Read-only preview of <b>{viewName}</b>&apos;s Consortium page — buttons are switched off.</p></div>;
+  }
+  const shell = (x: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>{preview}{preview ? <fieldset disabled style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>{x}</fieldset> : x}</Shell>;
+  if (user.role !== "CHAIRMAN" && !preview) return shell(<div className="card">The Institute Head manages your university&apos;s consortium membership. Visiting courses and teaching posts open in the next phases.</div>);
+  const m = await memberOf(hid).catch(() => undefined);
   if (m === undefined) return shell(<div className="err">{CONSORTIUM_HINT}</div>);
   const { rules, label } = await rulesOn();
   const head = (
@@ -34,7 +50,7 @@ export default async function ConsortiumPage() {
   );
   const applyForm = (submit: string, collapsed = false) => (
     <ActionForm showMessage url="/api/consortium" fixed={{ action: "apply" }} submit={submit} collapsed={collapsed} openLabel="Edit university details…"
-      initial={{ country: m?.country || "PK", city: m?.city || "", website: m?.website || "", hecRecognized: m?.hecRecognized || false, contactName: m?.contactName || user.name, contactEmail: m?.contactEmail || "", note: m?.note || "" }}
+      initial={{ country: m?.country || "PK", city: m?.city || "", website: m?.website || "", hecRecognized: m?.hecRecognized || false, contactName: m?.contactName || viewName, contactEmail: m?.contactEmail || "", note: m?.note || "" }}
       fields={[{ name: "city", label: "City" }, { name: "website", label: "Website", width: 220 }, { name: "contactName", label: "Contact person" }, { name: "contactEmail", label: "Contact email", width: 220 },
         { name: "country", label: "Country", type: "select", options: [["PK", "Pakistan"], ["AE", "UAE"], ["SA", "Saudi Arabia"], ["GB", "United Kingdom"], ["US", "United States"], ["MY", "Malaysia"], ["TR", "Türkiye"], ["CN", "China"]] },
         { name: "hecRecognized", label: "We are on HEC's list of recognised universities", type: "checkbox" }, { name: "note", label: "Programmes you want to offer jointly, or a note", type: "textarea" }]} />
@@ -46,24 +62,24 @@ export default async function ConsortiumPage() {
       {applyForm("Apply to join")}</div></>);
 
   const [nocs, centres, campuses, ids] = await Promise.all([
-    cdb.consortiumNoc.findMany({ where: { chairmanId: user.id }, orderBy: { createdAt: "desc" } }) as Promise<Noc[]>,
-    cdb.examCentre.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }) as Promise<Centre[]>,
-    (prisma as unknown as Record<string, any>).campus.findMany({ where: { chairmanId: user.id }, orderBy: { name: "asc" } }).catch(() => []) as Promise<{ id: string; name: string }[]>,
-    myPeople(user.id),
+    cdb.consortiumNoc.findMany({ where: { chairmanId: hid }, orderBy: { createdAt: "desc" } }) as Promise<Noc[]>,
+    cdb.examCentre.findMany({ where: { chairmanId: hid }, orderBy: { name: "asc" } }) as Promise<Centre[]>,
+    (prisma as unknown as Record<string, any>).campus.findMany({ where: { chairmanId: hid }, orderBy: { name: "asc" } }).catch(() => []) as Promise<{ id: string; name: string }[]>,
+    myPeople(hid),
   ]);
   const [people, profiles, affs] = await Promise.all([
     prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, role: true, email: true }, orderBy: { name: "asc" } }),
     prisma.facultyProfile.findMany({ where: { userId: { in: ids } }, select: { userId: true, cnic: true } }),
-    cdb.consortiumAffiliation.findMany({ where: { chairmanId: user.id } }) as Promise<Affiliation[]>,
+    cdb.consortiumAffiliation.findMany({ where: { chairmanId: hid } }) as Promise<Affiliation[]>,
   ]);
   const cnicOf = new Map(profiles.map((p) => [p.userId, normCnic(p.cnic)]));
   const affOf = new Map(affs.map((a) => [a.userId, a]));
   const sponsored = affs.filter((a) => a.kind === "SPONSORED");
   const sUsers = await prisma.user.findMany({ where: { id: { in: sponsored.map((a) => a.userId) } }, select: { id: true, name: true, email: true } });
   const res = residencyOf(m);
-  const activeIds = ((await cdb.consortiumMember.findMany({ where: { status: "ACTIVE" }, select: { chairmanId: true } })) as { chairmanId: string }[]).map((x) => x.chairmanId).filter((x) => x !== user.id);
+  const activeIds = ((await cdb.consortiumMember.findMany({ where: { status: "ACTIVE" }, select: { chairmanId: true } })) as { chairmanId: string }[]).map((x) => x.chairmanId).filter((x) => x !== hid);
   const others = (await cdb.examCentre.findMany({ where: { chairmanId: { in: activeIds }, status: "ACTIVE" }, orderBy: [{ city: "asc" }, { name: "asc" }] })) as Centre[];
-  const approvedSet = new Set(((await cdb.consortiumCentreApproval.findMany({ where: { chairmanId: user.id, status: "APPROVED" } }).catch(() => [])) as { centreId: string }[]).map((x) => x.centreId));
+  const approvedSet = new Set(((await cdb.consortiumCentreApproval.findMany({ where: { chairmanId: hid, status: "APPROVED" } }).catch(() => [])) as { centreId: string }[]).map((x) => x.centreId));
   const otherHeads = await prisma.user.findMany({ where: { id: { in: Array.from(new Set(others.map((c) => c.chairmanId))) } }, select: { id: true, instituteName: true, name: true } });
   const uniName = (id: string) => otherHeads.find((h) => h.id === id)?.instituteName || otherHeads.find((h) => h.id === id)?.name || "—";
   const registered = people.filter((p) => affOf.get(p.id)?.status === "ACTIVE").length;

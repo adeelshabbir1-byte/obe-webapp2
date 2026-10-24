@@ -48,7 +48,7 @@ export default async function ConsortiumAdmin() {
             <tr key={m.chairmanId}><td><b>{nm(m.chairmanId)}</b><div className="small-note">{m.city || ""}{m.country !== "PK" ? ` · ${m.country}` : ""}{m.website ? ` · ${m.website}` : ""}</div></td>
               <td style={{ color: c, fontWeight: 700 }}>{l}<div className="small-note" style={{ fontWeight: 400 }}>{m.hecRecognized ? "HEC-recognised (declared)" : "not declared HEC-recognised"}</div></td>
               <td className="small-note">{m.contactName || ""}{m.contactEmail ? ` · ${m.contactEmail}` : ""}{m.note ? <div>{m.note}</div> : null}{m.decisionNote ? <div>Decision: {m.decisionNote}</div> : null}</td>
-              <td style={{ whiteSpace: "nowrap" }}>{m.status !== "ACTIVE" && <ActionButton showMessage url="/api/consortium" body={{ action: "member", chairmanId: m.chairmanId, status: "ACTIVE" }} label="Admit" confirmText={`Admit ${nm(m.chairmanId)} to the consortium? Check it is on HEC's list of recognised universities.`} />}{" "}
+              <td style={{ whiteSpace: "nowrap" }}><Link href={`/consortium?as=${m.chairmanId}`} className="btn btn-secondary btn-sm">Preview</Link>{" "}{m.status !== "ACTIVE" && <ActionButton showMessage url="/api/consortium" body={{ action: "member", chairmanId: m.chairmanId, status: "ACTIVE" }} label="Admit" confirmText={`Admit ${nm(m.chairmanId)} to the consortium? Check it is on HEC's list of recognised universities.`} />}{" "}
                 {m.status === "ACTIVE" && <ActionButton showMessage url="/api/consortium" body={{ action: "member", chairmanId: m.chairmanId, status: "SUSPENDED" }} label="Suspend" className="btn btn-secondary btn-sm" askNote="Why is this university suspended? (shown to it)" noteRequired />}{" "}
                 {m.status === "APPLIED" && <ActionButton showMessage url="/api/consortium" body={{ action: "member", chairmanId: m.chairmanId, status: "DECLINED" }} label="Decline" className="btn btn-secondary btn-sm" askNote="Why is the application declined? (shown to the university)" noteRequired />}</td></tr>); })}</tbody></table>}
       </div>
@@ -75,7 +75,7 @@ export default async function ConsortiumAdmin() {
         <p className="small-note" style={{ marginTop: 0 }}>One person, one identity: every account they hold at any institute, and who vouches for each. CNICs are shown only here.</p>
         <CnicLookup />
       </div>
-      <p className="small-note"><Link href="/consortium">What an Institute Head sees →</Link></p>
+      <p className="small-note"><Link href="/consortium?as=">What an Institute Head sees →</Link></p>
     </>
   );
 }

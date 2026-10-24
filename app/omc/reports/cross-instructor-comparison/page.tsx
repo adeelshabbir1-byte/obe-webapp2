@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor , batchScopeFor } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
@@ -18,7 +18,7 @@ export default async function CrossInstructorComparisonPage({ searchParams }: { 
   if (!(await canViewReport(user, "omc.reports.cross-instructor-comparison"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } } });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) } });
   const batchIds = batches.map((b) => b.id);
 
   // Only course codes taught by more than one instructor (across

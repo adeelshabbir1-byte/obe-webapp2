@@ -86,3 +86,10 @@ export function roleLabel(role: string) {
   };
   return labels[role] || role;
 }
+
+/** Extra batch filter for report pickers: an Instructor or Subject Expert only sees the batches where they teach / design a course. */
+export function batchScopeFor(user: { id: string; role: string }): Prisma.BatchWhereInput {
+  if (user.role === "INSTRUCTOR") return { courses: { some: { instructorId: user.id } } };
+  if (user.role === "SUBJECT_EXPERT") return { courses: { some: { subjectExpertId: user.id } } };
+  return {};
+}

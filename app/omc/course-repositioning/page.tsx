@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
-import { coordinatorIdsFor, roleLabel } from "../../../lib/reportScope";
+import { coordinatorIdsFor, roleLabel , batchScopeFor } from "../../../lib/reportScope";
 import { findOwnInstitutionCurriculum } from "../../../lib/institutionCurriculum";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
@@ -27,7 +27,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   const canManageCourses = user.role === "OMC" || user.role === "PROGRAM_COORDINATOR";
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const selectedBatchId = searchParams.batchId || batches[0]?.id || "";
   const curriculum = canManageCourses ? await findOwnInstitutionCurriculum(user.id) : null;
 

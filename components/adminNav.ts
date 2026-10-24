@@ -1,5 +1,5 @@
 export const ADMIN_NAV = [
-  { href: "/admin/users", label: "Manage Chairmen" },
+  { href: "/admin/users", label: "Manage Institute Heads" },
   { href: "/admin/account-requests", label: "Account Requests" },
   { href: "/admin/modules", label: "Institute Modules" },
   { href: "/admin/billing", label: "Billing" },

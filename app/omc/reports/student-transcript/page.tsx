@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, coordinatorIdsFor, roleLabel } from "../../../../lib/reportScope";
+import { canViewReports, coordinatorIdsFor, roleLabel , batchScopeFor } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { prisma } from "../../../../lib/db";
 import { computeStudentTranscriptReport } from "../../../../lib/studentTranscriptReport";
@@ -19,7 +19,7 @@ export default async function OmcStudentTranscriptPage({ searchParams }: { searc
   if (!(await canViewReport(user, "omc.reports.student-transcript"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const batchIds = batches.map((b) => b.id);
 
   const q = searchParams.q || "";

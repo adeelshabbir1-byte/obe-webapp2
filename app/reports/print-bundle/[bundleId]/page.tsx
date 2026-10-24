@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { ALL_REPORTS, reportParam } from "../../../../lib/reportRegistry";
 import { canViewReport } from "../../../../lib/reportAcl";
-import { coordinatorIdsFor, courseScopeFor } from "../../../../lib/reportScope";
+import { coordinatorIdsFor, courseScopeFor , batchScopeFor } from "../../../../lib/reportScope";
 import PrintBundleClient from "../../../../components/PrintBundleClient";
 
 export default async function PrintBundlePage({ params }: { params: { bundleId: string } }) {
@@ -27,7 +27,7 @@ export default async function PrintBundlePage({ params }: { params: { bundleId: 
   const coordinatorIds = await coordinatorIdsFor(user);
   const needsStudents = allowed.some((r) => r.param === "student");
   const [batches, courses, students] = await Promise.all([
-    prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] }),
+    prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] }),
     prisma.course.findMany({ where: { ...courseScopeFor(user), batchId: { not: null } }, select: { id: true, code: true, title: true, batchId: true, semesterNumber: true, isOffered: true }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }] }),
     needsStudents
       ? prisma.student.findMany({ where: { batch: { coordinatorId: { in: coordinatorIds } } }, select: { id: true, name: true, rollNumber: true, batchId: true }, orderBy: { rollNumber: "asc" } })

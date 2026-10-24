@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
-import { canViewReports, roleLabel, coordinatorIdsFor } from "../../../../lib/reportScope";
+import { canViewReports, roleLabel, coordinatorIdsFor , batchScopeFor } from "../../../../lib/reportScope";
 import { canViewReport } from "../../../../lib/reportAcl";
 import { navForRole } from "../../../../components/reportNav";
 import { prisma } from "../../../../lib/db";
@@ -26,7 +26,7 @@ export default async function AuditReportPage({ searchParams }: { searchParams: 
   if (!(await canViewReport(user, "omc.reports.audit"))) redirect("/dashboard");
 
   const coordinatorIds = await coordinatorIdsFor(user);
-  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds } }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
+  const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   const filter = { degree: searchParams.degree, batchId: searchParams.batchId };
 
   const programs = await getAuditReport(user, filter);
