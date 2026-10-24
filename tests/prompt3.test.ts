@@ -150,7 +150,7 @@ test("PU BSCS 2021: 131 CH, labs merged, mapped to HEC 2025 and NCEAC 2023", asy
   const { TEMPLATES, kindInfo } = await import("../lib/curriculumTemplates");
   const { PU_BSCS_2021 } = await import("../lib/puBscs2021");
   const { CONTENT_PACKS } = await import("../lib/curriculumContent");
-  const { courseKeys } = await import("../lib/curriculumEquivalence");
+  const { courseKeys, editionFor } = await import("../lib/curriculumEquivalence");
   const t = TEMPLATES.find((x) => x.key === "PU-BSCS-2021")!;
   assert.equal(t.types.filter((x) => kindInfo(x.kind).counts).reduce((a, x) => a + (x.minCredits || 0), 0), 131);
   assert.equal(PU_BSCS_2021.find((c) => c.code === "CC-112")!.lab, 1);
@@ -158,10 +158,15 @@ test("PU BSCS 2021: 131 CH, labs merged, mapped to HEC 2025 and NCEAC 2023", asy
   assert.equal(pu.content("Data Structures and Algorithms")!.from, "Data Structures");
   assert.equal(pu.details!("Database Systems")!.code, "CC-312");
   assert.equal(pu.semester("Compiler Construction", "", 0), 5);
-  const meet = (a: string, b: string) => courseKeys(a).some((k) => courseKeys(b).includes(k));
-  assert.ok(meet("Data Structures and Algorithms", "Data Structures"));
-  assert.ok(meet("Discrete Structures", "Quantitative Reasoning I (Discrete Structures)"));
-  assert.ok(meet("Computer Organization and Assembly Language", "Computer Organization and Architecture"));
-  assert.ok(!meet("Compiler Construction", "Cloud Computing"));
+  const meet = (a: string, b: string, e: "2025" | "2023" | null) => courseKeys(a, e).some((k) => courseKeys(b, e).includes(k));
+  assert.ok(meet("Data Structures and Algorithms", "Data Structures", "2025"));
+  assert.ok(meet("Computer Organization and Assembly Language", "Computer Organization and Architecture", "2025"));
+  assert.ok(meet("Discrete Structures", "Quantitative Reasoning I (Discrete Structures)", "2023"));
+  assert.ok(meet("Design and Analysis of Algorithms", "Analysis of Algorithms", "2023"));
+  // never across editions: a 2023 title does not map in a 2025 comparison, and 2023 vs 2025 gets no table
+  assert.ok(!meet("Design and Analysis of Algorithms", "Analysis of Algorithms", "2025"));
+  assert.equal(editionFor("2023", "2025"), null);
+  assert.equal(editionFor("2021", "2025"), "2025");
+  assert.ok(!meet("Compiler Construction", "Cloud Computing", "2023"));
   assert.ok(TEMPLATES.some((x) => x.key === "NCEAC-BS-CS-2025" && x.council === "NCEAC"));
 });

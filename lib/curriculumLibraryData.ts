@@ -1,4 +1,4 @@
-import { courseKeys } from "./curriculumEquivalence";
+import { courseKeys, editionFor } from "./curriculumEquivalence";
 import { prisma } from "./db";
 import { findOwningChairmanId } from "./institutionCurriculum";
 import { countedCredits, countsTowardDegree } from "./courseTypes";
@@ -88,11 +88,12 @@ export async function compareCurricula(a: string, b: string) {
   const usedB = new Set<number>();
   // Versions of one curriculum match on code or title; different curricula (PU vs HEC, …) through course equivalences.
   const sameLine = A.authority === B.authority;
-  const kb = B.courses.map((y) => courseKeys(y.title));
+  const ed = sameLine ? null : editionFor(A.version, B.version); // 2025 ↔ 2025 or 2023 ↔ 2023 only
+  const kb = B.courses.map((y) => courseKeys(y.title, ed));
   const find = (x: { code: string; title: string }) => {
     const j = B.courses.findIndex((y, i) => !usedB.has(i) && ((sameLine && y.code === x.code) || key(y) === key(x)));
     if (j >= 0) return j;
-    for (const k of courseKeys(x.title)) { const i = kb.findIndex((ks, n) => !usedB.has(n) && ks.includes(k)); if (i >= 0) return i; }
+    for (const k of courseKeys(x.title, ed)) { const i = kb.findIndex((ks, n) => !usedB.has(n) && ks.includes(k)); if (i >= 0) return i; }
     return -1;
   };
   for (const x of A.courses) {
