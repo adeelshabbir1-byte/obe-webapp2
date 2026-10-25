@@ -86,11 +86,13 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
 
   async function patchClo(c: Clo, d: Draft): Promise<string | null> {
     const payload = { ...d, statement: d.statement.trim(), ploContributionPct: d.mappedPloId ? (d.ploContributionPct ?? 100) : null, targetPct: d.targetPct || 60 };
+    const send = { ...payload, code: c.code };
     try {
-      const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch(`/api/subjectexpert/courses/${courseId}/clo/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(send) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return `${c.code}: ${data.error || "Something went wrong."}`;
-      setClos((prev) => prev.map((x) => x.id === c.id ? { ...x, ...payload, ploMappingSource: payload.mappedPloId ? "MANUAL" : null } : x));
+      const newId: string = data.clo?.id || c.id; // the CLO may have been recreated under a new id
+      setClos((prev) => prev.map((x) => x.id === c.id ? { ...x, ...payload, id: newId, ploMappingSource: payload.mappedPloId ? "MANUAL" : null } : x));
       setDrafts((prev) => { const n = { ...prev }; delete n[c.id]; return n; });
       return null;
     } catch (err: any) { return `${c.code}: ${err.message}`; }

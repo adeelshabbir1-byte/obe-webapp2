@@ -17,17 +17,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   const blocked = await blockedAsNonBaseCourse(course.id);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
-  const clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
-  if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "not found" }, { status: 404 });
+  const body = await req.json();
+  // The page may hold an older id: the course's CLOs can be recreated meanwhile (Load HEC content, Content Sync from
+  // the base course, a curriculum import). Fall back to the same CLO by its code so the save still lands.
+  let clo = await prisma.cLO.findUnique({ where: { id: params.cloId } });
+  if ((!clo || clo.courseId !== course.id || clo.source !== "SE") && typeof body.code === "string" && body.code) clo = await prisma.cLO.findFirst({ where: { courseId: course.id, source: "SE", code: body.code } });
+  if (!clo || clo.courseId !== course.id || clo.source !== "SE") return NextResponse.json({ error: "This CLO was replaced since the page opened (the course's CLOs were reloaded). Reload the page and save again.", stale: true }, { status: 404 });
+  const cloId = clo.id;
 
   { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
-  const body = await req.json();
   if (!body.statement || !body.bloomLevel) {
     return NextResponse.json({ error: "statement and bloomLevel are required" }, { status: 400 });
   }
 
   const updated = await prisma.cLO.update({
-    where: { id: params.cloId },
+    where: { id: cloId },
     data: {
       statement: body.statement,
       bloomLevel: body.bloomLevel,
@@ -42,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: params.cloId });
+  await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: cloId });
   await syncCourseContentToLinkedCourses(course.id);
   if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id, "MANUAL");
 
