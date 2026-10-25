@@ -21,10 +21,10 @@ function typeRank(t: string): number {
   return i === -1 ? TYPE_ORDER.length : i;
 }
 
-export default function ContentSyncManager({ initialBatchIds = [] }: { initialBatchIds?: string[] } = {}) {
+export default function ContentSyncManager() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [batchesLoaded, setBatchesLoaded] = useState(false);
-  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set(initialBatchIds));
+  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
   const [courses, setCourses] = useState<Course[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [coursesLoaded, setCoursesLoaded] = useState(false);
@@ -36,7 +36,7 @@ export default function ContentSyncManager({ initialBatchIds = [] }: { initialBa
   useEffect(() => {
     fetch("/api/omc/content-sync/batches")
       .then((res) => res.json())
-      .then((data) => { setBatches(data.batches || []); setBatchesLoaded(true); if (initialBatchIds.length) setTimeout(() => document.getElementById("cs-load")?.click(), 0); })
+      .then((data) => { setBatches(data.batches || []); setBatchesLoaded(true); })
       .catch((err) => setError("Failed to load batches: " + err.message));
   }, []);
 
@@ -431,7 +431,7 @@ export default function ContentSyncManager({ initialBatchIds = [] }: { initialBa
           ))}
           {batches.length === 0 && <p style={{ fontSize: 12.5, color: "var(--slate)" }}>No batches yet.</p>}
         </div>
-        <button id="cs-load" onClick={loadCoursesAndGroups} disabled={selectedBatchIds.size === 0} className="btn btn-brass" style={{ fontSize: 12.5 }}>
+        <button onClick={loadCoursesAndGroups} disabled={selectedBatchIds.size === 0} className="btn btn-brass" style={{ fontSize: 12.5 }}>
           Load courses for checked batches
         </button>
         <button onClick={handleFixAllBases} disabled={busy} style={{ fontSize: 12.5, padding: "5px 10px", border: "1px solid var(--line)", background: "#fff", marginLeft: 8 }}>

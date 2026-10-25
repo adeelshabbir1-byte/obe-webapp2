@@ -4,7 +4,6 @@ import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
 import { navForRole } from "../../../../components/reportNav";
 import BatchSetupWizard from "../../../../components/BatchSetupWizard";
-import SetupStrip from "../../../../components/SetupStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +17,6 @@ export default async function NewBatchPage({ searchParams }: { searchParams: { b
   if (existing && existing._count.courses > 0) redirect(`/coordinator/courses?batchId=${existing.id}`);
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
-      {existing && <SetupStrip batchId={existing.id} step="source" />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>{existing ? "Set up this batch's courses" : "New batch"}</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>One step at a time. The courses come from one source you choose — a curriculum or a previous batch — never a mix. Adjust them afterwards on the batch&apos;s courses page.</p>
       <BatchSetupWizard programs={programs} existing={existing ? { id: existing.id, degreeProgram: existing.degreeProgram, batchName: existing.batchName } : null} />

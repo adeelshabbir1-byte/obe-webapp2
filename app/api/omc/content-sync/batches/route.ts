@@ -10,7 +10,7 @@ import { deptScope } from "../../../../../lib/omcScope";
 export async function GET() {
   try {
     const user = await getAuthenticatedUser();
-    if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
     const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
     const coordinatorIds = coordinators.map((c) => c.id);

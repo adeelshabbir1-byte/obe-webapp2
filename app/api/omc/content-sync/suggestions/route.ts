@@ -5,7 +5,7 @@ import { deptScope } from "../../../../../lib/omcScope";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   try {

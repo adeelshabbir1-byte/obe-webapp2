@@ -685,11 +685,6 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "Notification"
 },
 {
-"f": "migration_obe_governance.sql",
-"d": "OBE governance: batch set-up steps, OMC batch review, SE plan votes and thread, limit rounds, request votes and panels, GA crosswalks, other departments' courses per term",
-"t": "GaCrosswalk"
-},
-{
 "f": "migration_obe_learning.sql",
 "d": "OBE learning (lessons, practice question bank) and the optional OBE Assistant chat. Safe to run more than once.",
 "t": "AiConfig",

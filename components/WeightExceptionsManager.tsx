@@ -24,7 +24,6 @@ export default function WeightExceptionsManager({ initialRequests }: { initialRe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      if (data.pending) { setError(data.message); setOpenId(null); setLoading(false); return; }
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
       setOpenId(null); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }

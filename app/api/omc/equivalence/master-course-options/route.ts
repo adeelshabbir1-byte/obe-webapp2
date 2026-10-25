@@ -9,7 +9,7 @@ import { curriculaWhere } from "../../../../../lib/curriculumLibrary";
 // edition first, each labelled with its curriculum. Not every institute's clones (those repeat the same titles).
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await findOwningChairmanId(user.id);
   const curricula = chairmanId
     ? await prisma.masterCurriculum.findMany({ where: { AND: [await curriculaWhere(chairmanId), { status: "PUBLISHED" }] }, select: { id: true, authority: true, title: true, version: true, createdAt: true }, orderBy: [{ version: "desc" }, { createdAt: "desc" }] })

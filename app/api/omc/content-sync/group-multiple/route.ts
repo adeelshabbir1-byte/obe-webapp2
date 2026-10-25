@@ -11,7 +11,7 @@ import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 // respected and merged the same way /pair does for two at a time.
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   const body = await req.json();

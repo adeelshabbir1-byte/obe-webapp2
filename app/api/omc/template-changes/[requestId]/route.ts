@@ -16,11 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
 
   const body = await req.json();
   if (!["approved", "rejected"].includes(body.status)) return NextResponse.json({ error: "status must be 'approved' or 'rejected'" }, { status: 400 });
-  const v = await (await import("../../../../../lib/omcRules")).requestVote({ kind: "TEMPLATE_CHANGE", requestId: request.id, courseId: course.id, user: { id: user.id, name: user.name }, approve: body.status === "approved", reason: body.comment });
-  if ("error" in v) return NextResponse.json({ error: v.error }, { status: 400 });
-  if (!v.decided) return NextResponse.json({ ok: true, pending: true, message: v.message });
-  body.status = v.decided;
-  const comment = [String(body.comment || "").trim(), v.message].filter(Boolean).join(" — ") || null;
+  const comment = String(body.comment || "").trim() || null;
 
   if (body.status === "approved") {
     const before = await snapshotTemplate(course.id);

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const created: { id: string; batchName: string; degreeProgram: string; copiedFrom: string | null; coursesCopied: number; plosCopied: number }[] = [];
+  const created: { batchName: string; degreeProgram: string; copiedFrom: string | null; coursesCopied: number; plosCopied: number }[] = [];
   const skipped: { degreeProgram: string; reason: string }[] = [];
 
   for (const p of programs) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const copyResult = await autoCopyFromPreviousBatch(batch, { courses: false }); // courses: chosen on the batch's set-up page, never copied silently
     created.push({
-      id: batch.id, batchName, degreeProgram: p.name,
+      batchName, degreeProgram: p.name,
       copiedFrom: copyResult.copiedFrom, coursesCopied: copyResult.coursesCopied, plosCopied: copyResult.plosCopied,
     });
     await writeAuditLog({

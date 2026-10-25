@@ -13,9 +13,6 @@ export async function PUT(req: NextRequest, { params }: { params: { batchId: str
   if (body.open) { // a batch taken from a curriculum opens only once its courses are synced and have home departments
     const st = await (await import("../../../../../../lib/batchSetup")).setupStatus(batch.id).catch(() => null);
     if (st && !st.done) return NextResponse.json({ error: `Finish this batch's set-up first (courses page): ${st.open} course(s) to sync or mark new, ${st.noHome} without a home department.` }, { status: 409 });
-    const { registrationBlockers } = await import("../../../../../../lib/registrationGate");
-    const bl = await registrationBlockers(batch.id);
-    if (bl.length) return NextResponse.json({ error: `Registration waits for: ${bl.slice(0, 8).map((x) => `${x.code} — ${x.reason}`).join("; ")}${bl.length > 8 ? ` … and ${bl.length - 8} more` : ""}.` }, { status: 409 });
   }
   const updated = await prisma.batch.update({ where: { id: batch.id }, data: { registrationOpen: !!body.open } });
   return NextResponse.json({ registrationOpen: updated.registrationOpen });

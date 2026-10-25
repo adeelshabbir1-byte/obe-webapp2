@@ -17,10 +17,6 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const isOffered = !!body.isOffered;
 
   const data: any = { isOffered };
-  if (isOffered && course.batchId) { // set-up steps 5–6 first
-    const st = await (await import("../../../../../../lib/batchSetup")).setupStatus(course.batchId).catch(() => null);
-    if (st && !st.done) return NextResponse.json({ error: `Finish the batch's set-up first: ${st.open} course(s) to sync or mark new, ${st.noHome} without a home department.` }, { status: 409 });
-  }
   if (isOffered) {
     const current = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
     if (current) {

@@ -21,7 +21,7 @@ export async function logChange(batchId: string, by: U, action: string, c: { id?
   await db.batchSchemeChange.create({ data: { id: randomUUID(), batchId, courseId: c.id || null, code: c.code || "", title: c.title || "", action, why: why || null, byId: by.id, byName: by.name } }).catch(() => null);
 }
 
-export type SetupRow = { id: string; code: string; title: string; ch?: number; semester?: number | null; home: string | null; homeId: string | null; matched: { id: string; code: string; title: string; batch: string } | null; isNew: boolean; suggestion: { id: string; code: string; title: string; batch: string } | null };
+export type SetupRow = { id: string; code: string; title: string; home: string | null; homeId: string | null; matched: { id: string; code: string; title: string; batch: string } | null; isNew: boolean; suggestion: { id: string; code: string; title: string; batch: string } | null };
 
 /** The set-up state of a batch: which courses are equalised, new or still open, and where names / codes differ. */
 export async function setupStatus(batchId: string) {
@@ -29,11 +29,10 @@ export async function setupStatus(batchId: string) {
   if (!batch) return null;
   const src = await batchSource(batchId);
   const fromCurriculum = !!src && src.how !== "BATCH_AS_TAUGHT";
-  await applyDefaults(batchId).catch(() => null);
-  const cs = await prisma.course.findMany({ where: { batchId, courseType: { notIn: LIST_TYPES } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], select: { id: true, code: true, title: true, creditHours: true, semesterNumber: true, masterCourseId: true, subjectHomeDepartmentId: true, subjectHomeDepartment: { select: { name: true } } } });
+  const cs = await prisma.course.findMany({ where: { batchId, courseType: { notIn: LIST_TYPES } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], select: { id: true, code: true, title: true, masterCourseId: true, subjectHomeDepartmentId: true, subjectHomeDepartment: { select: { name: true } } } });
   const ids = cs.map((c) => c.id).concat("none");
   const mem = await prisma.courseContentSyncMember.findMany({ where: { courseId: { in: ids } }, select: { courseId: true, groupId: true } });
-  const others = await prisma.courseContentSyncMember.findMany({ where: { groupId: { in: mem.map((m) => m.groupId).concat("none") }, courseId: { notIn: ids } }, select: { groupId: true, course: { select: { id: true, code: true, title: true, createdAt: true, semesterNumber: true, subjectExpertId: true, subjectHomeDepartmentId: true, batch: { select: { batchName: true } } } } } });
+  const others = await prisma.courseContentSyncMember.findMany({ where: { groupId: { in: mem.map((m) => m.groupId).concat("none") }, courseId: { notIn: ids } }, select: { groupId: true, course: { select: { id: true, code: true, title: true, createdAt: true, batch: { select: { batchName: true } } } } } });
   const newOnes = new Set(((await db.batchCourseNew.findMany({ where: { batchId } }).catch(() => [])) as { courseId: string }[]).map((x) => x.courseId));
   // Courses already taught: the program's other batches in the institute.
   const prior = await prisma.course.findMany({ where: { batchId: { not: batchId }, batch: { degreeProgram: batch.degreeProgram, coordinator: { managedById: batch.coordinator.managedById } }, courseType: { notIn: LIST_TYPES } }, orderBy: { createdAt: "desc" }, select: { id: true, code: true, title: true, masterCourseId: true, batch: { select: { batchName: true } } } });
@@ -42,7 +41,7 @@ export async function setupStatus(batchId: string) {
     const g = mem.find((m) => m.courseId === c.id);
     const o = g ? others.filter((x) => x.groupId === g.groupId).sort((a, b) => +b.course.createdAt - +a.course.createdAt)[0]?.course : null;
     const sug = o ? null : candidates.find((p) => c.masterCourseId && p.masterCourseId === c.masterCourseId) || candidates.find((p) => p.code.toUpperCase() === c.code.toUpperCase()) || candidates.find((p) => sameName(p.title, c.title)) || null;
-    return { id: c.id, code: c.code, title: c.title, ch: c.creditHours, semester: c.semesterNumber, home: c.subjectHomeDepartment?.name || null, homeId: c.subjectHomeDepartmentId, matched: o ? { id: o.id, code: o.code, title: o.title, batch: o.batch?.batchName || "" } : null, isNew: newOnes.has(c.id), suggestion: sug ? { id: sug.id, code: sug.code, title: sug.title, batch: sug.batch?.batchName || "" } : null };
+    return { id: c.id, code: c.code, title: c.title, home: c.subjectHomeDepartment?.name || null, homeId: c.subjectHomeDepartmentId, matched: o ? { id: o.id, code: o.code, title: o.title, batch: o.batch?.batchName || "" } : null, isNew: newOnes.has(c.id), suggestion: sug ? { id: sug.id, code: sug.code, title: sug.title, batch: sug.batch?.batchName || "" } : null };
   });
   const open = rows.filter((r) => !r.matched && !r.isNew);
   const noHome = rows.filter((r) => !r.homeId);
@@ -174,56 +173,4 @@ export async function offeredTracks(batchId: string) {
 export async function setOfferedTracks(batchId: string, tracks: { id: string; name: string }[]) {
   await db.batchTrackOffer.deleteMany({ where: { batchId } }).catch(() => null);
   for (const t of tracks) await db.batchTrackOffer.create({ data: { batchId, trackId: t.id, name: t.name } }).catch(() => null);
-}
-
-/** Defaults that make the steps easy: every course without a home gets the program's own department; a course synced
- *  to a course already taught takes that course's semester and Subject Expert — once (recorded), so a course the
- *  Program Lead moves afterwards is never moved back. */
-export async function applyDefaults(batchId: string) {
-  const { departmentOfBatch } = await import("./omcCommittee");
-  const { departmentId } = await departmentOfBatch(batchId);
-  if (departmentId) await prisma.course.updateMany({ where: { batchId, subjectHomeDepartmentId: null, courseType: { notIn: LIST_TYPES } }, data: { subjectHomeDepartmentId: departmentId } });
-  const cs = await prisma.course.findMany({ where: { batchId, courseType: { notIn: LIST_TYPES } }, select: { id: true, code: true, title: true, semesterNumber: true, subjectExpertId: true } });
-  const ids = cs.map((c) => c.id).concat("none");
-  const mem = await prisma.courseContentSyncMember.findMany({ where: { courseId: { in: ids } }, select: { courseId: true, groupId: true } });
-  if (!mem.length) return;
-  const applied = new Set(((await db.batchSchemeChange.findMany({ where: { batchId, action: "SYNC_DEFAULTS" }, select: { courseId: true } }).catch(() => [])) as { courseId: string | null }[]).map((x) => x.courseId || ""));
-  const others = await prisma.courseContentSyncMember.findMany({ where: { groupId: { in: mem.map((m) => m.groupId) }, courseId: { notIn: ids } }, select: { groupId: true, course: { select: { id: true, semesterNumber: true, subjectExpertId: true, subjectHomeDepartmentId: true, createdAt: true, batch: { select: { batchName: true } } } } } });
-  for (const c of cs) {
-    if (applied.has(c.id)) continue;
-    const g = mem.find((m) => m.courseId === c.id); if (!g) continue;
-    const o = others.filter((x) => x.groupId === g.groupId).sort((a, b) => +b.course.createdAt - +a.course.createdAt)[0]?.course;
-    if (!o) continue;
-    const data: Record<string, unknown> = {};
-    if (o.semesterNumber && o.semesterNumber !== c.semesterNumber) data.semesterNumber = o.semesterNumber;
-    if (!c.subjectExpertId && o.subjectExpertId) data.subjectExpertId = o.subjectExpertId;
-    if (o.subjectHomeDepartmentId) data.subjectHomeDepartmentId = o.subjectHomeDepartmentId;
-    if (Object.keys(data).length) await prisma.course.update({ where: { id: c.id }, data });
-    await db.batchSchemeChange.create({ data: { id: randomUUID(), batchId, courseId: c.id, code: c.code, title: c.title, action: "SYNC_DEFAULTS", why: `S${o.semesterNumber ?? "?"} (as in ${o.batch?.batchName || "the previous batch"})${data.subjectExpertId ? ", same Subject Expert" : ""}`, byId: "system", byName: "System" } }).catch(() => null);
-  }
-}
-
-/** The home-department step: every course in one list, one Save. Synced courses pass the home on to their linked courses. */
-export async function saveHomes(by: U, batchId: string, rows: { courseId: string; departmentId: string | null; sameAs?: string | null }[]) {
-  const cs = await prisma.course.findMany({ where: { batchId, id: { in: rows.map((r) => r.courseId).concat("none") } }, select: { id: true, subjectHomeDepartmentId: true } });
-  let n = 0;
-  for (const r of rows) {
-    const c = cs.find((x) => x.id === r.courseId); if (!c || (c.subjectHomeDepartmentId || null) === (r.departmentId || null)) continue;
-    await prisma.course.update({ where: { id: c.id }, data: { subjectHomeDepartmentId: r.departmentId || null } });
-    const m = await prisma.courseContentSyncMember.findUnique({ where: { courseId: c.id } });
-    if (m) { const base = await prisma.courseContentSyncMember.findFirst({ where: { groupId: m.groupId, isBase: true } }); if (base && base.courseId !== c.id) await prisma.course.update({ where: { id: base.courseId }, data: { subjectHomeDepartmentId: r.departmentId || null } }); await syncGroupSubjectHome(m.groupId); }
-    n++;
-  }
-  // Courses of another department: the same course they teach (linked by content sync — its plan is shared), or not
-  // offered by them (planned for this program: their SE, our GAs, our OMC).
-  for (const r of rows) {
-    if (!r.sameAs) continue;
-    if (r.sameAs === "none") await db.courseHomePlan.upsert({ where: { courseId: r.courseId }, create: { courseId: r.courseId, mode: "PLANNED_FOR_PROGRAM", byId: by.id }, update: { mode: "PLANNED_FOR_PROGRAM", linkedCourseId: null, byId: by.id, at: new Date() } }).catch(() => null);
-    else {
-      await equalise(by, r.courseId, r.sameAs).catch(() => null);
-      await db.courseHomePlan.upsert({ where: { courseId: r.courseId }, create: { courseId: r.courseId, mode: "SAME_AS", linkedCourseId: r.sameAs, byId: by.id }, update: { mode: "SAME_AS", linkedCourseId: r.sameAs, byId: by.id, at: new Date() } }).catch(() => null);
-    }
-  }
-  await writeAuditLog({ actorUserId: by.id, action: "BATCH_HOMES_SAVED", entityType: "Batch", entityId: batchId, metadata: { changed: n } }).catch(() => null);
-  return n;
 }

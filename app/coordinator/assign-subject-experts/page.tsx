@@ -9,10 +9,9 @@ import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpert
 import { navForRole } from "../../../components/reportNav";
 import { currentTermIndexFor, isPastTerm } from "../../../lib/courseTerm";
 import { leavesOf, leaveText } from "../../../lib/facultyLeave";
-import SetupStrip from "../../../components/SetupStrip";
 
 
-export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string , setup?: string } }) {
+export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -101,7 +100,6 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
-      {searchParams.setup && <SetupStrip batchId={searchParams.setup} step="ses" />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assign Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Grouped by course category (Maths, Foundation, etc. — set on the Course & Faculty Categories page),

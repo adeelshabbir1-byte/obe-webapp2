@@ -57,8 +57,6 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
       setResult(data); setLoading(false);
-      // One intake: straight on to Step 2 of its set-up (where its courses come from).
-      if (data.created?.length === 1 && !data.skipped?.length) window.location.href = `/coordinator/batches/new?batchId=${data.created[0].id}`;
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 
@@ -122,9 +120,9 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
             {result.created.length > 0 && (
               <div style={{ color: "var(--sage)", marginBottom: 6 }}>
                 {result.created.map((c: any) => (
-                  <p key={c.batchName} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <span>✓ Step 1: {c.batchName} created.{c.copiedFrom ? ` GAs copied from ${c.copiedFrom} (${c.plosCopied}).` : ""}</span>
-                    <a className="btn btn-sm" href={`/coordinator/batches/new?batchId=${c.id}`}>Step 2: choose its courses →</a>
+                  <p key={c.batchName}>
+                    {c.batchName} created.
+                    {c.copiedFrom ? ` GAs copied from ${c.copiedFrom} (${c.plosCopied}).` : ""} Next: choose where its courses come from on the batch&apos;s courses page.
                   </p>
                 ))}
               </div>
