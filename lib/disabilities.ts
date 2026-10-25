@@ -13,7 +13,7 @@ export async function keepsRegister(w: Who) {
   if (w.head || w.affairs) return true;
   return !!(await rdb.committeeMember.findFirst({ where: { userId: w.id, toDate: null, committeeId: { in: ((await rdb.committee.findMany({ where: { chairmanId: w.chairmanId, kind: "DISABILITY" }, select: { id: true } }).catch(() => [])) as { id: string }[]).map((c) => c.id).concat(["none"]) } } }).catch(() => null));
 }
-export const examOffice = (w: Who) => w.exam || w.role === "OMC";
+export const examOffice = (w: Who) => w.exam; // the Controller of Examinations (and exam branch) — not the OMC
 export const accommodationText = (r: Rec) => [r.extraTimePct ? `${r.extraTimePct}% extra time in exams` : "", r.seating ? `seating: ${r.seating}` : "", r.materials ? `materials: ${r.materials}` : "", r.assistive ? `assistive: ${r.assistive}` : "", r.other || ""].filter(Boolean).join("; ") || "—";
 
 /** Students whose accommodations this person may see: all of them for the exam office and register keepers; else the students of their current courses. */

@@ -7410,6 +7410,7 @@ model CurriculumMeta {
   lockScheme     Boolean  @default(true)
   lockGa         Boolean  @default(true)
   lockClo        Boolean  @default(true)
+  sourceKind     String?  // HEC | NCEAC | NBEAC | PEC | UNIVERSITY | OTHER — overrides the derived source badge
   aliasesJson    String   @default("[]")
   updatedById    String?
   updatedAt      DateTime @default(now())
@@ -7968,4 +7969,57 @@ model PlatformRole {
   createdAt   DateTime @default(now())
 
   @@id([userId, role])
+}
+
+// University curriculum (lib/universityCurriculum.ts): revisions, the university's plan per curriculum course, the
+// revision each batch started from, and changes moving SE / OMC → BOS → OMC forwards.
+model CurriculumRevision {
+  id           String   @id
+  curriculumId String
+  number       Int
+  note         String   @default("")
+  itemsJson    String   @default("[]")
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  @@unique([curriculumId, number])
+}
+
+model UniversityCoursePlan {
+  masterCourseId String   @id
+  snapshotJson   String
+  revision       Int      @default(0)
+  updatedAt      DateTime @default(now())
+}
+
+model BatchCurriculumSource {
+  batchId      String   @id
+  curriculumId String?
+  revision     Int      @default(0)
+  how          String   @default("CURRICULUM") // CURRICULUM | BATCH_REVISION | BATCH_LATEST | BATCH_AS_TAUGHT | OTHER
+  fromBatchId  String?
+  at           DateTime @default(now())
+}
+
+model CurriculumRecommendation {
+  id             String   @id
+  chairmanId     String
+  courseId       String
+  masterCourseId String?
+  curriculumId   String?
+  kind           String   @default("SE_CHANGE")
+  summary        String
+  reason         String?
+  snapshotJson   String
+  status         String   @default("OMC_REVIEW")
+  proposedById   String
+  omcById        String?
+  bosMinutesId   String?
+  bosItem        String?
+  bosNote        String?
+  revision       Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@index([chairmanId, status])
 }

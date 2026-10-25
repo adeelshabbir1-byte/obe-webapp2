@@ -8,6 +8,7 @@ import InstructorClosManager from "../../../../../components/InstructorClosManag
 import { navForRole } from "../../../../../components/reportNav";
 import { ploPanel } from "../../../../../lib/ploRequests";
 import { CoursePloRequests } from "../../../../../components/PloRequestControls";
+import CoursePlanTools from "../../../../../components/CoursePlanTools";
 
 
 export default async function InstructorClosPage({ params }: { params: { courseId: string } }) {
@@ -33,6 +34,7 @@ export default async function InstructorClosPage({ params }: { params: { courseI
   return (
     <Shell roleLabel="Course Instructor" userName={user.name} navLinks={navForRole(user.role)}>
       <InstructorCourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} />
+      <CoursePlanTools courseId={course.id} as="INSTRUCTOR" />
       <InstructorClosManager
         courseId={course.id}
         initialClos={instructorClos.map((c) => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, mappedPloId: c.mappedPloId, ploContributionPct: c.ploContributionPct }))}

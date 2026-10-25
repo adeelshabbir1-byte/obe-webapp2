@@ -15,7 +15,7 @@ export async function whoIs(user: U): Promise<Who | null> {
   if (!chairmanId) return null;
   const extra = new Set(user.extraRoles || []);
   const head = user.role === "CHAIRMAN", dean = user.role === "DEAN", hod = user.role === "HEAD_OF_DEPARTMENT";
-  return { id: user.id, name: user.name, role: user.role, chairmanId, head, dean, hod, lead: user.role === "PROGRAM_COORDINATOR", qec: extra.has(QEC_INCHARGE), exam: extra.has(EXAM_CONTROLLER), finance: user.role === "FINANCE_OFFICER", affairs: user.role === "STUDENT_AFFAIRS", librarian: user.role === "LIBRARIAN", leader: head || dean || hod };
+  return { id: user.id, name: user.name, role: user.role, chairmanId, head, dean, hod, lead: user.role === "PROGRAM_COORDINATOR", qec: extra.has(QEC_INCHARGE), exam: extra.has(EXAM_CONTROLLER) || head, finance: user.role === "FINANCE_OFFICER", affairs: user.role === "STUDENT_AFFAIRS", librarian: user.role === "LIBRARIAN", leader: head || dean || hod };
 }
 
 /** Staff of an institute (for pickers). */

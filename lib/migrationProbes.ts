@@ -1068,6 +1068,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "source"
 },
 {
+"f": "migration_university_curriculum.sql",
+"d": "University curriculum: revisions, course plans, batch source, changes SE/OMC → BOS → OMC forwards; source badge",
+"t": "CurriculumRecommendation"
+},
+{
 "f": "migration_weight_mincount.sql",
 "d": "Run in Supabase SQL Editor. Adds minimum-assessment-count fields to the",
 "t": "WeightPolicy",

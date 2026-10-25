@@ -268,6 +268,14 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       // Program Leads whose batches use this curriculum review any changes (nothing changes in their batches by itself).
       const users = await prisma.course.findMany({ where: { masterCourse: { masterCurriculumId: c.id } }, select: { coordinatorId: true, batchId: true }, distinct: ["batchId"] });
       if (users.length) { const { notifyUsers } = await import("./notifications"); await notifyUsers(Array.from(new Set(users.map((u) => u.coordinatorId))), { kind: "CURRICULUM", title: `Master curriculum updated: ${c.title} ${c.version}`, body: "Review what changed for your batches; nothing changes until you apply it.", href: "/coordinator/curriculum-sync" }); }
+      // A new national curriculum: every Program Lead of that discipline is told it can be chosen for their next batch.
+      if (c.chairmanId === null) {
+        const { familyOf } = await import("./batchBoard");
+        const fam = familyOf(c.title);
+        const leads = await prisma.batch.findMany({ select: { coordinatorId: true, degreeProgram: true }, distinct: ["coordinatorId", "degreeProgram"] });
+        const ids = Array.from(new Set(leads.filter((l) => familyOf(l.degreeProgram) === fam).map((l) => l.coordinatorId)));
+        if (ids.length) { const { notifyUsers } = await import("./notifications"); await notifyUsers(ids, { kind: "CURRICULUM", title: `New national curriculum: ${c.authority} ${c.title} ${c.version}`, body: "You can choose it for your next batch (Courses → Add courses from).", href: "/curricula?show=national" }).catch(() => null); }
+      }
       return "Published.";
     }
     case "reopen": { await prisma.masterCurriculum.update({ where: { id: c.id }, data: { status: "DRAFT" } }); return "Back to draft."; }

@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const copyResult = await autoCopyFromPreviousBatch(batch);
+  // GAs carry forward from the previous batch; courses do not — the Program Lead picks their source next.
+  const copyResult = await autoCopyFromPreviousBatch(batch, { courses: false });
   await writeAuditLog({
     actorUserId: user.id, action: "BATCH_CREATED", entityType: "Batch", entityId: batch.id,
     metadata: { autoCopyFrom: copyResult.copiedFrom, autoCopyCourses: copyResult.coursesCopied, autoCopyPlos: copyResult.plosCopied },

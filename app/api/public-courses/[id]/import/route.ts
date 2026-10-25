@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../lib/contentSync";
 import { applySnapshot, eligibleCourses, Snapshot } from "../../../../../lib/publicCourse";
+import { notifyUsers } from "../../../../../lib/notifications";
 
 // Imports a public course into one of the caller's own courses as an independent, editable copy.
 // Subject Experts and Coordinators fill the course's Subject Expert plan; an Instructor fills his own delivery plan.
@@ -24,6 +25,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   const marks = await prisma.studentMark.count({ where: { courseId: target.id } });
   if (marks > 0) return NextResponse.json({ error: `This course already has ${marks} entered student mark(s). Importing would delete graded work, so it has been blocked.` }, { status: 409 });
+  if (target.plan === "INSTRUCTOR" && (await prisma.cLO.count({ where: { courseId: target.id, source: "SE" } }))) {
+    // The Subject Expert's design comes with the course: a teacher can't swap the whole plan for another university's.
+    const c = await prisma.course.findUnique({ where: { id: target.id }, select: { subjectExpertId: true, code: true, title: true } });
+    if (body?.suggest && c?.subjectExpertId) {
+      await notifyUsers([c.subjectExpertId], { kind: "ASSIGNMENT", title: `Suggested plan for ${c.code} ${c.title}`, body: `${user.name} suggests a shared course plan for your course.`, href: `/public-library?open=${params.id}` }).catch(() => null);
+      return NextResponse.json({ ok: true, message: "Sent to your Subject Expert to consider." });
+    }
+    return NextResponse.json({ error: "This course already has the Subject Expert's plan, so a teacher can't replace it. Copy single lectures or materials instead, or suggest this plan to your Subject Expert.", canSuggest: !!c?.subjectExpertId }, { status: 409 });
+  }
+  if (target.plan === "SE" && (await prisma.course.count({ where: { id: target.id, templateStatus: { in: ["approved", "submitted"] } } }))) {
+    return NextResponse.json({ error: "Your plan is submitted / approved. Ask the OMC to reopen it (a template change) before importing over it." }, { status: 409 });
+  }
   if (target.plan === "INSTRUCTOR") {
     const attendance = await prisma.attendanceRecord.count({ where: { courseId: target.id } });
     if (attendance > 0) return NextResponse.json({ error: "Attendance has already been taken for this course, so its lecture plan can't be replaced." }, { status: 409 });

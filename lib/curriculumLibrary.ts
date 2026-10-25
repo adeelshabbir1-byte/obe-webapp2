@@ -94,12 +94,13 @@ export async function setAffiliation(by: string, collegeId: string, universityId
 /** Curricula an institute may import from: its own, official ones assigned to it, and its university's (if a college). */
 export async function curriculaWhere(chairmanId: string) {
   const uni = await universityOf(chairmanId);
-  return { OR: [{ chairmanId }, { chairmanId: null, assignments: { some: { chairmanId } } }, ...(uni ? [{ chairmanId: uni, status: "PUBLISHED" }] : [])] };
+  // A national (council) curriculum is open to every institute as soon as it is published; an assignment is still honoured for drafts.
+  return { OR: [{ chairmanId }, { chairmanId: null, status: "PUBLISHED" }, { chairmanId: null, assignments: { some: { chairmanId } } }, ...(uni ? [{ chairmanId: uni, status: "PUBLISHED" }] : [])] };
 }
 export async function canUseCurriculum(c: { id: string; chairmanId: string | null }, chairmanId: string | null | undefined) {
   if (!chairmanId) return false;
   if (c.chairmanId === chairmanId) return true;
-  if (c.chairmanId === null) return !!(await prisma.curriculumAssignment.findUnique({ where: { curriculumId_chairmanId: { curriculumId: c.id, chairmanId } } }));
+  if (c.chairmanId === null) return (await prisma.masterCurriculum.count({ where: { id: c.id, status: "PUBLISHED" } })) > 0 || !!(await prisma.curriculumAssignment.findUnique({ where: { curriculumId_chairmanId: { curriculumId: c.id, chairmanId } } }));
   return c.chairmanId === (await universityOf(chairmanId));
 }
 

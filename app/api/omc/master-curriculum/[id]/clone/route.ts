@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const body = await req.json().catch(() => ({}));
-  const newVersion = body.newVersion?.trim() || `${source.version} (your copy)`;
+  const newVersion = body.newVersion?.trim() || source.version;
 
   const clone = await prisma.masterCurriculum.create({
     data: {

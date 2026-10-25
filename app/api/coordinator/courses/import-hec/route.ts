@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseIfAvailable } from "../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
+import * as uc from "../../../../../lib/universityCurriculum";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -81,7 +82,11 @@ export async function POST(req: NextRequest) {
   const existingKeys = new Set((await prisma.course.findMany({ where: { coordinatorId: ownerId, batchId: batch.id }, select: { code: true, title: true } })).map((c) => norm(c.code, c.title)));
   const seenInThisImport = new Set<string>();
   let duplicatesSkipped = 0;
+  // Elective / IDS lists are a pool to choose from, not courses the batch studies: only the slots are imported.
+  const listTypes = new Set(typeDefs.filter((t) => t.kind === "ELECTIVE_LIST" || t.kind === "IDS_LIST").map((t) => t.name));
+  let listSkipped = 0;
   const toImport = curriculum.courses.filter((mc) => {
+    if (listTypes.has(mc.category) && !body.includeListCourses) { listSkipped++; return false; }
     if (importedIds.has(mc.id) || (Array.isArray(body.courseIds) && !body.courseIds.includes(mc.id))) return false;
     const key = norm(mc.code, mc.title);
     if (mc.category !== "Domain Elective" && (existingKeys.has(key) || seenInThisImport.has(key))) { duplicatesSkipped++; return false; }
@@ -116,14 +121,18 @@ export async function POST(req: NextRequest) {
       });
       created++;
 
-      const benchmark = await copyBenchmarkIfAvailable(newCourse.id, ownerId, mc.id, code, benchmarkCandidates);
+      // Content: the university curriculum's approved plan for this course (its latest revision), else the curriculum's
+      // own CLOs and lecture topics. The previous batch's plan only when the Program Lead chose that source.
+      const benchmark = body.fromPreviousBatch ? await copyBenchmarkIfAvailable(newCourse.id, ownerId, mc.id, code, benchmarkCandidates) : null;
       if (benchmark) benchmarksCopied++;
-      else await seedFromMasterCourseIfAvailable(newCourse.id, mc.id);
+      else if (!(await uc.seedFromUniversityPlan(newCourse.id, mc.id, user.id))) await seedFromMasterCourseIfAvailable(newCourse.id, mc.id);
+      await uc.assignDefaultSubjectExpert(newCourse.id, user.id).catch(() => null);
     } catch (err: any) {
       errors.push(`${mc.code}: ${err?.message || "failed"}`);
     }
   }
 
+  if (created) await uc.recordBatchSource(batch.id, curriculum.id, body.fromPreviousBatch ? "BATCH_LATEST" : "CURRICULUM");
   await writeAuditLog({
     actorUserId: user.id, action: "HEC_CURRICULUM_BULK_IMPORTED", entityType: "Batch", entityId: batch.id,
     metadata: { count: created, curriculumId: curriculum.id, benchmarksCopied, errorCount: errors.length },
@@ -139,7 +148,7 @@ export async function POST(req: NextRequest) {
     orderBy: [{ semesterNumber: "asc" }, { code: "asc" }],
   });
   return NextResponse.json({
-    created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, duplicatesSkipped, benchmarksCopied,
+    created, skipped: toImport.length - created - errors.length, alreadyPresent: importedIds.size, duplicatesSkipped, listSkipped, benchmarksCopied,
     errors: errors.length > 0 ? errors : undefined,
     courses: freshCourses.map((c) => ({
       id: c.id, code: c.code, title: c.title, creditHours: c.creditHours, courseType: c.courseType, semesterNumber: c.semesterNumber,

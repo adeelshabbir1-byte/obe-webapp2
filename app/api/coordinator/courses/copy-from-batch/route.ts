@@ -6,6 +6,8 @@ import { copyCourseContent } from "../../../../../lib/benchmarkCopy";
 import { deleteCourseCompletely } from "../../../../../lib/deleteCourseCompletely";
 import { linkAsFollowerOfSource } from "../../../../../lib/contentSync";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
+import { LIST_TYPES } from "../../../../../lib/autoCopyPreviousBatch";
+import { recordBatchSource, batchSource } from "../../../../../lib/universityCurriculum";
 
 // copyCourseContent does several queries and inserts per course (CLOs,
 // lecture rows, instruments, paper items) — for a batch of any real
@@ -43,6 +45,7 @@ export async function POST(req: NextRequest) {
   // The "delete everything existing first" step only ever runs once,
   // on the first call of the sequence (no cursor yet) — repeating it
   // on every chunk would re-delete courses this same run just copied.
+  if (!cursor) { const src = await batchSource(sourceBatch.id); await recordBatchSource(targetBatch.id, src?.curriculumId || null, "BATCH_AS_TAUGHT", sourceBatch.id); }
   let deleted = 0;
   if (replaceExisting && !cursor) {
     const existingTargetCourses = await prisma.course.findMany({ where: { batchId: targetBatch.id }, select: { id: true } });
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   const [sourceCourses, existingInTarget] = await Promise.all([
     prisma.course.findMany({
-      where: { batchId: sourceBatch.id, ...(cursor ? { id: { gt: cursor } } : {}) },
+      where: { batchId: sourceBatch.id, courseType: { notIn: LIST_TYPES }, ...(cursor ? { id: { gt: cursor } } : {}) }, // never the elective / IDS list pool
       orderBy: { id: "asc" },
       take: CHUNK_SIZE,
     }),

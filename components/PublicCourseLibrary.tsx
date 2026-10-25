@@ -66,6 +66,11 @@ export default function PublicCourseLibrary({ role, myCourses }: { role: string;
       search();
     } else if (r.data?.needsConfirm) {
       if (confirm(`${r.data.error}\n\nReplace it?`)) await doImport(id, true);
+    } else if (r.data?.canSuggest) {
+      if (confirm(`${r.data.error}\n\nSuggest this plan to your Subject Expert?`)) {
+        const s2 = await api(`/api/public-courses/${id}/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetCourseId: targetId, suggest: true }) });
+        if (s2.ok) setMessage(s2.data.message || "Sent to your Subject Expert."); else setError(s2.data?.error || "Couldn't send.");
+      }
     } else setError(r.data?.error || "Import failed.");
   }
 

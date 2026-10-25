@@ -7,7 +7,7 @@ const FILTERS: [keyof LibItem, string][] = [["kind", "Owner type"], ["owner", "O
 const KIND_COLOR: Record<string, string> = { National: "#1565C0", "Your university's": "#7A2E3B", "University (yours)": "#2E7D32", University: "#6B7177" };
 
 /** The curriculum library: filters on the left, one card per program with its versions (newest first). */
-export default function CurriculumLibrary({ items, canTidy }: { items: LibItem[]; canTidy: boolean }) {
+export default function CurriculumLibrary({ items, canTidy, canUse }: { items: LibItem[]; canTidy: boolean; canUse?: boolean }) {
   const [f, setF] = useState<Record<string, string>>({});
   const [q, setQ] = useState("");
   const [old, setOld] = useState(false);
@@ -53,7 +53,7 @@ export default function CurriculumLibrary({ items, canTidy }: { items: LibItem[]
                     <td>{i.version}{n === 0 && i.status !== "SUPERSEDED" ? <span style={{ color: "#2E7D32", fontWeight: 700 }}> latest</span> : null}{i.status !== "PUBLISHED" ? ` (${i.status.toLowerCase()})` : ""}</td>
                     <td>{i.effective || "—"}</td><td>{i.courses}</td><td>{i.credits}</td><td>{i.gas}</td>
                     <td className="small-note">{i.batches} batch(es){i.institutes ? `, ${i.institutes} institute(s)` : ""}{i.copies ? `, ${i.copies} copy(ies)` : ""}</td>
-                    <td><Link href={`/curricula/${i.id}`}>Open</Link></td>
+                    <td style={{ whiteSpace: "nowrap" }}><Link href={`/curricula/${i.id}`}>Open</Link>{canUse && <> · <Link href={`/coordinator/courses?preview=c:${i.id}#sources`}>Use for a batch</Link></>}</td>
                   </tr>
                 ))}</tbody>
               </table>

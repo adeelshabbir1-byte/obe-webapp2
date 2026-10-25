@@ -11,7 +11,7 @@ export type ExamSessionRow = {
 };
 export type ExamPaperRow = { id: string; sessionId: string; courseId: string; date: Date | null; slot: number | null; pinned: boolean; roomsJson: string; invigilatorsJson: string };
 export const EXAM_MANAGERS = ["CHAIRMAN"];
-export const EXAM_VIEWERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "OMC"];
+export const EXAM_VIEWERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"]; // exams are the Controller of Examinations' work, not the OMC's
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 export const parse = <T,>(s: string | null | undefined, d: T): T => { try { return s ? (JSON.parse(s) as T) : d; } catch { return d; } };

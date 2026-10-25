@@ -33,7 +33,7 @@ export async function cloneGrandCurriculumForChairman(grand: { id: string; autho
 
     const clone = await prisma.masterCurriculum.create({
       data: {
-        authority: grand.authority, title: grand.title, version: `${grand.version} (your copy)`,
+        authority: grand.authority, title: grand.title, version: grand.version,
         sourceReference: grand.sourceReference, chairmanId, parentCurriculumId: grand.id,
       },
     });

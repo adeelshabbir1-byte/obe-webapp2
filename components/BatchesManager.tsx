@@ -80,14 +80,8 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      const copy = data.autoCopy;
-      setCopyResultMsg(
-        copy?.copiedFrom
-          ? `Copied ${copy.coursesCopied} course(s) and ${copy.plosCopied} GA(s) forward from ${copy.copiedFrom}.`
-          : "No earlier batch of this program to copy from — starting empty."
-      );
-      setBatches((prev) => [...prev, { ...data.batch, courseCount: copy?.coursesCopied || 0 }]);
-      (e.target as HTMLFormElement).reset(); setLoading(false);
+      // No silent copy: the Program Lead now chooses where the new batch's courses come from.
+      window.location.href = `/coordinator/courses?batchId=${data.batch.id}&pick=1#Add%20courses`;
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

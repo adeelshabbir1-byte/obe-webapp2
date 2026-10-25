@@ -20,7 +20,13 @@ export default async function Curricula({ searchParams }: { searchParams: { show
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (!LIB_ROLES.includes(user.role) && !(user.extraRoles || []).includes("CURRICULUM_BUILDER")) redirect("/home");
-  const all = await libraryItems(user);
+  let all = await libraryItems(user);
+  // A Program Lead sees the curricula of their programs' discipline (BS CS → Computing), not every program's.
+  if (user.role === "PROGRAM_COORDINATOR") {
+    const { familyOf } = await import("../../lib/batchBoard");
+    const fams = new Set((await prisma.batch.findMany({ where: { coordinatorId: user.id }, select: { degreeProgram: true }, distinct: ["degreeProgram"] })).map((b) => familyOf(b.degreeProgram)));
+    if (fams.size) all = all.filter((i) => fams.has(familyOf(i.title)));
+  }
   const show = searchParams.show === "university" ? "university" : searchParams.show === "national" ? "national" : null;
   const items = show === "national" ? all.filter((i) => i.kind === "National") : show === "university" ? all.filter((i) => i.kind !== "National") : all;
   const cid = user.role === "SUPER_USER" ? null : await findOwningChairmanId(user.id);
@@ -33,7 +39,7 @@ export default async function Curricula({ searchParams }: { searchParams: { show
       <p style={{ fontSize: 13, margin: "0 0 6px", fontWeight: 600 }}>{show === "university" ? "Curricula of universities: your own and, for an affiliated college, your university’s." : show === "national" ? "HEC and council curricula (NCEAC, NBEAC, PEC …) that every university builds on." : "National (HEC / council) and University curricula together."}</p>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Every curriculum you can use, grouped by program, newest version first. Each has a standard code: <code>AUTHORITY-LEVEL-PROGRAM-YEAR</code> for official ones (e.g. NCEAC-BS-CS-2023) and the owner&apos;s short name for an institute&apos;s own (e.g. PU-BS-CS-2027).</p>
       {uniName && <div className="card" style={{ borderLeft: "5px solid #7A2E3B", fontSize: 13.5 }}>Your institute is affiliated to <b>{uniName.instituteName || uniName.name}</b>. Its curricula are listed as “Your university&apos;s”: import the version that applies from your batch&apos;s intake term; the scheme of studies, GAs and CLOs it sets cannot be changed here.</div>}
-      <CurriculumLibrary items={items} canTidy={["SUPER_USER", "CHAIRMAN", "DEAN", "OMC"].includes(user.role)} />
+      <CurriculumLibrary canUse={user.role === "PROGRAM_COORDINATOR"} items={items} canTidy={["SUPER_USER", "CHAIRMAN", "DEAN", "OMC"].includes(user.role)} />
     </Shell>
   );
 }

@@ -10,7 +10,7 @@ import { termIndex } from "./termLogic";
  * program. Silently does nothing if no earlier batch exists (e.g. the
  * very first batch of a brand new program) — that's a normal case, not
  * an error. */
-export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordinatorId: string; degreeProgram: string; startTerm: string; startYear: number }) {
+export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordinatorId: string; degreeProgram: string; startTerm: string; startYear: number }, opts: { courses?: boolean } = {}) {
   const candidates = await prisma.batch.findMany({
     where: { coordinatorId: newBatch.coordinatorId, degreeProgram: newBatch.degreeProgram, id: { not: newBatch.id } },
   });
@@ -38,8 +38,11 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
   const existingCodes = new Set(existingInTarget.map((c) => c.code));
 
   let coursesCopied = 0;
+  // Elective / IDS list courses (a pool, not studied by the batch) are not carried forward unless they fill a slot.
+  const listCourse = await listCourseIds(sourceCourses);
+  if (opts.courses === false) sourceCourses.length = 0;
   for (const sc of sourceCourses) {
-    if (existingCodes.has(sc.code)) continue;
+    if (existingCodes.has(sc.code) || listCourse.has(sc.id)) continue;
     try {
       // Elective-type courses carry forward exactly as the previous batch
       // had them — same code, same title, same masterCourseId (whatever
@@ -91,4 +94,11 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
   }
 
   return { copiedFrom: previous.batchName, coursesCopied, plosCopied };
+}
+
+/** Courses of a batch that came from an Elective / IDS list (batch type "Domain Elective" / "Domain IDS") — a pool to choose
+ *  from, not studied as such. A filled elective slot keeps its slot type ("Elective" / "IDS") and is not one of these. */
+export const LIST_TYPES = ["Domain Elective", "Domain IDS"];
+export async function listCourseIds(courses: { id: string; courseType: string | null }[]) {
+  return new Set(courses.filter((c) => LIST_TYPES.includes(c.courseType || "")).map((c) => c.id));
 }
