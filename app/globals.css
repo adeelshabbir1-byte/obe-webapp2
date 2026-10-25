@@ -756,3 +756,6 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
 .sidebar a.nav-link:hover .nl-star,.sidebar .nl-star[data-on="true"]{opacity:.9;}
 .sidebar .nl-star:hover{background:rgba(255,255,255,.14);opacity:1;}
 @media (hover:none){.sidebar .nl-star{opacity:.6;}}
+
+/* Batch set-up strip: only the step numbers on narrow screens */
+@media (max-width: 760px) { .setup-strip-title { display: none; } }

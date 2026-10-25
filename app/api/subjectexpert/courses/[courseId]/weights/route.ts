@@ -42,6 +42,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   // fresh approval - e.g. when only the number of quizzes/assignments or the "best of" is changed afterwards.
   const alreadyApproved = !!course.weightsConfirmedAt && fields.every((f) => (course as any)[f] === vals[f]);
   const violations = alreadyApproved ? [] : checkPolicyCompliance(vals as any, policy, course.hasLab);
+  // The OMC's locked assessment limits for this kind of course: outside them, the change goes to the OMC as an exception.
+  if (!alreadyApproved) violations.push(...(await (await import("../../../../../../lib/omcRules")).limitBreaches(course.id, "SE", { quiz: vals.quizPct, assignment: vals.assignmentPct, midterm: vals.midtermPct, final: vals.finalPct, project: vals.projectPct, lab: vals.labPct }).catch(() => [] as string[])));
 
   // Number of items per category — pre-filled from the OMC's minimum on
   // the form, the SE can raise it. Can't be saved below that minimum.

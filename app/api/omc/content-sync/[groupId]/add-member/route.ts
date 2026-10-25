@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { syncContext, mayTouch, groupCourseIds, afterLink } from "../../../../../../lib/syncAccess";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { reconsiderGroupBase, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
@@ -10,8 +10,9 @@ import { pairForEquivalence } from "../../../../../../lib/equivalencePairing";
 // case, but reachable straight from a specific group in the UI rather
 // than needing to pick that group's base again in a separate dropdown.
 export async function POST(req: NextRequest, { params }: { params: { groupId: string } }) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const ctx = await syncContext();
+  if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = ctx.user;
 
   const group = await prisma.courseContentSyncGroup.findUnique({ where: { id: params.groupId } });
   if (!group || group.chairmanId !== user.managedById) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   const body = await req.json();
   const { courseId } = body;
   if (!courseId) return NextResponse.json({ error: "courseId is required" }, { status: 400 });
+  if (!(await mayTouch(ctx, [courseId, ...(await groupCourseIds(params.groupId))]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   const existingMembership = await prisma.courseContentSyncMember.findUnique({ where: { courseId } });
   if (existingMembership) {
@@ -54,5 +56,6 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
     }
   }
 
+  await afterLink(ctx, [courseId]);
   return NextResponse.json({ ok: true });
 }

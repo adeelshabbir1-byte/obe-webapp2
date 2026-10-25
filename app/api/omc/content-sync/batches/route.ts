@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
-import { deptScope } from "../../../../../lib/omcScope";
 
 // Lightweight, fast list of batches (no course data at all) — used to
 // render the checkbox picker before the potentially large course list
@@ -9,11 +8,10 @@ import { deptScope } from "../../../../../lib/omcScope";
 // regardless of how many hundreds of courses exist overall.
 export async function GET() {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
-
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
-    const coordinatorIds = coordinators.map((c) => c.id);
+    const ctx = await syncContext();
+    if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    const user = ctx.user;
+    const coordinatorIds = ctx.coordinatorIds;
 
     // Only the last 4 admission years are shown — a batch older than
     // that has already graduated, so there's nothing left to link for

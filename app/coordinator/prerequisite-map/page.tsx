@@ -7,10 +7,12 @@ import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import ConfirmPrerequisitesButton from "../../../components/ConfirmPrerequisitesButton";
+import SetupStrip from "../../../components/SetupStrip";
+import { stepHref } from "../../../lib/batchFlow";
 import BatchCoursesQuickEditTable from "../../../components/BatchCoursesQuickEditTable";
 
 
-export default async function PrerequisiteMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
+export default async function PrerequisiteMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string; setup?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -26,7 +28,8 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
   const allBatches = await prisma.batch.findMany({ where: { coordinatorId: { in: coordinatorIds }, ...batchScopeFor(user) }, orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }] });
   await nameCollegeBatches(user, allBatches);
   const degrees = Array.from(new Set(allBatches.map((b) => b.degreeProgram)));
-  const selectedDegree = searchParams.degree || degrees[0] || "";
+  // A batch named in the link (e.g. from the batch set-up) picks its own degree.
+  const selectedDegree = searchParams.degree || allBatches.find((b) => b.id === searchParams.batchId)?.degreeProgram || degrees[0] || "";
   const batchesForDegree = allBatches.filter((b) => b.degreeProgram === selectedDegree);
   // A batchId from the URL only makes sense if it actually belongs to the
   // selected degree — otherwise it's a stale value left over from
@@ -49,6 +52,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      {canEdit && !!selectedBatchId && searchParams.setup === selectedBatchId && <SetupStrip batchId={selectedBatchId} step={9} hideNext />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Prerequisite Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         One row per semester, boxes color-coded by course type. Click two courses to set a prerequisite link.
@@ -97,6 +101,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
         <ConfirmPrerequisitesButton
           batchId={selectedBatchId}
           confirmedAt={batchesForDegree.find((b) => b.id === selectedBatchId)?.prerequisitesConfirmedAt?.toISOString() || null}
+          setupNext={canEdit && !!selectedBatchId && searchParams.setup === selectedBatchId ? stepHref(10, selectedBatchId) : undefined}
         />
       )}
 

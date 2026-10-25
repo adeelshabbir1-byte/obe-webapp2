@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Program = { id: string; name: string; shortCode: string; defaultIntakeSize: number; usuallyOfferedInFall: boolean; usuallyOfferedInSpring: boolean };
 
@@ -39,6 +40,7 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
     Object.fromEntries(initialPrograms.map((p) => [p.id, p.usuallyOfferedInFall]))
   );
   const [result, setResult] = useState<{ created: any[]; skipped: any[] } | null>(null);
+  const router = useRouter();
 
   function setTermAndResetChecks(t: "Fall" | "Spring") {
     setTerm(t);
@@ -56,6 +58,8 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      // One intake: straight into its guided set-up (step 2, the source; step 1 is done). Several: one row each below.
+      if (data.created?.length === 1 && !data.skipped?.length) { router.push(data.created[0].setupHref); return; }
       setResult(data); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -120,9 +124,9 @@ export default function DegreeProgramsAndIntakeManager({ programs: initialProgra
             {result.created.length > 0 && (
               <div style={{ color: "var(--sage)", marginBottom: 6 }}>
                 {result.created.map((c: any) => (
-                  <p key={c.batchName}>
-                    {c.batchName} created.
-                    {c.copiedFrom ? ` GAs copied from ${c.copiedFrom} (${c.plosCopied}).` : ""} Next: choose where its courses come from on the batch&apos;s courses page.
+                  <p key={c.batchName} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <span>✓ {c.batchName} created.{c.copiedFrom ? ` GAs copied from ${c.copiedFrom} (${c.plosCopied}).` : ""}</span>
+                    <a className="btn btn-sm" href={c.setupHref}>Step 2: choose its courses →</a>
                   </p>
                 ))}
               </div>

@@ -629,7 +629,7 @@ export default function AssessmentsManager({ courseId, initialInstruments, targe
           <p style={{ fontSize: 12.5, color: "var(--slate)" }}>Define at least one instrument above first.</p>
         ) : (
           <div className="mapgrid">
-          <style>{`.mapgrid th, .mapgrid td { border: 1px solid #BDB8A8; } .mapgrid thead th, .mapgrid thead td { text-align: center !important; vertical-align: middle !important; } .mapgrid thead th.sortable-th { padding: 16px 4px !important; } .mapgrid thead th.sortable-th::after { right: auto; left: 50%; margin-left: -3px; top: auto; bottom: 3px; margin-top: 0; }`}</style>
+          <style dangerouslySetInnerHTML={{ __html: `.mapgrid th, .mapgrid td { border: 1px solid #BDB8A8; } .mapgrid thead th, .mapgrid thead td { text-align: center !important; vertical-align: middle !important; } .mapgrid thead th.sortable-th { padding: 16px 4px !important; } .mapgrid thead th.sortable-th::after { right: auto; left: 50%; margin-left: -3px; top: auto; bottom: 3px; margin-top: 0; }` }} />
           <SortableTable paginate={false}>
             <thead>
               {cloList.length > 0 && (

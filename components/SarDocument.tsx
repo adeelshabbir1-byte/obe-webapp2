@@ -34,7 +34,7 @@ export default function SarDocument({ data, hec, evidence, program, department, 
   const cell = { border: "1px solid #bbb", padding: "4px 8px", fontSize: 12.5, textAlign: "left", verticalAlign: "top" } as const;
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", padding: "18px 16px", background: "#fff", color: "#111", fontFamily: "Georgia, serif" }}>
-      <style>{`@media print { .no-print { display: none !important; } body { background: #fff; } h2 { break-after: avoid; } table { break-inside: auto; } tr { break-inside: avoid; } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@media print { .no-print { display: none !important; } body { background: #fff; } h2 { break-after: avoid; } table { break-inside: auto; } tr { break-inside: avoid; } }` }} />
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <a className="btn" href={back}>← Back</a><PrintButton />
       </div>

@@ -22,7 +22,7 @@ export default function CurriculumLibrary({ items, canTidy, canUse }: { items: L
   const unnamed = items.filter((i) => !i.named).length;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 220px) minmax(0, 1fr)", gap: 16 }} className="lib-grid">
-      <style>{`@media (max-width: 760px) { .lib-grid { grid-template-columns: 1fr !important; } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@media (max-width: 760px) { .lib-grid { grid-template-columns: 1fr !important; } }` }} />
       <aside className="card" style={{ margin: 0, alignSelf: "start", display: "grid", gap: 10 }}>
         <input placeholder="Search code, name, notification…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search curricula" />
         {FILTERS.map(([k, l]) => (

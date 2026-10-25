@@ -81,6 +81,8 @@ export async function courseFilePdf(courseId: string): Promise<{ bytes: Uint8Arr
   const d = await PdfDoc.create(`Course file - ${course.code} ${course.title}${term ? ` - ${term}` : ""}`);
   d.title(`Course File: ${course.code} ${course.title}`, `${inst?.instituteName || "Institute"} - ${course.batch?.degreeProgram || ""}, ${course.batch?.batchName || ""}${term ? ` - ${term}` : ""}`);
   d.kv([["Credit hours", course.creditHours], ["Course type", course.courseType], ["Semester", course.semesterNumber || "-"], ["Teacher", course.instructor?.name || "-"], ["Program Lead", course.coordinator?.name || "-"], ["Prepared", dmy(new Date())]]);
+  // A plan the OMC finalised itself carries that note for good.
+  { const note = await (await import("./sePlan")).omcFinalNote(course.id).catch(() => null); if (note) d.note(note); }
   d.h2(status.complete ? "This course file is complete." : `Still missing: ${status.missing.join(", ")}.`);
   d.table([["Part", 5], ["In this file", 2]], PARTS.map(([, l]) => [l, status.done.includes(l) ? "Yes" : "Missing"]), { colour: (r, c) => (c === 1 ? (status.done.includes(PARTS[r][1]) ? GREEN : RED) : undefined) });
 

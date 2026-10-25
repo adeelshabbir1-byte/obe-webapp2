@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { autoCopyFromPreviousBatch } from "../../../../lib/autoCopyPreviousBatch";
+import { startFlow } from "../../../../lib/batchFlow";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const created: { batchName: string; degreeProgram: string; copiedFrom: string | null; coursesCopied: number; plosCopied: number }[] = [];
+  const created: { batchId: string; setupHref: string; batchName: string; degreeProgram: string; copiedFrom: string | null; coursesCopied: number; plosCopied: number }[] = [];
   const skipped: { degreeProgram: string; reason: string }[] = [];
 
   for (const p of programs) {
@@ -56,8 +57,10 @@ export async function POST(req: NextRequest) {
     existingDistinctPrograms.add(p.name);
 
     const copyResult = await autoCopyFromPreviousBatch(batch, { courses: false }); // courses: chosen on the batch's set-up page, never copied silently
+    // Step 1 of the guided set-up is done the moment the batch exists; step 2 (the source) comes next.
+    await startFlow(batch.id, user).catch(() => null);
     created.push({
-      batchName, degreeProgram: p.name,
+      batchId: batch.id, setupHref: `/coordinator/batches/new?batchId=${batch.id}&setup=${batch.id}`, batchName, degreeProgram: p.name,
       copiedFrom: copyResult.copiedFrom, coursesCopied: copyResult.coursesCopied, plosCopied: copyResult.plosCopied,
     });
     await writeAuditLog({

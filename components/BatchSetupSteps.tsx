@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SetupRow } from "../lib/batchSetup";
 
-// After a batch takes its courses from a curriculum: ① sync & equalise each course with the one already taught (or mark
-// it new) · ② home department of the new courses · ③ final names and codes where the equal courses differ. Then the
+// After a batch takes its courses from a curriculum (set-up steps 5–7): ⑤ sync & equalise on the Content Sync page ·
+// ⑥ home department of the new courses · ⑦ final names and codes where the equal courses differ. Then the
 // adjusting tools: add a course from another degree, merge duplicates, start again with another source.
 
 type Status = { fromCurriculum: boolean; rows: SetupRow[]; open: number; noHome: number; naming: SetupRow[]; candidates: { id: string; code: string; title: string; batch: string }[]; done: boolean };
@@ -15,7 +15,6 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [pickPrev, setPickPrev] = useState<Record<string, string>>({});
   const [homeOf, setHomeOf] = useState<Record<string, string>>({});
   // ③ names / codes: per row which side ("prev" / "new") for name and for code; default code = previous, name = curriculum.
   const [nameSide, setNameSide] = useState<Record<string, "prev" | "new">>({});
@@ -27,13 +26,12 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
   const [addSem, setAddSem] = useState("");
   const run = async (body: unknown, after?: () => void) => { setBusy(true); setMsg(null); try { const d = await post({ batchId, ...(body as object) }); setMsg({ ok: true, text: d.message || "Saved." }); after?.(); router.refresh(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } setBusy(false); };
 
-  const openRows = status.rows.filter((r) => !r.matched && !r.isNew);
   const homeRows = status.rows.filter((r) => !r.homeId && (r.isNew || !r.matched));
-  const s1 = status.open === 0, s2 = s1 && status.noHome === 0;
+  const s1 = status.open === 0, s2 = status.noHome === 0;
   const nSide = (r: SetupRow) => nameSide[r.id] || "new", cSide = (r: SetupRow) => codeSide[r.id] || "prev";
   const cell = (on: boolean, onClick: () => void, children: React.ReactNode, label: string) => <button type="button" aria-pressed={on} aria-label={label} onClick={onClick} style={{ border: `1.5px solid ${on ? "#0D2A4A" : "#E1E5EA"}`, background: on ? "#EAF1FA" : "#fff", color: on ? "#0D2A4A" : "#9AA0A6", borderRadius: 6, padding: "3px 7px", font: "inherit", fontSize: 12.5, cursor: "pointer", textAlign: "left", width: "100%" }}>{children}</button>;
   const step = (n: number, title: string, done: boolean, body: React.ReactNode) => (
-    <div style={{ borderTop: "1px solid var(--line)", paddingTop: 8, marginTop: 8 }}>
+    <div id={n === 6 ? "home" : n === 7 ? "names" : n === 5 ? "sync" : undefined} style={{ borderTop: "1px solid var(--line)", paddingTop: 8, marginTop: 8, scrollMarginTop: 80 }}>
       <b style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ width: 22, height: 22, borderRadius: 999, background: done ? "#2E7D32" : "#0D2A4A", color: "#fff", display: "inline-grid", placeItems: "center", fontSize: 12 }}>{done ? "✓" : n}</span>{title}</b>
       {body}
     </div>
@@ -43,7 +41,7 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
     <div className="card" style={{ borderLeft: `5px solid ${status.done ? "#2E7D32" : "#C62828"}` }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <b>Courses came from: {sourceLabel || "—"}</b>
-        {status.fromCurriculum && !status.done && <span style={{ color: "#C62828", fontWeight: 700 }}>Set-up not finished — sync and equalise the courses. Registration can&apos;t open until it is.</span>}
+        {status.fromCurriculum && !status.done && <span style={{ color: "#C62828", fontWeight: 700 }}>Set-up not finished — sync and equalise the courses (step 5) and give the new courses their home department (step 6). Their courses can&apos;t be offered and registration can&apos;t open until then.</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => run({ action: "merge" })}>Merge duplicates</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => { if (confirm("Remove all this batch's courses and choose the source again? Only allowed while nobody studies any of them.")) run({ action: "reset" }, () => router.push(`/coordinator/batches/new?batchId=${batchId}`)); }}>Start again with another source</button>
@@ -52,21 +50,14 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
       {msg && <p className={msg.ok ? "small-note" : "err"} style={{ color: msg.ok ? "#1E6B34" : undefined }}>{msg.text}</p>}
 
       {status.fromCurriculum && <>
-        {step(1, `Sync & equalise — ${status.rows.length - status.open} of ${status.rows.length} done`, s1, openRows.length ? (
-          <div>
-            <p className="small-note" style={{ margin: "4px 0" }}>Each course is linked to the course already taught (the same content-sync link the OMC&apos;s Content Sync page shows); it then takes that course&apos;s home department. A course equal to nothing taught before is a <b>new course</b>.</p>
-            {openRows.some((r) => r.suggestion) && <button type="button" className="btn btn-sm" disabled={busy} onClick={() => run({ action: "equaliseAll" })}>Accept every suggestion</button>}
-            <table style={{ fontSize: 12.5, width: "100%", marginTop: 6 }}><thead><tr><th>This batch</th><th>Equal to (already taught)</th><th /></tr></thead>
-              <tbody>{openRows.map((r) => { const v = pickPrev[r.id] ?? r.suggestion?.id ?? ""; return (
-                <tr key={r.id}><td><b>{r.code}</b> {r.title}</td>
-                  <td><select value={v} onChange={(e) => setPickPrev((x) => ({ ...x, [r.id]: e.target.value }))} style={{ maxWidth: 360 }} aria-label={`Equal course for ${r.code}`}><option value="">— choose —</option>{status.candidates.map((c) => <option key={c.id} value={c.id}>{c.code} {c.title} ({c.batch})</option>)}</select>{r.suggestion && v === r.suggestion.id && <span className="small-note" style={{ margin: "0 0 0 6px" }}>suggested</span>}</td>
-                  <td style={{ whiteSpace: "nowrap" }}><button type="button" className="btn btn-sm" disabled={busy || !v} onClick={() => run({ action: "equalise", courseId: r.id, prevCourseId: v })}>Equal</button>{" "}<button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => run({ action: "new", courseId: r.id })}>New course</button></td></tr>); })}</tbody></table>
-          </div>) : <p className="small-note" style={{ margin: "4px 0" }}>Every course is equalised or marked new.</p>)}
-        {step(2, `Home department of new courses${status.noHome ? ` — ${status.noHome} to set` : ""}`, s2, !s1 ? <p className="small-note" style={{ margin: "4px 0" }}>After step 1.</p> : homeRows.length ? (
+        {step(5, `Sync & equalise — synced ${status.rows.filter((r) => r.matched).length} of ${status.rows.length}${status.rows.some((r) => r.isNew) ? ` · ${status.rows.filter((r) => r.isNew).length} new` : ""}`, s1, (
+          <p className="small-note" style={{ margin: "4px 0" }}>{s1 ? "Every course is synced with the course taught before or marked new." : `${status.open} course(s) still to link or mark new.`} Linking is done on the Content Sync page (the OMC&apos;s page, open to you for your own batches): a synced course takes the earlier course&apos;s semester, home department and Subject Expert, and its plan comes with it.{" "}
+            <a href={`/omc/content-sync?batchId=${batchId}&setup=${batchId}`} className="btn btn-sm">{s1 ? "Open Content Sync" : "Sync on the Content Sync page →"}</a></p>))}
+        {step(6, `Home department of new courses${status.noHome ? ` — ${status.noHome} to set` : ""}`, s2, homeRows.length ? (
           <table style={{ fontSize: 12.5, width: "100%", marginTop: 6 }}><tbody>{homeRows.map((r) => (
             <tr key={r.id}><td><b>{r.code}</b> {r.title}</td><td><select value={homeOf[r.id] || ""} onChange={(e) => setHomeOf((x) => ({ ...x, [r.id]: e.target.value }))} aria-label={`Home department of ${r.code}`}><option value="">— home department —</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>{" "}<button type="button" className="btn btn-sm" disabled={busy || !homeOf[r.id]} onClick={() => run({ action: "home", courseId: r.id, departmentId: homeOf[r.id] })}>Save</button></td></tr>))}</tbody></table>
         ) : <p className="small-note" style={{ margin: "4px 0" }}>Every course has its home department.</p>)}
-        {step(3, "Final names and codes", s2 && !status.naming.length, !s1 ? <p className="small-note" style={{ margin: "4px 0" }}>After step 1.</p> : status.naming.length ? (
+        {step(7, "Final names and codes", s2 && !status.naming.length, status.naming.length ? (
           <div>
             <p className="small-note" style={{ margin: "4px 0" }}>{status.rows.filter((r) => r.matched).length - status.naming.length} equal courses have the same name and code — nothing to choose. For these, click the name and the code you want (the chosen one is highlighted); ✎ types another name. Defaults: <b>code</b> from the course already taught (its department&apos;s code system), <b>name</b> from the curriculum.</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "4px 0" }}>

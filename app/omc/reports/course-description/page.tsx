@@ -62,6 +62,8 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
     isInstructorSet: course.instructorAssignmentPct !== null,
   } : null;
 
+  // A plan the OMC finalised itself carries that note on every report.
+  const finalNote = course ? await (await import("../../../../lib/sePlan")).omcFinalNote(course.id).catch(() => null) : null;
   return (
     <Shell roleLabel="Report Viewer" userName={user.name} navLinks={navForRole(user.role)}>
       <ReportPrintHeader title="Course Description Form" />
@@ -73,6 +75,7 @@ export default async function CourseDescriptionPage({ searchParams }: { searchPa
         {selectedCourseId && <a href={`/api/reports/course-description-word?courseId=${selectedCourseId}`} className="btn btn-brass" style={{ textDecoration: "none", marginLeft: 10 }}>Download Word</a>}
         </div>
       </div>
+      {course && finalNote && <div className="card" style={{ borderLeft: "5px solid #8D2B0B" }}><b style={{ color: "#8D2B0B" }}>{finalNote}</b></div>}
       {course && (
         <div className="card">
           <SortableTable paginate={false} searchable={false}>

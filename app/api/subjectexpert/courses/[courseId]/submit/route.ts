@@ -44,11 +44,17 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
     return NextResponse.json({ error: `The paper distribution doesn't meet the OMC's minimums yet - ${questions.short.join("; ")}. Add questions on the Paper Distribution tab.` }, { status: 400 });
   }
 
+  // The OMC's locked assessment limits for this kind of course.
+  const limits = await (await import("../../../../../../lib/omcRules")).limitBreaches(course.id, "SE");
+  if (limits.length > 0) return NextResponse.json({ error: `The plan is outside the OMC's assessment limits — ${limits.join("; ")}.` }, { status: 400 });
+
   // An approved template is locked: it can only be reopened through an approved change request.
   if (course.templateStatus === "approved") {
     return NextResponse.json({ error: "This template is already approved and locked. Request a change if something must be edited." }, { status: 409 });
   }
   const updated = await prisma.course.update({ where: { id: course.id }, data: { templateStatus: "submitted" } });
+  // Each submission is a new voting round for the OMC (votes of the last round stay on record).
+  await (await import("../../../../../../lib/sePlan")).newRound(course.id).catch(() => null);
   // Resubmitting a reopened template: record exactly what changed, for the semester's improvement log.
   if (course.templateStatus === "reopened") {
     const open = await prisma.templateChangeRequest.findFirst({ where: { courseId: course.id, status: "approved" }, orderBy: { createdAt: "desc" } });
@@ -60,7 +66,8 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_SUBMITTED", entityType: "Course", entityId: course.id });
   {
     const lead = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });
-    if (lead?.managedById) await notifyUsers(await holdersOf(lead.managedById, "OMC"), { kind: "TEMPLATE", title: `Course plan to review: ${course.code} ${course.title}`, body: `${user.name} submitted the plan of ${course.code} ${course.title} to the OMC.`, href: "/omc/queue", exceptId: user.id });
+    const omc = await (await import("../../../../../../lib/omcMembers")).omcOfCourse(course.id).catch(() => null);
+    if (lead?.managedById) await notifyUsers(omc?.members.length ? omc.members.map((m) => m.id) : await holdersOf(lead.managedById, "OMC"), { kind: "TEMPLATE", title: `Course plan to review: ${course.code} ${course.title}`, body: `${user.name} submitted the plan of ${course.code} ${course.title} to the OMC.`, href: `/omc/templates/${course.id}`, exceptId: user.id });
   }
 
   return NextResponse.json({ course: updated });

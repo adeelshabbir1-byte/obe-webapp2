@@ -15,6 +15,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const isOffered = !!body.isOffered;
+  if (isOffered) { const why = await (await import("../../../../../../lib/batchFlow")).offerBlock(course.batchId); if (why) return NextResponse.json({ error: why }, { status: 409 }); }
 
   const data: any = { isOffered };
   if (isOffered) {

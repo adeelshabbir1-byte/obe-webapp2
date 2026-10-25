@@ -41,7 +41,7 @@ export default async function YearlySummaryPage({ searchParams }: { searchParams
   const planDone = plan.reduce((n, l) => n + l.done, 0), planTotal = plan.reduce((n, l) => n + l.total, 0);
   return (
     <Shell roleLabel="Yearly summary" userName={user.name} navLinks={navForRole(user.role)}>
-      <style>{`@media print { .no-print { display: none !important; } aside, nav { display: none !important; } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@media print { .no-print { display: none !important; } aside, nav { display: none !important; } }` }} />
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
         <form method="get"><label style={{ fontSize: 13 }}>Year <input name="year" type="number" defaultValue={year} min={2015} max={thisYear} style={{ width: 80, padding: "5px 8px" }} /></label> <button className="btn" type="submit">Show</button></form>
         <PrintButton label="Print" className="btn" />

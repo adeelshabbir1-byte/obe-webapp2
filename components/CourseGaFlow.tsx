@@ -119,7 +119,7 @@ export default function CourseGaFlow({ course, clos: rawClos, assessments: rawA,
 
   return (
     <div>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .cgf-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
         .cgf-chip{border:1px solid #E1E5EA;background:#fff;border-radius:999px;padding:4px 10px;font:600 12px inherit;cursor:pointer;color:#5A3A00}
         .cgf-chip[aria-pressed="true"]{background:#8A5A0F;color:#fff;border-color:#8A5A0F}
@@ -138,7 +138,7 @@ export default function CourseGaFlow({ course, clos: rawClos, assessments: rawA,
         .cgf-tag{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#FBF3E4;color:#8A5A0F;white-space:nowrap}
         .cgf-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:2}
         @media (prefers-reduced-motion: no-preference){.cgf-node{transition:border-color .1s, box-shadow .1s}}
-      `}</style>
+      ` }} />
 
       {msg && <p className="small-note" style={{ marginTop: 0, color: /now/.test(msg) ? "#1E6B34" : "#B3261E" }}>{msg}</p>}
       {edit && <p className="small-note" style={{ marginTop: 0 }}>Click an assessment&apos;s <b>% of its CLO</b> to change it; the other assessments of that CLO share the rest.</p>}

@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: { courseId: strin
   const latest = await prisma.templateChangeRequest.findFirst({ where: { courseId: course.id }, orderBy: { createdAt: "desc" } });
   return NextResponse.json({
     status: course.templateStatus,
-    request: latest ? { id: latest.id, status: latest.status, reason: latest.reason, omcComment: latest.omcComment } : null,
+    request: latest ? { id: latest.id, status: latest.status, reason: latest.reason, omcComment: latest.omcComment, votes: latest.status === "pending" ? (await (await import("../../../../../../lib/omcRules")).requestVotes("TEMPLATE", latest.id, course.id)).line : null } : null,
   });
 }
 

@@ -239,7 +239,7 @@ test("joint degree plan: rules engine checks credits, load, residency, capstone,
 
 test("shared course content: same-named course, same edition first, then official", async () => {
   const { pick } = await import("../lib/curriculumShare");
-  const s = (label: string, edition: string, official: boolean, n = 1) => ({ key: "programming fundamental", fromCourseId: label, label, edition, official, clos: Array.from({ length: n }, () => ({ statement: "x", bloomLevel: "C3", plo: 2, source: "HEC" })), topics: [], plos: [] });
+  const s = (label: string, edition: string, official: boolean, n = 1) => ({ keys: new Set(["programming fundamental"]), outline: null, textbook: null, references: null, fromCourseId: label, label, edition, official, clos: Array.from({ length: n }, () => ({ statement: "x", bloomLevel: "C3", plo: 2, source: "HEC" })), topics: [], plos: [] });
   assert.equal(pick([s("CS 2025", "2025", true, 5), s("SE 2023", "2023", true)], "2023")!.label, "SE 2023");
   assert.equal(pick([s("Uni CS 2025", "2025", false, 9), s("HEC CS 2025", "2025", true)], "2025")!.label, "HEC CS 2025");
   assert.equal(pick([s("CS 2025", "2025", true)], "2023")!.label, "CS 2025"); // other edition when nothing else

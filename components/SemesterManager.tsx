@@ -76,6 +76,8 @@ export default function SemesterManager({ currentTerm, offeredCourses: initialOf
       const lines = data.perBatch.map((b: any) =>
         b.notStarted
           ? `${b.batchName}: hasn't started yet (its own intake term is still ahead) — nothing offered`
+          : b.setupNotFinished
+          ? `${b.batchName}: its set-up isn't finished (sync & equalise, home departments) — finish steps 5–6 first`
           : b.prerequisitesNotConfirmed
           ? `${b.batchName}: Prerequisite Map hasn't been confirmed yet — set it up first, then come back here`
           : `${b.batchName}: Semester ${b.semesterNumber}, ${b.coursesOffered} course(s) newly offered${b.coursesUnOffered ? `, ${b.coursesUnOffered} prior-semester course(s) taken off the active list` : ""}`

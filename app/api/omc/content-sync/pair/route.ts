@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { syncContext, mayTouch, groupCourseIds, afterLink } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const ctx = await syncContext();
+  if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = ctx.user;
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   const body = await req.json();
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     prisma.courseContentSyncMember.findUnique({ where: { courseId: courseIdB } }),
   ]);
   if (!courseA || !courseB) return NextResponse.json({ error: "course not found" }, { status: 404 });
+  if (!(await mayTouch(ctx, [courseIdA, courseIdB, ...(memberA ? await groupCourseIds(memberA.groupId) : []), ...(memberB ? await groupCourseIds(memberB.groupId) : [])]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   if (memberA && memberB && memberA.groupId === memberB.groupId) {
     return NextResponse.json({ groupId: memberA.groupId });
@@ -120,5 +122,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  await afterLink(ctx, [courseIdA, courseIdB]);
   return NextResponse.json({ groupId, alsoMadeEquivalent, baseCourseCode: groupBase?.course.code || null });
 }

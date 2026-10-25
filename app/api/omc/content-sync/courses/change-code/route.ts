@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { syncContext, mayTouch, groupCourseIds } from "../../../../../../lib/syncAccess";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { termIndex } from "../../../../../../lib/termLogic";
@@ -12,8 +12,9 @@ import { termIndex } from "../../../../../../lib/termLogic";
 // edited course instead, for cases like electives where the code
 // shouldn't necessarily follow across different programs.
 export async function PUT(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const ctx = await syncContext();
+  if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = ctx.user;
 
   const body = await req.json();
   const { courseId, newCode, applyToAllPrograms = true } = body;
@@ -28,6 +29,7 @@ export async function PUT(req: NextRequest) {
   const editedTermIndex = termIndex(editedCourse.batch.startTerm, editedCourse.batch.startYear);
 
   const membership = await prisma.courseContentSyncMember.findUnique({ where: { courseId } });
+  if (!(await mayTouch(ctx, [courseId, ...(membership && applyToAllPrograms ? await groupCourseIds(membership.groupId) : [])]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   // Every course this change should touch — starts with just the edited
   // course itself; linked courses are added below if there's a group.

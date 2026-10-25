@@ -213,11 +213,11 @@ function Combined({ jobs: initialJobs, topBar, onBack }: { jobs: Job[]; topBar: 
   const skipped = jobs.filter((j) => state[j.key] === "skipped");
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print { .no-print { display: none !important; } body { background: #fff !important; } .bundle-section { padding: 0 !important; } }
         .bundle-section { padding: 16px 24px; border-bottom: 1px dashed ${C.line}; }
         .bundle-section + .bundle-section { break-before: page; page-break-before: always; }
-      `}</style>
+      ` }} />
       {topBar(<>
         <span style={{ fontSize: 12.5, opacity: 0.85 }}>{done ? `Ready: ${jobs.length - skipped.length} of ${jobs.length} section(s)` : `Preparing ${Math.min(current + 1, jobs.length)} of ${jobs.length}: ${jobs[current]?.title}${jobs[current]?.sub ? ` (${jobs[current].sub})` : ""}…`}</span>
         <button onClick={onBack} style={{ ...btn(), color: "#fff" }}>Change selections</button>

@@ -5,14 +5,15 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // The OMC, or the Program Lead for their own batch (step 8 of the batch set-up).
+  if (!user || (user.role !== "OMC" && user.role !== "PROGRAM_COORDINATOR")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
     include: { coordinator: true, prerequisiteCourse: true, postrequisiteCourses: true },
   });
   if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (course.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (user.role === "PROGRAM_COORDINATOR" ? course.coordinatorId !== user.id : course.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   if (course.isOffered) {
     return NextResponse.json({ error: "this course is already offered this semester — repositioning is only for courses that haven't started yet" }, { status: 400 });
@@ -41,6 +42,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
 
   const updated = await prisma.course.update({ where: { id: course.id }, data: { semesterNumber: newSemester } });
+  // Moved by hand: content sync never moves this course's semester again.
+  await (await import("../../../../../../lib/batchFlow")).markManual(course.id, user.id);
 
   await writeAuditLog({ actorUserId: user.id, action: "COURSE_REPOSITIONED", entityType: "Course", entityId: course.id, metadata: { from: course.semesterNumber, to: newSemester } });
 

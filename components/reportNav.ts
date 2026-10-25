@@ -9,6 +9,8 @@ export const OMC_ACTION_NAV = [
   { href: "/learn", label: "Learn OBE" },
   { href: "/clo-bulk-import", label: "Bulk CLO Import" },
   { href: "/omc/queue", label: "Review Queue" },
+  { href: "/omc/batch-review", label: "New Batches to Approve" },
+  { href: "/omc/assessment-rules", label: "Assessment Rules & Limits" },
   { href: "/omc/faculty-requests", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/instructor-review", label: "Instructor Delivery Review" },
   { href: "/omc/plo-matrix", label: "GA–Course Matrix" },

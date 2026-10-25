@@ -16,9 +16,12 @@ import { setupStatus, schemeChanges } from "../../../lib/batchSetup";
 import { batchBoard, curriculumBoard } from "../../../lib/batchBoard";
 import SlotChooser from "../../../components/SlotChooser";
 import { slotChooser, slotChoicesOf } from "../../../lib/slotChoice";
+import SetupStrip from "../../../components/SetupStrip";
+import { originsOf, flowOf } from "../../../lib/batchFlow";
+import { planFlags, flagText } from "../../../lib/sePlan";
 
 
-export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string; preview?: string; pick?: string } }) {
+export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string; preview?: string; pick?: string; setup?: string; step?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -35,6 +38,22 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   const allBatchesForPick = !selectedBatchId && pv ? await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ startYear: "desc" }], take: 12, select: { id: true, degreeProgram: true, batchName: true } }) : [];
   const preview = pv.startsWith("c:") ? await curriculumBoard(pv.slice(2)) : pv.startsWith("b:") && (await prisma.batch.findFirst({ where: { id: pv.slice(2), coordinator: { managedById: owning || "none" } }, select: { id: true } })) ? await batchBoard(pv.slice(2)) : null;
   const [slotGroups, slotChoices] = selectedBatchId ? await Promise.all([slotChooser(selectedBatchId).catch(() => []), slotChoicesOf(selectedBatchId)]) : [[], []];
+  // The board: "S5 (as in BSCS Fall 2026)" on synced courses, and a red flag on each course whose plan the OMC hasn't approved.
+  if (board && selectedBatchId) {
+    const [orig, flags] = await Promise.all([originsOf(selectedBatchId), planFlags(board.courses.map((c) => c.id))]);
+    for (const c of board.courses) {
+      const o = orig.get(c.id);
+      if (o && !o.manual && o.semester && o.semester === c.semester) c.semNote = `S${o.semester} (as in ${o.from})`;
+      else if (o?.manual) c.semNote = `S${c.semester ?? "?"} (moved by hand)`;
+      const f = flags.get(c.id);
+      if (f && !f.approved) c.planFlag = flagText(f);
+      else if (f?.carried) c.planFlag = `Approved for ${f.carried} — the Subject Expert should recheck it`;
+    }
+  }
+  const inSetup = !!selectedBatchId && searchParams.setup === selectedBatchId;
+  const flow = inSetup ? await flowOf(selectedBatchId) : null;
+  const askStep = Number(searchParams.step);
+  const setupStep = [1, 2, 3, 4, 6, 7, 10].includes(askStep) ? askStep : flow && [2, 3, 4, 6, 7, 10].includes(flow.current) ? flow.current : 6;
   const listCount = selectedBatchId ? await prisma.course.count({ where: { batchId: selectedBatchId, courseType: { in: LIST_TYPES } } }) : 0;
 
   const courses = await prisma.course.findMany({
@@ -67,6 +86,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
 
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
+      {inSetup && <SetupStrip batchId={selectedBatchId} step={setupStep} finish={setupStep === 7 ? "Names and codes are final →" : setupStep === 10 ? "Electives are chosen →" : undefined} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Catalog</h1>
         <a href="/api/coordinator/courses/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
@@ -87,6 +107,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
       {selectedBatchId && board && board.courses.length === 0 && <div className="card" style={{ borderLeft: "5px solid #0D2A4A" }}><h3 style={{ marginTop: 0 }}>This batch has no courses yet</h3><p className="small-note">Choose where they come from — a curriculum (e.g. NCEAC) or a previous batch — step by step.</p><a className="btn" href={`/coordinator/batches/new?batchId=${selectedBatchId}`}>Set up this batch&apos;s courses →</a></div>}
       {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} />}
       {selectedBatchId && board && board.courses.length > 0 && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
+      {selectedBatchId && <div id="electives" style={{ scrollMarginTop: 80 }} />}
       {selectedBatchId && <SlotChooser batchId={selectedBatchId} groups={slotGroups} choices={slotChoices.map((c) => ({ courseId: c.courseId, byName: c.byName, at: new Date(c.at).toISOString() }))} />}
       {listCount > 0 && <div className="card" style={{ borderLeft: "5px solid #B26A00", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <span><b>{listCount}</b> elective / IDS <b>list</b> courses are in this batch. A list is the pool students choose from — the batch only needs its elective slots, each filled from the list.</span>

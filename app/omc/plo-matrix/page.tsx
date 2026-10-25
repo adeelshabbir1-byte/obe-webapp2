@@ -15,12 +15,16 @@ import AutoMapSystemAllButton from "../../../components/AutoMapSystemAllButton";
 import PloMatrixExcelButtons from "../../../components/PloMatrixExcelButtons";
 import { deptScope } from "../../../lib/omcScope";
 import { batchScopeFor, nameCollegeBatches } from "../../../lib/reportScope";
+import SetupStrip from "../../../components/SetupStrip";
+import { navForRole } from "../../../components/reportNav";
+import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
 
-export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
+export default async function OmcPloMatrixPage({ searchParams }: { searchParams: { degree?: string; batchId?: string; setup?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
+  if (user.role === "PROGRAM_COORDINATOR") return leadView(user, searchParams);
   if (user.role !== "OMC") redirect("/dashboard");
 
   const coordinators = await prisma.user.findMany({
@@ -117,6 +121,41 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
         </div>
       )}
       {hasFilter && <PloMatrix programs={programs} />}
+    </Shell>
+  );
+}
+
+// Step 12 of a batch's set-up: the Program Lead checks the GA mapping read-only (the OMC decides it here) and sees warnings.
+async function leadView(user: { id: string; name: string; role: string }, searchParams: { batchId?: string; setup?: string }) {
+  const batch = searchParams.batchId ? await prisma.batch.findFirst({ where: { id: searchParams.batchId, coordinatorId: user.id }, select: { id: true, degreeProgram: true, batchName: true } }) : null;
+  if (!batch) redirect("/coordinator/batches");
+  const [plos, courses] = await Promise.all([
+    prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } }),
+    prisma.course.findMany({ where: { batchId: batch.id, courseType: { notIn: LIST_TYPES } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], select: { id: true, code: true, title: true, semesterNumber: true, ploMappings: { select: { ploId: true } }, clos: { where: { source: "SE" }, select: { mappedPloId: true } } } }),
+  ]);
+  const noGa = courses.filter((c) => !c.ploMappings.length);
+  const unused = plos.filter((p) => !courses.some((c) => c.ploMappings.some((m) => m.ploId === p.id)));
+  const offMap = courses.filter((c) => c.clos.some((x) => x.mappedPloId && !c.ploMappings.some((m) => m.ploId === x.mappedPloId)));
+  const warnings = [
+    ...(plos.length ? [] : ["The batch has no GAs yet."]),
+    ...(noGa.length ? [`${noGa.length} course(s) contribute to no GA: ${noGa.map((c) => c.code).join(", ")}.`] : []),
+    ...(unused.length ? [`${unused.length} GA(s) no course serves: ${unused.map((p) => `GA-${p.number}`).join(", ")}.`] : []),
+    ...(offMap.length ? [`${offMap.length} course(s) have CLOs pointing at a GA the course isn't mapped to: ${offMap.map((c) => c.code).join(", ")}.`] : []),
+  ];
+  return (
+    <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
+      {searchParams.setup === batch.id && <SetupStrip batchId={batch.id} step={12} finish="GA mapping checked →" />}
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>GA–Course Matrix · {batch.degreeProgram} {batch.batchName}</h1>
+      <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Which GAs each course contributes to. The OMC decides this mapping here during its review; you check it. Warnings only — nothing here blocks the set-up.</p>
+      <div className="card" style={{ borderLeft: `5px solid ${warnings.length ? "#B26A00" : "#2E7D32"}` }}>
+        {warnings.length ? <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{warnings.map((w) => <li key={w}>{w}</li>)}</ul> : <b>No warnings — every course serves a GA and every GA is served.</b>}
+      </div>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="table" style={{ fontSize: 12.5 }}>
+          <thead><tr><th>Course</th><th>Sem</th>{plos.map((p) => <th key={p.id} title={p.title} style={{ textAlign: "center" }}>GA-{p.number}</th>)}</tr></thead>
+          <tbody>{courses.map((c) => <tr key={c.id}><td><b>{c.code}</b> {c.title}</td><td>{c.semesterNumber ?? "—"}</td>{plos.map((p) => <td key={p.id} style={{ textAlign: "center", color: "#1E6B34" }}>{c.ploMappings.some((m) => m.ploId === p.id) ? "✓" : ""}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
     </Shell>
   );
 }
