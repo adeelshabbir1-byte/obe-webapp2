@@ -31,7 +31,7 @@ const D = (t: string): [Kind, string] => ["D", t], R = (t: string): [Kind, strin
 export const ROWS: PmRow[] = [
   // ---------------- 0. One-time set-up
   { phase: 0, task: "Institute", sub: "Institute name, logo, position titles (VC / Rector / Director)", when: "Day 1", href: "/chairman/institute-settings", cells: { IH: D("Sets") } },
-  { phase: 0, task: "Institute", sub: "Faculties, departments, campuses", when: "Day 1", href: "/chairman/departments", cells: { IH: D("Creates"), DEAN: V("Sees own faculty"), HOD: V("Sees own department") } },
+  { phase: 0, task: "Institute", sub: "Faculties, departments, campuses", when: "Day 1", href: "/chairman/setup", cells: { IH: D("Creates"), DEAN: V("Sees own faculty"), HOD: V("Sees own department") } },
   { phase: 0, task: "People", sub: "Organisation chart: Deans, HODs, Program Leads, coordinators", when: "Week 1", href: "/chairman/org-chart", cells: { IH: D("Builds the chart, drags people into positions"), DEAN: I("Placed in chart"), HOD: I("Placed in chart"), PL: I("Placed in chart"), DC: I("Placed in chart") } },
   { phase: 0, task: "People", sub: "Duties: Controller of Exams, QEC Convener, OMC Conveners and members", when: "Week 1", href: "/chairman/org-chart", group: "A", cells: { IH: D("Names them"), OMC: I("Added to the department's OMC"), CONV: I("Named convener"), CTRL: I("Named Controller"), QEC: I("Named convener / member") } },
   { phase: 0, task: "People", sub: "Faculty accounts and profiles", when: "Week 1", href: "/data-import", group: "A", cells: { IH: D("Imports faculty"), PL: D("Onboards own teachers"), SE: D("Completes profile"), INS: D("Completes profile, photo, qualifications"), LAB: D("Completes profile") } },

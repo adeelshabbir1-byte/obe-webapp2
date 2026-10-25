@@ -12,7 +12,7 @@ export const CORE: Record<string, [string, string[]][]> = {
     ["People & structure", ["/chairman/org-chart", "/chairman/people", "/leave-approvals"]],
     ["Academics", ["/results-approval", "/academic-calendar", "/academic-rules"]],
     ["Accreditation", ["/accreditation-overview", "/accreditation/readiness", "/quality-office"]],
-    ["Institute", ["/chairman/institute-settings", "/data-import", "/controller", "/chairman/backups", "/chairman/campuses", "/billing"]],
+    ["Institute", ["/chairman/setup", "/chairman/institute-settings", "/data-import", "/controller", "/chairman/backups", "/chairman/campuses", "/billing"]],
   ],
   DEAN: [
     ["Today", ["/dean/overview", "/approvals", "/head-dashboard", "/deadlines"]],

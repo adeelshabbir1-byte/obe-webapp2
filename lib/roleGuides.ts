@@ -5,6 +5,7 @@
 export type Step = { key: string; title: string; href: string; how: string; video?: string };
 export const GUIDES: Record<string, { intro: string; steps: Step[] }> = {
   CHAIRMAN: { intro: "As Institute Head you set up the institute once, name the people in charge, then watch and approve.", steps: [
+    { key: "setup", title: "Set up the institute", href: "/chairman/setup", how: "Pick the shape (Faculty → Department → Program, Department → Program, or Program only), tick your disciplines, upload the management logins and put each person in their position." },
     { key: "settings", title: "Check institute name, logo and position titles", href: "/chairman/institute-settings", how: "Set the institute's name and logo, and the titles you use (VC, Rector, Director)." },
     { key: "org", title: "Build the organisation chart", href: "/chairman/org-chart", how: "Add Deans, HODs, Program Leads; use “+ Add OMC & QEC Conveners”, then add members to each." },
     { key: "controller", title: "Name the Controller of Examinations", href: "/chairman/org-chart", how: "Give the Controller of Examinations duty to one person; they run exams and publish results." },
