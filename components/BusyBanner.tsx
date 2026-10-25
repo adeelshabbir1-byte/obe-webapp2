@@ -27,7 +27,7 @@ export default function BusyBanner() {
       border: "1px solid var(--line, #ccc)", borderLeft: "4px solid var(--brass, #b8860b)", padding: "10px 14px",
       boxShadow: "0 4px 14px rgba(0,0,0,0.18)", fontSize: 12.5,
     }}>
-      <style>{`@keyframes busyspin { to { transform: rotate(360deg); } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes busyspin { to { transform: rotate(360deg); } }` }} />
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ width: 16, height: 16, border: "2px solid var(--line, #ccc)", borderTopColor: "var(--brass, #b8860b)", borderRadius: "50%", display: "inline-block", animation: "busyspin 0.8s linear infinite", flexShrink: 0 }} />
         <b>{task.message}</b>

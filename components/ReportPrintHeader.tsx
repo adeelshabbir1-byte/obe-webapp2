@@ -17,7 +17,7 @@ export default function ReportPrintHeader({ title, instituteName }: { title: str
 
   return (
     <div className="print-header">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
@@ -25,7 +25,7 @@ export default function ReportPrintHeader({ title, instituteName }: { title: str
           .main { padding: 0 !important; }
         }
         .print-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-      `}</style>
+      ` }} />
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {nceacLogo ? (
           <img src={nceacLogo} alt="NCEAC" style={{ width: 44, height: 44, objectFit: "contain" }} />

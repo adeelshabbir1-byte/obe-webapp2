@@ -52,7 +52,7 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
   const [st, color] = STATUS[props.cur.status] || [props.cur.status, "#555"];
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .bb-steps{display:flex;gap:4px;flex-wrap:wrap}
         .bb-step{border:0;border-radius:999px;padding:8px 16px;font:600 13px inherit;cursor:pointer;background:#EEF1F5;color:#334}
         .bb-step[aria-current="step"]{background:#0D2A4A;color:#fff}
@@ -71,7 +71,7 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
         .bb-ghost{border:1px dashed #C9A227;background:#FFFBEA;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;text-align:left;color:#7A5B00}
         .bb-toast{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));padding:10px 16px;border-radius:10px;color:#fff;font-weight:600;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.18)}
         @media (prefers-reduced-motion: no-preference){.bb-card{transition:transform .08s}.bb-card:active{transform:scale(.98)}}
-      `}</style>
+      ` }} />
       <div className="card" style={{ margin: 0, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#6B7177" }}>{props.cur.authority} · {props.cur.owner || "Official"}{props.cur.reference ? ` · ${props.cur.reference}` : ""}</div>
