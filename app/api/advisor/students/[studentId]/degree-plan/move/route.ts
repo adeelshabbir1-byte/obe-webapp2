@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { recordMove } from "../../../../../../../lib/planHistory";
 
 // Advisor-facing counterpart to /api/student/degree-plan/move — same
 // "has this course historically run in that semester" validation, but
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
   });
   const validated = !!everOfferedAtThatSemester;
 
+  const before = await prisma.degreePlanEntry.findUnique({ where: { studentId_courseId: { studentId: student.id, courseId: course.id } }, select: { plannedSemesterNumber: true } });
+  await recordMove(student.id, course.id, before?.plannedSemesterNumber ?? null, targetSemesterNumber, user.id, body.reason ? String(body.reason) : null, body.note ? String(body.note) : null);
   await prisma.degreePlanEntry.upsert({
     where: { studentId_courseId: { studentId: student.id, courseId: course.id } },
     update: { plannedSemesterNumber: targetSemesterNumber },

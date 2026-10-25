@@ -767,6 +767,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "PlatformRole"
 },
 {
+"f": "migration_plan_history.sql",
+"d": "Degree plan history: versions, course moves with reasons, student / advisor comments",
+"t": "PlanComment"
+},
+{
 "f": "migration_plo_batch_scope.sql",
 "d": "Run in Supabase SQL Editor. Re-scopes PLO from (coordinator + degreeProgram)",
 "t": "PLO",

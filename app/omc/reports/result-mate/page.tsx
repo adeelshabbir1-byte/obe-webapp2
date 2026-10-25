@@ -18,9 +18,10 @@ import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
 import { resultLockMessage } from "../../../../lib/resultApproval";
 import ResultMateMarks from "../../../../components/ResultMateMarks";
 import MarksGrid from "../../../../components/MarksGrid";
+import CoursePicker from "../../../../components/CoursePicker";
 import AffiliateMarksNote from "../../../../components/AffiliateMarksNote";
 
-export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string } }) {
+export default async function ResultMatePage({ searchParams }: { searchParams: { courseId?: string; degree?: string; batchId?: string; semester?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -44,6 +45,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
     for (const b of cb) collegeOfBatch.set(b.id, b.coordinator.managedBy?.instituteName || b.coordinator.managedBy?.name || "college");
   }
   const notMine = !!searchParams.batchId && (user.role === "INSTRUCTOR" || user.role === "SUBJECT_EXPERT") && !allBatches.some((b) => b.id === searchParams.batchId);
+  const allCourses = courses;
   if (searchParams.batchId) courses = courses.filter((c) => c.batchId === searchParams.batchId);
   else if (searchParams.degree) courses = courses.filter((c) => c.batch?.degreeProgram === searchParams.degree);
 
@@ -92,8 +94,7 @@ export default async function ResultMatePage({ searchParams }: { searchParams: {
       <div className="card no-print">
         <DegreeBatchFilter batches={allBatches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: collegeOfBatch.get(b.id) ? `${b.batchName} — ${collegeOfBatch.get(b.id)}` : b.batchName }))} selectedDegree={searchParams.degree || ""} selectedBatchId={searchParams.batchId || ""} extraParams={{}} />
         <div style={{ marginTop: 10 }}>
-        <label style={{ fontSize: 11.5, color: "var(--slate)", textTransform: "uppercase", letterSpacing: ".05em", marginRight: 10 }}>Course</label>
-        <AutoSubmitSelect name="courseId" defaultValue={selectedCourseId} options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.title}${collegeIds.includes(c.coordinator.managedById || "") ? ` (${c.coordinator.managedBy?.instituteName || c.coordinator.managedBy?.name})` : ""}` }))} />
+          <CoursePicker basePath="/omc/reports/result-mate" batches={allBatches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}`, current: null }))} courses={allCourses.map((c) => ({ id: c.id, code: c.code, title: c.title, batchId: c.batchId, semester: c.semesterNumber }))} batchId={searchParams.batchId || ""} semester={searchParams.semester ? Number(searchParams.semester) : null} courseId={selectedCourseId} extra={searchParams.degree ? { degree: searchParams.degree } : {}} />
         </div>
       </div>
 

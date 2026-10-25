@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import DegreePlanner from "../../../components/DegreePlanner";
 import StudentShell from "../../../components/StudentShell";
+import PlanHistoryPanel from "../../../components/PlanHistoryPanel";
 
 export default async function DegreePlanPage() {
   const student = await getAuthenticatedStudent();
@@ -20,6 +21,7 @@ export default async function DegreePlanPage() {
           course.
         </p>
         <DegreePlanner />
+        <PlanHistoryPanel studentId={student.id} staff={false} />
       </div>
     </StudentShell>
   );

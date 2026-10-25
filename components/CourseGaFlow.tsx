@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
-// One course's outcome flow, left to right: Assessments → CLOs → GAs → Course.
+// One course's outcome flow, left to right: Assessments → CLOs → GAs (each CLO linked straight to its GA).
 // Each CLO shows the GA it maps to. Pick a GA (or a CLO / assessment) to see only what is linked to it.
 
 type Clo = { id: string; code: string; statement: string; bloom: string; ploNumber: number | null; weight: number; attainment: number | null; avg: number | null };
@@ -55,7 +55,8 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
     return { L, A, G };
   }, [pick, clos, assessments, allGas]);
 
-  const shownA = assessments.filter((a) => vis.A.has(a.id));
+  // Focused on a CLO / GA: its assessments in order of their contribution (largest first).
+  const shownA = assessments.filter((a) => vis.A.has(a.id)).sort((x, y) => (pick ? (y.share || 0) - (x.share || 0) : 0));
   const shownL = clos.filter((c) => vis.L.has(c.id));
   const shownG = allGas.filter((g) => vis.G.has(String(g.number)));
   const unassessedA = assessments.filter((a) => !a.cloId);
@@ -74,7 +75,6 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
       const shownA = assessments.filter((a) => vis.A.has(a.id)), shownL = clos.filter((c) => vis.L.has(c.id)), shownG = allGas.filter((g) => vis.G.has(String(g.number)));
       for (const a of shownA) { if (!a.cloId || !vis.L.has(a.cloId)) continue; const p = pos(`A:${a.id}`, "r"), q = pos(`L:${a.cloId}`, "l"); if (p && q) out.push({ k: `a${a.id}`, d: curve(p, q), on: !!pick, color: tc(a.type) }); }
       for (const c of shownL) { if (c.ploNumber === null) continue; const p = pos(`L:${c.id}`, "r"), q = pos(`G:${c.ploNumber}`, "l"); if (p && q) out.push({ k: `l${c.id}`, d: curve(p, q), on: !!pick, color: "#6B3F8A" }); }
-      for (const g of shownG) { const p = pos(`G:${g.number}`, "r"), q = pos("C", "l"); if (p && q) out.push({ k: `g${g.number}`, d: curve(p, q), on: !!pick, color: "#8A5A0F" }); }
       setLines(out); setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     draw();
@@ -94,7 +94,7 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
         .cgf-chip{border:1px solid #E1E5EA;background:#fff;border-radius:999px;padding:4px 10px;font:600 12px inherit;cursor:pointer;color:#5A3A00}
         .cgf-chip[aria-pressed="true"]{background:#8A5A0F;color:#fff;border-color:#8A5A0F}
         .cgf{position:relative;overflow-x:auto}
-        .cgf-grid{display:grid;grid-template-columns:minmax(190px,1fr) minmax(230px,1.3fr) minmax(190px,1fr) minmax(160px,.8fr);gap:56px;position:relative;z-index:1;min-width:880px}
+        .cgf-grid.focus{grid-template-columns:minmax(320px,2fr) minmax(220px,1fr) minmax(180px,.8fr)}.cgf-grid{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(240px,1.3fr) minmax(200px,1fr);gap:64px;position:relative;z-index:1;min-width:880px}
         .cgf-col h4{margin:0 0 2px;font-size:13px}
         .cgf-col .cgf-sub{font-size:11px;color:var(--slate);margin-bottom:8px}
         .cgf-node{display:block;width:100%;text-align:left;background:#fff;border:1px solid #DDE2E8;border-radius:9px;padding:7px 9px;margin-bottom:7px;cursor:pointer;font:inherit;color:inherit}
@@ -110,6 +110,7 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
         @media (prefers-reduced-motion: no-preference){.cgf-node{transition:border-color .1s, box-shadow .1s}}
       `}</style>
 
+      <div className="small-note" style={{ marginTop: 0 }}><b>{course.code} {course.title}</b> · {course.creditHours} CH · {clos.length} CLOs · {allGas.length} GAs</div>
       <div className="cgf-bar" role="group" aria-label="Show one GA">
         <b style={{ fontSize: 12.5 }}>Show one GA:</b>
         {allGas.map((g) => <button key={g.number} type="button" className="cgf-chip" aria-pressed={isPicked("G", String(g.number))} onClick={() => toggle({ kind: "G", id: String(g.number) })} title={g.title}>GA{g.number}</button>)}
@@ -121,7 +122,7 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
         <svg className="cgf-svg" width={size.w} height={size.h} aria-hidden="true">
           {lines.map((l) => <path key={l.k} d={l.d} fill="none" stroke={l.color} strokeOpacity={l.on ? 0.85 : 0.35} strokeWidth={l.on ? 2.2 : 1.4} />)}
         </svg>
-        <div className="cgf-grid">
+        <div className={`cgf-grid${pick?.kind === "L" ? " focus" : ""}`}>
           <div className="cgf-col">
             <h4 style={{ color: "#3E5C8A" }}>Assessments <span className="cgf-muted">({shownA.length})</span></h4>
             <div className="cgf-sub">which CLO each one assesses</div>
@@ -157,15 +158,6 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
             {!shownG.length && <p className="small-note">No GA for this selection.</p>}
           </div>
 
-          <div className="cgf-col">
-            <h4 style={{ color: "#7E2435" }}>Course</h4>
-            <div className="cgf-sub">&nbsp;</div>
-            <div data-node="C" className="cgf-node" style={{ cursor: "default", borderLeft: "4px solid #7E2435" }}>
-              <b style={{ fontSize: 12.5 }}>{course.code}</b>
-              <div style={{ fontSize: 12, lineHeight: 1.35 }}>{course.title}</div>
-              <div className="cgf-muted">{course.creditHours} CH · {clos.length} CLOs · {allGas.length} GAs</div>
-            </div>
-          </div>
         </div>
       </div>
       {unassessedA.length > 0 && !pick && <p className="small-note" style={{ color: AMBER }}>{unassessedA.length} assessment(s) not linked to a CLO — link their lectures to a CLO in the lecture plan.</p>}

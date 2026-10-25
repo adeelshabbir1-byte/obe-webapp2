@@ -16,6 +16,7 @@ import KeyButton from "../../../../components/KeyButton";
 import AdvisorCourseStatus from "../../../../components/AdvisorCourseStatus";
 import { liveCourseStatus, plannedVsActual } from "../../../../lib/studentCourseStatus";
 import { ActionButton } from "../../../../components/fyp/FypClient";
+import PlanHistoryPanel from "../../../../components/PlanHistoryPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,7 @@ export default async function AdvisorStudentPage({ params }: { params: { student
       {live.length > 0 && <div style={{ marginTop: 8 }}><ActionButton url={`/api/advisor/students/${s.id}/freeze-grades`} body={{}} label="Save target grades as this semester's plan" className="btn btn-secondary btn-sm" done="Saved (only courses without a saved plan)." /></div>}
       <h2 style={{ fontSize: 16, margin: "18px 0 8px" }}>Degree plan</h2>
       <AdvisorStudentPlanner studentId={s.id} />
+      <PlanHistoryPanel studentId={s.id} staff />
     </Shell>
   );
 }

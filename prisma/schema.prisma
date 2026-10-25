@@ -8108,3 +8108,48 @@ model VisitingClaim {
   @@unique([assignmentId, periodStart])
   @@index([chairmanId, status])
 }
+
+// Degree plan history (lib/planHistory.ts): versions, course moves with reasons, and the student / advisor comments.
+model PlanVersion {
+  id        String   @id
+  studentId String
+  kind      String   // LOCK | UNLOCK | HANDOVER | SNAPSHOT
+  byId      String
+  byName    String   @default("")
+  reason    String?
+  note      String?
+  itemsJson String
+  at        DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model PlanMove {
+  id        String   @id
+  studentId String
+  courseId  String
+  code      String   @default("")
+  fromSem   Int?
+  toSem     Int
+  byId      String
+  byName    String   @default("")
+  reason    String?
+  note      String?
+  at        DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model PlanComment {
+  id        String   @id
+  studentId String
+  byId      String
+  byName    String   @default("")
+  byStudent Boolean  @default(false)
+  body      String
+  courseId  String?
+  versionId String?
+  at        DateTime @default(now())
+
+  @@index([studentId])
+}

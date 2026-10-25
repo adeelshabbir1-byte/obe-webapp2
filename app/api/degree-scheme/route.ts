@@ -3,6 +3,7 @@ import { schemeAccess, loadScheme, changeScheme } from "../../../lib/degreeSchem
 import { writeAuditLog } from "../../../lib/audit";
 import { prisma } from "../../../lib/db";
 import { planLock, registerFromPlan } from "../../../lib/registrationRules";
+import { snapshot } from "../../../lib/planHistory";
 
 const db = prisma as unknown as Record<string, any>;
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
     if (access.by !== "staff") return NextResponse.json({ error: "Only the advisor or the Program Lead can do this." }, { status: 403 });
     if (b.action === "lock") await db.degreePlanLock.upsert({ where: { studentId: access.studentId }, update: { lockedById: access.actorId, note: b.note ? String(b.note).slice(0, 500) : null, lockedAt: new Date() }, create: { studentId: access.studentId, lockedById: access.actorId, note: b.note ? String(b.note).slice(0, 500) : null } });
     if (b.action === "unlock") await db.degreePlanLock.deleteMany({ where: { studentId: access.studentId } });
+    if (b.action === "lock" || b.action === "unlock") await snapshot(access.studentId, access.actorId, b.action === "lock" ? "LOCK" : "UNLOCK", b.note ? String(b.note).slice(0, 500) : null, b.reason ? String(b.reason) : null);
     let result: unknown = { ok: true };
     if (b.action === "register") result = await registerFromPlan(access.studentId);
     await writeAuditLog({ actorUserId: access.actorId, action: `DEGREE_PLAN_${String(b.action).toUpperCase()}`, entityType: "Student", entityId: access.studentId });

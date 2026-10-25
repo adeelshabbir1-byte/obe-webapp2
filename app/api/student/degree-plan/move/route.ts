@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../../lib/studentSession";
 import { prisma } from "../../../../../lib/db";
+import { recordMove } from "../../../../../lib/planHistory";
 
 // Moves a planned course to a different semester — but only after
 // checking that the course (by code) has actually been scheduled at
@@ -30,6 +31,8 @@ export async function POST(req: NextRequest) {
   });
   const validated = !!everOfferedAtThatSemester;
 
+  const before = await prisma.degreePlanEntry.findUnique({ where: { studentId_courseId: { studentId: student.id, courseId: course.id } }, select: { plannedSemesterNumber: true } });
+  await recordMove(student.id, course.id, before?.plannedSemesterNumber ?? null, targetSemesterNumber, student.id, body.reason ? String(body.reason) : null, body.note ? String(body.note) : null);
   await prisma.degreePlanEntry.upsert({
     where: { studentId_courseId: { studentId: student.id, courseId: course.id } },
     update: { plannedSemesterNumber: targetSemesterNumber },
