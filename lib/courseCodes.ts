@@ -49,12 +49,30 @@ export async function proposeCodes(batchId: string) {
   const inst = await prisma.course.findMany({ where: { coordinator: { managedById: cid }, NOT: { batchId } }, select: { code: true, title: true } });
   const used = new Set([...inst, ...cs].map((c) => c.code.toUpperCase()));
   const byTitle = new Map<string, string>();
+  // A course of another department is coded by that department, not by this program: shown read-only with its code.
+  const ownDept = b.coordinator.departmentId;
+  const foreignCodes = await prisma.course.findMany({ where: { coordinator: { managedById: cid, departmentId: { in: Array.from(new Set(cs.map((c) => c.subjectHomeDepartmentId).filter((x): x is string => !!x && x !== ownDept))).concat("none") } } }, select: { code: true, title: true, coordinator: { select: { departmentId: true } } } });
+  const whyNone = (home: string | null) => {
+    if (!home) return "Your Program Lead account has no department — ask the Institute Head to set it";
+    const any = all.filter((x) => x.departmentId === home);
+    if (!any.length) return `${depts.get(home) || "This department"} has no code system yet — ask the Dean`;
+    const later = any.find((x) => x.effectiveYear && key(x.effectiveTerm, x.effectiveYear) > intake);
+    if (later) return `The code system starts from ${later.effectiveTerm || ""} ${later.effectiveYear} — after this batch's intake`;
+    const prog = any.find((x) => x.program);
+    if (prog) return `The Dean's system is for the program "${prog.program}" only`;
+    return "No code system applies";
+  };
   const out = cs.map((c) => {
-    const home = c.subjectHomeDepartmentId || b.coordinator.departmentId;
-    const s = schemeFor(home);
+    const home = c.subjectHomeDepartmentId || ownDept;
     const year = c.semesterNumber ? Math.ceil(c.semesterNumber / 2) : null;
-    const base = { courseId: c.id, code: c.code, title: c.title, semester: c.semesterNumber, home: home ? depts.get(home) || "—" : "—", type: c.courseType };
-    if (!s) return { ...base, proposed: null as string | null, why: "No code system for the home department yet" };
+    const base = { courseId: c.id, code: c.code, title: c.title, semester: c.semesterNumber, home: home ? depts.get(home) || "—" : "—", type: c.courseType, foreign: false };
+    if (home && ownDept && home !== ownDept) {
+      const t = norm(c.title) + (isLabTitle(c.title) ? " lab" : "");
+      const theirs = foreignCodes.find((x) => x.coordinator.departmentId === home && norm(x.title) + (isLabTitle(x.title) ? " lab" : "") === t);
+      return { ...base, foreign: true, proposed: null as string | null, why: theirs ? `Coded by ${depts.get(home) || "its department"}: ${theirs.code}` : `Waiting for ${depts.get(home) || "its department"} to code it` };
+    }
+    const s = schemeFor(home);
+    if (!s) return { ...base, proposed: null as string | null, why: whyNone(home) };
     if (!year) return { ...base, proposed: null, why: "Set the semester first — the first digit is the year" };
     if (/^domain /i.test(c.courseType)) return { ...base, proposed: null, why: "An option in a list — gets its code when it is offered" };
     const cur = parse(c.code, s);
@@ -76,8 +94,9 @@ export async function applyCodes(by: string, batchId: string, picks: { courseId:
   let n = 0; const skipped: string[] = [];
   for (const p of picks) {
     const code = p.code.trim().toUpperCase().slice(0, 20);
-    const c = await prisma.course.findFirst({ where: { id: p.courseId, batchId }, select: { id: true, code: true } });
+    const c = await prisma.course.findFirst({ where: { id: p.courseId, batchId }, select: { id: true, code: true, subjectHomeDepartmentId: true, coordinator: { select: { departmentId: true } } } });
     if (!c || !code || c.code === code) continue;
+    if (c.subjectHomeDepartmentId && c.coordinator.departmentId && c.subjectHomeDepartmentId !== c.coordinator.departmentId) { skipped.push(`${c.code}: coded by its home department`); continue; }
     const lock = await courseLock(c.id, "scheme");
     if (lock) { skipped.push(`${c.code}: set by the university`); continue; }
     if (await prisma.course.findFirst({ where: { batchId, code, id: { not: c.id } } })) { skipped.push(`${code} is already used in this batch`); continue; }

@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../lib/session";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
 import SemesterPlanForm from "../../components/SemesterPlanForm";
-import PassOnForm from "../../components/PassOnForm";
+import PassDownTable from "../../components/PassDownTable";
 import GanttChart from "../../components/GanttChart";
 import { prisma } from "../../lib/db";
 import RemindButton from "../../components/RemindButton";
@@ -24,11 +24,14 @@ export default async function SemesterPlanPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (!SETTER_ROLES.includes(user.role)) redirect("/deadlines");
   const isIH = user.role === "CHAIRMAN";
-  const lines = await planProgress(user);
+  // Sorted by role, then the order the work happens (a prerequisite first), then the date.
+  const orderOf = (k: string | null) => { const i = PLAN_TEMPLATE.findIndex((p) => p.key === (k || "").split(":")[1]); return i < 0 ? 999 : i; };
+  const roleRank = (r: string | null) => { const i = PLAN_ROLES.indexOf((r || "") as never); return i < 0 ? 99 : i; };
+  const lines = (await planProgress(user)).sort((a, b) => roleRank(a.role) - roleRank(b.role) || orderOf(a.planKey) - orderOf(b.planKey) || a.dueDate.getTime() - b.dueDate.getTime());
   const behind = lines.filter((l) => l.state === "BEHIND");
   const risk = lines.filter((l) => l.state === "AT_RISK");
   const starts = (await prisma.academicCalendarEntry.findMany({ where: { chairmanId: user.role === "CHAIRMAN" ? user.id : user.managedById || "none", kind: "SEMESTER_START" }, select: { termName: true, startDate: true } })) as { termName: string | null; startDate: Date }[];
-  const offCal = isIH ? ((await prisma.academicCalendarEntry.findMany({ where: { chairmanId: user.id, kind: { in: ["HOLIDAY", "BREAK"] } }, select: { startDate: true, endDate: true } })) as { startDate: Date; endDate: Date | null }[]) : [];
+  const offCal = (await prisma.academicCalendarEntry.findMany({ where: { chairmanId: isIH ? user.id : user.managedById || "none", kind: { in: ["HOLIDAY", "BREAK"] } }, select: { startDate: true, endDate: true } })) as { startDate: Date; endDate: Date | null }[];
   const holidays: string[] = [];
   for (const c of offCal) { const e = c.endDate || c.startDate; for (const d = new Date(c.startDate); d <= e && holidays.length < 3000; d.setUTCDate(d.getUTCDate() + 1)) holidays.push(d.toISOString().slice(0, 10)); }
   // Tasks the Institute Head added in earlier plans come back as suggestions, at the same distance from the start.
@@ -72,12 +75,12 @@ export default async function SemesterPlanPage() {
         <div key={term} className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
           <h3 style={{ marginTop: 0 }}>{term}</h3>
           <div style={{ marginBottom: 12 }}><GanttChart lines={lines.filter((l) => (l.planTerm || "Other") === term)} start={startOf(term)} now={now} /></div>
+          {!isIH && <PassDownTable holidays={holidays} rows={lines.filter((l) => (l.planTerm || "Other") === term && !l.mine).map((l) => ({ id: l.id, title: l.title, role: l.role || "", roleLabel: l.role ? ROLE_LABEL[l.role] || l.role : "—", parentDate: iso(l.dueDate), current: (() => { const c = l.passed.find((p) => p.by === user.name); return c ? iso(c.dueDate) : ""; })(), order: orderOf(l.planKey) }))} />}
           <table>
             <thead><tr><th>Final date</th><th>Task</th><th>Role</th><th>Progress</th><th>State</th><th>{isIH ? "Passed down" : "My date for my area"}</th></tr></thead>
             <tbody>{lines.filter((l) => (l.planTerm || "Other") === term).map((l) => {
               const st = STATE[l.state];
               const mineChild = l.passed.find((p) => p.by === user.name);
-              const sug = new Date(l.dueDate.getTime() - 7 * 86400000);
               return (
                 <tr key={l.id} style={{ background: l.state === "BEHIND" ? "rgba(179,38,30,0.07)" : undefined }}>
                   <td style={{ whiteSpace: "nowrap" }}><b>{day(l.dueDate)}</b><div style={{ fontSize: 11.5, color: "var(--slate)" }}>set by {l.setBy}</div></td>
@@ -92,7 +95,7 @@ export default async function SemesterPlanPage() {
                   <td>
                     {isIH ? (l.passed.length ? l.passed.map((p, i) => <div key={i} style={{ fontSize: 12 }}>{p.by}: {day(p.dueDate)} <span style={{ color: p.slack >= 7 ? "var(--slate)" : "#B7791F" }}>({p.slack} days slack)</span></div>) : <span style={{ fontSize: 12, color: "var(--slate)" }}>Not passed down yet</span>)
                       : l.mine ? <span style={{ fontSize: 12, color: "var(--slate)" }}>Set by you</span>
-                      : <PassOnForm parentId={l.id} parentDate={iso(l.dueDate)} suggested={iso(sug)} current={mineChild ? iso(mineChild.dueDate) : ""} />}
+                      : mineChild ? <span style={{ fontSize: 12 }}>{day(mineChild.dueDate)} <span className="small-note">({Math.round((l.dueDate.getTime() - mineChild.dueDate.getTime()) / 86400000)} days slack)</span></span> : <span style={{ fontSize: 12, color: "#B7791F" }}>Not passed on — set it above</span>}
                   </td>
                 </tr>
               );
