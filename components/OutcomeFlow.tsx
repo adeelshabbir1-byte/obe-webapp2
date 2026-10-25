@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { assessName } from "../lib/assessName";
 
 // Outcome Flow: Assessments -> CLOs -> Courses -> PLOs -> PEOs with the weight on every link and attainment
 // (% of students reaching the target) on every box. Opens at Courses -> PLOs -> PEOs; clicking a course opens its CLOs,
@@ -59,21 +60,23 @@ export default function OutcomeFlow(props: FlowProps) {
   const [error, setError] = useState("");
   const [wide, setWide] = useState(false);
 
-  const chain0 = open ? chains[open] : null;
-  // Assessments grouped by CLO (CLO-1's first, then CLO-2's …), largest share first inside each, so lines don't cross.
-  const chain = useMemo(() => {
-    if (!chain0) return null;
-    const ord = new Map(chain0.clos.map((c, i) => [c.id, i]));
-    return { ...chain0, assessments: [...chain0.assessments].sort((a, b) => (ord.get(a.cloId || "") ?? 99) - (ord.get(b.cloId || "") ?? 99) || b.share - a.share) };
-  }, [chain0]);
-  const ploByNumber = useMemo(() => new Map(plos.map((p) => [p.number, p])), [plos]);
-
-  // Step-by-step opening: batch view goes PEO -> PLOs -> courses -> CLOs -> assessments; a course view goes from the course
-  // to its CLOs (left) and PLOs (right), then PLO -> PEOs. Clicking an open box closes it and everything opened after it.
   const [all, setAll] = useState(false);
   const [selE, setSelE] = useState<Set<number>>(new Set());
   const [selP, setSelP] = useState<Set<string>>(new Set());
   const [selL, setSelL] = useState<Set<string>>(new Set());
+  const chain0 = open ? chains[open] : null;
+  // Assessments grouped by CLO (CLO-1's first, then CLO-2's …), largest share first inside each, so lines don't cross.
+  const chain = useMemo(() => {
+    if (!chain0) return null;
+    const picked = new Set(plos.filter((p) => selP.has(p.id)).map((p) => p.number));
+    const clos = [...chain0.clos].sort((a, b) => Number(picked.has(b.ploNumber ?? -1)) - Number(picked.has(a.ploNumber ?? -1)) || (a.ploNumber ?? 99) - (b.ploNumber ?? 99) || (b.contribution ?? b.weight) - (a.contribution ?? a.weight));
+    const ord = new Map(clos.map((c, i) => [c.id, i]));
+    return { ...chain0, clos, assessments: [...chain0.assessments].sort((a, b) => (ord.get(a.cloId || "") ?? 99) - (ord.get(b.cloId || "") ?? 99) || b.share - a.share) };
+  }, [chain0, selP, plos]);
+  const ploByNumber = useMemo(() => new Map(plos.map((p) => [p.number, p])), [plos]);
+
+  // Step-by-step opening: batch view goes PEO -> PLOs -> courses -> CLOs -> assessments; a course view goes from the course
+  // to its CLOs (left) and PLOs (right), then PLO -> PEOs. Clicking an open box closes it and everything opened after it.
   const [courseOn, setCourseOn] = useState(false); // course view: the course box has been opened
   const flip = <T,>(set: Set<T>, v: T) => { const n = new Set(set); if (n.has(v)) n.delete(v); else n.add(v); return n; };
 
@@ -105,17 +108,21 @@ export default function OutcomeFlow(props: FlowProps) {
       // Every GA shows from the start (a batch whose PEOs aren't linked yet would otherwise show none); picking PEOs narrows it.
       P = all || selE.size === 0 ? new Set(plos.map((p) => p.id)) : peoPlos(selE);
       const openP = plos.filter((p) => P.has(p.id) && (all || selP.has(p.id)));
+      // Focus: a picked GA hides the other GAs; an open course hides the other courses.
+      if (!all && selP.size) P = new Set(Array.from(P).filter((id) => selP.has(id)));
       C = all ? new Set(courses.map((c) => c.id)) : new Set(openP.flatMap((p) => p.courses.map((c) => c.id)));
+      if (!all && open && C.has(open)) C = new Set([open]);
     } else {
       C = new Set(courses.map((c) => c.id));
       P = all || courseOn ? new Set(plos.filter((p) => !chain || p.courses.some((c) => c.id === chain.course.id)).map((p) => p.id)) : new Set();
       E = all ? new Set(peos.map((e) => e.index)) : new Set(peos.filter((e) => e.links.some((l) => { const id = ploByNumber.get(l.ploNumber)?.id; return !!id && P.has(id) && selP.has(id); })).map((e) => e.index));
     }
     const courseOpen = mode === "batch" ? !!chain && C.has(chain.course.id) : all || courseOn;
-    const L = new Set(courseOpen && chain ? chain.clos.map((l) => l.id) : []);
+    let L = new Set(courseOpen && chain ? chain.clos.map((l) => l.id) : []);
+    if (!all && selL.size) L = new Set(Array.from(L).filter((id) => selL.has(id))); // a picked CLO hides the others
     const A = new Set(courseOpen && chain ? chain.assessments.filter((a) => a.cloId && (all || selL.has(a.cloId))).map((a) => a.id) : []);
     return { P, E, C, L, A, courseOpen };
-  }, [mode, all, selE, selP, selL, courseOn, chain, plos, peos, courses, ploByNumber]);
+  }, [mode, all, selE, selP, selL, courseOn, chain, plos, peos, courses, ploByNumber, open]);
 
   // Closing a box also closes what was opened from it.
   useEffect(() => {
@@ -145,7 +152,8 @@ export default function OutcomeFlow(props: FlowProps) {
       };
       if (chain) {
         for (const a of chain.assessments) if (a.cloId) add(key("A", a.id), key("L", a.cloId), `${a.share}%`, undefined, typeColor(a.type));
-        for (const l of chain.clos) add(key("L", l.id), key("C", chain.course.id), `${l.weight}%`);
+        const pickedGa = new Set(plos.filter((p) => selP.has(p.id)).map((p) => p.number));
+        for (const l of chain.clos) if (all || !pickedGa.size || (l.ploNumber != null && pickedGa.has(l.ploNumber))) add(key("L", l.id), key("C", chain.course.id), l.contribution != null && pickedGa.size ? `${l.contribution}%` : `${l.weight}%`);
       }
       for (const p of plos) for (const c of p.courses) add(key("C", c.id), key("P", p.id), `${c.weight}%`, { kind: "plo", ploId: p.id });
       for (const e of peos) for (const l of e.links) { const p = ploByNumber.get(l.ploNumber); if (p) add(key("P", p.id), key("E", e.index), `${l.weight}%`, { kind: "peo", index: e.index }); }
@@ -155,7 +163,7 @@ export default function OutcomeFlow(props: FlowProps) {
     const ro = new ResizeObserver(draw); if (box.current) ro.observe(box.current);
     window.addEventListener("resize", draw);
     return () => { ro.disconnect(); window.removeEventListener("resize", draw); };
-  }, [chain, plos, peos, related, ploByNumber, open, loading]);
+  }, [chain, plos, peos, related, ploByNumber, open, loading, selP, all]);
 
   const showBadges = edges.filter((e) => e.on).length <= 90;
   const node = (k: string, kind: Kind, onClick: () => void, children: React.ReactNode, active = isOpen(k)) => !related.has(k) ? null : (
@@ -194,6 +202,15 @@ export default function OutcomeFlow(props: FlowProps) {
           <button className="btn btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setWide(!wide)}>{wide ? "Exit full screen" : "Full screen"}</button>
         </span>
       </div>
+      {mode === "batch" && !all && (selP.size > 0 || open) && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, marginBottom: 6 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => { setSelP(new Set()); setSelL(new Set()); setOpen(null); }}>All GAs</button>
+          {plos.filter((p) => selP.has(p.id)).map((p) => <span key={p.id}>› <a style={{ cursor: "pointer" }} onClick={() => { setSelL(new Set()); setOpen(null); }}><b>GA-{p.number}</b></a></span>)}
+          {open && chain && <span>› <a style={{ cursor: "pointer" }} onClick={() => setSelL(new Set())}><b>{chain.course.code}</b></a></span>}
+          {chain && Array.from(selL).map((id) => <span key={id}>› <b>{chain.clos.find((c) => c.id === id)?.code}</b></span>)}
+          <span className="small-note" style={{ margin: 0 }}>Click a box again to step back.</span>
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <div ref={box} style={{ position: "relative", minWidth: 1450, display: "grid", gridTemplateColumns: "1fr 1.15fr 1.1fr 1.2fr 1.15fr", gap: 96, padding: "6px 4px 16px" }}>
           <svg width={size.w} height={size.h} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
@@ -220,7 +237,7 @@ export default function OutcomeFlow(props: FlowProps) {
             <div style={{ zIndex: 1, position: "relative", display: "flex" }}>
               {col("A", chain ? chain.assessments.filter((a) => a.cloId).map((a) => node(key("A", a.id), "A", () => toggle(key("A", a.id)), (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b style={{ color: typeColor(a.type) }}>{a.label}</b><Att v={a.reached} target={target} avg={a.avg} /></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><b style={{ color: typeColor(a.type) }}>{assessName(a.type, a.label)}</b><Att v={a.reached} target={target} avg={a.avg} /></div>
                   <div style={{ fontSize: 10.5, color: "var(--slate)" }}>{a.marksPct}% of course · {a.share}% of {chain.clos.find((c) => c.id === a.cloId)?.code || "CLO"}{a.graded ? ` · ${a.graded} marked` : ""}</div>
                   {a.perfShare != null && Math.abs(a.perfShare - a.share) >= 0.5 && <div style={{ fontSize: 10.5, color: "#6B3F8A" }}>performance-weighted: {a.perfShare}% of the CLO</div>}
                 </>

@@ -100,6 +100,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "LmsCourseLink"
 },
 {
+"f": "migration_batch_setup.sql",
+"d": "Batch set-up: offered tracks, new courses, program course names / codes, scheme change log",
+"t": "BatchSchemeChange"
+},
+{
 "f": "migration_batches.sql",
 "d": "Run in Supabase SQL Editor. Adds Batch/cohort support: a course now",
 "t": "Course",
@@ -1060,6 +1065,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "f": "migration_training.sql",
 "d": "OBE certification: exam attempts (a passed attempt is the badge) and the institute's training rule. Safe to re-run.",
 "t": "TrainingPolicy"
+},
+{
+"f": "migration_type_rules.sql",
+"d": "Curriculum type rules: pass / fail only, only for one student track (deficiency courses)",
+"t": "CurriculumTypeRule"
 },
 {
 "f": "migration_ug_policy.sql",

@@ -14,7 +14,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const core = useMemo(() => courses.filter((c) => c.category === "Major" || c.category === "General Education / Other"), [courses]);
+  const core = useMemo(() => courses.filter((c) => c.category === "Major" || c.category === "Core" || c.category === "General Education" || c.category === "General Education / Other"), [courses]);
   const electivesByDomain = useMemo(() => {
     const map = new Map<string, MCourse[]>();
     for (const c of courses) {
@@ -88,7 +88,7 @@ export default function ProgramCopyBuilder({ sourceCurriculumId, courses }: { so
       <div style={{ marginBottom: 24, padding: 12, background: "#FAFAF8", border: "1px solid var(--line)" }}>
         <h3 style={{ fontSize: 13, marginBottom: 6 }}>Always included — shared core ({core.length} courses)</h3>
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 8 }}>
-          Mandatory Major and General Education / Other courses apply to every program and are included automatically.
+          Mandatory Core and General Education courses apply to every program and are included automatically.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {core.map((c) => (

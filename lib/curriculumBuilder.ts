@@ -237,6 +237,12 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
       await writeTypes(c.id, rows.map((r) => ({ name: String(r.name), kind: (KINDS.some((k) => k.kind === r.kind) ? r.kind : "CORE") as Kind, minCourses: n(r.minCourses), minCredits: n(r.minCredits), maxCredits: n(r.maxCredits), required: Array.isArray(r.required) ? (r.required as string[]) : String(r.required || "").split(/\n|;/), note: r.note ? String(r.note) : null })), false);
       return "Types saved.";
     }
+    case "typeRule": { // pass / fail only, and only for one student track (e.g. Math Deficiency for Pre-Medical)
+      const typeName = s("typeName", 120); if (!typeName) throw new Error("Which type?");
+      const onlyTrack = s("onlyTrack", 60) || null, passFail = !!a.passFail;
+      await bdb.curriculumTypeRule.upsert({ where: { curriculumId_typeName: { curriculumId: c.id, typeName } }, create: { curriculumId: c.id, typeName, passFail, onlyTrack }, update: { passFail, onlyTrack, at: new Date() } });
+      return `${typeName}: ${passFail ? "pass / fail, not in GPA" : "graded"}${onlyTrack ? ` · only for ${onlyTrack} students` : " · for every student"}.`;
+    }
     case "applyTemplate": {
       const tpl = TEMPLATES.find((t) => t.key === s("templateKey"));
       if (!tpl) throw new Error("Choose a template.");

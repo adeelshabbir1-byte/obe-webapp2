@@ -1,11 +1,13 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { assessName } from "../lib/assessName";
 
 // One course's outcome flow, left to right: Assessments → CLOs → GAs (each CLO linked straight to its GA).
 // Each CLO shows the GA it maps to. Pick a GA (or a CLO / assessment) to see only what is linked to it.
 
-type Clo = { id: string; code: string; statement: string; bloom: string; ploNumber: number | null; weight: number; attainment: number | null; avg: number | null };
+type Clo = { id: string; code: string; statement: string; bloom: string; ploNumber: number | null; weight: number; attainment: number | null; avg: number | null; contribution?: number | null };
 type Asmt = { id: string; type: string; label: string; marksPct: number; cloId: string | null; reached: number | null; share: number };
 type Ga = { number: number; title: string; attainment: number | null; weight: number | null };
 type Pick = { kind: "A" | "L" | "G"; id: string } | null;
@@ -20,10 +22,38 @@ function Att({ v, target }: { v: number | null; target: number }) {
   return <span title={`${v}% of students reached it (target ${target}%)`} className="cgf-att" style={{ background: ok ? "#E2F4E8" : "#FBEED2", color: ok ? "#1F5E36" : "#95650F" }}>{v}%</span>;
 }
 
-export default function CourseGaFlow({ course, clos, assessments, gas, target }: { course: { code: string; title: string; creditHours: number }; clos: Clo[]; assessments: Asmt[]; gas: Ga[]; target: number }) {
+export default function CourseGaFlow({ course, clos: rawClos, assessments: rawA, gas, target, edit }: { course: { code: string; title: string; creditHours: number }; clos: Clo[]; assessments: Asmt[]; gas: Ga[]; target: number; edit?: { courseId: string; source: "SE" | "INSTRUCTOR" } }) {
+  const router = useRouter();
+  // Always in order, so lines don't cross: CLOs grouped by the GA they map to (bigger contributor first), then each CLO's
+  // assessments behind it (largest share of the CLO first); unlinked ones last.
+  const clos = useMemo(() => [...rawClos].sort((a, b) => (a.ploNumber ?? 999) - (b.ploNumber ?? 999) || (b.contribution ?? b.weight) - (a.contribution ?? a.weight) || a.code.localeCompare(b.code)), [rawClos]);
+  const assessments = useMemo(() => { const ord = new Map(clos.map((c, i) => [c.id, i])); return [...rawA].sort((a, b) => (ord.get(a.cloId || "") ?? 999) - (ord.get(b.cloId || "") ?? 999) || (b.share || 0) - (a.share || 0)); }, [rawA, clos]);
+  const [editing, setEditing] = useState<{ id: string; v: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  // New share of its CLO for one assessment: the CLO's total marks stay the same; the others of that CLO share the rest
+  // in their current proportions. Saved through the assessment plan's own save (all its checks apply).
+  async function saveShare(a: Asmt, pct: number) {
+    if (!edit || !a.cloId || isNaN(pct) || pct <= 0 || pct >= 100) { setMsg("Give a share between 0 and 100."); return; }
+    const same = rawA.filter((x) => x.cloId === a.cloId);
+    const T = same.reduce((t, x) => t + x.marksPct, 0);
+    const mine = Math.round((pct / 100) * T * 100) / 100;
+    const restOld = T - a.marksPct;
+    const others = same.filter((x) => x.id !== a.id);
+    const edits = [{ instrumentId: a.id, marksPct: mine }, ...others.map((x) => ({ instrumentId: x.id, marksPct: Math.round((restOld > 0 ? (x.marksPct * (T - mine)) / restOld : (T - mine) / others.length) * 100) / 100 }))];
+    const diff = Math.round((T - edits.reduce((t, e) => t + e.marksPct, 0)) * 100) / 100;
+    if (diff && edits.length > 1) edits[edits.length - 1].marksPct = Math.round((edits[edits.length - 1].marksPct + diff) * 100) / 100;
+    setSaving(true); setMsg("");
+    const url = edit.source === "SE" ? `/api/subjectexpert/courses/${edit.courseId}/instruments/batch-save` : `/api/instructor/courses/${edit.courseId}/instruments/batch-save`;
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ edits }) });
+    const d = await r.json().catch(() => ({}));
+    setSaving(false);
+    if (!r.ok) { setMsg(d.error || "Could not save — the plan may be locked (marks entered or approved by the OMC)."); return; }
+    setEditing(null); setMsg(`${assessName(a.type, a.label)} is now ${pct}% of its CLO.`); router.refresh();
+  }
   const [pick, setPick] = useState<Pick>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  const [lines, setLines] = useState<{ k: string; d: string; on: boolean; color: string }[]>([]);
+  const [lines, setLines] = useState<{ k: string; d: string; on: boolean; color: string; label: string; mx: number; my: number }[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   // GAs: every GA a CLO maps to, plus GAs the course is linked to without a CLO (shown amber).
@@ -56,7 +86,7 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
   }, [pick, clos, assessments, allGas]);
 
   // Focused on a CLO / GA: its assessments in order of their contribution (largest first).
-  const shownA = assessments.filter((a) => vis.A.has(a.id)).sort((x, y) => (pick ? (y.share || 0) - (x.share || 0) : 0));
+  const shownA = assessments.filter((a) => vis.A.has(a.id));
   const shownL = clos.filter((c) => vis.L.has(c.id));
   const shownG = allGas.filter((g) => vis.G.has(String(g.number)));
   const unassessedA = assessments.filter((a) => !a.cloId);
@@ -71,10 +101,10 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
         return { x: (side === "r" ? b.right : b.left) - r.left, y: b.top + b.height / 2 - r.top };
       };
       const curve = (p: { x: number; y: number }, q: { x: number; y: number }) => { const mx = (p.x + q.x) / 2; return `M${p.x},${p.y} C${mx},${p.y} ${mx},${q.y} ${q.x},${q.y}`; };
-      const out: { k: string; d: string; on: boolean; color: string }[] = [];
+      const out: { k: string; d: string; on: boolean; color: string; label: string; mx: number; my: number }[] = [];
       const shownA = assessments.filter((a) => vis.A.has(a.id)), shownL = clos.filter((c) => vis.L.has(c.id)), shownG = allGas.filter((g) => vis.G.has(String(g.number)));
-      for (const a of shownA) { if (!a.cloId || !vis.L.has(a.cloId)) continue; const p = pos(`A:${a.id}`, "r"), q = pos(`L:${a.cloId}`, "l"); if (p && q) out.push({ k: `a${a.id}`, d: curve(p, q), on: !!pick, color: tc(a.type) }); }
-      for (const c of shownL) { if (c.ploNumber === null) continue; const p = pos(`L:${c.id}`, "r"), q = pos(`G:${c.ploNumber}`, "l"); if (p && q) out.push({ k: `l${c.id}`, d: curve(p, q), on: !!pick, color: "#6B3F8A" }); }
+      for (const a of shownA) { if (!a.cloId || !vis.L.has(a.cloId)) continue; const p = pos(`A:${a.id}`, "r"), q = pos(`L:${a.cloId}`, "l"); if (p && q) out.push({ k: `a${a.id}`, d: curve(p, q), on: !!pick, color: tc(a.type), label: `${a.share}%`, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }); }
+      for (const c of shownL) { if (c.ploNumber === null) continue; const p = pos(`L:${c.id}`, "r"), q = pos(`G:${c.ploNumber}`, "l"); if (p && q) out.push({ k: `l${c.id}`, d: curve(p, q), on: !!pick, color: "#6B3F8A", label: c.contribution != null ? `${c.contribution}%` : "", mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }); }
       setLines(out); setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     draw();
@@ -106,10 +136,12 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
         .cgf-att{font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
         .cgf-row{display:flex;justify-content:space-between;gap:6px;align-items:baseline}
         .cgf-tag{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#FBF3E4;color:#8A5A0F;white-space:nowrap}
-        .cgf-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:0}
+        .cgf-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:2}
         @media (prefers-reduced-motion: no-preference){.cgf-node{transition:border-color .1s, box-shadow .1s}}
       `}</style>
 
+      {msg && <p className="small-note" style={{ marginTop: 0, color: /now/.test(msg) ? "#1E6B34" : "#B3261E" }}>{msg}</p>}
+      {edit && <p className="small-note" style={{ marginTop: 0 }}>Click an assessment&apos;s <b>% of its CLO</b> to change it; the other assessments of that CLO share the rest.</p>}
       <div className="small-note" style={{ marginTop: 0 }}><b>{course.code} {course.title}</b> · {course.creditHours} CH · {clos.length} CLOs · {allGas.length} GAs</div>
       <div className="cgf-bar" role="group" aria-label="Show one GA">
         <b style={{ fontSize: 12.5 }}>Show one GA:</b>
@@ -121,16 +153,17 @@ export default function CourseGaFlow({ course, clos, assessments, gas, target }:
       <div className="cgf" ref={wrap}>
         <svg className="cgf-svg" width={size.w} height={size.h} aria-hidden="true">
           {lines.map((l) => <path key={l.k} d={l.d} fill="none" stroke={l.color} strokeOpacity={l.on ? 0.85 : 0.35} strokeWidth={l.on ? 2.2 : 1.4} />)}
+          {lines.length <= 80 && lines.filter((l) => l.label).map((l) => <g key={`t${l.k}`} transform={`translate(${l.mx},${l.my})`}><rect x={-17} y={-8} width={34} height={16} rx={5} fill="#fff" stroke="#D8CCCF" /><text x={0} y={4} textAnchor="middle" fontSize={10} fontWeight={700} fill={l.color}>{l.label}</text></g>)}
         </svg>
         <div className={`cgf-grid${pick?.kind === "L" ? " focus" : ""}`}>
           <div className="cgf-col">
             <h4 style={{ color: "#3E5C8A" }}>Assessments <span className="cgf-muted">({shownA.length})</span></h4>
             <div className="cgf-sub">which CLO each one assesses</div>
             {shownA.map((a) => { const c = a.cloId ? cloOf.get(a.cloId) : null; return (
-              <button key={a.id} type="button" data-node={`A:${a.id}`} className={`cgf-node${a.cloId ? "" : " gap"}`} aria-pressed={isPicked("A", a.id)} onClick={() => toggle({ kind: "A", id: a.id })} style={{ borderLeft: `4px solid ${tc(a.type)}` }}>
-                <div className="cgf-row"><b style={{ fontSize: 12.5 }}>{a.label}</b><span className="cgf-muted">{a.marksPct}%</span></div>
-                <div className="cgf-row"><span style={{ fontSize: 11, color: a.cloId ? "#556" : AMBER }}>{c ? `→ ${c.code}${a.share ? ` · ${a.share}% of it` : ""}` : "not linked to a CLO"}</span><Att v={a.reached} target={target} /></div>
-              </button>); })}
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "INPUT") toggle({ kind: "A", id: a.id }); }} key={a.id} data-node={`A:${a.id}`} className={`cgf-node${a.cloId ? "" : " gap"}`} aria-pressed={isPicked("A", a.id)} onClick={() => toggle({ kind: "A", id: a.id })} style={{ borderLeft: `4px solid ${tc(a.type)}` }}>
+                <div className="cgf-row"><b style={{ fontSize: 12.5 }}>{assessName(a.type, a.label)}</b><span className="cgf-muted">{a.marksPct}% of course</span></div>
+                <div className="cgf-row"><span style={{ fontSize: 11, color: a.cloId ? "#556" : AMBER }}>{c ? <>→ {c.code}{" · "}{edit && editing?.id === a.id ? <span onClick={(e) => e.stopPropagation()}><input type="number" min={1} max={99} step={0.5} value={editing.v} autoFocus onChange={(e) => setEditing({ id: a.id, v: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") saveShare(a, Number(editing.v)); if (e.key === "Escape") setEditing(null); }} style={{ width: 56, fontSize: 11 }} aria-label={`Share of ${c.code}`} />% <a role="button" onClick={() => saveShare(a, Number(editing.v))}>{saving ? "…" : "save"}</a></span> : <span role={edit ? "button" : undefined} title={edit ? "Click to change this assessment's share of the CLO" : undefined} onClick={(e) => { if (!edit) return; e.stopPropagation(); setEditing({ id: a.id, v: String(a.share) }); }} style={edit ? { textDecoration: "underline dotted", cursor: "pointer", fontWeight: 700 } : undefined}>{a.share}% of it</span>}</> : "not linked to a CLO"}</span><Att v={a.reached} target={target} /></div>
+              </div>); })}
             {!shownA.length && <p className="small-note">{pick ? "No assessment for this selection." : "No assessments in the plan yet."}</p>}
           </div>
 

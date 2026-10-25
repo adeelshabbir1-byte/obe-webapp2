@@ -8191,3 +8191,56 @@ model ObeCourseOff {
   byId     String
   at       DateTime @default(now())
 }
+
+// A curriculum course type's rules: pass / fail only (not in GPA) and only for students of one track (e.g. Pre-Medical).
+model CurriculumTypeRule {
+  curriculumId String
+  typeName     String
+  passFail     Boolean  @default(false)
+  onlyTrack    String?
+  at           DateTime @default(now())
+
+  @@id([curriculumId, typeName])
+}
+
+// Batch set-up (lib/batchSetup.ts).
+model BatchTrackOffer {
+  batchId String
+  trackId String
+  name    String @default("")
+
+  @@id([batchId, trackId])
+}
+model BatchCourseNew {
+  courseId String   @id
+  batchId  String
+  byId     String
+  at       DateTime @default(now())
+
+  @@index([batchId])
+}
+model ProgramCourseNaming {
+  chairmanId     String
+  program        String
+  masterCourseId String
+  code           String
+  title          String
+  byId           String
+  at             DateTime @default(now())
+
+  @@id([chairmanId, program, masterCourseId])
+}
+model BatchSchemeChange {
+  id       String   @id
+  batchId  String
+  courseId String?
+  code     String   @default("")
+  title    String   @default("")
+  action   String
+  why      String?
+  byId     String
+  byName   String   @default("")
+  at       DateTime @default(now())
+
+  @@index([batchId])
+}

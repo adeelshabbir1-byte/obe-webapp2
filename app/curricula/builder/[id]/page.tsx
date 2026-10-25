@@ -32,7 +32,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
   return shell(
     <>
       <p className="small-note" style={{ margin: "0 0 6px" }}><Link href="/curricula/builder">← Curriculum Builder</Link> · <Link href={`/curricula/${b.curriculum.id}`}>Library view</Link>{refs.map((r) => <span key={r.id}> · <Link href={`/curricula/compare?a=${b.curriculum.id}&b=${r.id}`}>Map against {r.authority} {r.version}</Link></span>)}{user.role === "SUPER_USER" && <> · <Link href={`/admin/curricula/${b.curriculum.id}`}>CLOs, topics and GAs (full editor)</Link></>}</p>
-      <BuilderBoard canEdit cur={b.curriculum} types={b.types} tracks={b.tracks} courses={b.courses} step={searchParams.step || ""} canPublish={canPublish} isSuper={user.role === "SUPER_USER"}
+      <BuilderBoard canEdit rules={((await (prisma as unknown as Record<string, any>).curriculumTypeRule.findMany({ where: { curriculumId: b.curriculum.id } }).catch(() => [])) as { typeName: string; passFail: boolean; onlyTrack: string | null }[])} cur={b.curriculum} types={b.types} tracks={b.tracks} courses={b.courses} step={searchParams.step || ""} canPublish={canPublish} isSuper={user.role === "SUPER_USER"}
         templates={TEMPLATES.map((t) => ({ key: t.key, label: `${t.council} ${t.version} — ${t.program}` }))} older={older.map((o) => ({ id: o.id, label: `${o.authority} ${o.version}` }))}
         packs={TEMPLATES.filter((t) => hasContentPack(t.key) && normTitle(t.program) === normTitle(b.curriculum.title) && (b.curriculum.version.match(/(19|20)\d{2}/)?.[0] || t.version) === t.version).map((t) => ({ key: t.key, label: `${t.council} ${t.version}` }))} />
     </>

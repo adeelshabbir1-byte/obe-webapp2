@@ -9,7 +9,7 @@ import { curriculumPools, retypeListCourses, isPlaceholderTitle, type Flavour } 
 
 const bdb = prisma as unknown as Record<string, any>;
 export type BoardType = { name: string; kind: string; minCredits: number | null; maxCredits: number | null; minCourses: number | null; counts: boolean; color: string };
-export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null };
+export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null; deficiency?: string | null; home?: string | null };
 export type Board = { curriculumId: string | null; title: string; types: BoardType[]; courses: BoardCourse[]; missing: { masterCourseId: string; code: string; title: string; ch: number; type: string; semester: number | null }[]; listPool: number; slots: Record<Flavour, number>; obeNote?: string | null; target: [number, number] };
 
 /** Discipline family of a program title — a Program Lead sees only their family's curricula. */
@@ -27,6 +27,7 @@ const typeFor = (types: { name: string; kind: string }[], cat: string) => { cons
 
 /** Board of a curriculum (preview) — courses by type, the list pool counted apart. */
 export async function curriculumBoard(curriculumId: string): Promise<Board | null> {
+  await prisma.masterCourse.updateMany({ where: { masterCurriculumId: curriculumId, category: "General Education / Other" }, data: { category: "General Education" } }).catch(() => null);
   const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { title: true, version: true, authority: true, courses: { select: { id: true, code: true, title: true, creditHours: true, category: true, semesterNumber: true, _count: { select: { seedClos: true, seedTopics: true } } } } } });
   if (!c) return null;
   const defs = ((await bdb.curriculumType.findMany({ where: { curriculumId }, orderBy: { position: "asc" } }).catch(() => [])) as { name: string; kind: string; minCredits: number | null; maxCredits: number | null; minCourses: number | null }[]);
@@ -46,7 +47,7 @@ export async function curriculumBoard(curriculumId: string): Promise<Board | nul
 export async function batchBoard(batchId: string): Promise<Board | null> {
   // Older imports carried the elective / IDS list options as ordinary courses: give them their list type first.
   await retypeListCourses(batchId).catch(() => 0);
-  const b = await prisma.batch.findUnique({ where: { id: batchId }, select: { degreeProgram: true, batchName: true, courses: { select: { id: true, code: true, title: true, creditHours: true, courseType: true, semesterNumber: true, masterCourseId: true, subjectExpert: { select: { name: true } }, instructor: { select: { name: true } }, clos: { where: { source: "SE" }, select: { mappedPloId: true } }, _count: { select: { lectureRows: true } } } } } });
+  const b = await prisma.batch.findUnique({ where: { id: batchId }, select: { degreeProgram: true, batchName: true, courses: { select: { id: true, code: true, title: true, creditHours: true, courseType: true, semesterNumber: true, masterCourseId: true, isNonCredit: true, trackName: true, subjectHomeDepartment: { select: { name: true } }, subjectExpert: { select: { name: true } }, instructor: { select: { name: true } }, clos: { where: { source: "SE" }, select: { mappedPloId: true } }, _count: { select: { lectureRows: true } } } } } });
   if (!b) return null;
   const src = await batchSource(batchId);
   const curId = src?.curriculumId || (await prisma.masterCourse.findFirst({ where: { id: { in: b.courses.map((c) => c.masterCourseId).filter((x): x is string => !!x).concat("none") } }, select: { masterCurriculumId: true } }))?.masterCurriculumId || null;
@@ -63,7 +64,7 @@ export async function batchBoard(batchId: string): Promise<Board | null> {
   const fromLabel = src ? (src.how === "BATCH_AS_TAUGHT" ? "previous batch (as taught)" : cur ? `${cur.title}${src.revision ? ` rev ${src.revision}` : ""}` : null) : cur?.title || null;
   return {
     curriculumId: curId, title: `${b.degreeProgram} — ${b.batchName}`, types,
-    courses: courses.map((c) => ({ id: c.id, code: c.code, title: c.title, ch: c.creditHours, type: c.courseType || "Other", semester: c.semesterNumber, se: c.subjectExpert?.name || null, instructor: c.instructor?.name || null, clos: c.clos.length, lectures: c._count.lectureRows, mapped: c.clos.filter((x) => x.mappedPloId).length, from: fromLabel, masterCourseId: c.masterCourseId, gradesOnly: gOnly.get(c.id) || null })),
+    courses: courses.map((c) => ({ id: c.id, code: c.code, title: c.title, ch: c.creditHours, type: c.courseType || "Other", semester: c.semesterNumber, se: c.subjectExpert?.name || null, instructor: c.instructor?.name || null, clos: c.clos.length, lectures: c._count.lectureRows, mapped: c.clos.filter((x) => x.mappedPloId).length, from: fromLabel, masterCourseId: c.masterCourseId, gradesOnly: gOnly.get(c.id) || null, deficiency: c.isNonCredit ? `Deficiency${c.trackName ? ` — ${c.trackName} only` : ""}, pass / fail` : null, home: c.subjectHomeDepartment?.name || null })),
     // Elective slots are compared by count (a filled slot points at the chosen elective), other courses one by one.
     missing: (cur?.courses || []).filter((m) => !have.has(m.id) && !slotTypes.has(m.type) && !isPlaceholderTitle(m.title)).map((m) => ({ masterCourseId: m.id, code: m.code, title: m.title, ch: m.ch, type: typeFor(defs, m.type), semester: m.semester })),
     listPool: cur?.listPool || 0, slots: cur?.slots || { Elective: 0, IDS: 0 }, obeNote: obeNote?.text || null, target: [120, 144],
@@ -76,6 +77,11 @@ export type SourceRow = { kind: "CURRICULUM" | "BATCH"; id: string; name: string
 export async function sourcesFor(user: { id: string; role: string }, chairmanId: string, batchId: string): Promise<SourceRow[]> {
   const batch = await prisma.batch.findUnique({ where: { id: batchId }, select: { id: true, degreeProgram: true, coordinatorId: true } });
   if (!batch) return [];
+  return sourcesForProgram(chairmanId, batch.coordinatorId, batch.degreeProgram, batch.id);
+}
+/** Sources for a program before its new batch exists (the batch set-up wizard). */
+export async function sourcesForProgram(chairmanId: string, coordinatorId: string, degreeProgram: string, excludeBatchId = "none"): Promise<SourceRow[]> {
+  const batch = { id: excludeBatchId, degreeProgram, coordinatorId };
   const fam = familyOf(batch.degreeProgram);
   const curs = await prisma.masterCurriculum.findMany({ where: { AND: [await curriculaWhere(chairmanId), { status: "PUBLISHED" }] }, select: { id: true, title: true, version: true, authority: true, chairmanId: true, createdAt: true, parentCurriculum: { select: { authority: true, title: true, version: true } }, courses: { select: { id: true, creditHours: true, category: true } } }, orderBy: [{ createdAt: "desc" }] });
   const mine = curs.filter((c) => familyOf(c.title) === fam);

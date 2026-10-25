@@ -43,9 +43,11 @@ export const KINDS: Kind[] = [
       { key: "rollNumber", label: "Roll number", required: true, aliases: ["roll", "roll no", "roll number", "registration no", "reg no", "reg number", "student id", "enrollment no"], example: "2026-CS-001" },
       { key: "name", label: "Name", required: true, aliases: ["name", "student name", "full name"], example: "Ali Khan" },
       { key: "semester", label: "Current semester", aliases: ["semester", "current semester", "sem"], example: 1, note: "Optional; defaults to 1." },
+      { key: "hssc", label: "HSSC group / track", aliases: ["hssc", "hssc group", "intermediate", "fsc", "group", "track", "hssc degree", "hssc degree name", "hssc degree nomenclature"], example: "FSc Pre-Medical", note: "Pre-Medical students get the deficiency courses (e.g. Mathematics); anything else is Non-Medical." },
     ],
     async prepare(rows, ctx) {
       const b = await batchOf(ctx);
+      const trackOf = (x: string | undefined) => (!/non[- ]?med/i.test(x || "") && /pre[- ]?med|^\s*3\s*$/i.test(x || "") ? "Pre-Medical" : "Non-Medical");
       const have = new Set((await prisma.student.findMany({ where: { batch: { coordinator: { managedById: ctx.chairmanId } } }, select: { rollNumber: true } })).map((s) => s.rollNumber.toLowerCase()));
       const out: Prepared = { ok: [], errors: [], skipped: [] };
       for (const { row, v } of rows) {
@@ -55,7 +57,7 @@ export const KINDS: Kind[] = [
         const sem = v.semester ? num(v.semester) : 1;
         if (!Number.isInteger(sem) || sem < 1 || sem > 12) { out.errors.push({ row, message: `Semester "${v.semester}" is not 1–12.` }); continue; }
         have.add(r.toLowerCase());
-        out.ok.push({ row, data: { id: randomUUID(), batchId: b.id, rollNumber: r, name: n, currentSemesterNumber: sem } });
+        out.ok.push({ row, data: { id: randomUUID(), batchId: b.id, rollNumber: r, name: n, currentSemesterNumber: sem, ...(v.hssc ? { track: trackOf(v.hssc) } : {}) } });
       }
       return out;
     },

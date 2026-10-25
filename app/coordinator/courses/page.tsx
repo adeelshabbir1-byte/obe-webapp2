@@ -10,8 +10,10 @@ import { degreeSortKey } from "../../../lib/curriculumAccess";
 import { navForRole } from "../../../components/reportNav";
 import { ActionButton } from "../../../components/fyp/FypClient";
 import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
-import { CourseBoard, SourcePicker } from "../../../components/BatchBoard";
-import { batchBoard, curriculumBoard, sourcesFor } from "../../../lib/batchBoard";
+import { CourseBoard } from "../../../components/BatchBoard";
+import BatchSetupSteps from "../../../components/BatchSetupSteps";
+import { setupStatus, schemeChanges } from "../../../lib/batchSetup";
+import { batchBoard, curriculumBoard } from "../../../lib/batchBoard";
 import SlotChooser from "../../../components/SlotChooser";
 import { slotChooser, slotChoicesOf } from "../../../lib/slotChoice";
 
@@ -25,7 +27,10 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
 
   const selectedBatchId = searchParams.batchId || "";
   const owning = await findOwningChairmanId(user.id);
-  const [board, sources] = selectedBatchId ? await Promise.all([batchBoard(selectedBatchId), owning ? sourcesFor(user, owning, selectedBatchId) : Promise.resolve([])]) : [null, []];
+  const board = selectedBatchId ? await batchBoard(selectedBatchId) : null;
+  const [setup, changes] = selectedBatchId ? await Promise.all([setupStatus(selectedBatchId).catch(() => null), schemeChanges(selectedBatchId)]) : [null, []];
+  const sourceLabel = setup?.source ? (setup.source.how === "BATCH_AS_TAUGHT" ? "a previous batch, as it was taught" : board?.title && setup.source.curriculumId ? (await prisma.masterCurriculum.findUnique({ where: { id: setup.source.curriculumId }, select: { authority: true, title: true, version: true } }).then((c) => (c ? `${c.authority} ${c.title} ${c.version}` : "a curriculum"))) : "a curriculum") : "not recorded (older batch)";
+  const offered = selectedBatchId ? await (await import("../../../lib/batchSetup")).offeredTracks(selectedBatchId) : [];
   const pv = searchParams.preview || "";
   const allBatchesForPick = !selectedBatchId && pv ? await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ startYear: "desc" }], take: 12, select: { id: true, degreeProgram: true, batchName: true } }) : [];
   const preview = pv.startsWith("c:") ? await curriculumBoard(pv.slice(2)) : pv.startsWith("b:") && (await prisma.batch.findFirst({ where: { id: pv.slice(2), coordinator: { managedById: owning || "none" } }, select: { id: true } })) ? await batchBoard(pv.slice(2)) : null;
@@ -79,14 +84,10 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
         </div>
       )}
       {!selectedBatchId && preview && <div className="card" id="sources"><h3 style={{ marginTop: 0 }}>Use this curriculum for a batch</h3><p className="small-note">Pick the batch: {allBatchesForPick.map((b) => <a key={b.id} className="btn btn-secondary btn-sm" style={{ marginRight: 6 }} href={`/coordinator/courses?batchId=${b.id}&preview=${searchParams.preview}#sources`}>{b.degreeProgram} — {b.batchName}</a>)}</p><CourseBoard board={preview} /></div>}
-      {selectedBatchId && board && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
+      {selectedBatchId && board && board.courses.length === 0 && <div className="card" style={{ borderLeft: "5px solid #0D2A4A" }}><h3 style={{ marginTop: 0 }}>This batch has no courses yet</h3><p className="small-note">Choose where they come from — a curriculum (e.g. NCEAC) or a previous batch — step by step.</p><a className="btn" href={`/coordinator/batches/new?batchId=${selectedBatchId}`}>Set up this batch&apos;s courses →</a></div>}
+      {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} />}
+      {selectedBatchId && board && board.courses.length > 0 && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
       {selectedBatchId && <SlotChooser batchId={selectedBatchId} groups={slotGroups} choices={slotChoices.map((c) => ({ courseId: c.courseId, byName: c.byName, at: new Date(c.at).toISOString() }))} />}
-      {selectedBatchId && <div className="card" id="sources">
-        <h3 style={{ marginTop: 0 }}>{board && board.courses.length ? "Add courses from" : "Where should this batch's courses come from?"}</h3>
-        <p className="small-note" style={{ marginTop: 0 }}>Curricula of this program&apos;s discipline (the university&apos;s own first: new batches get its latest approved plan for each course) and earlier batches. <b>Preview</b> shows it as a board; <b>Import</b> brings it in. Elective / IDS lists stay in the curriculum as the pool you fill elective slots from.</p>
-        <SourcePicker rows={sources} batchId={selectedBatchId} previewKey={searchParams.preview || ""} />
-        {preview && <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}><div className="small-note" style={{ marginTop: 0 }}>Preview</div><CourseBoard board={preview} /></div>}
-      </div>}
       {listCount > 0 && <div className="card" style={{ borderLeft: "5px solid #B26A00", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <span><b>{listCount}</b> elective / IDS <b>list</b> courses are in this batch. A list is the pool students choose from — the batch only needs its elective slots, each filled from the list.</span>
         <ActionButton showMessage url={`/api/coordinator/batches/${selectedBatchId}/cleanup-lists`} body={{}} label="Remove the unchosen list courses" className="btn btn-sm" confirmText={`Remove ${listCount} elective-list course(s) from this batch? Courses with students, marks or attendance are kept; filled elective slots are not touched.`} />

@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
   const typeDefs = ((await (prisma as unknown as Record<string, any>).curriculumType.findMany({ where: { curriculumId: curriculum.id } }).catch(() => [])) as { name: string; kind: string }[]);
   const { kindInfo } = await import("../../../../../lib/curriculumTemplates");
   const labOf = new Map(((await (prisma as unknown as Record<string, any>).masterCourseLab.findMany({ where: { masterCourseId: { in: curriculum.courses.map((x) => x.id).concat("none") } } }).catch(() => [])) as { masterCourseId: string; labCredits: number }[]).map((l) => [l.masterCourseId, l.labCredits]));
-  const batchTypeOf = (cat: string) => { const d = typeDefs.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : cat; };
+  const { typeKey } = await import("../../../../../lib/courseTypes");
+  const rules = ((await (prisma as unknown as Record<string, any>).curriculumTypeRule.findMany({ where: { curriculumId: curriculum.id } }).catch(() => [])) as { typeName: string; passFail: boolean; onlyTrack: string | null }[]);
+  const ruleOf = (cat: string) => rules.find((r) => r.typeName === cat) || null;
+  const batchTypeOf = (cat: string) => { const d = typeDefs.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : typeKey(cat); };
 
   // Defense in depth: the frontend only ever offers this institution's
   // own curriculum (via findOwnInstitutionCurriculum), but this endpoint
@@ -99,22 +102,26 @@ export async function POST(req: NextRequest) {
   let benchmarksCopied = 0;
   const errors: string[] = [];
 
+  const naming = owningChairmanId ? await (await import("../../../../../lib/batchSetup")).namingFor(owningChairmanId, batch.degreeProgram) : new Map<string, { code: string; title: string }>();
   for (const mc of toImport) {
     try {
-      let code = mc.code;
-      if (existingCodes.has(code)) code = `${mc.code}-${curriculum.version}`;
+      const named = naming.get(mc.id); // the program's earlier choice of name / code for this curriculum course
+      let code = named?.code || mc.code;
+      if (existingCodes.has(code)) code = `${code}-${curriculum.version}`;
       existingCodes.add(code);
 
       // Every Elective-type course gets a uniform "<Degree> Elective <N>"
       // title instead of whatever its master template happened to be
       // titled — this is the same rule already applied as a one-time
       // bulk rename to existing data, now applied automatically here too.
-      const title = batchTypeOf(mc.category) === "Elective" && !typeDefs.length ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : batchTypeOf(mc.category) === "Elective" && /^elective\b/i.test(mc.title) ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : mc.title;
+      const title = batchTypeOf(mc.category) === "Elective" && !typeDefs.length ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : batchTypeOf(mc.category) === "Elective" && /^elective\b/i.test(mc.title) ? electiveTitleFor(batch.degreeProgram, ++electiveCounter) : named?.title || mc.title;
 
       const newCourse = await prisma.course.create({
         data: {
           code, title, creditHours: mc.creditHours,
           courseType: batchTypeOf(mc.category), semesterNumber: mc.semesterNumber,
+          // Deficiency / non-credit types: pass / fail only and, when the curriculum says so, only for one student track.
+          ...(ruleOf(mc.category) ? { isNonCredit: ruleOf(mc.category)!.passFail, trackName: ruleOf(mc.category)!.onlyTrack || null } : typeDefs.find((t) => t.name === mc.category)?.kind === "NONCREDIT" ? { isNonCredit: true } : {}),
           ...(typeDefs.length ? { hasLab: (labOf.get(mc.id) || 0) > 0, labPct: mc.creditHours ? Math.round((100 * (labOf.get(mc.id) || 0)) / mc.creditHours) : 0 } : {}),
           textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial,
           coordinatorId: ownerId, batchId: batch.id, masterCourseId: mc.id,

@@ -19,7 +19,8 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
   const [view, setView] = useState<"type" | "semester">("type");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const total = board.courses.filter((c) => board.types.find((t) => t.name === c.type)?.counts !== false).reduce((t, c) => t + c.ch, 0);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const total = board.courses.filter((c) => !c.deficiency && board.types.find((t) => t.name === c.type)?.counts !== false).reduce((t, c) => t + c.ch, 0);
   const obeCs = board.courses.filter((c) => !c.gradesOnly); const noSe = obeCs.filter((c) => !c.se).length, noClo = obeCs.filter((c) => !c.clos).length, gOnly = board.courses.length - obeCs.length;
   const cols = useMemo(() => view === "type"
     ? board.types.map((t) => ({ key: t.name, label: t.name, color: t.color, t, cs: board.courses.filter((c) => c.type === t.name), miss: board.missing.filter((m) => m.type === t.name) }))
@@ -47,7 +48,9 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
       {msg && <p className={msg.ok ? "small-note" : "err"} style={{ color: msg.ok ? "#1E6B34" : undefined }}>{msg.text}</p>}
       <div className="cb-cols">
         {cols.map((col) => { const ch = col.cs.reduce((t, c) => t + c.ch, 0); const t = col.t; const ok = !t || ((!t.minCredits || ch >= t.minCredits) && (!t.minCourses || col.cs.length >= t.minCourses)); return (
-          <section key={col.key} className="cb-col" aria-label={col.label}>
+          <section key={col.key} className="cb-col" aria-label={col.label} style={dragOver === col.key ? { outline: "2px dashed #1565C0" } : undefined}
+            onDragOver={(e) => { if (editable) { e.preventDefault(); setDragOver(col.key); } }} onDragLeave={() => setDragOver(null)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(null); const id = e.dataTransfer.getData("text/plain"); if (!editable || !id) return; run(() => post("/api/coordinator/batch-board", view === "type" ? { action: "move", courseId: id, type: col.key } : { action: "move", courseId: id, semester: col.key === "0" ? "" : col.key })); }}>
             <header className="cb-head" style={{ borderTop: `5px solid ${col.color}` }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}><b style={{ fontSize: 13.5 }}>{col.label}</b>{t && (t.minCredits || t.minCourses) ? <span style={{ fontWeight: 800, color: ok ? "#2E7D32" : "#C62828" }}>{ok ? "✓" : "✗"}</span> : null}</div>
               <div style={{ fontSize: 12 }}><b>{ch}</b>{t?.minCredits ? ` / ${t.minCredits}${t.maxCredits ? `–${t.maxCredits}` : ""}` : ""} CH · {col.cs.length}{t?.minCourses ? ` / ${t.minCourses}` : ""} courses</div>
@@ -55,10 +58,12 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
             <div className="cb-list">
               {col.miss.map((m) => <button key={m.masterCourseId} type="button" className="cb-ghost" disabled={busy || !editable} onClick={() => addMissing([m.masterCourseId])} title="Missing from this batch — click to add">＋ <b>{m.code}</b> {m.title} <span style={{ float: "right" }}>{m.ch} CH</span></button>)}
               {col.cs.sort((a, b) => (a.semester ?? 99) - (b.semester ?? 99) || a.code.localeCompare(b.code)).map((c) => (
-                <div key={c.id} className="cb-card" style={{ borderLeft: `4px solid ${col.color}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><span><span style={{ fontFamily: "ui-monospace,Consolas,monospace", fontSize: 11, fontWeight: 700, color: "#556", marginRight: 5 }}>{c.code}</span>{c.title}</span><b style={{ whiteSpace: "nowrap", fontSize: 11.5 }}>{c.ch} CH{c.semester ? <span style={{ fontWeight: 400, color: "#778" }}> · S{c.semester}</span> : null}</b></div>
+                <div key={c.id} className="cb-card" draggable={!!editable} onDragStart={(e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; }} style={{ borderLeft: `4px solid ${col.color}`, cursor: editable ? "grab" : undefined }} title={editable ? "Drag onto another column to move it" : undefined}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><span><span style={{ fontFamily: "ui-monospace,Consolas,monospace", fontSize: 11, fontWeight: 700, color: "#556", marginRight: 5 }}>{c.code}</span>{c.title}</span>{editable && batchId && <button type="button" aria-label={`Remove ${c.code}`} title="Remove from this batch (only while it has no students, marks or attendance)" disabled={busy} onClick={() => { const why = prompt(`Remove ${c.code} ${c.title} from this batch? Why?`); if (why !== null) run(() => post("/api/coordinator/batch-setup", { action: "remove", batchId, courseId: c.id, why })); }} style={{ border: "none", background: "none", color: "#B3261E", cursor: "pointer", padding: 0, fontSize: 13, order: 3 }}>×</button>}<b style={{ whiteSpace: "nowrap", fontSize: 11.5 }}>{c.ch} CH{c.semester ? <span style={{ fontWeight: 400, color: "#778" }}> · S{c.semester}</span> : null}</b></div>
                   {editable && <div style={{ fontSize: 11, color: "#556" }}>SE: {c.se ? c.se : <b style={{ color: "#B3261E" }}>none</b>} · Teacher: {c.instructor || "—"}</div>}
                   <div style={{ fontSize: 10.5, display: "flex", gap: 6, color: "#778" }}>{c.gradesOnly ? <span title={c.gradesOnly} style={{ color: "#6B7177" }}>grades only</span> : <><span style={{ color: c.clos ? (editable && c.mapped < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLOs${editable && c.mapped < c.clos ? ` (${c.clos - c.mapped} not mapped)` : ""}` : "no CLOs"}</span><span style={{ color: c.lectures ? "#2E7D32" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span></>}</div>
+                  {c.deficiency && <div style={{ fontSize: 10.5, fontWeight: 700, color: "#8D6E63" }}>{c.deficiency} · not in CH or GPA</div>}
+                  {editable && <div style={{ fontSize: 10.5, color: c.home ? "#556" : "#B26A00" }}>Home: {c.home || "not set"}</div>}
                   {c.from && <div style={{ fontSize: 10.5, color: "#556", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.from}>from {c.from}</div>}
                   {editable && <div className="cb-move" style={{ marginTop: 3 }}>
                     <select aria-label={`Move ${c.title} to type`} value="" disabled={busy} onChange={(e) => e.target.value && run(() => post("/api/coordinator/batch-board", { action: "move", courseId: c.id, type: e.target.value }))} style={{ fontSize: 11, maxWidth: 120 }}><option value="">Type…</option>{board.types.filter((t) => t.name !== c.type).map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}</select>{" "}

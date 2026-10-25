@@ -124,7 +124,14 @@ export async function batchListCourses(batchId: string) {
 
 /** Give a batch's list options their list type ("Domain Elective" / "Domain IDS") so every count, report and copy skips
  *  them. Idempotent; returns how many were retyped. */
+/** Old type names from early imports become the standard ones ("General Education / Other" → "General Education",
+ *  "Major" → "Core") so a course sits in one column. */
+export async function normaliseTypes(batchId: string) {
+  await prisma.course.updateMany({ where: { batchId, courseType: "General Education / Other" }, data: { courseType: "General Education" } });
+  await prisma.course.updateMany({ where: { batchId, courseType: "Major" }, data: { courseType: "Core" } });
+}
 export async function retypeListCourses(batchId: string) {
+  await normaliseTypes(batchId).catch(() => null);
   const { list } = await batchListCourses(batchId);
   const cs = await prisma.course.findMany({ where: { id: { in: Array.from(list.keys()).concat("none") } }, select: { id: true, courseType: true } });
   let n = 0;

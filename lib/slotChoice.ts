@@ -37,6 +37,8 @@ export async function slotChooser(batchId: string): Promise<SlotGroup[]> {
   const out: SlotGroup[] = [];
   for (const fl of ["IDS", "Elective"] as Flavour[]) {
     const options = ms.filter((m) => pool.flavour.get(m.id) === fl).map((m) => ({ id: m.id, code: m.code, title: m.title, ch: m.creditHours, tracks: links.filter((l) => l.masterCourseId === m.id).map((l) => tracks.find((t) => t.id === l.trackId)?.name || "").filter(Boolean), clos: m._count.seedClos, lectures: m._count.seedTopics }));
+    const offered = ((await db.batchTrackOffer.findMany({ where: { batchId } }).catch(() => [])) as { name: string }[]).map((t) => t.name);
+    if (offered.length && fl === "Elective") options.splice(0, options.length, ...options.filter((o) => !o.tracks.length || o.tracks.some((t) => offered.includes(t))));
     if (!options.length) continue;
     const slots = await slotsOf(batchId, fl, pool.ids, pool.flavour);
     out.push({ flavour: fl, cap: pool.slots[fl] || slots.length, slots, options });

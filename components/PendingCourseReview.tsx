@@ -10,7 +10,7 @@ type PendingCourse = {
 };
 type ExistingCourse = { id: string; title: string; category: string };
 
-const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Certification", "Capstone Project", "Field Experience", "Major", "Domain Elective", "General Education / Other"];
+const CATEGORIES = ["General Education", "Core", "Elective", "IDS", "Domain Elective", "Domain IDS", "Certification", "Capstone Project", "Field Experience"];
 
 export default function PendingCourseReview({ curriculumId, pendingCourses: initialPendingCourses, allCourses }: { curriculumId: string; pendingCourses: PendingCourse[]; allCourses: ExistingCourse[] }) {
   const [pendingCourses, setPendingCourses] = useState<PendingCourse[]>(initialPendingCourses);

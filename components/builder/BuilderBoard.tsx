@@ -10,7 +10,7 @@ const STEPS = [["types", "1  Course types"], ["place", "2  Place courses"], ["tr
 const STATUS: Record<string, [string, string]> = { DRAFT: ["Draft", "#B26A00"], SUBMITTED: ["Waiting to publish", "#1565C0"], PUBLISHED: ["Published", "#2E7D32"], SUPERSEDED: ["Superseded", "#6B7177"] };
 const UNPLACED = "__unplaced";
 
-export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[]; packs?: { key: string; label: string }[]; isSuper?: boolean }) {
+export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[]; packs?: { key: string; label: string }[]; isSuper?: boolean; rules?: { typeName: string; passFail: boolean; onlyTrack: string | null }[] }) {
   const router = useRouter();
   const [step, setStep] = useState(STEPS.some(([k]) => k === props.step) ? props.step : props.types.length ? "place" : "types");
   const [courses, setCourses] = useState(props.courses);
@@ -87,7 +87,7 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
       {published && !locked && <div className="card" style={{ margin: 0, borderLeft: "4px solid #1565C0", fontSize: 13.5 }}>This version is <b>{st.toLowerCase()}</b>: your changes go to the master straight away. Program Leads whose batches use it see them under “My Curriculum vs Master” and decide whether to apply them.</div>}
       {locked && <div className="card" style={{ margin: 0, borderLeft: "4px solid #6B7177", fontSize: 13.5 }}>You can look at this curriculum but not change it.</div>}
       {step === "types" && <TypesStep types={props.types} templates={props.templates} post={post} busy={busy} locked={locked} onDone={() => setStep("place")} />}
-      {step === "place" && <PlaceStep types={props.types} courses={courses} setCourses={setCourses} live={live} post={post} locked={locked} />}
+      {step === "place" && <PlaceStep types={props.types} courses={courses} setCourses={setCourses} live={live} post={post} locked={locked} rules={props.rules || []} canEdit={props.canEdit} />}
       {step === "tracks" && <TracksStep types={props.types} tracks={props.tracks} courses={courses} setCourses={setCourses} post={post} locked={locked} />}
       {step === "review" && <ReviewStep cur={props.cur} types={props.types} tracks={props.tracks} courses={courses} live={live} post={post} canPublish={props.canPublish} older={props.older} busy={busy} packs={props.packs || []} locked={locked} isSuper={!!props.isSuper} />}
       {toast && <div role="status" className="bb-toast" style={{ background: toast.ok ? "#1E6B34" : "#B3261E" }}>{toast.text}</div>}
@@ -202,7 +202,7 @@ function Editor({ c, types, post, close, locked }: { c: BCourse; types: BType[];
   );
 }
 
-function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: BType[]; courses: BCourse[]; setCourses: (c: BCourse[]) => void; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean; chOk: boolean; nOk: boolean }>; unplaced: BCourse[] }; post: Post; locked: boolean }) {
+function PlaceStep({ types, courses, setCourses, live, post, locked, rules, canEdit }: { rules: { typeName: string; passFail: boolean; onlyTrack: string | null }[]; canEdit: boolean; types: BType[]; courses: BCourse[]; setCourses: (c: BCourse[]) => void; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean; chOk: boolean; nOk: boolean }>; unplaced: BCourse[] }; post: Post; locked: boolean }) {
   const [over, setOver] = useState<string | null>(null);
   const [folded, setFolded] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<BCourse | null>(null);
@@ -245,6 +245,11 @@ function PlaceStep({ types, courses, setCourses, live, post, locked }: { types: 
                     <div style={{ fontSize: 12.5, marginTop: 2 }}>
                       <b style={{ color: p!.chOk ? undefined : "#C62828" }}>{p!.ch}</b>{k.counts ? <> / {t.minCredits ?? "—"}{t.maxCredits ? `–${t.maxCredits}` : ""} CH</> : " CH listed (not counted)"} · <b style={{ color: p!.nOk ? undefined : "#C62828" }}>{cs.length}</b>{t.minCourses ? ` / ${t.minCourses}` : ""} courses
                     </div>
+                    {(t.kind === "NONCREDIT" || !k.counts) && (() => { const r = rules.find((x) => x.typeName === t.name); const ro = !canEdit; return (
+                      <div style={{ fontSize: 11.5, marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                        <label><input type="checkbox" disabled={ro} checked={!!r?.passFail} onChange={(e) => post({ action: "typeRule", typeName: t.name, passFail: e.target.checked, onlyTrack: r?.onlyTrack || "" })} /> Pass / fail only — not in GPA</label>
+                        <label>Only for <select disabled={ro} value={r?.onlyTrack || ""} onChange={(e) => post({ action: "typeRule", typeName: t.name, passFail: !!r?.passFail, onlyTrack: e.target.value })} style={{ fontSize: 11 }}><option value="">every student</option><option value="Pre-Medical">Pre-Medical students</option><option value="Non-Medical">Non-Medical students</option></select></label>
+                      </div>); })()}
                     {k.counts && t.minCredits ? <div className="bb-bar"><div style={{ width: `${pct}%`, height: "100%", background: p!.chOk ? "#2E7D32" : k.color }} /></div> : null}
                   </>
                 ) : <div style={{ fontSize: 12.5, color: "#C62828" }}>Drag each into its type</div>}

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     });
     existingDistinctPrograms.add(p.name);
 
-    const copyResult = await autoCopyFromPreviousBatch(batch);
+    const copyResult = await autoCopyFromPreviousBatch(batch, { courses: false }); // courses: chosen on the batch's set-up page, never copied silently
     created.push({
       batchName, degreeProgram: p.name,
       copiedFrom: copyResult.copiedFrom, coursesCopied: copyResult.coursesCopied, plosCopied: copyResult.plosCopied,
