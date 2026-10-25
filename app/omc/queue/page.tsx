@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { OMC_ACTION_NAV } from "../../../components/reportNav";
 import OmcReviewQueue from "../../../components/OmcReviewQueue";
+import OmcGovernanceBox from "../../../components/OmcGovernanceBox";
 import { omcLeadScope, omcCourseScope } from "../../../lib/omcScope";
 
 export default async function OmcQueuePage() {
@@ -32,6 +33,7 @@ export default async function OmcQueuePage() {
         Subject Expert course templates submitted for review, split by who's responsible for getting to each
         one.
       </p>
+      <OmcGovernanceBox userId={user.id} chairmanId={user.managedById || ""} coordinatorIds={coordinatorIds} />
       <OmcReviewQueue
         myId={user.id}
         omcMembers={omcMembers.map((m) => ({ id: m.id, name: m.name }))}

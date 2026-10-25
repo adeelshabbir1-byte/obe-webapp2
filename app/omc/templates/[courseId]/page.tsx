@@ -3,7 +3,7 @@ import SortableTable from "../../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import Shell from "../../../../components/Shell";
-import OmcDecisionForm from "../../../../components/OmcDecisionForm";
+import PlanVotePanel from "../../../../components/PlanVotePanel";
 import Link from "next/link";
 import { navForRole } from "../../../../components/reportNav";
 
@@ -71,7 +71,7 @@ export default async function OmcTemplateDetailPage({ params }: { params: { cour
       {reviewer && (
         <p style={{ fontSize: 11.5, color: "var(--slate)", marginTop: -8, marginBottom: 12 }}>Last reviewed by {reviewer.name} ({course.templateStatus}).</p>
       )}
-      <OmcDecisionForm courseId={course.id} currentComment={course.omcComment} />
+      <PlanVotePanel courseId={course.id} viewerId={user.id} viewerRole={user.role} />
     </Shell>
   );
 }

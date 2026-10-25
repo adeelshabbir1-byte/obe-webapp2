@@ -13,7 +13,7 @@ import { termIndex } from "../../../../../../lib/termLogic";
 // shouldn't necessarily follow across different programs.
 export async function PUT(req: NextRequest) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { courseId, newCode, applyToAllPrograms = true } = body;

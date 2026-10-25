@@ -16,6 +16,7 @@ export default function TemplateChangeReview({ initial }: { initial: Req[] }) {
       const r = await fetch(`/api/omc/template-changes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, comment: comments[id] || "" }) });
       const d = await r.json();
       if (!r.ok) { setError(d.error || "Something went wrong."); setBusy(false); return; }
+      if (d.pending) { setError(d.message); setBusy(false); return; }
       setReqs((p) => p.filter((x) => x.id !== id));
     } catch (e: any) { setError("Unexpected error: " + e.message); }
     setBusy(false);

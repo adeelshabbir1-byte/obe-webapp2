@@ -43,6 +43,10 @@ export async function POST() {
       perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: 0, prerequisitesNotConfirmed: true });
       continue;
     }
+    { // set-up steps 5–6 (sync & equalise, home departments) must be finished before anything is offered
+      const st = await (await import("../../../../lib/batchSetup")).setupStatus(batch.id).catch(() => null);
+      if (st && !st.done) { perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: 0, setupNotDone: true } as never); continue; }
+    }
     const coursesToOffer = await prisma.course.findMany({ where: { batchId: batch.id, semesterNumber, isOffered: false } });
     if (coursesToOffer.length > 0) {
       for (const c of coursesToOffer) {

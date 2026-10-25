@@ -14,6 +14,12 @@ export async function POST(req: NextRequest) {
     if (b.action === "save" || b.action === "delete") {
       if (!["OMC", "CHAIRMAN"].includes(user.role)) return NextResponse.json({ error: "Only the OMC sets these rules." }, { status: 403 });
       const chairmanId = await chairmanIdFor(user);
+      { // Limits finalised by the Convener are locked until he reopens them; while a round is open only he edits.
+        const { rounds } = await import("../../../../lib/omcRules");
+        const r = (await rounds(chairmanId))[0];
+        if (r?.status === "LOCKED") return NextResponse.json({ error: "The limits are locked by the OMC Convener — he reopens them for a new round." }, { status: 423 });
+        if (r?.status === "OPEN") { const { omcCommittee } = await import("../../../../lib/omcCommittee"); const com = await omcCommittee(chairmanId, null); if (com.convenerId && com.convenerId !== user.id) return NextResponse.json({ error: "A round is open: give your opinion per category; the Convener decides the figures." }, { status: 403 }); }
+      }
       if (b.action === "delete") { await deleteRule(chairmanId, String(b.id || "")); return NextResponse.json({ ok: true }); }
       const types = String(b.types || "").split(/[,+]/).map((t) => t.trim()).filter(Boolean).map((t) => TYPES.find((x) => x.toLowerCase() === t.toLowerCase()) || t);
       const num = (v: unknown) => (v === "" || v === null || v === undefined ? null : Number(v));
@@ -23,6 +29,10 @@ export async function POST(req: NextRequest) {
       if ([minPct, maxPct].some((x) => x !== null && (!Number.isFinite(x) || x < 0 || x > 100))) return NextResponse.json({ error: "Percentages are 0–100." }, { status: 400 });
       await saveRule(chairmanId, { id: b.id ? String(b.id) : undefined, label: String(b.label || `${types.join(" + ")} ${b.level === "CLO" ? "per CLO" : "of the course"}`).slice(0, 120), types, level: b.level === "CLO" ? "CLO" : "COURSE", minPct, maxPct, courseKind: ["THEORY", "LAB"].includes(b.courseKind) ? b.courseKind : "ALL", program: b.program ? String(b.program) : null }, user.id);
       return NextResponse.json({ ok: true });
+    }
+    if (["open", "opinion", "lock"].includes(b.action)) {
+      const r = await (await import("../../../../lib/omcRules")).ruleAct({ id: user.id, name: user.name, managedById: user.managedById, role: user.role }, b);
+      return "error" in r ? NextResponse.json({ error: r.error }, { status: 400 }) : NextResponse.json(r);
     }
     if (b.action === "decide") {
       const courseId = String(b.courseId || ""), source = b.source === "SE" ? "SE" : "INSTRUCTOR";

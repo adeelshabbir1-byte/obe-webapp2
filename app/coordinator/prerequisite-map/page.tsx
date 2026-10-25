@@ -8,9 +8,10 @@ import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import ConfirmPrerequisitesButton from "../../../components/ConfirmPrerequisitesButton";
 import BatchCoursesQuickEditTable from "../../../components/BatchCoursesQuickEditTable";
+import SetupStrip from "../../../components/SetupStrip";
 
 
-export default async function PrerequisiteMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string } }) {
+export default async function PrerequisiteMapPage({ searchParams }: { searchParams: { degree?: string; batchId?: string , setup?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -49,6 +50,7 @@ export default async function PrerequisiteMapPage({ searchParams }: { searchPara
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      {searchParams.setup && <SetupStrip batchId={searchParams.setup} step="prereqs" />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Prerequisite Map</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         One row per semester, boxes color-coded by course type. Click two courses to set a prerequisite link.

@@ -52,7 +52,7 @@ export default function BatchSetupWizard({ programs, existing }: { programs: Pro
       if (src.kind === "CURRICULUM") await post("/api/coordinator/courses/import-hec", { batchId, curriculumId: src.id });
       else { let cursor: string | undefined; for (let i = 0; i < 200; i++) { const d = await post("/api/coordinator/courses/copy-from-batch", { sourceBatchId: src.id, targetBatchId: batchId, cursor }); cursor = d.nextCursor; if (!d.mightHaveMore || !cursor) break; } }
       if (picked.size) await post("/api/coordinator/batch-setup", { action: "tracks", batchId, tracks: tracks.filter((t) => picked.has(t.id)) });
-      router.push(`/coordinator/courses?batchId=${batchId}&setup=1`);
+      router.push(`/coordinator/batches/next?batchId=${batchId}`);
     } catch (e) { setErr((e as Error).message); setBusy(""); }
   }
 

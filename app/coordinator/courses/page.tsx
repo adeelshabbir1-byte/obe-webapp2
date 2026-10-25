@@ -12,13 +12,14 @@ import { ActionButton } from "../../../components/fyp/FypClient";
 import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
 import { CourseBoard } from "../../../components/BatchBoard";
 import BatchSetupSteps from "../../../components/BatchSetupSteps";
+import SetupStrip from "../../../components/SetupStrip";
 import { setupStatus, schemeChanges } from "../../../lib/batchSetup";
 import { batchBoard, curriculumBoard } from "../../../lib/batchBoard";
 import SlotChooser from "../../../components/SlotChooser";
 import { slotChooser, slotChoicesOf } from "../../../lib/slotChoice";
 
 
-export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string; preview?: string; pick?: string } }) {
+export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string; preview?: string; pick?: string; setup?: string; step?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -30,6 +31,36 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   const board = selectedBatchId ? await batchBoard(selectedBatchId) : null;
   const [setup, changes] = selectedBatchId ? await Promise.all([setupStatus(selectedBatchId).catch(() => null), schemeChanges(selectedBatchId)]) : [null, []];
   const sourceLabel = setup?.source ? (setup.source.how === "BATCH_AS_TAUGHT" ? "a previous batch, as it was taught" : board?.title && setup.source.curriculumId ? (await prisma.masterCurriculum.findUnique({ where: { id: setup.source.curriculumId }, select: { authority: true, title: true, version: true } }).then((c) => (c ? `${c.authority} ${c.title} ${c.version}` : "a curriculum"))) : "a curriculum") : "not recorded (older batch)";
+  const step = ["home", "names", "electives", "ga"].includes(searchParams.step || "") ? searchParams.step! : "";
+  const { setupProgress } = await import("../../../lib/setupProgress");
+  const prog = selectedBatchId ? await setupProgress(selectedBatchId).catch(() => null) : null;
+  const stepIdx = prog ? prog.steps.findIndex((x) => x.key === step) : -1;
+  const nextUrl = prog && stepIdx >= 0 ? prog.steps[stepIdx + 1]?.url || null : null;
+  const ownDepartmentId = selectedBatchId ? (await (await import("../../../lib/omcCommittee")).departmentOfBatch(selectedBatchId)).departmentId : null;
+  // Home step: the courses each department already teaches (to say "same as …"), and the batch's same-as / not-offered choices.
+  const deptCourses: Record<string, { id: string; code: string; title: string; program: string }[]> = {};
+  const homePlans: Record<string, { mode: string; linkedCourseId: string | null }> = {};
+  if (selectedBatchId && step === "home" && owning) {
+    const dps = await prisma.departmentProgram.findMany({ where: { chairmanId: owning }, select: { departmentId: true, degreeProgram: true } });
+    const others = await prisma.course.findMany({ where: { batchId: { not: selectedBatchId }, coordinator: { managedById: owning }, courseType: { notIn: LIST_TYPES } }, orderBy: { createdAt: "desc" }, take: 4000, select: { id: true, code: true, title: true, subjectHomeDepartmentId: true, batch: { select: { degreeProgram: true } } } });
+    const seen = new Set<string>();
+    for (const c of others) {
+      const prog2 = c.batch?.degreeProgram || "";
+      const dept = c.subjectHomeDepartmentId || dps.find((d) => d.degreeProgram === prog2)?.departmentId; if (!dept) continue;
+      const k = `${dept}|${c.code.toUpperCase()}`; if (seen.has(k)) continue; seen.add(k);
+      (deptCourses[dept] ||= []).push({ id: c.id, code: c.code, title: c.title, program: prog2 });
+    }
+    for (const r of ((await (prisma as unknown as Record<string, any>).courseHomePlan.findMany({ where: { courseId: { in: (setup?.rows || []).map((x) => x.id).concat("none") } } }).catch(() => [])) as { courseId: string; mode: string; linkedCourseId: string | null }[])) homePlans[r.courseId] = { mode: r.mode, linkedCourseId: r.linkedCourseId };
+  }
+  let gaCheck: { noGa: { code: string; title: string }[]; unserved: { number: number; title: string }[] } | null = null;
+  if (selectedBatchId && step === "ga") {
+    const [cs, plos, maps] = await Promise.all([
+      prisma.course.findMany({ where: { batchId: selectedBatchId, courseType: { notIn: LIST_TYPES } }, select: { id: true, code: true, title: true } }),
+      prisma.pLO.findMany({ where: { batchId: selectedBatchId }, select: { id: true, number: true, title: true }, orderBy: { number: "asc" } }),
+      prisma.coursePloMapping.findMany({ where: { plo: { batchId: selectedBatchId } }, select: { courseId: true, ploId: true } }),
+    ]);
+    gaCheck = { noGa: cs.filter((c) => !maps.some((m) => m.courseId === c.id)).map((c) => ({ code: c.code, title: c.title })), unserved: plos.filter((p2) => !maps.some((m) => m.ploId === p2.id)).map((p2) => ({ number: p2.number, title: p2.title })) };
+  }
   const offered = selectedBatchId ? await (await import("../../../lib/batchSetup")).offeredTracks(selectedBatchId) : [];
   const pv = searchParams.preview || "";
   const allBatchesForPick = !selectedBatchId && pv ? await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ startYear: "desc" }], take: 12, select: { id: true, degreeProgram: true, batchName: true } }) : [];
@@ -85,7 +116,8 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
       )}
       {!selectedBatchId && preview && <div className="card" id="sources"><h3 style={{ marginTop: 0 }}>Use this curriculum for a batch</h3><p className="small-note">Pick the batch: {allBatchesForPick.map((b) => <a key={b.id} className="btn btn-secondary btn-sm" style={{ marginRight: 6 }} href={`/coordinator/courses?batchId=${b.id}&preview=${searchParams.preview}#sources`}>{b.degreeProgram} — {b.batchName}</a>)}</p><CourseBoard board={preview} /></div>}
       {selectedBatchId && board && board.courses.length === 0 && <div className="card" style={{ borderLeft: "5px solid #0D2A4A" }}><h3 style={{ marginTop: 0 }}>This batch has no courses yet</h3><p className="small-note">Choose where they come from — a curriculum (e.g. NCEAC) or a previous batch — step by step.</p><a className="btn" href={`/coordinator/batches/new?batchId=${selectedBatchId}`}>Set up this batch&apos;s courses →</a></div>}
-      {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} />}
+      {selectedBatchId && searchParams.setup && step && <SetupStrip batchId={selectedBatchId} step={step as never} />}
+      {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} step={step} ownDepartmentId={ownDepartmentId} deptCourses={deptCourses} homePlans={homePlans} gaCheck={gaCheck} nextUrl={nextUrl} setupUrl={prog?.current.url || `/coordinator/batches/new?batchId=${selectedBatchId}`} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} />}
       {selectedBatchId && board && board.courses.length > 0 && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
       {selectedBatchId && <SlotChooser batchId={selectedBatchId} groups={slotGroups} choices={slotChoices.map((c) => ({ courseId: c.courseId, byName: c.byName, at: new Date(c.at).toISOString() }))} />}
       {listCount > 0 && <div className="card" style={{ borderLeft: "5px solid #B26A00", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

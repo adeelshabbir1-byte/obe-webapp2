@@ -9,7 +9,7 @@ import { curriculumPools, retypeListCourses, isPlaceholderTitle, type Flavour } 
 
 const bdb = prisma as unknown as Record<string, any>;
 export type BoardType = { name: string; kind: string; minCredits: number | null; maxCredits: number | null; minCourses: number | null; counts: boolean; color: string };
-export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null; deficiency?: string | null; home?: string | null };
+export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null; deficiency?: string | null; home?: string | null; placedFrom?: string | null };
 export type Board = { curriculumId: string | null; title: string; types: BoardType[]; courses: BoardCourse[]; missing: { masterCourseId: string; code: string; title: string; ch: number; type: string; semester: number | null }[]; listPool: number; slots: Record<Flavour, number>; obeNote?: string | null; target: [number, number] };
 
 /** Discipline family of a program title — a Program Lead sees only their family's curricula. */
@@ -60,11 +60,12 @@ export async function batchBoard(batchId: string): Promise<Board | null> {
   const have = new Set(courses.map((c) => c.masterCourseId).filter(Boolean));
   const slotTypes = new Set(defs.filter((d) => d.kind === "ELECTIVE_SLOT").map((d) => d.name));
   const gOnly = await (await import("./obeTerm")).gradesOnlyCourses(courses.map((c) => c.id)).catch(() => new Map<string, string>());
+  const placed = new Map(((await bdb.batchSchemeChange.findMany({ where: { batchId, action: "SYNC_DEFAULTS" }, select: { courseId: true, why: true } }).catch(() => [])) as { courseId: string; why: string }[]).map((x) => [x.courseId, x.why]));
   const obeNote = await (await import("./obeTerm")).batchObeNote(batchId).catch(() => null);
   const fromLabel = src ? (src.how === "BATCH_AS_TAUGHT" ? "previous batch (as taught)" : cur ? `${cur.title}${src.revision ? ` rev ${src.revision}` : ""}` : null) : cur?.title || null;
   return {
     curriculumId: curId, title: `${b.degreeProgram} — ${b.batchName}`, types,
-    courses: courses.map((c) => ({ id: c.id, code: c.code, title: c.title, ch: c.creditHours, type: c.courseType || "Other", semester: c.semesterNumber, se: c.subjectExpert?.name || null, instructor: c.instructor?.name || null, clos: c.clos.length, lectures: c._count.lectureRows, mapped: c.clos.filter((x) => x.mappedPloId).length, from: fromLabel, masterCourseId: c.masterCourseId, gradesOnly: gOnly.get(c.id) || null, deficiency: c.isNonCredit ? `Deficiency${c.trackName ? ` — ${c.trackName} only` : ""}, pass / fail` : null, home: c.subjectHomeDepartment?.name || null })),
+    courses: courses.map((c) => ({ id: c.id, code: c.code, title: c.title, ch: c.creditHours, type: c.courseType || "Other", semester: c.semesterNumber, se: c.subjectExpert?.name || null, instructor: c.instructor?.name || null, clos: c.clos.length, lectures: c._count.lectureRows, mapped: c.clos.filter((x) => x.mappedPloId).length, from: fromLabel, masterCourseId: c.masterCourseId, gradesOnly: gOnly.get(c.id) || null, deficiency: c.isNonCredit ? `Deficiency${c.trackName ? ` — ${c.trackName} only` : ""}, pass / fail` : null, home: c.subjectHomeDepartment?.name || null, placedFrom: placed.get(c.id) || null })),
     // Elective slots are compared by count (a filled slot points at the chosen elective), other courses one by one.
     missing: (cur?.courses || []).filter((m) => !have.has(m.id) && !slotTypes.has(m.type) && !isPlaceholderTitle(m.title)).map((m) => ({ masterCourseId: m.id, code: m.code, title: m.title, ch: m.ch, type: typeFor(defs, m.type), semester: m.semester })),
     listPool: cur?.listPool || 0, slots: cur?.slots || { Elective: 0, IDS: 0 }, obeNote: obeNote?.text || null, target: [120, 144],

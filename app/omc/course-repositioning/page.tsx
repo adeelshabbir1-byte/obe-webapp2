@@ -8,8 +8,9 @@ import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import BatchCoursesAdminPanel from "../../../components/BatchCoursesAdminPanel";
 import { courseLegendEntry } from "../../../lib/courseTypeColors";
+import SetupStrip from "../../../components/SetupStrip";
 
-export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
+export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string; setup?: string  } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -19,7 +20,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   // the Institute Head can see the same map here, just without being able to
   // drag a course into a new row.
   if (!["OMC", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
-  const canEdit = user.role === "OMC";
+  const canEdit = user.role === "OMC" || user.role === "PROGRAM_COORDINATOR"; // the Program Lead places his own batch's courses (semester positions step)
   // Adding, deleting, and quick-editing a batch's courses (below the map)
   // is OMC-or-Coordinator — same institution-wide scope the underlying
   // API routes now accept — but not Subject Expert or Institute Head, who are
@@ -49,6 +50,7 @@ export default async function CourseRepositioningPage({ searchParams }: { search
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      {searchParams.setup && <SetupStrip batchId={searchParams.setup} step="positions" />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Repositioning</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Move an HEC-approved course to a different semester before it's offered — click a course, then a

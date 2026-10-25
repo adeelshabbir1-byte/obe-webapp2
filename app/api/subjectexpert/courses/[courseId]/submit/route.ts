@@ -57,6 +57,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
       await prisma.templateChangeRequest.update({ where: { id: open.id }, data: { status: "completed", changesJson: JSON.stringify(changes), completedAt: new Date() } });
     }
   }
+  await (await import("../../../../../../lib/planVote")).onSubmit(course.id).catch(() => null);
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_SUBMITTED", entityType: "Course", entityId: course.id });
   {
     const lead = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });

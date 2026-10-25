@@ -5,7 +5,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !["OMC", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const course = await prisma.course.findUnique({
     where: { id: params.courseId },
@@ -13,6 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   });
   if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (course.coordinator.managedById !== user.managedById) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (user.role === "PROGRAM_COORDINATOR" && course.coordinatorId !== user.id) return NextResponse.json({ error: "Only your own batches' courses." }, { status: 403 });
 
   if (course.isOffered) {
     return NextResponse.json({ error: "this course is already offered this semester — repositioning is only for courses that haven't started yet" }, { status: 400 });

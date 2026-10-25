@@ -21,6 +21,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
     return NextResponse.json({ error: "status must be 'approved' or 'rejected'" }, { status: 400 });
   }
 
+  { // Two OMC approvals approve, two rejections reject (or 2 of the course's 3-member panel).
+    const v = await (await import("../../../../../lib/omcRules")).requestVote({ kind: "WEIGHT_EXCEPTION", requestId: request.id, courseId: request.courseId, user: { id: user.id, name: user.name }, approve: body.status === "approved", reason: body.comment });
+    if ("error" in v) return NextResponse.json({ error: v.error }, { status: 400 });
+    if (!v.decided) return NextResponse.json({ pending: true, message: v.message });
+    body.status = v.decided; body.comment = [body.comment, v.message].filter(Boolean).join(" — ");
+  }
   if (body.status === "approved") {
     if (request.source === "INSTRUCTOR") {
       await prisma.course.update({

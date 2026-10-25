@@ -60,6 +60,14 @@ export async function POST(req: NextRequest) {
       case "remove": await bs.removeCourse(by, await mine(b.courseId), String(b.why || "").slice(0, 300)); return NextResponse.json({ ok: true, message: "Removed." });
       case "add": { const n = await bs.addCourse(by, batch.id, b.kind === "master" ? { masterCourseId: String(b.id) } : { courseId: String(b.id) }, String(b.type || ""), b.semester ? Number(b.semester) : null); return NextResponse.json({ ok: true, message: `${n.code} ${n.title} added.` }); }
       case "tracks": await bs.setOfferedTracks(batch.id, Array.isArray(b.tracks) ? b.tracks.map((t: { id: string; name: string }) => ({ id: String(t.id), name: String(t.name || "") })) : []); return NextResponse.json({ ok: true, message: "Tracks saved." });
+      case "stepDone": { const { markStep, STEPS } = await import("../../../../lib/setupProgress"); const k = String(b.step || ""); if (!STEPS.some((x) => x.key === k)) throw new Error("Unknown step."); if (k === "prereqs" && b.on !== false) await prisma.batch.update({ where: { id: batch.id }, data: { prerequisitesConfirmedAt: new Date() } }); await markStep(batch.id, k as never, by, b.on !== false); return NextResponse.json({ ok: true, message: "Step done." }); }
+      case "markRestNew": { const st = await bs.setupStatus(batch.id); let n = 0; for (const r of st?.rows || []) if (!r.matched && !r.isNew) { await bs.markNew(by, r.id, undefined as never); n++; } return NextResponse.json({ ok: true, message: `${n} course(s) marked new.` }); }
+      case "homes": { // one Save for the whole home-department step
+        const rows = Array.isArray(b.homes) ? (b.homes as { courseId: string; departmentId: string | null }[]) : [];
+        const n = await bs.saveHomes(by, batch.id, rows);
+        const { markStep } = await import("../../../../lib/setupProgress"); await markStep(batch.id, "home", by);
+        return NextResponse.json({ ok: true, message: `Home departments saved (${n} changed).` });
+      }
       case "reset": { // "Start again with another source": only while nobody studies any course of the batch
         const cs = await prisma.course.findMany({ where: { batchId: batch.id }, select: { id: true, _count: { select: { studentEnrollments: true, studentMarks: true, attendanceRecords: true } } } });
         if (cs.some((c) => c._count.studentEnrollments || c._count.studentMarks || c._count.attendanceRecords)) throw new Error("This batch already has students, marks or attendance — its courses can't be replaced.");

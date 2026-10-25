@@ -33,6 +33,12 @@ export default async function BatchesPage() {
   };
   const degreePrograms = await prisma.degreeProgram.findMany({ where: { coordinatorId: user.id }, orderBy: { name: "asc" } });
   const obe = await obeStarts(user.managedById || "none");
+  // Set-up progress of the newest batches (the guided steps), with "Continue set-up →".
+  const { setupProgress } = await import("../../../lib/setupProgress");
+  const setupRows = (await Promise.all(batches.slice().sort((a, b) => b.startYear - a.startYear).slice(0, 8).map(async (b) => { const p = await setupProgress(b.id).catch(() => null); return p ? { id: b.id, label: `${b.degreeProgram} — ${b.batchName}`, done: p.doneCount, total: p.total, next: p.current.label, status: p.review?.status === "APPROVED" ? "approved by the OMC" : p.review ? "with the OMC" : "" } : null; }))).filter((x): x is NonNullable<typeof x> => !!x);
+  // Red flags: what holds each batch's registration back (unapproved SE plans, unconfirmed course → GA of courses from other departments).
+  const { registrationBlockers } = await import("../../../lib/registrationGate");
+  const regFlags = (await Promise.all(batches.map(async (b) => ({ b, bl: await registrationBlockers(b.id).catch(() => []) })))).filter((x) => x.bl.length);
   const obeProgs = Array.from(new Set([...degreePrograms.map((d) => d.name), ...batches.map((b) => b.degreeProgram)])).sort();
   // Any teacher can advise a batch: the people this Program Lead manages, the Lead themself, and teachers of the same
   // department (Chairman, other Program Leads, Instructors) — not only plain Instructors / Subject Experts.
@@ -53,6 +59,18 @@ export default async function BatchesPage() {
         The batches (intakes) of your program. Add a batch, then choose where its courses come from; set its advisor and planned intake. Each batch can follow a different curriculum version.
       </p>
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
+      {regFlags.length > 0 && <div className="card" style={{ borderLeft: "5px solid #B3261E" }}>
+        <h3 style={{ marginTop: 0, color: "#B3261E" }}>⚑ Registration waits for</h3>
+        {regFlags.map(({ b, bl }) => <div key={b.id} style={{ fontSize: 12.5, marginBottom: 6 }}><b>{b.degreeProgram} — {b.batchName}:</b> {bl.map((x) => <span key={x.courseId + x.kind} style={{ display: "inline-block", margin: "2px 4px", padding: "1px 8px", borderRadius: 999, background: "#FDECEA", color: "#B3261E" }}>⚑ {x.code} — {x.kind === "PLAN" ? "SE plan not approved" : "course → GA not confirmed"}</span>)}</div>)}
+      </div>}
+      {setupRows.length > 0 && <div className="card">
+        <h3 style={{ marginTop: 0 }}>Batch set-up</h3>
+        <table style={{ fontSize: 12.5, width: "100%" }}><tbody>{setupRows.map((r) => (
+          <tr key={r.id}><td style={{ width: 240 }}><b>{r.label}</b></td>
+            <td><div style={{ height: 8, background: "#E8ECF1", borderRadius: 4, overflow: "hidden", minWidth: 120 }}><div style={{ width: `${Math.round((100 * r.done) / r.total)}%`, height: "100%", background: r.done === r.total ? "#2E7D32" : "#1565C0" }} /></div></td>
+            <td style={{ whiteSpace: "nowrap" }}>{r.done} of {r.total}{r.status ? ` · ${r.status}` : ` · next: ${r.next}`}</td>
+            <td>{r.done < r.total && <a className="btn btn-sm" href={`/coordinator/batches/next?batchId=${r.id}`}>Continue set-up →</a>}</td></tr>))}</tbody></table>
+      </div>}
       {obeProgs.length > 0 && <div className="card">
         <h3 style={{ marginTop: 0 }}>OBE start of your program</h3>
         <p className="small-note" style={{ marginTop: 0 }}>Courses taught from this term on are OBE; earlier ones are grades only (no CLOs needed, not in attainment). Institute: <b>{obe.institute ? termLabel(obe.institute) : "not set (all OBE)"}</b>. Leave the year empty to follow the institute.</p>
