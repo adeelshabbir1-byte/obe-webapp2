@@ -154,7 +154,7 @@ export const COORDINATOR_NAV = [
   { href: "/course-split", label: "Course Requests" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/coordinator/faculty", label: "Teacher Onboarding" }, { href: "/coordinator/faculty-requests", label: "Teachers from Other Departments" }, { href: "/coordinator/lab-engineers", label: "Lab Engineers" }, { href: "/course-leads", label: "Course Leads" },
-  { href: "/coordinator/batches", label: "Departments & Programs" },
+  { href: "/coordinator/batches", label: "My Batches" },
   { href: "/coordinator/courses", label: "Course Catalog" },
   { href: "/coordinator/assign-subject-experts", label: "Assign Subject Experts" },
   { href: "/coordinator/elective-options", label: "Elective Options" },

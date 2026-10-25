@@ -39,12 +39,11 @@ export default async function BatchesPage() {
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Departments &amp; Programs</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Batches</h1>
         <a href="/api/coordinator/batches/export" className="btn btn-brass" style={{ textDecoration: "none" }}>Export to Excel</a>
       </div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
-        Different batches/cohorts can follow different schemes of studies. Create a batch here, then import
-        or add courses into it — the same HEC curriculum can be imported fresh for each new batch.
+        The batches (intakes) of your program. Add a batch, then choose where its courses come from; set its advisor and planned intake. Each batch can follow a different curriculum version.
       </p>
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
       <BatchesManager
