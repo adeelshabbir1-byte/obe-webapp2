@@ -17,6 +17,13 @@ CREATE TABLE IF NOT EXISTS "OmcRequestVote" (
   "kind" TEXT NOT NULL, "requestId" TEXT NOT NULL, "memberId" TEXT NOT NULL, "approve" BOOLEAN NOT NULL, "reason" TEXT,
   "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY ("kind", "requestId", "memberId")
 );
+-- An earlier, withdrawn build (migration_obe_governance.sql) made an "OmcPanel" of another shape; replace it.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'OmcPanel' AND column_name = 'courseId')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'OmcPanel' AND column_name = 'chairmanId') THEN
+    DROP TABLE "OmcPanel";
+  END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS "OmcPanel" (
   "id" TEXT PRIMARY KEY, "chairmanId" TEXT NOT NULL, "departmentId" TEXT, "term" TEXT NOT NULL, "label" TEXT NOT NULL DEFAULT '',
   "courseIdsJson" TEXT NOT NULL DEFAULT '[]', "memberIdsJson" TEXT NOT NULL DEFAULT '[]', "createdById" TEXT NOT NULL,
