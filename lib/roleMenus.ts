@@ -10,9 +10,9 @@ export const CORE: Record<string, [string, string[]][]> = {
   CHAIRMAN: [
     ["Today", ["/home", "/approvals", "/head-dashboard", "/deadlines"]],
     ["People & structure", ["/chairman/org-chart", "/chairman/people", "/leave-approvals"]],
-    ["Academics", ["/results-approval", "/academic-calendar", "/academic-rules"]],
+    ["Academics", ["/results-approval", "/academic-calendar"]],
     ["Accreditation", ["/accreditation-overview", "/accreditation/readiness", "/quality-office"]],
-    ["Institute", ["/chairman/setup", "/chairman/institute-settings", "/data-import", "/controller", "/chairman/backups", "/chairman/campuses", "/billing"]],
+    ["Institute", ["/chairman/setup", "/chairman/institute-settings", "/chairman/campuses"]],
   ],
   DEAN: [
     ["Today", ["/dean/overview", "/approvals", "/head-dashboard", "/deadlines"]],

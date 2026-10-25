@@ -6,7 +6,7 @@ import { roleLabel } from "../../lib/reportScope";
 import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import { ActionButton, ActionForm } from "../../components/fyp/FypClient";
-import { controllerChairman, controllerSummary, debarList, standingList, xdb, CONTROLLER_HINT } from "../../lib/examController";
+import { controllerAccess, controllerChairman, controllerSummary, debarList, standingList, xdb, CONTROLLER_HINT } from "../../lib/examController";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Controller of Examinations" };
@@ -18,8 +18,10 @@ export default async function ControllerPage({ searchParams }: { searchParams: {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  const cid = await controllerChairman(user);
-  if (!cid) redirect("/home");
+  const acc = await controllerAccess(user);
+  if (!acc) redirect("/home");
+  const cid = acc.chairmanId;
+  const ctrlNow = acc.mode === "VIEW" ? await (await import("../../lib/academicRules")).examController(cid) : null;
   const tab = TABS.some(([k]) => k === searchParams.tab) ? searchParams.tab! : "results";
   const s = await controllerSummary(cid);
   const tile = (n: number | null, label: string, href: string, warn = false) => (
@@ -30,6 +32,8 @@ export default async function ControllerPage({ searchParams }: { searchParams: {
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Controller of Examinations</h1>
+      {acc.mode === "VIEW" && <div className="card" style={{ borderLeft: "5px solid #1565C0", padding: "8px 12px", fontSize: 13 }}><b>Oversight view.</b> {ctrlNow ? `${ctrlNow.name} is the Controller of Examinations` : "No Controller of Examinations is named yet — name one on the organisation chart (until then a Dean acts)"}; publishing, re-checking and debarring are done by them, not here.</div>}
+      {acc.mode === "ACTING" && <div className="card" style={{ borderLeft: "5px solid #B26A00", padding: "8px 12px", fontSize: 13 }}><b>Acting Controller</b> — no Controller of Examinations is named yet, so you act as Controller. This goes away when the Institute Head names one.</div>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Exam sessions, date sheets, seating and invigilation are on <Link href="/exams">Exam Sessions</Link>. Here: publishing approved results, re-checking, debarred lists, admit cards and standing lists. Also: <Link href="/results-approval">grade changes</Link> · <Link href="/official-transcript">official transcripts</Link> · <Link href="/degrees">degrees</Link> · <Link href="/academic-rules">academic rules</Link>.</p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         {tile(s.toPublish, "approved, ready to publish", "/controller?tab=results", true)}

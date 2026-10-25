@@ -5,7 +5,7 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
 import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
-import { academicRules, canSetRules, examController, RULE_LABELS, RULE_OWNERS } from "../../lib/academicRules";
+import { academicRules, canSetRulesNow, examController, RULE_LABELS, RULE_OWNERS } from "../../lib/academicRules";
 import { holdsFor } from "../../lib/autoRegister";
 import { ActionForm } from "../../components/fyp/FypClient";
 import KeyButton from "../../components/KeyButton";
@@ -19,7 +19,7 @@ export default async function AcademicRulesPage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   const chairmanId = await chairmanIdFor(user);
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true } });
-  const setter = canSetRules({ role: user.role, extraRoles: me?.extraRoles });
+  const setter = await canSetRulesNow({ id: user.id, role: user.role, extraRoles: me?.extraRoles }, chairmanId);
   const [rules, ctrl] = await Promise.all([academicRules(chairmanId), examController(chairmanId)]);
   const leads = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: chairmanId }, select: { id: true } });
   const staff = user.role === "CHAIRMAN" ? await prisma.user.findMany({ where: { isActive: true, isVisitingPlaceholder: false, OR: [{ managedById: chairmanId }, { managedById: { in: leads.map((l) => l.id) } }] }, select: { id: true, name: true }, orderBy: { name: "asc" } }) : [];

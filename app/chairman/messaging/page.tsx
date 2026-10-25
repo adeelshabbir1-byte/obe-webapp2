@@ -6,6 +6,7 @@ import { navForRole } from "../../../components/reportNav";
 import { ActionForm } from "../../../components/fyp/FypClient";
 import MessagingTools from "../../../components/MessagingTools";
 import { xdb, configOf, mask, ALERT_KINDS } from "../../../lib/messaging";
+import { itAccess } from "../../../lib/itManager";
 
 export const dynamic = "force-dynamic";
 
@@ -14,16 +15,18 @@ export default async function MessagingPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "CHAIRMAN") redirect("/dashboard");
-  const shell = (c: React.ReactNode) => <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}><h1 style={{ fontSize: 22, marginBottom: 4 }}>SMS &amp; WhatsApp</h1>{c}</Shell>;
-  let c; try { c = await configOf(user.id); await xdb.messageLog.count({ where: { chairmanId: user.id } }); } catch { return shell(<div className="err">Run prisma/migration_messaging.sql first.</div>); }
+  const it = await itAccess(user);
+  if (!it) redirect("/home");
+  const cid = it.chairmanId;
+  const shell = (c: React.ReactNode) => <Shell roleLabel="Institute Head" userName={user.name} navLinks={navForRole(user.role)}><h1 style={{ fontSize: 22, marginBottom: 4 }}>SMS &amp; WhatsApp</h1>{!it.canAct && <div className="card" style={{ borderLeft: "5px solid #1565C0", padding: "8px 12px", fontSize: 13 }}><b>Read-only.</b> {it.manager?.name} is the IT Manager and runs this page.</div>}{c}</Shell>;
+  let c; try { c = await configOf(cid); await xdb.messageLog.count({ where: { chairmanId: cid } }); } catch { return shell(<div className="err">Run prisma/migration_messaging.sql first.</div>); }
   const sms = (() => { try { return JSON.parse(c?.smsJson || "{}"); } catch { return {}; } })() as Record<string, string>;
   const wa = (() => { try { return JSON.parse(c?.waJson || "{}"); } catch { return {}; } })() as Record<string, string>;
   const kinds = (() => { try { return JSON.parse(c?.kindsJson || "[]") as string[]; } catch { return []; } })();
-  const log = (await xdb.messageLog.findMany({ where: { chairmanId: user.id }, orderBy: { createdAt: "desc" }, take: 60 })) as { channel: string; to: string; body: string; status: string; error: string | null; kind: string | null; createdAt: Date }[];
+  const log = (await xdb.messageLog.findMany({ where: { chairmanId: cid }, orderBy: { createdAt: "desc" }, take: 60 })) as { channel: string; to: string; body: string; status: string; error: string | null; kind: string | null; createdAt: Date }[];
   const since = new Date(); since.setHours(0, 0, 0, 0);
   const today = log.filter((l) => l.createdAt >= since).length;
-  const batches = await prisma.batch.findMany({ where: { coordinator: { managedById: user.id } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { startYear: "desc" }] });
+  const batches = await prisma.batch.findMany({ where: { coordinator: { managedById: cid } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { startYear: "desc" }] });
   const contacts = (await xdb.studentContact.count({ where: { phone: { not: null } } }).catch(() => 0)) as number;
   const audiences: [string, string][] = [["role:ALL", "All staff"], ["role:INSTRUCTOR", "Instructors"], ["role:PROGRAM_COORDINATOR", "Program Leads"], ["role:HEAD_OF_DEPARTMENT", "Chairmen"], ...batches.map((b) => [`batch:${b.id}`, `Students — ${b.degreeProgram} ${b.batchName}`] as [string, string])];
   return shell(<>

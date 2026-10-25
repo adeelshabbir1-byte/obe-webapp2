@@ -8,6 +8,7 @@ import { PdfDoc } from "../../../lib/pdfDoc";
 import { MODULE_KEYS } from "../../../lib/modules";
 import { bdb, BILL_HINT, PERIODS, invoiceFor, recordPayment, applyLocks, type Invoice, type Plan } from "../../../lib/billing";
 import { adminCan } from "../../../lib/platformTeam";
+import { itAccess } from "../../../lib/itManager";
 
 /** GET ?invoice=<id> — the invoice as a PDF (the Super User, or the institute's own Head). */
 export async function GET(req: Request) {
@@ -16,7 +17,8 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("invoice") || "";
   try {
     const inv = (await bdb.billingInvoice.findUnique({ where: { id } })) as Invoice | null;
-    if (!inv || !(user.role === "SUPER_USER" || (user.role === "CHAIRMAN" && inv.chairmanId === user.id))) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const it = await itAccess(user);
+    if (!inv || !(user.role === "SUPER_USER" || it?.chairmanId === inv.chairmanId)) return NextResponse.json({ error: "Not found." }, { status: 404 });
     const head = await prisma.user.findUnique({ where: { id: inv.chairmanId }, select: { name: true, instituteName: true, email: true } });
     const pays = (await bdb.billingPayment.findMany({ where: { invoiceId: inv.id }, orderBy: { paidOn: "asc" } })) as { amount: number; method: string; reference: string | null; paidOn: Date }[];
     const d = await PdfDoc.create(`OBEHUB invoice ${inv.number}`);

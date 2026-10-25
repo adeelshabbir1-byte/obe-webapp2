@@ -6,6 +6,7 @@ import Shell from "../../../components/Shell";
 import BackupRestore from "../../../components/BackupRestore";
 import { ActionButton } from "../../../components/fyp/FypClient";
 import { listBackups, storageReady, TABLES } from "../../../lib/instituteBackup";
+import { itAccess } from "../../../lib/itManager";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Backups" };
@@ -14,11 +15,13 @@ export default async function Backups() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "CHAIRMAN") redirect("/home");
-  const stored = await listBackups(user.id);
+  const it = await itAccess(user);
+  if (!it) redirect("/home");
+  const cid = it.chairmanId;
+  const stored = await listBackups(cid);
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Backups and restore</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Backups and restore</h1>{!it.canAct && <div className="card" style={{ borderLeft: "5px solid #1565C0", padding: "8px 12px", fontSize: 13 }}><b>Read-only.</b> {it.manager?.name} is the IT Manager and runs this page.</div>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Your institute&apos;s own backup — {TABLES.length} tables ({TABLES.map((t) => t.label.toLowerCase()).join(", ")}). Passwords and two-step secrets are never in a backup. The hosting provider also backs up the whole database daily.</p>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Take a backup</h3>

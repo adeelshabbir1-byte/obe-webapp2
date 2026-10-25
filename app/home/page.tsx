@@ -26,6 +26,13 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
   if (!OVERVIEW_ROLES.includes(user.role)) redirect("/dashboard");
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "none";
   const now = new Date();
+  // Duties the Institute Head names but does not do: a red line until each has a holder.
+  const [coe, itm, acting] = user.role === "CHAIRMAN" ? await Promise.all([
+    (await import("../../lib/academicRules")).examController(user.id).catch(() => null),
+    (await import("../../lib/itManager")).itManagerOf(user.id).catch(() => null),
+    (await import("../../lib/academicRules")).actingControllerDean(user.id).catch(() => null),
+  ]) : [null, null, null];
+  const actingName = acting ? (await prisma.user.findUnique({ where: { id: acting }, select: { name: true } }))?.name : null;
   const [lines, openAsked, answered, splitWaiting, overdue, staleLib, lastChanges] = await Promise.all([
     planProgress(user),
     prisma.taskRequest.count({ where: { toId: user.id, status: "OPEN" } }),
@@ -148,6 +155,13 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{overdue.map((o) => <li key={o.id}>{o.title}, due {day(o.dueDate)}</li>)}</ul>
         </div>
       )}
+      {user.role === "CHAIRMAN" && (!coe || !itm) && (
+        <div className="card" style={{ marginBottom: 14, borderLeft: "4px solid #C62828" }}>
+          {!coe && <div><b>Name a Controller of Examinations</b> — {actingName ? `until then ${actingName} (Dean) acts as Controller.` : "no Dean either: exam work waits until one is named."} <Link href="/chairman/org-chart">Organisation chart →</Link></div>}
+          {!itm && <div><b>Name an IT Manager</b> — backups, billing and systems are yours until then (weekly backups still run on their own). <Link href="/chairman/org-chart">Organisation chart →</Link></div>}
+        </div>
+      )}
+      {user.role === "CHAIRMAN" && coe && <p className="small-note" style={{ marginTop: 0 }}>Controller of Examinations: <b>{coe.name}</b> · <Link href="/controller">oversight view</Link></p>}
       {user.role === "CHAIRMAN" && staleDays !== null && staleDays > 120 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: "4px solid #B7791F" }}>The library record was last updated {staleDays} days ago. <Link href="/resources">Check Resources</Link></div>
       )}

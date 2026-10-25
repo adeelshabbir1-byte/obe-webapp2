@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { prisma } from "../../../lib/db";
-import { academicRules, saveRules, canSetRules, setExamController, DEFAULT_RULES, RULES_HINT, type AcademicRules } from "../../../lib/academicRules";
+import { academicRules, saveRules, canSetRulesNow, setExamController, DEFAULT_RULES, RULES_HINT, type AcademicRules } from "../../../lib/academicRules";
 import { runAutoRegistration } from "../../../lib/autoRegister";
 import { writeAuditLog } from "../../../lib/audit";
 
@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true } });
   const chairmanId = await chairmanIdFor(user);
   const b = await req.json().catch(() => ({}));
-  const setter = canSetRules({ role: user.role, extraRoles: me?.extraRoles });
+  const setter = await canSetRulesNow({ id: user.id, role: user.role, extraRoles: me?.extraRoles }, chairmanId);
   try {
     if (b.action === "save") {
-      if (!setter) return NextResponse.json({ error: "Only the Controller of Examinations, the Dean or the Institute Head sets these." }, { status: 403 });
+      if (!setter) return NextResponse.json({ error: "Only the Controller of Examinations (or the Dean acting as Controller while none is named) sets these." }, { status: 403 });
       const cur = await academicRules(chairmanId);
       const r = { ...cur } as AcademicRules;
       for (const k of Object.keys(DEFAULT_RULES) as (keyof AcademicRules)[]) if (b[k] !== undefined && b[k] !== "") { const v = Number(b[k]); if (!isNaN(v)) r[k] = v; }

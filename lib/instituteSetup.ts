@@ -66,6 +66,7 @@ export async function createStructure(chairmanId: string, shape: Shape, families
   const root = positions.find((p) => !p.parentId && p.role === "NONE")?.id || (await pos({ title: "Institute Head", role: "NONE", parentId: null, holderId: chairmanId }));
   await pos({ title: "Controller of Examinations", role: "EXAM_CONTROLLER", parentId: root });
   await pos({ title: "QEC Convener", role: "QEC_INCHARGE", parentId: root });
+  await pos({ title: "IT Manager", role: "IT_MANAGER", parentId: root });
 
   for (const f of families.filter((x) => x.on)) {
     const fname = clean(f.faculty); if (!fname) continue;
@@ -100,11 +101,11 @@ export async function createStructure(chairmanId: string, shape: Shape, families
 /** The positions a template / assignment covers: everything except the Institute Head's own box. */
 export async function setupPositions(chairmanId: string) {
   const [ps, fs, ds] = await Promise.all([
-    odb.orgPosition.findMany({ where: { chairmanId, offAt: null, role: { in: ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_LEAD", "EXAM_CONTROLLER", "QEC_INCHARGE", "OMC_CONVENER"] } }, orderBy: [{ orderIndex: "asc" }] }) as Promise<{ id: string; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; coversJson: string }[]>,
+    odb.orgPosition.findMany({ where: { chairmanId, offAt: null, role: { in: ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_LEAD", "EXAM_CONTROLLER", "QEC_INCHARGE", "IT_MANAGER", "OMC_CONVENER"] } }, orderBy: [{ orderIndex: "asc" }] }) as Promise<{ id: string; title: string; role: string; facultyId: string | null; departmentId: string | null; program: string | null; holderId: string | null; coversJson: string }[]>,
     prisma.faculty.findMany({ where: { chairmanId }, select: { id: true, name: true } }),
     prisma.department.findMany({ where: { chairmanId }, select: { id: true, name: true, facultyId: true } }),
   ]);
-  const order = ["EXAM_CONTROLLER", "QEC_INCHARGE", "DEAN", "HEAD_OF_DEPARTMENT", "OMC_CONVENER", "PROGRAM_LEAD"];
+  const order = ["EXAM_CONTROLLER", "QEC_INCHARGE", "IT_MANAGER", "DEAN", "HEAD_OF_DEPARTMENT", "OMC_CONVENER", "PROGRAM_LEAD"];
   return ps.map((p) => ({ ...p, covers: (() => { try { return JSON.parse(p.coversJson) as string[]; } catch { return []; } })(), scope: p.program || ds.find((d) => d.id === p.departmentId)?.name || fs.find((f) => f.id === p.facultyId)?.name || "Institute" }))
     .sort((a, b) => (a.departmentId || a.facultyId || "").localeCompare(b.departmentId || b.facultyId || "") || order.indexOf(a.role) - order.indexOf(b.role));
 }

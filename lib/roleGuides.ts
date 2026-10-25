@@ -8,10 +8,8 @@ export const GUIDES: Record<string, { intro: string; steps: Step[] }> = {
     { key: "setup", title: "Set up the institute", href: "/chairman/setup", how: "Pick the shape (Faculty → Department → Program, Department → Program, or Program only), tick your disciplines, upload the management logins and put each person in their position." },
     { key: "settings", title: "Check institute name, logo and position titles", href: "/chairman/institute-settings", how: "Set the institute's name and logo, and the titles you use (VC, Rector, Director)." },
     { key: "org", title: "Build the organisation chart", href: "/chairman/org-chart", how: "Add Deans, HODs, Program Leads; use “+ Add OMC & QEC Conveners”, then add members to each." },
-    { key: "controller", title: "Name the Controller of Examinations", href: "/chairman/org-chart", how: "Give the Controller of Examinations duty to one person; they run exams and publish results." },
-    { key: "import", title: "Import earlier records", href: "/data-import", how: "Students, faculty, past transcripts and rooms — template or your own file, dry run first." },
+    { key: "controller", title: "Name the Controller of Examinations and the IT Manager", href: "/chairman/org-chart", how: "The Controller runs exams, results and brings in old results; the IT Manager runs backups, billing and systems. Until a Controller is named a Dean acts." },
     { key: "rules", title: "Check academic rules and calendar", href: "/academic-rules", how: "CGPA limits and minimum attendance; then the academic calendar." },
-    { key: "backup", title: "Take the first backup", href: "/chairman/backups", how: "Download one now; weekly backups run on their own." },
     { key: "approvals", title: "Open My Approvals daily", href: "/approvals", how: "Everything waiting for you, in one list." },
   ] },
   DEAN: { intro: "As Dean you approve, watch your faculty's programs and lead accreditation visits.", steps: [

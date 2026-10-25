@@ -78,6 +78,12 @@ async function holders(chairmanId: string, key: PositionKey, scope: Scope): Prom
     return ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), { extraRoles: { has: "OMC_CONVENER" } }, { departmentId: scope.departmentId }] }, select: { id: true } }));
   }
   const hat = DUTY_HAT[key];
+  if (key === "EXAM_CONTROLLER") { // no Controller named → the Dean acting as Controller (never silently the Institute Head)
+    const held = ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), { extraRoles: { has: "EXAM_CONTROLLER" } }] }, select: { id: true } }));
+    if (held.length) return held;
+    const d = await (await import("./academicRules")).actingControllerDean(chairmanId).catch(() => null);
+    return d ? [d] : [];
+  }
   return hat ? ids(await prisma.user.findMany({ where: { AND: [staffOf(chairmanId), { extraRoles: { has: hat } }] }, select: { id: true } })) : [];
 }
 

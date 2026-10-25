@@ -686,6 +686,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "chatbotDailyLimit"
 },
 {
+"f": "migration_obe_start.sql",
+"d": "OBE start term (institute / program) and grades-only course offerings",
+"t": "ObeStart"
+},
+{
 "f": "migration_oct2026_features.sql",
 "d": "============================================================================",
 "t": "Course",

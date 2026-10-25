@@ -64,6 +64,18 @@ export default function OrgChartEditor(p: Props) {
   const [over, setOver] = useState<string | null>(null);
   const [move, setMove] = useState<{ id: string; parentId: string | null; effects: Effect[] } | null>(null);
   const [view, setView] = useState<"tree" | "list">("tree");
+  // Lens: the academic line (Dean → Chairman → Program Lead), the other (administrative) positions, or everything.
+  const [lens, setLensRaw] = useState<"all" | "academic" | "admin">("all");
+  useEffect(() => { try { const v = localStorage.getItem("orgLens"); if (v === "academic" || v === "admin") setLensRaw(v); } catch { /* none */ } }, []);
+  const setLens = (v: "all" | "academic" | "admin") => { setLensRaw(v); try { localStorage.setItem("orgLens", v); } catch { /* none */ } };
+  // Full screen: the chart alone, filling the screen (browser full screen where possible, else the whole window).
+  const fsBox = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  useEffect(() => { const on = () => { if (!document.fullscreenElement) setFull(false); }; document.addEventListener("fullscreenchange", on); const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); }; window.addEventListener("keydown", esc); return () => { document.removeEventListener("fullscreenchange", on); window.removeEventListener("keydown", esc); }; }, []);
+  const toggleFull = async () => {
+    if (full) { setFull(false); if (document.fullscreenElement) await document.exitFullscreen().catch(() => null); return; }
+    setFull(true); await document.documentElement.requestFullscreen?.().catch(() => null); setTimeout(fit, 80);
+  };
   // Chart zoom: a wide institute does not fit the screen, so it can be zoomed out or fitted, and opens centred on the top box.
   const [zoom, setZoom] = useState(1);
   const treeBox = useRef<HTMLDivElement>(null);
@@ -86,7 +98,7 @@ export default function OrgChartEditor(p: Props) {
     let r;
     if (role === "OMC") r = await post("/api/chairman/omc-hat", { userId, ...(revoke ? { action: "REVOKE" } : {}) });
     else if (role === "COURSE_ASSIGNER") r = await post("/api/chairman/assigner-hat", { userId, ...(revoke ? { action: "REVOKE" } : { term: "ALWAYS" }) });
-    else if (role === "EXAM_CONTROLLER" || role === "QEC_INCHARGE" || role === "OMC_CONVENER") r = await post("/api/org/duty", { duty: role, userId, revoke });
+    else if (role === "EXAM_CONTROLLER" || role === "QEC_INCHARGE" || role === "OMC_CONVENER" || role === "IT_MANAGER") r = await post("/api/org/duty", { duty: role, userId, revoke });
     else if (revoke) r = await post("/api/chairman/give-role", { userId, action: "REVOKE", role: role === "PROGRAM_LEAD" ? "PROGRAM_COORDINATOR" : role });
     else r = await post("/api/chairman/give-role", { userId, role, facultyId: pos.facultyId, departmentId: pos.departmentId, program: pos.program });
     if (!r.ok && /already holds|already/i.test(r.error || "")) return { ok: true };
@@ -193,8 +205,14 @@ export default function OrgChartEditor(p: Props) {
       </div>
     );
   }
+  const ACADEMIC = ["DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_LEAD"];
+  const isAcademic = (x: Position) => !x.parentId || ACADEMIC.includes(x.role);
+  const shown = (x: Position) => lens === "all" || !x.parentId || (lens === "academic" ? isAcademic(x) : !ACADEMIC.includes(x.role));
+  // Children as the lens sees them: a hidden position in between is skipped and its own children join the line.
+  const vkids = (id: string | null): Position[] => kids(id).flatMap((k) => (shown(k) ? [k] : vkids(k.id)));
+  const lensCount = (l: "all" | "academic" | "admin") => p.positions.filter((x) => x.parentId && (l === "all" || (l === "academic" ? ACADEMIC.includes(x.role) : !ACADEMIC.includes(x.role)))).length + p.positions.filter((x) => !x.parentId).length;
   function Tree({ pos }: { pos: Position }) {
-    const ks = kids(pos.id);
+    const ks = vkids(pos.id);
     return <li><Box pos={pos} />{ks.length > 0 && <ul>{ks.map((k) => <Tree key={k.id} pos={k} />)}</ul>}</li>;
   }
   function ListNode({ pos, depth }: { pos: Position; depth: number }) {
@@ -246,19 +264,23 @@ export default function OrgChartEditor(p: Props) {
             {p.lastMove && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act({ action: "undo", moveId: p.lastMove!.id }, `Undo the last move (${p.lastMove!.title}, ${p.lastMove!.at})?`)}>↶ Undo last move</button>}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 260px", gap: 14, alignItems: "start" }} className="org-grid">
-            <div className="card" style={{ minWidth: 0 }}
+            <div className="card" ref={fsBox} style={{ minWidth: 0, ...(full ? { position: "fixed", inset: 0, zIndex: 80, margin: 0, borderRadius: 0, background: "#fff", overflow: "auto", padding: 12 } : {}) }}
               onDragOver={(e) => { if (drag?.kind === "position") e.preventDefault(); }}
               onDrop={(e) => { if (drag?.kind === "position" && e.target === e.currentTarget) { e.preventDefault(); const d = drag; setDrag(null); askMove(d.id, null); } }}>
               {view === "tree" ? (
                 <>
-                  <div className="no-print" style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginBottom: 6 }}>
+                  <div className="no-print" style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", marginBottom: 6, flexWrap: "wrap" }}>
+                    <span role="group" aria-label="Which positions" style={{ display: "flex", gap: 4, marginRight: "auto" }}>
+                      {([["academic", "Academic"], ["admin", "Administrative"], ["all", "All"]] as const).map(([k, t]) => <button key={k} type="button" className={lens === k ? "btn btn-sm" : "btn btn-secondary btn-sm"} onClick={() => setLens(k)} title={k === "academic" ? "Deans, Chairmen / HoDs, Department Coordinators, Program Leads" : k === "admin" ? "Controller, QEC, OMC, IT Manager, Course Assigners and other posts" : "Every position"}>{t} {lensCount(k)}</button>)}
+                    </span>
                     <span className="small-note">Zoom {Math.round(zoom * 100)}%</span>
                     <button className="act" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}>−</button>
                     <button className="act" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(1.2, +(z + 0.1).toFixed(2)))}>+</button>
                     <button className="act" onClick={fit}>Fit to screen</button>
+                    <button className="act" onClick={toggleFull} aria-pressed={full}>{full ? "✕ Exit full screen" : "⛶ Full screen"}</button>
                   </div>
-                  <div ref={treeBox} style={{ overflowX: "auto" }}>
-                    <ul className="otree" style={{ zoom }}>{kids(null).map((r) => <Tree key={r.id} pos={r} />)}</ul>
+                  <div ref={treeBox} style={{ overflow: "auto", ...(full ? { maxHeight: "calc(100vh - 70px)" } : {}) }}>
+                    <ul className="otree" style={{ zoom }}>{vkids(null).map((r) => <Tree key={r.id} pos={r} />)}</ul>
                   </div>
                 </>
               ) : kids(null).map((r) => <ListNode key={r.id} pos={r} depth={0} />)}

@@ -367,3 +367,20 @@ export async function undo(chairmanId: string, by: string, logId: string) {
   await writeAuditLog({ actorUserId: by, action: "DATA_IMPORT_UNDONE", entityType: "ImportLog", entityId: logId, metadata: { removed, kept } as never });
   return { removed, kept };
 }
+
+/** Which kinds of earlier records this person imports — each kind by the people who own it, not the Institute Head:
+ *  the Controller of Examinations (or the Dean acting as Controller) brings in old students and past transcripts; Program
+ *  Leads their own batches' students and teachers; Deans and Chairmen their teachers; the IT Manager / Librarian rooms;
+ *  the QEC alumni and employers. The Institute Head keeps the faculty-details upload (whole institute) and the log. */
+export async function importKindsFor(u: { id: string; role: string; managedById?: string | null; extraRoles?: string[] | null }, chairmanId: string): Promise<string[]> {
+  const hats = u.extraRoles ?? (await prisma.user.findUnique({ where: { id: u.id }, select: { extraRoles: true } }))?.extraRoles ?? [];
+  const out = new Set<string>();
+  const acting = u.role === "DEAN" && (await (await import("./academicRules")).actingControllerDean(chairmanId).catch(() => null)) === u.id;
+  if (hats.includes("EXAM_CONTROLLER") || acting) ["students", "transcripts"].forEach((k) => out.add(k));
+  if (u.role === "PROGRAM_COORDINATOR" || u.role === "DEPARTMENT_COORDINATOR") ["students", "faculty"].forEach((k) => out.add(k));
+  if (u.role === "DEAN" || u.role === "HEAD_OF_DEPARTMENT") ["faculty", "faculty-details"].forEach((k) => out.add(k));
+  if (u.role === "CHAIRMAN") out.add("faculty-details");
+  if (hats.includes("IT_MANAGER") || u.role === "LIBRARIAN" || u.role === "FACILITIES_MANAGER") out.add("rooms");
+  if (hats.includes("QEC_INCHARGE") || hats.includes("QEC_MEMBER")) ["alumni", "employers"].forEach((k) => out.add(k));
+  return KINDS.map((k) => k.key).filter((k) => out.has(k));
+}

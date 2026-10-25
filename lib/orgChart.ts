@@ -11,6 +11,7 @@ export const ORG_ROLES: { value: string; label: string; scope: "none" | "faculty
   { value: "COURSE_ASSIGNER", label: "Course Assigner", scope: "none" },
   { value: "EXAM_CONTROLLER", label: "Controller of Examinations", scope: "none" },
   { value: "QEC_INCHARGE", label: "QEC Convener (members listed under it)", scope: "none" },
+  { value: "IT_MANAGER", label: "IT Manager (backups, billing, systems)", scope: "none" },
 ];
 export const roleLabelOf = (r: string) => ORG_ROLES.find((x) => x.value === r)?.label || r;
 

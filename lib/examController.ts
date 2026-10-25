@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { prisma } from "./db";
-import { EXAM_CONTROLLER, academicRules } from "./academicRules";
+import { EXAM_CONTROLLER, academicRules, actingControllerDean } from "./academicRules";
 import { chairmanIdFor } from "./reportScope";
 import { notifyUsers } from "./notifications";
 import { notifyStudents } from "./studentNotices";
@@ -17,12 +17,22 @@ export const xdb = prisma as unknown as Record<string, any>;
 export const CONTROLLER_HINT = "Needs prisma/migration_exam_controller.sql — run it in Supabase.";
 
 type U = { id: string; role: string; managedById: string | null; extraRoles?: string[] | null };
-export const isController = (u: U) => u.role === "CHAIRMAN" || (u.extraRoles || []).includes(EXAM_CONTROLLER);
+export const isController = (u: U) => (u.extraRoles || []).includes(EXAM_CONTROLLER);
+export type ControllerMode = "HOLDER" | "ACTING" | "VIEW";
 
-/** The institute this person controls exams for, else null. */
+/** How this person reaches the Controller's work: as the Controller (HOLDER), as the Dean acting while none is named
+ *  (ACTING), or the Institute Head looking on (VIEW, read-only). Null = no access. */
+export async function controllerAccess(u: U): Promise<{ chairmanId: string; mode: ControllerMode } | null> {
+  if (u.role === "CHAIRMAN") return { chairmanId: u.id, mode: isController(u) ? "HOLDER" : "VIEW" };
+  const cid = await chairmanIdFor(u as never).catch(() => null);
+  if (!cid) return null;
+  if (isController(u)) return { chairmanId: cid, mode: "HOLDER" };
+  if (u.role === "DEAN" && (await actingControllerDean(cid)) === u.id) return { chairmanId: cid, mode: "ACTING" };
+  return null;
+}
+/** The institute this person may see the Controller's work for, else null. */
 export async function controllerChairman(u: U): Promise<string | null> {
-  if (!isController(u)) return null;
-  return u.role === "CHAIRMAN" ? u.id : await chairmanIdFor(u as never).catch(() => null);
+  return (await controllerAccess(u))?.chairmanId || null;
 }
 
 const instituteCourses = (chairmanId: string) => ({ coordinator: { managedById: chairmanId } });

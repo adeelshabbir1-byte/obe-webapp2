@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { itAccess } from "../../../lib/itManager";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { xdb, configOf, sendAlert, alertStudents, normPhone, ALERT_KINDS } from "../../../lib/messaging";
@@ -12,9 +13,10 @@ const SECRET = new Set(["token"]);
 // Institute Head: gateway settings, test message, broadcast to a batch / guardians / staff, student number import.
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
-  if (!user || !user.mfaVerified || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head manages SMS and WhatsApp." }, { status: 403 });
+  const it = user && user.mfaVerified ? await itAccess(user) : null;
+  if (!user || !it || !it.canAct) return NextResponse.json({ error: "Only the IT Manager does this (the Institute Head until one is named)." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
-  const cid = user.id;
+  const cid = it.chairmanId;
   try {
     if (b.action === "save") {
       const prev = await configOf(cid);

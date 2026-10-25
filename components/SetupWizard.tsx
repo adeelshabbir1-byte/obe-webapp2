@@ -46,7 +46,7 @@ export default function SetupWizard({ shapes, families: start, hasStructure, pos
   async function roleCall(pos: Pos, role: string, userId: string) {
     if (userId === chairmanId) return { ok: true } as { ok: boolean; error?: string };
     let r;
-    if (["EXAM_CONTROLLER", "QEC_INCHARGE", "OMC_CONVENER"].includes(role)) r = await post("/api/org/duty", { duty: role, userId, revoke: false });
+    if (["EXAM_CONTROLLER", "QEC_INCHARGE", "OMC_CONVENER", "IT_MANAGER"].includes(role)) r = await post("/api/org/duty", { duty: role, userId, revoke: false });
     else r = await post("/api/chairman/give-role", { userId, role, facultyId: pos.facultyId, departmentId: pos.departmentId, program: pos.program });
     if (!r.ok && /already/i.test(r.error || "")) return { ok: true };
     return r;
@@ -103,7 +103,7 @@ export default function SetupWizard({ shapes, families: start, hasStructure, pos
         </div>
         <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
           <button type="button" className="btn" disabled={busy} onClick={create}>{busy ? "Creating…" : hasStructure ? "Add what's ticked" : "Create the structure"}</button>
-          <span className="small-note" style={{ margin: 0 }}>Also makes the Controller of Examinations, QEC Convener and each department&apos;s OMC Convener positions.</span>
+          <span className="small-note" style={{ margin: 0 }}>Also makes the Controller of Examinations, QEC Convener, IT Manager and each department&apos;s OMC Convener positions.</span>
         </div>
       </section>
 

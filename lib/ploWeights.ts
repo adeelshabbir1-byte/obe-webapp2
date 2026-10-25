@@ -10,6 +10,9 @@ export async function batchPloWeights(batchId: string, withAttainment = false, c
     prisma.pLO.findMany({ where: { batchId }, orderBy: { number: "asc" }, select: { id: true, number: true, title: true } }),
     prisma.coursePloMapping.findMany({ where: { plo: { batchId } }, select: { ploId: true, course: { select: { id: true, code: true, title: true, courseType: true, creditHours: true, semesterNumber: true } } } }),
   ]);
+  // Courses taught before the OBE start term (or marked grades-only) carry no CLO evidence: left out of PLO attainment.
+  const gradesOnly = await (await import("./obeTerm")).gradesOnlyCourses(Array.from(new Set(maps.map((m) => m.course.id)))).catch(() => new Map<string, string>());
+  if (gradesOnly.size) maps.splice(0, maps.length, ...maps.filter((m) => !gradesOnly.has(m.course.id)));
   let saved: Row[] = [], missing = false;
   try { saved = (await wdb.coursePloWeight.findMany({ where: { batchId } })) as Row[]; } catch { missing = true; }
 

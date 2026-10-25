@@ -20,7 +20,7 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const total = board.courses.filter((c) => board.types.find((t) => t.name === c.type)?.counts !== false).reduce((t, c) => t + c.ch, 0);
-  const noSe = board.courses.filter((c) => !c.se).length, noClo = board.courses.filter((c) => !c.clos).length;
+  const obeCs = board.courses.filter((c) => !c.gradesOnly); const noSe = obeCs.filter((c) => !c.se).length, noClo = obeCs.filter((c) => !c.clos).length, gOnly = board.courses.length - obeCs.length;
   const cols = useMemo(() => view === "type"
     ? board.types.map((t) => ({ key: t.name, label: t.name, color: t.color, t, cs: board.courses.filter((c) => c.type === t.name), miss: board.missing.filter((m) => m.type === t.name) }))
     : Array.from(new Set(board.courses.map((c) => c.semester ?? 0))).sort((a, b) => (a || 99) - (b || 99)).map((s) => ({ key: String(s), label: s ? `Semester ${s}` : "No semester", color: "#0D2A4A", t: null, cs: board.courses.filter((c) => (c.semester ?? 0) === s), miss: [] as Board["missing"] })), [view, board]);
@@ -35,12 +35,14 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
         <span style={{ fontSize: 12.5 }}>{board.courses.length} courses</span>
         {editable && <span style={{ fontSize: 12.5, color: noSe ? "#B3261E" : "#2E7D32" }}>{noSe} without a Subject Expert</span>}
         {editable && <span style={{ fontSize: 12.5, color: noClo ? "#B26A00" : "#2E7D32" }}>{noClo} without CLOs</span>}
+        {gOnly > 0 && <span className="small-note" style={{ margin: 0 }}>{gOnly} taught before OBE (grades only — no CLOs needed)</span>}
         {board.listPool > 0 && <span className="small-note" style={{ margin: 0 }}>+ {board.listPool} elective / IDS list options (a pool, not counted)</span>}
         <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
           <button type="button" className={view === "type" ? "btn btn-sm" : "btn btn-secondary btn-sm"} onClick={() => setView("type")}>By type</button>
           <button type="button" className={view === "semester" ? "btn btn-sm" : "btn btn-secondary btn-sm"} onClick={() => setView("semester")}>By semester</button>
         </span>
       </div>
+      {board.obeNote && <p className="small-note" style={{ marginTop: 0 }}>{board.obeNote}</p>}
       {editable && board.missing.length > 0 && <div style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><span style={{ color: "#7A5B00", fontSize: 12.5 }}><b>{board.missing.length}</b> course(s) of the curriculum are not in this batch (yellow).</span><button type="button" className="btn btn-sm" disabled={busy} onClick={() => addMissing(board.missing.map((m) => m.masterCourseId))}>Add all missing</button></div>}
       {msg && <p className={msg.ok ? "small-note" : "err"} style={{ color: msg.ok ? "#1E6B34" : undefined }}>{msg.text}</p>}
       <div className="cb-cols">
@@ -56,11 +58,12 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
                 <div key={c.id} className="cb-card" style={{ borderLeft: `4px solid ${col.color}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}><span><span style={{ fontFamily: "ui-monospace,Consolas,monospace", fontSize: 11, fontWeight: 700, color: "#556", marginRight: 5 }}>{c.code}</span>{c.title}</span><b style={{ whiteSpace: "nowrap", fontSize: 11.5 }}>{c.ch} CH{c.semester ? <span style={{ fontWeight: 400, color: "#778" }}> · S{c.semester}</span> : null}</b></div>
                   {editable && <div style={{ fontSize: 11, color: "#556" }}>SE: {c.se ? c.se : <b style={{ color: "#B3261E" }}>none</b>} · Teacher: {c.instructor || "—"}</div>}
-                  <div style={{ fontSize: 10.5, display: "flex", gap: 6, color: "#778" }}><span style={{ color: c.clos ? (editable && c.mapped < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLOs${editable && c.mapped < c.clos ? ` (${c.clos - c.mapped} not mapped)` : ""}` : "no CLOs"}</span><span style={{ color: c.lectures ? "#2E7D32" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span></div>
+                  <div style={{ fontSize: 10.5, display: "flex", gap: 6, color: "#778" }}>{c.gradesOnly ? <span title={c.gradesOnly} style={{ color: "#6B7177" }}>grades only</span> : <><span style={{ color: c.clos ? (editable && c.mapped < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLOs${editable && c.mapped < c.clos ? ` (${c.clos - c.mapped} not mapped)` : ""}` : "no CLOs"}</span><span style={{ color: c.lectures ? "#2E7D32" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span></>}</div>
                   {c.from && <div style={{ fontSize: 10.5, color: "#556", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.from}>from {c.from}</div>}
                   {editable && <div className="cb-move" style={{ marginTop: 3 }}>
                     <select aria-label={`Move ${c.title} to type`} value="" disabled={busy} onChange={(e) => e.target.value && run(() => post("/api/coordinator/batch-board", { action: "move", courseId: c.id, type: e.target.value }))} style={{ fontSize: 11, maxWidth: 120 }}><option value="">Type…</option>{board.types.filter((t) => t.name !== c.type).map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}</select>{" "}
                     <select aria-label={`Semester of ${c.title}`} value="" disabled={busy} onChange={(e) => e.target.value && run(() => post("/api/coordinator/batch-board", { action: "move", courseId: c.id, semester: e.target.value }))} style={{ fontSize: 11 }}><option value="">Semester…</option>{Array.from({ length: 8 }, (_, i) => <option key={i} value={i + 1}>S{i + 1}</option>)}</select>{" "}
+                    <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 10.5, padding: "1px 6px" }} disabled={busy} title="A course offering with no CLOs / attainment, e.g. a non-credit deficiency course" onClick={() => { if (c.gradesOnly?.startsWith("marked")) { run(() => post("/api/obe-start", { scope: "course", courseId: c.id, off: false })); return; } if (c.gradesOnly) { alert(`This course is ${c.gradesOnly}.`); return; } const r = prompt(`Why is ${c.code} grades-only (no CLOs, not in attainment)?`); if (r && r.trim()) run(() => post("/api/obe-start", { scope: "course", courseId: c.id, off: true, reason: r })); }}>{c.gradesOnly?.startsWith("marked") ? "Make OBE again" : "Grades only…"}</button>{" "}
                     {c.se && <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 10.5, padding: "1px 6px" }} disabled={busy} title="This Subject Expert gets the course in every future batch" onClick={() => run(() => post("/api/coordinator/batch-board", { action: "owner", courseId: c.id }))}>Owner for future batches</button>}
                   </div>}
                 </div>))}

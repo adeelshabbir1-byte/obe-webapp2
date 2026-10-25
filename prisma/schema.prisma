@@ -8169,3 +8169,25 @@ model BatchSlotChoice {
 
   @@index([batchId])
 }
+
+// OBE start term (program "" = whole institute): courses taught from this term on are OBE, earlier ones grades-only.
+model ObeStart {
+  id         String   @id
+  chairmanId String
+  program    String   @default("")
+  termName   String
+  termYear   Int
+  byId       String
+  byName     String   @default("")
+  at         DateTime @default(now())
+
+  @@unique([chairmanId, program])
+}
+
+// A course offering its Program Lead marked grades-only (no CLOs / attainment), with the reason.
+model ObeCourseOff {
+  courseId String   @id
+  reason   String
+  byId     String
+  at       DateTime @default(now())
+}

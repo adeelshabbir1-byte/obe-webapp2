@@ -65,6 +65,7 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
   const picked = searchParams.courseId ? cs.find((c) => c.id === searchParams.courseId) || null : null;
   const semester = searchParams.semester ? Number(searchParams.semester) : null;
   const flow = batch ? await cachedBatchFlow(batch.id) : null;
+  const obeNote = batch ? (await (await import("../../lib/obeTerm")).batchObeNote(batch.id).catch(() => null))?.text || null : null;
   const cohort = batch && canEdit && searchParams.cohort === "1" ? await cohortSuggestion(batch.id) : null;
 
   return (
@@ -82,6 +83,7 @@ export default async function OutcomeFlowPage({ searchParams }: { searchParams: 
       {picked && <CourseFlowPanel key={picked.id} courseId={picked.id} />}
       {!batch && !picked && <div className="card"><p style={{ margin: 0, fontSize: 13, color: "var(--slate)" }}>Choose a batch above.</p></div>}
       {flow?.missing && <div className="err">The outcome weight tables are not in the database yet — run prisma/migration_plo_weights.sql (or the System Health fix script) in Supabase. Until then every GA uses the equal split and PEOs have no links.</div>}
+      {flow && !picked && obeNote && <p className="small-note" style={{ borderLeft: "4px solid #B26A00", paddingLeft: 8 }}>{obeNote}</p>}
       {flow && !picked && <OutcomeFlow key={batch!.id} mode="batch" batchId={batch!.id} canEdit={canEdit} target={flow.target} courses={flow.courses} plos={flow.plos} peos={flow.peos} cohort={cohort} />}
     </Shell>
   );

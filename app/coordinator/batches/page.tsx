@@ -6,6 +6,8 @@ import Shell from "../../../components/Shell";
 import BatchesManager from "../../../components/BatchesManager";
 import DegreeProgramsAndIntakeManager from "../../../components/DegreeProgramsAndIntakeManager";
 import { navForRole } from "../../../components/reportNav";
+import { ActionForm } from "../../../components/fyp/FypClient";
+import { obeStarts, termLabel } from "../../../lib/obeTerm";
 import { LIST_TYPES as LIST_TYPES_ } from "../../../lib/autoCopyPreviousBatch";
 
 
@@ -30,6 +32,8 @@ export default async function BatchesPage() {
     return { total: rows.reduce((n, r) => n + (r._sum.creditHours || 0), 0), bySemester: rows.filter((r) => r.semesterNumber).sort((a, b) => (a.semesterNumber || 0) - (b.semesterNumber || 0)).map((r) => ({ sem: r.semesterNumber as number, cr: r._sum.creditHours || 0 })) };
   };
   const degreePrograms = await prisma.degreeProgram.findMany({ where: { coordinatorId: user.id }, orderBy: { name: "asc" } });
+  const obe = await obeStarts(user.managedById || "none");
+  const obeProgs = Array.from(new Set([...degreePrograms.map((d) => d.name), ...batches.map((b) => b.degreeProgram)])).sort();
   // Any teacher can advise a batch: the people this Program Lead manages, the Lead themself, and teachers of the same
   // department (Chairman, other Program Leads, Instructors) — not only plain Instructors / Subject Experts.
   const facultyRaw = await prisma.user.findMany({ where: advisorCandidatesWhere(user), orderBy: { name: "asc" }, select: { id: true, name: true, managedById: true, departmentId: true, role: true, department_: { select: { name: true } }, advisedBatches: { select: { id: true, degreeProgram: true, batchName: true } } } });
@@ -49,6 +53,14 @@ export default async function BatchesPage() {
         The batches (intakes) of your program. Add a batch, then choose where its courses come from; set its advisor and planned intake. Each batch can follow a different curriculum version.
       </p>
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
+      {obeProgs.length > 0 && <div className="card">
+        <h3 style={{ marginTop: 0 }}>OBE start of your program</h3>
+        <p className="small-note" style={{ marginTop: 0 }}>Courses taught from this term on are OBE; earlier ones are grades only (no CLOs needed, not in attainment). Institute: <b>{obe.institute ? termLabel(obe.institute) : "not set (all OBE)"}</b>. Leave the year empty to follow the institute.</p>
+        {obeProgs.map((name) => { const own = obe.programs.find((p) => p.program === name); return (
+          <div key={name} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}><b style={{ minWidth: 200 }}>{name}</b><span className="small-note" style={{ margin: 0 }}>{own ? `from ${termLabel(own)} (set by ${own.byName})` : "follows the institute"}</span>
+            <ActionForm url="/api/obe-start" fixed={{ scope: "program", program: name }} submit="Save" collapsed openLabel="Change" showMessage initial={{ termName: own?.termName || "Fall", termYear: own?.termYear || "" }}
+              fields={[{ name: "termName", label: "Term", type: "select", options: [["Fall", "Fall"], ["Spring", "Spring"]] }, { name: "termYear", label: "Year", type: "number", width: 100 }]} /></div>); })}
+      </div>}
       <BatchesManager
         initialBatches={batches.map((b) => ({ id: b.id, degreeProgram: b.degreeProgram, batchName: b.batchName, startTerm: b.startTerm, startYear: b.startYear, studentCount: b.studentCount, enrolledCount: b._count.students, courseCount: b._count.courses, credits: creditsOf(b.id), registrationOpen: b.registrationOpen, advisorId: b.advisorId }))}
         faculty={faculty.map((f) => ({ id: f.id, name: f.name, group: ["Your program — not advising any batch", "Your program", "Your department — free", "Other programs — free", "Your department — already advising", "Others — already advising"][f.rank], dept: f.department_?.name || null, advising: f.advisedBatches.map((b) => `${b.degreeProgram} ${b.batchName}`), sections: secOf.get(f.id) || 0 }))}

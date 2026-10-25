@@ -5,6 +5,7 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel } from "../../lib/reportScope";
 import { MODULES } from "../../lib/modules";
 import { bdb, BILL_HINT, PERIODS, usageOf, type Plan, type Sub, type Invoice } from "../../lib/billing";
+import { itAccess } from "../../lib/itManager";
 
 export const dynamic = "force-dynamic";
 const day = (d: Date | string | null) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -15,20 +16,22 @@ export default async function BillingPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "CHAIRMAN") redirect("/dashboard");
+  const it = await itAccess(user);
+  if (!it) redirect("/home");
+  const cid = it.chairmanId;
   let missing = false, sub: Sub | null = null, plan: Plan | null = null, invoices: Invoice[] = [], pays: { invoiceId: string; amount: number; method: string; reference: string | null; paidOn: Date }[] = [];
   try {
-    sub = await bdb.subscription.findUnique({ where: { chairmanId: user.id } });
+    sub = await bdb.subscription.findUnique({ where: { chairmanId: cid } });
     plan = sub ? await bdb.billingPlan.findUnique({ where: { id: sub.planId } }) : null;
-    invoices = await bdb.billingInvoice.findMany({ where: { chairmanId: user.id, status: { not: "VOID" } }, orderBy: { issuedAt: "desc" } });
-    pays = await bdb.billingPayment.findMany({ where: { chairmanId: user.id }, orderBy: { paidOn: "desc" } });
+    invoices = await bdb.billingInvoice.findMany({ where: { chairmanId: cid, status: { not: "VOID" } }, orderBy: { issuedAt: "desc" } });
+    pays = await bdb.billingPayment.findMany({ where: { chairmanId: cid }, orderBy: { paidOn: "desc" } });
   } catch { missing = true; }
-  const usage = await usageOf(user.id);
+  const usage = await usageOf(cid);
   const mods = plan ? (JSON.parse(plan.modulesJson) as string[]) : [];
   const numOf = new Map(invoices.map((i) => [i.id, i.number]));
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>OBEHUB Plan &amp; Invoices</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>OBEHUB Plan &amp; Invoices</h1>{!it.canAct && <div className="card" style={{ borderLeft: "5px solid #1565C0", padding: "8px 12px", fontSize: 13 }}><b>Read-only.</b> {it.manager?.name} is the IT Manager and runs this page.</div>}
       {missing && <div className="card"><p style={{ color: "#B3261E", margin: 0 }}>{BILL_HINT}</p></div>}
       {!missing && !sub && <div className="card"><p style={{ margin: 0 }}>No subscription is set up for your institute yet — every module is available. Contact OBEHUB for a plan.</p></div>}
       {sub && plan && (

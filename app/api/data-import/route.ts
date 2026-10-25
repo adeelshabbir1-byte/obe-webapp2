@@ -5,14 +5,17 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { prisma } from "../../../lib/db";
 import { readWorkbookGrids } from "../../../lib/excelRead";
 import { parseCsv } from "../../../lib/lmsImport";
-import { KINDS, kindOf, headerRow, autoMap, mappedRows, dryRun, commit, undo, IMPORT_HINT, type Ctx } from "../../../lib/dataImport";
+import { KINDS, kindOf, importKindsFor, headerRow, autoMap, mappedRows, dryRun, commit, undo, IMPORT_HINT, type Ctx } from "../../../lib/dataImport";
 
 const ALLOWED = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"];
 
 async function who() {
   const user = await getAuthenticatedUser();
-  if (!user || !ALLOWED.includes(user.role)) return null;
-  return { user, chairmanId: await chairmanIdFor(user) };
+  if (!user) return null;
+  const chairmanId = await chairmanIdFor(user);
+  const kinds = await importKindsFor(user as never, chairmanId);
+  if (!kinds.length && !ALLOWED.includes(user.role)) return null;
+  return { user, chairmanId, kinds };
 }
 
 // GET ?template=<kind> — an Excel template: the columns, one example row, an Instructions sheet.
@@ -21,6 +24,7 @@ export async function GET(req: NextRequest) {
   if (!w) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const k = kindOf(req.nextUrl.searchParams.get("template") || "");
   if (!k) return NextResponse.json({ error: "unknown template" }, { status: 404 });
+  if (!w.kinds.includes(k.key)) return NextResponse.json({ error: "That kind of record is imported by someone else." }, { status: 403 });
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(k.title.slice(0, 30).replace(/[\\/?*[\]:]/g, ""));
   const head = ws.addRow(k.fields.map((f) => f.label + (f.required ? " *" : "")));
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
     const kind = kindOf(String(fd.get("kind") || ""));
     const file = fd.get("file") as File | null;
     if (!kind || !file) return NextResponse.json({ error: "Choose what you are importing and a file." }, { status: 400 });
-    if (kind.key === "faculty-details" && !["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)) return NextResponse.json({ error: "Faculty details are uploaded by the Institute Head, a Dean or a Head of Department." }, { status: 403 });
+    if (!w.kinds.includes(kind.key)) return NextResponse.json({ error: "That kind of record is imported by someone else (old results and transcripts: the Controller of Examinations; students: the Program Lead; rooms: the IT Manager; alumni: the QEC)." }, { status: 403 });
     if (file.size > 15 * 1024 * 1024) return NextResponse.json({ error: "The file is over 15 MB — split it." }, { status: 400 });
     const sheets = file.name.toLowerCase().endsWith(".csv") ? [{ name: "csv", grid: parseCsv(Buffer.from(await file.arrayBuffer()).toString("utf-8")) }] : await readWorkbookGrids(file);
     const si = Math.min(Math.max(0, Number(fd.get("sheet") || 0)), sheets.length - 1);

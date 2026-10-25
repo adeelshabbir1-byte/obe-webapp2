@@ -49,9 +49,26 @@ export function standingWith(cgpa: number | null, r: AcademicRules): "GOOD_STAND
   return "GOOD_STANDING";
 }
 
-/** Who may set the rules: the Institute Head, a Dean of the institute, or whoever holds the Controller of Examinations duty. */
+/** Who may set the rules: whoever holds the Controller of Examinations duty — or, while no Controller is named, the Dean
+ *  acting as Controller. The Institute Head and other Deans only see them. */
 export function canSetRules(u: { role: string; extraRoles?: string[] | null }) {
-  return u.role === "CHAIRMAN" || u.role === "DEAN" || (u.extraRoles || []).includes(EXAM_CONTROLLER);
+  return (u.extraRoles || []).includes(EXAM_CONTROLLER);
+}
+export async function canSetRulesNow(u: { id: string; role: string; extraRoles?: string[] | null }, chairmanId: string) {
+  if (canSetRules(u)) return true;
+  return u.role === "DEAN" && (await actingControllerDean(chairmanId)) === u.id;
+}
+
+/** While no Controller of Examinations is named, the Dean who acts as Controller: the Dean whose box the Controller's
+ *  position sits under on the organisation chart (the Institute Head chooses by moving it), else the first Dean named. */
+export async function actingControllerDean(chairmanId: string): Promise<string | null> {
+  if (await examController(chairmanId)) return null;
+  const ps = ((await adb.orgPosition.findMany({ where: { chairmanId, role: { in: ["EXAM_CONTROLLER", "DEAN"] } }, select: { id: true, role: true, parentId: true, holderId: true, offAt: true } }).catch(() => [])) as { id: string; role: string; parentId: string | null; holderId: string | null; offAt: Date | null }[]);
+  const ctrl = ps.find((p) => p.role === "EXAM_CONTROLLER");
+  const under = ctrl?.parentId ? ps.find((p) => p.id === ctrl.parentId && p.role === "DEAN" && p.holderId && !p.offAt) : null;
+  if (under?.holderId) return under.holderId;
+  const dean = await prisma.user.findFirst({ where: { isActive: true, managedById: chairmanId, OR: [{ role: "DEAN" }, { secondaryRole: "DEAN" }, { tertiaryRole: "DEAN" }] }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  return dean?.id || null;
 }
 
 export async function examController(chairmanId: string) {

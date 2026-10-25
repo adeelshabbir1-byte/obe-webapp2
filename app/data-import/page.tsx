@@ -6,7 +6,7 @@ import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import DataImportWizard from "../../components/DataImportWizard";
 import { ActionButton } from "../../components/fyp/FypClient";
-import { KINDS, OTHER_IMPORTERS, idb, IMPORT_HINT } from "../../lib/dataImport";
+import { KINDS, importKindsFor, OTHER_IMPORTERS, idb, IMPORT_HINT } from "../../lib/dataImport";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Data Import" };
@@ -15,8 +15,9 @@ export default async function DataImport() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (!["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(user.role)) redirect("/home");
   const cid = await chairmanIdFor(user);
+  const mine = await importKindsFor(user as never, cid);
+  if (!mine.length) redirect("/home");
   const pl = user.role === "PROGRAM_COORDINATOR";
   const [batches, leads] = await Promise.all([
     prisma.batch.findMany({ where: pl ? { coordinatorId: user.id } : { coordinator: { managedById: cid } }, select: { id: true, degreeProgram: true, batchName: true }, orderBy: [{ degreeProgram: "asc" }, { startYear: "desc" }] }),
@@ -27,8 +28,9 @@ export default async function DataImport() {
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Data Import — bring in your earlier records</h1>
+      <p className="small-note" style={{ marginTop: 0 }}>Each kind of record is brought in by the people who own it: old students and past transcripts — the Controller of Examinations; current batches&apos; students — their Program Lead; teachers — Deans, Chairmen and Program Leads; rooms — the IT Manager; alumni and employers — the QEC.</p>
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Use our template or your own spreadsheet (.xlsx or .csv). Match the columns, check every row in a dry run, then import. Existing rows are skipped, so uploading again is safe, and each import can be undone below.</p>
-      <DataImportWizard kinds={KINDS.map((k) => ({ key: k.key, title: k.title, what: k.what, needs: k.needs, fields: k.fields.map((f) => ({ key: f.key, label: f.label, required: f.required })) }))}
+      <DataImportWizard kinds={KINDS.filter((k) => mine.includes(k.key)).map((k) => ({ key: k.key, title: k.title, what: k.what, needs: k.needs, fields: k.fields.map((f) => ({ key: f.key, label: f.label, required: f.required })) }))}
         batches={batches.map((b) => [b.id, `${b.degreeProgram} — ${b.batchName}`])} leads={leads.map((l) => [l.id, l.name])} />
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Other imports</h3>
