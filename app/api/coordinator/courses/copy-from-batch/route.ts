@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (!cursor) await (await import("../../../../../lib/listCourses")).retypeListCourses(sourceBatch.id).catch(() => 0); // older imports: mark the list options first
   const [sourceCourses, existingInTarget] = await Promise.all([
     prisma.course.findMany({
       where: { batchId: sourceBatch.id, courseType: { notIn: LIST_TYPES }, ...(cursor ? { id: { gt: cursor } } : {}) }, // never the elective / IDS list pool

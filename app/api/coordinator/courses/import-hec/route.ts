@@ -85,8 +85,9 @@ export async function POST(req: NextRequest) {
   // Elective / IDS lists are a pool to choose from, not courses the batch studies: only the slots are imported.
   const listTypes = new Set(typeDefs.filter((t) => t.kind === "ELECTIVE_LIST" || t.kind === "IDS_LIST").map((t) => t.name));
   let listSkipped = 0;
+  const pool = (await (await import("../../../../../lib/listCourses")).curriculumPools([curriculum.id])).get(curriculum.id);
   const toImport = curriculum.courses.filter((mc) => {
-    if (listTypes.has(mc.category) && !body.includeListCourses) { listSkipped++; return false; }
+    if ((listTypes.has(mc.category) || pool?.ids.has(mc.id)) && !body.includeListCourses) { listSkipped++; return false; }
     if (importedIds.has(mc.id) || (Array.isArray(body.courseIds) && !body.courseIds.includes(mc.id))) return false;
     const key = norm(mc.code, mc.title);
     if (mc.category !== "Domain Elective" && (existingKeys.has(key) || seenInThisImport.has(key))) { duplicatesSkipped++; return false; }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { buildExcelResponse } from "../../../../../lib/excelExport";
+import { LIST_TYPES as LIST_TYPES_ } from "../../../../../lib/autoCopyPreviousBatch";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -13,7 +14,7 @@ export async function GET() {
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 
-  const crRows = await prisma.course.groupBy({ by: ["batchId", "semesterNumber"], where: { batchId: { in: batches.map((b) => b.id) }, isNonCredit: false }, _sum: { creditHours: true } });
+  const crRows = await prisma.course.groupBy({ by: ["batchId", "semesterNumber"], where: { batchId: { in: batches.map((b) => b.id) }, isNonCredit: false, courseType: { notIn: LIST_TYPES_ } }, _sum: { creditHours: true } });
   const cr = (batchId: string, sem?: number) => crRows.filter((r) => r.batchId === batchId && (sem === undefined || r.semesterNumber === sem)).reduce((n, r) => n + (r._sum.creditHours || 0), 0);
   const maxSem = Math.max(8, ...crRows.map((r) => r.semesterNumber || 0));
   const sems = Array.from({ length: maxSem }, (_, i) => i + 1);

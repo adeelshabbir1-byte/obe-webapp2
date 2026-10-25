@@ -12,6 +12,8 @@ import { ActionButton } from "../../../components/fyp/FypClient";
 import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
 import { CourseBoard, SourcePicker } from "../../../components/BatchBoard";
 import { batchBoard, curriculumBoard, sourcesFor } from "../../../lib/batchBoard";
+import SlotChooser from "../../../components/SlotChooser";
+import { slotChooser, slotChoicesOf } from "../../../lib/slotChoice";
 
 
 export default async function CoordinatorCoursesPage({ searchParams }: { searchParams: { batchId?: string; preview?: string; pick?: string } }) {
@@ -27,6 +29,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   const pv = searchParams.preview || "";
   const allBatchesForPick = !selectedBatchId && pv ? await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: [{ startYear: "desc" }], take: 12, select: { id: true, degreeProgram: true, batchName: true } }) : [];
   const preview = pv.startsWith("c:") ? await curriculumBoard(pv.slice(2)) : pv.startsWith("b:") && (await prisma.batch.findFirst({ where: { id: pv.slice(2), coordinator: { managedById: owning || "none" } }, select: { id: true } })) ? await batchBoard(pv.slice(2)) : null;
+  const [slotGroups, slotChoices] = selectedBatchId ? await Promise.all([slotChooser(selectedBatchId).catch(() => []), slotChoicesOf(selectedBatchId)]) : [[], []];
   const listCount = selectedBatchId ? await prisma.course.count({ where: { batchId: selectedBatchId, courseType: { in: LIST_TYPES } } }) : 0;
 
   const courses = await prisma.course.findMany({
@@ -77,6 +80,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
       )}
       {!selectedBatchId && preview && <div className="card" id="sources"><h3 style={{ marginTop: 0 }}>Use this curriculum for a batch</h3><p className="small-note">Pick the batch: {allBatchesForPick.map((b) => <a key={b.id} className="btn btn-secondary btn-sm" style={{ marginRight: 6 }} href={`/coordinator/courses?batchId=${b.id}&preview=${searchParams.preview}#sources`}>{b.degreeProgram} — {b.batchName}</a>)}</p><CourseBoard board={preview} /></div>}
       {selectedBatchId && board && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
+      {selectedBatchId && <SlotChooser batchId={selectedBatchId} groups={slotGroups} choices={slotChoices.map((c) => ({ courseId: c.courseId, byName: c.byName, at: new Date(c.at).toISOString() }))} />}
       {selectedBatchId && <div className="card" id="sources">
         <h3 style={{ marginTop: 0 }}>{board && board.courses.length ? "Add courses from" : "Where should this batch's courses come from?"}</h3>
         <p className="small-note" style={{ marginTop: 0 }}>Curricula of this program&apos;s discipline (the university&apos;s own first: new batches get its latest approved plan for each course) and earlier batches. <b>Preview</b> shows it as a board; <b>Import</b> brings it in. Elective / IDS lists stay in the curriculum as the pool you fill elective slots from.</p>

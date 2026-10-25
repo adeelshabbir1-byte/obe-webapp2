@@ -8153,3 +8153,19 @@ model PlanComment {
 
   @@index([studentId])
 }
+
+// Which Elective / IDS list option fills a batch's slot (course), chosen by the Program Lead.
+model BatchSlotChoice {
+  courseId       String   @id
+  batchId        String
+  flavour        String
+  masterCourseId String
+  oldCode        String   @default("")
+  oldTitle       String   @default("")
+  oldCh          Int      @default(0)
+  byId           String
+  byName         String   @default("")
+  at             DateTime @default(now())
+
+  @@index([batchId])
+}

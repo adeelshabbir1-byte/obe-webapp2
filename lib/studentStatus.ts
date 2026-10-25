@@ -7,6 +7,7 @@ import { academicRules } from "./academicRules";
 import { holdBacks, setHoldBack } from "./semesterSync";
 import { balanceOf } from "./fees";
 import { titlesFor } from "./titles";
+import { LIST_TYPES } from "./autoCopyPreviousBatch";
 
 // Student status changes — one request with an approval chain: the Program Lead or batch advisor raises it, the
 // department's Chairman/HoD approves, then the Controller of Examinations (titles are the institute's own; a missing
@@ -78,7 +79,7 @@ export async function canRaise(user: { id: string; role: string }, studentId: st
 
 /** Program credits of a batch (non-credit courses left out). */
 async function programCredits(batchId: string) {
-  const cs = await prisma.course.findMany({ where: { batchId, isNonCredit: false }, select: { creditHours: true } });
+  const cs = await prisma.course.findMany({ where: { batchId, isNonCredit: false, courseType: { notIn: LIST_TYPES } }, select: { creditHours: true } });
   return cs.reduce((a, c) => a + c.creditHours, 0);
 }
 

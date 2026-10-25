@@ -39,7 +39,7 @@ export async function autoCopyFromPreviousBatch(newBatch: { id: string; coordina
 
   let coursesCopied = 0;
   // Elective / IDS list courses (a pool, not studied by the batch) are not carried forward unless they fill a slot.
-  const listCourse = await listCourseIds(sourceCourses);
+  const listCourse = new Set([...(await listCourseIds(sourceCourses)), ...(await (await import("./listCourses")).batchListCourses(previous.id).catch(() => ({ list: new Map() }))).list.keys()]);
   if (opts.courses === false) sourceCourses.length = 0;
   for (const sc of sourceCourses) {
     if (existingCodes.has(sc.code) || listCourse.has(sc.id)) continue;

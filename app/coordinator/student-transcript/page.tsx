@@ -10,6 +10,7 @@ import AddHistoricalGradeForm from "../../../components/AddHistoricalGradeForm";
 import { navForRole } from "../../../components/reportNav";
 import { bestAttemptTotals } from "../../../lib/cgpaMath";
 import DegreeSchemeBoard from "../../../components/DegreeSchemeBoard";
+import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
 
 
 export default async function StudentTranscriptPage({ searchParams }: { searchParams: { studentId?: string; batchId?: string; q?: string; tab?: string } }) {
@@ -70,7 +71,7 @@ export default async function StudentTranscriptPage({ searchParams }: { searchPa
       for (const r of mine) if ((r.gpaPoints !== null && r.gpaPoints > 0) || r.grade === "P") passedCodes.set(r.courseCode.trim().toUpperCase(), r.creditHours);
       return { id: st.id, name: st.name, roll: st.rollNumber, cgpa: t.credits > 0 ? Math.round((t.points / t.credits) * 100) / 100 : null, earned: Array.from(passedCodes.values()).reduce((n, c) => n + c, 0), attempted: mine.reduce((n, r) => n + r.creditHours, 0) };
     }).sort((a, b) => (a.cgpa ?? 9) - (b.cgpa ?? 9));
-    const semCr = await prisma.course.groupBy({ by: ["semesterNumber"], where: { batchId: selectedBatchId, isNonCredit: false }, _sum: { creditHours: true } });
+    const semCr = await prisma.course.groupBy({ by: ["semesterNumber"], where: { batchId: selectedBatchId, isNonCredit: false, courseType: { notIn: LIST_TYPES } }, _sum: { creditHours: true } });
     const gpas = rows.map((r) => r.cgpa).filter((g): g is number => g !== null);
     batchSummary = {
       studentCount: studentsInBatch.length,

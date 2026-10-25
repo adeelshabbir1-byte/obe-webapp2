@@ -954,6 +954,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "SignatureAsset"
 },
 {
+"f": "migration_slot_choice.sql",
+"d": "Elective / IDS slot choices of a batch (which list option fills which slot, who chose it)",
+"t": "BatchSlotChoice"
+},
+{
 "f": "migration_specialization_history.sql",
 "d": "Run in Supabase SQL Editor. Adds faculty specialization tagging and the",
 "t": "User",

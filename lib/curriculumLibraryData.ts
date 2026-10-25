@@ -23,11 +23,12 @@ export async function libraryItems(user: U) {
   const meta = await metaOf(cs.map((c) => c.id));
   const owners = await prisma.user.findMany({ where: { id: { in: cs.map((c) => c.chairmanId).filter((x): x is string => !!x).concat("none") } }, select: { id: true, name: true, instituteName: true } });
   const ownerName = new Map(owners.map((o) => [o.id, o.instituteName || o.name]));
-  const mcs = await prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { masterCurriculumId: true, creditHours: true, category: true } });
+  const mcs = await prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { id: true, masterCurriculumId: true, creditHours: true, category: true } });
+  const pools = await (await import("./listCourses")).curriculumPools(cs.map((c) => c.id));
   const defs = ((await ldb.curriculumType.findMany({ where: { curriculumId: { in: cs.map((c) => c.id).concat("none") } }, select: { curriculumId: true, name: true, kind: true } }).catch(() => [])) as { curriculumId: string; name: string; kind: string }[]);
   const { kindInfo } = await import("./curriculumTemplates");
   const counts = (cid: string, cat: string) => { const ds = defs.filter((d) => d.curriculumId === cid); if (!ds.length) return countsTowardDegree(cat); const d = ds.find((x) => x.name === cat); return d ? kindInfo(d.kind).counts : false; };
-  const chOf = new Map<string, number>(); for (const x of mcs) if (counts(x.masterCurriculumId, x.category)) chOf.set(x.masterCurriculumId, (chOf.get(x.masterCurriculumId) || 0) + x.creditHours);
+  const chOf = new Map<string, number>(); for (const x of mcs) if (counts(x.masterCurriculumId, x.category) && !pools.get(x.masterCurriculumId)?.ids.has(x.id)) chOf.set(x.masterCurriculumId, (chOf.get(x.masterCurriculumId) || 0) + x.creditHours);
   const used = await prisma.course.findMany({ where: { masterCourse: { masterCurriculumId: { in: cs.map((c) => c.id).concat("none") } } }, select: { batchId: true, masterCourse: { select: { masterCurriculumId: true } } }, distinct: ["batchId"] });
   const batches = new Map<string, number>(); used.forEach((u) => batches.set(u.masterCourse!.masterCurriculumId, (batches.get(u.masterCourse!.masterCurriculumId) || 0) + 1));
   const uni = sc.chairmanId ? await universityOf(sc.chairmanId) : null;

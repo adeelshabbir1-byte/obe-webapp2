@@ -6,6 +6,7 @@ import Shell from "../../../components/Shell";
 import BatchesManager from "../../../components/BatchesManager";
 import DegreeProgramsAndIntakeManager from "../../../components/DegreeProgramsAndIntakeManager";
 import { navForRole } from "../../../components/reportNav";
+import { LIST_TYPES as LIST_TYPES_ } from "../../../lib/autoCopyPreviousBatch";
 
 
 export default async function BatchesPage() {
@@ -20,8 +21,10 @@ export default async function BatchesPage() {
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
     include: { _count: { select: { courses: true, students: true } } },
   });
+  // Older imports: give elective / IDS list options their list type so they never add to the totals.
+  { const { retypeListCourses } = await import("../../../lib/listCourses"); for (const b of batches) if (b._count.courses > 0) await retypeListCourses(b.id).catch(() => 0); }
   // Credit hours per batch and semester (non-credit deficiency courses don't count).
-  const crRows = await prisma.course.groupBy({ by: ["batchId", "semesterNumber"], where: { batchId: { in: batches.map((b) => b.id) }, isNonCredit: false }, _sum: { creditHours: true } });
+  const crRows = await prisma.course.groupBy({ by: ["batchId", "semesterNumber"], where: { batchId: { in: batches.map((b) => b.id) }, isNonCredit: false, courseType: { notIn: LIST_TYPES_ } }, _sum: { creditHours: true } });
   const creditsOf = (batchId: string) => {
     const rows = crRows.filter((r) => r.batchId === batchId);
     return { total: rows.reduce((n, r) => n + (r._sum.creditHours || 0), 0), bySemester: rows.filter((r) => r.semesterNumber).sort((a, b) => (a.semesterNumber || 0) - (b.semesterNumber || 0)).map((r) => ({ sem: r.semesterNumber as number, cr: r._sum.creditHours || 0 })) };

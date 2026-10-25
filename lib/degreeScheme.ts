@@ -9,6 +9,7 @@ import { courseTermIndex, termLabel } from "./courseTerm";
 import { planMeta, setMeta, planRequests, programOfferings } from "./degreePlanner";
 import { getPolicy } from "./registrationRules";
 import { computeCgpa } from "./academicStanding";
+import { LIST_TYPES } from "./autoCopyPreviousBatch";
 
 // The full degree scheme of one student, semester by semester: what was already taken (with the grade, in the semester it
 // was taken) and every remaining course in the semester it is planned for. The student, the batch's advisor and the
@@ -43,7 +44,7 @@ export async function loadScheme(studentId: string) {
   const student = await prisma.student.findUnique({ where: { id: studentId }, include: { batch: true } });
   if (!student?.batch) return null;
   const batch = student.batch;
-  const [records, scale, lead, entries, enrollments, courses] = await Promise.all([
+  const [records, scale, lead, entries, enrollments, coursesAll] = await Promise.all([
     prisma.studentTranscriptRecord.findMany({ where: { studentId }, orderBy: [{ termYear: "asc" }, { termName: "asc" }] }),
     getGradingScaleForBatch(batch.coordinatorId, batch),
     prisma.user.findUnique({ where: { id: batch.coordinatorId }, select: { minCreditsPerSemester: true, maxCreditsPerSemester: true } }),
@@ -58,6 +59,8 @@ export async function loadScheme(studentId: string) {
   for (const r of records) { const b = best.get(key(r.courseCode)); if (!b || (r.gpaPoints ?? -1) > (b.gpaPoints ?? -1)) best.set(key(r.courseCode), r); }
   const plan = new Map(entries.map((e) => [e.courseId, e]));
   const enrolled = new Set(enrollments.map((e) => e.courseId));
+  // Elective / IDS list options are not part of the scheme (the slots are), unless the student is enrolled in one.
+  const courses = coursesAll.filter((c) => !LIST_TYPES.includes(c.courseType || "") || enrolled.has(c.id));
   const meta = await planMeta(studentId);
 
   const completed = records.map((r) => {
