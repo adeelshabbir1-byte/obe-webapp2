@@ -43,7 +43,7 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
   A({
     key: "who-resets-passwords", kind: "faq", category: "account", roles: [],
     title: "Who can reset someone else’s password?",
-    summary: "It depends on who manages the account. A Program Lead resets the teachers they onboarded and the students of their batches; the department’s Program Coordinator can do the same while working on that program. The Institute Head can reset anyone in the institute. The platform’s Super User resets Institute Heads. Everyone can reset their own by email.",
+    summary: "It depends on who manages the account. A Program Lead resets the teachers they onboarded and the students of their batches; the department’s Program Coordinator can do the same while working on that program. The Institute Head can reset anyone in the institute. The platform’s Super User (or a platform team member given onboarding or support) resets Institute Heads. Everyone can reset their own by email.",
     who: "Program Lead: Teacher Onboarding › Reset Password, and Students › Reset login. Institute Head: People & Roles › Edit › Reset password. Super User: Users › Reset Institute Head password.",
     affects: "The person signs in with the temporary password and must choose their own straight away; their other sessions are signed out.",
     pages: ["/chairman/people", "/coordinator/faculty", "/coordinator/students", "/admin/users"], keywords: ["admin reset", "force reset", "it admin", "credentials", "reset user", "temporary password"],

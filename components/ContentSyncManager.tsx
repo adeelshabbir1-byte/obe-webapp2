@@ -21,7 +21,9 @@ function typeRank(t: string): number {
   return i === -1 ? TYPE_ORDER.length : i;
 }
 
-export default function ContentSyncManager() {
+/** preselect: batches ticked and loaded straight away (a Program Lead's batch in set-up and the batches before it).
+ *  onChanged: called after every link change (the set-up panel above refreshes its "Synced 41 of 48"). */
+export default function ContentSyncManager({ preselect, onChanged }: { preselect?: string[]; onChanged?: () => void } = {}) {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [batchesLoaded, setBatchesLoaded] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
@@ -36,9 +38,18 @@ export default function ContentSyncManager() {
   useEffect(() => {
     fetch("/api/omc/content-sync/batches")
       .then((res) => res.json())
-      .then((data) => { setBatches(data.batches || []); setBatchesLoaded(true); })
+      .then((data) => {
+        const list: Batch[] = data.batches || [];
+        setBatches(list); setBatchesLoaded(true);
+        const pre = (preselect || []).filter((id) => list.some((x) => x.id === id));
+        if (pre.length) { setSelectedBatchIds(new Set(pre)); setAutoLoad(true); }
+      })
       .catch((err) => setError("Failed to load batches: " + err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const [autoLoad, setAutoLoad] = useState(false);
+  useEffect(() => { if (autoLoad && selectedBatchIds.size) { setAutoLoad(false); loadCoursesAndGroups(); } // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLoad, selectedBatchIds]);
 
   async function loadCoursesAndGroups() {
     setCoursesLoaded(false); setError("");
@@ -52,7 +63,7 @@ export default function ContentSyncManager() {
         return;
       }
       if (!res.ok) { setError(data.error || "Something went wrong."); return; }
-      setCourses(data.courses); setGroups(data.groups); setCoursesLoaded(true);
+      setCourses(data.courses); setGroups(data.groups); setCoursesLoaded(true); onChanged?.();
     } catch (err: any) { setError("Unexpected error: " + err.message); }
   }
 

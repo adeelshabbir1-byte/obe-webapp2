@@ -63,6 +63,8 @@ export function CourseBoard({ board, batchId, editable }: { board: Board; batchI
                   {editable && <div style={{ fontSize: 11, color: "#556" }}>SE: {c.se ? c.se : <b style={{ color: "#B3261E" }}>none</b>} · Teacher: {c.instructor || "—"}</div>}
                   <div style={{ fontSize: 10.5, display: "flex", gap: 6, color: "#778" }}>{c.gradesOnly ? <span title={c.gradesOnly} style={{ color: "#6B7177" }}>grades only</span> : <><span style={{ color: c.clos ? (editable && c.mapped < c.clos ? "#B26A00" : "#2E7D32") : "#A0A6AD" }}>{c.clos ? `${c.clos} CLOs${editable && c.mapped < c.clos ? ` (${c.clos - c.mapped} not mapped)` : ""}` : "no CLOs"}</span><span style={{ color: c.lectures ? "#2E7D32" : "#A0A6AD" }}>{c.lectures ? `${c.lectures} lectures` : "no lecture plan"}</span></>}</div>
                   {c.deficiency && <div style={{ fontSize: 10.5, fontWeight: 700, color: "#8D6E63" }}>{c.deficiency} · not in CH or GPA</div>}
+                  {c.semNote && <div style={{ fontSize: 10.5, color: "#0D2A4A" }} title="Semester taken from the previous batch's course it is synced with">{c.semNote}</div>}
+                  {c.planFlag && <div style={{ fontSize: 10.5, fontWeight: 700, color: "#B3261E" }} title="The Subject Expert's plan is not OMC-approved yet">⚑ {c.planFlag}</div>}
                   {editable && <div style={{ fontSize: 10.5, color: c.home ? "#556" : "#B26A00" }}>Home: {c.home || "not set"}</div>}
                   {c.from && <div style={{ fontSize: 10.5, color: "#556", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.from}>from {c.from}</div>}
                   {editable && <div className="cb-move" style={{ marginTop: 3 }}>

@@ -68,10 +68,13 @@ export async function equalise(by: U, courseId: string, prevCourseId: string) {
   if (m) await syncGroupSubjectHome(m.groupId);
   if (p.subjectHomeDepartmentId) await prisma.course.updateMany({ where: { id: c.id, subjectHomeDepartmentId: null }, data: { subjectHomeDepartmentId: p.subjectHomeDepartmentId } });
   await db.batchCourseNew.deleteMany({ where: { courseId: c.id } }).catch(() => null);
+  // The synced course takes the previous course's semester (unless moved by hand), Subject Expert and plan.
+  const { applySyncDefaults } = await import("./batchFlow");
+  await applySyncDefaults([c.id], by.id).catch(() => null);
   await writeAuditLog({ actorUserId: by.id, action: "BATCH_COURSE_EQUALISED", entityType: "Course", entityId: c.id, metadata: { to: p.id, code: p.code } }).catch(() => null);
 }
 /** ① New course (equal to nothing taught before), with ② its home department. */
-export async function markNew(by: U, courseId: string, homeDepartmentId: string | null) {
+export async function markNew(by: U, courseId: string, homeDepartmentId?: string | null) {
   const c = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, batchId: true } });
   if (!c?.batchId) throw new Error("Course not found.");
   await db.batchCourseNew.upsert({ where: { courseId }, create: { courseId, batchId: c.batchId, byId: by.id }, update: { byId: by.id, at: new Date() } });

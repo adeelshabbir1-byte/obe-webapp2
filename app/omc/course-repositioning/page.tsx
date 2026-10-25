@@ -8,8 +8,9 @@ import Shell from "../../../components/Shell";
 import InteractiveCourseMap from "../../../components/InteractiveCourseMap";
 import BatchCoursesAdminPanel from "../../../components/BatchCoursesAdminPanel";
 import { courseLegendEntry } from "../../../lib/courseTypeColors";
+import SetupStrip from "../../../components/SetupStrip";
 
-export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string } }) {
+export default async function CourseRepositioningPage({ searchParams }: { searchParams: { batchId?: string; setup?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -19,7 +20,9 @@ export default async function CourseRepositioningPage({ searchParams }: { search
   // the Institute Head can see the same map here, just without being able to
   // drag a course into a new row.
   if (!["OMC", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "CHAIRMAN"].includes(user.role)) redirect("/dashboard");
-  const canEdit = user.role === "OMC";
+  // The OMC moves any course; the Program Lead moves their own batch's courses (step 8 of the set-up).
+  const ownBatch = user.role === "PROGRAM_COORDINATOR" && !!searchParams.batchId && !!(await prisma.batch.findFirst({ where: { id: searchParams.batchId, coordinatorId: user.id }, select: { id: true } }));
+  const canEdit = user.role === "OMC" || ownBatch;
   // Adding, deleting, and quick-editing a batch's courses (below the map)
   // is OMC-or-Coordinator — same institution-wide scope the underlying
   // API routes now accept — but not Subject Expert or Institute Head, who are
@@ -49,7 +52,9 @@ export default async function CourseRepositioningPage({ searchParams }: { search
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
+      {ownBatch && searchParams.setup && <SetupStrip batchId={selectedBatchId} step={8} finish="Positions are final →" />}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Repositioning</h1>
+      {ownBatch && <p className="small-note" style={{ marginTop: 0 }}>Synced courses start in the semester they had in the previous batch; new courses keep the curriculum&apos;s semester. A course you move here keeps its new semester — syncing never moves it again.</p>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Move an HEC-approved course to a different semester before it's offered — click a course, then a
         semester row. Blocked if it would land before its own prerequisite, or ahead of a course that depends

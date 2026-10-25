@@ -36,6 +36,7 @@ export default async function WeightsPage({ params }: { params: { courseId: stri
             Your proposed weights fall outside the policy range and are waiting on OMC approval.
             The weights shown below are still your last approved/saved values until then.
           </p>
+          <p style={{ fontSize: 12.5, fontWeight: 600 }}>{(await (await import("../../../../../lib/omcRules")).requestVotes("WEIGHT", pendingException.id, course.id)).line}</p>
         </div>
       )}
       {pendingException && pendingException.status === "rejected" && (

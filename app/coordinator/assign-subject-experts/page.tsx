@@ -9,9 +9,12 @@ import AssignSubjectExpertsManager from "../../../components/AssignSubjectExpert
 import { navForRole } from "../../../components/reportNav";
 import { currentTermIndexFor, isPastTerm } from "../../../lib/courseTerm";
 import { leavesOf, leaveText } from "../../../lib/facultyLeave";
+import SetupStrip from "../../../components/SetupStrip";
+import { ActionButton } from "../../../components/fyp/FypClient";
+import { LIST_TYPES } from "../../../lib/autoCopyPreviousBatch";
 
 
-export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string } }) {
+export default async function AssignSubjectExpertsPage({ searchParams }: { searchParams: { batchId?: string; setup?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -98,8 +101,19 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
     orderBy: [{ degreeProgram: "asc" }, { batchName: "desc" }],
   });
 
+  // Step 11 of a batch's set-up: every course needs a Subject Expert; defaults come from the previous batch (synced
+  // courses) or the curriculum course's university owner (new courses).
+  const inSetup = !!selectedBatchId && searchParams.setup === selectedBatchId && batches.some((b) => b.id === selectedBatchId);
+  const noSe = inSetup ? await prisma.course.findMany({ where: { batchId: selectedBatchId, subjectExpertId: null, courseType: { notIn: LIST_TYPES } }, select: { code: true, title: true }, orderBy: { code: "asc" } }) : [];
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
+      {inSetup && <SetupStrip batchId={selectedBatchId} step={11} finish={noSe.length ? undefined : "Subject Experts are set →"} />}
+      {inSetup && <div className="card" style={{ borderLeft: `5px solid ${noSe.length ? "#C62828" : "#2E7D32"}` }}>
+        <b>{noSe.length ? `${noSe.length} course(s) still without a Subject Expert` : "Every course has a Subject Expert"}</b>
+        <p className="small-note" style={{ margin: "4px 0" }}>Defaults: a synced course keeps the previous batch&apos;s Subject Expert (and their plan); a new course gets the university owner of its curriculum course, or a teacher of its home department suggested below.</p>
+        {noSe.length > 0 && <p style={{ fontSize: 12.5, margin: "4px 0" }}>{noSe.map((c) => c.code).join(" · ")}</p>}
+        <ActionButton url="/api/coordinator/batch-flow" body={{ batchId: selectedBatchId, action: "seDefaults" }} label="Fill the defaults" className="btn btn-sm" showMessage />
+      </div>}
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assign Subject Experts</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Grouped by course category (Maths, Foundation, etc. — set on the Course & Faculty Categories page),

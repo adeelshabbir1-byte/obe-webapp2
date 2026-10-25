@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
-import { deptScope } from "../../../../../lib/omcScope";
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const ctx = await syncContext();
+  if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = ctx.user;
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   try {
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById, ...deptScope(user) }, select: { id: true } });
-    const coordinatorIds = coordinators.map((c) => c.id);
+    const coordinatorIds = ctx.coordinatorIds;
 
     // Same reasoning as the main course list: scanning every batch from
     // the last 4 years at once, for every chairman with a lot of data,

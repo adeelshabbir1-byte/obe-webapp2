@@ -9,7 +9,7 @@ import { curriculumPools, retypeListCourses, isPlaceholderTitle, type Flavour } 
 
 const bdb = prisma as unknown as Record<string, any>;
 export type BoardType = { name: string; kind: string; minCredits: number | null; maxCredits: number | null; minCourses: number | null; counts: boolean; color: string };
-export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null; deficiency?: string | null; home?: string | null };
+export type BoardCourse = { id: string; code: string; title: string; ch: number; type: string; semester: number | null; se: string | null; instructor: string | null; clos: number; lectures: number; mapped: number; from: string | null; masterCourseId: string | null; gradesOnly?: string | null; deficiency?: string | null; home?: string | null; semNote?: string | null; planFlag?: string | null };
 export type Board = { curriculumId: string | null; title: string; types: BoardType[]; courses: BoardCourse[]; missing: { masterCourseId: string; code: string; title: string; ch: number; type: string; semester: number | null }[]; listPool: number; slots: Record<Flavour, number>; obeNote?: string | null; target: [number, number] };
 
 /** Discipline family of a program title — a Program Lead sees only their family's curricula. */
@@ -24,6 +24,13 @@ export function familyOf(title: string) {
 }
 
 const typeFor = (types: { name: string; kind: string }[], cat: string) => { const d = types.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : cat; };
+/** A curriculum's course category → the type name its courses get in a batch (e.g. "Major" → "Core"). */
+export async function batchTypeMapper(curriculumId: string) {
+  const defs = ((await bdb.curriculumType.findMany({ where: { curriculumId } }).catch(() => [])) as { name: string; kind: string }[]);
+  const { typeKey } = await import("./courseTypes");
+  // The same mapping the curriculum import uses: the category's kind, else the standard type of its name.
+  return (cat: string) => { const d = defs.find((t) => t.name === cat); return d ? kindInfo(d.kind).batchType : typeKey(cat); };
+}
 
 /** Board of a curriculum (preview) — courses by type, the list pool counted apart. */
 export async function curriculumBoard(curriculumId: string): Promise<Board | null> {

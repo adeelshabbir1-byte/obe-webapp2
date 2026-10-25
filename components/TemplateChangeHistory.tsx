@@ -1,4 +1,5 @@
 export type ChangeItem = {
+  courseId?: string;
   id: string; courseCode: string; courseTitle: string; termLabel: string; reason: string; requestedBy: string; status: string;
   omcComment: string | null; date: string; changes: string[];
 };

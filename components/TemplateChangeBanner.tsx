@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type State = { status: string; request: { id: string; status: string; reason: string; omcComment: string | null } | null };
+type State = { status: string; request: { id: string; status: string; reason: string; omcComment: string | null; votes?: string | null } | null };
 
 /** Shown on every Subject Expert course tab once the template is approved (locked) or reopened for changes. */
 export default function TemplateChangeBanner({ courseId }: { courseId: string }) {
@@ -49,7 +49,7 @@ export default function TemplateChangeBanner({ courseId }: { courseId: string })
       <b style={{ fontSize: 13 }}>🔒 Approved by the OMC — locked.</b>
       <span style={{ fontSize: 12.5 }}> To change anything on these tabs, ask the OMC to reopen it.</span>
       {history}
-      {req?.status === "pending" && <p style={{ fontSize: 12.5, marginTop: 8 }}>Your change request is waiting for the OMC: <i>"{req.reason}"</i></p>}
+      {req?.status === "pending" && <p style={{ fontSize: 12.5, marginTop: 8 }}>Your change request is waiting for the OMC: <i>"{req.reason}"</i>{req.votes ? <> · <b>{req.votes}</b></> : null}</p>}
       {req?.status === "rejected" && <p style={{ fontSize: 12.5, marginTop: 8, color: "var(--rust)" }}>Your last request was declined{req.omcComment ? `: "${req.omcComment}"` : "."}</p>}
       {req?.status !== "pending" && !open && <div style={{ marginTop: 8 }}><button className="btn btn-brass" onClick={() => setOpen(true)}>Request Change</button></div>}
       {open && (

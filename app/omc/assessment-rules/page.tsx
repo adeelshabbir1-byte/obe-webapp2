@@ -6,6 +6,7 @@ import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import { ActionButton, ActionForm } from "../../../components/fyp/FypClient";
 import { breachesFor, rulesOf, TYPES } from "../../../lib/assessmentRules";
+import OmcLimitsSection from "../../../components/OmcLimitsSection";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -45,6 +46,7 @@ export default async function AssessmentRulesPage() {
         )}
         {canEdit && <div style={{ marginTop: 8 }}><ActionForm url="/api/omc/assessment-rules" fixed={{ action: "save" }} submit="Add rule" collapsed openLabel="+ Add a rule" initial={{ level: "CLO", courseKind: "ALL", types: "Quiz, Assignment", maxPct: "25" }} fields={fields} /></div>}
       </div>
+      <OmcLimitsSection chairmanId={chairmanId} me={user.realUserId || user.id} canAct={user.role === "OMC"} />
       <div className="card" style={{ overflowX: "auto" }}>
         <b>Courses outside the rules ({breaches.length})</b>
         {breaches.length === 0 ? <p className="small-note">None this semester.</p> : (

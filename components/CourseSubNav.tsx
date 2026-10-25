@@ -4,6 +4,7 @@ import SubjectHomeLine from "./SubjectHomeLine";
 import Link from "next/link";
 import ContentSyncStatusBanner from "./ContentSyncStatusBanner";
 import TemplateChangeBanner from "./TemplateChangeBanner";
+import SePlanStrip from "./SePlanStrip";
 export default function CourseSubNav({ courseId, active, code, title, status }: {
   courseId: string; active: "clos" | "weights" | "instruments" | "schedule" | "paper-distribution" | "delivery" | "flow"; code: string; title: string; status: string;
 }) {
@@ -31,6 +32,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
           <Link key={t.key} href={t.href} className="tab" aria-current={active === t.key ? "page" : undefined}>{t.label}</Link>
         ))}
       </nav>
+      <SePlanStrip courseId={courseId} active={active} />
       <CourseReadiness courseId={courseId} source="SE" />
       <ObeAssistant courseId={courseId} courseLabel={code} />
       {(status === "approved" || status === "reopened") && <TemplateChangeBanner courseId={courseId} />}

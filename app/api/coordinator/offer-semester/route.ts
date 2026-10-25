@@ -27,7 +27,7 @@ export async function POST() {
 
   let offered = 0;
   let unOffered = 0;
-  const perBatch: { batchName: string; semesterNumber: number; coursesOffered: number; coursesUnOffered?: number; notStarted?: boolean; prerequisitesNotConfirmed?: boolean }[] = [];
+  const perBatch: { batchName: string; semesterNumber: number; coursesOffered: number; coursesUnOffered?: number; notStarted?: boolean; prerequisitesNotConfirmed?: boolean; setupNotFinished?: boolean }[] = [];
 
   for (const batch of batches) {
     const semesterNumber = computeCurrentSemesterNumber(batch, current);
@@ -41,6 +41,11 @@ export async function POST() {
       // Prerequisite Map is a required one-time setup step before a batch's
       // courses can ever be offered.
       perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: 0, prerequisitesNotConfirmed: true });
+      continue;
+    }
+    if (await (await import("../../../../lib/batchFlow")).offerBlock(batch.id)) {
+      // Set-up steps 5–6 (sync & equalise, home departments) come first.
+      perBatch.push({ batchName: `${batch.degreeProgram} — ${batch.batchName}`, semesterNumber, coursesOffered: 0, setupNotFinished: true });
       continue;
     }
     const coursesToOffer = await prisma.course.findMany({ where: { batchId: batch.id, semesterNumber, isOffered: false } });

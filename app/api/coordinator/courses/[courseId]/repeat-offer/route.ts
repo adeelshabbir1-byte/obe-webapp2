@@ -12,6 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   const body = await req.json();
   const offer = !!body.offer;
+  if (offer) { const why = await (await import("../../../../../../lib/batchFlow")).offerBlock(course.batchId); if (why) return NextResponse.json({ error: why }, { status: 409 }); }
 
   const data: any = { isOffered: offer };
   if (offer) { data.offeredTermName = "Summer"; data.offeredTermYear = body.year ? parseInt(body.year, 10) : new Date().getFullYear(); }

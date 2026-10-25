@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
 import { syncCourseContentToLinkedCourses } from "../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../lib/audit";
@@ -19,8 +19,9 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // this repeatedly (using the returned remainingPending) until it reaches
 // zero, showing progress along the way instead of one long silent wait.
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const ctx = await syncContext();
+  if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = ctx.user;
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
 
   const body = await req.json().catch(() => ({}));
@@ -35,12 +36,12 @@ export async function POST(req: NextRequest) {
 
   const [pendingGroups, totalPendingCount] = await Promise.all([
     prisma.courseContentSyncGroup.findMany({
-      where: { chairmanId: user.managedById, needsSync: true },
+      where: { chairmanId: user.managedById, needsSync: true, ...(ctx.isOmc ? {} : { members: { every: { course: { coordinatorId: user.id } } } }) },
       include: { members: { where: { isBase: true }, include: { course: true } } },
       take: batchSize,
       orderBy: { id: "asc" },
     }),
-    prisma.courseContentSyncGroup.count({ where: { chairmanId: user.managedById, needsSync: true } }),
+    prisma.courseContentSyncGroup.count({ where: { chairmanId: user.managedById, needsSync: true, ...(ctx.isOmc ? {} : { members: { every: { course: { coordinatorId: user.id } } } }) } }),
   ]);
 
   let groupsSynced = 0;

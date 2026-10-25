@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../lib/session";
+import { syncContext } from "../../../../lib/syncAccess";
 import { prisma } from "../../../../lib/db";
-import { deptScope } from "../../../../lib/omcScope";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
-
-    const coordinators = await prisma.user.findMany({ where: { role: "PROGRAM_COORDINATOR", managedById: user.managedById || "", ...deptScope(user) }, select: { id: true } });
-    const coordinatorIds = coordinators.map((c) => c.id);
+    const ctx = await syncContext();
+    if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    const user = ctx.user;
+    const coordinatorIds = ctx.coordinatorIds;
 
     // Courses are only fetched for whichever batches the person actually
     // checked — with potentially several hundred offered courses across

@@ -23,7 +23,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_affiliates.sql",
-"d": "Affiliated colleges: course design taken from the university's Subject Expert, and the university's marks distribution (who enters each head)",
+"d": "Affiliated colleges follow their university: the course design a college course took from the university's",
 "t": "AffiliateMarksPolicy"
 },
 {
@@ -100,8 +100,18 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "LmsCourseLink"
 },
 {
+"f": "migration_batch_flow.sql",
+"d": "Guided batch set-up (Prompt 4 items 1-4, 6): the 13-step progress of each batch, courses whose semester the Program",
+"t": "BatchCourseOrigin"
+},
+{
+"f": "migration_batch_omc.sql",
+"d": "OMC approval of a new batch (Prompt 4 item 5): the submission, the OMC's proposals with the Program Lead's opinion on",
+"t": "BatchEndorsement"
+},
+{
 "f": "migration_batch_setup.sql",
-"d": "Batch set-up: offered tracks, new courses, program course names / codes, scheme change log",
+"d": "Batch set-up: tracks a batch offers, courses marked \"new\" (equal to nothing taught before), the program's chosen names",
 "t": "BatchSchemeChange"
 },
 {
@@ -692,8 +702,8 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_obe_start.sql",
-"d": "OBE start term (institute / program) and grades-only course offerings",
-"t": "ObeStart"
+"d": "OBE start term: courses taught from this term on are OBE; earlier ones are grades-only. program '' = the whole institute.",
+"t": "ObeCourseOff"
 },
 {
 "f": "migration_oct2026_features.sql",
@@ -718,6 +728,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "d": "Lets a faculty member also be an OMC member (the same login, a role to choose at sign-in).",
 "t": "User",
 "c": "omcHat"
+},
+{
+"f": "migration_omc_rules.sql",
+"d": "OMC rules (Prompt 4 item 8): assessment limits per course category set through rounds of members' opinions and locked by",
+"t": "OmcPanel"
 },
 {
 "f": "migration_org_chart.sql",
@@ -756,6 +771,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "PlagiarismRecord"
 },
 {
+"f": "migration_plan_history.sql",
+"d": "Degree plan history: versions (lock / unlock / advisor hand-over), every course move with its reason, and comments.",
+"t": "PlanComment"
+},
+{
 "f": "migration_plan_tasks.sql",
 "d": "",
 "t": "Deadline",
@@ -773,13 +793,8 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_platform_team.sql",
-"d": "Platform team: national curriculum teams (Convener + National Subject Experts) and the other platform roles",
+"d": "Platform team: national curriculum teams (Convener + National Subject Experts) per discipline area, and the other",
 "t": "PlatformRole"
-},
-{
-"f": "migration_plan_history.sql",
-"d": "Degree plan history: versions, course moves with reasons, student / advisor comments",
-"t": "PlanComment"
 },
 {
 "f": "migration_plo_batch_scope.sql",
@@ -927,6 +942,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RubricScore"
 },
 {
+"f": "migration_se_plan_votes.sql",
+"d": "Subject Expert plan step by step and OMC approval by vote (Prompt 4 items 6-7): the plan's state per course (steps done,",
+"t": "SePlanSuggestion"
+},
+{
 "f": "migration_search.sql",
 "d": "Search everywhere (Prompt 2 item 2): trigram indexes so \"contains\" searches stay fast, and each person's recent searches.",
 "t": "SearchHistory"
@@ -965,7 +985,7 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_slot_choice.sql",
-"d": "Elective / IDS slot choices of a batch (which list option fills which slot, who chose it)",
+"d": "Elective / IDS slot choices of a batch: which list option fills which slot, who chose it, and what the slot was before.",
 "t": "BatchSlotChoice"
 },
 {
@@ -1068,13 +1088,19 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_type_rules.sql",
-"d": "Curriculum type rules: pass / fail only, only for one student track (deficiency courses)",
+"d": "Per course-type rules of a curriculum: pass / fail only (not in GPA) and \"only for students from <track>\" (e.g. Math",
 "t": "CurriculumTypeRule"
 },
 {
 "f": "migration_ug_policy.sql",
 "d": "HEC Undergraduate Education Policy 2023 checker: which course of a program meets which named General Education",
 "t": "PolicyCourseMap"
+},
+{
+"f": "migration_university_curriculum.sql",
+"d": "University curriculum as the main copy: revisions, the university's plan per curriculum course, which revision each",
+"t": "CurriculumMeta",
+"c": "sourceKind"
 },
 {
 "f": "migration_visit.sql",
@@ -1087,20 +1113,15 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "SarNarrative"
 },
 {
+"f": "migration_visiting_pay.sql",
+"d": "Visiting teaching pay: the Dean's rules, sections marked Visiting, biometric day records, and claims",
+"t": "VisitingClaim"
+},
+{
 "f": "migration_weight_exception_source.sql",
 "d": "Run in Supabase SQL Editor. Adds a \"source\" column to WeightExceptionRequest",
 "t": "WeightExceptionRequest",
 "c": "source"
-},
-{
-"f": "migration_university_curriculum.sql",
-"d": "University curriculum: revisions, course plans, batch source, changes SE/OMC → BOS → OMC forwards; source badge; feed-forward check-ins",
-"t": "FeedForwardAck"
-},
-{
-"f": "migration_visiting_pay.sql",
-"d": "Visiting teaching pay: Dean's rules, visiting sections, biometric records, claims (teacher → Program Lead → Dean → Accounts)",
-"t": "VisitingClaim"
 },
 {
 "f": "migration_weight_mincount.sql",

@@ -54,6 +54,9 @@ export default async function SubjectExpertCoursesPage() {
   });
   const courses = own.filter((c) => !pastCourses.includes(c));
   const courseIds = courses.map((c) => c.id);
+  // Red flags: what each plan still misses for the OMC, with the deadline from the semester plan.
+  const { planFlags, flagText } = await import("../../../lib/sePlan");
+  const flags = await planFlags(courseIds);
 
   const progressByCourse = await seProgressFor(courses);
 
@@ -78,7 +81,7 @@ export default async function SubjectExpertCoursesPage() {
                   <td>{c.title}</td>
                   <td style={{ fontSize: 12.5 }}>{batchLabel}</td>
                   <td><ProgressBar steps={steps} showPending /></td>
-                  <td>{statusLabel(c.templateStatus)}</td>
+                  <td>{statusLabel(c.templateStatus)}{(() => { const f = flags.get(c.id); return f && !f.approved ? <div style={{ fontSize: 11, fontWeight: 700, color: "#B3261E" }}>⚑ {flagText(f)}</div> : f?.carried ? <div style={{ fontSize: 11, color: "#8D6E00" }}>Approved for {f.carried} — recheck</div> : null; })()}</td>
                   <td style={{ whiteSpace: "nowrap" }}><Link href={`/subjectexpert/courses/${c.id}/clos`} className="act act-primary">Open</Link>{(c.templateStatus === "draft" || c.templateStatus === "changes-requested" || c.templateStatus === "reopened") && <HandBackCourse courseId={c.id} code={c.code} />}</td>
                 </tr>
               );

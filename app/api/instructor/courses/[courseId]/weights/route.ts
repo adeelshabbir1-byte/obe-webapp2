@@ -39,6 +39,8 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const alreadyApproved = (!!(course as any).instructorWeightsConfirmedAt && fields.every((f) => (course as any)[instField(f)] === vals[f]))
     || (!!course.weightsConfirmedAt && fields.every((f) => (course as any)[f] === vals[f]));
   const violations = alreadyApproved ? [] : checkPolicyCompliance(vals as any, policy, course.hasLab);
+  // The OMC's locked assessment limits for this kind of course: outside them, the change goes to the OMC as an exception.
+  if (!alreadyApproved) violations.push(...(await (await import("../../../../../../lib/omcRules")).limitBreaches(course.id, "INSTRUCTOR", { quiz: vals.quizPct, assignment: vals.assignmentPct, midterm: vals.midtermPct, final: vals.finalPct, project: vals.projectPct, lab: vals.labPct }).catch(() => [] as string[])));
 
   // Counts and best-of are only changed when the form sends them (older clients sent percentages only).
   const counts: Record<string, number> = {};

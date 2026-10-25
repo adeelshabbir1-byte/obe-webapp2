@@ -8244,3 +8244,172 @@ model BatchSchemeChange {
 
   @@index([batchId])
 }
+
+// Prompt 4 — guided batch set-up, OMC approval of a batch, SE plan votes, OMC rules (side tables; see prisma/migration_batch_flow.sql,
+// migration_batch_omc.sql, migration_se_plan_votes.sql, migration_omc_rules.sql).
+model BatchSetupProgress {
+  batchId     String   @id
+  marksJson   String   @default("{}")
+  currentStep Int      @default(1)
+  startedAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+}
+model BatchCourseManual {
+  courseId String   @id
+  batchId  String
+  byId     String
+  at       DateTime @default(now())
+
+  @@index([batchId])
+}
+model BatchCourseOrigin {
+  courseId           String   @id
+  batchId            String
+  fromCourseId       String
+  fromBatchName      String   @default("")
+  semester           Int?
+  curriculumSemester Int?
+  at                 DateTime @default(now())
+
+  @@index([batchId])
+}
+model BatchApproval {
+  batchId       String    @id
+  chairmanId    String
+  departmentId  String?
+  status        String    @default("SUBMITTED")
+  submittedAt   DateTime  @default(now())
+  submittedById String
+  reviewJson    String    @default("{}")
+  finalisedAt   DateTime?
+  finalisedById String?
+  summaryJson   String?
+
+  @@index([chairmanId, status])
+}
+model BatchProposal {
+  id          String    @id
+  batchId     String
+  step        String
+  courseId    String?
+  kind        String
+  payloadJson String    @default("{}")
+  reason      String
+  byId        String
+  byName      String    @default("")
+  createdAt   DateTime  @default(now())
+  plOpinion   String?
+  plComment   String?
+  plAt        DateTime?
+  status      String    @default("OPEN")
+  decidedAt   DateTime?
+
+  @@index([batchId])
+}
+model BatchEndorsement {
+  batchId  String
+  memberId String
+  endorse  Boolean
+  comment  String?
+  at       DateTime @default(now())
+
+  @@id([batchId, memberId])
+}
+model SePlanState {
+  courseId            String    @id
+  round               Int       @default(1)
+  stepsJson           String    @default("{}")
+  carriedFromCourseId String?
+  carriedFromBatch    String?
+  carriedApprovedAt   DateTime?
+  carriedHash         String?
+  recheckedAt         DateTime?
+  approvedAt          DateTime?
+  approvedById        String?
+  finalisedByOmc      Boolean   @default(false)
+  overriddenJson      String?
+  updatedAt           DateTime  @default(now())
+}
+model SePlanVote {
+  courseId String
+  round    Int
+  memberId String
+  approve  Boolean
+  comment  String?
+  at       DateTime @default(now())
+
+  @@id([courseId, round, memberId])
+}
+model SePlanSuggestion {
+  id        String    @id
+  courseId  String
+  round     Int
+  step      String
+  item      String?
+  text      String
+  reason    String
+  byId      String
+  byName    String    @default("")
+  createdAt DateTime  @default(now())
+  status    String    @default("OPEN")
+  reply     String?
+  repliedAt DateTime?
+
+  @@index([courseId])
+}
+model AssessmentLimitRound {
+  id             String    @id
+  chairmanId     String
+  status         String    @default("OPEN")
+  categoriesJson String    @default("[]")
+  openedById     String
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+
+  @@index([chairmanId])
+}
+model AssessmentLimitOpinion {
+  roundId     String
+  memberId    String
+  category    String
+  figuresJson String
+  comment     String?
+  at          DateTime @default(now())
+
+  @@id([roundId, memberId, category])
+}
+model AssessmentLimit {
+  chairmanId  String
+  category    String
+  figuresJson String
+  locked      Boolean   @default(true)
+  lockedAt    DateTime?
+  lockedById  String?
+  roundId     String?
+  historyJson String    @default("[]")
+
+  @@id([chairmanId, category])
+}
+model OmcRequestVote {
+  kind      String
+  requestId String
+  memberId  String
+  approve   Boolean
+  reason    String?
+  at        DateTime @default(now())
+
+  @@id([kind, requestId, memberId])
+}
+model OmcPanel {
+  id            String   @id
+  chairmanId    String
+  departmentId  String?
+  term          String
+  label         String   @default("")
+  courseIdsJson String   @default("[]")
+  memberIdsJson String   @default("[]")
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([chairmanId, term])
+}

@@ -9,6 +9,7 @@ import { navForRole } from "../../../components/reportNav";
 import { ActionForm } from "../../../components/fyp/FypClient";
 import { obeStarts, termLabel } from "../../../lib/obeTerm";
 import { LIST_TYPES as LIST_TYPES_ } from "../../../lib/autoCopyPreviousBatch";
+import { flowSummaries, TOTAL_STEPS } from "../../../lib/batchFlow";
 
 
 export default async function BatchesPage() {
@@ -43,6 +44,9 @@ export default async function BatchesPage() {
   const rank = (f: (typeof facultyRaw)[number]) => { const own = f.managedById === user.id || f.id === user.id, dept = !!user.departmentId && f.departmentId === user.departmentId, free = !f.advisedBatches.length; return own && free ? 0 : own ? 1 : dept && free ? 2 : free ? 3 : dept ? 4 : 5; };
   const faculty = facultyRaw.map((f) => ({ ...f, rank: rank(f) })).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
 
+  // The guided set-up of each batch: "7 of 13 · Continue set-up →" (and the OMC's approval once sent).
+  const flows = await flowSummaries(batches.map((b) => b.id));
+  const settingUp = batches.filter((b) => (flows.has(b.id) && !flows.get(b.id)!.approved) || b._count.courses === 0);
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
@@ -52,6 +56,16 @@ export default async function BatchesPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         The batches (intakes) of your program. Add a batch, then choose where its courses come from; set its advisor and planned intake. Each batch can follow a different curriculum version.
       </p>
+      {settingUp.length > 0 && <div className="card" style={{ borderLeft: "5px solid #0D2A4A" }}>
+        <h3 style={{ marginTop: 0 }}>Batches being set up</h3>
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>{settingUp.map((b) => { const f = flows.get(b.id); return (
+          <li key={b.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "4px 0", borderTop: "1px solid var(--line)" }}>
+            <b style={{ minWidth: 220 }}>{b.degreeProgram} {b.batchName}</b>
+            <span aria-label={`${f?.done || 1} of ${TOTAL_STEPS} steps done`} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ display: "inline-block", width: 120, height: 8, borderRadius: 99, background: "#E1E5EA", overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: `${Math.round((100 * (f?.done || 1)) / TOTAL_STEPS)}%`, background: "#2E7D32" }} /></span>{f?.done || 1} of {TOTAL_STEPS}</span>
+            {f?.sent && <span className="badge badge-warn">with the OMC</span>}
+            <a className="btn btn-sm" href={`/coordinator/batches/${b.id}/setup`} style={{ marginLeft: "auto" }}>{f ? "Continue set-up →" : "Start set-up →"}</a>
+          </li>); })}</ul>
+      </div>}
       <DegreeProgramsAndIntakeManager programs={degreePrograms} />
       {obeProgs.length > 0 && <div className="card">
         <h3 style={{ marginTop: 0 }}>OBE start of your program</h3>
