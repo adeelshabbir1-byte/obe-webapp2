@@ -11,7 +11,7 @@ import type { SetupRow } from "../lib/batchSetup";
 type Status = { fromCurriculum: boolean; rows: SetupRow[]; open: number; noHome: number; naming: SetupRow[]; candidates: { id: string; code: string; title: string; batch: string }[]; done: boolean };
 const post = async (body: unknown) => { const r = await fetch("/api/coordinator/batch-setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong."); return d as { message?: string }; };
 
-export default function BatchSetupSteps({ batchId, status, departments, sourceLabel, changes, types }: { batchId: string; status: Status; departments: { id: string; name: string }[]; sourceLabel: string; changes: { id: string; code: string; title: string; action: string; why: string | null; byName: string; at: string }[]; types: string[] }) {
+export default function BatchSetupSteps({ batchId, status, departments, sourceLabel, changes, types, ownDepartmentId }: { batchId: string; status: Status; departments: { id: string; name: string }[]; ownDepartmentId?: string | null; sourceLabel: string; changes: { id: string; code: string; title: string; action: string; why: string | null; byName: string; at: string }[]; types: string[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -26,7 +26,13 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
   const [addSem, setAddSem] = useState("");
   const run = async (body: unknown, after?: () => void) => { setBusy(true); setMsg(null); try { const d = await post({ batchId, ...(body as object) }); setMsg({ ok: true, text: d.message || "Saved." }); after?.(); router.refresh(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } setBusy(false); };
 
-  const homeRows = status.rows.filter((r) => !r.homeId && (r.isNew || !r.matched));
+  // Step 6: every course in one table; a course with no home yet starts with the program's own department. One Save.
+  const homeRows = status.rows;
+  const homeVal = (r: SetupRow) => homeOf[r.id] ?? r.homeId ?? ownDepartmentId ?? "";
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [moveTo, setMoveTo] = useState("");
+  const deptName = (id: string) => departments.find((d) => d.id === id)?.name || "— none —";
+  const split = homeRows.reduce<Record<string, number>>((m, r) => { const k = deptName(homeVal(r)); m[k] = (m[k] || 0) + 1; return m; }, {});
   const s1 = status.open === 0, s2 = status.noHome === 0;
   const nSide = (r: SetupRow) => nameSide[r.id] || "new", cSide = (r: SetupRow) => codeSide[r.id] || "prev";
   const cell = (on: boolean, onClick: () => void, children: React.ReactNode, label: string) => <button type="button" aria-pressed={on} aria-label={label} onClick={onClick} style={{ border: `1.5px solid ${on ? "#0D2A4A" : "#E1E5EA"}`, background: on ? "#EAF1FA" : "#fff", color: on ? "#0D2A4A" : "#9AA0A6", borderRadius: 6, padding: "3px 7px", font: "inherit", fontSize: 12.5, cursor: "pointer", textAlign: "left", width: "100%" }}>{children}</button>;
@@ -53,10 +59,20 @@ export default function BatchSetupSteps({ batchId, status, departments, sourceLa
         {step(5, `Sync & equalise — synced ${status.rows.filter((r) => r.matched).length} of ${status.rows.length}${status.rows.some((r) => r.isNew) ? ` · ${status.rows.filter((r) => r.isNew).length} new` : ""}`, s1, (
           <p className="small-note" style={{ margin: "4px 0" }}>{s1 ? "Every course is synced with the course taught before or marked new." : `${status.open} course(s) still to link or mark new.`} Linking is done on the Content Sync page (the OMC&apos;s page, open to you for your own batches): a synced course takes the earlier course&apos;s semester, home department and Subject Expert, and its plan comes with it.{" "}
             <a href={`/omc/content-sync?batchId=${batchId}&setup=${batchId}`} className="btn btn-sm">{s1 ? "Open Content Sync" : "Sync on the Content Sync page →"}</a></p>))}
-        {step(6, `Home department of new courses${status.noHome ? ` — ${status.noHome} to set` : ""}`, s2, homeRows.length ? (
-          <table style={{ fontSize: 12.5, width: "100%", marginTop: 6 }}><tbody>{homeRows.map((r) => (
-            <tr key={r.id}><td><b>{r.code}</b> {r.title}</td><td><select value={homeOf[r.id] || ""} onChange={(e) => setHomeOf((x) => ({ ...x, [r.id]: e.target.value }))} aria-label={`Home department of ${r.code}`}><option value="">— home department —</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>{" "}<button type="button" className="btn btn-sm" disabled={busy || !homeOf[r.id]} onClick={() => run({ action: "home", courseId: r.id, departmentId: homeOf[r.id] })}>Save</button></td></tr>))}</tbody></table>
-        ) : <p className="small-note" style={{ margin: "4px 0" }}>Every course has its home department.</p>)}
+        {step(6, `Home department of each course${status.noHome ? ` — ${status.noHome} pre-filled with ${deptName(ownDepartmentId || "")}, check and save` : ""}`, s2, (
+          <div>
+            <p className="small-note" style={{ margin: "4px 0" }}>Split: {Object.entries(split).map(([k, v]) => `${k} ${v}`).join(" · ")}. Every course starts with this program&apos;s own department; tick the ones another department teaches and move them, then save once.</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", margin: "4px 0" }}>
+              <label style={{ fontSize: 12.5 }}><input type="checkbox" checked={ticked.size === homeRows.length && homeRows.length > 0} onChange={(e) => setTicked(e.target.checked ? new Set(homeRows.map((r) => r.id)) : new Set())} /> all</label>
+              <select value={moveTo} onChange={(e) => setMoveTo(e.target.value)} aria-label="Move ticked to"><option value="">— department —</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={!moveTo || !ticked.size} onClick={() => { setHomeOf((x) => ({ ...x, ...Object.fromEntries(Array.from(ticked).map((id) => [id, moveTo])) })); setTicked(new Set()); }}>Move ticked ({ticked.size}) to {moveTo ? deptName(moveTo) : "…"}</button>
+            </div>
+            <table style={{ fontSize: 12.5, width: "100%" }}><tbody>{homeRows.map((r) => (
+              <tr key={r.id}><td style={{ width: 24 }}><input type="checkbox" checked={ticked.has(r.id)} onChange={() => setTicked((t) => { const n = new Set(t); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })} aria-label={`Tick ${r.code}`} /></td>
+                <td><b>{r.code}</b> {r.title}{r.matched ? <span className="small-note"> · synced</span> : ""}</td>
+                <td><select value={homeVal(r)} onChange={(e) => setHomeOf((x) => ({ ...x, [r.id]: e.target.value }))} aria-label={`Home department of ${r.code}`}><option value="">— home department —</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></td></tr>))}</tbody></table>
+            <button type="button" className="btn" style={{ marginTop: 6 }} disabled={busy} onClick={() => run({ action: "homes", rows: homeRows.filter((r) => homeVal(r) && homeVal(r) !== r.homeId).map((r) => ({ courseId: r.id, departmentId: homeVal(r) })) }, () => { setHomeOf({}); location.hash = "names"; })}>Save and continue →</button>
+          </div>))}
         {step(7, "Final names and codes", s2 && !status.naming.length, status.naming.length ? (
           <div>
             <p className="small-note" style={{ margin: "4px 0" }}>{status.rows.filter((r) => r.matched).length - status.naming.length} equal courses have the same name and code — nothing to choose. For these, click the name and the code you want (the chosen one is highlighted); ✎ types another name. Defaults: <b>code</b> from the course already taught (its department&apos;s code system), <b>name</b> from the curriculum.</p>

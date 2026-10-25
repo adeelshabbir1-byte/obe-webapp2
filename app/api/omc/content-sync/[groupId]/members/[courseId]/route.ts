@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { syncContext, mayTouch, groupCourseIds } from "../../../../../../../lib/syncAccess";
+import { syncContext, mayTouch } from "../../../../../../../lib/syncAccess";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 
@@ -10,7 +10,7 @@ export async function DELETE(req: Request, { params }: { params: { groupId: stri
 
   const group = await prisma.courseContentSyncGroup.findUnique({ where: { id: params.groupId } });
   if (!group || group.chairmanId !== user.managedById) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await mayTouch(ctx, await groupCourseIds(params.groupId)))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
+  if (!(await mayTouch(ctx, [params.courseId]))) return NextResponse.json({ error: "You can detach only your own batches' courses." }, { status: 403 });
 
   const removedMember = await prisma.courseContentSyncMember.findFirst({ where: { groupId: params.groupId, courseId: params.courseId } });
   await prisma.courseContentSyncMember.deleteMany({ where: { groupId: params.groupId, courseId: params.courseId } });

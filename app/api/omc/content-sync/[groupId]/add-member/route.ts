@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncContext, mayTouch, groupCourseIds, afterLink } from "../../../../../../lib/syncAccess";
+import { syncContext, mayJoin, groupCourseIds, afterLink } from "../../../../../../lib/syncAccess";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { reconsiderGroupBase, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   const body = await req.json();
   const { courseId } = body;
   if (!courseId) return NextResponse.json({ error: "courseId is required" }, { status: 400 });
-  if (!(await mayTouch(ctx, [courseId, ...(await groupCourseIds(params.groupId))]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
+  if (!(await mayJoin(ctx, [courseId, ...(await groupCourseIds(params.groupId))]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   const existingMembership = await prisma.courseContentSyncMember.findUnique({ where: { courseId } });
   if (existingMembership) {

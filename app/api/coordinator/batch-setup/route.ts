@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, message: `${n} course(s) equalised with the suggested course.` });
       }
       case "new": await bs.markNew(by, await mine(b.courseId), b.departmentId ? String(b.departmentId) : null); return NextResponse.json({ ok: true, message: "Marked as a new course." });
+      case "homes": { const rows = Array.isArray(b.rows) ? b.rows : []; for (const r of rows) await bs.setHome(await mine(r.courseId), r.departmentId ? String(r.departmentId) : null); return NextResponse.json({ ok: true, message: rows.length ? `Home department saved for ${rows.length} course(s).` : "Nothing changed — saved." }); }
       case "home": await bs.setHome(await mine(b.courseId), b.departmentId ? String(b.departmentId) : null); return NextResponse.json({ ok: true, message: "Home department saved." });
       case "naming": { const n = await bs.saveNaming(by, batch.id, Array.isArray(b.picks) ? b.picks : []); return NextResponse.json({ ok: true, message: `${n} course(s) renamed / recoded. Names and codes saved for the next batch too.` }); }
       case "merge": return NextResponse.json({ ok: true, message: await bs.mergeDuplicates(by, batch.id) });

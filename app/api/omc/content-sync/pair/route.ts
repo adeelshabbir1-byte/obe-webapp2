@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncContext, mayTouch, groupCourseIds, afterLink } from "../../../../../lib/syncAccess";
+import { syncContext, mayJoin, groupCourseIds, afterLink } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     prisma.courseContentSyncMember.findUnique({ where: { courseId: courseIdB } }),
   ]);
   if (!courseA || !courseB) return NextResponse.json({ error: "course not found" }, { status: 404 });
-  if (!(await mayTouch(ctx, [courseIdA, courseIdB, ...(memberA ? await groupCourseIds(memberA.groupId) : []), ...(memberB ? await groupCourseIds(memberB.groupId) : [])]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
+  if (!(await mayJoin(ctx, [courseIdA, courseIdB, ...(memberA ? await groupCourseIds(memberA.groupId) : []), ...(memberB ? await groupCourseIds(memberB.groupId) : [])]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   if (memberA && memberB && memberA.groupId === memberB.groupId) {
     return NextResponse.json({ groupId: memberA.groupId });

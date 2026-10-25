@@ -28,6 +28,15 @@ export async function mayTouch(ctx: SyncCtx, courseIds: string[]) {
   return n === ids.length;
 }
 
+/** May this person link these courses together? The OMC always; a Program Lead when at least one of them is his own and
+ *  all belong to the same institute — so his new batch's course can join a group that holds other programs' courses. */
+export async function mayJoin(ctx: SyncCtx, courseIds: string[]) {
+  if (ctx.isOmc) return true;
+  const ids = Array.from(new Set(courseIds.filter(Boolean)));
+  const cs = await prisma.course.findMany({ where: { id: { in: ids.concat("none") } }, select: { coordinatorId: true, coordinator: { select: { managedById: true } } } });
+  return cs.length === ids.length && cs.some((c) => c.coordinatorId === ctx.user.id) && cs.every((c) => c.coordinatorId === ctx.user.id || c.coordinator.managedById === ctx.chairmanId);
+}
+
 /** Every member of a group (for the checks above). */
 export async function groupCourseIds(groupId: string) {
   return (await prisma.courseContentSyncMember.findMany({ where: { groupId }, select: { courseId: true } })).map((m) => m.courseId);

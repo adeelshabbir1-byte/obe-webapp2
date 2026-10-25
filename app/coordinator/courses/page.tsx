@@ -76,6 +76,8 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
   // Sorted by degree (all BSCS together, then BBA, ...), with the authority + version shown to tell them apart.
   const owningChairmanId = await findOwningChairmanId(user.id);
   const departmentList = await prisma.department.findMany({ where: { chairmanId: owningChairmanId || "none" }, orderBy: { name: "asc" } });
+  // The program's own department: every course's default home in set-up step 6.
+  const ownDepartmentId = selectedBatchId ? await (async () => { const bb = await prisma.batch.findUnique({ where: { id: selectedBatchId }, select: { degreeProgram: true, coordinator: { select: { departmentId: true } } } }); const dp = bb ? await prisma.departmentProgram.findFirst({ where: { chairmanId: owningChairmanId || "none", degreeProgram: bb.degreeProgram }, select: { departmentId: true } }) : null; return dp?.departmentId || bb?.coordinator.departmentId || null; })() : null;
   const visible = owningChairmanId
     ? await prisma.masterCurriculum.findMany({ where: { status: "PUBLISHED", ...(await (await import("../../../lib/curriculumLibrary")).curriculaWhere(owningChairmanId)) } })
     : [];
@@ -105,7 +107,7 @@ export default async function CoordinatorCoursesPage({ searchParams }: { searchP
       )}
       {!selectedBatchId && preview && <div className="card" id="sources"><h3 style={{ marginTop: 0 }}>Use this curriculum for a batch</h3><p className="small-note">Pick the batch: {allBatchesForPick.map((b) => <a key={b.id} className="btn btn-secondary btn-sm" style={{ marginRight: 6 }} href={`/coordinator/courses?batchId=${b.id}&preview=${searchParams.preview}#sources`}>{b.degreeProgram} — {b.batchName}</a>)}</p><CourseBoard board={preview} /></div>}
       {selectedBatchId && board && board.courses.length === 0 && <div className="card" style={{ borderLeft: "5px solid #0D2A4A" }}><h3 style={{ marginTop: 0 }}>This batch has no courses yet</h3><p className="small-note">Choose where they come from — a curriculum (e.g. NCEAC) or a previous batch — step by step.</p><a className="btn" href={`/coordinator/batches/new?batchId=${selectedBatchId}`}>Set up this batch&apos;s courses →</a></div>}
-      {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} />}
+      {selectedBatchId && setup && board && board.courses.length > 0 && <BatchSetupSteps batchId={selectedBatchId} status={setup} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} sourceLabel={sourceLabel + (offered.length ? ` · tracks ${offered.map((t) => t.name).join(", ")}` : "")} types={board.types.map((t) => t.name)} changes={changes.map((c) => ({ ...c, at: new Date(c.at).toISOString() }))} ownDepartmentId={ownDepartmentId} />}
       {selectedBatchId && board && board.courses.length > 0 && <div className="card"><CourseBoard board={board} batchId={selectedBatchId} editable /></div>}
       {selectedBatchId && <div id="electives" style={{ scrollMarginTop: 80 }} />}
       {selectedBatchId && <SlotChooser batchId={selectedBatchId} groups={slotGroups} choices={slotChoices.map((c) => ({ courseId: c.courseId, byName: c.byName, at: new Date(c.at).toISOString() }))} />}

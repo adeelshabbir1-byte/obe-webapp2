@@ -499,9 +499,12 @@ export default function ContentSyncManager({ preselect, onChanged }: { preselect
               <input type="checkbox" checked={showOnlyUnlinked} onChange={(e) => setShowOnlyUnlinked(e.target.checked)} />
               Show only groups not yet linked to a HEC course
             </label>
-            {selectedCourseIds.size > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, background: "#F8EEF0", padding: 8, border: "1px solid var(--brass)" }}>
+            {(selectedCourseIds.size > 0 || error || notice) && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10, background: "#F8EEF0", padding: 8, border: "1px solid var(--brass)", position: "sticky", top: "calc(var(--topbar-h, 0px) + 8px)", zIndex: 6 }}>
+                {error && <span style={{ fontSize: 12, color: "var(--rust)", fontWeight: 600, flex: "1 1 100%" }}>{error}</span>}
+                {notice && !error && <span style={{ fontSize: 12, color: "var(--sage)", flex: "1 1 100%" }}>{notice}</span>}
                 <span style={{ fontSize: 12, color: "var(--brass-dark)" }}>{selectedCourseIds.size} course(s) selected.</span>
+                {busy && <span style={{ fontSize: 12 }}>Working…</span>}
                 <button onClick={handleSubmitGroup} disabled={selectedCourseIds.size < 2 || busy} className="btn btn-brass" style={{ fontSize: 11.5, padding: "4px 10px" }}>
                   Group Selected ({selectedCourseIds.size}) — or press S
                 </button>

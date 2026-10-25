@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncContext, mayTouch, groupCourseIds, afterLink } from "../../../../../lib/syncAccess";
+import { syncContext, mayJoin, groupCourseIds, afterLink } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { determineBaseCourseId, syncGroupSubjectHome } from "../../../../../lib/contentSync";
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const memberships = await prisma.courseContentSyncMember.findMany({ where: { courseId: { in: courseIds } } });
   const membershipByCourseId = new Map(memberships.map((m) => [m.courseId, m]));
   const existingGroupIds = Array.from(new Set(memberships.map((m) => m.groupId)));
-  if (!(await mayTouch(ctx, [...courseIds, ...(await Promise.all(existingGroupIds.map(groupCourseIds))).flat()]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
+  if (!(await mayJoin(ctx, [...courseIds, ...(await Promise.all(existingGroupIds.map(groupCourseIds))).flat()]))) return NextResponse.json({ error: "Only your own batches' courses can be linked here." }, { status: 403 });
 
   let groupId: string;
   let baseCourseId: string;
