@@ -7,7 +7,7 @@ import SortableTable from "./SortableTable";
 import Link from "next/link";
 
 type Batch = { id: string; degreeProgram: string; batchName: string; startTerm: string; startYear: number; studentCount: number; enrolledCount: number; courseCount: number; credits?: { total: number; bySemester: { sem: number; cr: number }[] }; registrationOpen: boolean; advisorId: string | null };
-type Faculty = { id: string; name: string };
+type Faculty = { id: string; name: string; group?: string; dept?: string | null; advising?: string[]; sections?: number };
 
 export default function BatchesManager({ initialBatches, faculty }: { initialBatches: Batch[]; faculty: Faculty[] }) {
   const [batches, setBatches] = useState<Batch[]>(initialBatches);
@@ -18,6 +18,8 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [enrollResultMsg, setEnrollResultMsg] = useState<Record<string, string>>({});
+  const [picking, setPicking] = useState<Batch | null>(null);
+  const [pickQ, setPickQ] = useState("");
 
   async function setAdvisor(batch: Batch, advisorId: string) {
     setBusyId(batch.id); setError("");
@@ -209,10 +211,7 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
                   {enrollResultMsg[b.id] && <div style={{ fontSize: 10, color: "var(--sage)", marginTop: 2 }}>{enrollResultMsg[b.id]}</div>}
                 </td>
                 <td>
-                  <select value={b.advisorId || ""} onChange={(e) => setAdvisor(b, e.target.value)} disabled={busyId === b.id} style={{ fontSize: 11.5, padding: "3px 4px", border: "1px solid var(--line)" }}>
-                    <option value="">— None —</option>
-                    {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </select>
+                  <button type="button" className="act act-primary" disabled={busyId === b.id} onClick={() => { setPicking(b); setPickQ(""); }} title="Choose the batch's advisor — they stay with the batch through the degree">{faculty.find((f) => f.id === b.advisorId)?.name || "Assign advisor…"}</button>
                 </td>
                 <td><Link href={`/coordinator/courses?batchId=${b.id}`} className="act act-primary">View Courses</Link>
                 <button onClick={() => removeBatch(b.id, b.batchName)} disabled={busyId === b.id} className="act act-danger" style={{ marginLeft: 10 }}>Delete Batch</button></td>
@@ -246,6 +245,28 @@ export default function BatchesManager({ initialBatches, faculty }: { initialBat
           <button className="btn btn-brass" type="submit" disabled={loading}>{loading ? "Creating…" : "Create Batch"}</button>
         </form>
       </div>
+      {picking && (
+        <div role="dialog" aria-label={`Advisor for ${picking.batchName}`} onClick={() => setPicking(null)} style={{ position: "fixed", inset: 0, background: "rgba(13,42,74,.35)", display: "grid", placeItems: "center", zIndex: 60, padding: 16 }}>
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ margin: 0, width: "min(720px, 100%)", maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}><b style={{ fontSize: 16 }}>Advisor for {picking.degreeProgram} — {picking.batchName}</b><button type="button" className="btn btn-secondary btn-sm" onClick={() => setPicking(null)}>Close</button></div>
+            <p className="small-note" style={{ marginTop: 4 }}>Best case: one advisor per batch, who stays with it through the whole degree. Your program&apos;s teachers who advise no batch yet are listed first.</p>
+            <input autoFocus placeholder="Search a name…" value={pickQ} onChange={(e) => setPickQ(e.target.value)} style={{ width: "100%", marginBottom: 8 }} />
+            {picking.advisorId && <button type="button" className="btn btn-secondary btn-sm" style={{ marginBottom: 8 }} onClick={async () => { await setAdvisor(picking, ""); setPicking(null); }}>Remove the current advisor</button>}
+            {Array.from(new Set(faculty.map((f) => f.group || "Teachers"))).map((g) => { const fs = faculty.filter((f) => (f.group || "Teachers") === g && (!pickQ || f.name.toLowerCase().includes(pickQ.toLowerCase()))); return fs.length ? (
+              <div key={g} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#556", textTransform: "uppercase", letterSpacing: ".04em", margin: "6px 0" }}>{g}</div>
+                <table style={{ fontSize: 12.5, width: "100%" }}><tbody>{fs.map((f) => (
+                  <tr key={f.id} style={f.id === picking.advisorId ? { background: "#EEF4FB" } : undefined}>
+                    <td style={{ width: "34%" }}><b>{f.name}</b>{f.dept && <div className="small-note" style={{ margin: 0 }}>{f.dept}</div>}</td>
+                    <td style={{ color: f.advising?.length ? "#B26A00" : "#2E7D32" }}>{f.advising?.length ? `Advising: ${f.advising.join(", ")}` : "Not advising any batch"}</td>
+                    <td className="small-note">{f.sections || 0} course section(s) now</td>
+                    <td style={{ textAlign: "right" }}><button type="button" className="btn btn-sm" disabled={busyId === picking.id || f.id === picking.advisorId} onClick={async () => { await setAdvisor(picking, f.id); setPicking(null); }}>{f.id === picking.advisorId ? "Current" : "Choose"}</button></td>
+                  </tr>))}</tbody></table>
+              </div>) : null; })}
+          </div>
+        </div>
+      )}
+
     </>
   );
 }

@@ -23,14 +23,14 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
   // assignment just like an Instructor can, and section assignments
   // don't discriminate by role — leaving SE out here undercounts real
   // load exactly the way the Assignment Matrix already avoids doing.
-  const instructors = await prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true, managedById: coordinatorId }, orderBy: { name: "asc" } });
+  const instructors = await prisma.user.findMany({ where: { OR: [{ role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true }, { role: "LAB_ENGINEER" }], managedById: coordinatorId }, orderBy: { name: "asc" } });
 
   // Every section these teachers teach anywhere in the institute — not only this program's courses: a teacher of this
   // program may teach sections of another department's program (e.g. QR-I for BBA); those count toward their load too.
   const chairmanId = (await prisma.user.findUnique({ where: { id: coordinatorId }, select: { managedById: true } }))?.managedById || "";
   const ids = instructors.map((i) => i.id);
   const courses = await prisma.course.findMany({
-    where: { isOffered: true, OR: [{ coordinatorId }, { coordinator: { managedById: chairmanId }, OR: [{ instructorId: { in: ids } }, { sectionAssignments: { some: { instructorId: { in: ids } } } }] }] },
+    where: { isOffered: true, OR: [{ coordinatorId }, { coordinator: { managedById: chairmanId }, OR: [{ instructorId: { in: ids } }, { labEngineerId: { in: ids } }, { sectionAssignments: { some: { instructorId: { in: ids } } } }] }] },
     include: { sectionAssignments: true, batch: true },
   });
   const relevantCourses = courses.filter((c) => matchesSelectedTerms(c, selectedTerms));
@@ -61,6 +61,9 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
         if (termLabel in byTerm) byTerm[termLabel] += a.sectionCount;
       }
     }
+    // Labs: courses whose lab this person runs (Lab Engineer / lab instructor) — counted apart from theory sections.
+    let labs = 0; const labDetails: { label: string; term: string; sections: number }[] = [];
+    for (const c of relevantCourses) if (c.labEngineerId === i.id) { labs++; labDetails.push({ label: `${c.code} — ${c.title} (lab)${c.coordinatorId !== coordinatorId ? ` (${c.batch?.degreeProgram || "other program"})` : ""}`, term: `${c.offeredTermName} ${c.offeredTermYear}`, sections: 1 }); }
     for (const g of relevantGroups) {
       const a = g.sectionAssignments.find((x) => x.instructorId === i.id);
       if (a) {
@@ -81,7 +84,7 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
     return {
       instructorId: i.id, name: i.name, role: i.role, normalLoad: i.normalLoad, externalLoadCount: i.externalLoadCount,
       externalLoadNote: i.externalLoadNote, assigned, total: assigned + i.externalLoadCount,
-      over: assigned + i.externalLoadCount > i.normalLoad, details, byTerm,
+      over: assigned + i.externalLoadCount > i.normalLoad, details, byTerm, labs, labDetails,
     };
   });
 

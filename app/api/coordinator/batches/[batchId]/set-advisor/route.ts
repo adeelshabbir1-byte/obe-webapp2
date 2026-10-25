@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { writeAuditLog } from "../../../../../../lib/audit";
 import { advisorCandidatesWhere } from "../../../../../../lib/advisors";
 
 export async function PUT(req: NextRequest, { params }: { params: { batchId: string } }) {
@@ -21,5 +22,6 @@ export async function PUT(req: NextRequest, { params }: { params: { batchId: str
   }
 
   await prisma.batch.update({ where: { id: batch.id }, data: { advisorId } });
+  await writeAuditLog({ actorUserId: user.id, action: "BATCH_ADVISOR_SET", entityType: "Batch", entityId: batch.id, metadata: { from: batch.advisorId, to: advisorId } });
   return NextResponse.json({ ok: true, advisorId });
 }

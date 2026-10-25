@@ -12,6 +12,7 @@ import CloExcelButtons from "../../../../../components/CloExcelButtons";
 import { navForRole } from "../../../../../components/reportNav";
 import { ploPanel } from "../../../../../lib/ploRequests";
 import { CoursePloRequests } from "../../../../../components/PloRequestControls";
+import FeedForwardPanel from "../../../../../components/FeedForwardPanel";
 import CoursePlanTools from "../../../../../components/CoursePlanTools";
 
 
@@ -71,6 +72,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
         </div>
       )}
       {!isFollower && course.masterCourseId && <LoadHecContentButton courseId={course.id} hasExistingClos={course.clos.length > 0} />}
+      {!isFollower && <FeedForwardPanel courseId={course.id} userId={user.id} />}
       {!isFollower && <CoursePlanTools courseId={course.id} as="SE" />}
       {!isFollower && <ImportContentFromCourseButton courseId={course.id} />}
       <CloExcelButtons courseId={course.id} canImport={!isFollower} />

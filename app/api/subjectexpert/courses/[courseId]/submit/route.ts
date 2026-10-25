@@ -12,6 +12,7 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await (await import("../../../../../../lib/feedForward")).startReadDone(course.id, user.id).catch(() => true))) return NextResponse.json({ error: "Read the notes from last time first: check in on each (Start of semester) on the CLO page, then submit." }, { status: 409 });
 
   const clos = await prisma.cLO.findMany({ where: { courseId: course.id, source: "SE" } });
   const lectureRows = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "SE" } });

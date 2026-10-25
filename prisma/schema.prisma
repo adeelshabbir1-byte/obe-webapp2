@@ -8023,3 +8023,88 @@ model CurriculumRecommendation {
 
   @@index([chairmanId, status])
 }
+
+// Feed-forward check-ins (lib/feedForward.ts): the teacher's / SE's status on a note from an earlier offering, per checkpoint.
+model FeedForwardAck {
+  id         String   @id
+  noteId     String
+  courseId   String
+  userId     String
+  checkpoint String   // START | MID | END
+  status     String   // READ | APPLIED | PARTLY | NOT_APPLIED
+  comment    String?
+  at         DateTime @default(now())
+
+  @@index([courseId])
+}
+
+// Visiting teaching pay (lib/visitingPay.ts): the Dean's rules, sections marked Visiting, biometric day records, claims.
+model VisitingPayRule {
+  id                String   @id
+  chairmanId        String
+  departmentId      String?
+  basis             String   @default("LECTURE")
+  rateTheory        Float    @default(0)
+  rateLab           Float    @default(0)
+  phdBonusPct       Float    @default(0)
+  period            String   @default("MONTHLY")
+  lateGraceMin      Int      @default(10)
+  latePenaltyPct    Float    @default(0)
+  marksWithinDays   Int      @default(14)
+  requireAttendance Boolean  @default(true)
+  requireTopics     Boolean  @default(true)
+  updatedById       String
+  updatedAt         DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model VisitingAssignment {
+  id         String   @id
+  chairmanId String
+  courseId   String
+  userId     String
+  basis      String?
+  rate       Float?
+  note       String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@unique([courseId, userId])
+}
+
+model BiometricPunch {
+  id         String  @id
+  chairmanId String
+  userId     String
+  date       String
+  inAt       String?
+  outAt      String?
+
+  @@unique([userId, date])
+}
+
+model VisitingClaim {
+  id               String    @id
+  chairmanId       String
+  assignmentId     String
+  courseId         String
+  userId           String
+  periodStart      DateTime
+  periodEnd        DateTime
+  linesJson        String    @default("[]")
+  requirementsJson String    @default("[]")
+  amount           Float     @default(0)
+  adjustedAmount   Float?
+  status           String    @default("DRAFT")
+  teacherNote      String?
+  plNote           String?
+  deanNote         String?
+  paidRef          String?
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now())
+
+  @@unique([assignmentId, periodStart])
+  @@index([chairmanId, status])
+}

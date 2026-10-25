@@ -1069,8 +1069,13 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 },
 {
 "f": "migration_university_curriculum.sql",
-"d": "University curriculum: revisions, course plans, batch source, changes SE/OMC → BOS → OMC forwards; source badge",
-"t": "CurriculumRecommendation"
+"d": "University curriculum: revisions, course plans, batch source, changes SE/OMC → BOS → OMC forwards; source badge; feed-forward check-ins",
+"t": "FeedForwardAck"
+},
+{
+"f": "migration_visiting_pay.sql",
+"d": "Visiting teaching pay: Dean's rules, visiting sections, biometric records, claims (teacher → Program Lead → Dean → Accounts)",
+"t": "VisitingClaim"
 },
 {
 "f": "migration_weight_mincount.sql",

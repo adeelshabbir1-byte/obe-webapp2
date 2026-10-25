@@ -13,13 +13,14 @@ export async function POST(req: NextRequest) {
 
   const { rows, termLabels } = await getTeacherLoadReport(user.id, selectedTerms);
 
-  const summaryRows = rows.map((r) => ({
+  const summaryRows = rows.filter((r) => r.role !== "LAB_ENGINEER").map((r) => ({
     name: r.name, role: r.role === "SUBJECT_EXPERT" ? "SE" : "Instructor",
     ...Object.fromEntries(termLabels.map((label) => [`term_${label}`, r.byTerm[label] ?? 0])),
     assigned: r.assigned, external: r.externalLoadCount, externalNote: r.externalLoadNote || "",
     total: r.total, normalLoad: r.normalLoad, status: r.over ? "OVER" : "OK",
   }));
 
+  const labRows = rows.filter((r) => r.role === "LAB_ENGINEER" || r.labs > 0).map((r) => ({ name: r.name, labs: r.labs, courses: r.labDetails.map((d) => `${d.label} (${d.term})`).join("; "), theory: r.role === "LAB_ENGINEER" ? r.assigned : "" }));
   const detailRows: Record<string, any>[] = [];
   for (const r of rows) {
     for (const d of r.details) {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   return buildExcelResponse("teacher-load-report.xlsx", [
     {
-      name: "Load Summary",
+      name: "Instructors",
       columns: [
         { header: "Faculty", key: "name", width: 24 },
         { header: "Role", key: "role", width: 12 },
@@ -42,6 +43,11 @@ export async function POST(req: NextRequest) {
         { header: "Status", key: "status", width: 10 },
       ],
       rows: summaryRows,
+    },
+    {
+      name: "Lab instructors",
+      columns: [{ header: "Lab staff", key: "name", width: 24 }, { header: "Labs run", key: "labs", width: 10 }, { header: "Lab courses", key: "courses", width: 60 }, { header: "Theory sections", key: "theory", width: 14 }],
+      rows: labRows,
     },
     {
       name: "Assignment Detail",

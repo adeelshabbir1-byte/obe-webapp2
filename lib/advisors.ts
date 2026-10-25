@@ -12,6 +12,8 @@ export function advisorCandidatesWhere(lead: { id: string; managedById: string |
       { id: lead.id },
       { managedById: lead.id },
       ...(lead.departmentId ? [{ departmentId: lead.departmentId, OR: sameInstitute }] : []),
+      // Free teachers of other programs / departments of the same institute may advise too (listed after one's own).
+      ...sameInstitute,
     ],
   } as never;
 }

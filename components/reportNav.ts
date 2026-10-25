@@ -456,6 +456,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/coordinator/course-codes", "Course Codes", ["PROGRAM_COORDINATOR", "OMC"]],
   ["/coordinator/curriculum-sync", "University Curriculum vs National", ["PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"]],
   ["/curricula", "Curricula (National · University)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"]],
+  ["/visiting-pay", "Visiting Pay", ["CHAIRMAN", "DEAN", "PROGRAM_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "FINANCE_OFFICER"]],
   ["/curriculum-changes", "Curriculum Changes (OMC → BOS)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "SUBJECT_EXPERT"]],
   ["/chairman/affiliates", "Affiliated Colleges", ["CHAIRMAN"]],
   ["/affiliates/marks", "Affiliated Colleges — Marks", ["CHAIRMAN"]],

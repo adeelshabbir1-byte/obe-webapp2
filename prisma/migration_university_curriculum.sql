@@ -24,3 +24,9 @@ DO $$ BEGIN
   IF to_regclass('"CurriculumMeta"') IS NOT NULL THEN ALTER TABLE "CurriculumMeta" ADD COLUMN IF NOT EXISTS "sourceKind" TEXT; END IF;
   IF to_regclass('"MasterCurriculum"') IS NOT NULL THEN UPDATE "MasterCurriculum" SET "version" = TRIM(REPLACE("version", ' (your copy)', '')) WHERE "version" LIKE '%(your copy)%'; END IF;
 END $$;
+-- Feed-forward check-ins (start / midterm / end) on notes from earlier offerings.
+CREATE TABLE IF NOT EXISTS "FeedForwardAck" (
+  "id" TEXT PRIMARY KEY, "noteId" TEXT NOT NULL, "courseId" TEXT NOT NULL, "userId" TEXT NOT NULL, "checkpoint" TEXT NOT NULL,
+  "status" TEXT NOT NULL, "comment" TEXT, "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "FeedForwardAck_courseId_idx" ON "FeedForwardAck"("courseId");
