@@ -25,8 +25,12 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
   // load exactly the way the Assignment Matrix already avoids doing.
   const instructors = await prisma.user.findMany({ where: { role: { in: ["INSTRUCTOR", "SUBJECT_EXPERT"] }, canTeach: true, managedById: coordinatorId }, orderBy: { name: "asc" } });
 
+  // Every section these teachers teach anywhere in the institute — not only this program's courses: a teacher of this
+  // program may teach sections of another department's program (e.g. QR-I for BBA); those count toward their load too.
+  const chairmanId = (await prisma.user.findUnique({ where: { id: coordinatorId }, select: { managedById: true } }))?.managedById || "";
+  const ids = instructors.map((i) => i.id);
   const courses = await prisma.course.findMany({
-    where: { coordinatorId, isOffered: true },
+    where: { isOffered: true, OR: [{ coordinatorId }, { coordinator: { managedById: chairmanId }, OR: [{ instructorId: { in: ids } }, { sectionAssignments: { some: { instructorId: { in: ids } } } }] }] },
     include: { sectionAssignments: true, batch: true },
   });
   const relevantCourses = courses.filter((c) => matchesSelectedTerms(c, selectedTerms));
@@ -47,11 +51,13 @@ export async function getTeacherLoadReport(coordinatorId: string, selectedTerms:
     const byTerm: Record<string, number> = Object.fromEntries(termLabels.map((l) => [l, 0]));
 
     for (const c of relevantCourses) {
-      const a = c.sectionAssignments.find((x) => x.instructorId === i.id);
+      // A section assignment, or (a course run as its own section) the course's own instructor.
+      const a = c.sectionAssignments.find((x) => x.instructorId === i.id) || (c.instructorId === i.id && !c.sectionAssignments.length ? { sectionCount: 1 } : null);
       if (a) {
         assigned += a.sectionCount;
         const termLabel = `${c.offeredTermName} ${c.offeredTermYear}`;
-        details.push({ label: `${c.code} — ${c.title}`, term: termLabel, sections: a.sectionCount });
+        const other = c.coordinatorId !== coordinatorId ? ` (${c.batch?.degreeProgram || "other program"} — ${c.batch?.batchName || ""})` : "";
+        details.push({ label: `${c.code} — ${c.title}${other}`, term: termLabel, sections: a.sectionCount });
         if (termLabel in byTerm) byTerm[termLabel] += a.sectionCount;
       }
     }
