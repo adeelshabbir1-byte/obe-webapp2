@@ -4,6 +4,8 @@
 name: Timetable Solver
 on:
   push:
+    # branches must be listed too: with only "tags", GitHub skips branch pushes (paths only apply to branch pushes)
+    branches: ["**"]
     paths: ["desktop/timetable-solver/**", ".github/workflows/timetable-solver.yml"]
     tags: ["timetable-solver-v*"]
   pull_request:
@@ -25,10 +27,11 @@ jobs:
           cache: pip
           cache-dependency-path: desktop/timetable-solver/requirements*.txt
       - run: python -m pip install -r requirements-dev.txt
-      - name: Tests (the 600-session performance test runs too, with the runner's fewer cores allowed 120 s)
+      - name: Tests (including the 600-session performance test)
+        shell: bash
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q
+        run: python -X faulthandler -m pytest -q -p no:cacheprovider
 
   build:
     needs: test

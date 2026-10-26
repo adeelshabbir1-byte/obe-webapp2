@@ -76,3 +76,5 @@ def test_app_end_to_end(tmp_path, monkeypatch):
     assert check(p, assignment_from_solution(rows)) == []
     assert os.path.getsize(pdf) > 2000
     win.close()
+    win.deleteLater()  # tear Qt down here, not while Python is shutting down
+    app.processEvents()
