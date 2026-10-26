@@ -1,0 +1,88 @@
+# The desktop Timetable Solver (desktop/timetable-solver): tests and single-file builds for Windows, macOS and Linux on
+# every change to that folder (download them from the run's Artifacts). A tag "timetable-solver-v*" also publishes a
+# GitHub release with the three files attached — the portal's Timetable page links to the latest release.
+name: Timetable Solver
+on:
+  push:
+    paths: ["desktop/timetable-solver/**", ".github/workflows/timetable-solver.yml"]
+    tags: ["timetable-solver-v*"]
+  pull_request:
+    paths: ["desktop/timetable-solver/**"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: desktop/timetable-solver
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: desktop/timetable-solver/requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Tests (the 600-session performance test runs too, with the runner's fewer cores allowed 120 s)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+
+  build:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            file: OBEHUB-Timetable-Solver.exe
+            asset: OBEHUB-Timetable-Solver-windows.exe
+          - os: macos-latest
+            file: OBEHUB-Timetable-Solver
+            asset: OBEHUB-Timetable-Solver-macos
+          - os: ubuntu-latest
+            file: OBEHUB-Timetable-Solver
+            asset: OBEHUB-Timetable-Solver-linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python build.py
+      - name: Smoke test (command line solve on a generated file)
+        shell: bash
+        run: |
+          python -c "from ttsolver.sample import tiny_problem, write_constraints; write_constraints('c.xlsx', tiny_problem())"
+          ./dist/${{ matrix.file }} solve c.xlsx s.xlsx --time 10
+          ./dist/${{ matrix.file }} check c.xlsx s.xlsx
+      - shell: bash
+        run: mv "dist/${{ matrix.file }}" "dist/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: desktop/timetable-solver/dist/${{ matrix.asset }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/timetable-solver-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Timetable Solver ${{ github.ref_name }}
+          make_latest: true
+          files: assets/*
+          body: |
+            OBEHUB Timetable Solver — makes a clash-free timetable from the portal's timetable-constraints.xlsx.
+            Windows: download OBEHUB-Timetable-Solver-windows.exe and double-click it (no install needed).
+            macOS / Linux: download the file for your system, then `chmod +x` it and run it.
+            How to use it: desktop/timetable-solver/README.md

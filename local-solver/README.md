@@ -1,4 +1,9 @@
 # Local Timetable Solver
+> **Replaced by the OBEHUB Timetable Solver app in `desktop/timetable-solver/`** (download it from the portal's
+> Timetable page → "Download the desktop solver"). The new app never exports a timetable with clashes, explains in
+> plain words when none is possible, checks every result independently and lets you edit the timetable by hand. This
+> older program is kept for reference.
+
 > New to this? Follow **STEP_BY_STEP.md** — plain-language steps with screenshots-free instructions.
 
 A program that runs **on your own computer** (not the web portal) and builds the

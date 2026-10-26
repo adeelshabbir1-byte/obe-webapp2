@@ -556,12 +556,13 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option A: Generate Locally on Your PC (recommended for larger institutions)</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
-              Download your current setup as an Excel file, open the Local Timetable Solver program on your own
-              computer (no time limit — it is much stronger than the web option below), choose that file, then
-              upload the solution file it produces. The program lives in the <code>local-solver</code> folder of the
-              project.
+              Download your current setup as an Excel file, open it in the OBEHUB Timetable Solver on your own
+              computer, press Generate, save the solution file and upload it here. The solver guarantees a
+              clash-free timetable (or tells you in plain words why none is possible) and is much stronger than the
+              web option below.
             </p>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <a href="https://github.com/adeelshabbir1-byte/obe-webapp2/releases/latest" target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ textDecoration: "none" }}>Download the desktop solver</a>
               <DownloadButton url="/api/coordinator/timetable/download-constraints" label="1. Download Constraints (Excel)" className="btn btn-brass" />
               <LocalSolutionUploader onUploaded={(runId) => { setRunId(runId); loadRun(runId); }} />
             </div>
