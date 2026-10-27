@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { timetableActor, READ_ONLY } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { runGeneticAlgorithm } from "../../../../../lib/timetableGA";
@@ -12,8 +12,10 @@ export const maxDuration = 60;
 // very first poll already has a result. The client then repeatedly calls
 // the /continue endpoint until status flips to COMPLETED or the user stops.
 export async function POST(req: Request) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
   if (!chairmanId) return NextResponse.json({ error: "no institution on record for this account" }, { status: 400 });
 

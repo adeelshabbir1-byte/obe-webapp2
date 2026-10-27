@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { timetableActor } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
+import { retiredSectionIds } from "../../../../../lib/studentSections";
 
 // Read-only pre/post-generation health check for the Timetable Generator.
 // Answers, in one glance, the questions a Coordinator has to otherwise
@@ -23,19 +24,20 @@ import { prisma } from "../../../../../lib/db";
 // enough to flag "you don't have nearly enough room-hours" before running
 // the generator; not a substitute for the GA's own exact conflict check.
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = actor.user;
 
-  const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, include: { scheduleConfig: true } });
+  const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: actor.scope.coordinatorIds.concat("none") } }, include: { scheduleConfig: true } });
   const batchIds = batches.map((b) => b.id);
 
-  const [courses, groups, rooms, sections] = await Promise.all([
+  const [courses, groups, rooms, sectionsAll] = await Promise.all([
     prisma.course.findMany({ where: { batchId: { in: batchIds }, isOffered: true }, include: { sectionAssignments: true } }),
     prisma.courseEquivalenceGroup.findMany({
       where: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } },
       include: { sectionAssignments: true, members: { include: { course: true } } },
     }),
-    prisma.room.findMany({ where: { chairmanId: user.managedById || "" } }),
+    prisma.room.findMany({ where: actor.scope.roomWhere }),
     prisma.scheduleSection.findMany({
       where: {
         OR: [
@@ -50,6 +52,9 @@ export async function GET() {
       },
     }),
   ]);
+  // Sections replaced by a later auto-generate (student sections changed) are not counted.
+  const retired = await retiredSectionIds(sectionsAll.map((x) => x.id));
+  const sections = sectionsAll.filter((x) => !retired.has(x.id));
 
   // Courses/groups that would be silently skipped by auto-generate because
   // no instructor is assigned at all — same logic, read-only.

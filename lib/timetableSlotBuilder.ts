@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { Slot } from "./timetableGA";
 import { timetableScopeFor, busyElsewhere } from "./timetableScope";
+import { coversOf, retiredSectionIds, sectionKey, getMaxSection } from "./studentSections";
 
 // One run covers one "scope" (see timetableScope.ts): every department on the shared timetable together, or a single
 // department that keeps its own timetable and rooms. Teachers lent across scopes are kept free at the times they already
@@ -8,17 +9,19 @@ import { timetableScopeFor, busyElsewhere } from "./timetableScope";
 // Friday prayer break — no classes in this window (set here if the time ever changes).
 export const JUMMAH_BREAK = { day: "Fri", startHour: 13, endHour: 14 };
 
+// A slot's batchIds are STUDENT SECTIONS ("batchId#A"): Section A and Section B of one batch are different students and
+// may run at the same time; one student section is never in two places at once; a combined class lists every student
+// section it covers. StudentCount is the real size of what the section covers.
 export async function buildSlots(user: { id: string; managedById: string | null }) {
   const chairmanId = user.managedById;
   const scope = await timetableScopeFor(user);
+  const max = await getMaxSection(chairmanId || "", scope.key);
   const batches = await prisma.batch.findMany({ where: { coordinatorId: { in: scope.coordinatorIds } }, include: { scheduleConfig: true } });
   const batchIds = batches.map((b) => b.id);
   const configByBatch = new Map(batches.map((b) => [b.id, b.scheduleConfig]));
+  const batchLabel = new Map(batches.map((b) => [b.id, `${b.degreeProgram} — ${b.batchName}`]));
 
-  // Intersect allowed days and take the tightest hour window across every
-  // batch a slot covers — for a standalone course that's just its one
-  // batch's own config; for a combined group it's every member batch,
-  // since all of them must actually be free at whatever time is picked.
+  // Intersect allowed days and take the tightest hour window across every batch a slot covers.
   function resolveWindow(memberBatchIds: string[]) {
     let allowedDays: string[] | null = null;
     let dayStartHour = 8, dayEndHour = 16;
@@ -33,84 +36,56 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   }
 
   const [courseSections, groupSections, roomsAll] = await Promise.all([
-    // Only sections of courses that are offered NOW — a course that is no longer offered (an earlier semester of a batch that has moved on)
-    // can leave its old sections behind, and those must not take up room hours or be scheduled again.
-    prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds }, isOffered: true } }, include: { course: { include: { batch: true } } } }),
+    // Only sections of courses that are offered NOW — an earlier semester's leftover sections are not scheduled again.
+    prisma.scheduleSection.findMany({ where: { course: { batchId: { in: batchIds }, isOffered: true } }, include: { course: { select: { id: true, batchId: true, isOffered: true } } } }),
     prisma.scheduleSection.findMany({
       where: { group: { members: { some: { course: { batchId: { in: batchIds }, isOffered: true } } } } },
-      include: { group: { include: { members: { include: { course: { include: { batch: true } } } } } } },
+      include: { group: { include: { members: { include: { course: { select: { id: true, batchId: true, isOffered: true } } } } } } },
     }),
     prisma.room.findMany({ where: scope.roomWhere }),
   ]);
   // Multi-campus: batches are timetabled only into rooms of their own campus.
   const rooms = await (await import("./campus")).campusRooms(roomsAll, batchIds);
 
-  // "Visiting Faculty (to be decided)" is a placeholder, not one person: give every visiting section its own
-  // virtual teacher so two visiting courses can never be flagged as the same teacher clashing.
+  const all = [...courseSections, ...groupSections];
+  const retired = await retiredSectionIds(all.map((s) => s.id));
+  const live = all.filter((s) => !retired.has(s.id));
+  const covers = await coversOf(live as never, max);
+  const explicit = new Set(((await (prisma as unknown as Record<string, any>).scheduleSectionCover.findMany({ where: { scheduleSectionId: { in: live.map((s) => s.id).concat("none") } }, select: { scheduleSectionId: true } }).catch(() => [])) as { scheduleSectionId: string }[]).map((r) => r.scheduleSectionId));
+
+  // "Visiting Faculty (to be decided)" is a placeholder, not one person: every visiting section gets its own virtual teacher.
   const visitingIds = new Set<string>((await prisma.user.findMany({ where: { isVisitingPlaceholder: true, managedById: chairmanId || "" }, select: { id: true } })).map((u) => u.id));
   const teacherOf = (sectionId: string, instructorId: string) => (visitingIds.has(instructorId) ? `visiting:${sectionId}` : instructorId);
 
+  // Only GENUINE duplicates are left out: two sections covering the same student section of the same course and room type
+  // (e.g. a course's own section left over after it was combined). Sections made with student sections come first, then
+  // older ones; within that by label.
+  const ty = (t: string) => (t === "LAB" ? "LAB" : "TH");
+  const order = live.slice().sort((a, b) => Number(explicit.has(b.id)) - Number(explicit.has(a.id)) || a.sectionLabel.localeCompare(b.sectionLabel) || a.id.localeCompare(b.id));
+  const claimed = new Set<string>();
+  const kept: typeof live = [];
+  const duplicates: string[] = [];
+  for (const s of order) {
+    const cv = (covers.get(s.id) || []).filter((c) => batchIds.includes(c.batchId));
+    if (!cv.length) continue;
+    const courseFor = (bId: string) => ("course" in s && s.course ? [s.course.id] : (("group" in s && s.group?.members) || []).filter((m) => m.course.batchId === bId && m.course.isOffered).map((m) => m.course.id));
+    const keys = cv.flatMap((c) => courseFor(c.batchId).map((cid) => `${cid}|${ty(s.roomTypeNeeded)}|${sectionKey(c.batchId, c.label)}`));
+    if (keys.some((k) => claimed.has(k))) { duplicates.push(s.id); continue; }
+    keys.forEach((k) => claimed.add(k));
+    kept.push(s);
+  }
+
   const slots: Slot[] = [];
   let slotIndex = 0;
-
-  // A batch attends ONE section of a course. Stale/duplicate/parallel sections (a course's own section left over after it was combined,
-  // or several sections of one combined group) would otherwise each demand their own time for the same batch and make a clash-free
-  // timetable impossible. So: one section per group+type, and a course covered by a group isn't also scheduled on its own.
-  const ty = (t: string) => (t === "LAB" ? "LAB" : "TH");
-  const byLabel = (a: { sectionLabel: string; id: string }, b: { sectionLabel: string; id: string }) => a.sectionLabel.localeCompare(b.sectionLabel) || a.id.localeCompare(b.id);
-  const seenGroup = new Set<string>();
-  const keptGroupSections = [...groupSections].sort(byLabel).filter((s) => {
-    if (!s.groupId) return false;
-    const k = `${s.groupId}|${ty(s.roomTypeNeeded)}`;
-    if (seenGroup.has(k)) return false;
-    seenGroup.add(k);
-    return true;
-  });
-  const covered = new Set<string>();
-  for (const s of keptGroupSections) for (const m of s.group?.members || []) covered.add(`${m.courseId}|${ty(s.roomTypeNeeded)}`);
-  const seenCourse = new Set<string>();
-  const keptCourseSections = [...courseSections].sort(byLabel).filter((s) => {
-    const k = `${s.courseId}|${ty(s.roomTypeNeeded)}`;
-    if (covered.has(k) || seenCourse.has(k)) return false;
-    seenCourse.add(k);
-    return true;
-  });
-
-  for (const s of keptCourseSections) {
-    if (!s.course?.batch) continue;
-    const { allowedDays, dayStartHour, dayEndHour } = resolveWindow([s.course.batch.id]);
+  for (const s of kept) {
+    const cv = (covers.get(s.id) || []).filter((c) => batchIds.includes(c.batchId));
+    const keys = cv.map((c) => sectionKey(c.batchId, c.label));
+    const labels = cv.map((c) => `${batchLabel.get(c.batchId) || c.batchId} — Section ${c.label}`);
+    const { allowedDays, dayStartHour, dayEndHour } = resolveWindow(Array.from(new Set(cv.map((c) => c.batchId))));
+    const studentCount = cv.reduce((a, c) => a + c.size, 0);
     for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
       slots.push({
-        slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: s.courseId, batchIds: [s.course.batch.id],
-        instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
-        studentCount: s.course.batch.studentCount, allowedDays, dayStartHour, dayEndHour,
-      });
-    }
-  }
-
-  // A group's combined enrollment is split evenly across however many
-  // sections currently exist for it. This is an approximation, not a real
-  // roster — nothing yet tracks which specific student is in which
-  // section of a combined class — but it keeps the room-capacity check
-  // honest instead of assuming every one of N sections holds the group's
-  // FULL combined total.
-  const sectionsPerGroup = new Map<string, number>();
-  for (const s of groupSections) {
-    if (!s.groupId) continue;
-    sectionsPerGroup.set(s.groupId, (sectionsPerGroup.get(s.groupId) || 0) + 1);
-  }
-
-  for (const s of keptGroupSections) {
-    if (!s.groupId || !s.group) continue;
-    const memberBatches = s.group.members.filter((m) => m.course.isOffered).map((m) => m.course.batch).filter((b): b is NonNullable<typeof b> => !!b);
-    const memberBatchIdsInScope = memberBatches.map((b) => b.id).filter((id) => batchIds.includes(id));
-    if (memberBatchIdsInScope.length === 0) continue; // none of this group's member batches belong to this coordinator
-    const combinedTotal = memberBatches.reduce((sum, b) => sum + b.studentCount, 0);
-    const studentCount = combinedTotal; // one scheduled section per group, so it holds the whole combined class
-    const { allowedDays, dayStartHour, dayEndHour } = resolveWindow(memberBatches.map((b) => b.id));
-    for (let occurrence = 0; occurrence < s.sessionsPerWeek; occurrence++) {
-      slots.push({
-        slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: null, batchIds: memberBatchIdsInScope,
+        slotIndex: slotIndex++, scheduleSectionId: s.id, courseId: s.courseId, batchIds: keys, batchLabels: labels,
         instructorId: teacherOf(s.id, s.instructorId), roomTypeNeeded: s.roomTypeNeeded, durationHours: s.sessionDurationMinutes / 60,
         studentCount, allowedDays, dayStartHour, dayEndHour,
       });
@@ -136,5 +111,5 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   }
   const roomsForGA = rooms.map((r) => ({ id: r.id, type: r.type, capacity: r.capacity }));
 
-  return { slots, rooms: roomsForGA, unavailability, scope };
+  return { slots, rooms: roomsForGA, unavailability, scope, max, duplicates };
 }

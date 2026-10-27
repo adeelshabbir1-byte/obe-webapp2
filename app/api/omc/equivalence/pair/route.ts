@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
-import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
+import { pairForEquivalence, combineRefusal } from "../../../../../lib/equivalencePairing";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    const refused = await combineRefusal(courseIdA, courseIdB, user.managedById);
+    if (refused) return NextResponse.json({ error: `These classes can't be taught together: ${refused} students. Each is taught as its own section(s).` }, { status: 400 });
     const result = await pairForEquivalence(courseIdA, courseIdB, user.managedById, user.id);
     if (!result) return NextResponse.json({ error: "course not found" }, { status: 404 });
 

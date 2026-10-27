@@ -16,6 +16,7 @@ export type Slot = {
   // check below tests for any shared batch, not equality of a single id.
   batchIds: string[];
   preferredDays?: string[]; // instructor's preferred days (soft — only the local solver weighs it)
+  batchLabels?: string[]; // readable name of each entry of batchIds ("BSCS Fall 2025 — Section A")
   instructorId: string;
   roomTypeNeeded: string;
   durationHours: number;

@@ -8413,3 +8413,45 @@ model OmcPanel {
 
   @@index([chairmanId, term])
 }
+
+// Student sections for the department timetable (prisma/migration_student_sections.sql) — side tables only.
+model BatchStudentSection {
+  batchId   String
+  label     String
+  size      Int      @default(0)
+  updatedAt DateTime @default(now())
+
+  @@id([batchId, label])
+}
+model StudentSectionMember {
+  studentId String   @id
+  batchId   String
+  label     String
+  manual    Boolean  @default(false)
+  updatedAt DateTime @default(now())
+
+  @@index([batchId, label])
+}
+model ScheduleSectionCover {
+  scheduleSectionId String
+  batchId           String
+  label             String
+  size              Int    @default(0)
+
+  @@id([scheduleSectionId, batchId, label])
+  @@index([batchId])
+}
+model ScheduleSectionRetired {
+  scheduleSectionId String   @id
+  note              String?
+  at                DateTime @default(now())
+}
+model TimetableSetting {
+  chairmanId  String
+  scopeKey    String
+  maxSection  Int      @default(50)
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@id([chairmanId, scopeKey])
+}

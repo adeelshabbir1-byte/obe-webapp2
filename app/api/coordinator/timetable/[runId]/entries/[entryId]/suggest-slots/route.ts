@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../../../lib/session";
+import { timetableActor } from "../../../../../../../../lib/timetableAccess";
 import { JUMMAH_BREAK } from "../../../../../../../../lib/timetableSlotBuilder";
+import { sectionKeysById, coversOf } from "../../../../../../../../lib/studentSections";
 import { prisma } from "../../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../../lib/reportScope";
 
@@ -26,8 +27,9 @@ function batchIdsFor(section: { course: { batch: { id: string } | null } | null;
 // the existing PUT .../entries/[entryId] endpoint (room choice is applied
 // separately there — this just names which room(s) work for that slot).
 export async function GET(req: Request, { params }: { params: { runId: string; entryId: string } }) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
 
   const run = await prisma.timetableRun.findUnique({ where: { id: params.runId } });
@@ -47,8 +49,12 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
     prisma.timetableEntry.findMany({ where: { timetableRunId: params.runId, id: { not: entry.id } }, include: { scheduleSection: { include: sectionInclude } } }),
     prisma.facultyUnavailability.findMany({ where: { facultyId: instructorId } }),
     prisma.batchScheduleConfig.findMany({ where: { batchId: { in: batchIds } } }),
-    prisma.room.findMany({ where: { chairmanId, type: entry.scheduleSection.roomTypeNeeded } }),
+    prisma.room.findMany({ where: { AND: [actor.scope.roomWhere, { type: entry.scheduleSection.roomTypeNeeded }] } }),
   ]);
+  // Clashes are per student section ("batchId#A"): Section B of the same batch may be taught at the same time.
+  const keyMap = await sectionKeysById([entry.scheduleSectionId, ...otherEntries.map((o) => o.scheduleSectionId)]);
+  const myKeys = keyMap.get(entry.scheduleSectionId) || [];
+  const mySize = ((await coversOf([{ id: entry.scheduleSection.id, course: entry.scheduleSection.course, group: entry.scheduleSection.group }])).get(entry.scheduleSection.id) || []).reduce((a, c) => a + c.size, 0);
 
   // Allowed days/hours = the INTERSECTION across every batch this class
   // affects (a combined-group section serves more than one batch at once,
@@ -80,10 +86,10 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
       const instructorUnavailable = sameDayUnavail.some((u) => overlaps(start, end, u.startHour, u.endHour));
       if (instructorUnavailable) continue;
       if (day === JUMMAH_BREAK.day && overlaps(start, end, JUMMAH_BREAK.startHour, JUMMAH_BREAK.endHour)) continue; // Jummah break
-      const batchBusy = sameDayOthers.some((o) => overlaps(start, end, o.startHour, o.endHour) && batchIdsFor(o.scheduleSection).some((id) => batchIds.includes(id)));
+      const batchBusy = sameDayOthers.some((o) => overlaps(start, end, o.startHour, o.endHour) && (keyMap.get(o.scheduleSectionId) || []).some((k) => myKeys.includes(k)));
       if (batchBusy) continue;
 
-      const freeRooms = candidateRooms.filter((r) => !sameDayOthers.some((o) => o.roomId === r.id && overlaps(start, end, o.startHour, o.endHour)));
+      const freeRooms = candidateRooms.filter((r) => r.capacity >= mySize && !sameDayOthers.some((o) => o.roomId === r.id && overlaps(start, end, o.startHour, o.endHour)));
       if (freeRooms.length === 0) continue;
 
       candidates.push({ dayOfWeek: day, startHour: start, endHour: end, roomIds: freeRooms.map((r) => r.id), roomNames: freeRooms.map((r) => r.name) });

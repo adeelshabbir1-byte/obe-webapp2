@@ -100,3 +100,23 @@ def test_missing_sheet_or_column(tmp_path):
     wb.save(f)
     errs = read_constraints(f).errors
     assert any("no sheet named Rooms" in e for e in errs)
+
+
+def test_a_section_over_the_limit_is_reported():
+    p = Problem([Slot(0, "S", ["B1#A"], "T", "THEORY", 2, 64, ["Mon", "Tue"], 16, 32, label="CS-201 Section A")], [Room("R1", "THEORY", 80)], [])
+    reasons = precheck(p)
+    assert any("CS-201 Section A has 64 students — over the 50 limit; regenerate sections on the portal" in r for r in reasons), reasons
+    assert not Solver(p, fast(5)).solve().ok
+    assert precheck(p, 70) == []  # a higher limit set in Settings
+
+
+def test_sections_of_one_batch_may_run_together_but_not_one_section_twice():
+    from ttsolver.model import Placement
+    # Section A and Section B of batch B1 at the same time: allowed (different students).
+    p = Problem([Slot(0, "S1", ["B1#A"], "T1", "THEORY", 2, 40, ["Mon"], 16, 32, label="CS-101 Section A"),
+                 Slot(1, "S2", ["B1#B"], "T2", "THEORY", 2, 40, ["Mon"], 16, 32, label="CS-101 Section B")], [Room("R1", "THEORY", 50), Room("R2", "THEORY", 50)], [])
+    assert check(p, {0: Placement("Mon", 16, "R1"), 1: Placement("Mon", 16, "R2")}) == []
+    # Section A in two classes at once (a combined class that also covers B1#A): a clash.
+    q = Problem([Slot(0, "S1", ["B1#A"], "T1", "THEORY", 2, 40, ["Mon"], 16, 32, label="CS-101 Section A"),
+                 Slot(1, "S3", ["B1#A", "B2#A"], "T2", "THEORY", 2, 50, ["Mon"], 16, 32, label="MA-101 Combined 1")], [Room("R1", "THEORY", 50), Room("R2", "THEORY", 50)], [])
+    assert [v.rule for v in check(q, {0: Placement("Mon", 16, "R1"), 1: Placement("Mon", 17, "R2")})] == [7]

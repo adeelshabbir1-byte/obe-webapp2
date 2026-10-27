@@ -38,8 +38,12 @@ def _window(problem: Problem, slots: list[Slot], teacher: str | None) -> int:
     return sum(len(v) for v in by_day.values())
 
 
-def precheck(problem: Problem) -> list[str]:
+def precheck(problem: Problem, max_section: int = 50) -> list[str]:
     reasons: list[str] = []
+    # The portal never makes a section of more than its limit (default 50); a bigger one means the file is out of date.
+    for s in problem.slots:
+        if max_section and s.students > max_section:
+            reasons.append(f"{s.name} has {s.students} students — over the {max_section} limit; regenerate sections on the portal (Timetable → Sections → Auto-generate sections).")
     rooms_by_type: dict[str, list] = {}
     for r in problem.rooms:
         rooms_by_type.setdefault(r.type, []).append(r)

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
+import { sectionKeysById } from "../../../../../lib/studentSections";
 
 export async function GET(req: Request, { params }: { params: { runId: string } }) {
   const user = await getAuthenticatedUser();
@@ -29,6 +30,9 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
     orderBy: [{ dayOfWeek: "asc" }, { startHour: "asc" }],
   });
 
+  // Which student sections each entry is for (a combined class: every member's), so the batch grid shows a combined
+  // class under every batch it serves and can be filtered to Section A / B.
+  const keyMap = await sectionKeysById(entries.map((e) => e.scheduleSectionId));
   return NextResponse.json({
     run: { id: run.id, hardViolations: run.hardViolations, generations: run.generations, notes: run.notes, createdAt: run.createdAt },
     entries: entries.map((e) => {
@@ -48,6 +52,8 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
         sectionLabel: s.sectionLabel,
         instructorId: s.instructorId, instructorName: s.instructor.name,
         batchId, batchLabel,
+        batchIds: Array.from(new Set([...(s.course?.batch ? [s.course.batch.id] : memberBatches.map((x) => x.id))])),
+        sectionKeys: keyMap.get(e.scheduleSectionId) || [],
         roomId: e.roomId,
       };
     }),

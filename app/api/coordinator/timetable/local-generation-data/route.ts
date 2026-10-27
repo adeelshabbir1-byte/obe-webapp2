@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { timetableActor, READ_ONLY } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
@@ -7,8 +7,9 @@ import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
 // GET: everything the local script needs to run the GA on the user's own
 // machine — the same data buildSlots() would use server-side.
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = actor.user;
 
   const { slots, rooms, unavailability } = await buildSlots(user);
   return NextResponse.json({ slots, rooms, unavailability });
@@ -17,8 +18,10 @@ export async function GET() {
 // POST: accepts a chromosome computed locally and saves it as a completed
 // TimetableRun, exactly like the server-side generator would.
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
   if (!chairmanId) return NextResponse.json({ error: "no institution on record for this account" }, { status: 400 });
 

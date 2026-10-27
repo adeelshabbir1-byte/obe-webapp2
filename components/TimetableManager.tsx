@@ -11,8 +11,8 @@ import LocalSolutionUploader from "./LocalSolutionUploader";
 type Room = { id: string; name: string; type: string; capacity: number };
 type Batch = { id: string; label: string; workingDays: string[]; dailyStartHour: number; dailyEndHour: number };
 type Faculty = { id: string; name: string };
-type Section = { id: string; courseCode: string; courseTitle: string; batchLabel: string; instructorId: string; instructorName: string; sectionLabel: string; sessionsPerWeek: number; sessionDurationMinutes: number; roomTypeNeeded: string };
-type Entry = { id: string; day: string; startHour: number; endHour: number; roomName: string; roomType: string; courseCode: string; courseTitle: string; sectionLabel: string; instructorId: string; instructorName: string; batchId: string; batchLabel: string; roomId: string };
+type Section = { id: string; courseCode: string; courseTitle: string; batchLabel: string; instructorId: string; instructorName: string; sectionLabel: string; sessionsPerWeek: number; sessionDurationMinutes: number; roomTypeNeeded: string; size?: number; overLimit?: boolean; toAssign?: boolean; mine?: boolean };
+type Entry = { id: string; day: string; startHour: number; endHour: number; roomName: string; roomType: string; courseCode: string; courseTitle: string; sectionLabel: string; instructorId: string; instructorName: string; batchId: string; batchLabel: string; roomId: string; batchIds?: string[]; sectionKeys?: string[] };
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TABS = ["Rooms", "Batch Schedules", "Sections", "Faculty Availability", "Generate & View"] as const;
@@ -22,8 +22,13 @@ function formatHour(h: number) {
   return `${hour.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
 }
 
-export default function TimetableManager({ rooms: initialRooms, batches, faculty, latestRunId }: {
+// The department timetable. canEdit is false for a Program Lead when the department has a Department Coordinator: the
+// set-up controls are then read-only and the grid shows their own batches. batchSections: each batch's student sections.
+type GenResult = { created: number; kept: number; adopted: number; retired: number; max: number; toAssign: string[]; extraUnits: string[]; groupNotes: { group: string; note: string }[]; splitBatches: string[] };
+const FS = { border: 0, padding: 0, margin: 0, minWidth: 0 } as const;
+export default function TimetableManager({ rooms: initialRooms, batches, faculty, latestRunId, canEdit = true, ownBatchIds = null, maxSection: initialMax = 50, batchSections = {} }: {
   rooms: Room[]; batches: Batch[]; faculty: Faculty[]; latestRunId: string | null;
+  canEdit?: boolean; ownBatchIds?: string[] | null; maxSection?: number; batchSections?: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<typeof TABS[number]>("Rooms");
@@ -72,6 +77,14 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   // Schedule sections
   const [sections, setSections] = useState<Section[]>([]);
   const [skippedNoInstructor, setSkippedNoInstructor] = useState<{ code: string; title: string }[]>([]);
+  const [genResult, setGenResult] = useState<GenResult | null>(null);
+  const [maxSection, setMaxSection] = useState(initialMax);
+  async function saveMax(v: string) {
+    const res = await fetch("/api/coordinator/timetable-settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxSection: v }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(data.error || "Could not save."); return; }
+    setMaxSection(data.maxSection); setError("");
+  }
   async function loadSections() {
     const res = await fetch("/api/coordinator/schedule-sections");
     const data = await res.json();
@@ -82,10 +95,11 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
   async function autoGenerateSections() {
     setLoading(true); setError("");
     try {
-      const res = await withProgress("Creating sections for all offered courses…", () => fetch("/api/coordinator/schedule-sections/auto-generate", { method: "POST" }));
+      const res = await withProgress("Creating sections for every offered course of the department…", () => fetch("/api/coordinator/schedule-sections/auto-generate", { method: "POST" }));
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      setSkippedNoInstructor(data.skippedNoInstructor || []);
+      setSkippedNoInstructor([]);
+      setGenResult(data);
       await loadSections(); setLoading(false);
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
@@ -270,9 +284,19 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
     if (res.ok) { setRunStatus(data.status); await loadRun(runId); }
   }
 
-  const groupKeyFor = (e: Entry) => (viewMode === "batch" ? e.batchLabel : viewMode === "instructor" ? e.instructorName : viewMode === "room" ? e.roomName : `${e.courseCode} — ${e.courseTitle}`);
-  const groups = Array.from(new Set(entries.map(groupKeyFor))).sort();
-  const filteredEntries = viewFilter ? entries.filter((e) => groupKeyFor(e) === viewFilter) : entries;
+  // By batch: a combined class shows under every batch it serves; a batch in sections can be narrowed to Section A / B.
+  const batchLabelOf = new Map(batches.map((b) => [b.id, b.label]));
+  const entryBatches = (e: Entry) => (e.batchIds && e.batchIds.length ? e.batchIds : [e.batchId]);
+  const own = ownBatchIds && !canEdit ? new Set(ownBatchIds) : null;
+  const visible = own ? entries.filter((e) => entryBatches(e).some((b) => own.has(b))) : entries;
+  const groupKeyFor = (e: Entry) => (viewMode === "instructor" ? e.instructorName : viewMode === "room" ? e.roomName : `${e.courseCode} — ${e.courseTitle}`);
+  const groups: { key: string; label: string }[] = viewMode === "batch"
+    ? Array.from(new Set(visible.flatMap(entryBatches))).filter((b) => !own || own.has(b)).map((b) => ({ key: b, label: batchLabelOf.get(b) || b })).sort((a, b) => a.label.localeCompare(b.label))
+    : Array.from(new Set(visible.map(groupKeyFor))).sort().map((g) => ({ key: g, label: g }));
+  const [sectionFilter, setSectionFilter] = useState("");
+  const sectionsOfFilter = viewMode === "batch" && viewFilter ? batchSections[viewFilter] || [] : [];
+  const filteredEntries = (viewFilter ? visible.filter((e) => (viewMode === "batch" ? entryBatches(e).includes(viewFilter) : groupKeyFor(e) === viewFilter)) : visible)
+    .filter((e) => !sectionFilter || !e.sectionKeys || !e.sectionKeys.some((k) => k.startsWith(`${viewFilter}#`)) || e.sectionKeys.includes(`${viewFilter}#${sectionFilter}`));
 
   const GRID_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const usedDays = GRID_DAYS.filter((d) => filteredEntries.some((e) => e.day === d));
@@ -315,6 +339,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
       </div>
 
       {tab === "Rooms" && (
+        <fieldset disabled={!canEdit} style={FS}>
         <div className="card">
           <h3 style={{ fontSize: 14, marginBottom: 10 }}>Rooms & Labs</h3>
           <table>
@@ -339,9 +364,11 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             <button className="btn btn-brass" type="submit" disabled={loading}>Add Room</button>
           </form>
         </div>
+        </fieldset>
       )}
 
       {tab === "Batch Schedules" && (
+        <fieldset disabled={!canEdit} style={FS}>
         <div className="card">
           <h3 style={{ fontSize: 14, marginBottom: 10 }}>Per-Batch Scheduling Window</h3>
           {batchConfigs.map((b) => (
@@ -370,13 +397,33 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             </div>
           ))}
         </div>
+        </fieldset>
       )}
 
       {tab === "Sections" && (
+        <fieldset disabled={!canEdit} style={FS}>
         <div className="card" style={{ overflowX: "auto" }}>
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>Schedulable Sections</h3>
-          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>One row per (course, instructor) pair that needs a time slot. Auto-generate from your offered courses, then adjust sessions/week, duration, or room type as needed.</p>
-          <button onClick={autoGenerateSections} disabled={loading} className="btn btn-brass" style={{ marginBottom: 12 }}>Auto-Generate from Offered Courses</button>
+          <p style={{ fontSize: 11.5, color: "var(--slate)", marginBottom: 10 }}>One row per class that needs a time slot: each student section of every offered course of the department, and the combined classes. Auto-generate, then adjust sessions/week, duration or room type as needed.</p>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+            <button onClick={autoGenerateSections} disabled={loading} className="btn btn-brass">Auto-generate sections (every program)</button>
+            <label style={{ fontSize: 12.5 }}>Most students in one section <input type="number" min={5} max={500} defaultValue={maxSection} key={maxSection} onBlur={(e) => { if (Number(e.target.value) !== maxSection) saveMax(e.target.value); }} style={{ width: 64, padding: "3px 5px", border: "1px solid var(--line)" }} aria-label="Section limit" /></label>
+            <span style={{ fontSize: 11.5, color: "var(--slate)" }}>A batch over {maxSection} is split into Section A, B, … (the same students in every course); a combined class never goes over {maxSection}.</span>
+          </div>
+          {genResult && (
+            <div style={{ background: "#EEF7EF", border: "1px solid var(--sage)", borderRadius: 4, padding: "8px 12px", marginBottom: 12, fontSize: 12 }}>
+              <b>{genResult.created} created · {genResult.kept} kept · {genResult.adopted} updated{genResult.retired ? ` · ${genResult.retired} retired (no longer fit)` : ""}</b>
+              {genResult.splitBatches.length > 0 && <div style={{ marginTop: 4 }}>Batches in sections: {genResult.splitBatches.join(" | ")}</div>}
+              {genResult.groupNotes.length > 0 && <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>{genResult.groupNotes.map((g, i) => <li key={i}>{g.group}: {g.note}</li>)}</ul>}
+              {genResult.extraUnits.length > 0 && <ul style={{ margin: "4px 0 0 18px", padding: 0, color: "#8A5A0F" }}>{genResult.extraUnits.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+            </div>
+          )}
+          {genResult && genResult.toAssign.length > 0 && (
+            <div style={{ background: "#FBE2DF", border: "1px solid var(--rust)", borderRadius: 4, padding: "8px 12px", marginBottom: 12, fontSize: 12 }}>
+              <b>{genResult.toAssign.length} section{genResult.toAssign.length > 1 ? "s" : ""} to be assigned</b> — made for &ldquo;Visiting Faculty (to be decided)&rdquo; because the course&apos;s instructor assignment covers fewer sections. Assign a teacher on the Section Assignment Matrix, then auto-generate again.
+              <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>{genResult.toAssign.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            </div>
+          )}
           {skippedNoInstructor.length > 0 && (
             <div style={{ background: "#FBE2DF", border: "1px solid var(--rust)", borderRadius: 4, padding: "8px 12px", marginBottom: 12, fontSize: 12 }}>
               <b>{skippedNoInstructor.length} offered course{skippedNoInstructor.length > 1 ? "s" : ""} skipped</b> — no instructor is assigned yet, so {skippedNoInstructor.length > 1 ? "they" : "it"} cannot appear anywhere on the generated timetable. Assign an instructor on the Primary Instructor Assignment page, then click Auto-Generate again.
@@ -386,12 +433,14 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             </div>
           )}
           <table>
-            <thead><tr><th>Course</th><th>Batch</th><th>Instructor</th><th>Section</th><th>Sessions/Week</th><th>Duration (min)</th><th>Room Type</th><th></th></tr></thead>
+            <thead><tr><th>Course</th><th>Students (sections covered)</th><th>Size</th><th>Instructor</th><th>Section</th><th>Sessions/Week</th><th>Duration (min)</th><th>Room Type</th><th></th></tr></thead>
             <tbody>
-              {sections.length === 0 && <tr><td colSpan={8} style={{ color: "var(--slate)" }}>None yet — click "Auto-Generate" above.</td></tr>}
+              {sections.length === 0 && <tr><td colSpan={9} style={{ color: "var(--slate)" }}>None yet — click "Auto-Generate" above.</td></tr>}
               {sections.map((s) => (
                 <tr key={s.id}>
-                  <td>{s.courseCode} <span style={{ color: "var(--slate)", fontSize: 11 }}>— {s.courseTitle}</span></td><td style={{ fontSize: 11 }}>{s.batchLabel}</td><td>{s.instructorName}</td><td>{s.sectionLabel}</td>
+                  <td>{s.courseCode} <span style={{ color: "var(--slate)", fontSize: 11 }}>— {s.courseTitle}</span></td><td style={{ fontSize: 11 }}>{s.batchLabel}</td>
+                  <td style={{ fontWeight: 700, color: s.overLimit ? "var(--rust)" : undefined }} title={s.overLimit ? `Over the ${maxSection} limit — auto-generate sections to split it` : undefined}>{s.size ?? "—"}{s.overLimit ? " ⚠" : ""}</td>
+                  <td>{s.instructorName}{s.toAssign && <span className="badge badge-warn" style={{ marginLeft: 4 }}>to be assigned</span>}</td><td>{s.sectionLabel}</td>
                   <td><input type="number" min={1} defaultValue={s.sessionsPerWeek} onBlur={(e) => updateSection(s.id, "sessionsPerWeek", e.target.value)} style={{ width: 50, padding: "3px 5px", border: "1px solid var(--line)" }} /></td>
                   <td><input type="number" min={30} step={15} defaultValue={s.sessionDurationMinutes} onBlur={(e) => updateSection(s.id, "sessionDurationMinutes", e.target.value)} style={{ width: 60, padding: "3px 5px", border: "1px solid var(--line)" }} /></td>
                   <td>
@@ -405,9 +454,11 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             </tbody>
           </table>
         </div>
+        </fieldset>
       )}
 
       {tab === "Faculty Availability" && (
+        <fieldset disabled={!canEdit} style={FS}>
         <>
           <div className="card">
             <label style={{ fontSize: 11, color: "var(--slate)", display: "block", marginBottom: 4 }}>Faculty Member</label>
@@ -432,6 +483,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             <AvailabilityGrid facultyId={unavailFacultyId} existingUnavailable={facultyUnavailable} />
           )}
         </>
+        </fieldset>
       )}
 
       {tab === "Generate & View" && (
@@ -553,6 +605,7 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             )}
           </div>
 
+          <fieldset disabled={!canEdit} style={FS}>
           <div className="card">
             <h3 style={{ fontSize: 14, marginBottom: 10 }}>Option A: Generate Locally on Your PC (recommended for larger institutions)</h3>
             <p style={{ fontSize: 12, color: "var(--slate)", marginBottom: 12 }}>
@@ -603,6 +656,8 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
             )}
           </div>
 
+          </fieldset>
+
           {entries.length > 0 && (
             <div className="card" style={{ overflowX: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
@@ -610,16 +665,22 @@ export default function TimetableManager({ rooms: initialRooms, batches, faculty
                 {runId && <DownloadButton url={`/api/coordinator/timetable/${runId}/export`} label="Export to Excel" className="btn btn-brass" />}
               </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-                <select value={viewMode} onChange={(e) => { setViewMode(e.target.value as any); setViewFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
+                <select value={viewMode} onChange={(e) => { setViewMode(e.target.value as any); setViewFilter(""); setSectionFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)" }}>
                   <option value="batch">By Batch / Degree Program</option>
                   <option value="instructor">By Instructor</option>
                   <option value="room">By Room</option>
                   <option value="course">By Course</option>
                 </select>
-                <select value={viewFilter} onChange={(e) => setViewFilter(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", minWidth: 200 }}>
-                  <option value="">— All —</option>
-                  {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+                <select value={viewFilter} onChange={(e) => { setViewFilter(e.target.value); setSectionFilter(""); }} style={{ padding: "6px 8px", border: "1px solid var(--line)", minWidth: 200 }} aria-label="Show">
+                  <option value="">{own ? "— All my batches —" : "— All —"}</option>
+                  {groups.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
                 </select>
+                {sectionsOfFilter.length > 1 && (
+                  <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)" }} aria-label="Section">
+                    <option value="">Whole batch</option>
+                    {sectionsOfFilter.map((l) => <option key={l} value={l}>Section {l}</option>)}
+                  </select>
+                )}
               </div>
 
               <table>

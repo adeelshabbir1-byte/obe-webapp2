@@ -17,6 +17,15 @@ export const DEPT_COORDINATOR_APIS = [
   "/api/loans",
 ];
 
+// The timetable is the whole department's, so on these the coordinator always works as themself (never as the
+// Program Lead they picked): the page and its services cover every program of the department.
+export const DEPT_WIDE_PATHS = [
+  "/coordinator/timetable", "/api/coordinator/timetable", "/api/coordinator/schedule-sections", "/api/coordinator/rooms",
+  "/api/coordinator/batch-schedule-config", "/api/coordinator/faculty-unavailability", "/api/coordinator/faculty-preferred-days",
+  "/api/coordinator/timetable-settings",
+];
+
 export function isDeptCoordinatorPath(path: string): boolean {
+  if (DEPT_WIDE_PATHS.some((p) => path === p || path.startsWith(p + "/"))) return false;
   return [...DEPT_COORDINATOR_PAGES, ...DEPT_COORDINATOR_APIS].some((p) => path === p || path.startsWith(p + "/"));
 }

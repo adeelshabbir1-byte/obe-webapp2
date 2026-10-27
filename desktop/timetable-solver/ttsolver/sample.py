@@ -45,7 +45,8 @@ def generated_problem(n_slots: int = 600, n_rooms: int = 40, n_teachers: int = 8
     sec = 0
     while len(slots) < n_slots:
         b, size = batches[sec % n_batches]
-        combined = rnd.random() < 0.08
+        # a combined class only while the two batches together stay within the 50-student section limit
+        combined = rnd.random() < 0.08 and size + batches[(sec + 1) % n_batches][1] <= 50
         bids = [b] + ([batches[(sec + 1) % n_batches][0]] if combined else [])
         students = size + (batches[(sec + 1) % n_batches][1] if combined else 0)
         lab = rnd.random() < 0.15 and not combined
@@ -78,7 +79,7 @@ def tiny_problem() -> Problem:
 
     slots = [
         S(0, "CS101-A", ["B1"], "Khan", "THEORY", 2, 35, label="CS101 A"), S(1, "CS101-A", ["B1"], "Khan", "THEORY", 2, 35, label="CS101 A"),
-        S(2, "MA101-A", ["B1", "B2"], "Ali", "THEORY", 3, 55, label="MA101 A (combined)"), S(3, "MA101-A", ["B1", "B2"], "Ali", "THEORY", 3, 55, label="MA101 A (combined)"),
+        S(2, "MA101-A", ["B1", "B2"], "Ali", "THEORY", 3, 45, label="MA101 A (combined)"), S(3, "MA101-A", ["B1", "B2"], "Ali", "THEORY", 3, 45, label="MA101 A (combined)"),
         S(4, "CS102-L", ["B2"], "Khan", "LAB", 6, 25, label="CS102 Lab"),
         S(5, "EN101-A", ["B2"], "Sara", "THEORY", 2, 30, label="EN101 A"),
     ]

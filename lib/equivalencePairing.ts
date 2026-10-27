@@ -24,6 +24,8 @@ export async function pairForEquivalence(courseIdA: string, courseIdB: string, c
   if (!courseA || !courseB) return null;
 
   if (memberA && memberB && memberA.groupId === memberB.groupId) return { groupId: memberA.groupId };
+  // A combined class never holds more than the section limit (default 50): pairs that can't share a class aren't merged.
+  if (await combineRefusal(courseIdA, courseIdB, chairmanId)) return null;
 
   let groupId: string;
   if (memberA && !memberB) {
@@ -84,4 +86,25 @@ async function copyPloMappingByNumber(fromCourseId: string, toCourseId: string) 
       });
     }
   }
+}
+
+/** Why two courses can't be taught as one combined class, e.g. "not combined — 30 + 30 = 60 > 50"; null when they can.
+ *  Each side counts its smallest student section (a batch over the limit is already split into sections), and joining
+ *  an existing group needs room next to at least one of its members. */
+export async function combineRefusal(courseIdA: string, courseIdB: string, chairmanId: string): Promise<string | null> {
+  const { getMaxSection, sectionsOfBatches } = await import("./studentSections");
+  const { timetableScopeFor } = await import("./timetableScope");
+  const sideOf = async (courseId: string) => {
+    const m = await prisma.courseEquivalenceMember.findUnique({ where: { courseId } });
+    const ids = m ? (await prisma.courseEquivalenceMember.findMany({ where: { groupId: m.groupId }, select: { courseId: true } })).map((x) => x.courseId) : [courseId];
+    return prisma.course.findMany({ where: { id: { in: ids } }, select: { batchId: true, coordinatorId: true } });
+  };
+  const [a, b] = await Promise.all([sideOf(courseIdA), sideOf(courseIdB)]);
+  const lead = a[0]?.coordinatorId || b[0]?.coordinatorId;
+  if (!lead) return null;
+  const max = await getMaxSection(chairmanId, (await timetableScopeFor({ id: lead, managedById: chairmanId })).key);
+  const split = await sectionsOfBatches([...a, ...b].map((c) => c.batchId).filter((x): x is string => !!x), max);
+  const smallest = (cs: { batchId: string | null }[]) => Math.min(...cs.map((c) => Math.min(...(split.get(c.batchId || "") || [{ size: 0 }]).map((x) => x.size))));
+  const sa = smallest(a), sb = smallest(b);
+  return sa + sb > max ? `not combined — ${sa} + ${sb} = ${sa + sb} > ${max}` : null;
 }

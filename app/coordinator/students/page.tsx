@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import StudentManager from "../../../components/StudentManager";
+import StudentSectionsPanel from "../../../components/StudentSectionsPanel";
 import { navForRole } from "../../../components/reportNav";
 
 
@@ -33,6 +34,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: { b
           students={students.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber, track: s.track, status: s.status, statusReason: s.statusReason }))}
         />
       )}
+      {batchId && <StudentSectionsPanel batchId={batchId} students={students.filter((s) => s.status === "ACTIVE").map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber }))} />}
     </Shell>
   );
 }

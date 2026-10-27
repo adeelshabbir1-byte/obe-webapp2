@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../lib/session";
+import { timetableActor, READ_ONLY } from "../../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 import { Gene } from "../../../../../../lib/timetableGA";
 import { buildSlots } from "../../../../../../lib/timetableSlotBuilder";
 
 export async function POST(req: Request, { params }: { params: { runId: string } }) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
 
   const run = await prisma.timetableRun.findUnique({ where: { id: params.runId } });

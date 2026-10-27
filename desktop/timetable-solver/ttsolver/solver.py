@@ -57,6 +57,7 @@ class Settings:
     max_batch_hours: float = 6.0
     max_teacher_hours: float = 5.0
     max_in_a_row: float = 3.0
+    max_section: int = 50  # most students in one section (the portal's limit)
     seed: int = 1
 
 
@@ -458,7 +459,7 @@ class Solver:
             bad = _check_fixed(p, fixed)
             if bad:
                 return Result("INVALID", None, 0, 0, time.time() - t0, reasons=["Your fixed changes break the rules themselves:"] + [str(v) for v in bad])
-        reasons = precheck(p)
+        reasons = precheck(p, st.max_section)
         if reasons:
             say("impossible — see the reasons")
             res = Result("INFEASIBLE", None, 0, 0, time.time() - t0, reasons=reasons)

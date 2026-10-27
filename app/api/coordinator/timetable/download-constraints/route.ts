@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
+import { timetableActor } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
 import { buildExcelResponse } from "../../../../../lib/excelExport";
 
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = actor.user;
 
   const { slots, rooms, unavailability } = await buildSlots(user);
 
@@ -15,7 +16,7 @@ export async function GET() {
   // uses them so its report can say "CS-101 Section A (Dr Khan)" instead of
   // an opaque id; anything that doesn't know about them just ignores them.
   const sectionIds = Array.from(new Set(slots.map((s) => s.scheduleSectionId)));
-  const allBatchIds = Array.from(new Set(slots.flatMap((s) => s.batchIds)));
+  const allBatchIds = Array.from(new Set(slots.flatMap((s) => s.batchIds.map((k) => k.split("#")[0]))));
   const [sectionRows, roomRows, batchRows] = await Promise.all([
     prisma.scheduleSection.findMany({
       where: { id: { in: sectionIds } },
@@ -61,7 +62,7 @@ export async function GET() {
       rows: slots.map((s) => ({
         ...s, allowedDays: s.allowedDays.join(","), preferredDays: (s.preferredDays || []).join(","), batchId: s.batchIds.join(","),
         ...labelFor(s.scheduleSectionId),
-        batchLabels: s.batchIds.map((b) => batchLabelById.get(b) || b).join("; "),
+        batchLabels: (s.batchLabels || s.batchIds.map((b) => batchLabelById.get(b) || b)).join("; "),
       })),
     },
     {

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../lib/session";
+import { timetableActor, READ_ONLY } from "../../../../lib/timetableAccess";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { timetableScopeFor } from "../../../../lib/timetableScope";
 
 export async function GET() {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
   const scope = await timetableScopeFor(user);
   const rooms = await prisma.room.findMany({ where: scope.roomWhere, orderBy: { name: "asc" } });
@@ -14,8 +15,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
   if (!chairmanId) return NextResponse.json({ error: "no institution on record for this account" }, { status: 400 });
 

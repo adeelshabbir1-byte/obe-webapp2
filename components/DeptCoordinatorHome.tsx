@@ -40,7 +40,7 @@ export default function DeptCoordinatorHome({ programs, actingForId }: { program
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button className="btn btn-brass" onClick={() => work(p.id, "/coordinator/faculty")}>Teachers</button>{" "}
                   <button className="btn" onClick={() => work(p.id, "/coordinator/students")}>Students</button>{" "}
-                  <button className="btn" onClick={() => work(p.id, "/coordinator/timetable")}>Timetable</button>
+                  <a className="btn" href="/coordinator/timetable" title="The department's timetable — every program together">Timetable</a>
                 </td>
               </tr>
             ))}

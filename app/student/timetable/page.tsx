@@ -15,8 +15,10 @@ export default async function StudentTimetablePage() {
   const chairmanId = coordinator?.managedById || "";
 
   const allEntries = chairmanId ? await getTimetableEntries(chairmanId) : [];
+  // A batch split into sections: only this student's section's classes (Section A students don't see Section B's).
+  const myLabel = batch ? (await (await import("../../../lib/studentSections")).sectionOfStudents([student.id])).get(student.id) : undefined;
   const entries = allEntries
-    .filter((e) => batch && e.batchIds.includes(batch.id))
+    .filter((e) => batch && e.batchIds.includes(batch.id) && (!myLabel || !e.sectionKeys.some((k) => k.startsWith(`${batch.id}#`)) || e.sectionKeys.includes(`${batch.id}#${myLabel}`)))
     .map((e) => ({ ...e, timeLabel: timeRangeLabel(e.startHour, e.endHour) }));
 
   return (

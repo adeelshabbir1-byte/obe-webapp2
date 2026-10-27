@@ -183,7 +183,7 @@ class MainWindow(QMainWindow):
             for i, (k, val) in enumerate(facts):
                 self.summary_grid.addWidget(_label(k), i // 4, (i % 4) * 2)
                 self.summary_grid.addWidget(_label(str(val), True), i // 4, (i % 4) * 2 + 1)
-            reasons = precheck(p)
+            reasons = precheck(p, int(self.qs.value("maxs", 50)))
             if reasons:
                 lines += ["", "A clash-free timetable is impossible with this file:"] + [f"  • {r}" for r in reasons]
             elif not res.errors:
@@ -232,11 +232,13 @@ class MainWindow(QMainWindow):
         self.max_batch = QDoubleSpinBox(minimum=1, maximum=12, singleStep=0.5, value=float(self.qs.value("maxb", 6)), suffix=" h")
         self.max_teacher = QDoubleSpinBox(minimum=1, maximum=12, singleStep=0.5, value=float(self.qs.value("maxt", 5)), suffix=" h")
         self.max_row = QDoubleSpinBox(minimum=1, maximum=8, singleStep=0.5, value=float(self.qs.value("maxr", 3)), suffix=" h")
+        self.max_section = QSpinBox(minimum=5, maximum=500, value=int(self.qs.value("maxs", 50)), suffix=" students")
         form.addRow("Time limit", self.time_limit)
         form.addRow("Workers (CPU threads)", self.workers)
         form.addRow("Most hours a day for a batch", self.max_batch)
         form.addRow("Most hours a day for a teacher", self.max_teacher)
         form.addRow("Most hours in a row without a break", self.max_row)
+        form.addRow("Most students in one section (the portal's limit)", self.max_section)
         v.addLayout(form)
         box = QGroupBox("Soft rules — weight (0 = ignore; higher = more important). Hard rules always hold.")
         f2 = QFormLayout(box)
@@ -258,13 +260,14 @@ class MainWindow(QMainWindow):
         self.max_batch.setValue(6)
         self.max_teacher.setValue(5)
         self.max_row.setValue(3)
+        self.max_section.setValue(50)
         for k, sp in self.weights.items():
             sp.setValue(DEFAULT_WEIGHTS[k])
 
     def settings(self) -> Settings:
         st = Settings(time_limit=self.time_limit.value(), workers=self.workers.value(), weights={k: sp.value() for k, sp in self.weights.items()},
-                      max_batch_hours=self.max_batch.value(), max_teacher_hours=self.max_teacher.value(), max_in_a_row=self.max_row.value())
-        for key, val in (("time", st.time_limit), ("workers", st.workers), ("maxb", st.max_batch_hours), ("maxt", st.max_teacher_hours), ("maxr", st.max_in_a_row)):
+                      max_batch_hours=self.max_batch.value(), max_teacher_hours=self.max_teacher.value(), max_in_a_row=self.max_row.value(), max_section=self.max_section.value())
+        for key, val in (("time", st.time_limit), ("workers", st.workers), ("maxb", st.max_batch_hours), ("maxt", st.max_teacher_hours), ("maxr", st.max_in_a_row), ("maxs", st.max_section)):
             self.qs.setValue(key, val)
         for k, val in st.weights.items():
             self.qs.setValue(f"w_{k}", val)

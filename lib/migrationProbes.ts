@@ -1001,6 +1001,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "maxScore"
 },
 {
+"f": "migration_student_sections.sql",
+"d": "Student sections for the department timetable: a batch over the section limit (default 50) is split into Section A, B,",
+"t": "TimetableSetting"
+},
+{
 "f": "migration_student_status.sql",
 "d": "Student status changes with an approval chain (drop, leave, freeze, transfer within / out / in, rustication,",
 "t": "StudentAccess"

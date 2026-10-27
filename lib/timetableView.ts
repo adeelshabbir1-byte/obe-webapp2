@@ -8,6 +8,7 @@ export type TimetableEntryView = {
   instructorId: string; instructorName: string;
   roomId: string; roomName: string; roomType: string;
   batchIds: string[]; batchLabels: string[]; degreePrograms: string[];
+  sectionKeys: string[]; // student sections taught ("batchId#A"); a student sees only their own section's classes
 };
 
 const sectionInclude = {
@@ -79,6 +80,8 @@ export async function getTimetableEntries(chairmanId: string, runId?: string): P
     include: { room: true, scheduleSection: { include: sectionInclude } },
   });
 
+  const { sectionKeysById } = await import("./studentSections");
+  const keyMap = await sectionKeysById(entries.map((e) => e.scheduleSectionId));
   return entries
     .map((e) => {
       const section = e.scheduleSection as unknown as SectionWithIncludes;
@@ -91,6 +94,7 @@ export async function getTimetableEntries(chairmanId: string, runId?: string): P
         roomId: e.roomId, roomName: e.room?.name || "—", roomType: e.room?.type || "—",
         batchIds: batches.map((b) => b.id), batchLabels: batches.map((b) => b.label),
         degreePrograms: Array.from(new Set(batches.map((b) => b.degreeProgram))),
+        sectionKeys: keyMap.get(e.scheduleSectionId) || [],
       };
     })
     .sort((a, b) => (DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek)) || (a.startHour - b.startHour));

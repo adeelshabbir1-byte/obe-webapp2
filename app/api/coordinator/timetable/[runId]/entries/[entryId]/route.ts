@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../../../lib/session";
+import { timetableActor, READ_ONLY } from "../../../../../../../lib/timetableAccess";
+import { sectionKeysById } from "../../../../../../../lib/studentSections";
 import { prisma } from "../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../lib/reportScope";
 import { busyElsewhere } from "../../../../../../../lib/timetableScope";
@@ -9,8 +10,10 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { runId: string; entryId: string } }) {
-  const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await timetableActor();
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
+  const user = actor.user;
   const chairmanId = await chairmanIdFor(user);
 
   const run = await prisma.timetableRun.findUnique({ where: { id: params.runId } });
@@ -25,10 +28,7 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   function codeFor(section: { course: { code: string; title: string } | null; group: { name: string } | null }): string {
     return section.course ? `${section.course.code} — ${section.course.title}` : `${section.group!.name} (combined)`;
   }
-  function batchIdsFor(section: { course: { batch: { id: string } | null } | null; group: { members: { course: { batch: { id: string } | null } }[] } | null }): string[] {
-    if (section.course) return section.course.batch ? [section.course.batch.id] : [];
-    return (section.group?.members || []).map((m) => m.course.batch?.id).filter((id): id is string => !!id);
-  }
+
 
   const entry = await prisma.timetableEntry.findUnique({
     where: { id: params.entryId },
@@ -61,7 +61,9 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
   });
 
   const effectiveRoomId = newRoomId || entry.roomId;
-  const entryBatchIds = batchIdsFor(entry.scheduleSection);
+  // Clashes are per student section ("batchId#A"): Section A and Section B of one batch may run at the same time.
+  const keyMap = await sectionKeysById([entry.scheduleSectionId, ...allEntries.map((o) => o.scheduleSectionId)]);
+  const entryKeys = keyMap.get(entry.scheduleSectionId) || [];
   const clashingEntryIds: string[] = [];
   const reasons: string[] = [];
   const entryTeacher = await prisma.user.findUnique({ where: { id: entry.scheduleSection.instructorId }, select: { isVisitingPlaceholder: true } });
@@ -70,7 +72,7 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
     const otherCode = codeFor(other.scheduleSection);
     if (other.roomId === effectiveRoomId) { clashingEntryIds.push(other.id); reasons.push(`Room clash with ${otherCode}`); }
     if (!entryTeacher?.isVisitingPlaceholder && other.scheduleSection.instructorId === entry.scheduleSection.instructorId) { clashingEntryIds.push(other.id); reasons.push(`Instructor clash with ${otherCode}`); }
-    if (batchIdsFor(other.scheduleSection).some((id) => entryBatchIds.includes(id))) { clashingEntryIds.push(other.id); reasons.push(`Batch clash with ${otherCode}`); }
+    if ((keyMap.get(other.scheduleSectionId) || []).some((k) => entryKeys.includes(k))) { clashingEntryIds.push(other.id); reasons.push(`Student clash with ${otherCode} (same students)`); }
   }
 
   // The same teacher may already be teaching in another department's own timetable at that time.
