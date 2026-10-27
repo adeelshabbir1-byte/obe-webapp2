@@ -27,6 +27,9 @@ export default async function CourseSurveyPage({ searchParams }: { searchParams:
   const win = sel ? await windowOf(sel.id, fs) : null;
   let clos: { id: string; code: string; statement: string }[] = [];
   if (sel) { const all = await prisma.cLO.findMany({ where: { courseId: sel.id }, select: { id: true, code: true, statement: true, source: true }, orderBy: { code: "asc" } }); const inst = all.filter((c) => c.source === "INSTRUCTOR"); clos = (inst.length ? inst : all).map(({ id, code, statement }) => ({ id, code, statement })); }
+  // "Which topics were hardest?" — the course's taught topics (Instructor's plan, else the Subject Expert's).
+  let topics: string[] = [];
+  if (sel) { const rows = await prisma.lectureRow.findMany({ where: { courseId: sel.id, topic: { not: "" } }, select: { topic: true, source: true }, orderBy: { lectureNumber: "asc" } }); const ins = rows.filter((r) => r.source === "INSTRUCTOR"); topics = Array.from(new Set((ins.length ? ins : rows).map((r) => r.topic.trim()).filter((t) => t && !/(mid|final).*exam|exam/i.test(t)))).slice(0, 40); }
   return (
     <StudentShell studentName={st.name}>
       <h1 style={{ fontSize: 22 }}>Course Surveys &amp; Evaluations</h1>
@@ -34,7 +37,7 @@ export default async function CourseSurveyPage({ searchParams }: { searchParams:
       <div className="card">{enr.map((e) => <div key={e.course.id} style={{ padding: "3px 0" }}><Link href={`/student/course-survey?course=${e.course.id}`} style={{ fontWeight: sel?.id === e.course.id ? 700 : 400 }}>{e.course.code} {e.course.title}</Link> {doneMap.has(e.course.id) ? <span style={{ color: "#1F5E36", fontSize: 12 }}>✓ done</span> : <span className="small-note">pending</span>}</div>)}{!enr.length && <p className="small-note">No current courses.</p>}</div>
       {sel && <div className="card"><h3 style={{ marginTop: 0 }}>{sel.code} {sel.title}</h3>{clos.length ? <CourseExitForm courseId={sel.id} clos={clos} initial={doneMap.has(sel.id) ? JSON.parse(doneMap.get(sel.id)!) : null} /> : <p className="small-note">This course has no outcomes listed yet.</p>}
         {win && !win.open ? <p className="small-note" style={{ marginTop: 10 }}>Course and teacher feedback opens in week {fs.fromWeek} of the semester{win.opensOn ? ` (${win.opensOn})` : ""} and closes after week {fs.toWeek}{win.closesOn ? ` (${win.closesOn})` : ""}.</p> : <>
-        <EvalForm courseId={sel.id} kind="COURSE" title={EVAL.COURSE.title} items={qCourse.map((q) => [q.key, q.text] as [string, string])} done={evals.some((e) => e.kind === "COURSE")} min={fs.minResponses} />
+        <EvalForm courseId={sel.id} kind="COURSE" topics={topics} title={EVAL.COURSE.title} items={qCourse.map((q) => [q.key, q.text] as [string, string])} done={evals.some((e) => e.kind === "COURSE")} min={fs.minResponses} />
         <EvalForm courseId={sel.id} kind="TEACHER" title={EVAL.TEACHER.title} items={qTeacher.map((q) => [q.key, q.text] as [string, string])} done={evals.some((e) => e.kind === "TEACHER")} min={fs.minResponses} /></>}</div>}
     </StudentShell>
   );

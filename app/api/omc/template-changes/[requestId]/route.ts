@@ -38,6 +38,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
       data: { status: "approved", omcComment: note, reviewedById: user.id, reviewedAt: new Date(), beforeJson: JSON.stringify(before) },
     });
     await prisma.course.update({ where: { id: course.id }, data: { templateStatus: "reopened" } });
+    // Topic Workspace changes accepted on this approved plan apply now.
+    await import("../../../../../lib/topicPlan").then((m) => m.applyAfterTemplateApproval(request.id, { id: user.id, role: user.role, managedById: user.managedById, name: user.name })).catch(() => 0);
   } else {
     await prisma.templateChangeRequest.update({
       where: { id: request.id },

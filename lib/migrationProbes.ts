@@ -1081,6 +1081,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "ploMinTopics"
 },
 {
+"f": "migration_topic_planning.sql",
+"d": "Topic Workspace planning: side tables only (nothing is added to Course or CurriculumType). Importance and other",
+"t": "TopicPlanSetting"
+},
+{
 "f": "migration_tracks_deficiency.sql",
 "d": "Run in Supabase SQL Editor (safe to run more than once).",
 "t": "PassingCriteria",

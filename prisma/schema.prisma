@@ -8455,3 +8455,241 @@ model TimetableSetting {
 
   @@id([chairmanId, scopeKey])
 }
+
+// ---------------------------------------------------------------- Topic Workspace planning (migration_topic_planning.sql)
+// Side tables only. Per-topic facts are keyed to the lecture row; nothing is added to Course or CurriculumType.
+model TopicMeta {
+  lectureRowId        String   @id
+  courseId            String
+  importance          String?  // CORE | IMPORTANT | OPTIONAL (null = not set; a suggestion is shown instead)
+  importanceConfirmed Boolean  @default(false)
+  industry            String?  // HIGH | MEDIUM | LOW
+  reading             String?
+  needsClo            Boolean  @default(false) // moved in from another course: map it to a CLO here
+  movedFrom           String?
+  notTaught           Boolean  @default(false) // planned but not taught (approved "short of time")
+  notTaughtNote       String?
+  updatedById         String?
+  updatedAt           DateTime @default(now())
+
+  @@index([courseId])
+}
+
+model WorkspaceState {
+  userId    String    @id
+  openJson  String    @default("[]")
+  draftJson String?
+  draftAt   DateTime?
+  updatedAt DateTime  @default(now())
+}
+
+model PlanProposal {
+  id                String    @id
+  chairmanId        String
+  courseId          String
+  source            String    @default("SE")
+  kind              String    @default("EDIT") // EDIT | SHORT_OF_TIME
+  fromUserId        String
+  toUserId          String?
+  note              String?
+  status            String    @default("PENDING") // PENDING | ACCEPTED | PARTIAL | REJECTED | AWAITING_OMC | WITHDRAWN
+  reason            String?
+  beforeJson        String    @default("[]")
+  afterJson         String    @default("[]")
+  templateRequestId String?
+  respondedById     String?
+  respondedAt       DateTime?
+  remindedAt        DateTime?
+  escalatedAt       DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([courseId, status])
+  @@index([toUserId, status])
+  @@index([fromUserId])
+}
+
+model PlanProposalItem {
+  id           String    @id
+  proposalId   String
+  kind         String    // ADD | REMOVE | MOVE_IN | MOVE_OUT | RENAME | REORDER | IMPORTANCE | DROP | SHORTEN
+  lectureRowId String?
+  topic        String    @default("")
+  subtopic     String?
+  detailJson   String    @default("{}")
+  position     Int       @default(0)
+  linkKey      String?
+  status       String    @default("PENDING") // PENDING | ACCEPTED | REJECTED | WAITING
+  reason       String?
+  decidedAt    DateTime?
+
+  @@index([proposalId])
+  @@index([linkKey])
+}
+
+model TopicLinkProposal {
+  id            String    @id
+  chairmanId    String
+  coordinatorId String
+  kind          String    // PREREQ | OVERLAP
+  level         String    // STRONG | MILD | WEAK | PROGRESSION | DUPLICATION
+  action        String    @default("ADD") // ADD | CHANGE | REMOVE
+  fromCourseId  String
+  fromCode      String
+  fromTopic     String
+  toCourseId    String
+  toCode        String
+  toTopic       String
+  status        String    @default("PENDING") // PENDING | CONFIRMED | REJECTED
+  seFromAt      DateTime?
+  seFromById    String?
+  seToAt        DateTime?
+  seToById      String?
+  plAt          DateTime?
+  plById        String?
+  reason        String?
+  note          String?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+
+  @@index([chairmanId, status])
+}
+
+model TopicPlanVersion {
+  id        String   @id
+  courseId  String
+  source    String
+  sessionId String?
+  byUserId  String
+  label     String?
+  rowsJson  String
+  afterJson String?
+  undone    Boolean  @default(false)
+  at        DateTime @default(now())
+
+  @@index([courseId, source, at])
+  @@index([byUserId, sessionId])
+}
+
+model TopicComment {
+  id           String   @id
+  courseId     String
+  lectureRowId String?
+  topicKey     String
+  userId       String
+  body         String
+  at           DateTime @default(now())
+
+  @@index([courseId, topicKey])
+}
+
+model TopicNote {
+  id            String   @id
+  coordinatorId String
+  courseCode    String
+  topicKey      String
+  topic         String
+  courseId      String
+  termLabel     String?
+  note          String
+  byUserId      String
+  at            DateTime @default(now())
+
+  @@index([coordinatorId, courseCode, topicKey])
+}
+
+model TopicPerformance {
+  id            String    @id
+  courseId      String
+  coordinatorId String
+  courseCode    String
+  lectureRowId  String?
+  topicKey      String
+  topic         String
+  termLabel     String?
+  batchLabel    String?
+  offeredAt     DateTime?
+  students      Int       @default(0)
+  avgPct        Float?
+  belowPct      Float?
+  questions     Int       @default(0)
+  assessments   Int       @default(0)
+  lectures      Int       @default(0)
+  sections      Int       @default(1)
+  sourceKind    String    @default("APPROVAL") // APPROVAL | BACKFILL | HISTORICAL
+  storedAt      DateTime  @default(now())
+
+  @@unique([courseId, topicKey])
+  @@index([coordinatorId, courseCode])
+  @@index([lectureRowId])
+}
+
+model TopicDifficultyVote {
+  courseId  String
+  studentId String
+  topicKey  String
+  topic     String
+  at        DateTime @default(now())
+
+  @@id([courseId, studentId, topicKey])
+}
+
+model TopicHelp {
+  id            String   @id
+  coordinatorId String
+  courseCode    String
+  topicKey      String
+  kind          String   @default("MATERIAL") // PRACTICE | MATERIAL | REMEDIATION
+  title         String
+  url           String?
+  byUserId      String
+  at            DateTime @default(now())
+
+  @@index([coordinatorId, courseCode, topicKey])
+}
+
+model TopicHelpSent {
+  courseId String
+  topicKey String
+  at       DateTime @default(now())
+
+  @@id([courseId, topicKey])
+}
+
+model SuggestionDecision {
+  chairmanId String
+  kind       String
+  key        String
+  textHash   String
+  decision   String // ACCEPTED | REJECTED
+  reason     String?
+  byUserId   String
+  at         DateTime @default(now())
+
+  @@id([chairmanId, kind, key])
+}
+
+model AiTopicCache {
+  key        String   @id
+  resultJson String
+  at         DateTime @default(now())
+}
+
+model WorkspacePresence {
+  userId   String
+  courseId String
+  at       DateTime @default(now())
+
+  @@id([userId, courseId])
+  @@index([courseId, at])
+}
+
+model TopicPlanSetting {
+  chairmanId       String   @id
+  remindDays       Int      @default(3)
+  escalateDays     Int      @default(7)
+  minBankQuestions Int      @default(5)
+  minStudents      Int      @default(30)
+  minSection       Int      @default(15)
+  updatedAt        DateTime @default(now())
+}

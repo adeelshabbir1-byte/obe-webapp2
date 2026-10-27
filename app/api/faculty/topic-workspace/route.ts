@@ -1,32 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../lib/session";
-import { writeAuditLog } from "../../../../lib/audit";
-import { loadWorkspace, saveWorkspace, WORKSPACE_ROLES } from "../../../../lib/facultyTopicWorkspace";
+import { loadWorkspace, saveWorkspace } from "../../../../lib/facultyTopicWorkspace";
+import { getState, loadColumns, savePlans, tablesReady, MISSING } from "../../../../lib/topicPlan";
+import { forbidden, parseOpen, reply, wsUser } from "../../../../lib/topicApi";
 
-export const maxDuration = 120;
-const ids = (v: string | null) => (v || "").split(",").map((s) => s.trim()).filter(Boolean);
+export const maxDuration = 60;
 
+// GET ?open=[{courseId, plan}] → the open courses' plans (any course of the institute, any number). Without `open`, the
+// person's last set of open courses. (The older ?courseIds=&referenceIds= form still answers.)
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || !WORKSPACE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const r = await loadWorkspace(user, ids(req.nextUrl.searchParams.get("courseIds")), ids(req.nextUrl.searchParams.get("referenceIds")));
-  if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
-  return NextResponse.json(r);
+  const user = await wsUser();
+  if (!user) return forbidden();
+  const sp = req.nextUrl.searchParams;
+  if (sp.has("courseIds")) {
+    const ids = (s: string | null) => (s || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const r = await loadWorkspace(user, ids(sp.get("courseIds")), ids(sp.get("referenceIds")));
+    return NextResponse.json(r, { status: "error" in r ? 400 : 200 });
+  }
+  const ready = await tablesReady();
+  const state = ready ? await getState(user.id) : { open: [], draft: null, draftAt: null };
+  const open = sp.has("open") ? parseOpen(sp.get("open")) : state.open;
+  return NextResponse.json({ columns: await loadColumns(user, open), state, missing: ready ? null : MISSING });
 }
 
+// POST { sessionId, courses: [{courseId, plan, hash, entries}], note } → applies what the person owns, proposes the rest.
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || !WORKSPACE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const user = await wsUser();
+  if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
-  // Each course: its topics in order — existing lecture rows by id, topics copied from a reference course as text.
-  const layout = Array.isArray(b.courses) ? b.courses.map((c: any) => ({
-    courseId: String(c.courseId || ""),
-    items: Array.isArray(c.items)
-      ? c.items.map((i: any) => (i && i.id ? { id: String(i.id) } : { topic: String(i?.topic || ""), subtopic: i?.subtopic ? String(i.subtopic) : null }))
-      : Array.isArray(c.rowIds) ? c.rowIds.map((id: unknown) => ({ id: String(id) })) : [],
-  })) : [];
-  const r = await saveWorkspace(user, layout);
-  if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
-  await writeAuditLog({ actorUserId: user.id, action: "LECTURE_TOPICS_REARRANGED", entityType: "Course", entityId: layout[0]?.courseId || "", metadata: { courseIds: layout.map((l: { courseId: string }) => l.courseId).join(","), moved: r.moved, copied: r.copied } });
-  return NextResponse.json(r);
+  if (Array.isArray(b.courses) && b.courses.some((c: { items?: unknown }) => Array.isArray(c?.items))) {
+    const r = await saveWorkspace(user, b.courses);
+    return NextResponse.json(r, { status: "error" in r ? 400 : 200 });
+  }
+  if (!Array.isArray(b.courses) || !b.courses.length) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
+  return reply(await savePlans(user, { sessionId: String(b.sessionId || "").slice(0, 80) || undefined, note: typeof b.note === "string" ? b.note : undefined, courses: b.courses }));
 }

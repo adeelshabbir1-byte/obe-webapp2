@@ -6,6 +6,7 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel } from "../../lib/reportScope";
 import Shell from "../../components/Shell";
 import TopicPrereqBoard from "../../components/TopicPrereqBoard";
+import TopicPlanOversight from "../../components/TopicPlanOversight";
 import { canEditLinks, corequisiteOrderIssues, courseTopics, visibleCourses } from "../../lib/topicLinks";
 import { downstreamOfferings, effectOf, STRENGTHS, strengthOf } from "../../lib/prereqCascade";
 
@@ -149,6 +150,7 @@ export default async function TopicPrerequisitesPage({ searchParams }: { searchP
           )}
         </>
       )}
+      {["PROGRAM_COORDINATOR", "OMC"].includes(user.role) && <TopicPlanOversight role={user.role} courseIds={courses.filter((c) => c.isOffered).map((c) => c.id)} />}
     </Shell>
   );
 }

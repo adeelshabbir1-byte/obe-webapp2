@@ -60,6 +60,11 @@ export async function GET(req: NextRequest) {
   const backups = await import("../../../../lib/instituteBackup").then((m) => m.weeklyBackups(now)).catch(() => 0);
   const qa = await import("../../../../lib/qaOffice").then((m) => m.remindQa(now)).catch(() => 0);
   void statusApplied; void backups; void qa;
+  // Topic Workspace: reminders for unanswered plan proposals (the Program Lead is told after a week), and ready help
+  // for usually-hard topics offered to instructors a week before the lecture.
+  const topicPlans = await import("../../../../lib/topicPlan").then((m) => m.proposalReminders(now)).catch(() => null);
+  const topicHelp = await import("../../../../lib/topicChecks").then((m) => m.offerTopicHelp(now)).catch(() => 0);
+  void topicPlans; void topicHelp;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());

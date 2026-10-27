@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/session";
-import { referenceCourses, WORKSPACE_ROLES } from "../../../../../lib/facultyTopicWorkspace";
+import { pickerCourses } from "../../../../../lib/topicPlan";
+import { forbidden, wsUser } from "../../../../../lib/topicApi";
 
-// Search the institute's courses to open one for reference in the Topic Workspace.
+// The course picker: any course of the institute, by code, title, program or batch.
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser();
-  if (!user || !WORKSPACE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  return NextResponse.json({ courses: await referenceCourses(user, (req.nextUrl.searchParams.get("q") || "").slice(0, 80)) });
+  const user = await wsUser();
+  if (!user) return forbidden();
+  return NextResponse.json({ courses: await pickerCourses(user, (req.nextUrl.searchParams.get("q") || "").slice(0, 80)) });
 }

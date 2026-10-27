@@ -45,6 +45,8 @@ export async function POST(req: NextRequest) {
       if (to.length) await notify(head, user.id, to, `GA drop after ${ch.code}`, `Approving ${ch.code} lowered ${batch?.batchName || "the batch"}'s GA attainment: ${text}. Consider a CQI action.`, `/plo-progress?batchId=${ch.batchId}`);
     }
   } catch { /* the approval itself already succeeded */ }
+  // How students did on each topic, kept per offering for the Topic Workspace (history, heat colours).
+  await import("../../../../lib/topicPerformance").then((m) => m.storeTopicPerformance(courseId)).catch(() => 0);
   // Students (and, if turned on, parents) hear that the result is out.
   try { const ids = (await prisma.studentEnrollment.findMany({ where: { courseId }, select: { studentId: true } })).map((e) => e.studentId); await alertStudents(await chairmanIdFor(user), ids, "RESULT_STUDENT", `Result out: ${course?.code || "course"}`, "Your result is approved. See My Transcript in the student portal."); } catch { /* best effort */ }
   return NextResponse.json({ ok: true, status: "APPROVED" });
