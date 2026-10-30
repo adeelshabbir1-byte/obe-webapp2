@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { STATUSES, closeSession, phaseOf, refreshShortageFlags } from "../../../../../lib/attendance";
 import { issueToken, windowAt } from "../../../../../lib/attendanceToken";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ async function mine(id: string) {
 }
 
 // GET — the live state: the current QR token (never the key), the phase and its countdown, and the roster.
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   let { user, s } = await mine(params.id);
   if (!user || !s) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (s.status === "OPEN" && Date.now() >= s.closesAt.getTime()) {
@@ -64,7 +65,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 // PATCH { action: "close" } | { action: "extend", minutes } | { action: "mark", studentId, status, note? }
 // "mark" is the instructor's override (a dead phone, no camera, a late arrival they let in), also after closing.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const { user, s } = await mine(params.id);
   if (!user || !s) return NextResponse.json({ error: "not found" }, { status: 404 });
   const b = await req.json().catch(() => ({}));
@@ -104,3 +105,5 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
+export const GET = withErrors(GET_handler);
+export const PATCH = withErrors(PATCH_handler);

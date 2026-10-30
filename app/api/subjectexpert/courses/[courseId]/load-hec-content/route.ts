@@ -7,8 +7,9 @@ import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 import { seedFromMasterCourseIfAvailable } from "../../../../../../lib/benchmarkCopy";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -58,3 +59,4 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
 
   return NextResponse.json({ ok: true, ...result });
 }
+export const POST = withErrors(POST_handler);

@@ -6,6 +6,7 @@ import { prisma } from "../../../lib/db";
 import { readWorkbookGrids } from "../../../lib/excelRead";
 import { parseCsv } from "../../../lib/lmsImport";
 import { KINDS, kindOf, importKindsFor, headerRow, autoMap, mappedRows, dryRun, commit, undo, IMPORT_HINT, type Ctx } from "../../../lib/dataImport";
+import { withErrors } from "../../../lib/apiHandler";
 
 const ALLOWED = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"];
 
@@ -19,7 +20,7 @@ async function who() {
 }
 
 // GET ?template=<kind> — an Excel template: the columns, one example row, an Instructions sheet.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const w = await who();
   if (!w) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const k = kindOf(req.nextUrl.searchParams.get("template") || "");
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST multipart { action: parse | dryrun | commit, kind, file, sheet, map (JSON), batchId, leadId }  or JSON { action: "undo", id }.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const w = await who();
   if (!w) return NextResponse.json({ error: "Only heads, Program Leads and coordinators can import data." }, { status: 403 });
   const { user, chairmanId } = w;
@@ -104,3 +105,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

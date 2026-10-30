@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Turns every collected choice into a real StudentEnrollment. Applies
 // choices in submission order (first-come-first-served) so if an
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // dropped, so the Coordinator can follow up (move them to another
 // option, raise capacity, etc.) rather than having students find out
 // only by their absence from the roster.
-export async function POST(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -61,3 +62,4 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
 
   return NextResponse.json({ applied, waitlisted, alreadyEnrolled });
 }
+export const POST = withErrors(POST_handler);

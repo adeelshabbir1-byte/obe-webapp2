@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { findOwnInstitutionCurriculum } from "../../../../lib/institutionCurriculum";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ALLOWED_CATEGORIES = ["Domain Elective", "Domain IDS"];
 
@@ -11,7 +12,7 @@ const ALLOWED_CATEGORIES = ["Domain Elective", "Domain IDS"];
 // or Domain IDS for an unfilled IDS-III/IV slot. The two pools are
 // kept deliberately separate: an IDS slot should only ever offer the
 // small, restricted IDS list, never the full elective catalog.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   // Shared by the OMC-facing Course Repositioning page and the
   // Coordinator-facing Prerequisite Map page — both use the same
@@ -33,3 +34,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ courses });
 }
+export const GET = withErrors(GET_handler);

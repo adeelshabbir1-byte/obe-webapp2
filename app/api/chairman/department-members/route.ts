@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Moves one person (coordinator, course assigner, OMC member, head or faculty member) into a department.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -28,3 +29,4 @@ export async function PUT(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "DEPARTMENT_MEMBER_MOVED", entityType: "User", entityId: target.id, metadata: { departmentId: dept.id } });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

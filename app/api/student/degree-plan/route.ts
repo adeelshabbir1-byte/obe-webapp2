@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { getGradingScaleForBatch } from "../../../../lib/gradingScaleLookup";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const DEFAULT_MIN_CREDITS = 12;
 const DEFAULT_MAX_CREDITS = 18;
 
-export async function GET() {
+async function GET_handler() {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -91,3 +92,4 @@ export async function GET() {
     planned,
   });
 }
+export const GET = withErrors(GET_handler);

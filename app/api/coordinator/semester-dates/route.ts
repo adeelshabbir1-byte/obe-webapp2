@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const dates = await prisma.semesterDates.findMany({ where: { coordinatorId: user.id }, orderBy: [{ termYear: "desc" }, { degreeProgram: "asc" }] });
   return NextResponse.json({ dates });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -42,3 +43,5 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ record });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

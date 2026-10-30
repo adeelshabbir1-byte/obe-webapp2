@@ -4,10 +4,11 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { pdb, storeFile, MAX_FILE } from "../../../lib/portfolio";
 
 import { LAB_ROLES } from "../../../lib/labFile";
+import { withErrors } from "../../../lib/apiHandler";
 const KINDS = ["MANUAL", "SOP", "SAFETY_TRAINING", "MAINTENANCE", "EQUIPMENT", "CALIBRATION"];
 
 // The lab file: add a record (with an optional document) or remove one.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !LAB_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const cid = await chairmanIdFor(user);
@@ -28,3 +29,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (e) { return NextResponse.json({ error: e instanceof Error && /storage/i.test(e.message) ? e.message : "Run prisma/migration_visit_extras.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

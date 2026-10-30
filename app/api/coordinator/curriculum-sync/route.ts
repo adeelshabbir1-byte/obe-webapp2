@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { resolve } from "../../../../lib/curriculumSync";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { batchId, courseIds[], take: "master" | "mine", all? } — the Program Lead decides each master change.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -16,3 +17,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: b.take === "mine" ? "Kept as it is." : `${n} course(s) updated from the master.` });
   } catch (e) { const m = (e as Error).message || ""; return NextResponse.json({ error: /courseMasterSync|does not exist/.test(m) ? "Needs prisma/migration_curriculum_builder.sql — run it in Supabase." : m }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

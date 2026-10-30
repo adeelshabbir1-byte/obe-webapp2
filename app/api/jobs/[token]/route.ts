@@ -2,13 +2,14 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { notifyUsers } from "../../../../lib/notifications";
 import { rdb2, REC_HINT, DEGREES, eligibility, type Request as HiringReq } from "../../../../lib/recruitment";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const MAX_CV = 3 * 1024 * 1024;
 const s = (v: FormDataEntryValue | null, n = 300) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const nOf = (v: FormDataEntryValue | null) => Math.max(0, Math.min(60, Number(s(v)) || 0));
 
 /** POST multipart — the public application form of an advertisement (no sign-in). One application per email. */
-export async function POST(req: Request, { params }: { params: { token: string } }) {
+async function POST_handler(req: Request, { params }: { params: { token: string } }) {
   try {
     const ad = await rdb2.jobAdvert.findUnique({ where: { token: params.token } });
     if (!ad || ad.status !== "OPEN" || new Date(ad.closeAt) < new Date()) return NextResponse.json({ error: "This position is no longer open for applications." }, { status: 400 });
@@ -34,3 +35,4 @@ export async function POST(req: Request, { params }: { params: { token: string }
     return NextResponse.json({ ok: true });
   } catch (e) { return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(String(e)) ? REC_HINT : "Could not save the application. Please try again." }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

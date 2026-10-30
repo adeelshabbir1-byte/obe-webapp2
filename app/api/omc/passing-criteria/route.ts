@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ versions: [] });
@@ -15,7 +16,7 @@ export async function GET() {
   return NextResponse.json({ versions });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -44,3 +45,5 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ criteria });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

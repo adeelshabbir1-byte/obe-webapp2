@@ -2,11 +2,12 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { TEMPLATES } from "../../../../lib/importTemplates";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const csvCell = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
 /** GET — the download format for an upload: its columns, an example row and instructions. */
-export async function GET(_req: Request, { params }: { params: { name: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { name: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const t = TEMPLATES[params.name];
@@ -33,3 +34,4 @@ export async function GET(_req: Request, { params }: { params: { name: string } 
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": disp } });
 }
+export const GET = withErrors(GET_handler);

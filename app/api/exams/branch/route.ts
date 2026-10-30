@@ -4,9 +4,10 @@ import { prisma } from "../../../../lib/db";
 import { ebdb } from "../../../../lib/examBranch";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Institute Head: put staff in (or take them out of) the exam branch, which then runs exam sessions, duties and swaps.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head sets up the exam branch." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -19,3 +20,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Run prisma/migration_exam_branch.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { AREA_OF } from "../../../../lib/evidence";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const num = (v: unknown) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -33,3 +34,5 @@ export async function DELETE(req: NextRequest) {
   if (!r.count) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

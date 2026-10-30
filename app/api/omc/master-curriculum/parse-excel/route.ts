@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../lib/session";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Reads a course list from an Excel/CSV file and returns it as tab-separated lines for the Bulk Import box,
 // so it can be reviewed there before anything is saved. Understands the sheet the Export button produces,
 // and any sheet whose headings include Code, Title, Credit hours, Category (Domain and Semester optional).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const file = (await req.formData()).get("file") as File | null;
@@ -36,3 +37,4 @@ export async function POST(req: NextRequest) {
   if (lines.length === 0) return NextResponse.json({ error: "no course rows found" }, { status: 400 });
   return NextResponse.json({ text: lines.join("\n"), count: lines.length });
 }
+export const POST = withErrors(POST_handler);

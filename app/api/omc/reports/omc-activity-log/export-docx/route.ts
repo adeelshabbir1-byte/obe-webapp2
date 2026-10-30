@@ -4,8 +4,9 @@ import { canViewReports } from "../../../../../../lib/reportScope";
 import { canViewReport } from "../../../../../../lib/reportAcl";
 import { generateOmcMinutes } from "../../../../../../lib/omcMinutesGenerator";
 import { buildDocxResponse } from "../../../../../../lib/docxExport";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!(await canViewReport(user, "omc.reports.omc-activity-log"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -28,3 +29,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message || "something went wrong generating the document" }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);

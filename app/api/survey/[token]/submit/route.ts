@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
+import { hitLimit, ipOf, tooMany } from "../../../../../lib/rateLimit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { token: string } }) {
+  // Public endpoint: at most 30 requests per address per 60 minutes.
+  { const lim = await hitLimit(`survey:${ipOf(req.headers)}`, 30, 3600_000); if (!lim.ok) return tooMany(lim.retryAfter); }
   const response = await prisma.surveyResponse.findUnique({
     where: { token: params.token },
     include: { surveyTemplate: { include: { questions: true } } },
@@ -29,3 +33,4 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

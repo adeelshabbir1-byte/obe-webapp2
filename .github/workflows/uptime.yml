@@ -1,0 +1,55 @@
+# Uptime check: every 10 minutes, calls /api/health on production. If it fails, opens (or updates) one GitHub issue
+# labelled "uptime" and assigns it to the repository owner, so GitHub emails them. When the site is back, the issue is
+# closed with a note. Set the repository variable PRODUCTION_URL (Settings → Secrets and variables → Actions →
+# Variables), e.g. https://obehub.example.com — without it the check is skipped.
+name: Uptime
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check /api/health
+        id: check
+        env:
+          URL: ${{ vars.PRODUCTION_URL }}
+        run: |
+          if [ -z "$URL" ]; then echo "PRODUCTION_URL is not set; skipping."; echo "skip=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          ok=0
+          for i in 1 2 3; do
+            body=$(curl -s -m 10 -w "\n%{http_code}" "${URL%/}/api/health" || true)
+            code=$(echo "$body" | tail -n1); json=$(echo "$body" | head -n -1)
+            echo "try $i: HTTP $code $json"
+            if [ "$code" = "200" ] && echo "$json" | grep -q '"ok":true'; then ok=1; break; fi
+            sleep 20
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "detail=HTTP $code ${json:0:200}" >> "$GITHUB_OUTPUT"
+      - name: Open or update the issue
+        if: steps.check.outputs.skip != '1' && steps.check.outputs.ok != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DETAIL: ${{ steps.check.outputs.detail }}
+        run: |
+          gh label create uptime --color B60205 --description "Production health check failing" -R "$GITHUB_REPOSITORY" 2>/dev/null || true
+          n=$(gh issue list -R "$GITHUB_REPOSITORY" --label uptime --state open --json number --jq '.[0].number')
+          msg="$(date -u '+%Y-%m-%d %H:%M UTC'): /api/health failed — $DETAIL"
+          if [ -n "$n" ]; then gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body "$msg"
+          else gh issue create -R "$GITHUB_REPOSITORY" --label uptime --assignee "${{ github.repository_owner }}" --title "Production is down or the database is unreachable" --body "$msg
+
+          The uptime workflow checks every 10 minutes and closes this issue when the site answers again."; fi
+          exit 1
+      - name: Close the issue when back up
+        if: steps.check.outputs.skip != '1' && steps.check.outputs.ok == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list -R "$GITHUB_REPOSITORY" --label uptime --state open --json number --jq '.[].number'); do
+            gh issue close "$n" -R "$GITHUB_REPOSITORY" --comment "$(date -u '+%Y-%m-%d %H:%M UTC'): back up — /api/health answers ok."
+          done

@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { deptScope } from "../../../../../lib/omcScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Same as auto-map-hec, but for every batch across the whole
 // institution at once, a handful at a time per call — with 40+ batches,
@@ -10,7 +11,7 @@ import { deptScope } from "../../../../../lib/omcScope";
 // request risks the same kind of timeout content-sync's "sync all" ran
 // into, so the caller is expected to call this repeatedly (via
 // nextOffset) until done, same pattern.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -73,3 +74,4 @@ export async function POST(req: NextRequest) {
     batchesProcessed, totalBatches: allBatches.length, nextOffset, done: nextOffset >= allBatches.length,
   });
 }
+export const POST = withErrors(POST_handler);

@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { canReviewCv } from "../../../lib/studentCv";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { studentId, action: "approve" | "changes", note } — the batch's CV reviewer (advisor), the Program Lead or the FYP supervisor.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const studentId = String(b.studentId || "");
@@ -14,3 +15,4 @@ export async function POST(req: Request) {
   await (prisma as unknown as Record<string, any>).studentCv.update({ where: { studentId }, data: { status: b.action === "approve" ? "APPROVED" : "CHANGES", reviewerNote: note || null, reviewedById: user.id, ...(b.action === "approve" ? {} : { published: false }) } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

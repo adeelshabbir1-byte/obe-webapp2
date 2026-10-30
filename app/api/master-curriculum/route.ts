@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Published master curricula this user may browse: the Super User sees all of them; everyone else sees
 // only their own institute's copies plus the official ones the Super User assigned to their institute.
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
@@ -18,3 +19,4 @@ export async function GET() {
 
   return NextResponse.json({ curricula });
 }
+export const GET = withErrors(GET_handler);

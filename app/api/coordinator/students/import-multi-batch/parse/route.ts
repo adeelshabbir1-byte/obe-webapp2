@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { normalizeTrack } from "../../../../../../lib/tracks";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Pure file/text parsing, no database writes at all — this is the fast
 // part (reading file structure into rows) split out from the slow part
@@ -11,7 +12,7 @@ import { normalizeTrack } from "../../../../../../lib/tracks";
 // limit, rather than one request trying to do everything for however
 // many hundreds of rows the file contains and getting cut off mid-way
 // with an unparseable response.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -59,3 +60,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ rows: dataRows });
 }
+export const POST = withErrors(POST_handler);

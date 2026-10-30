@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { erpAccess, edb, post } from "../../../lib/erp";
+import { withErrors } from "../../../lib/apiHandler";
 
 const clip = (v: unknown, n = 120) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // Store: stock items, vendors, and stock moves (receive / issue / count correction). Issues are expensed at cost.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const acc = await erpAccess(user);
@@ -44,3 +45,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Inventory is not set up yet — run prisma/migration_erp.sql." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -5,11 +5,12 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { MODULE_KEYS, PACKAGES } from "../../../../lib/modules";
 import { forgetLocks } from "../../../../lib/moduleLocks";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const mdb = prisma as unknown as Record<string, any>;
 
 // POST { chairmanId, on: string[] (modules switched on), packageKey?, note?, validUntil? } — Super User only.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !(await adminCan(user, "BILLING"))) return NextResponse.json({ error: "Only the Super User sets institute modules." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -29,3 +30,4 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "INSTITUTE_MODULES_SET", entityType: "User", entityId: chairmanId, metadata: { locked: locked.join(", "), programs: programs.join(", "), packageKey: packageKey || "" } });
   return NextResponse.json({ ok: true, locked: locked.length });
 }
+export const POST = withErrors(POST_handler);

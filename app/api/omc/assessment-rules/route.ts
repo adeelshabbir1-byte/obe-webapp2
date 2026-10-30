@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { canDecide, courseBreaches, decideBreach, deleteRule, saveRule, TYPES, RULES_HINT } from "../../../../lib/assessmentRules";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { action: "save", id?, label, types (comma list), level, minPct?, maxPct?, courseKind, program? } — OMC / Institute Head
 //      { action: "delete", id }
 //      { action: "decide", courseId, source, ruleId, scope, approve, note? } — OMC or HOD
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: RULES_HINT }, { status: 500 }); }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

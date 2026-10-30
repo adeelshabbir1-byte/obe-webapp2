@@ -6,6 +6,7 @@ import { hashPassword } from "../../../../../../lib/auth";
 import { cloneGrandCurriculaForChairman } from "../../../../../../lib/cloneCurriculum";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 function slugifyUsername(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "chairman";
@@ -15,7 +16,7 @@ function slugifyUsername(name: string) {
 // them in one step — the two things a Super User previously had to do
 // separately (create the account by hand, then run a SQL script) now
 // happen together automatically on approval.
-export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -66,3 +67,4 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
     clonedCurricula: clonedCurriculumIds.length,
   });
 }
+export const POST = withErrors(POST_handler);

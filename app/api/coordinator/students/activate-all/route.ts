@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // One-click login activation across EVERY batch this Coordinator owns —
 // but only for students who haven't finished their degree yet. "Finished"
@@ -24,7 +25,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // the kind of one-click action that shouldn't exist.
 export const maxDuration = 60;
 
-export async function POST(_req: NextRequest) {
+async function POST_handler(_req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -73,3 +74,4 @@ export async function POST(_req: NextRequest) {
 
   return NextResponse.json({ activated, skippedGraduated, skippedAlreadyActive, perBatch });
 }
+export const POST = withErrors(POST_handler);

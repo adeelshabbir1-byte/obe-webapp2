@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../../../../lib/contentSync";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 /** One-time catch-up for labs that already exist: every Lab "<CODE>-L" with
  * NO Subject Expert gets its theory course's expert. A Lab that already has
  * a DIFFERENT expert is never touched — it's listed back so the Coordinator
  * can decide. Send { apply: false } to preview without changing anything. */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -51,3 +52,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ applied: apply, filled, differing, blocked, theoryUnassigned });
 }
+export const POST = withErrors(POST_handler);

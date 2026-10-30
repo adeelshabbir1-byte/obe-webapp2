@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const degreeProgram = req.nextUrl.searchParams.get("degreeProgram");
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ profile });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -37,7 +38,7 @@ export async function PUT(req: NextRequest) {
 // NBEAC SAR details of the program: its level, launch, approvals, and which PLOs serve each PEO.
 const LEVELS = ["UG16", "GRAD18", "PHD"];
 const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v + "T00:00:00Z") : null);
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -65,3 +66,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Run prisma/migration_nbeac_sar.sql in Supabase first." }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);
+export const PATCH = withErrors(PATCH_handler);

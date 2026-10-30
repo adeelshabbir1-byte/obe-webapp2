@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 async function requireOwnedCourse(courseId: string, chairmanId: string | null) {
   const course = await prisma.masterCourse.findUnique({ where: { id: courseId }, include: { masterCurriculum: true } });
@@ -12,7 +13,7 @@ async function requireOwnedCourse(courseId: string, chairmanId: string | null) {
   return { course };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -46,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -81,3 +82,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -4,6 +4,7 @@ import { JUMMAH_BREAK } from "../../../../../../../../lib/timetableSlotBuilder";
 import { sectionKeysById, coversOf } from "../../../../../../../../lib/studentSections";
 import { prisma } from "../../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../../lib/reportScope";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const STEP = 0.5; // half-hour granularity, matching TimetableEntry.startHour
@@ -26,7 +27,7 @@ function batchIdsFor(section: { course: { batch: { id: string } | null } | null;
 // dragging. Read-only: nothing is moved until the Coordinator picks one via
 // the existing PUT .../entries/[entryId] endpoint (room choice is applied
 // separately there — this just names which room(s) work for that slot).
-export async function GET(req: Request, { params }: { params: { runId: string; entryId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { runId: string; entryId: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -100,3 +101,4 @@ export async function GET(req: Request, { params }: { params: { runId: string; e
 
   return NextResponse.json({ duration, candidates });
 }
+export const GET = withErrors(GET_handler);

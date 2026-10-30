@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user || !course.batchId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -35,3 +36,4 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   }));
   return NextResponse.json({ enrolled, students: allStudents });
 }
+export const POST = withErrors(POST_handler);

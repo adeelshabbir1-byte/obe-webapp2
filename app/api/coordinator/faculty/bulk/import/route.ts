@@ -5,6 +5,7 @@ import { prisma } from "../../../../../../lib/db";
 import { hashPassword } from "../../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { collegeRoleBlock } from "../../../../../../lib/affiliates";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const DEFAULT_TEMP_PASSWORD = "12345678"; // same fixed default already used by "Reset All Faculty Passwords"
 
@@ -24,7 +25,7 @@ function placeholderEmail(username: string): string {
   return `${username}@faculty.local`;
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const collegeNoSe = await collegeRoleBlock(user.managedById, "SUBJECT_EXPERT");
@@ -119,3 +120,4 @@ export async function POST(req: NextRequest) {
     tempPassword: created > 0 ? DEFAULT_TEMP_PASSWORD : undefined,
   });
 }
+export const POST = withErrors(POST_handler);

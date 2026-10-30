@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { importFullCurriculum, readProgramInfo } from "../../../../lib/masterFullImport";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 // Full curriculum import (courses, PLOs, CLOs with PLO mapping, lecture topics) from one Excel file.
 // OMC: into the institute's own curriculum for that degree program (created if missing), or into a chosen own copy.
 // Super User: into a chosen official curriculum, or a new official one.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "OMC" && user.role !== "SUPER_USER")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData().catch(() => null);
@@ -40,3 +41,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "could not read that file" }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

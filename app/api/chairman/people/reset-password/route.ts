@@ -5,10 +5,11 @@ import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { institutePeople } from "../../../../../lib/institutePeople";
 import { passwordProblem } from "../../../../../lib/passwordPolicy";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The Institute Head resets the password of anyone in the institute, and/or turns off their two-step sign-in
 // (a lost phone without backup codes). body: { userId, newPassword?, turnOffTwoStep? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head can do this." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -42,3 +43,4 @@ export async function POST(req: NextRequest) {
   const done = [resetPassword && "Temporary password set — they choose their own at the next sign-in", turnOff && "two-step sign-in turned off"].filter(Boolean).join("; ");
   return NextResponse.json({ ok: true, result: `${done}. ${person.name} has been signed out everywhere.` });
 }
+export const POST = withErrors(POST_handler);

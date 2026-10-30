@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Fetches the full topic list for 2-3 chosen courses at once, for the
 // cross-course topic redistribution workspace.
-export async function GET(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -30,3 +31,4 @@ export async function GET(req: NextRequest, { params }: { params: { curriculumId
     })),
   });
 }
+export const GET = withErrors(GET_handler);

@@ -7,10 +7,11 @@ import { autoEnrollBatchStudents } from "../../../../lib/autoEnroll";
 import { ensureInstructorCopy } from "../../../../lib/instructorCopy";
 import { carryOverFromMatchingSemester } from "../../../../lib/benchmarkCopy";
 import { snapshotCourseAssignmentsIfTermChanging, snapshotAttainmentAndResetIfTermChanging } from "../../../../lib/assignmentSnapshot";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -110,3 +111,4 @@ export async function POST() {
 
   return NextResponse.json({ offered, unOffered, perBatch, currentTerm: current });
 }
+export const POST = withErrors(POST_handler);

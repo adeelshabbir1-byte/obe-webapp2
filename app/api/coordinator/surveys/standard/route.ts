@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { STANDARD_SURVEYS } from "../../../../../lib/standardSurveys";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Program Lead: create the four standard indirect-assessment forms for a batch, one question per PLO (and per PEO for alumni/employers).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "Only the Program Lead creates program surveys." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -29,3 +30,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: true, made });
 }
+export const POST = withErrors(POST_handler);

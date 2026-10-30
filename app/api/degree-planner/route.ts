@@ -7,11 +7,12 @@ import { studentCurriculumGaps } from "../../../lib/curriculumWatch";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?studentId= — the generated plan with the loads saved for the student, the load form, requests and curriculum notes.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const access = await schemeAccess(req.nextUrl.searchParams.get("studentId"));
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
   const inp = await loadPlanInput(access.studentId);
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { studentId?, action: "loads", loads } | { action: "apply", loads? } | { action: "request", kind, courseCode?, termKey?, note? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const access = await schemeAccess(b.studentId ? String(b.studentId) : null);
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
@@ -77,3 +78,5 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

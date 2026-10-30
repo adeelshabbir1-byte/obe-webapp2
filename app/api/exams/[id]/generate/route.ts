@@ -3,12 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { loadSession, generate, allocate } from "../../../../../lib/exams";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 // POST { mode: "dates" | "rooms" } — make the date sheet (keeps papers moved by hand) and then rooms, seats and
 // invigilators; or only redo rooms, seats and invigilators for the dates as they are.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   const cid = user ? await examChairman(user) : null;
   if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await writeAuditLog({ actorUserId: user.id, action: "EXAM_DATESHEET_GENERATED", entityType: "ExamSession", entityId: s.id, metadata: { placed: r.placed ?? 0, unplaced: r.unplaced ?? 0 } });
   return NextResponse.json(r);
 }
+export const POST = withErrors(POST_handler);

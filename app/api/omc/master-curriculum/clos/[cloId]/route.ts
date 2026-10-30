@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 async function requireOwnedClo(cloId: string, chairmanId: string | null) {
   const clo = await prisma.masterCourseClo.findUnique({ where: { id: cloId }, include: { masterCourse: { include: { masterCurriculum: true } } } });
@@ -12,7 +13,7 @@ async function requireOwnedClo(cloId: string, chairmanId: string | null) {
   return { clo };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { cloId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -35,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { cloId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -47,3 +48,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { cloId: st
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

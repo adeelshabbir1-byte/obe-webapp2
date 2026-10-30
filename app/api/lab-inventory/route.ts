@@ -3,11 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { labScope } from "../../../lib/resources";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -53,3 +54,5 @@ export async function DELETE(req: NextRequest) {
   const r = await prisma.labInfo.deleteMany({ where: { id, chairmanId: scope.chairmanId, ...(scope.departmentIds ? { departmentId: { in: scope.departmentIds } } : {}) } });
   return NextResponse.json({ ok: r.count > 0 });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

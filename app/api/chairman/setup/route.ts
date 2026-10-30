@@ -7,6 +7,7 @@ import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 import { createStructure, setupPositions, ensureDegreeProgram, type Shape, type TFamily } from "../../../../lib/instituteSetup";
 import { roleLabelOf } from "../../../../lib/orgChart";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 const HEAD = ["Position", "Faculty / department / program", "Name", "Email (login)", "CNIC", "Phone", "Position ID (do not change)"];
@@ -14,7 +15,7 @@ const HEAD = ["Position", "Faculty / department / program", "Name", "Email (logi
 async function ih() { const u = await getAuthenticatedUser(); return u && u.role === "CHAIRMAN" ? u : null; }
 
 // GET — the management logins template: one row per position of the structure.
-export async function GET() {
+async function GET_handler() {
   const user = await ih(); if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const ps = await setupPositions(user.id);
   const holders = await prisma.user.findMany({ where: { id: { in: ps.map((p) => p.holderId).filter((x): x is string => !!x).concat("none") } }, select: { id: true, name: true, email: true } });
@@ -31,7 +32,7 @@ export async function GET() {
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="management-logins.xlsx"' } });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await ih(); if (!user) return NextResponse.json({ error: "Only the Institute Head sets up the institute." }, { status: 403 });
   const chairmanId = user.id;
   if ((req.headers.get("content-type") || "").includes("multipart/form-data")) return upload(req, chairmanId);
@@ -107,3 +108,5 @@ async function upload(req: NextRequest, chairmanId: string) {
   await writeAuditLog({ actorUserId: chairmanId, action: "MANAGEMENT_LOGINS_UPLOADED", entityType: "User", entityId: chairmanId, metadata: { rows: rows.length, created } }).catch(() => null);
   return NextResponse.json({ ok: true, rows, created, message: `${created} new login(s) created; ${ok.length - created} row(s) use an existing login. Now assign the positions below.` });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -5,13 +5,14 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { holdersOf, notifyUsers } from "../../../../lib/notifications";
 import { EVENT_CATEGORIES } from "../../../../lib/studentActivities";
 import { officesOf, validTime } from "../../../../lib/engagement";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // A society's office bearers propose events (workshops, competitions, talks) for the Student Activities coordinator to
 // approve, and can withdraw a proposal that is still waiting.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return bad("not logged in", 401);
   const b = await req.json().catch(() => ({}));
@@ -56,3 +57,4 @@ export async function POST(req: NextRequest) {
     return bad("Could not save.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

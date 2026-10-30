@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Excel download of one master curriculum: its PLOs, its courses, every course's CLOs with the PLO each is tagged to,
 // and the lecture-by-lecture topics with the CLO each lecture serves.
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -62,3 +63,4 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     { name: "GAs", columns: [{ header: "GA", key: "number", width: 8 }, { header: "Title", key: "title", width: 40 }, { header: "Description", key: "description", width: 90 }], rows: ploRows },
   ]);
 }
+export const GET = withErrors(GET_handler);

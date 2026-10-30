@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { decideHold, choicesFor } from "../../../lib/autoRegister";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const adb = prisma as unknown as Record<string, any>;
 
 // POST { holdId, courseIds[], note } — the batch advisor (or the Program Lead) registers a held student.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -22,3 +23,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "REGISTRATION_HOLD_DECIDED", entityType: "Student", entityId: h.studentId, metadata: { courses: ids.length } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

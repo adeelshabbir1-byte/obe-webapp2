@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   });
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -83,3 +84,5 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

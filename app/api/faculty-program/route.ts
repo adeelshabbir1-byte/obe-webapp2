@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Divides a department's faculty into programs: a faculty member belongs to the coordinator / Program Lead
 // who looks after their program. The Institute Head can move anyone; a Chairman only within their own department.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (user.role === "HEAD_OF_DEPARTMENT") return NextResponse.json({ error: "A Chairman asks for a move on the Teacher Program Moves page; both Program Leads must accept it." }, { status: 403 });
@@ -22,3 +23,4 @@ export async function PUT(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_MOVED_TO_PROGRAM", entityType: "User", entityId: target.id, metadata: { coordinatorId: coordinator.id } });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

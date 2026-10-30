@@ -12,6 +12,7 @@ import { rdb2, REC_HINT, DESIGNATIONS, DEFAULT_WEIGHTS, raiseRequest, decideRequ
 import { issueDocument, signersFrom } from "../../../lib/signoff";
 import { docxSignOff } from "../../../lib/signoffDocx";
 import { titlesFor, applyTitles } from "../../../lib/titles";
+import { withErrors } from "../../../lib/apiHandler";
 
 async function who() {
   const user = await getAuthenticatedUser();
@@ -37,7 +38,7 @@ async function appAndReq(me: Me, applicationId: string) {
 }
 
 /** GET ?offer=<applicationId> (Word) · ?cv=<applicationId> (the CV) · ?record=1 (hiring record, Excel). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -91,7 +92,7 @@ export async function GET(req: Request) {
  *   board { advertId, members (ids, comma separated), interviewAt, venue }   mark { applicationId, marks, remarks }
  *   recommend { advertId, applicationIds }   approveBoard { advertId, approve, note }   join { applicationId, username, password }   declined { applicationId }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -197,3 +198,5 @@ export async function POST(req: Request) {
     }
   } catch (e) { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(m) ? REC_HINT : m.slice(0, 300) }, { status: 400 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

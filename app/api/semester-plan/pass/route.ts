@@ -4,12 +4,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { RANK, SETTER_ROLES, chairmanOf, topUpStanding } from "../../../../lib/deadlines";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /**
  * A Dean, Chairman or Program Lead passes a higher target down to the people in their own area with an earlier date,
  * keeping some slack before the date above them. Setting it again replaces their earlier choice.
  */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role) || user.role === "CHAIRMAN") return NextResponse.json({ error: "Only a Dean, Chairman or Program Lead can pass a target on" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -29,3 +30,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "TARGET_PASSED_ON", entityType: "Deadline", entityId: parent.id });
   return NextResponse.json({ ok: true }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

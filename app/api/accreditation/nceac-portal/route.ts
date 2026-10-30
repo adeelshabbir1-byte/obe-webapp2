@@ -9,13 +9,14 @@ import { TEMPLATES, portalLists, savePortalList, studentExport, facultyExport, s
 import { INVENTORY, GROUP_LABEL } from "../../../../lib/nceacInventory";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const safe = (s: string) => s.replace(/[^\w .()-]+/g, "").trim();
 const file = (buf: ArrayBuffer | Buffer, name: string) => new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": XLSX, "Content-Disposition": `attachment; filename="${safe(name)}.xlsx"` } });
 
 /** GET ?file=students|faculty|courses|inventory&program=&batch=<id|all>&scope=program|all — a file in the NCEAC portal's format. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
  *   { action: "remind", program } — tell the program's teachers whose rows the portal would reject
  * POST multipart { file, kind: "students"|"faculty", program, batch } — upload a filled file in the portal's format.
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   try {
@@ -128,3 +129,5 @@ export async function POST(req: Request) {
   }
 }
 
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

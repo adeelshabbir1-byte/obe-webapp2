@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { visibleBatchIds } from "../../../../lib/studentScope";
 import { bestAttemptTotals } from "../../../../lib/cgpaMath";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // GET ?q=2510 → matching students (as you type)
 //     ?batches=1 → batches the person may open
 //     ?batchId=… → the whole batch in roll-number order (with CGPA and status)
 //     ?around=<studentId> → that student's batch list and position, for Previous / Next
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const ids = await visibleBatchIds(user);
@@ -32,3 +33,4 @@ export async function GET(req: NextRequest) {
   const cg = (id: string) => { const t = bestAttemptTotals(recs.filter((r) => r.studentId === id) as never); return t.credits ? Math.round((100 * t.points) / t.credits) / 100 : null; };
   return NextResponse.json({ students: xs.map((x) => ({ ...x, cgpa: p.get("cgpa") ? cg(x.id) : undefined })), index: around ? xs.findIndex((x) => x.id === around) : -1 });
 }
+export const GET = withErrors(GET_handler);

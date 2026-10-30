@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // currentSemesterNumber previously had no way to ever change at all —
 // every student stayed at its default of 1 forever, with nothing in
@@ -19,7 +20,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // they're retaking, not a blanket default), while manual
 // register/withdraw and out-of-batch requests were already
 // independent of this field entirely.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -61,3 +62,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ advanced: toAdvance.length, heldBack: heldBackSet.size });
 }
+export const POST = withErrors(POST_handler);

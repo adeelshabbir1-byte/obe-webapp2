@@ -5,6 +5,7 @@ import { searchArticles, suggestFor } from "../../../../lib/help/search";
 import { helpAiCredentials } from "../../../../lib/help/rerank";
 import { forAudience, type HelpArticle } from "../../../../lib/help/types";
 import { toCard } from "../../../../lib/help/cards";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ const card = toCard;
 
 // GET ?q=&path=&audience=student — search the help center as the signed-in person (staff role or student).
 // Without q it returns the suggestions for the page they are on.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const viewer = await helpViewer(sp.get("audience") === "student" ? "student" : "staff");
   if (!viewer) return NextResponse.json({ error: "Sign in to use help." }, { status: 401 });
@@ -38,3 +39,4 @@ export async function GET(req: NextRequest) {
   const ai = hits.length >= 2 && !!(await helpAiCredentials(viewer.chairmanId));
   return NextResponse.json({ results: hits.map((h) => ({ ...card(h.article), matched: h.matched })), aiAvailable: ai });
 }
+export const GET = withErrors(GET_handler);

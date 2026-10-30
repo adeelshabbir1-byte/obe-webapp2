@@ -507,6 +507,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "levelsJson"
 },
 {
+"f": "migration_hardening.sql",
+"d": "Production hardening: request counters for rate limits (password reset, Report a problem, public endpoints), the",
+"t": "PrivacySetting"
+},
+{
 "f": "migration_has_lab.sql",
 "d": "Run in Supabase SQL Editor. Adds hasLab to Course \u2014 when false, Lab %",
 "t": "Course",

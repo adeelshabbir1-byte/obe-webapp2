@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { sendFollowUps } from "../../../../../../lib/topicLinks";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // The course's results by topic raise follow-ups: to the teacher of the course that depends on a weak topic, and to
 // whoever teaches this course next. Sending again only updates the numbers of ones already sent.
-export async function POST(_req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(_req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -20,3 +21,4 @@ export async function POST(_req: NextRequest, { params }: { params: { courseId: 
     return NextResponse.json({ error: "The follow-up table is not in the database yet — run prisma/migration_oct2026_features.sql in Supabase." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

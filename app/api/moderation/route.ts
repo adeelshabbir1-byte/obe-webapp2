@@ -7,10 +7,11 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { createExaminer, examinerByToken, addRemark, moderationLog, mdb, MOD_HINT, MOD_ROLES } from "../../../lib/moderation";
+import { withErrors } from "../../../lib/apiHandler";
 
 
 /** GET ?format=docx — the moderation log of the person's courses as a Word document (for the SAR). */
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !MOD_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const where = await reviewBatchWhere(user);
@@ -33,7 +34,7 @@ export async function GET() {
  *   { action: "revoke", id }
  *   { action: "remark", token, courseId, kind: "PAPER"|"RESULT", decision: "OK"|"CHANGES", comments, clarity } — the external examiner (no account)
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const b = await req.json().catch(() => ({}));
   try {
     if (b.action === "remark") {
@@ -76,3 +77,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? MOD_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -4,8 +4,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { canEditReport } from "../../../../../../lib/reportAcl";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!(await canEditReport(user, "omc.reports.result-mate"))) return NextResponse.json({ error: "edit access to this report is restricted" }, { status: 403 });
@@ -31,3 +32,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const saved = await prisma.courseGradeCutoff.findMany({ where: { courseId: course.id } });
   return NextResponse.json({ cutoffs: saved });
 }
+export const PUT = withErrors(PUT_handler);

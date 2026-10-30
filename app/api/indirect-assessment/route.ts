@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { reviewBatchWhere } from "../../../lib/reviewScope";
 import { idb, SOURCES } from "../../../lib/indirectPlo";
+import { withErrors } from "../../../lib/apiHandler";
 
 // The Program Lead (or Institute Head / OMC) sets how direct and indirect evidence are blended for a program, and the target.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const where = await reviewBatchWhere(user);
@@ -22,3 +23,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Run prisma/migration_indirect.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

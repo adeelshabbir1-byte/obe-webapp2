@@ -7,11 +7,12 @@ import { alertStudents } from "../../../lib/messaging";
 import { followersOf, mirrorInstrument } from "../../../lib/sectionLink";
 import { fmt, mdb, parseLocal, parseBank, normClo, finishAttempt, pushMark, DIFF, BLOOM, type Quiz, type Attempt } from "../../../lib/mcq";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const s = (v: unknown, n = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // Instructor: the course's MCQ bank (shared by every section of the course code) and its online quizzes.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const course = await requireInstructorCourse(user, String(b.courseId || ""));
@@ -93,3 +94,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Online quizzes are not set up yet — run prisma/migration_mcq.sql." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -13,3 +13,23 @@ export async function ipBlocked(ip: string) {
   }).catch(() => 0);
   return n >= IP_MAX_FAILS;
 }
+
+// General request limits (password reset, Report a problem, public endpoints): at most `max` hits per `key` in
+// `windowMs`, counted in a small side table so it works across serverless instances. If the table is missing the
+// request is allowed (never lock people out because of a pending migration).
+const rdb = prisma as unknown as Record<string, any>;
+export async function hitLimit(key: string, max: number, windowMs: number): Promise<{ ok: boolean; retryAfter: number }> {
+  try {
+    const since = new Date(Date.now() - windowMs);
+    const n = await rdb.rateLimitHit.count({ where: { key, at: { gte: since } } });
+    if (n >= max) return { ok: false, retryAfter: Math.ceil(windowMs / 1000) };
+    await rdb.rateLimitHit.create({ data: { key } });
+    // Old rows are cleared now and then.
+    if (Math.random() < 0.02) await rdb.rateLimitHit.deleteMany({ where: { at: { lt: new Date(Date.now() - 24 * 3600_000) } } }).catch(() => null);
+    return { ok: true, retryAfter: 0 };
+  } catch {
+    return { ok: true, retryAfter: 0 };
+  }
+}
+/** The JSON 429 reply for a refused request. */
+export const tooMany = (retryAfter: number) => new Response(JSON.stringify({ error: "Too many requests — please wait a few minutes and try again." }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(retryAfter) } });

@@ -55,6 +55,7 @@ export default async function HemisPage({ searchParams }: { searchParams: { show
         <b>Download</b>
         <a className="btn btn-brass btn-sm" href="/api/hemis?dataset=all">⬇ All six data sets (Excel)</a>
         <a className="btn btn-secondary btn-sm" href="/api/hemis?dataset=all&only=ready">⬇ Only rows that pass</a>
+        <a className="btn btn-secondary btn-sm" href="/api/hemis?dataset=all&only=ready&withCnic=1" title="CNICs are masked in every download. The HEMIS upload needs them in full: Institute Head, Dean, HOD, Program Lead or Department Coordinator only; logged.">⬇ For the HEMIS upload (full CNIC, logged)</a>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 12 }}>
         {DATASETS.map((d) => { const s = hemisSummary(out[d.key]); return (

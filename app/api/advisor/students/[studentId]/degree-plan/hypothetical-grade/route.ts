@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Advisor-facing counterpart to /api/student/degree-plan/hypothetical-grade
 // — lets the Advisor try out a future grade for a course in the
 // student's plan (e.g. "if they get a B+ retaking this course next
 // semester") and see the effect on projected GPA/CGPA, same as the
 // student's own what-if planner.
-export async function POST(req: NextRequest, { params }: { params: { studentId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -30,3 +31,4 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

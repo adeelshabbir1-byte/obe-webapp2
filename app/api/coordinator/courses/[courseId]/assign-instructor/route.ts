@@ -9,6 +9,7 @@ import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope
 import { pastTermError } from "../../../../../../lib/courseTerm";
 import { notifyUsers } from "../../../../../../lib/notifications";
 import { leaveBlock } from "../../../../../../lib/facultyLeave";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Originally Course Assigner-only. Institute Head, Program Coordinator, and OMC
 // can now also assign/change an instructor directly from the Program
@@ -16,7 +17,7 @@ import { leaveBlock } from "../../../../../../lib/facultyLeave";
 // those roles already get everywhere else via courseScopeFor.
 const ASSIGNABLE_ROLES = ["COURSE_ASSIGNER", "PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"];
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !ASSIGNABLE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -90,3 +91,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   }
   return NextResponse.json({ course: updated });
 }
+export const PUT = withErrors(PUT_handler);

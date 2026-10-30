@@ -5,12 +5,13 @@ import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { buildExcelResponse } from "../../../lib/excelExport";
 import { VP_HINT, vdb, saveRule, setVisiting, saveBiometric, buildClaim, teacherUpdate, plDecide, deanDecide, markPaid, type Claim } from "../../../lib/visitingPay";
+import { withErrors } from "../../../lib/apiHandler";
 
 const s = (v: unknown, n = 500) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const RULE_ROLES = ["DEAN", "CHAIRMAN"], FIN = ["FINANCE_OFFICER", "CHAIRMAN"];
 
 // GET ?sheet=YYYY-MM — Accounts: the month's approved / paid visiting-pay sheet as Excel.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !FIN.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.role === "CHAIRMAN" ? user.id : await chairmanIdFor(user);
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     rows: cs.map((c) => { const u = users.find((x) => x.id === c.userId); const co = courses.find((x) => x.id === c.courseId); return { t: u?.name || "", d: u?.department_?.name || "", c: co ? `${co.code} ${co.title}` : "", n: (JSON.parse(c.linesJson) as { counted: boolean }[]).filter((l) => l.counted).length, a: c.adjustedAmount ?? c.amount, st: c.status === "PAID" ? "Paid" : "Approved", r: c.paidRef || "" }; }) }]);
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.role === "CHAIRMAN" ? user.id : await chairmanIdFor(user).catch(() => "");
@@ -74,3 +75,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|P2021/.test(m) ? VP_HINT : m }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

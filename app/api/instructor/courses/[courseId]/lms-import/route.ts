@@ -6,13 +6,14 @@ import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { normKey } from "../../../../../../lib/lmsImport";
 import { collegeMarksBlock } from "../../../../../../lib/affiliates";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 type Body = { source?: string; rows: { key: string; name?: string; scores: Record<string, string> }[]; map: { col: string; instrumentId: string; outOf: number }[]; overwrite?: boolean };
 
 // Imports an LMS gradebook (Moodle, Google Classroom, Canvas) into this course's assessments.
 // Each LMS column is mapped to one assessment; scores are rescaled from the LMS "out of" to the assessment's own max,
 // so the marks then flow to CLOs and PLOs exactly like typed marks.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -47,3 +48,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   await writeAuditLog({ actorUserId: user.id, action: "MARKS_IMPORTED_LMS", entityType: "Course", entityId: course.id, metadata: { source: b.source || "CSV", columns: b.map.map((m) => iOf.get(m.instrumentId)?.label).join(", "), written, skipped, unmatched: unmatched.length } });
   return NextResponse.json({ ok: true, written, skipped, unmatched: unmatched.slice(0, 50), unmatchedCount: unmatched.length });
 }
+export const POST = withErrors(POST_handler);

@@ -54,6 +54,7 @@ export default async function AasPage({ searchParams }: { searchParams: { progra
       <button className="btn btn-secondary btn-sm">Show</button>
       <a className="btn btn-brass btn-sm" href={`/api/accreditation/aas?file=workbook&${qs}`}>⬇ AAS workbook (all sections)</a>
       <a className="btn btn-brass btn-sm" href={`/api/accreditation/nceac-portal?file=students&${qs}`}>⬇ Students file (NCEAC upload format)</a>
+      <a className="btn btn-secondary btn-sm" href={`/api/accreditation/nceac-portal?file=students&withCnic=1&${qs}`} title="CNICs are masked in every download. The portal upload needs them in full: Institute Head, Dean, HOD, Program Lead or Department Coordinator only; logged.">⬇ For the portal upload (full CNIC, logged)</a>
       <a className="btn btn-secondary btn-sm" href={`/accreditation/nceac-portal?${qs}`}>NCEAC Portal Data: checks, faculty file, field inventory →</a>
     </form>
     <div className="card" style={{ borderLeft: `4px solid ${rules.every((r) => r[1]) ? "#2E7D4F" : "#B3261E"}` }}>

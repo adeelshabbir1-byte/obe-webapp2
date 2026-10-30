@@ -6,9 +6,10 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, num, dateOrNull, staffOf } from "../../../lib/registers";
 import { BEN_HINT, KINDS, CLAIM, canManageBenefits, type Plan } from "../../../lib/benefits";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET — the employee benefits summary (Word) for NBEAC Form 7. */
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -32,7 +33,7 @@ export async function GET() {
  *   enrol { planId, userId | "ALL", dependantsCount, amount, startDate }   unenrol { enrolmentId }
  *   claim { planId, date, amount, description } — a member of staff on their own plan;   decide { claimId, status, note }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -87,3 +88,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? BEN_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

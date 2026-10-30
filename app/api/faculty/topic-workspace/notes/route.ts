@@ -4,11 +4,12 @@ import { prisma } from "../../../../../lib/db";
 import { accessFor, db, MISSING } from "../../../../../lib/topicPlan";
 import { topicKey } from "../../../../../lib/topicPlanCore";
 import { forbidden, wsUser } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // POST { courseId, topic, note } — a teaching note on a topic, kept by course code so the next offering's teacher sees it.
 // POST { courseId, topic, help: { kind: PRACTICE|MATERIAL|REMEDIATION, title, url } } — ready help for a usually-hard
 // topic, offered to the instructor a week before its lecture.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
@@ -30,3 +31,4 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: MISSING }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

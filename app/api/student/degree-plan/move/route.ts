@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../../lib/studentSession";
 import { prisma } from "../../../../../lib/db";
 import { recordMove } from "../../../../../lib/planHistory";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Moves a planned course to a different semester — but only after
 // checking that the course (by code) has actually been scheduled at
@@ -9,7 +10,7 @@ import { recordMove } from "../../../../../lib/planHistory";
 // or present. This can't predict a semester that hasn't happened yet
 // with full certainty, but a course's own historical semester pattern
 // is the best signal available without a live scheduling system.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -44,3 +45,4 @@ export async function POST(req: NextRequest) {
     warning: validated ? null : `${course.code} hasn't historically been offered in Semester ${targetSemesterNumber} for this program — double check with your Program Coordinator before relying on this plan.`,
   });
 }
+export const POST = withErrors(POST_handler);

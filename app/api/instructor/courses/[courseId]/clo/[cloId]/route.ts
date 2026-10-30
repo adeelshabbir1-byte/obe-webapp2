@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   return NextResponse.json({ clo: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -41,3 +42,5 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_CLO_DELETED", entityType: "CLO", entityId: params.cloId });
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

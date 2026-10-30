@@ -5,8 +5,9 @@ import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 import { recomputeAffectedRows, recomputeRows } from "../../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -55,3 +56,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   });
   return NextResponse.json({ rows: allRows.map((r) => ({ id: r.id, weightPct: r.weightPct, linkedInstrumentIds: r.instrumentLinks.map((l) => l.instrumentId) })) });
 }
+export const PUT = withErrors(PUT_handler);

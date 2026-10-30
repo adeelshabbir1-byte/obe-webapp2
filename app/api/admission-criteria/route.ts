@@ -4,11 +4,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { INSTITUTE_KEY, academicScope, programsOf } from "../../../lib/academic";
+import { withErrors } from "../../../lib/apiHandler";
 
 const num = (v: unknown) => (v === "" || v === null || v === undefined ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 const txt = (v: unknown) => (String(v ?? "").trim() || null);
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["CHAIRMAN", "STUDENT_AFFAIRS"].includes(user.role)) return NextResponse.json({ error: "Only the Student Affairs department (or the Institute Head) can set admission criteria" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -34,3 +35,4 @@ export async function PUT(req: NextRequest) {
   await logChange(chairmanId, "ADMISSION", `Admission criteria saved for ${degreeProgram}${data.seats ? ` (${data.seats} seats)` : ""}`, user.id);
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

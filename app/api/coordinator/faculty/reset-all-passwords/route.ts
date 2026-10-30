@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Bulk password reset for every faculty member (Subject Expert or
 // Instructor) this Coordinator onboarded — unlike a student's initial
@@ -14,7 +15,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // nobody remembers what was typed in at onboarding time.
 const DEFAULT_PASSWORD = "12345678";
 
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -31,3 +32,4 @@ export async function POST() {
 
   return NextResponse.json({ reset: faculty.length });
 }
+export const POST = withErrors(POST_handler);

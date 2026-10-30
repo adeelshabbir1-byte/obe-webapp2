@@ -4,10 +4,11 @@ import { chairmanIdFor } from "../../../../lib/reportScope";
 import { decideCandidate, decidePlan, publish, saveElection, SCOPES, ELECTION_HINT } from "../../../../lib/elections";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Societies Head (Student Affairs / Institute Head): open or edit an election, give final approval, publish the result.
 // The society's faculty advisor: approve candidates and the office holders' plans and event reports.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

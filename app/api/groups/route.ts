@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canEvaluate, saveGroups, autoGroups, groupsOf } from "../../../lib/workGroups";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { courseId, action: "save", groups: [{ name, title, studentIds }] } or { courseId, action: "auto", size }.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const courseId = String(b.courseId || "");
@@ -14,3 +15,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, groups: await groupsOf(courseId) });
   } catch { return NextResponse.json({ error: "Groups are not set up yet — the Super User needs to run prisma/migration_groups_labs.sql." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

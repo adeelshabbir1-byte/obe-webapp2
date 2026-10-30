@@ -508,7 +508,7 @@ export default function AppShell({
           {children}
           <div className="app-footer">
             {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
-            <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved.</span>
+            <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved. · <a href="/privacy">Privacy</a></span>
           </div>
         </div>
       </div>

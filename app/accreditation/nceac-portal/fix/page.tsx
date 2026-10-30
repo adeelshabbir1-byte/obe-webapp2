@@ -6,7 +6,7 @@ import { navForRole } from "../../../../components/reportNav";
 import { roleLabel } from "../../../../lib/reportScope";
 import { aasContext } from "../../../../lib/aasAccess";
 import { sectionRows } from "../../../../lib/aas";
-import { selfFields, canonValues } from "../../../../lib/aasFields";
+import { selfFields, canonValues, maskedValues } from "../../../../lib/aasFields";
 import { portalLists, buildRow, STUDENT_TEMPLATE, FACULTY_TEMPLATE } from "../../../../lib/nceacPortal";
 import DetailsForm from "../../../../components/DetailsForm";
 
@@ -38,7 +38,7 @@ export default async function FixPortalDetails({ searchParams }: { searchParams:
   if (kind === "student") { const s = await prisma.student.findUnique({ where: { id }, select: { rollNumber: true } }); row = rows.find((r) => r.ref === s?.rollNumber) || null; }
   const shell = (x: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}><p className="no-print" style={{ margin: "0 0 6px" }}><a href={back}>← {back.startsWith("/hemis") ? "HEMIS Data Export" : "NCEAC Portal Data"}</a></p>{x}</Shell>;
   if (!row) return shell(<div className="card">This {kind === "student" ? "student" : "teacher"} is not in your programs.</div>);
-  const values = canonValues(kind, row.values, lists);
+  const values = maskedValues(canonValues(kind, row.values, lists), user.role);
   const check = buildRow(kind === "student" ? STUDENT_TEMPLATE : FACULTY_TEMPLATE, { ...values, roll: row.ref }, lists, row.ref, id);
   return shell(<>
     <h1 style={{ fontSize: 22, marginBottom: 4 }}>Details for NCEAC and HEMIS — {row.values.name}</h1>

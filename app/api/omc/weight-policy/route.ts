@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { fitUnconfirmedWeightsToPolicy } from "../../../../lib/weightPolicy";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -34,7 +35,7 @@ export async function GET() {
   return NextResponse.json({ policies });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -92,3 +93,5 @@ export async function PUT(req: NextRequest) {
   const adjusted = await fitUnconfirmedWeightsToPolicy({ chairmanId: user.managedById });
   return NextResponse.json({ policy, adjusted });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

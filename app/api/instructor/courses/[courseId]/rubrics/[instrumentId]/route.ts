@@ -5,10 +5,11 @@ import { requireInstructorCourse } from "../../../../../../../lib/instructorGuar
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { rdb, validateCriteria, parseCriteria, scoreFor, type RubricRow, type RubricScoreRow } from "../../../../../../../lib/rubrics";
 import { resultLockMessage } from "../../../../../../../lib/resultApproval";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // PUT { title, criteria } — save the rubric of one assessment item. If students were already marked with it, their
 // marks are worked out again from their chosen levels (a criterion that was removed or added makes them unmarked).
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -43,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   return NextResponse.json({ ok: true, id: row.id, remarked: updated });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -53,3 +54,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
   await rdb.rubric.delete({ where: { id: row.id } });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

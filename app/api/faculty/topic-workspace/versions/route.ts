@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { accessFor, compareWithLast, undoSession } from "../../../../../lib/topicPlan";
 import { forbidden, reply, wsUser } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // GET ?courseId=&plan= — compare with last semester, and the saved versions of the plan.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const sp = req.nextUrl.searchParams;
@@ -12,10 +13,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(await compareWithLast(a.planCourseId, a.plan));
 }
 // POST { undo: sessionId } — undo everything this person saved in that workspace session.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
   if (!b.undo) return NextResponse.json({ error: "unknown action" }, { status: 400 });
   return reply(await undoSession(user, String(b.undo)));
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

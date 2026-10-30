@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { timetableActor, READ_ONLY } from "../../../../lib/timetableAccess";
 import { getMaxSection, setMaxSection, STUDENT_SECTIONS_HINT } from "../../../../lib/studentSections";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** GET — the department timetable's settings (the section limit). */
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   return NextResponse.json({ maxSection: await getMaxSection(actor.chairmanId, actor.scope.key), canEdit: actor.canEdit });
 }
 
 /** PUT { maxSection } — the Department Coordinator sets the most students in one section (default 50). */
-export async function PUT(req: Request) {
+async function PUT_handler(req: Request) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -23,3 +24,5 @@ export async function PUT(req: Request) {
   await writeAuditLog({ actorUserId: actor.user.id, action: "TIMETABLE_SECTION_LIMIT_SET", entityType: "TimetableScope", entityId: actor.scope.key, metadata: { maxSection: v } }).catch(() => null);
   return NextResponse.json({ maxSection: v, message: `Sections hold at most ${v} students. Run "Auto-generate sections" to apply it.` });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

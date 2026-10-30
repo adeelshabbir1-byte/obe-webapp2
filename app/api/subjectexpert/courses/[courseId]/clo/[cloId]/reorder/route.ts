@@ -6,8 +6,9 @@ import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGua
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 import { renumberClos } from "../../../../../../../../lib/cloOrdering";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -41,3 +42,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

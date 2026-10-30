@@ -6,9 +6,10 @@ import { sdb, canDecideLeave, type ShortLeaveRow, type SubRow } from "../../../.
 import { prisma } from "../../../../lib/db";
 import { details, policies, setDetail } from "../../../../lib/leaveRules";
 import { approverFor } from "../../../../lib/approvers";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { action: "approve" | "reject" | "cancel", note } — the Chairman decides; the teacher can withdraw it.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const me = await getSignedInUser();
   const user = await getAuthenticatedUser();
   if (!me || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -62,3 +63,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await notifyUsers([l.userId], { kind: "REQUEST", title: `Your leave was ${approve ? "approved" : "not approved"}`, body: `${user.name} ${approve ? "approved" : "did not approve"} your leave${note ? `: ${note}` : "."}`, href: "/my-leave" });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

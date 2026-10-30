@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { bdb, BUILDER_HINT } from "../../../../lib/curriculumBuilder";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { userId, on, councils: "NCEAC, NBEAC", programs: "" } — make a platform expert a Curriculum Builder (or not).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: b.on === false ? `${u.name} is no longer a Curriculum Builder.` : `${u.name} can now build curricula.` });
   } catch (e) { const m = (e as Error).message || ""; return NextResponse.json({ error: /curriculumBuilderScope|does not exist/.test(m) ? BUILDER_HINT : m }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

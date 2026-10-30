@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Shared by the assigned Instructor, the assigned Subject Expert, and
 // any OMC member who can see this course — a running thread between
@@ -16,7 +17,7 @@ async function canAccess(user: any, courseId: string) {
   return null;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const course = await canAccess(user, params.courseId);
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
   return NextResponse.json({ comments });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const course = await canAccess(user, params.courseId);
@@ -41,3 +42,5 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   await writeAuditLog({ actorUserId: user.id, action: "GUIDANCE_COMMENT_ADDED", entityType: "Course", entityId: params.courseId });
   return NextResponse.json({ comment }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

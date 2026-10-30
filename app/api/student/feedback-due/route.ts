@@ -4,11 +4,12 @@ import { prisma } from "../../../../lib/db";
 import { evdb } from "../../../../lib/evaluations";
 import { instituteOfBatch } from "../../../../lib/moduleLocks";
 import { settingsFor, windowOf } from "../../../../lib/questionnaires";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // GET — the student's courses whose feedback window is open and that they have not answered yet (the portal reminder).
-export async function GET() {
+async function GET_handler() {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ due: [] });
   const chairmanId = await instituteOfBatch(st.batchId).catch(() => null);
@@ -23,3 +24,4 @@ export async function GET() {
   }
   return NextResponse.json({ due });
 }
+export const GET = withErrors(GET_handler);

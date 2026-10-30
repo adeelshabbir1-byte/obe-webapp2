@@ -4,11 +4,12 @@ import { prisma } from "../../../../lib/db";
 import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
 import { sourcesForProgram, curriculumBoard, batchBoard } from "../../../../lib/batchBoard";
 import * as bs from "../../../../lib/batchSetup";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const db = prisma as unknown as Record<string, any>;
 
 // GET ?sources=<program> | ?preview=c:<curriculumId>|b:<batchId> | ?tracks=<curriculumId> | ?search=<text>&batchId=
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = req.nextUrl.searchParams;
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action, batchId, ... } — the Program Lead's own batch.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -78,3 +79,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation/i.test(m) ? "Run prisma/migration_batch_setup.sql (System Health → Run migrations)." : m.slice(0, 300) }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

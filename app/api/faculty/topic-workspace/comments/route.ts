@@ -5,9 +5,10 @@ import { notifyUsers } from "../../../../../lib/notifications";
 import { accessFor, db, MISSING } from "../../../../../lib/topicPlan";
 import { topicKey } from "../../../../../lib/topicPlanCore";
 import { forbidden, wsUser, LINK_ROLES } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The comment thread of one topic (Subject Expert, Instructor, Program Lead).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const sp = req.nextUrl.searchParams;
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   const names = new Map((await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId).concat("none") } }, select: { id: true, name: true, role: true } })).map((u) => [u.id, u]));
   return NextResponse.json({ comments: rows.map((r) => ({ id: r.id, body: r.body, at: r.at, by: names.get(r.userId)?.name || "", role: names.get(r.userId)?.role || "" })) });
 }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
@@ -30,3 +31,5 @@ export async function POST(req: NextRequest) {
   await notifyUsers([c?.subjectExpertId, c?.instructorId, c?.coordinatorId], { kind: "TOPIC_SUGGESTION", title: `${user.name} commented on "${topic}" (${a.code})`, body: body.slice(0, 200), href: "/faculty/topic-workspace", exceptId: user.id });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

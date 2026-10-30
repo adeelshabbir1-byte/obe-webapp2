@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Clones a curriculum — the official shared one, or another chairman's
 // own copy — into a NEW copy owned by this chairman, freely editable
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // and HEC's own PLO suggestions (keyed by code, so they only carry over
 // correctly when this clone's courses keep the same codes as the
 // source).
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -81,3 +82,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   return NextResponse.json({ curriculum: clone, coursesCloned, closCloned, ploSuggestionsCarriedForward: ploSuggestionsCloned });
 }
+export const POST = withErrors(POST_handler);

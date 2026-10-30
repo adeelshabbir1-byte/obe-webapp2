@@ -4,12 +4,13 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { govScope, inScope } from "../../../../../../lib/accreditation/governance";
 import { buildDossier } from "../../../../../../lib/accreditation/dossier";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // GET — the visit dossier as a ZIP: every task form, the evidence, the SAR (NBEAC), minutes, CQI and an index.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   if (!user || !s) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,3 +26,4 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "The dossier couldn't be put together — run prisma/migration_accreditation_governance.sql if you haven't yet." }, { status: 503 });
   }
 }
+export const GET = withErrors(GET_handler);

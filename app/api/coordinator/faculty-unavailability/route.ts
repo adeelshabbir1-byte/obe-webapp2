@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timetableActor, READ_ONLY, scopeFaculty } from "../../../../lib/timetableAccess";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ records, faculty: faculty.map((f) => ({ id: f.id, name: f.name })) });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -36,3 +37,5 @@ export async function POST(req: NextRequest) {
   });
   return NextResponse.json({ record }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

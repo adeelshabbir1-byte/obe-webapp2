@@ -4,10 +4,11 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
 import { appraiseesFor } from "../../../../lib/appraisal";
 import { rdb2, currentSemester, RECOGNITION_MANAGERS } from "../../../../lib/recognition";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { userId, title, reason } — the Chairman / Institute Head recognises work the system can't see
 // (a workshop run, committee work, a research grant...). DELETE ?id= takes one back.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !RECOGNITION_MANAGERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -26,10 +27,12 @@ export async function POST(req: NextRequest) {
   await notifyUsers([String(b.userId)], { kind: "REQUEST", title: `Recognised: ${title}`, body: `${user.name} recognised you${b.reason ? ` — ${String(b.reason).slice(0, 200)}` : "."}`, href: "/my-obe" });
   return NextResponse.json({ ok: true });
 }
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !RECOGNITION_MANAGERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { chairmanId, people } = await appraiseesFor(user);
   await rdb2.recognitionBadge.deleteMany({ where: { id: req.nextUrl.searchParams.get("id") || "", chairmanId, userId: { in: people.map((p) => p.id) } } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

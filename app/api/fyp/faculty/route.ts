@@ -4,13 +4,14 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
 import { ARTIFACT_KINDS, evaluatorRoleFor, fypAccess, REQUISITION_KINDS, saveScores } from "../../../../lib/fyp";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 const isUrl = (u: string) => /^https?:\/\/\S+$/i.test(u);
 
 // What any faculty member does in FYPs: propose projects, accept student groups, supervise, sit on panels and score.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const acc = await fypAccess(user);
@@ -162,3 +163,4 @@ export async function POST(req: NextRequest) {
     return bad("Could not save.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

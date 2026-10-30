@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { canEditArticles, helpViewer } from "../../../../lib/help/access";
 import { CATEGORIES, EVERYONE, STUDENT } from "../../../../lib/help/types";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const txt = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 const ROLE_VALUES = new Set([EVERYONE, STUDENT, "SUPER_USER", "CHAIRMAN", "PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "OMC", "COURSE_ASSIGNER", "HEAD_OF_DEPARTMENT", "DEAN", "DEPARTMENT_COORDINATOR", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"]);
@@ -11,7 +12,7 @@ const MISSING = "Your own help articles need prisma/migration_help_center.sql to
 
 // POST — create or update one of the institute's own help articles (the Super User writes them for every institute).
 // body: { id?, kind: GUIDE|FAQ, category, title, summary, steps[], whoCan, affects, roles[], pages[], keywords[], href, published, sourceTicketId? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const v = await helpViewer("staff");
   if (!v || !canEditArticles(v)) return NextResponse.json({ error: "Only the Institute Head (or the platform's Super User) writes help articles." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE ?id= — remove one of the institute's own articles.
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const v = await helpViewer("staff");
   if (!v || !canEditArticles(v)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scope = v.role === "SUPER_USER" ? null : v.id;
@@ -64,3 +65,5 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { suggestPloForClo, evenSplitContribution } from "../../../../../lib/cloPloMatching";
 import { ensureCoursePloMapping } from "../../../../../lib/coursePloSync";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Keyword-based CLO-to-PLO suggestion, at the granularity that
 // actually drives weighted attainment scoring (unlike the existing
@@ -21,7 +22,7 @@ import { ensureCoursePloMapping } from "../../../../../lib/coursePloSync";
 // in the batch has been processed.
 const CHUNK_SIZE = 15;
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -112,3 +113,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ suggested, skippedNoConfidentMatch, alreadyMapped, nextCursor, mightHaveMore });
 }
+export const POST = withErrors(POST_handler);

@@ -5,9 +5,10 @@ import { labAccessFor } from "../../../../lib/labAccess";
 import { labMarksLocked } from "../../../../lib/labTheory";
 import { labSessions } from "../../../../lib/labSessions";
 import { scoreFor } from "../../../../lib/rubrics";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // PUT { labCourseId, labNumber, studentId, levels } — rubric marking of one student in one lab session.
-export async function PUT(req: Request) {
+async function PUT_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const access = user ? await labAccessFor(user, String(b.labCourseId || "")) : null;
@@ -29,3 +30,4 @@ export async function PUT(req: Request) {
   });
   return NextResponse.json({ ok: true, score: r.score });
 }
+export const PUT = withErrors(PUT_handler);

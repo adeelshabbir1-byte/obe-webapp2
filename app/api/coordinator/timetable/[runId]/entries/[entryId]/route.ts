@@ -4,12 +4,13 @@ import { sectionKeysById } from "../../../../../../../lib/studentSections";
 import { prisma } from "../../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../../lib/reportScope";
 import { busyElsewhere } from "../../../../../../../lib/timetableScope";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { runId: string; entryId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { runId: string; entryId: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -88,3 +89,4 @@ export async function PUT(req: NextRequest, { params }: { params: { runId: strin
     clashes: clashingEntryIds.length > 0 ? { entryIds: Array.from(new Set(clashingEntryIds)), reasons } : null,
   });
 }
+export const PUT = withErrors(PUT_handler);

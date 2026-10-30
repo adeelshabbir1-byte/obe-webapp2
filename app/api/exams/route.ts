@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { xdb, readSettings } from "../../../lib/exams";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST — the Institute Head opens an exam session (midterm / final) with its days, time slots and rules.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const cid = user ? await examChairman(user) : null;
   if (!user || !cid) return NextResponse.json({ error: "Only the exam branch manages exams." }, { status: 403 });
@@ -15,3 +16,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "EXAM_SESSION_CREATED", entityType: "ExamSession", entityId: row.id, metadata: { name: r.data.name } });
   return NextResponse.json({ ok: true, id: row.id });
 }
+export const POST = withErrors(POST_handler);

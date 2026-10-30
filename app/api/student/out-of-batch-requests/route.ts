@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, requestId: request.id }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

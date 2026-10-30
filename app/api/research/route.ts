@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, staffOf, str, num, dateOrNull } from "../../../lib/registers";
 import { xdb, RES_HINT, isOric, submitForReview, review, decide, fetchOrcid, parseBibtex, parseLines, addCandidates, confirm, type Proposal } from "../../../lib/research";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * POST { action, ... } — every member of staff for their own research; ORIC (and the Institute Head) review and record decisions.
@@ -12,7 +13,7 @@ import { xdb, RES_HINT, isOric, submitForReview, review, decide, fetchOrcid, par
  *   review { id, ok, note }   decide { id, awarded, amount, startDate, endDate }
  *   journal { id?, title, issn, category, impactFactor }   removeJournal { id }   oric { userId, on } (the Institute Head)
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -78,3 +79,4 @@ export async function POST(req: Request) {
     }
   } catch (e) { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(m) ? RES_HINT : m.slice(0, 300) }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

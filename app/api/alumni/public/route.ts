@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addVoice, alumniByToken, answerRequest, ALUMNI_HINT } from "../../../../lib/alumniVoice";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // Public (link-based) actions of alumni: answer a faculty member's request; suggest; offer a workshop.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   try {
     if (b.action === "answer") {
@@ -27,3 +28,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

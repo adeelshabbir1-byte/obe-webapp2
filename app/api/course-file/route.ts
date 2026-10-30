@@ -5,6 +5,7 @@ import { prisma } from "../../../lib/db";
 import { reviewBatchWhere } from "../../../lib/reviewScope";
 import { courseFilePdf, syncCourseFolders } from "../../../lib/courseFile";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
@@ -12,7 +13,7 @@ export const maxDuration = 60;
  * GET ?courseId= — one course file as a PDF (its teacher, its Program Lead, or anyone who reviews its batch).
  * GET ?batch=<id>&semester=<n|all> — every offered course of a batch (or one semester) as PDFs in one ZIP.
  */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -43,3 +44,4 @@ export async function GET(req: Request) {
   const name = `Course files - ${batch?.degreeProgram} ${batch?.batchName}${sem && sem !== "all" ? ` semester ${sem}` : ""}.zip`.replace(/[^\w .()-]+/g, "");
   return new NextResponse(buf as unknown as ArrayBuffer, { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${name}"` } });
 }
+export const GET = withErrors(GET_handler);

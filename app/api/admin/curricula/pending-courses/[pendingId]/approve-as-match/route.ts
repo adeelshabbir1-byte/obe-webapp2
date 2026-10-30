@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Confirms a pending course is the SAME as an existing MasterCourse —
 // the "equate" action. Optionally merges the staged CLOs into the
 // existing course (only the ones that don't already exist there, by
 // statement text) rather than just discarding the duplicate.
-export async function POST(req: NextRequest, { params }: { params: { pendingId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { pendingId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -49,3 +50,4 @@ export async function POST(req: NextRequest, { params }: { params: { pendingId: 
 
   return NextResponse.json({ courseId: existingCourse.id, mergedClos: mergedCount });
 }
+export const POST = withErrors(POST_handler);

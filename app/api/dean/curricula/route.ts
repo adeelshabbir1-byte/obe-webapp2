@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Dean's sign-off (or "returned for changes") on one of the institute's curricula for their faculty.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "DEAN" || !user.facultyId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -24,3 +25,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "DEAN_CURRICULUM_" + body.status, entityType: "MasterCurriculum", entityId: curriculum.id, metadata: { note } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

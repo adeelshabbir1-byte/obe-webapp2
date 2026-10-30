@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../lib/contentSync";
 import { seedFromMasterCourseIfAvailable } from "../../../../lib/benchmarkCopy";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The one-at-a-time "Load HEC Content" button (Subject Expert side)
 // only ever touches a single course. With hundreds of courses now
@@ -23,7 +24,7 @@ import { writeAuditLog } from "../../../../lib/audit";
 // directly).
 const CHUNK_SIZE = 15;
 
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -87,3 +88,4 @@ export async function POST(req: Request) {
     perBatch: Array.from(perBatch.values()).sort((a, b) => a.batchLabel.localeCompare(b.batchLabel)),
   });
 }
+export const POST = withErrors(POST_handler);

@@ -8693,3 +8693,31 @@ model TopicPlanSetting {
   minSection       Int      @default(15)
   updatedAt        DateTime @default(now())
 }
+
+// ---------------------------------------------------------------- Production hardening (migration_hardening.sql)
+model RateLimitHit {
+  id  BigInt   @id @default(autoincrement())
+  key String
+  at  DateTime @default(now())
+
+  @@index([key, at])
+}
+
+model RestoreDrill {
+  id         String   @id
+  at         DateTime @default(now())
+  passed     Boolean
+  source     String?
+  summary    String?
+  detailJson String   @default("{}")
+
+  @@index([at])
+}
+
+model PrivacySetting {
+  chairmanId           String   @id
+  inactiveUserMonths   Int?
+  graduatedDetailYears Int?
+  updatedById          String?
+  updatedAt            DateTime @default(now())
+}

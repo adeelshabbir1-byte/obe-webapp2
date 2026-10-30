@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { timetableActor, READ_ONLY, type TimetableActor } from "../../../../../lib/timetableAccess";
 import { coversOf, getMaxSection } from "../../../../../lib/studentSections";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // A section belongs to either a standalone course or an equivalence group — never both — and must be on this
 // department timetable (any of its batches).
@@ -18,7 +19,7 @@ async function sizeOf(id: string, max: number) {
   return ((await coversOf([{ id: s.id, course: s.course, group: s.group }], max)).get(s.id) || []).reduce((a, c) => a + c.size, 0);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -44,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ section: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { id: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -61,3 +62,5 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   await prisma.scheduleSection.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

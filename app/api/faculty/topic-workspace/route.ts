@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { loadWorkspace, saveWorkspace } from "../../../../lib/facultyTopicWorkspace";
 import { getState, loadColumns, savePlans, tablesReady, MISSING } from "../../../../lib/topicPlan";
 import { forbidden, parseOpen, reply, wsUser } from "../../../../lib/topicApi";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?open=[{courseId, plan}] → the open courses' plans (any course of the institute, any number). Without `open`, the
 // person's last set of open courses. (The older ?courseIds=&referenceIds= form still answers.)
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const sp = req.nextUrl.searchParams;
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { sessionId, courses: [{courseId, plan, hash, entries}], note } → applies what the person owns, proposes the rest.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
@@ -34,3 +35,5 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(b.courses) || !b.courses.length) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
   return reply(await savePlans(user, { sessionId: String(b.sessionId || "").slice(0, 80) || undefined, note: typeof b.note === "string" ? b.note : undefined, courses: b.courses }));
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

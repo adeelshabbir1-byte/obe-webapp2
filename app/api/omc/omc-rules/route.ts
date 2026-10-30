@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { openRound, giveOpinion, finaliseCategory, savePanel, deletePanel, HEADS } from "../../../../lib/omcRules";
+import { withErrors } from "../../../../lib/apiHandler";
 
 function figuresFrom(b: Record<string, unknown>) {
   const f: Record<string, unknown> = { minQuizzes: b.minQuizzes, minAssignments: b.minAssignments };
@@ -15,7 +16,7 @@ function figuresFrom(b: Record<string, unknown>) {
  *   open { categories: "ALL" | "CORE,LAB" }    opinion { category, quizMin, quizMax, …, minQuizzes, minAssignments, comment }
  *   finalise { category, figures as above }    panel { id?, term, label, courses (codes, comma separated), member1..3 }    deletePanel { id }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "OMC") return NextResponse.json({ error: "Only OMC members." }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -47,3 +48,4 @@ export async function POST(req: Request) {
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

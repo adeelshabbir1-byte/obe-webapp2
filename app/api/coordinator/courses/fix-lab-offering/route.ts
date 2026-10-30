@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // One-time repair for Lab courses created by split-lab (either the
 // per-course button or the bulk "Split all 4-credit courses" one) BEFORE
@@ -13,7 +14,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // was actively offered. Safe to run more than once — it only ever touches
 // a Lab course whose own sibling theory course is offered and whose own
 // isOffered is still false.
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -41,3 +42,4 @@ export async function POST() {
 
   return NextResponse.json({ fixed: fixedCodes.length, fixedCodes });
 }
+export const POST = withErrors(POST_handler);

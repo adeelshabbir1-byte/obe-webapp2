@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const [own, platform] = await Promise.all([
@@ -15,7 +16,7 @@ export async function GET() {
   });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -30,3 +31,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ bundle: { ...bundle, reportIds: body.reportIds } }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

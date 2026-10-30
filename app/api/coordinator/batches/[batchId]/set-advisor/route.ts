@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../lib/db";
 import { snapshot } from "../../../../../../lib/planHistory";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { advisorCandidatesWhere } from "../../../../../../lib/advisors";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { batchId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -32,3 +33,4 @@ export async function PUT(req: NextRequest, { params }: { params: { batchId: str
   await writeAuditLog({ actorUserId: user.id, action: "BATCH_ADVISOR_SET", entityType: "Batch", entityId: batch.id, metadata: { from: batch.advisorId, to: advisorId } });
   return NextResponse.json({ ok: true, advisorId });
 }
+export const PUT = withErrors(PUT_handler);

@@ -4,10 +4,11 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { canEditMeta } from "../../../../../../lib/curriculumLibraryData";
 import { COURSE_TYPES } from "../../../../../../lib/courseTypes";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // PATCH { updates: [{ id, category?, creditHours?, semesterNumber?, domain? }] } — course types, credit hours, semester
 // and track of a master curriculum's courses, saved together.
-export async function PATCH(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const c = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId }, select: { id: true, chairmanId: true } });
@@ -31,3 +32,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_TYPES_UPDATED", entityType: "MasterCurriculum", entityId: c.id, metadata: { changed: n } });
   return NextResponse.json({ ok: true, message: `${n} course(s) saved.` });
 }
+export const PATCH = withErrors(PATCH_handler);

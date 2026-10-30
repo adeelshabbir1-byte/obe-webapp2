@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { xdb, normPhone } from "../../../../lib/messaging";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A student sets the mobile numbers that receive quiz, hand-in and result alerts.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -14,3 +15,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Alerts are not set up yet." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

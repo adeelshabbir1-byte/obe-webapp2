@@ -6,6 +6,7 @@ import { notifyUsers } from "../../../../lib/notifications";
 import {
   autoAssignPanels, consolidate, DEFAULT_CUTOFFS, DEFAULT_MILESTONES, DEFAULT_RUBRIC, departmentsOf, fypAccess, grantExtension, MILESTONE_KINDS, newExternalToken, REQUISITION_KINDS, signOff,
 } from "../../../../lib/fyp";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -14,7 +15,7 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
 
 // FYP administration: the department Chairman names the FYP Head and Committee and signs off results; the Head and
 // Committee run the cycle (settings, milestones, rubric, proposal review, panels, consolidation, extensions, requisitions).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const acc = await fypAccess(user);
@@ -303,8 +304,10 @@ export async function POST(req: NextRequest) {
 }
 
 // Departments this person belongs to (used by the setup screens).
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   return NextResponse.json({ departments: await departmentsOf(user.id) });
 }
+export const POST = withErrors(POST_handler);
+export const GET = withErrors(GET_handler);

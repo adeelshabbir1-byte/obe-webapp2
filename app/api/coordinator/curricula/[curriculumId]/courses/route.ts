@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Full course list for a curriculum, for the Coordinator's "pick which
 // courses to import" checklist — grouped client-side by category/domain.
-export async function GET(req: Request, { params }: { params: { curriculumId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -27,3 +28,4 @@ export async function GET(req: Request, { params }: { params: { curriculumId: st
 
   return NextResponse.json({ courses: unique, duplicatesHidden: courses.length - unique.length });
 }
+export const GET = withErrors(GET_handler);

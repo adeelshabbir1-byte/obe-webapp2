@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Commits the whole workspace arrangement at once: for each course
 // involved, replaces its entire topic list with whatever the client
@@ -13,7 +14,7 @@ import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../
 // Body: { courses: [ { courseId, topics: [ { topic, subtopic } ] } ] }
 // — topics are plain text at this point (no ids needed); lectureNumber
 // is assigned from array order.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -53,3 +54,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

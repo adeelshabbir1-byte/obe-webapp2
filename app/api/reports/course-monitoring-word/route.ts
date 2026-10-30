@@ -7,6 +7,7 @@ import { computeTopicVariance } from "../../../../lib/varianceReport";
 import { buildDocxResponse, logoImageOptions } from "../../../../lib/docxExport";
 import { titlesFor } from "../../../../lib/titles";
 import { instituteOfUser } from "../../../../lib/moduleLocks";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const PAGE_WIDTH_DXA = 12240;
 const MARGIN_DXA = 1440;
@@ -23,7 +24,7 @@ function labelValueRow(label: string, value: string) {
   });
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const signTitle = (await titlesFor(user ? await instituteOfUser({ id: user.id, role: user.role, managedById: user.managedById ?? null }).catch(() => null) : null)).PROGRAM_LEAD.title;
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -86,3 +87,4 @@ export async function GET(req: NextRequest) {
   const filename = `Course_Monitoring_${course.code}.docx`;
   return buildDocxResponse(filename, doc);
 }
+export const GET = withErrors(GET_handler);

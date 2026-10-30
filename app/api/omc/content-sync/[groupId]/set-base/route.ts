@@ -3,8 +3,9 @@ import { syncContext, mayTouch, groupCourseIds } from "../../../../../../lib/syn
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -58,3 +59,4 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

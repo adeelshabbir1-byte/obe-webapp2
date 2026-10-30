@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { externalByToken, saveScores } from "../../../../../lib/fyp";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // An external / industry evaluator scores the groups of their panels through their private link. Nothing else is reachable.
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { token: string } }) {
   const ext = await externalByToken(params.token);
   if (!ext) return NextResponse.json({ error: "This evaluation link is not valid or has expired." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -28,3 +29,4 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
   await writeAuditLog({ action: "FYP_EXTERNAL_SCORES", entityType: "FypGroup", entityId: group.id, metadata: { externalId: ext.id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

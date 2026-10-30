@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
 import { curriculaWhere } from "../../../../../lib/curriculumLibrary";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The "HEC course" picker (Content Sync, Course Equivalence): courses of EVERY curriculum the institute may use —
 // its own published copies, the official curricula assigned to it, and (for a college) its university's — newest
 // edition first, each labelled with its curriculum. Not every institute's clones (those repeat the same titles).
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await findOwningChairmanId(user.id);
@@ -28,3 +29,4 @@ export async function GET() {
       .map((mc) => ({ id: mc.id, code: mc.code, title: mc.title, curriculumId: mc.masterCurriculumId, degreeProgram: label.get(mc.masterCurriculumId) || "", hasPloSuggestions: hecCodeSet.has(mc.code) })),
   });
 }
+export const GET = withErrors(GET_handler);

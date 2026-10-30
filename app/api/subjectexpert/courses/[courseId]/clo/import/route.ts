@@ -7,6 +7,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
@@ -15,7 +16,7 @@ const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6"];
 // Reads the first sheet of an Excel (or CSV) file in the same layout the Export produces:
 // CLO | Statement | Bloom level | PLO number | Contribution % | Target %.
 // A row whose CLO code already exists updates that CLO; any other row is added as a new CLO. Nothing is ever deleted.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
@@ -87,3 +88,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   if (added + updated > 0) await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ added, updated, errors });
 }
+export const POST = withErrors(POST_handler);

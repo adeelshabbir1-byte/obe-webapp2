@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const TEACHING = ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"];
 
@@ -31,7 +32,7 @@ async function requestMove(user: Asker, chairmanId: string, teacherId: string, t
 }
 
 // The Chairman (own department) or a Dean (departments of the faculty) asks to move one teacher (teacherId) or several (teacherIds) to another Program Lead's program.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "HEAD_OF_DEPARTMENT" && user.role !== "DEAN")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.managedById || "";
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
 // A Program Lead accepts or declines (the lead the teacher leaves, and the lead the teacher joins, each answer once);
 // the person who asked can withdraw the request.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -92,3 +93,5 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PROGRAM_MOVE_ANSWERED", entityType: "User", entityId: move.teacherId, metadata: { answer } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

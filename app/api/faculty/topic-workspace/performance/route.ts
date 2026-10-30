@@ -6,13 +6,14 @@ import { accessFor, db, planRows, planSettings } from "../../../../../lib/topicP
 import { backfillTopicPerformance, hardestTopics, performanceOf, sectionsCompared } from "../../../../../lib/topicPerformance";
 import { topicKey } from "../../../../../lib/topicPlanCore";
 import { forbidden, wsUser } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 // GET ?courseId=&plan= — how students did on each topic (overall / last 3 / last offering), with the teaching notes,
 // ready help and "hardest topic" votes of the course. GET ?program=1 (Program Lead / OMC) — the hardest topics of the
 // program and sections compared (never shown to students; small sections hidden).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   if (sp.get("program")) {
     const user = await getAuthenticatedUser();
@@ -43,10 +44,12 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { backfill: true } — the one-time back-fill of past offerings (OMC, Program Lead or Head of the institute).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"].includes(user.role)) return forbidden();
   const b = await req.json().catch(() => ({}));
   if (!b.backfill) return NextResponse.json({ error: "unknown action" }, { status: 400 });
   return NextResponse.json(await backfillTopicPerformance(await chairmanIdFor(user)));
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

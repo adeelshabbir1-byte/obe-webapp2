@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -63,4 +64,4 @@ async function PATCH_handler(req: NextRequest, { params }: { params: { courseId:
 }
 
 // A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
-export const PATCH = withLabSync(PATCH_handler);
+export const PATCH = withErrors(withLabSync(PATCH_handler));

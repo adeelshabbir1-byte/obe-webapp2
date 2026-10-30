@@ -5,13 +5,14 @@ import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { UPLOAD_ROLES, uploadDepartments, parseEmployees, checkEmployees, type EmpCheck } from "../../../../lib/employeeImport";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // POST multipart (file) → preview: every row checked as NEW / UPDATE / ERROR, nothing saved.
 // POST JSON { rows, password } → saves those rows (the page sends them in small groups).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !UPLOAD_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { head, departments } = await uploadDepartments(user);
@@ -55,3 +56,4 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "EMPLOYEES_UPLOADED", entityType: "User", entityId: user.id, metadata: { created: done.filter((d) => d.status === "CREATED").length, updated: done.filter((d) => d.status === "UPDATED").length } }).catch(() => null);
   return NextResponse.json({ done });
 }
+export const POST = withErrors(POST_handler);

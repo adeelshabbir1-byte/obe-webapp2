@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Where the change-request banner reads its state.
-export async function GET(_req: Request, { params }: { params: { courseId: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: { courseId: strin
 }
 
 // The SE asks the OMC to reopen an approved template.
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -36,3 +37,5 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   await writeAuditLog({ actorUserId: user.id, action: "TEMPLATE_CHANGE_REQUESTED", entityType: "Course", entityId: course.id, metadata: { reason } });
   return NextResponse.json({ request: { id: request.id, status: request.status } }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

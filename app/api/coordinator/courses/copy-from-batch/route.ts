@@ -8,6 +8,7 @@ import { linkAsFollowerOfSource } from "../../../../../lib/contentSync";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 import { LIST_TYPES } from "../../../../../lib/autoCopyPreviousBatch";
 import { recordBatchSource, batchSource } from "../../../../../lib/universityCurriculum";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // copyCourseContent does several queries and inserts per course (CLOs,
 // lecture rows, instruments, paper items) — for a batch of any real
@@ -21,7 +22,7 @@ import { recordBatchSource, batchSource } from "../../../../../lib/universityCur
 // picks up the remaining ones without duplicating anything.
 const CHUNK_SIZE = 5;
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -118,3 +119,4 @@ export async function POST(req: NextRequest) {
     nextCursor, mightHaveMore,
   });
 }
+export const POST = withErrors(POST_handler);

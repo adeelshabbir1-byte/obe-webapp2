@@ -3,12 +3,13 @@ import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // Uploads PLOs for one batch from an Excel/CSV file with the headings # (number), Title and Description
 // (the Export layout works as is). PLO numbers that already exist are left untouched; only new ones are added.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
@@ -54,3 +55,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PLOS_IMPORTED_FROM_FILE", entityType: "Batch", entityId: batchId, metadata: { added, skipped } });
   return NextResponse.json({ added, skipped, errors: errors.slice(0, 10) });
 }
+export const POST = withErrors(POST_handler);

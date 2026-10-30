@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
+import { hitLimit, ipOf, tooMany } from "../../../lib/rateLimit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Fully public — no login. A prospective Institute Head submits this once;
 // a Super User reviews it under Manage Institute Heads / Account Requests.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
+  // Public endpoint: at most 5 requests per address per 60 minutes.
+  { const lim = await hitLimit(`request-account:${ipOf(req.headers)}`, 5, 3600_000); if (!lim.ok) return tooMany(lim.retryAfter); }
   const body = await req.json();
   const name = String(body.name || "").trim();
   const email = String(body.email || "").trim();
@@ -29,3 +33,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, id: request.id });
 }
+export const POST = withErrors(POST_handler);

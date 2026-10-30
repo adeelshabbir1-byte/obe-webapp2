@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A Dean answers a teacher request that involves their faculty. Approving lets it carry on to the lending Chairman;
 // declining ends it (a short reason is required).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "DEAN" || !user.facultyId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: decision === "APPROVE" ? "DEAN_LOAN_APPROVED" : "DEAN_LOAN_REJECTED", entityType: "Course", entityId: loan.courseId, metadata: { loanId: loan.id, note } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

@@ -3,8 +3,9 @@ import { getAuthenticatedStudent } from "../../../../../lib/studentSession";
 import { prisma } from "../../../../../lib/db";
 import { needsAdvisorApproval } from "../../../../../lib/academicStanding";
 import { studentContext, selfRegistrationBlock, checkCourses } from "../../../../../lib/registrationRules";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -59,3 +60,4 @@ export async function POST(req: NextRequest) {
   await prisma.studentEnrollment.create({ data: { studentId: student.id, courseId: course.id, isRepeat: false } });
   return NextResponse.json({ ok: true, pendingApproval: false });
 }
+export const POST = withErrors(POST_handler);

@@ -2,9 +2,10 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { EMP_COLUMNS, EMPLOYMENT_TYPES, UPLOAD_ROLES, uploadDepartments } from "../../../../lib/employeeImport";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // GET: the employee Excel template, with drop-down lists for Department and Employment Type.
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !UPLOAD_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { departments } = await uploadDepartments(user);
@@ -37,3 +38,4 @@ export async function GET() {
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="employees_template.xlsx"' } });
 }
+export const GET = withErrors(GET_handler);

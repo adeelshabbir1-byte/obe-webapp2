@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { buildExcelResponse } from "../../../../../lib/excelExport";
 import { financeScope, EXPENSE_CATEGORIES, INCOME_CATEGORIES, fiscalYearNow, recentFiscalYears } from "../../../../../lib/resources";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // One fiscal year as two sheets (Budget and spending, Income) that can be edited and uploaded back,
 // plus a read-only "Year by year" summary of the last six years.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user ? financeScope(user) : null;
   if (!user || !scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,3 +26,4 @@ export async function GET(req: NextRequest) {
       rows: years.map((y) => ({ y, b: sum(y, "BUDGET", EXPENSE_CATEGORIES), s: sum(y, "SPENT", EXPENSE_CATEGORIES), l: get(y, "BUDGET", "Laboratory equipment and upgrades"), lb: get(y, "BUDGET", "Library and digital resources"), i: sum(y, "INCOME", INCOME_CATEGORIES) })) },
   ]);
 }
+export const GET = withErrors(GET_handler);

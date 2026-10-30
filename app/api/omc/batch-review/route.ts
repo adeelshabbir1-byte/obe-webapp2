@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { markReview, propose, endorse, setProposalStatus, finalise } from "../../../../lib/batchApproval";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /**
  * POST { batchId, action, ... } — members of the batch's department OMC.
  *   review { step, on }    propose { step, courseId, kind, reason, semester | ch | code | title | type | subjectExpertId | prerequisiteCourseId }
  *   endorse { yes, note }    keep / drop { proposalId } (Convener)    finalise (Convener, once more than half endorse)
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const me = { id: user.realUserId || user.id, name: user.name };
@@ -28,3 +29,4 @@ export async function POST(req: Request) {
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

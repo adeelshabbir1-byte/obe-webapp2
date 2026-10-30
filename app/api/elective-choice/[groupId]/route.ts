@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Fully public — no login, matching how Feedback Survey links work,
 // since students have no account anywhere in this system. Identifies
 // the student by roll number (checked against this group's own batch)
 // rather than a per-person token.
-export async function GET(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const group = await prisma.electiveSlotGroup.findUnique({
     where: { id: params.groupId },
     include: {
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { groupId: str
   });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const group = await prisma.electiveSlotGroup.findUnique({ where: { id: params.groupId } });
   if (!group) return NextResponse.json({ error: "invalid link" }, { status: 404 });
   if (!group.registrationOpen) return NextResponse.json({ error: "Registration for this elective isn't open right now — check with your Program Coordinator." }, { status: 400 });
@@ -61,3 +62,5 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
 
   return NextResponse.json({ ok: true, studentName: student.name.split(" ")[0], courseTitle: option.course.title, changed: !!existingChoice, choiceId: choice.id });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

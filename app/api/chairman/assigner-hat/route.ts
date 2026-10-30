@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { instituteTerm, termLabel, nextTermLabel } from "../../../../lib/assignerHat";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Institute Head gives any teacher the Course Assigner role for a semester (or until removed), or takes it back.
 // The teacher keeps all their other roles and picks the hat when they sign in.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
@@ -37,3 +38,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: assignerTerm ? "ASSIGNER_HAT_GIVEN" : "ASSIGNER_HAT_REMOVED", entityType: "User", entityId: person.id, metadata: { term: assignerTerm || "none" } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

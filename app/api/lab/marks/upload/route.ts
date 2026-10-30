@@ -5,9 +5,10 @@ import { labAccessFor } from "../../../../../lib/labAccess";
 import { labMarksLocked } from "../../../../../lib/labTheory";
 import { parseLabMarks } from "../../../../../lib/labMarksSheet";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // POST form { courseId, file, commit? } — the Lab Engineer uploads lab marks. Without commit it only previews.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const form = await req.formData();
   const courseId = String(form.get("courseId") || "");
@@ -34,3 +35,4 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MARKS_UPLOADED", entityType: "Course", entityId: access.lab.id, metadata: { changes: p.writes.length, labs: p.labs.length, file: file.name } });
   return NextResponse.json({ ok: true, saved: p.writes.length, ...summary });
 }
+export const POST = withErrors(POST_handler);

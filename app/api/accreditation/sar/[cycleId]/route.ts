@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { govScope, inScope } from "../../../../../lib/accreditation/governance";
 import { buildSar } from "../../../../../lib/sarBuilder";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const db = prisma as unknown as Record<string, any>;
 async function access(cycleId: string) {
@@ -16,7 +17,7 @@ async function access(cycleId: string) {
 }
 
 // GET: the full SAR as a Word document, generated now from live data plus the saved narrative.
-export async function GET(_req: Request, { params }: { params: { cycleId: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { cycleId: string } }) {
   const a = await access(params.cycleId);
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const r = await buildSar(params.cycleId, a.user.id);
@@ -26,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: { cycleId: string
 }
 
 // POST { sectionKey, text }: save the narrative for one chapter.
-export async function POST(req: Request, { params }: { params: { cycleId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { cycleId: string } }) {
   const a = await access(params.cycleId);
   if (!a || !a.edit) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -35,3 +36,5 @@ export async function POST(req: Request, { params }: { params: { cycleId: string
   try { await db.sarNarrative.upsert({ where: { cycleId_sectionKey: { cycleId: params.cycleId, sectionKey: key } }, create: { cycleId: params.cycleId, sectionKey: key, text, updatedById: a.user.id }, update: { text, updatedById: a.user.id } }); return NextResponse.json({ ok: true }); }
   catch { return NextResponse.json({ error: "Run prisma/migration_visit_extras.sql first." }, { status: 500 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

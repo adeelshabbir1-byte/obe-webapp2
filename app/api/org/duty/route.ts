@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { setDuty, DUTIES } from "../../../../lib/duties";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // POST { duty: "EXAM_CONTROLLER" | "QEC_INCHARGE", userId, revoke? } — the Institute Head gives or takes an institute duty.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head gives institute duties." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -20,3 +21,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

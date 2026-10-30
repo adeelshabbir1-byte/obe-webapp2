@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, getSignedInUser } from "../../../../lib/session";
 import { notifyUsers } from "../../../../lib/notifications";
 import { adb, type AppraisalRow } from "../../../../lib/appraisal";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { year, comment, acknowledge } — the teacher replies to their shared appraisal and confirms they have read it.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = (await getSignedInUser()) || (await getAuthenticatedUser());
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -15,3 +16,4 @@ export async function POST(req: NextRequest) {
   await notifyUsers([a.reviewerId], { kind: "REQUEST", title: `${user.name} replied to their ${year} appraisal`, body: b.comment ? String(b.comment).slice(0, 300) : "Acknowledged.", href: `/appraisals/${user.id}?year=${year}` });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

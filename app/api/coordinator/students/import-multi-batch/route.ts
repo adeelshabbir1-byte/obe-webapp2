@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { normalizeTrack } from "../../../../../lib/tracks";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Processes one chunk of already-parsed rows (see the sibling /parse
 // endpoint, which does the file reading up front) — the database work
@@ -22,7 +23,7 @@ import { normalizeTrack } from "../../../../../lib/tracks";
 // student in the same pass, using the same roll-number-as-initial-
 // password bootstrap as the existing activate-logins endpoint —
 // nobody who already has a password set is ever touched.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -89,3 +90,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ imported, activated, rowErrors });
 }
+export const POST = withErrors(POST_handler);

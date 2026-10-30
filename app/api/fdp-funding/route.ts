@@ -6,9 +6,10 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, num, dateOrNull, staffOf } from "../../../lib/registers";
 import { FDP_HINT, KINDS, SPONSORS, STATUS, canManageFdp, total, bond, spending, type Funding } from "../../../lib/fdpFunding";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET — spending by fiscal year and every record (Excel), for the councils' faculty development tables. */
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -32,7 +33,7 @@ export async function GET() {
  *   status { id, status, actualReturn, leftOn, refundPaid, notes } — head, Dean, HOD or Finance Officer
  *   report { id, term, report } — the funded teacher's progress report;   review { reportId, reviewNote }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -86,3 +87,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? FDP_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

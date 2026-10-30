@@ -5,11 +5,12 @@ import { prisma } from "../../../lib/db";
 import { academicRules, saveRules, canSetRulesNow, setExamController, DEFAULT_RULES, RULES_HINT, type AcademicRules } from "../../../lib/academicRules";
 import { runAutoRegistration } from "../../../lib/autoRegister";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // POST { action: "save", ...limits } | { action: "controller", userId } (Institute Head) | { action: "register" }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true } });
@@ -41,3 +42,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e) { console.error("academic-rules", e); return NextResponse.json({ error: RULES_HINT }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

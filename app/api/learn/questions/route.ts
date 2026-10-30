@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ldb = prisma as unknown as Record<string, any>;
 const QUESTION_EDITORS = ["OMC", "CHAIRMAN", "SUPER_USER"];
 
 // POST add a practice question; DELETE ?id= remove one. The Super User's questions are for every institute.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !QUESTION_EDITORS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "The question bank is not set up yet (migration_obe_learning.sql)." }, { status: 500 }); }
 }
 
-export async function DELETE(req: Request) {
+async function DELETE_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !QUESTION_EDITORS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -30,3 +31,5 @@ export async function DELETE(req: Request) {
   await ldb.obeQuestion.deleteMany({ where: { id, chairmanId } }).catch(() => null);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

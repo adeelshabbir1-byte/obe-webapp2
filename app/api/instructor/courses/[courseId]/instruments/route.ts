@@ -6,10 +6,11 @@ import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { ensureInstructorCopy } from "../../../../../../lib/instructorCopy";
 import { lockedWeights, reachedDefinedCount } from "../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const TYPES = ["Assignment", "Quiz", "Midterm", "Final", "Project", "Lab"];
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -37,3 +38,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   await writeAuditLog({ actorUserId: user.id, action: "INSTRUCTOR_INSTRUMENT_ADDED", entityType: "AssessmentInstrument", entityId: instrument.id });
   return NextResponse.json({ instrument }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

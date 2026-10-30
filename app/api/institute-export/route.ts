@@ -4,9 +4,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { toCsv } from "../../../lib/outcomesReport";
+import { withErrors } from "../../../lib/apiHandler";
 
 // The Institute Head's own backup: every academic table of the institute as CSV in one ZIP (no passwords or secrets).
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head can export the institute's data." }, { status: 403 });
   const cid = user.id;
@@ -34,3 +35,4 @@ export async function GET() {
   const buf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
   return new NextResponse(buf as unknown as BodyInit, { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="obehub-export-${new Date().toISOString().slice(0, 10)}.zip"` } });
 }
+export const GET = withErrors(GET_handler);

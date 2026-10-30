@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { curriculumId: string; ploId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { curriculumId: string; ploId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { curriculum
   return NextResponse.json({ plo: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { curriculumId: string; ploId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { curriculumId: string; ploId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -32,3 +33,5 @@ export async function DELETE(req: Request, { params }: { params: { curriculumId:
 
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

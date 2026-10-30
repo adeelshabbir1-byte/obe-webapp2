@@ -4,9 +4,10 @@ import { prisma } from "../../../../../../lib/db";
 import { hashPassword } from "../../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // The Super User sets a new password for an Institute Head (e.g. a forgotten one). Their open sessions are signed out.
-export async function PUT(req: NextRequest, { params }: { params: { chairmanId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { chairmanId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, ["ONBOARDING", "SUPPORT"]))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const head = await prisma.user.findUnique({ where: { id: params.chairmanId } });
@@ -22,3 +23,4 @@ export async function PUT(req: NextRequest, { params }: { params: { chairmanId: 
   if (turnOff) await writeAuditLog({ actorUserId: user.id, action: "MFA_TURNED_OFF_FOR_USER", entityType: "User", entityId: head.id });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

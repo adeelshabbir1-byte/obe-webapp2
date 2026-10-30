@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { ALLOC_HINT, saveTimesTaught, saveWish, selfExperience, wishes } from "../../../../lib/autoAllocate";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ALLOWED_ROLES = ["INSTRUCTOR", "SUBJECT_EXPERT"];
 const DEFAULT_SPECIALIZATION = "Computer Science";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -55,7 +56,7 @@ export async function GET() {
   });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -94,3 +95,5 @@ export async function PUT(req: NextRequest) {
   });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

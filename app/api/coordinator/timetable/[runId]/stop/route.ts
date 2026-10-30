@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 import { Gene } from "../../../../../../lib/timetableGA";
 import { buildSlots } from "../../../../../../lib/timetableSlotBuilder";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function POST(req: Request, { params }: { params: { runId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { runId: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -35,3 +36,4 @@ export async function POST(req: Request, { params }: { params: { runId: string }
 
   return NextResponse.json({ status: "STOPPED" });
 }
+export const POST = withErrors(POST_handler);

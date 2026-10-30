@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { academicScope } from "../../../../lib/academic";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** Program Lead: copy the official holidays and semester dates into their own calendar. */
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { chairmanId, facultyId } = await academicScope(user);
@@ -43,3 +44,4 @@ export async function POST() {
   await writeAuditLog({ actorUserId: user.id, action: "ACADEMIC_CALENDAR_APPLIED", entityType: "User", entityId: user.id, metadata: { holidays, terms } as never });
   return NextResponse.json({ ok: true, holidays, terms });
 }
+export const POST = withErrors(POST_handler);

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { batchForBulkClos, importBulkClos } from "../../../../lib/cloBulk";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const form = await req.formData().catch(() => null);
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "could not read that file" }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { deleteCourseCompletely } from "../../../../../lib/deleteCourseCompletely";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function DELETE(req: Request, { params }: { params: { courseId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   // Same institution-wide scope as edit/reposition: the owning
   // Coordinator can always delete their own course; OMC can delete any
@@ -25,3 +26,4 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

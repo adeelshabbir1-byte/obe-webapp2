@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { attemptLogin } from "../../../../lib/auth";
 import { createSession } from "../../../../lib/session";
 import { ipBlocked, ipOf } from "../../../../lib/rateLimit";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const { usernameOrEmail, password } = await req.json();
 
   if (!usernameOrEmail || !password) {
@@ -40,3 +41,4 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+export const POST = withErrors(POST_handler);

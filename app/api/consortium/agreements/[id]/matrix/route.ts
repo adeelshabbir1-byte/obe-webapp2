@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { matrix, institutionOf, KIND_LABEL } from "../../../../../../lib/consortiumAgreements";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // The Credit Equivalency Matrix of an agreement, as an Excel file (for the HEC NOC application): for each pair of
 // courses, credit hours and lab split, CLO coverage both ways, Bloom levels, and who approved it when.
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const me = user.role === "SUPER_USER" ? null : await institutionOf(user);
@@ -38,3 +39,4 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="Credit-Equivalency-Matrix-${m.agreement.edition}.xlsx"` } });
 }
+export const GET = withErrors(GET_handler);

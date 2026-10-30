@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -87,3 +88,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err?.message || "something went wrong finding suggestions" }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);

@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { getPolicy, EXEMPTION_RULES, type CreditRule } from "../../../lib/registrationRules";
+import { withErrors } from "../../../lib/apiHandler";
 
 const db = prisma as unknown as Record<string, any>;
 const chairmanOf = (u: { id: string; role: string; managedById: string | null }) => (u.role === "CHAIRMAN" ? u.id : u.role === "OMC" ? u.managedById || "" : "");
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !["OMC", "CHAIRMAN"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = chairmanOf(user);
@@ -23,7 +24,7 @@ export async function GET() {
 }
 
 // The OMC (or the Institute Head) saves the rules.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["OMC", "CHAIRMAN"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = chairmanOf(user);
@@ -47,3 +48,5 @@ export async function PUT(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "REGISTRATION_RULES_SAVED", entityType: "RegistrationPolicy", entityId: chairmanId });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

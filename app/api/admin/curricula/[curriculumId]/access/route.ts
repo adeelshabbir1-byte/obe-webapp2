@@ -4,9 +4,10 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { cloneGrandCurriculumForChairman } from "../../../../../../lib/cloneCurriculum";
 import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Super User: which institutes (Institute Heads) an official master curriculum is assigned to.
-export async function GET(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.curriculumId } });
@@ -24,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: { curriculumI
 
 // Replaces the assignment list. Newly assigned institutes also get their own editable copy;
 // un-assigning only stops the official one being offered - an institute's own copy is never deleted.
-export async function PUT(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -53,3 +54,5 @@ export async function PUT(req: NextRequest, { params }: { params: { curriculumId
   });
   return NextResponse.json({ ok: true, assigned: wanted.size, added: toAdd.length, removed: toRemove.length });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

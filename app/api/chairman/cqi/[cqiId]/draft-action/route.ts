@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 import { draftCqiAction } from "../../../../../../lib/cqiActionDraft";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // AI-drafts a starting "action taken" for an existing CQI finding — a
 // suggestion the Institute Head/OMC reviews and edits before saving, never
 // written to the record directly by this endpoint.
-export async function POST(req: NextRequest, { params }: { params: { cqiId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { cqiId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !["CHAIRMAN", "OMC"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -32,3 +33,4 @@ export async function POST(req: NextRequest, { params }: { params: { cqiId: stri
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 502 });
   return NextResponse.json({ draft: result.draft });
 }
+export const POST = withErrors(POST_handler);

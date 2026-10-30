@@ -5,8 +5,9 @@ import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { canEditReport } from "../../../../../../lib/reportAcl";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -30,3 +31,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const saved = await prisma.courseGradeCutoff.findMany({ where: { courseId: course.id } });
   return NextResponse.json({ cutoffs: saved });
 }
+export const PUT = withErrors(PUT_handler);

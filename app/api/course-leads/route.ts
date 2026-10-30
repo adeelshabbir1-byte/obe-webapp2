@@ -5,9 +5,10 @@ import { prisma } from "../../../lib/db";
 import { loadTeams, LEAD_MANAGER_ROLES } from "../../../lib/courseTeams";
 import { courseScopeFor } from "../../../lib/reportScope";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Names (or changes) the Course Lead of a course team. Changing the lead restarts any paper approval in progress.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !LEAD_MANAGER_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
@@ -30,3 +31,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "COURSE_LEAD_SET", entityType: "Course", entityId: team.rows[0].courseId, metadata: { teamKey: team.key, leadId: body.leadId } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

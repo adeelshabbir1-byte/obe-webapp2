@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Batch version of set-master-course: applies many contentSyncGroupId
 // -> masterCourseId links in one request instead of one round-trip per
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // re-fetching everything) on every single click.
 //
 // Body: { links: [{ contentSyncGroupId, masterCourseId | null }] }
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -48,3 +49,4 @@ export async function PUT(req: NextRequest) {
     updated: updatedGroups.map((g) => ({ groupId: g.id, masterCourse: g.members[0]?.course.masterCourse ?? null })),
   });
 }
+export const PUT = withErrors(PUT_handler);

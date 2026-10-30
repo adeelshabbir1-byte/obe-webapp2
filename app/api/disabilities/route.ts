@@ -6,9 +6,10 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, num, dateOrNull } from "../../../lib/registers";
 import { DIS_HINT, CATEGORIES, keepsRegister, type Rec } from "../../../lib/disabilities";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET ?report=xlsx — counts by category and program, no names (for HEC). Register keepers only. */
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -31,7 +32,7 @@ export async function GET() {
 
 /** POST { action: "save", studentId (or rollNumber), category, details, extraTimePct, seating, materials, assistive, other, validUntil, verified }
  *  POST { action: "remove", studentId } — register keepers only. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -55,3 +56,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? DIS_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

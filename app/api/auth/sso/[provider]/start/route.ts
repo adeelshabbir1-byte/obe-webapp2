@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { provider, randomToken, challengeOf, appOrigin } from "../../../../../../lib/sso";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET(req: Request, { params }: { params: { provider: string } }) {
+async function GET_handler(req: Request, { params }: { params: { provider: string } }) {
   const p = provider(params.provider);
   const origin = appOrigin(req);
   if (!p || !p.clientId || !p.secret) return NextResponse.redirect(`${origin}/login?sso=off`);
@@ -12,3 +13,4 @@ export async function GET(req: Request, { params }: { params: { provider: string
   res.cookies.set("sso_flow", [params.provider, state, nonce, verifier].join("."), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 600, path: "/api/auth/sso" });
   return res;
 }
+export const GET = withErrors(GET_handler);

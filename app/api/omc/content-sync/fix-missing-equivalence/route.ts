@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // One-time backfill: pairing/grouping through Content Sync was always
 // supposed to also create a Course Equivalence link for any two members
@@ -12,7 +13,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // group formed before it existed, or linked through a path that never
 // had the check (batch auto-copy, for instance), was silently missed.
 // This re-checks every existing group's members against each other now.
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -48,3 +49,4 @@ export async function POST() {
 
   return NextResponse.json({ groupsChecked: groups.length, pairsChecked, pairsCreated, created });
 }
+export const POST = withErrors(POST_handler);

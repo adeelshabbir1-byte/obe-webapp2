@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { computeReadiness } from "../../../lib/readiness";
 import { OVERVIEW_ROLES, leadsInScope } from "../../../lib/readinessScope";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Save today's readiness scores so progress can be compared later. body: { leadId, label }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !OVERVIEW_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -19,10 +20,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !OVERVIEW_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { leads } = await leadsInScope(user);
   const r = await prisma.readinessSnapshot.deleteMany({ where: { id: req.nextUrl.searchParams.get("id") || "", leadId: { in: leads.map((l) => l.id).concat(["none"]) } } as never });
   return r.count ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "not found" }, { status: 404 });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -7,6 +7,7 @@ import { whoIs, rdb, str, num, dateOrNull } from "../../../lib/registers";
 import { DEG_HINT, OFFICES, REQUESTERS, RESPONSES, canManageDegrees, allCleared, nextSerial, matchRequest } from "../../../lib/degrees";
 import { degreeAudit } from "../../../lib/transcriptPlus";
 import { computeCgpa } from "../../../lib/academicStanding";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * POST { action, ... }
@@ -16,7 +17,7 @@ import { computeCgpa } from "../../../lib/academicStanding";
  *   cancel { id, note }    convocation { title, date, venue }    assign { id, convocationId }
  *   request { requesterKind, requesterName, reference, rollNumber, serialNo, studentName, receivedAt }    respond { id, response, responseNote }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -111,3 +112,4 @@ export async function POST(req: Request) {
   }
 }
 export const dynamic = "force-dynamic";
+export const POST = withErrors(POST_handler);

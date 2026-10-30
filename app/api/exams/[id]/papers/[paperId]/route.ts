@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { xdb, loadSession, allocate, parse, type ExamPaperRow } from "../../../../../../lib/exams";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // PATCH { date: "YYYY-MM-DD" | null, slot } — move a paper (all sections of its course code) by hand. It stays there
 // when the date sheet is generated again. Rooms and invigilators are redone. Returns the clashes the move creates.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string; paperId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string; paperId: string } }) {
   const user = await getAuthenticatedUser();
   const cid = user ? await examChairman(user) : null;
   if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -39,3 +40,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await allocate(s.id);
   return NextResponse.json({ ok: true, clashes });
 }
+export const PATCH = withErrors(PATCH_handler);

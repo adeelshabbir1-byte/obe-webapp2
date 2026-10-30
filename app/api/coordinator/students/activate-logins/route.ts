@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { hashPassword } from "../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Bootstraps a student's login password to their own roll number
 // (mustChangePassword forces them to pick their own on first login) —
@@ -15,7 +16,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // already logged in and chosen their own password.
 export const maxDuration = 60;
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -43,3 +44,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ activated });
 }
+export const POST = withErrors(POST_handler);

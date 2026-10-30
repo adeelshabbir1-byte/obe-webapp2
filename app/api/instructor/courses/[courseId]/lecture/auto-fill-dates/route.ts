@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 function addDays(d: Date, n: number) {
   const copy = new Date(d);
@@ -10,7 +11,7 @@ function addDays(d: Date, n: number) {
   return copy;
 }
 
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -90,3 +91,4 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
   const updated = await prisma.lectureRow.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: { lectureNumber: "asc" } });
   return NextResponse.json({ filled, rows: updated });
 }
+export const POST = withErrors(POST_handler);

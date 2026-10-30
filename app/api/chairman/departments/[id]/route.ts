@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const dept = await prisma.department.findFirst({ where: { id: params.id, chairmanId: user.id } });
@@ -23,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // Only an empty department can be deleted - move its people and programs elsewhere first.
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+async function DELETE_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const dept = await prisma.department.findFirst({ where: { id: params.id, chairmanId: user.id } });
@@ -40,3 +41,5 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   await writeAuditLog({ actorUserId: user.id, action: "DEPARTMENT_DELETED", entityType: "Department", entityId: dept.id });
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

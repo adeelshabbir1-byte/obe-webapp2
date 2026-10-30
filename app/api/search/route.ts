@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import { search, remember, recent, type Viewer } from "../../../lib/search";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ async function viewer(): Promise<{ v: Viewer; key: string } | null> {
 }
 
 /** GET ?q= — results grouped by kind (only what the person may see); without q, the person's recent searches. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const me = await viewer();
   if (!me) return NextResponse.json({ error: "Sign in to search." }, { status: 401 });
   const q = new URL(req.url).searchParams.get("q") || "";
@@ -23,10 +24,12 @@ export async function GET(req: Request) {
 }
 
 /** POST { q } — remember a search the person opened a result from. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const me = await viewer();
   if (!me) return NextResponse.json({ error: "Sign in to search." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
   await remember(me.key, String(b.q || ""));
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

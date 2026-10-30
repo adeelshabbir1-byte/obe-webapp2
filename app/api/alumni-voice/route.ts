@@ -4,12 +4,13 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { prisma } from "../../../lib/db";
 import { ALUMNI_HINT, alumniLink, comment, createRequest, decideVoice, makeIndustrySe } from "../../../lib/alumniVoice";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const DECIDE_SUGGESTION = ["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "SUBJECT_EXPERT", "DEAN"];
 const DECIDE_WORKSHOP = ["STUDENT_AFFAIRS", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "PROGRAM_COORDINATOR"];
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -60,3 +61,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

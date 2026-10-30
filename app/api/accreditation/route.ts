@@ -6,12 +6,13 @@ import { departmentsOf } from "../../../lib/fyp";
 import { ALLOWED_TYPES, MAX_FILE_BYTES } from "../../../lib/evidenceFiles";
 import { sarScope } from "../../../lib/sarAccess";
 import { cleanValues, kindDef, missingRequired, sectionDef } from "../../../lib/sarRegistry";
+import { withErrors } from "../../../lib/apiHandler";
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // Accreditation data: profile sections (institute / business school) and the records register.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const scope = await sarScope(user);
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Download a record's attached file.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const scope = await sarScope(user);
@@ -127,3 +128,5 @@ export async function GET(req: NextRequest) {
   if (def.confidential && !scope.canEditKind(def)) return bad("not found", 404);
   return new NextResponse(Buffer.from(row.fileData, "base64"), { headers: { "Content-Type": row.mimeType || "application/octet-stream", "Content-Disposition": `attachment; filename="${(row.fileName || "file").replace(/"/g, "")}"` } });
 }
+export const POST = withErrors(POST_handler);
+export const GET = withErrors(GET_handler);

@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { runGeneticAlgorithm } from "../../../../../lib/timetableGA";
 import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
@@ -11,7 +12,7 @@ export const maxDuration = 60;
 // RUNNING) and immediately runs the first short chunk of the GA, so the
 // very first poll already has a result. The client then repeatedly calls
 // the /continue endpoint until status flips to COMPLETED or the user stops.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -34,3 +35,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ runId: run.id, status: "RUNNING" });
 }
+export const POST = withErrors(POST_handler);

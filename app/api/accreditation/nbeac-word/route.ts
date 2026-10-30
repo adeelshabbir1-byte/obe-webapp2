@@ -4,10 +4,11 @@ import { buildDocxResponse } from "../../../../lib/docxExport";
 import { sarScope } from "../../../../lib/sarAccess";
 import { buildNbeacSar } from "../../../../lib/nbeacSar";
 import { nbeacWordDocument } from "../../../../lib/nbeacWord";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const BUILDERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR", "PROGRAM_COORDINATOR"];
 // The NBEAC SAR as a Word document (landscape, for the wide tables).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !BUILDERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scope = await sarScope(user);
@@ -18,3 +19,4 @@ export async function GET(req: NextRequest) {
   const word = nbeacWordDocument(doc);
   return buildDocxResponse(`NBEAC-SAR-${doc.school.replace(/[^A-Za-z0-9]+/g, "-")}.docx`, word);
 }
+export const GET = withErrors(GET_handler);

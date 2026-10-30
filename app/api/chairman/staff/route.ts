@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ROLES = ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 
 // The Institute Head creates a Librarian or a Finance Officer login.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -23,3 +24,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not create the login: " + String((err as Error)?.message || err).split("\n").slice(-3).join(" ").slice(0, 300) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

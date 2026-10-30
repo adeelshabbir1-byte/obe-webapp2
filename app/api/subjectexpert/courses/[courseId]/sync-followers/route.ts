@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Copies this course's content out to follower courses. The browser calls this in the background after a save,
 // so the Subject Expert doesn't have to wait for the (slow) copy to finish.
 export const maxDuration = 60;
 
-export async function POST(_req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(_req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -17,3 +18,4 @@ export async function POST(_req: Request, { params }: { params: { courseId: stri
   await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

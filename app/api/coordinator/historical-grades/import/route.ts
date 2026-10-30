@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { getGradingScaleForBatch } from "../../../../../lib/gradingScaleLookup";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Backfills StudentTranscriptRecord rows for a batch that completed some or
 // all of its semesters before this system was in use — the only other way
@@ -11,7 +12,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // (no instrument-level marks were ever entered), so those fields are just
 // empty arrays — the record still counts fully toward GPA/CGPA and the
 // Courses Remaining list, just not toward Transcript 2's CLO/PLO stats.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["PROGRAM_COORDINATOR", "CHAIRMAN", "OMC"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -83,3 +84,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ imported, rowErrors });
 }
+export const POST = withErrors(POST_handler);

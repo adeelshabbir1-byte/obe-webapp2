@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const ALLOWED_ROLES = ["PROGRAM_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR"];
 
@@ -29,7 +30,7 @@ function addSheet(workbook: ExcelJS.Workbook, name: string, legend: string, colu
   return ws;
 }
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -80,3 +81,4 @@ export async function GET() {
     },
   });
 }
+export const GET = withErrors(GET_handler);

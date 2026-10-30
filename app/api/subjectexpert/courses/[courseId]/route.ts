@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET(req: Request, { params }: { params: { courseId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUBJECT_EXPERT") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -16,3 +17,4 @@ export async function GET(req: Request, { params }: { params: { courseId: string
   }
   return NextResponse.json({ course });
 }
+export const GET = withErrors(GET_handler);

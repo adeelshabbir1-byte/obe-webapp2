@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, dateOrNull, num, parseJ, staffOf } from "../../../lib/registers";
 import { QAA_HINT, STAGES, canManageQaa, teamOf, type Cycle, type Member } from "../../../lib/qaa";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * POST { action, ... }
@@ -14,7 +15,7 @@ import { QAA_HINT, STAGES, canManageQaa, teamOf, type Cycle, type Member } from 
  *   addAction { id, finding, action, ownerId, dueDate }    progress { actionId, progressPct, progressNote, done }
  * The Head, Dean, HOD or QEC In-charge manage a cycle; an action's owner updates its progress.
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -89,3 +90,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? QAA_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

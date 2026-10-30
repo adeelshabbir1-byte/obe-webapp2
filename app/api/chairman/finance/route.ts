@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { logChange } from "../../../../lib/changeLog";
 import { financeScope, EXPENSE_CATEGORIES, INCOME_CATEGORIES, recentFiscalYears } from "../../../../lib/resources";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Finance Officer or the Institute Head enters the budget, what was spent, and the income for a fiscal year.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user ? financeScope(user) : null;
   if (!user || !scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -27,3 +28,4 @@ export async function PUT(req: NextRequest) {
   await logChange(scope.chairmanId, "FINANCE", `Finance figures for ${year} saved (${rows.length} lines, total ${rows.reduce((n, e) => n + Number(e.amount), 0).toLocaleString("en-US")})`, user.id);
   return NextResponse.json({ ok: true, years: recentFiscalYears(1) });
 }
+export const PUT = withErrors(PUT_handler);

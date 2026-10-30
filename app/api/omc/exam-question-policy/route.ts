@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { qdb } from "../../../../lib/examQuestions";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience"];
 
 // PUT { courseType, midtermMinQuestions, finalMinQuestions } — the OMC sets the minimum questions per paper (0 = no rule).
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -26,3 +27,4 @@ export async function PUT(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "EXAM_QUESTION_POLICY_SET", entityType: "WeightPolicy", entityId: b.courseType, metadata: { midtermMinQuestions: mid, finalMinQuestions: fin } });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

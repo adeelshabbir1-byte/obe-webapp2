@@ -6,11 +6,12 @@ import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, staffOf, rdb, str, dateOrNull } from "../../../lib/registers";
 import { inboxFor, act, forgetCount, DEFAULT_SETTING } from "../../../lib/approvals/inbox";
 import { allProviders } from "../../../lib/approvals/registry";
+import { withErrors } from "../../../lib/apiHandler";
 
 const HINT = "Run prisma/migration_approvals_inbox.sql in Supabase first.";
 
 /** GET — everything waiting for the signed-in person (with counts by kind). */
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const box = await inboxFor(user as never);
@@ -25,7 +26,7 @@ export async function GET() {
  *   delegate { toUserId, startDate, endDate, note, fromUserId? }        revoke { id }
  *   setting { kind, remindAfterDays, escalateAfterDays } — the Institute Head
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -97,3 +98,5 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

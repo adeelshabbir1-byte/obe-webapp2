@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6"];
 
@@ -12,7 +13,7 @@ async function ownedMasterCourse(userId: string, role: string, isPlatformExpert:
   return c;
 }
 
-export async function GET(_req: Request, { params }: { params: { courseId: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = user && await ownedMasterCourse(user.id, user.role, user.isPlatformExpert, params.courseId);
   if (!course) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: { courseId: strin
 }
 
 // Saves the whole design in one go: description/books, CLOs and the lecture topics (replaced as a set).
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = user && await ownedMasterCourse(user.id, user.role, user.isPlatformExpert, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -55,3 +56,5 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_DESIGNED", entityType: "MasterCourse", entityId: course.id, metadata: { clos: cleanClos.length, topics: cleanTopics.length } });
   return NextResponse.json({ ok: true, clos: cleanClos.length, topics: cleanTopics.length });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

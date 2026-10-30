@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { REPORT_VIEWER_ROLES, reportPeople } from "../../../lib/facultyProfile";
 import { termReport, reportHtml, parseTerm } from "../../../lib/teacherPerformance";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?user=&term=Fall-2026 — the report as a Word document (the teacher themself, or HOD / Dean / Head for their staff).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = req.nextUrl.searchParams.get("user") || user.id;
@@ -15,3 +16,4 @@ export async function GET(req: NextRequest) {
   const r = await termReport(id, t);
   return new NextResponse(reportHtml(r), { headers: { "Content-Type": "application/msword", "Content-Disposition": `attachment; filename="performance-${r.teacher.name.replace(/[^A-Za-z0-9]+/g, "-")}-${t.name}-${t.year}.doc"` } });
 }
+export const GET = withErrors(GET_handler);

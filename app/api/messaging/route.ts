@@ -5,13 +5,14 @@ import { prisma } from "../../../lib/db";
 import { xdb, configOf, sendAlert, alertStudents, normPhone, ALERT_KINDS } from "../../../lib/messaging";
 import { parseCsv } from "../../../lib/lmsImport";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const s = (v: unknown, n = 500) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const SMS_KEYS = ["sid", "token", "from", "url", "method", "body", "localFormat", "failIf"], WA_KEYS = ["phoneNumberId", "token", "template", "lang", "sid", "from"];
 const SECRET = new Set(["token"]);
 
 // Institute Head: gateway settings, test message, broadcast to a batch / guardians / staff, student number import.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const it = user && user.mfaVerified ? await itAccess(user) : null;
   if (!user || !it || !it.canAct) return NextResponse.json({ error: "Only the IT Manager does this (the Institute Head until one is named)." }, { status: 403 });
@@ -66,3 +67,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_messaging.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

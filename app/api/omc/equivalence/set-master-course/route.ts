@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Manually sets (or clears) which HEC/standard-curriculum MasterCourse a
 // real course is equated with — most courses already got this
@@ -17,7 +18,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // (every course in that Content Sync group) — a group represents "the
 // same real course across batches" either way, so they share one HEC
 // link rather than needing it set separately per batch.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -48,3 +49,4 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ ok: true, updatedCount });
 }
+export const PUT = withErrors(PUT_handler);

@@ -175,5 +175,8 @@ export function settingsCheck() {
     { key: "RESEND_API_KEY", set: has("RESEND_API_KEY"), need: "optional", what: "Email delivery. Without it, notifications stay inside the app." },
     { key: "EMAIL_FROM", set: has("EMAIL_FROM"), need: "optional", what: "The sender address for emails (needed together with RESEND_API_KEY)." },
     { key: "NEXT_PUBLIC_APP_URL", set: has("NEXT_PUBLIC_APP_URL") || has("VERCEL_PROJECT_PRODUCTION_URL"), need: "optional", what: "The app's address, used for links inside emails." },
+    { key: "SENTRY_DSN", set: has("SENTRY_DSN"), need: "optional", what: "Error monitoring (Sentry). Without it errors are only in the Vercel logs and System Feedback." },
+    { key: "SENTRY_TRACES_SAMPLE_RATE", set: has("SENTRY_TRACES_SAMPLE_RATE"), need: "optional", what: "Share of requests traced for speed in Sentry (default 0.1 = 10%)." },
+    { key: "SUPPORT_EMAIL", set: has("SUPPORT_EMAIL"), need: "optional", what: "Where 'Report a problem' emails go when the automatic report can't be sent." },
   ];
 }

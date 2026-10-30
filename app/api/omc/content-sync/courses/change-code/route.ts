@@ -3,6 +3,7 @@ import { syncContext, mayTouch, groupCourseIds } from "../../../../../../lib/syn
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { termIndex } from "../../../../../../lib/termLogic";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Changes a course's code and propagates it forward to every course
 // content-sync-linked to it, but ONLY those from batches at the same
@@ -11,7 +12,7 @@ import { termIndex } from "../../../../../../lib/termLogic";
 // applyToAllPrograms=false scopes it to only the same program as the
 // edited course instead, for cases like electives where the code
 // shouldn't necessarily follow across different programs.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -75,3 +76,4 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ ok: true, updatedCount: targets.length, updatedCourseIds: targets.map((t) => t.id) });
 }
+export const PUT = withErrors(PUT_handler);

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { seniorMember } from "../../../../../lib/seniorMember";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const TYPE_ORDER = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification", "Combined"];
 function typeRank(t: string): number {
@@ -11,7 +12,7 @@ function typeRank(t: string): number {
   return i === -1 ? TYPE_ORDER.length : i;
 }
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "COURSE_ASSIGNER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -83,3 +84,4 @@ export async function GET() {
     },
   });
 }
+export const GET = withErrors(GET_handler);

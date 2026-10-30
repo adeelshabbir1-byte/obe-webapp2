@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -28,3 +29,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ course: updated });
 }
+export const PUT = withErrors(PUT_handler);

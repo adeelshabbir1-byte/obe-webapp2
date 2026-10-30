@@ -3,8 +3,9 @@ import { timetableActor } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
 import { buildExcelResponse } from "../../../../../lib/excelExport";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -89,3 +90,4 @@ export async function GET() {
 
   return buildExcelResponse("timetable-constraints.xlsx", sheets);
 }
+export const GET = withErrors(GET_handler);

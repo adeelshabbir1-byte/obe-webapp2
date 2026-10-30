@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { saveScheme, applyCodes, CODES_HINT } from "../../../lib/courseCodes";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: "scheme", departmentId, prefix, digits, separator, program?, effectiveTerm?, effectiveYear?, id? } — Dean / Institute Head
 // POST { action: "apply", batchId, picks: [{ courseId, code }] } — the batch's Program Lead (or OMC)
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -29,3 +30,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e) { const m = (e as Error).message || ""; return NextResponse.json({ error: /courseCodeScheme|does not exist/.test(m) ? CODES_HINT : m }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

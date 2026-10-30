@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { EMPTY_CV, type CvData } from "../../../../lib/studentCv";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const clip = (v: unknown, n = 300) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const list = (v: unknown, n = 30) => (Array.isArray(v) ? v.slice(0, n) : []);
 
 // POST { data, showCgpa, published?, submit? } — the student saves their CV (editing sends it back to draft), submits it for review, or publishes an approved CV.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -31,3 +32,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, status, published });
   } catch { return NextResponse.json({ error: "CVs are not set up yet (migration_fyp_plus.sql)." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

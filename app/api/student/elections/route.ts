@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { apply, castVote, ELECTION_HINT } from "../../../../lib/elections";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // POST { action: "apply", electionId, position, manifesto, plan, videoUrl? } | { action: "vote", electionId, position, candidateId }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -25,3 +26,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { assignFromLoan, REQUEST_ROLES, LoanKind } from "../../../../lib/loans";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // After the lending head has allowed some people, the requester picks one of them for the course.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = user.role === "COURSE_ASSIGNER" ? user.managedById || "" : await chairmanIdFor(user);
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

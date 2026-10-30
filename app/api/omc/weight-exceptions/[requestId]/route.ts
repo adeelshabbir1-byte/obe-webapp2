@@ -5,10 +5,11 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { ensureAllInstrumentCounts } from "../../../../../lib/instrumentAutoFill";
 import { voteOnRequest } from "../../../../../lib/omcRules";
 import { notifyUsers } from "../../../../../lib/notifications";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // A weight exception is decided by OMC votes: two approvals approve it at once, two rejections (with reasons) reject it.
 // When the Convener has given the course a panel for the semester, only the panel's three members vote (2 of 3).
-export async function PATCH(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -73,3 +74,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
 
   return NextResponse.json({ request: updated, votes: votes.line, decided: votes.decided });
 }
+export const PATCH = withErrors(PATCH_handler);

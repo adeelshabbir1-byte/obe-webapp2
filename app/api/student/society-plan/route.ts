@@ -4,11 +4,12 @@ import { officesOf } from "../../../../lib/engagement";
 import { submitPlan, ELECTION_HINT, studentPlace } from "../../../../lib/elections";
 import { eventClashes } from "../../../../lib/eventClash";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // GET ?date=YYYY-MM-DD&start=HH:MM&end=HH:MM — what clashes with that slot (office holders).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   if (!(await officesOf(student.id)).length) return NextResponse.json({ error: "For society office holders." }, { status: 403 });
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action: "yearPlan", societyId, text } | { action: "report", societyId, eventId, text, participants? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -39,3 +40,5 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: ELECTION_HINT }, { status: 500 }); }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

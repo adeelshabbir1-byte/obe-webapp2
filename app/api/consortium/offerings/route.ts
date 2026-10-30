@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { CONSORTIUM_HINT } from "../../../../lib/consortium";
 import { saveOffering } from "../../../../lib/consortiumOfferings";
 import { institutionOf } from "../../../../lib/consortiumAgreements";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { id?, courseId, term, mode, seats, feePerCredit, schedule, labArrangement, deadline, startsOn, centres[], about, status }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -19,3 +20,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

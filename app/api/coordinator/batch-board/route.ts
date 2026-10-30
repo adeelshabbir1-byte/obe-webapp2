@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { setOwner } from "../../../../lib/universityCurriculum";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { action: move | owner, courseId, type?, semester? } — Program Lead on the batch board.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -26,3 +27,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

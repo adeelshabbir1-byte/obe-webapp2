@@ -6,13 +6,14 @@ import { termFeedback, termOf } from "../../../../lib/feedbackAnalysis";
 import { QEC_INCHARGE } from "../../../../lib/duties";
 import { buildDocxResponse } from "../../../../lib/docxExport";
 import { cell, headerRow } from "../../../../lib/docxTableHelpers";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // GET ?term=Fall-2026[&teacher=<id>] — the QEC teacher-evaluation proforma as Word: every section's per-question counts,
 // averages and total out of 100, the batch norms and the ranking on raw and adjusted scores.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role) || (user.extraRoles || []).includes(QEC_INCHARGE))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const term = termOf(req.nextUrl.searchParams.get("term"));
@@ -49,3 +50,4 @@ export async function GET(req: NextRequest) {
   const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.PORTRAIT }, margin: { top: 900, bottom: 900, left: 900, right: 900 } } }, children }] });
   return buildDocxResponse(`teacher-evaluation-${term.name}-${term.year}.docx`, doc);
 }
+export const GET = withErrors(GET_handler);

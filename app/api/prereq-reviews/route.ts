@@ -5,12 +5,13 @@ import { writeAuditLog } from "../../../lib/audit";
 import { keyOf } from "../../../lib/courseKeys";
 import { reviewMarker, setReviewMarker } from "../../../lib/prereqCascade";
 import { rowsForTopic } from "../../../lib/topicLinks";
+import { withErrors } from "../../../lib/apiHandler";
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // The teacher of a dependent course plans the review of a MILD / WEAK prerequisite topic in one of their lectures
 // (the lecture's plan shows it), marks it done, or takes it back out.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const b = await req.json().catch(() => ({}));
@@ -52,3 +53,4 @@ export async function POST(req: NextRequest) {
     return bad("Run prisma/migration_master_spec.sql in Supabase first.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

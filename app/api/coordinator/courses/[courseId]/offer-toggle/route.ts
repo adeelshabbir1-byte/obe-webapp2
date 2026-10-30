@@ -5,8 +5,9 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 import { autoEnrollBatchStudents } from "../../../../../../lib/autoEnroll";
 import { carryOverFromMatchingSemester } from "../../../../../../lib/benchmarkCopy";
 import { snapshotCourseAssignmentsIfTermChanging, snapshotAttainmentAndResetIfTermChanging } from "../../../../../../lib/assignmentSnapshot";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -37,3 +38,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ course: updated });
 }
+export const PUT = withErrors(PUT_handler);

@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -22,3 +23,4 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

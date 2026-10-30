@@ -5,10 +5,11 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { snapshotTemplate } from "../../../../../lib/templateDiff";
 import { voteOnRequest } from "../../../../../lib/omcRules";
 import { notifyUsers } from "../../../../../lib/notifications";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // A request to change an approved plan (or its topics) is decided by OMC votes: two approvals reopen the plan for the
 // Subject Expert at once; two rejections with reasons decline it. A course with a semester panel: only the panel votes (2 of 3).
-export async function PATCH(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -50,3 +51,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { requestId:
   await notifyUsers([request.requestedById], { kind: "TEMPLATE", title: `${course.code} plan change ${votes.decided}`, body: note, href: `/subjectexpert/courses/${course.id}/clos` });
   return NextResponse.json({ ok: true, votes: votes.line, decided: votes.decided });
 }
+export const PATCH = withErrors(PATCH_handler);

@@ -4,13 +4,14 @@ import { prisma } from "../../../../lib/db";
 import { fypAccess } from "../../../../lib/fyp";
 import { addOpenHouseTemplate, addGroupTemplate, addYearTemplate } from "../../../../lib/fypPlan";
 import { reschedule } from "../../../../lib/fypSchedule";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const pdb = prisma as unknown as Record<string, any>;
 const day = (v: unknown) => { const d = new Date(String(v || "") + "T00:00:00Z"); return isNaN(d.getTime()) ? null : d; };
 
 // POST { cycleId, groupId?, action: add | update | delete | status | openHouseTemplate | groupTemplate, ... }
 // Year plan (no groupId): the FYP Head / Committee. A group's plan: its supervisor or the FYP Head.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -52,3 +53,4 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "FYP plans are not set up yet — run prisma/migration_fyp_plan.sql." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

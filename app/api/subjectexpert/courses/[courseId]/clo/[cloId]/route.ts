@@ -7,8 +7,9 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { renumberClos } from "../../../../../../../lib/cloOrdering";
 import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -53,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   return NextResponse.json({ clo: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   { const lk = await (await import("../../../../../../../lib/curriculumLibrary")).courseLock(params.courseId, "clo"); if (lk) return NextResponse.json({ error: lk }, { status: 423 }); }
@@ -76,3 +77,5 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

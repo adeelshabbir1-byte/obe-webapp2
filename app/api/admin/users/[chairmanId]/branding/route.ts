@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { invalidateInstituteBranding } from "../../../../../../lib/branding";
 import { adminCan } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { chairmanId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { chairmanId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -23,3 +24,4 @@ export async function PUT(req: NextRequest, { params }: { params: { chairmanId: 
 
   return NextResponse.json({ name: updated.name, instituteName: updated.instituteName, instituteLogo: updated.instituteLogo, maxDegreePrograms: updated.maxDegreePrograms });
 }
+export const PUT = withErrors(PUT_handler);

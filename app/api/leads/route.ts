@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { hashPassword } from "../../../lib/auth";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // A Program Lead is the Program Coordinator who is responsible for one program of a department. They get every
 // coordinator tool (batches, courses, faculty, Subject Experts, timetable...) for the people and data they own.
@@ -16,7 +17,7 @@ async function actor() {
 }
 
 // Creates a brand-new Program Coordinator who leads one program.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const a = await actor();
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { user, chairmanId } = a;
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Makes an existing coordinator of the department the lead of a program (userId + program), or clears a program's lead (program only).
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const a = await actor();
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { user, chairmanId } = a;
@@ -67,3 +68,5 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PROGRAM_LEAD_SET", entityType: "Department", entityId: dept.id, metadata: { program: body.program, userId: body.userId || "none" } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

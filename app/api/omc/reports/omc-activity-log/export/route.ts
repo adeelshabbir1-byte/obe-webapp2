@@ -5,8 +5,9 @@ import { canViewReports } from "../../../../../../lib/reportScope";
 import { getOmcActivityLog } from "../../../../../../lib/reports";
 import { formatActionLabel, formatMetadata } from "../../../../../../lib/auditLabels";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!(await canViewReport(user, "omc.reports.omc-activity-log"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -50,3 +51,4 @@ export async function GET(req: NextRequest) {
     rows: allRows,
   }]);
 }
+export const GET = withErrors(GET_handler);

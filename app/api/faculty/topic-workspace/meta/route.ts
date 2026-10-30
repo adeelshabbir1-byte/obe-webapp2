@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { accessFor, setMeta, MISSING } from "../../../../../lib/topicPlan";
 import { forbidden, wsUser } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // PATCH { courseId, plan, lectureRowId, industry?, reading?, cloId? } — facts about one topic of a plan the person owns:
 // industry relevance, the reading (book chapter), and confirming the CLO of a topic moved in from another course.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await wsUser();
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
@@ -26,3 +27,4 @@ export async function PATCH(req: NextRequest) {
   try { await setMeta(row.id, a.planCourseId, data, user.id); } catch { return NextResponse.json({ error: MISSING }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);

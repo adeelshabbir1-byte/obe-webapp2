@@ -4,9 +4,10 @@ import { saveDetail } from "../../../../lib/aas";
 import { STUDENT_SELF, checkValues, canonValues } from "../../../../lib/aasFields";
 import { portalLists } from "../../../../lib/nceacPortal";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** POST — the signed-in student saves their own details (the fields NCEAC's Student Directory asks for). */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const s = await getAuthenticatedStudent();
   if (!s) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -19,3 +20,4 @@ export async function POST(req: Request) {
   try { await saveDetail("student", s.id, v, s.id); } catch { return NextResponse.json({ error: "Not set up yet — ask your Program Lead (database update pending)." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

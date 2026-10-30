@@ -6,6 +6,7 @@ import SaveShortcut from "../components/SaveShortcut";
 import NavProgress from "../components/NavProgress";
 import TourBar from "../components/TourBar";
 import PwaRegister from "../components/PwaRegister";
+import MonitoringInit from "../components/MonitoringInit";
 
 // Self-hosted via next/font: no render-blocking request to Google at runtime,
 // no layout shift, and the files are served from our own origin with
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SaveShortcut />
         <PwaRegister />
+        <MonitoringInit />
         <Suspense fallback={null}>
           <NavProgress />
         </Suspense>

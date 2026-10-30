@@ -4,9 +4,10 @@ import { prisma } from "../../../../lib/db";
 import { labAccessFor } from "../../../../lib/labAccess";
 import { labMarksLocked } from "../../../../lib/labTheory";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Lab Engineer saves the marks of one lab session for the whole class.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -41,3 +42,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MARKS_SAVED", entityType: "Course", entityId: access.lab.id, metadata: { labNumber, saved, cleared } });
   return NextResponse.json({ ok: true, saved, cleared });
 }
+export const POST = withErrors(POST_handler);

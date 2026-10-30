@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { renumberPaperDistribution } from "../../../../../../../lib/paperDistributionOrdering";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Instructor counterpart to the SE version — builds this exam's paper
 // distribution list from whatever the Instructor has already linked on
 // their own Assessments tab (Midterm/Final Q# -> topics), instead of
 // re-entering the same topic/CLO/marks here by hand. REPLACES the
 // exam's current item list, same as the SE version.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -67,3 +68,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const items = await prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "INSTRUCTOR", examType }, orderBy: { orderIndex: "asc" } });
   return NextResponse.json({ items });
 }
+export const POST = withErrors(POST_handler);

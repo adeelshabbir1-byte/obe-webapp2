@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Resets an Elective-type course back to a genuinely unfilled slot —
 // specifically for elective placeholders that got silently pre-filled
@@ -12,7 +13,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // "choose a course for this slot" popup on Prerequisite Map / Course
 // Repositioning from opening for it. This is the retroactive fix for any
 // course that already got created that way before the code fix landed.
-export async function PUT(req: Request, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -26,3 +27,4 @@ export async function PUT(req: Request, { params }: { params: { courseId: string
 
   return NextResponse.json({ ok: true, course: updated });
 }
+export const PUT = withErrors(PUT_handler);

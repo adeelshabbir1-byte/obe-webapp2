@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -19,3 +20,4 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
   { const c = await prisma.course.findUnique({ where: { id: request.courseId }, select: { code: true } }); await (await import("../../../../../../lib/studentAlerts")).tellStudents([request.studentId], "REGISTRATION", `Advisor did not approve your request for ${c?.code || "the course"}`, body.note || undefined, "/student/registration"); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

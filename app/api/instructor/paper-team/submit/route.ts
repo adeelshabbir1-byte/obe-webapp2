@@ -4,9 +4,10 @@ import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { loadTeams, syncApprovedPaper } from "../../../../../lib/courseTeams";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The Course Lead sends the finished paper (Midterm or Final) to the other teachers of the course for approval.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "INSTRUCTOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PAPER_SUBMITTED_FOR_APPROVAL", entityType: "Course", entityId: row.courseId, metadata: { examType, version: submission.version } });
   return NextResponse.json({ ok: true, version: submission.version });
 }
+export const POST = withErrors(POST_handler);

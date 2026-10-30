@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { whoIs, rdb, staffOf, str } from "../../../../lib/registers";
 import { deskSetting, DESK_HINT, DEFAULT_SLA } from "../../../../lib/help/deskExtra";
+import { withErrors } from "../../../../lib/apiHandler";
 
-/** POST (the Institute Head) { action: "addSupport" | "removeSupport", userId } | { action: "sla", URGENT, HIGH, NORMAL, LOW } */
-export async function POST(req: Request) {
+/** POST_handler (the Institute Head) { action: "addSupport" | "removeSupport", userId } | { action: "sla", URGENT, HIGH, NORMAL, LOW } */
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -28,3 +29,4 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "HELP_DESK_SETTINGS_SAVED", entityType: "HelpDeskSetting", entityId: w.chairmanId, metadata: { support: ids.length } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -46,3 +47,4 @@ export async function PUT(req: NextRequest, { params }: { params: { groupId: str
 
   return NextResponse.json({ registrationOpen: updated.registrationOpen, defaultedCount });
 }
+export const PUT = withErrors(PUT_handler);

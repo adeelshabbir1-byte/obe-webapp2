@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { pdb, storeFile, MAX_FILE, LEVELS } from "../../../../../../lib/portfolio";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Upload / remove a sampled student script for an assessment (best, average or weakest).
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -35,3 +36,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
   await pdb.studentWorkSample.deleteMany({ where: { id, courseId: course.id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

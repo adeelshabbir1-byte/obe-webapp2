@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { buildExcelResponse } from "../../../../lib/excelExport";
 import { KINDS, completeness, reportPeople, yearsOfService, experienceSummary, ymText } from "../../../../lib/facultyProfile";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const d = (x: Date | null | undefined) => (x ? new Date(x).toISOString().slice(0, 10) : "");
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const people = await reportPeople(user);
@@ -48,3 +49,4 @@ export async function GET() {
   }))];
   return buildExcelResponse("faculty-details-report.xlsx", sheets);
 }
+export const GET = withErrors(GET_handler);

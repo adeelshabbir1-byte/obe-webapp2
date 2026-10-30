@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Without this, Next.js's build-time static optimizer sees a GET
 // handler with no dynamic API calls (no cookies/headers — this route
@@ -19,12 +20,12 @@ async function getOrCreate() {
   return prisma.landingPageContent.create({ data: {} });
 }
 
-export async function GET() {
+async function GET_handler() {
   const content = await getOrCreate();
   return NextResponse.json({ content });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -48,3 +49,5 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ content: updated });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

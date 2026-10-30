@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { book, cancel, clashes, BOOKING_HINT } from "../../../lib/facilityBooking";
+import { withErrors } from "../../../lib/apiHandler";
 
 const day = (s: unknown) => (s && /^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? new Date(`${s}T00:00:00Z`) : null);
 const time = (s: unknown) => (s && /^\d{1,2}:\d{2}$/.test(String(s).trim()) ? String(s).trim().padStart(5, "0") : null);
 
 // GET ?resource&date&start&end — clash check. POST { action: book | cancel }
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = req.nextUrl.searchParams, d = day(q.get("date")), s = time(q.get("start")), e = time(q.get("end"));
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   try { return NextResponse.json(await clashes(await chairmanIdFor(user), String(q.get("resource")), d, s, e)); } catch { return NextResponse.json({ error: BOOKING_HINT }, { status: 500 }); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -31,3 +32,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /Clash|end time|Not found|Only/.test(m) ? m : BOOKING_HINT }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -5,10 +5,11 @@ import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { getGradingScaleForBatch } from "../../../../../../lib/gradingScaleLookup";
 import { computeResultMate } from "../../../../../../lib/resultMate";
 import { db, getCourseResult, approversFor, notify, logResult } from "../../../../../../lib/resultApproval";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // POST { studentId, newGrade, reason } — after the result is approved, the Instructor asks to change one student's
 // grade. It takes effect only when the Chairman / Institute Head approves it.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -36,3 +37,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     `${user.name} asks to change ${row.name} (${row.rollNumber}) in ${course.code} from ${row.grade} to ${newGrade}. Reason: ${reason}`, "/results-approval");
   return NextResponse.json({ ok: true, id: reqRow.id });
 }
+export const POST = withErrors(POST_handler);

@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, str, num, dateOrNull } from "../../../lib/registers";
 import { ldb, LIB_HINT, SUBJECTS, findMember, issue, returnCopy, renew, reserve, markLost, payFine, syncLibraryInfo, duesOf, policyOf, fineOf } from "../../../lib/library";
+import { withErrors } from "../../../lib/apiHandler";
 
 async function who() {
   const user = await getAuthenticatedUser();
@@ -15,7 +16,7 @@ async function who() {
 const err = (e: unknown) => { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties of undefined|Unknown arg/.test(m) ? LIB_HINT : m.slice(0, 300) }, { status: 400 }); };
 
 /** GET ?member=<roll no / username> — the member, their loans, fines and holds (the Librarian). ?template=1 — the Excel import template. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
  *   withdraw { copyId }   reserve { titleId, member }   policy { studentLimit, studentDays, staffLimit, staffDays, finePerDay, maxRenewals, holdDays }
  * POST multipart { file } — import the catalogue from Excel (the template's columns).
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "Only the Librarian works the library desk." }, { status: 403 });
   const H = me.w.chairmanId, by = me.user.id;
@@ -130,3 +131,5 @@ export async function POST(req: Request) {
     }
   } catch (e) { return err(e); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

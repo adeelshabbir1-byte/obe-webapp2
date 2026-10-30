@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function DELETE(req: Request, { params }: { params: { groupId: string; courseId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { groupId: string; courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -16,3 +17,4 @@ export async function DELETE(req: Request, { params }: { params: { groupId: stri
 
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

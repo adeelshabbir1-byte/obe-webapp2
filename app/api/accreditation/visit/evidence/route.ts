@@ -4,11 +4,12 @@ import { prisma } from "../../../../../lib/db";
 import { govScope, inScope } from "../../../../../lib/accreditation/governance";
 import { vdb } from "../../../../../lib/accreditation/visit";
 import { uploadEvidenceFile } from "../../../../../lib/evidenceValidation";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const MAX = 15 * 1024 * 1024;
 
 // POST form { cycleId, id, file? | url?, name?, remove? } — attach evidence to a finding (for a rebuttal or to show it is fixed).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
@@ -39,3 +40,4 @@ export async function POST(req: Request) {
   await vdb.visitItem.update({ where: { id: f.id }, data: { dataJson: JSON.stringify(d) } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

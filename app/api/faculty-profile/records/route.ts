@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { KIND_NAMES } from "../../../../lib/facultyProfile";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ownerId = (u: { id: string }) => (u as { realUserId?: string }).realUserId || u.id;
 const str = (v: unknown, max = 300) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
@@ -9,7 +10,7 @@ const month = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return 
 const year = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 1950 && n <= 2100 ? n : null; };
 
 // Add (no id) or change (with id) one education / experience / paper / grant / project / event row of my own profile.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -36,10 +37,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, record: rec });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id") || "";
   const res = await prisma.facultyRecord.deleteMany({ where: { id, userId: ownerId(user) } });
   return NextResponse.json({ ok: res.count > 0 });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

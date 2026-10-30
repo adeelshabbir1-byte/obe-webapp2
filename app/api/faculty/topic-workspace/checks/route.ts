@@ -3,12 +3,13 @@ import { prisma } from "../../../../../lib/db";
 import { accessFor, type Access } from "../../../../../lib/topicPlan";
 import { checksFor, consortiumReference, programMap } from "../../../../../lib/topicChecks";
 import { forbidden, parseOpen, wsUser, LINK_ROLES } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?open=[...] — the Checks tab for the open courses; ?map=<courseId> — the program map; ?consortium=<courseId> —
 // the same course at other universities of the consortium.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const sp = req.nextUrl.searchParams;
@@ -30,3 +31,4 @@ export async function GET(req: NextRequest) {
   }
   return NextResponse.json(await checksFor(cols, user.role));
 }
+export const GET = withErrors(GET_handler);

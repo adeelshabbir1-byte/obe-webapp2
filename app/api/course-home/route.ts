@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { visibleBatchIds } from "../../../lib/studentScope";
 import { coursesInDegree, whereUsed } from "../../../lib/courseHome";
+import { withErrors } from "../../../lib/apiHandler";
 
 const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
 
 // GET ?batch=… (courses in a degree) or ?dept=… (where a department's courses are used) — as CSV for Excel.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const p = req.nextUrl.searchParams;
@@ -23,3 +24,4 @@ export async function GET(req: NextRequest) {
   }
   return new NextResponse(rows.join("\n"), { headers: { "Content-Type": "text/csv", "Content-Disposition": `attachment; filename="${p.get("batch") ? "courses-in-degree" : "where-courses-used"}.csv"` } });
 }
+export const GET = withErrors(GET_handler);

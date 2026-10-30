@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { UC_HINT, propose, omcDecide, bosDecide, forward } from "../../../lib/universityCurriculum";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n = 1000) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const BOS_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"];
 
 // POST { action: propose | omc | bos | forward, … } — changes moving from a batch to the university curriculum.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|P2021/.test(m) ? UC_HINT : m }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

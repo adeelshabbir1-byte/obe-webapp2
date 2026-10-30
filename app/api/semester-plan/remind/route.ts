@@ -3,9 +3,10 @@ import { notifyUsers } from "../../../../lib/notifications";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { SETTER_ROLES, chairmanOf, reach } from "../../../../lib/deadlines";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // body: { deadlineId, toId, item? } - remind one person about a late plan task.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
   await notifyUsers([String(b.toId)], { kind: "DEADLINE", title: `Reminder: ${t.title}`, body: `${user.name} reminded you about this task${item ? ` for ${item}` : ""}.`, href: "/deadlines" });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

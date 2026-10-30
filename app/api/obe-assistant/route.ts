@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { assistantConfig, usedToday, courseContext, SYSTEM_PROMPT, askClaude } from "../../../lib/obeAssistant";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,7 +18,7 @@ async function canUseCourse(user: { id: string; role: string }, courseId: string
 }
 
 // GET → is the assistant on for me, and how many questions are left today.
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ enabled: false });
   const cfg = await assistantConfig(await chairmanIdFor(user).catch(() => ""));
@@ -26,7 +27,7 @@ export async function GET() {
 }
 
 // POST { courseId?, question, history: [{ q, a }] } → the assistant's answer.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   const chairmanId = await chairmanIdFor(user).catch(() => "");
@@ -48,3 +49,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "The AI service could not be reached." }, { status: 502 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

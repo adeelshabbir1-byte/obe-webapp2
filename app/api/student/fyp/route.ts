@@ -4,12 +4,13 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
 import { ARTIFACT_KINDS, eligibility, REQUISITION_KINDS, studentCycle } from "../../../../lib/fyp";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // Students: form a group, invite classmates, apply to approved projects, and (once accepted) add their artifacts and requests.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const student = await getAuthenticatedStudent();
   if (!student) return bad("not logged in", 401);
   const cycle = await studentCycle(student.id);
@@ -150,3 +151,4 @@ export async function POST(req: NextRequest) {
     return bad("Could not save.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

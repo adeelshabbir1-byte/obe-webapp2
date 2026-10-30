@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.isAlumniCustodian) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -36,3 +37,4 @@ export async function GET() {
     })),
   });
 }
+export const GET = withErrors(GET_handler);

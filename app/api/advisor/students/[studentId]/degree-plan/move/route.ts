@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recordMove } from "../../../../../../../lib/planHistory";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Advisor-facing counterpart to /api/student/degree-plan/move — same
 // "has this course historically run in that semester" validation, but
 // performed by the Advisor for one specific advisee (e.g. building a
 // retake plan for courses just dropped off a probation student's
 // current semester), not by the student themselves.
-export async function POST(req: NextRequest, { params }: { params: { studentId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -52,3 +53,4 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
     warning: validated ? null : `${course.code} hasn't historically been offered in Semester ${targetSemesterNumber} for this program — double check with the Program Coordinator before relying on this plan.`,
   });
 }
+export const POST = withErrors(POST_handler);

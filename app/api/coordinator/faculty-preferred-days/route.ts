@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timetableActor, READ_ONLY, scopeFaculty } from "../../../../lib/timetableAccess";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Preferred teaching days are a PREFERENCE, not a rule: the timetable generator tries to keep this
 // instructor's classes on these days but will move one if that's the only way to avoid a clash.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ days: (f.preferredDays || "").split(",").filter(Boolean) });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -30,3 +31,5 @@ export async function PUT(req: NextRequest) {
   await prisma.user.update({ where: { id: f.id }, data: { preferredDays: days.length > 0 ? days.join(",") : null } });
   return NextResponse.json({ days });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

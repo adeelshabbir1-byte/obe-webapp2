@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { reorderLectureContent, applyLectureOrder } from "../../../../../../../lib/lectureReorder";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Drag a lecture's content to another slot; the lectures in between shift by one. Dates stay with the slot.
 async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
@@ -19,4 +20,4 @@ async function POST_handler(req: NextRequest, { params }: { params: { courseId: 
 }
 
 // A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
-export const POST = withLabSync(POST_handler);
+export const POST = withErrors(withLabSync(POST_handler));

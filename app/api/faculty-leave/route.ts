@@ -5,10 +5,11 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { appraiseesFor } from "../../../lib/appraisal";
 import { ldb, LEAVE_KINDS, LEAVE_MANAGERS, affectedCourses, type LeaveRow } from "../../../lib/facultyLeave";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { userId, kind, fromTerm, toTerm, allowDesign, note, disableLogin } — record that a teacher is away (or has left).
 // Returns the courses they still hold in those terms, so they can be taken back straight away.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !LEAVE_MANAGERS.includes(user.role)) return NextResponse.json({ error: "Only the Institute Head or a Chairman records faculty leave." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -26,3 +27,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_LEAVE_RECORDED", entityType: "User", entityId: userId, metadata: { kind, fromTerm, toTerm } });
   return NextResponse.json({ ok: true, id: row.id, affected: await affectedCourses(row) });
 }
+export const POST = withErrors(POST_handler);

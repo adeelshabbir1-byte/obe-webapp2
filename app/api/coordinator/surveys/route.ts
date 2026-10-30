@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** Surveys are visible/manageable institution-wide (chairman-scoped), by
  * either a Program Coordinator or the Institute Head-designated alumni/employer
@@ -11,7 +12,7 @@ async function canManageSurveys(user: { role: string; isAlumniCustodian: boolean
   return user.role === "PROGRAM_COORDINATOR" || user.isAlumniCustodian;
 }
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !(await canManageSurveys(user))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -26,7 +27,7 @@ export async function GET() {
   return NextResponse.json({ surveys });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await canManageSurveys(user))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -56,3 +57,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ survey }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

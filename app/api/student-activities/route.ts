@@ -6,12 +6,13 @@ import { activitiesScope, canEditSociety, EVENT_CATEGORIES, POSITIONS, SOCIETY_C
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { notifyUsers } from "../../../lib/notifications";
 import { awardEvent, awardLeadership, roomClashes } from "../../../lib/engagement";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const int = (v: unknown) => { if (v === "" || v === null || v === undefined) return null; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 ? n : null; };
 
 // Societies (Student Affairs / Institute Head), and each society's office bearers and events (also its faculty advisor).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await activitiesScope(user);
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await activitiesScope(user);
@@ -130,3 +131,5 @@ export async function DELETE(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "SOCIETY_RECORD_REMOVED", entityType: entity || "", entityId: id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

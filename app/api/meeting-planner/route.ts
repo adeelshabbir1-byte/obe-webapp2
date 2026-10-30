@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { MEETING_KINDS, MEETING_ROLES, fileScope } from "../../../lib/evidenceFiles";
 import { schedule, recordMinutes, cancelMeeting, addAction, setAction, MEET_HINT } from "../../../lib/meetingsPlus";
+import { withErrors } from "../../../lib/apiHandler";
 
 const mdb = prisma as unknown as Record<string, any>;
 const ORGANIZERS = [...MEETING_ROLES, "STUDENT_AFFAIRS"];
@@ -10,7 +11,7 @@ const day = (s: unknown) => (s && /^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? new Da
 const txt = (s: unknown, n: number) => String(s || "").trim().slice(0, n);
 
 // POST { action: schedule | minutes | cancel | addAction | actionDone }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -45,3 +46,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e) { console.error("meeting-planner", e); return NextResponse.json({ error: MEET_HINT }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

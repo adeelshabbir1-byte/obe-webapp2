@@ -1,0 +1,68 @@
+# End-to-end tests (tests/e2e, Playwright) on every pull request and every push to main: a Postgres test database,
+# the seeded demo institute (tests/e2e/seed.ts), a production build, then the journeys, role smoke tests, privacy and
+# phone-size checks. Screenshots and traces of failures are uploaded as artifacts. Never touches production data.
+# To test a Vercel preview that uses a TEST database instead, run it by hand with its address.
+name: E2E
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Preview URL to test (it must use a test database seeded with tests/e2e/seed.ts); empty = local build"
+        required: false
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: obe_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/obe_e2e
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/obe_e2e
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/obe_e2e
+      E2E_BASE_URL: ${{ github.event.inputs.base_url }}
+      CRON_SECRET: e2e-cron-secret
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test database and the demo institute
+        if: env.E2E_BASE_URL == ''
+        run: |
+          npx prisma db push --skip-generate
+          npx tsx tests/e2e/seed.ts
+      - name: Production build
+        if: env.E2E_BASE_URL == ''
+        run: npx next build
+      - name: Playwright
+        run: npx playwright test
+      - name: Screenshots and traces of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+      - name: Phone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

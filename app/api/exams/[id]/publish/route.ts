@@ -5,9 +5,10 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { notifyUsers } from "../../../../../lib/notifications";
 import { xdb, loadSession, parse, type ExamPaperRow } from "../../../../../lib/exams";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // POST { publish: boolean } — publish the date sheet (students, instructors and invigilators see it and are notified) or take it back.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   const cid = user ? await examChairman(user) : null;
   if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -28,3 +29,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

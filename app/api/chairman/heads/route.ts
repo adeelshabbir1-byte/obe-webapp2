@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Creates a Chairman account. A department can have more than one head.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Turns "this head also teaches as faculty" on or off.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -42,3 +43,5 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "HEAD_FACULTY_TOGGLED", entityType: "User", entityId: head.id, metadata: { alsoFaculty: !!body.alsoFaculty } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

@@ -5,10 +5,11 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 import { deleteCourseCompletely } from "../../../../../../lib/deleteCourseCompletely";
 import { LIST_TYPES } from "../../../../../../lib/autoCopyPreviousBatch";
 import { retypeListCourses } from "../../../../../../lib/listCourses";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // POST — remove the Elective / IDS list courses a batch got by importing a whole curriculum (a pool to choose from, not
 // studied as such): only those with no students, marks or attendance. Filled elective slots are untouched.
-export async function POST(_req: Request, { params }: { params: { batchId: string } }) {
+async function POST_handler(_req: Request, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const batch = await prisma.batch.findFirst({ where: { id: params.batchId, coordinatorId: user.id } });
@@ -21,3 +22,4 @@ export async function POST(_req: Request, { params }: { params: { batchId: strin
   await writeAuditLog({ actorUserId: user.id, action: "BATCH_LIST_COURSES_REMOVED", entityType: "Batch", entityId: batch.id, metadata: { removed, kept: cs.length - removed } });
   return NextResponse.json({ ok: true, message: `Removed ${removed} elective-list course(s).${cs.length - removed ? ` ${cs.length - removed} kept (students, marks or attendance).` : ""}` });
 }
+export const POST = withErrors(POST_handler);

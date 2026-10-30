@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Builds a leaner, program-specific master curriculum from the grand
 // HEC curriculum: copies the specified courses (the shared core plus
@@ -12,7 +13,7 @@ import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
 // tracked back to its source via parentCurriculumId for the sync
 // mechanism, and is itself an official (chairmanId null) curriculum,
 // clonable per-institute exactly like the grand one.
-export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -91,3 +92,4 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
 
   return NextResponse.json({ curriculumId: result.id });
 }
+export const POST = withErrors(POST_handler);

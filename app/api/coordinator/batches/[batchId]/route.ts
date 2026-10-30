@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { deleteBatchCompletely } from "../../../../../lib/deleteBatchCompletely";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // The batch's planned / current student count (Batches page). It sets how the batch is split into student sections for
 // the timetable (Section A, B, … of at most the limit), so those are recomputed straight away.
-export async function PUT(req: Request, { params }: { params: { batchId: string } }) {
+async function PUT_handler(req: Request, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const batch = await prisma.batch.findUnique({ where: { id: params.batchId } });
@@ -25,7 +26,7 @@ export async function PUT(req: Request, { params }: { params: { batchId: string 
   return NextResponse.json({ batch: updated, sections });
 }
 
-export async function DELETE(req: Request, { params }: { params: { batchId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -37,3 +38,5 @@ export async function DELETE(req: Request, { params }: { params: { batchId: stri
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

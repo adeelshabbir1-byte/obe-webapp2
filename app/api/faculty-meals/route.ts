@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { addMeal, removeMeal, order, monthBill, MEAL_HINT, MEAL_MANAGERS } from "../../../lib/facultyMeals";
+import { withErrors } from "../../../lib/apiHandler";
 
 const day = (s: unknown) => (s && /^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? new Date(`${s}T00:00:00Z`) : null);
 
 // GET ?month=YYYY-MM — the month's bill as CSV (managers). POST { action: add | remove | order }
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !MEAL_MANAGERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const [y, m] = String(req.nextUrl.searchParams.get("month") || new Date().toISOString().slice(0, 7)).split("-").map(Number);
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, { headers: { "Content-Type": "text/csv", "Content-Disposition": `attachment; filename="faculty-meals-${y}-${String(m).padStart(2, "0")}.csv"` } });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -36,3 +37,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /closed|Not found/.test(m) ? m : MEAL_HINT }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

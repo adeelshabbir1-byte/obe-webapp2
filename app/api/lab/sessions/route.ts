@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { labAccessFor } from "../../../../lib/labAccess";
 import { labCloOptions } from "../../../../lib/labSessions";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { labCourseId, labNumber, title?, cloId?, criteria? } — a lab session's CLO and (optional) rubric.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const access = user ? await labAccessFor(user, String(b.labCourseId || "")) : null;
@@ -30,3 +31,4 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "Not set up yet — the Super User needs to run prisma/migration_groups_labs.sql." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

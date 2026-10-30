@@ -6,6 +6,7 @@ import { ebdb, examChairman, swapMode } from "../../../../../lib/examBranch";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { notifyUsers } from "../../../../../lib/notifications";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 type Swap = { id: string; sessionId: string; paperId: string; roomId: string; fromUserId: string; toUserId: string; status: string };
 const slotOf = (p: ExamPaperRow) => `${p.date ? new Date(p.date).toISOString().slice(0, 10) : ""}:${p.slot}`;
@@ -25,7 +26,7 @@ async function execute(sw: Swap) {
   return null;
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+async function POST_handler(req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await loadSession(params.id);
@@ -64,3 +65,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   } catch { return NextResponse.json({ error: "Run prisma/migration_exam_branch.sql first." }, { status: 500 }); }
 }
 void prisma;
+export const POST = withErrors(POST_handler);

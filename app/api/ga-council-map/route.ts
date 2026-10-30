@@ -4,9 +4,10 @@ import { isCouncilKey } from "../../../lib/councilAttributes";
 import { autoMap, GA_MAP_EDITORS, GA_MAP_HINT, loadSet, mapBatches, saveMap } from "../../../lib/gaCouncilMap";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: "map", batchId, ploId, body, attrs: number[] } | { action: "load" | "auto", batchId, body }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !GA_MAP_EDITORS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -32,3 +33,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: GA_MAP_HINT }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

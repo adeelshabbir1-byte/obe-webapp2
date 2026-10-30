@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -12,3 +13,4 @@ export async function PUT(req: NextRequest) {
   await prisma.courseFolder.upsert({ where: { courseId: course.id }, create: { courseId: course.id, ...data }, update: data });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

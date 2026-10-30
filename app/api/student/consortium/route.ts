@@ -4,11 +4,12 @@ import { CONSORTIUM_HINT } from "../../../../lib/consortium";
 import { apply, withdraw, claimPayment } from "../../../../lib/consortiumApplications";
 import { changeCentre } from "../../../../lib/consortiumExams";
 import { choose } from "../../../../lib/consortiumJoint";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 // Student: POST { action: apply | withdraw | pay, ... }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -25,3 +26,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

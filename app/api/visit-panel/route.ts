@@ -4,9 +4,10 @@ import { prisma } from "../../../lib/db";
 import { govScope, inScope } from "../../../lib/accreditation/governance";
 import { createPass, revokePass } from "../../../lib/visitorPass";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: "create", cycleId, days, label } → a read-only panel link | { action: "revoke", id, cycleId }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   const b = await req.json().catch(() => ({}));
@@ -24,3 +25,4 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: "Run prisma/migration_platform_plus.sql in Supabase first." }, { status: 500 }); }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

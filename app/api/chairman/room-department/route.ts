@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Says who owns a room: one department (used by that department's own timetable) or nobody (a common room).
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -19,3 +20,4 @@ export async function PUT(req: NextRequest) {
   await prisma.room.update({ where: { id: room.id }, data: { departmentId } });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

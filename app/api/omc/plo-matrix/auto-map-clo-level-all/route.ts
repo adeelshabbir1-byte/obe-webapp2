@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { suggestPloForClo, evenSplitContribution } from "../../../../../lib/cloPloMatching";
 import { ensureCoursePloMapping } from "../../../../../lib/coursePloSync";
 import { deptScope } from "../../../../../lib/omcScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // All-batches counterpart to auto-map-clo-level, same offset/pageSize
 // pattern as auto-map-system-all. A smaller default pageSize than that
@@ -12,7 +13,7 @@ import { deptScope } from "../../../../../lib/omcScope";
 // comparison work plus a DB transaction per course, not just a single
 // lookup+create per course — heavier per batch, so fewer batches per
 // call keeps this comfortably under the same timeout risk.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -96,3 +97,4 @@ export async function POST(req: NextRequest) {
     batchesProcessed, batchesSkippedNoPlos, totalBatches: allBatches.length, nextOffset, done: nextOffset >= allBatches.length,
   });
 }
+export const POST = withErrors(POST_handler);

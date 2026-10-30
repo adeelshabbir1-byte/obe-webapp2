@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { ALLOWED_TYPES, MAX_FILE_BYTES, MEETING_KINDS, MEETING_ROLES, fileScope } from "../../../lib/evidenceFiles";
+import { withErrors } from "../../../lib/apiHandler";
 
 const txt = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !MEETING_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -38,3 +39,5 @@ export async function DELETE(req: NextRequest) {
   await prisma.meetingMinutes.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

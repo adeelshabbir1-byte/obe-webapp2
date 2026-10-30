@@ -4,9 +4,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { compareBatch, TAG_LABEL, sideText } from "../../../../lib/batchCompare";
 import { batchAccess } from "../../../../lib/batchAccess";
 import { PdfDoc } from "../../../../lib/pdfDoc";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** GET ?batchId=&format=pdf|xlsx — the three-way comparison as a file (Program Lead, the department OMC, leadership). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -45,3 +46,4 @@ export async function GET(req: Request) {
   d.table([["New batch", 3.4], ["Council curriculum", 3.4], ["Previous batch", 3.4], ["Changed", 2.2]], rows);
   return new NextResponse(Buffer.from(await d.save()), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}.pdf"` } });
 }
+export const GET = withErrors(GET_handler);

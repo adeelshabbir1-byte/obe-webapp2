@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSignedInUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ldb = prisma as unknown as Record<string, any>;
 
 // POST { key, score, total, passMark } — keeps each person's best score per lesson / course practice.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getSignedInUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -18,3 +19,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Learning progress is not set up yet (migration_obe_learning.sql)." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

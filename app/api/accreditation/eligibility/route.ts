@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { eligibility, saveInputs, ELIGIBILITY_HINT } from "../../../../lib/councilEligibility";
 import { sarScope } from "../../../../lib/sarAccess";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"];
 
@@ -17,7 +18,7 @@ async function who() {
 }
 
 // GET ?sheet=1[&program=] — the registration / eligibility sheet in Excel.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const w = await who();
   if (!w) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const only = req.nextUrl.searchParams.get("program") || undefined;
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { body, program, key, value } — save one typed-in answer.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const w = await who();
   if (!w) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -58,3 +59,5 @@ export async function POST(req: NextRequest) {
   catch { return NextResponse.json({ error: ELIGIBILITY_HINT }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

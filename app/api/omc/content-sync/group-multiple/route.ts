@@ -4,12 +4,13 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { determineBaseCourseId, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Links any number of courses (2+) into one group in a single request —
 // select several, then submit once, instead of one /pair call per
 // course. Existing group memberships among the selected courses are
 // respected and merged the same way /pair does for two at a time.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -112,3 +113,4 @@ export async function POST(req: NextRequest) {
   await afterLink(ctx, courseIds);
   return NextResponse.json({ groupId, baseCourseCode: baseCourse?.code || null, equivalencePairsMade });
 }
+export const POST = withErrors(POST_handler);

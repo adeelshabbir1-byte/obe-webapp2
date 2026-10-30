@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, rdb, str, num } from "../../../lib/registers";
 import { REFUND_HINT, canDecideRefunds, type Step } from "../../../lib/feeRefunds";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** POST { action: "schedule", rows: "7:100, 15:50" } (head or Finance Officer)
  *  POST { action: "decide", id, approve, amount, note }   POST { action: "paid", id, paymentRef } (Finance Officer or head) */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -43,3 +44,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? REFUND_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

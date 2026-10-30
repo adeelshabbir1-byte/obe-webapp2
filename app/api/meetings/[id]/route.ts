@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { fileScope } from "../../../../lib/evidenceFiles";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scope = await fileScope(user);
@@ -11,3 +12,4 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!m || !m.data) return NextResponse.json({ error: "not found" }, { status: 404 });
   return new NextResponse(Buffer.from(m.data, "base64"), { headers: { "Content-Type": m.mimeType || "application/octet-stream", "Content-Disposition": `attachment; filename="${(m.fileName || "minutes").replace(/[^\w.\- ]/g, "_")}"` } });
 }
+export const GET = withErrors(GET_handler);

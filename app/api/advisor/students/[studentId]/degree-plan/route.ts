@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { getGradingScaleForBatch } from "../../../../../../lib/gradingScaleLookup";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const DEFAULT_MIN_CREDITS = 12;
 const DEFAULT_MAX_CREDITS = 18;
@@ -12,7 +13,7 @@ const DEFAULT_MAX_CREDITS = 18;
 // needs to drop something this semester and get a future-semester plan
 // for retaking it" workflow. Read-only lookup here; the move and
 // drop-enrollment endpoints do the actual changes.
-export async function GET(req: Request, { params }: { params: { studentId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -89,3 +90,4 @@ export async function GET(req: Request, { params }: { params: { studentId: strin
     planned,
   });
 }
+export const GET = withErrors(GET_handler);

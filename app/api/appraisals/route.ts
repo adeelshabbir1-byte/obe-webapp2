@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { adb, appraiseesFor, computeScorecard, REVIEWER_ROLES, OVERALL, RATING_AREAS, type AppraisalRow } from "../../../lib/appraisal";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 120;
 
 // PUT { userId, year, ratings, studentFeedback, overall, strengths, improve, goals, action: "save" | "share" | "finalise" | "reopen" }
 // — the reviewer (Institute Head, or the teacher's Chairman) writes the appraisal. Sharing freezes the year's figures and
 // lets the teacher read it and reply; finalising signs it off.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !REVIEWER_ROLES.includes(user.role)) return NextResponse.json({ error: "Only the Institute Head or the Chairman appraises faculty." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function PUT(req: NextRequest) {
   if (action === "share" || action === "finalise") await notifyUsers([userId], { kind: "ASSIGNMENT", title: `Your ${year} appraisal is ${action === "share" ? "ready to read" : "final"}`, body: `${user.name} ${action === "share" ? "shared your annual appraisal. Read it and add your comments." : "signed off your annual appraisal."}`, href: `/appraisals/${userId}?year=${year}` });
   return NextResponse.json({ ok: true, status: data.status });
 }
+export const PUT = withErrors(PUT_handler);

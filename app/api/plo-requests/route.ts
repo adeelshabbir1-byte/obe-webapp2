@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { pdb, canRequest, notifyOmc } from "../../../lib/ploRequests";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { courseId, ploId, action: ADD | REMOVE, reason } — the course's Subject Expert or Instructor asks the OMC.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "The GA request table is not in the database yet — run prisma/migration_plo_requests.sql in Supabase." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

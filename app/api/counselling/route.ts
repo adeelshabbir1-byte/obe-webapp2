@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, staffOf, str, dateOrNull } from "../../../lib/registers";
 import { cdb, COUNSEL_HINT, MODES, counsels, publishSlots, callIn, schedule, cancel, complete } from "../../../lib/counselling";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * POST { action, ... } — for batch advisors and student counsellors (designate: the Institute Head or Student Affairs).
@@ -11,7 +12,7 @@ import { cdb, COUNSEL_HINT, MODES, counsels, publishSlots, callIn, schedule, can
  *   callIn { studentId, kind, reason, source }   schedule { bookingId, startsAt, mode, place }   cancel { bookingId, note }
  *   complete { bookingId, held, kind, notes, followUp }   designate { userId, on }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -70,3 +71,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /Unknown arg|does not exist|Cannot read properties of undefined/.test(m) ? COUNSEL_HINT : m.slice(0, 300) }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

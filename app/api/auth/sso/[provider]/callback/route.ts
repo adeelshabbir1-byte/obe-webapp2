@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../lib/db";
 import { createSession } from "../../../../../../lib/session";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { provider, decodeJwt, domainAllowed, appOrigin } from "../../../../../../lib/sso";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET(req: Request, { params }: { params: { provider: string } }) {
+async function GET_handler(req: Request, { params }: { params: { provider: string } }) {
   const origin = appOrigin(req);
   const fail = (why: string) => { const r = NextResponse.redirect(`${origin}/login?sso=${why}`); r.cookies.delete("sso_flow"); return r; };
   const p = provider(params.provider);
@@ -28,3 +29,4 @@ export async function GET(req: Request, { params }: { params: { provider: string
   await writeAuditLog({ actorUserId: user.id, action: "LOGIN_SUCCESS", metadata: { via: `sso:${params.provider}` } });
   const r = NextResponse.redirect(`${origin}/dashboard`); r.cookies.delete("sso_flow"); return r;
 }
+export const GET = withErrors(GET_handler);

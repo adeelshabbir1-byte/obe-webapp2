@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { buildExcelResponse } from "../../../../../lib/excelExport";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Excel download of one batch's PLO-Course matrix: a row per course, a column per PLO, "X" where mapped.
 // The same sheet can be edited and uploaded back through Import (it only ever adds mappings).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const batchId = new URL(req.url).searchParams.get("batchId") || "";
@@ -31,3 +32,4 @@ export async function GET(req: NextRequest) {
     { name: "GA reference", columns: [{ header: "GA", key: "n", width: 8 }, { header: "Title", key: "t", width: 44 }, { header: "Description", key: "d", width: 90 }], rows: plos.map((p) => ({ n: `GA-${p.number}`, t: p.title, d: p.description })) },
   ]);
 }
+export const GET = withErrors(GET_handler);

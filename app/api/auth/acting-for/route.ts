@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, setActingFor } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The department Program Coordinator chooses which program (Program Lead) they are working on.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "DEPARTMENT_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -14,3 +15,4 @@ export async function POST(req: NextRequest) {
   await setActingFor(body.coordinatorId || null);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

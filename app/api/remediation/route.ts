@@ -4,13 +4,14 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { canManagePlan, cloCodesForTopics, hostLectures, money, recordMicroAssessment, remediationScope, REMEDIATION_KINDS } from "../../../lib/remediation";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const num = (v: unknown, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 const ids = (v: unknown) => (Array.isArray(v) ? Array.from(new Set(v.map((x) => String(x)).filter(Boolean))).slice(0, 500) : []);
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const scope = await remediationScope(user);
@@ -133,3 +134,4 @@ export async function POST(req: NextRequest) {
     return bad("Could not save.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

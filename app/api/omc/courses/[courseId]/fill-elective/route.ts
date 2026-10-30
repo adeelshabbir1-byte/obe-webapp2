@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { seedFromMasterCourseIfAvailable } from "../../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculum";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Fills a generic elective placeholder (e.g. "Elective-I") with a real,
 // named course chosen from the institution's own curriculum — renames
@@ -12,7 +13,7 @@ import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculu
 // for courses that are still an unnamed placeholder (courseType
 // "Elective" with no masterCourseId yet) — use the Equivalence page's
 // "equate" instead for an already-named, already-taught course.
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   // The Prerequisite Map page (Coordinator-facing) uses this same
   // "choose a course for this slot" popup as Course Repositioning
@@ -72,3 +73,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ course: updated });
 }
+export const PUT = withErrors(PUT_handler);

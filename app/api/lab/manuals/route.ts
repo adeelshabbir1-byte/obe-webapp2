@@ -6,11 +6,12 @@ import { uploadEvidenceFile } from "../../../../lib/evidenceValidation";
 import { writeAuditLog } from "../../../../lib/audit";
 import { randomUUID } from "crypto";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const MAX_SIZE_BYTES = 15 * 1024 * 1024;
 
 // Upload a Word lab manual (or a new version of it). The Lab Engineer and the lab's lead can both do this.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
@@ -54,3 +55,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MANUAL_UPLOADED", entityType: "LabManual", entityId: manual.id, metadata: { labNumber, version: version.version, as: access.as, kind } });
   return NextResponse.json({ ok: true, version: version.version }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

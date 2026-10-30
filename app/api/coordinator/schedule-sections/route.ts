@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { timetableActor } from "../../../../lib/timetableAccess";
 import { coversOf, getMaxSection, retiredSectionIds } from "../../../../lib/studentSections";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Every timetable section of the department timetable (offered courses only), with the student sections it covers and
 // its size. A Program Lead without edit rights gets the same list (the page shows it read-only, their batches first).
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const max = await getMaxSection(actor.chairmanId, actor.scope.key);
@@ -49,3 +50,4 @@ export async function GET() {
 
   return NextResponse.json({ sections, max, canEdit: actor.canEdit });
 }
+export const GET = withErrors(GET_handler);

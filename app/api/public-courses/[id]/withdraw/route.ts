@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The author takes a course back out of the library. Copies already imported elsewhere are unaffected.
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+async function POST_handler(_req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const pc = await prisma.publicCourse.findUnique({ where: { id: params.id } });
@@ -13,3 +14,4 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   await writeAuditLog({ actorUserId: user.id, action: "PUBLIC_COURSE_WITHDRAWN", entityType: "PublicCourse", entityId: pc.id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

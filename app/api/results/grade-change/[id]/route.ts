@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { db, canDecide, notify, logResult, type GradeChangeRow } from "../../../../../lib/resultApproval";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // POST { action: "approve" | "reject", note } — decide one grade change request.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -27,3 +28,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     `${user.name} ${approve ? "approved" : "rejected"} the change of ${student?.name || "the student"} from ${gc.oldGrade} to ${gc.newGrade}${note ? `: ${note}` : "."}`, `/instructor/courses/${gc.courseId}/marks`);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

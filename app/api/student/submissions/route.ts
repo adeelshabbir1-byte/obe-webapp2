@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { pdb, storeFile, MAX_FILE } from "../../../../lib/portfolio";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A student hands in (or replaces, until graded) their work for an open hand-in point.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const fd = await req.formData();
@@ -26,3 +27,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, late });
   } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Upload failed." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

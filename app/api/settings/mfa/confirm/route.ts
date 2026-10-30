@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { verifyTotp, generateBackupCodes } from "../../../../../lib/totp";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -22,3 +23,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ backupCodes });
 }
+export const POST = withErrors(POST_handler);

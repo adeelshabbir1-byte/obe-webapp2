@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { canEditQa, canViewQa, qaInstitute, saveRecord, deleteRecord, createProgram, records, qkind, QA_HINT } from "../../../lib/qaOffice";
+import { withErrors } from "../../../lib/apiHandler";
 
 const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
 
 // GET ?export=<kind>[&ranking=QS] — the register as CSV (PQR in the register's column order; rankings per ranking).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewQa(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const cid = await qaInstitute(user);
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action: save | delete | createProgram, kind, id?, refId?, ...fields }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /qaRecord|QaRecord|does not exist/.test(m) ? QA_HINT : m }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

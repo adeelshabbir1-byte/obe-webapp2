@@ -6,11 +6,12 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, num, dateOrNull, staffOf } from "../../../lib/registers";
 import { PLAG_HINT, KINDS, DECISIONS, HEC_LIMIT, overLimit, plagOf, plagSummary, canSeeAllPlag } from "../../../lib/plagiarism";
+import { withErrors } from "../../../lib/apiHandler";
 
 const STAFF = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT"];
 
 /** GET ?file=<id> — a record's report; GET ?summary=xlsx — the summary per year and kind (for the councils' forms). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !STAFF.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
 
 /** POST multipart { kind, title, program, authors, supervisorId, tool, similarityPct, singleSourcePct, thresholdPct, decision, actionTaken, checkedAt, report } — add a record.
  *  POST JSON { action: "decide", id, decision, actionTaken } — change the decision. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !STAFF.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -79,3 +80,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? PLAG_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

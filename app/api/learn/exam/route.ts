@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSignedInUser } from "../../../../lib/session";
 import { tdb, BADGES, badgeOf, questionById, PASS_PCT, EXAM_MIN, RETAKE_MIN } from "../../../../lib/training";
+import { withErrors } from "../../../../lib/apiHandler";
 
 type Att = { id: string; badge: string; idsJson: string; answersJson: string; startedAt: Date; submittedAt: Date | null; passed: boolean };
 
 // Certification exam: start (random questions, options never sent with answers), submit (graded on the server).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getSignedInUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function POST(req: Request) {
 }
 export const dynamic = "force-dynamic";
 void BADGES;
+export const POST = withErrors(POST_handler);

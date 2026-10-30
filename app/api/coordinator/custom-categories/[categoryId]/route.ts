@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function DELETE(req: NextRequest, { params }: { params: { categoryId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { categoryId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -17,3 +18,4 @@ export async function DELETE(req: NextRequest, { params }: { params: { categoryI
 
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

@@ -9,6 +9,7 @@ import { notifyUsers } from "../../../../lib/notifications";
 import { labSetting, saveLabSetting, ensureLabItem, removeLabItem, LAB_THEORY_HINT } from "../../../../lib/labTheory";
 import { recomputeCourseRows } from "../../../../lib/lectureWeights";
 import { POST as importLabMarks } from "../import/route";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /**
  * POST { labCourseId, action }
@@ -17,7 +18,7 @@ import { POST as importLabMarks } from "../import/route";
  *   reopen  — the theory instructor: unlock the lab marks so the Lab Engineer can correct them
  *   request { reason } — the Lab Engineer: ask the theory instructor to reopen approved marks
  */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -85,3 +86,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? LAB_THEORY_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

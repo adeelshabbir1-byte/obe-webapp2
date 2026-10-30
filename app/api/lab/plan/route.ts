@@ -5,6 +5,7 @@ import { labAccessFor } from "../../../../lib/labAccess";
 import { checkLabSync, saveTask, LAB_PLAN_HINT } from "../../../../lib/labPlan";
 import { notifyUsers } from "../../../../lib/notifications";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ldb = prisma as unknown as Record<string, any>;
 
@@ -12,7 +13,7 @@ const ldb = prisma as unknown as Record<string, any>;
 //   saveTask   { labNumber, title, week, lectureNumbers[] } — Lab Engineer or the instructor
 //   removeTask { labNumber } — only while it has no file and no marks
 //   review     { versionId, decision: APPROVED | RETURNED, note } — the instructor only
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const access = user ? await labAccessFor(user, String(b.labCourseId || "")) : null;
@@ -60,3 +61,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

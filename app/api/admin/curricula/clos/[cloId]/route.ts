@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { cloId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   { const x = await prisma.masterCourseClo.findUnique({ where: { id: params.cloId }, select: { masterCourse: { select: { masterCurriculumId: true } } } }); if (!(await adminCurriculum(user, x?.masterCourse.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 }); }
@@ -29,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: { cloId: strin
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { cloId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { cloId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   { const x = await prisma.masterCourseClo.findUnique({ where: { id: params.cloId }, select: { masterCourse: { select: { masterCurriculumId: true } } } }); if (!(await adminCurriculum(user, x?.masterCourse.masterCurriculumId))) return NextResponse.json({ error: "Outside your national curriculum team's area." }, { status: 403 }); }
@@ -39,3 +40,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { cloId: st
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -8,6 +8,7 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { copyCourseContent } from "../../../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../../../lib/institutionCurriculum";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Lets a Subject Expert pull CLOs/PLO mappings/lecture plan/assessment
 // instruments in from another course OMC has marked as equivalent to
@@ -19,7 +20,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // that), and a course that inherits its content via Content Sync can't
 // be overwritten directly (same guard every other SE content-mutation
 // endpoint uses).
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -84,3 +85,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   return NextResponse.json({ ok: true, ...result });
 }
+export const POST = withErrors(POST_handler);

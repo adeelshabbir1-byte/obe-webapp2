@@ -4,10 +4,11 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { copyBenchmarkIfAvailable, seedFromMasterCourseIfAvailable } from "../../../../lib/benchmarkCopy";
 import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const VALID_COURSE_TYPES = ["Core", "Elective", "Lab", "IDS", "General Education", "Capstone Project", "Field Experience", "Certification"];
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,7 +26,7 @@ export async function GET() {
   });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   // Owning Coordinator adds to their own batch directly; OMC can add to
   // any batch belonging to a Coordinator under their own Institute Head — same
@@ -86,3 +87,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ course, benchmarkCopied: !!benchmark }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

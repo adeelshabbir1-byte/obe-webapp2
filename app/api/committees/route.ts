@@ -6,9 +6,10 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { whoIs, rdb, str, num, dateOrNull, staffOf, day } from "../../../lib/registers";
 import { COM_HINT, KINDS, ROLES, STATUSES, canManageCommittees, canSeeCases, annual, compliance, type Committee, type Member, type Case } from "../../../lib/committees";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET ?report=<committeeId>&year=YYYY — the committee's annual report (Word, no names in cases). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
  *   meeting { id, date, agenda, decisions, attendees }
  *   case { id, category, receivedAt, notes }   caseUpdate { caseId, status, outcome, notes }  (members and the head only)
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -115,3 +116,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? COM_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -4,8 +4,9 @@ import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -14,7 +15,7 @@ export async function GET() {
   return NextResponse.json({ chairmen: chairmen.map(({ passwordHash, mfaSecret, mfaBackupCodes, ...u }) => u) });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "ONBOARDING"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,3 +50,5 @@ export async function POST(req: NextRequest) {
   const { passwordHash: _omit, mfaSecret: _s, mfaBackupCodes: _b, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

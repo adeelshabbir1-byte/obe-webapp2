@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timetableActor, READ_ONLY } from "../../../../lib/timetableAccess";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -17,7 +18,7 @@ export async function GET() {
   });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -36,3 +37,5 @@ export async function PUT(req: NextRequest) {
   });
   return NextResponse.json({ config });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

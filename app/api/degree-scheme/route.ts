@@ -4,12 +4,13 @@ import { writeAuditLog } from "../../../lib/audit";
 import { prisma } from "../../../lib/db";
 import { planLock, registerFromPlan } from "../../../lib/registrationRules";
 import { snapshot } from "../../../lib/planHistory";
+import { withErrors } from "../../../lib/apiHandler";
 
 const db = prisma as unknown as Record<string, any>;
 
 // GET ?studentId=  : the student's full degree scheme (the student themself may omit studentId).
 // POST { studentId?, action: "move" | "retake" | "grade" | "cancel", courseId, semesterNumber?, grade? }
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const access = await schemeAccess(req.nextUrl.searchParams.get("studentId"));
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
   const s = await loadScheme(access.studentId);
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ...s, editedBy: access.by });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const access = await schemeAccess(b.studentId ? String(b.studentId) : null);
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
@@ -49,3 +50,5 @@ export async function POST(req: NextRequest) {
   if (access.by === "staff") await writeAuditLog({ actorUserId: access.actorId, action: `DEGREE_PLAN_${String(b.action).toUpperCase()}`, entityType: "Student", entityId: access.studentId, metadata: { courseId: String(b.courseId), semester: Number(b.semesterNumber) || 0 } });
   return NextResponse.json(r);
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

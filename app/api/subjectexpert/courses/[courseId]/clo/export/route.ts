@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard";
 import { buildExcelResponse } from "../../../../../../../lib/excelExport";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Excel download of this course's CLOs with their PLO mapping. The same file can be edited and uploaded back through Import.
-export async function GET(_req: Request, { params }: { params: { courseId: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -24,3 +25,4 @@ export async function GET(_req: Request, { params }: { params: { courseId: strin
       rows: plos.map((p) => ({ n: p.number, t: p.title, d: p.description })) },
   ]);
 }
+export const GET = withErrors(GET_handler);

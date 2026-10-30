@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -18,3 +19,4 @@ export async function GET() {
 
   return NextResponse.json({ plos });
 }
+export const GET = withErrors(GET_handler);

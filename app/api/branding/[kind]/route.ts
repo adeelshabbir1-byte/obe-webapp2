@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { cachedChairmanIdFor, decodeLogo, logoVersion, type LogoKind } from "../../../../lib/branding";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const KINDS: LogoKind[] = ["institute", "owner", "nceac"];
 
 // Serves a stored logo as a real image with long-lived caching. URLs carry a
 // content hash (?v=…), so a changed logo gets a new URL and the old cache
 // entry is simply never requested again.
-export async function GET(req: NextRequest, { params }: { params: { kind: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { kind: string } }) {
   const kind = params.kind as LogoKind;
   if (!KINDS.includes(kind)) return new NextResponse("Not found", { status: 404 });
 
@@ -63,3 +64,4 @@ export async function GET(req: NextRequest, { params }: { params: { kind: string
     },
   });
 }
+export const GET = withErrors(GET_handler);

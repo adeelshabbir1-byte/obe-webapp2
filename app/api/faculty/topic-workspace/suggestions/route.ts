@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { decide, suggestionsFor } from "../../../../../lib/topicAi";
 import { forbidden, wsUser, LINK_ROLES } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?courseIds=a,b[&ai=0] — system suggestions for the open courses (never applied on their own).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const ids = (req.nextUrl.searchParams.get("courseIds") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 40);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 // POST { kind, key, hash, decision: ACCEPTED|REJECTED, reason, data } — remembers the decision. Accepting a course
 // prerequisite (Program Lead only) sets it on the program's courses; accepting a topic link or an importance is done
 // by the caller through the normal proposal (links API / Save) so it follows the same approvals.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const b = await req.json().catch(() => ({}));
@@ -36,3 +37,5 @@ export async function POST(req: NextRequest) {
   await decide(user, { kind: String(b.kind || ""), key: String(b.key || ""), hash: String(b.hash || "") }, decision, String(b.reason || ""));
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

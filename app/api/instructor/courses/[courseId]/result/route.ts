@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { db, getCourseResult, approversFor, notify, logResult, resultSummary } from "../../../../../../lib/resultApproval";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // POST { action: "submit" | "withdraw" } — the Instructor sends the course result for approval, or takes it back
 // (only while it is still waiting).
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -42,3 +43,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     `${user.name} submitted the result of ${course.code} (${summary.students} students, mean ${summary.mean}%, pass rate ${summary.passRate}%). Please approve it or return it with a note.`, "/results-approval");
   return NextResponse.json({ ok: true, status: "SUBMITTED" });
 }
+export const POST = withErrors(POST_handler);

@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // PUT { enabled, dailyLimit } — the Institute Head switches the OBE Assistant on/off and sets the daily question limit.
-export async function PUT(req: Request) {
+async function PUT_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -15,3 +16,4 @@ export async function PUT(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "OBE_ASSISTANT_SETTINGS", entityType: "AiConfig", entityId: user.id, metadata: data }).catch(() => null);
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // GET ?courseId= : one Excel workbook that is the course folder: outline, CLOs, lecture plan, assessments, marks and attendance.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const courseId = req.nextUrl.searchParams.get("courseId") || "";
@@ -64,3 +65,4 @@ export async function GET(req: NextRequest) {
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(Buffer.from(buf), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${course.code.replace(/[^A-Za-z0-9_-]/g, "_")}-course-folder.xlsx"` } });
 }
+export const GET = withErrors(GET_handler);

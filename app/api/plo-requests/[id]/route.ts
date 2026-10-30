@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { omcCourseScope } from "../../../../lib/omcScope";
 import { pdb, decide, type PloRequestRow } from "../../../../lib/ploRequests";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // PATCH { decision: APPROVE | REJECT | CANCEL, note } — the OMC decides; the person who asked may withdraw it.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -31,3 +32,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: e instanceof Error ? e.message : "Could not apply." }, { status: 400 });
   }
 }
+export const PATCH = withErrors(PATCH_handler);

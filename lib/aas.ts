@@ -229,6 +229,8 @@ export async function saveDetail(kind: "student" | "staff", id: string, vals: Re
   const model = kind === "student" ? adb.studentDetail : adb.staffDetail;
   const where = kind === "student" ? { studentId: id } : { userId: id };
   const cur = await model.findUnique({ where });
+  // A masked CNIC (35202-•••••••-3) sent back from a form means "unchanged".
+  if (clean.cnic && clean.cnic.includes("•")) delete clean.cnic;
   const data = JSON.stringify({ ...parseJ(cur?.dataJson), ...clean });
   if (cur) await model.update({ where, data: { dataJson: data, updatedById: by, updatedAt: new Date() } });
   else await model.create({ data: { ...where, dataJson: data, updatedById: by } });

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The author's own coordinator approves or rejects a course before it becomes public.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const pc = await prisma.publicCourse.findUnique({ where: { id: params.id }, include: { author: { select: { managedById: true } } } });
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await writeAuditLog({ actorUserId: user.id, action: approve ? "PUBLIC_COURSE_APPROVED" : "PUBLIC_COURSE_REJECTED", entityType: "PublicCourse", entityId: pc.id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

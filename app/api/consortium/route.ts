@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { CONSORTIUM_HINT, applyToJoin, decideMember, saveResidency, saveNoc, saveCentre, registerEmployee, endAffiliation, sponsor, renewSponsored, saveRuleSet, lookupPerson, memberOf, cdb, myPeople } from "../../../lib/consortium";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 // POST { action, ... } — Super Admin: rules, member, lookup. Institute Head (Chairman): apply, residency, noc, centre,
 // register, registerAll, end, sponsor, renew.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -20,7 +21,9 @@ export async function POST(req: NextRequest) {
       if (!may) return NextResponse.json({ error: b.action === "rules" ? "Only the Super Admin changes the rules book." : "Your platform role doesn't include this." }, { status: 403 });
       if (b.action === "rules") { const v = await saveRuleSet(user.id, { label: str(b.label, 120), effectiveFrom: str(b.effectiveFrom, 30), note: str(b.note, 500), rules: b }); return ok(`Rules book version ${v} saved.`); }
       if (b.action === "member") { await decideMember(user.id, str(b.chairmanId, 60), b.status, str(b.note, 500)); return ok(b.status === "ACTIVE" ? "Admitted to the consortium." : "Saved."); }
-      const p = await lookupPerson(str(b.cnic, 20));
+      const found = await lookupPerson(str(b.cnic, 20));
+      // The full CNIC is shown to the Super Admin only.
+      const p = found && user.role !== "SUPER_USER" ? { ...found, cnic: (await import("../../../lib/scrub")).maskCnic(found.cnic) } : found;
       return ok(p ? `${p.name} (${p.cnic}): ${p.accounts.length} account(s)` : "No one is registered under this CNIC.", { person: p });
     }
     if (user.role !== "CHAIRMAN") return NextResponse.json({ error: "The Institute Head manages the consortium membership." }, { status: 403 });
@@ -53,3 +56,4 @@ export async function POST(req: NextRequest) {
 }
 
 async function inMyInstitute(chairmanId: string, userId: string) { return (await myPeople(chairmanId)).includes(userId); }
+export const POST = withErrors(POST_handler);

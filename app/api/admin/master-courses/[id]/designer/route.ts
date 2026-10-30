@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Assign (or clear) the platform Subject Expert who designs a Master Curriculum course.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const course = await prisma.masterCourse.findUnique({ where: { id: params.id }, include: { masterCurriculum: true } });
@@ -23,3 +24,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_DESIGNER_SET", entityType: "MasterCourse", entityId: course.id, metadata: { designerId } });
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);

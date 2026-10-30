@@ -1,0 +1,38 @@
+# Backup restore drill: monthly (and by hand), restores the latest stored backups into a SCRATCH database and checks
+# them (scripts/restore-drill.ts). Needs these repository secrets: RESTORE_TEST_DATABASE_URL (a separate, empty
+# Postgres — never the live one), SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (where the backups are), CRON_SECRET; and
+# the variable PRODUCTION_URL to record the result in System Health. Without RESTORE_TEST_DATABASE_URL it is skipped.
+name: Restore drill
+on:
+  schedule:
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RESTORE_TEST_DATABASE_URL: ${{ secrets.RESTORE_TEST_DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - name: Skip when not configured
+        id: cfg
+        run: if [ -z "$RESTORE_TEST_DATABASE_URL" ]; then echo "RESTORE_TEST_DATABASE_URL is not set; skipping."; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.skip != '1'
+      - uses: actions/setup-node@v4
+        if: steps.cfg.outputs.skip != '1'
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+        if: steps.cfg.outputs.skip != '1'
+      - name: Fresh tables in the scratch database
+        if: steps.cfg.outputs.skip != '1'
+        run: DATABASE_URL="$RESTORE_TEST_DATABASE_URL" npx prisma db push --force-reset --accept-data-loss --skip-generate
+      - name: Restore and check
+        if: steps.cfg.outputs.skip != '1'
+        run: npx tsx scripts/restore-drill.ts

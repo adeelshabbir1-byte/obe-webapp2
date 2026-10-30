@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { loadMoveData, moveProgram } from "../../../lib/programMove";
+import { withErrors } from "../../../lib/apiHandler";
 
 // The Chairman (for his department) or the Institute Head (whole institute) hands a program's existing batches over to its Program Lead.
 function scopeOf(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }) {
@@ -11,7 +12,7 @@ function scopeOf(user: { id: string; role: string; managedById: string | null; d
   return null;
 }
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   const scope = user && scopeOf(user);
   if (!scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -19,7 +20,7 @@ export async function GET() {
 }
 
 // body: { sourceId, program, targetId }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user && scopeOf(user);
   if (!user || !scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -38,3 +39,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "Could not move" }, { status: 409 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

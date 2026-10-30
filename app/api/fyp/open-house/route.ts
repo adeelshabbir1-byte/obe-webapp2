@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { fypAccess } from "../../../../lib/fyp";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const odb = prisma as unknown as Record<string, any>;
 const KINDS = ["INTERVIEW", "USHER", "REFRESHMENT", "PRINT", "OTHER"];
 const when = (v: unknown) => { if (!v) return null; const d = new Date(String(v)); return isNaN(d.getTime()) ? null : d; };
 
 // POST { cycleId, action: add | update | delete | status | posters, ... } — the FYP Head / Committee manage open-house logistics.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Not set up yet — run prisma/migration_fyp_plan.sql." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

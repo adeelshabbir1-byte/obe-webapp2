@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../../lib/contentSync";
 import { renumberPaperDistribution } from "../../../../../../../../lib/paperDistributionOrdering";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; itemId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; itemId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -35,3 +36,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await syncCourseContentToLinkedCourses(course.id);
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

@@ -4,12 +4,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { govScope } from "../../../../lib/accreditation/governance";
 import { STANDARD_FIELDS, isBody } from "../../../../lib/accreditation/bodies";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const MISSING = "Accreditation governance needs prisma/migration_accreditation_governance.sql to be run in Supabase first.";
 
 // PUT { action: "bind", program, body }        — the Institute Head binds a program to its council.
 // PUT { action: "standards", body, values }    — the Institute Head or OMC sets the thresholds for a council's programs.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   if (!user || !s) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -53,3 +54,4 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const PUT = withErrors(PUT_handler);

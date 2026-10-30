@@ -22,12 +22,13 @@ import { campusResearch } from "../../../../lib/demoResearch";
 import { campusBilling } from "../../../../lib/demoBilling";
 import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys, campusBbaContent, campusFixes } from "../../../../lib/demoCampus";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // One step of building or removing the demo institute per call (Super User only); the page drives the steps.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !(await adminCan(user, "ONBOARDING"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -58,3 +59,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

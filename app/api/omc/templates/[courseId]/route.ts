@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { castVote, confirmApproval, suggest, finaliseByOmc } from "../../../../../lib/sePlan";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The OMC's decision on a Subject Expert's plan is a vote of the course's OMC: more than half approving carries it and
 // the Convener confirms. Changes go to the Subject Expert as suggestions with reasons.
@@ -15,7 +16,7 @@ async function guard(courseId: string) {
 }
 
 /** Kept for the older decision form: approved = an approving vote; changes-requested = a vote against plus the comment as a suggestion. */
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const g = await guard(params.courseId);
   if (!g) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
  * POST { action, ... }
  *   vote { approve, note }    suggest { step, item, text, reason }    confirm (Convener)    finalise (Convener: the OMC's version)
  */
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const g = await guard(params.courseId);
   if (!g) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -48,3 +49,5 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const PATCH = withErrors(PATCH_handler);
+export const POST = withErrors(POST_handler);

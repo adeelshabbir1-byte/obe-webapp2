@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanOf } from "../../../../lib/deadlines";
 import { hatsOf } from "../../../../lib/dualRoles";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** Mark a task done (or undo it): anyone who holds the role it belongs to, the named person, or whoever set it. */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -18,3 +19,4 @@ export async function POST(req: NextRequest) {
   await prisma.deadline.update({ where: { id: d.id }, data: { completedAt: b.done ? new Date() : null } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

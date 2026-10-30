@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { recheck, answerSuggestion } from "../../../../../../lib/sePlan";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 /**
  * POST { action, ... } — the course's Subject Expert.
  *   recheck — "Rechecked — no change" on a plan approved for the previous batch
  *   answer { suggestionId, added, note } — an OMC suggestion: added to the plan, or a reply with reasons
  */
-export async function POST(req: Request, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!user || !course) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,3 +26,4 @@ export async function POST(req: Request, { params }: { params: { courseId: strin
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

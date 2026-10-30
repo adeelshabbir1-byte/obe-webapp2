@@ -6,3 +6,7 @@ next-env.d.ts
 # local environment (never commit database credentials)
 .env
 .env*.local
+tests/load/ids.json
+tests/load/results/
+playwright-report/
+test-results/

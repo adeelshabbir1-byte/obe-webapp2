@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { heldSet, packRoles } from "../../../../lib/dualRoles";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Gives an existing teacher or Subject Expert an extra role - Dean, Chairman of a department, or Program Lead - or removes it.
 // The person keeps their earlier roles and chooses which hat to wear when they sign in.
 // The Institute Head can do all three; a Chairman can only name Program Leads inside their own department.
 type Wanted = "DEAN" | "HEAD_OF_DEPARTMENT" | "DEPARTMENT_COORDINATOR" | "PROGRAM_LEAD";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || (user.role !== "CHAIRMAN" && user.role !== "HEAD_OF_DEPARTMENT")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const isInstituteHead = user.role === "CHAIRMAN";
@@ -143,3 +144,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "TEACHER_ROLE_GIVEN", entityType: "User", entityId: teacher.id, metadata: { role: wanted, facultyId: body.facultyId || null, departmentId: body.departmentId || null, program: body.program || null } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

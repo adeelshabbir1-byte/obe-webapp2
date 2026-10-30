@@ -6,6 +6,7 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { deptScope } from "../../../lib/omcScope";
 import { lendableWhere, REQUEST_ROLES, LoanKind } from "../../../lib/loans";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const ALL_ROLES = Array.from(new Set<string>([...REQUEST_ROLES.INSTRUCTOR, ...REQUEST_ROLES.SUBJECT_EXPERT]));
 
@@ -15,7 +16,7 @@ async function chairmanOf(user: { id: string; role: string; managedById: string 
 const kindsFor = (role: string): LoanKind[] => (["INSTRUCTOR", "SUBJECT_EXPERT"] as LoanKind[]).filter((k) => REQUEST_ROLES[k].includes(role));
 
 // Everything the "Faculty from other departments" page needs: my courses, who can be asked, and my requests.
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !ALL_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanOf(user);
@@ -71,7 +72,7 @@ export async function GET() {
   });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !ALL_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanOf(user);
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Requester withdraws a still-waiting request.
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !ALL_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanOf(user);
@@ -130,3 +131,6 @@ export async function DELETE(req: NextRequest) {
   await prisma.teacherLoanRequest.update({ where: { id }, data: { status: "CANCELLED", decidedAt: new Date(), decidedById: user.id } });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

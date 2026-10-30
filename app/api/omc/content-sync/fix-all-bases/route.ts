@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { determineBaseCourseId, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // One-time correction for groups formed before base re-evaluation
 // existed: previously, only the very first two courses in a group ever
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // became a follower unconditionally, even if it was actually more
 // recent. This re-checks every existing group's base across ALL its
 // current members at once and fixes any that are wrong.
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -73,3 +74,4 @@ export async function POST() {
 
   return NextResponse.json({ groupsChecked: groups.length, groupsFixed, corrections });
 }
+export const POST = withErrors(POST_handler);

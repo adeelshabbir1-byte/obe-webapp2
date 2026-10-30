@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { copyMasterClos } from "../../../../../../lib/masterClos";
 import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
@@ -17,7 +18,7 @@ async function guard(curriculumId: string) {
   return { user, c };
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const g = await guard(params.curriculumId); if ("error" in g) return g.error;
   const copies = await prisma.masterCurriculum.findMany({
     where: { chairmanId: { not: null }, OR: [{ parentCurriculumId: g.c.id }, ...(g.c.parentCurriculumId ? [{ parentCurriculumId: g.c.parentCurriculumId }] : [])] },
@@ -26,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: { curriculumI
   return NextResponse.json({ copies: copies.map((x) => ({ id: x.id, label: `${x.chairman?.instituteName || x.chairman?.name || "Institute"} — ${x.title} ${x.version}`, courses: x.courses.length, withClos: x.courses.filter((k) => k._count.seedClos > 0).length })) });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const g = await guard(params.curriculumId); if ("error" in g) return g.error;
   const b = await req.json().catch(() => ({}));
   const from = await prisma.masterCurriculum.findUnique({ where: { id: String(b.fromId || "") }, select: { id: true, chairmanId: true } });
@@ -35,3 +36,5 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
   await writeAuditLog({ actorUserId: g.user.id, action: "OFFICIAL_CLOS_ADOPTED_FROM_INSTITUTE", entityType: "MasterCurriculum", entityId: g.c.id, metadata: { fromId: from.id, courses: r?.courses ?? 0, clos: r?.clos ?? 0 } });
   return NextResponse.json(r);
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

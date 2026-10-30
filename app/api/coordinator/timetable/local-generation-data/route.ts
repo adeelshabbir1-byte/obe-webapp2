@@ -3,10 +3,11 @@ import { timetableActor, READ_ONLY } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { buildSlots } from "../../../../../lib/timetableSlotBuilder";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // GET: everything the local script needs to run the GA on the user's own
 // machine — the same data buildSlots() would use server-side.
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -17,7 +18,7 @@ export async function GET() {
 
 // POST: accepts a chromosome computed locally and saves it as a completed
 // TimetableRun, exactly like the server-side generator would.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -52,3 +53,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ runId: run.id, hardViolations, generations });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

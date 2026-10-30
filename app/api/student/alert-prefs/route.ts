@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { savePrefs, STUDENT_KINDS } from "../../../../lib/studentAlerts";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { k_<KIND>: boolean ..., parentWeekly } — which SMS / WhatsApp alerts the student receives.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -12,3 +13,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, message: "Saved." });
   } catch { return NextResponse.json({ error: "Alert choices need prisma/migration_data_import.sql — ask your institute to run it." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

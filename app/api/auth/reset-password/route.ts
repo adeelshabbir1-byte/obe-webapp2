@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 import { passwordProblem } from "../../../../lib/passwordPolicy";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const hashOf = (raw: string) => crypto.createHash("sha256").update(raw).digest("hex");
 
@@ -15,13 +16,13 @@ async function liveToken(raw: unknown) {
 }
 
 // GET ?token= — whether a reset link can still be used (the page shows the form or an "expired" message).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   return NextResponse.json({ valid: !!(await liveToken(req.nextUrl.searchParams.get("token"))) });
 }
 
 // POST { token, newPassword } — set the new password. The link is used up, every session is signed out and a
 // lock from wrong passwords is lifted. Two-step sign-in still applies at the next sign-in.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const t = await liveToken(b.token);
   if (!t) return NextResponse.json({ error: "This link has expired or was already used. Ask for a new one." }, { status: 400 });
@@ -37,3 +38,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: t.user.id, action: "PASSWORD_RESET_BY_EMAIL", entityType: "User", entityId: t.user.id });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

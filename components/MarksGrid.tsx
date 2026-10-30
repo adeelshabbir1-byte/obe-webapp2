@@ -161,6 +161,46 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
 
   const current = MOVES.find((m) => m.key === mode)!;
 
+  // On a phone: one student at a time, with previous / next (the grid stays one tap away).
+  const [narrow, setNarrow] = useState(false);
+  const [gridOnPhone, setGridOnPhone] = useState(false);
+  const [at, setAt] = useState(0);
+  useEffect(() => { const m = window.matchMedia("(max-width: 760px)"); const f = () => setNarrow(m.matches); f(); m.addEventListener("change", f); return () => m.removeEventListener("change", f); }, []);
+  const visible = students.filter(shown);
+  if (narrow && editable && !gridOnPhone && visible.length) {
+    const st = visible[Math.min(at, visible.length - 1)];
+    const idx = Math.min(at, visible.length - 1);
+    return (
+      <div className="marks-phone">
+        {error && <div className="err" role="alert">{error}</div>}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <input value={filter} onChange={(e) => { setFilter(e.target.value); setAt(0); }} placeholder="Find a student (name or roll no.)" aria-label="Find a student" style={{ flex: 1 }} />
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setGridOnPhone(true)}>Grid</button>
+        </div>
+        <div className="card" style={{ margin: 0 }} key={st.id}>
+          <div className="small-note" style={{ margin: 0 }}>Student {idx + 1} of {visible.length}</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{st.name}</div>
+          <div className="small-note" style={{ marginTop: 0 }}>{st.rollNumber}{st.isRepeat ? " · repeat" : ""}</div>
+          <div style={{ marginTop: 10 }}>
+            {cols.map((c) => (
+              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", borderTop: "1px solid var(--line)" }}>
+                <span style={{ fontSize: 14, flex: 1, minWidth: 0 }}><b style={{ color: TYPE_COLOR[c.type] || "inherit" }}>{c.code}</b> {c.label} <span className="small-note">/ {c.maxScore}</span></span>
+                <input inputMode="decimal" defaultValue={st.marks[c.id] ?? ""} aria-label={`${c.label} (out of ${c.maxScore})`} disabled={busy === st.id + c.id}
+                  onBlur={(e) => save(e.currentTarget, st.id, c)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                  style={{ fontSize: 16, textAlign: "right", minHeight: 44, width: 88, flex: "none" }} />
+              </label>
+            ))}
+          </div>
+          {rowAction && <div style={{ marginTop: 10 }}>{rowAction(st)}</div>}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button type="button" className="btn btn-secondary" style={{ flex: 1, minHeight: 44 }} disabled={idx === 0} onClick={() => setAt(idx - 1)}>‹ Previous student</button>
+          <button type="button" className="btn" style={{ flex: 1, minHeight: 44 }} disabled={idx >= visible.length - 1} onClick={() => setAt(idx + 1)}>Next student ›</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {editable && (

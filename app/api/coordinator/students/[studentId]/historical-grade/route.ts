@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { getGradingScaleForBatch } from "../../../../../../lib/gradingScaleLookup";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Adds one historical grade directly to a student's transcript — for a
 // single correction or one-off backfill (the bulk-upload page is for a
 // whole batch at once). Same destination as the live closeout snapshot
 // (StudentTranscriptRecord), so it shows up everywhere the transcript
 // already reads from — no separate code path downstream.
-export async function POST(req: NextRequest, { params }: { params: { studentId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !["PROGRAM_COORDINATOR", "CHAIRMAN", "OMC"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -49,3 +50,4 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
 
   return NextResponse.json({ ok: true, record: { id: record.id } });
 }
+export const POST = withErrors(POST_handler);

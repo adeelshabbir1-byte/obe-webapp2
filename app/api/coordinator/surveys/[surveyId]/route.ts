@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 async function canManageSurveys(user: { role: string; isAlumniCustodian: boolean }) {
   return user.role === "PROGRAM_COORDINATOR" || user.isAlumniCustodian;
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { surveyId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { surveyId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await canManageSurveys(user))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -34,3 +35,4 @@ export async function PUT(req: NextRequest, { params }: { params: { surveyId: st
   const updated = await prisma.surveyTemplate.findUnique({ where: { id: params.surveyId }, include: { questions: true } });
   return NextResponse.json({ survey: updated });
 }
+export const PUT = withErrors(PUT_handler);

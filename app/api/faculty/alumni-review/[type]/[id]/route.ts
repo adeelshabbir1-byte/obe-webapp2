@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const MODEL_FOR_TYPE = { alumni: "alumni", employer: "employer", employment: "alumniEmployment", degree: "alumniAdditionalDegree" } as const;
 
-export async function PUT(req: NextRequest, { params }: { params: { type: string; id: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { type: string; id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.isAlumniCustodian) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -38,3 +39,4 @@ export async function PUT(req: NextRequest, { params }: { params: { type: string
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

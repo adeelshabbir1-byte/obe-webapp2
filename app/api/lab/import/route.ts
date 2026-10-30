@@ -6,10 +6,11 @@ import { labAccessFor } from "../../../../lib/labAccess";
 import { writeAuditLog } from "../../../../lib/audit";
 import { labSessions } from "../../../../lib/labSessions";
 import { partScore, splitInstrument, unsplitInstrument, setDirectClo } from "../../../../lib/instrumentParts";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The lab's lead (the course instructor) brings the lab marks into their theory course's result, for institutes
 // where the lab carries a share of the theory course's marks. The total of all lab sessions becomes the mark of one Lab item.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -98,3 +99,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MARKS_IMPORTED", entityType: "Course", entityId: access.theory.id, metadata: { labCourseId: access.lab.id, instrumentId: instrument.id, imported, skipped } });
   return NextResponse.json({ ok: true, imported, skipped, byClo: cloKeys.length });
 }
+export const POST = withErrors(POST_handler);

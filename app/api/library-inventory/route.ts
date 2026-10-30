@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { logChange } from "../../../lib/changeLog";
 import { libraryScope } from "../../../lib/resources";
+import { withErrors } from "../../../lib/apiHandler";
 
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
 const str = (v: unknown, max = 2000) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 // Saves the institute's library record (the Lab Manager or the Institute Head).
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await libraryScope(user);
@@ -25,3 +26,4 @@ export async function PUT(req: NextRequest) {
   await logChange(scope.chairmanId, "LIBRARY", `Library record saved: ${data.totalTitles} titles, ${data.totalVolumes} volumes, ${data.seats} seats`, user.id);
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

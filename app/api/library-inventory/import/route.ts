@@ -4,11 +4,12 @@ import { prisma } from "../../../../lib/db";
 import { logChange } from "../../../../lib/changeLog";
 import { libraryScope } from "../../../../lib/resources";
 import { readWorkbookGrids, findHeader, norm, toInt, toText, toDate } from "../../../../lib/excelRead";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // Reads the library sheet (Item / Value rows, as the download gives it). Items missing from the file keep their current value.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await libraryScope(user);
@@ -45,3 +46,4 @@ export async function POST(req: NextRequest) {
   await logChange(scope.chairmanId, "LIBRARY", `Library record imported from Excel: ${data.totalTitles} titles, ${data.totalVolumes} volumes, ${data.seats} seats`, user.id);
   return NextResponse.json({ ok: true, message: `Library record updated (${vals.size} line${vals.size === 1 ? "" : "s"} read).` });
 }
+export const POST = withErrors(POST_handler);

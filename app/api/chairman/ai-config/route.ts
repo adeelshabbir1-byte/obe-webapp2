@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 function maskKey(key: string | null): string | null {
   if (!key) return null;
@@ -9,7 +10,7 @@ function maskKey(key: string | null): string | null {
   return "*".repeat(key.length - 4) + key.slice(-4);
 }
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -28,7 +29,7 @@ export async function GET() {
 // Body: { provider?, model?, apiKey?, enabled? } — apiKey is only
 // updated if provided (so re-saving other fields doesn't require
 // re-entering the key); pass an empty string to clear it.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -55,3 +56,5 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ ok: true, apiKeyMasked: maskKey(config.apiKey) });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

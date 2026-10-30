@@ -4,10 +4,11 @@ import { prisma } from "../../../../../lib/db";
 import { loadSession, sessionDays, parse, invigilatorPool } from "../../../../../lib/exams";
 import { ebdb, examChairman } from "../../../../../lib/examBranch";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Program Leads list which of their staff are available for duties; the exam branch can add anyone;
 // every teacher gives the slots they prefer and the most duties a day they want.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+async function POST_handler(req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await loadSession(params.id);
@@ -36,3 +37,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_exam_branch.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

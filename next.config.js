@@ -1,13 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Error monitoring (lib/monitoring.ts): one SENTRY_DSN switches it on for the server and the browser; the release is
+  // the commit id. Nothing is loaded when it is not set.
+  env: {
+    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN || "",
+    NEXT_PUBLIC_SENTRY_TRACES: process.env.SENTRY_TRACES_SAMPLE_RATE || "0.1",
+    NEXT_PUBLIC_RELEASE: process.env.VERCEL_GIT_COMMIT_SHA || "",
+    NEXT_PUBLIC_SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || "",
+  },
   compress: true,
   experimental: {
+    // instrumentation.ts starts server-side error monitoring when SENTRY_DSN is set.
+    instrumentationHook: true,
     // Loaded from node_modules at runtime instead of being bundled — the PDF
     // libraries read their own files/workers and break when webpack inlines them.
     serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"],
     // The Regulations Library's starter documents are read from disk by the API route that loads them.
-    outputFileTracingIncludes: { "/api/regulations": ["./regulations-seed/**/*"] },
+    outputFileTracingIncludes: { "/api/regulations": ["./regulations-seed/**/*"], "/admin/system-health/restore-guide": ["./docs/restore.md"] },
     // Import only the icons actually used instead of the whole barrel.
     optimizePackageImports: ["lucide-react"],
     // Keep visited pages in the browser for 30 s, so going back or switching between recent pages is instant.

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { applyMasterPush, planMasterPush } from "../../../../../../lib/masterPush";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 // GET: what an update would do (nothing is changed). POST { courseIds }: update those courses (send a few at a time).
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const plan = await planMasterPush(user, params.id);
@@ -14,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ plan });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -24,3 +25,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_CURRICULUM_PUSHED_TO_COURSES", entityType: "MasterCurriculum", entityId: params.id, metadata: result });
   return NextResponse.json(result);
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

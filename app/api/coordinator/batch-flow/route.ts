@@ -4,9 +4,10 @@ import { prisma } from "../../../../lib/db";
 import { flowOf, markStep, stepHref, TOTAL_STEPS, applySyncDefaults, fillSeDefaults } from "../../../../lib/batchFlow";
 import { submitBatch, plOpinion } from "../../../../lib/batchApproval";
 import { setupStatus, markNew } from "../../../../lib/batchSetup";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** GET ?batchId= — the 13 steps of the batch's set-up (its Program Lead). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const batchId = new URL(req.url).searchParams.get("batchId") || "";
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
  *   newRest — every course still open in "Sync & equalise" is a new course    defaults — apply the synced courses' defaults again
  *   seDefaults — fill the Subject Experts' defaults (step 11)    submit — send the batch to the OMC    opinion { proposalId, agree, comment } — on an OMC proposal
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "Only the Program Lead." }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -58,3 +59,5 @@ export async function POST(req: Request) {
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

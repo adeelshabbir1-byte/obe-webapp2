@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { requisitions } from "../../../../lib/courseResources";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const LIBRARY_ROLES = ["LIBRARIAN", "CHAIRMAN"];
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
@@ -10,7 +11,7 @@ const int = (v: unknown) => Math.max(0, Math.min(100000, Math.round(Number(v) ||
 const csvCell = (v: unknown) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
 // The textbook requisition list as a spreadsheet (CSV) for purchase orders.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !LIBRARY_ROLES.includes(user.role)) return bad("forbidden", 403);
   const q = req.nextUrl.searchParams;
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 // The librarian records stock, orders and receipts for a book in a term.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !LIBRARY_ROLES.includes(user.role)) return bad("Only the librarian (or the Institute Head) updates requisitions.", 403);
   const b = await req.json().catch(() => ({}));
@@ -38,3 +39,5 @@ export async function POST(req: NextRequest) {
     return bad("Run prisma/migration_master_spec.sql in Supabase first.", 500);
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

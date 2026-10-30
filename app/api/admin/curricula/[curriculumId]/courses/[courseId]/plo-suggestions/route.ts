@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
 // Replaces the full set of suggested PLO numbers for this course's code.
 // HecPloSuggestion is keyed by the bare course code, shared across
 // every curriculum (and every chairman's clone) using that same code —
 // editing it here, on the official copy, is exactly the place a fix
 // benefits every institution at once.
-export async function PUT(req: NextRequest, { params }: { params: { curriculumId: string; courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { curriculumId: string; courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -27,3 +28,4 @@ export async function PUT(req: NextRequest, { params }: { params: { curriculumId
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

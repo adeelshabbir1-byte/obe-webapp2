@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // The SE says which week the midterm falls after (null = back to the automatic guess).
-export async function PUT(req: Request, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: Request, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -15,3 +16,4 @@ export async function PUT(req: Request, { params }: { params: { courseId: string
   await prisma.course.update({ where: { id: course.id }, data: { midtermWeek: week } as never });
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

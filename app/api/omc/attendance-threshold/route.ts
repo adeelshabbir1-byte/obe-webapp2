@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The institute's attendance policy, kept by the OMC: the minimum %, how late and excused count, the "close to the
 // minimum" margin, and the defaults of a QR attendance session. Fields left out keep their current value.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -42,3 +43,4 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ threshold });
 }
+export const PUT = withErrors(PUT_handler);

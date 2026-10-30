@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { batchId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -20,3 +21,4 @@ export async function PUT(req: NextRequest, { params }: { params: { batchId: str
   const updated = await prisma.batch.update({ where: { id: batch.id }, data: { registrationOpen: !!body.open } });
   return NextResponse.json({ registrationOpen: updated.registrationOpen });
 }
+export const PUT = withErrors(PUT_handler);

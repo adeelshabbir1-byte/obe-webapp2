@@ -5,9 +5,10 @@ import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, rdb, str, dateOrNull } from "../../../lib/registers";
 import { POL_HINT, KINDS, canEditPolicies } from "../../../lib/policyHistory";
 import { REVIEW_ROLES } from "../../../lib/reviewScope";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET ?file=<versionId> — the approved document of a version. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
 
 /** POST JSON { action: "doc", kind, title, program } — a new policy / manual / curriculum.
  *  POST multipart { docId, version, summary, bosMeeting, bosDate, bosMinute, acMeeting, acDate, acMinute, effectiveFrom, link, file } — a version. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -57,3 +58,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? POL_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

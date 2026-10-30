@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { str, num, dateOrNull } from "../../../lib/registers";
 import { adb, ASSET_HINT, CATEGORIES, assetScope, labsIn, nextTag, repairStep, requestCondemnation, decideCondemnation, verify, syncLab, type Asset } from "../../../lib/assets";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * POST { action, ... }
@@ -11,7 +12,7 @@ import { adb, ASSET_HINT, CATEGORIES, assetScope, labsIn, nextTag, repairStep, r
  *   repair { faultId, text, status, cost }   condemn { assetId, reason, committeeNote }   decideCondemn { id, approve, note }
  *   verify { labId, foundTags, note }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const sc = await assetScope(user as never);
@@ -69,3 +70,4 @@ export async function POST(req: Request) {
     }
   } catch (e) { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(m) ? ASSET_HINT : m.slice(0, 300) }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

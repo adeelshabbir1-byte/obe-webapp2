@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { ploId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { ploId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { ploId: str
   return NextResponse.json({ plo: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { ploId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { ploId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -50,3 +51,5 @@ export async function DELETE(req: Request, { params }: { params: { ploId: string
 
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

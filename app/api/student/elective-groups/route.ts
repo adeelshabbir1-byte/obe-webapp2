@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Every elective group for this student's own batch — open ones they
 // can still choose or change, and finalized ones so they can see the
 // outcome of a past choice. A student only ever sees their own batch's
 // groups; there's no way to browse or choose for anyone else.
-export async function GET() {
+async function GET_handler() {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -30,3 +31,4 @@ export async function GET() {
     })),
   });
 }
+export const GET = withErrors(GET_handler);

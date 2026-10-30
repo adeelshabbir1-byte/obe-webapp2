@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { fileScope } from "../../../../lib/evidenceFiles";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scope = await fileScope(user);
@@ -12,3 +13,4 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const file = f as unknown as { data: string; mimeType: string; fileName: string };
   return new NextResponse(Buffer.from(file.data, "base64"), { headers: { "Content-Type": file.mimeType, "Content-Disposition": `attachment; filename="${file.fileName.replace(/[^\w.\- ]/g, "_")}"` } });
 }
+export const GET = withErrors(GET_handler);

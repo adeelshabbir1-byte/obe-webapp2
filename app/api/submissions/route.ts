@@ -9,12 +9,13 @@ import { alertStudents } from "../../../lib/messaging";
 import { followersOf, mirrorInstrument } from "../../../lib/sectionLink";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { pdb, LEVELS } from "../../../lib/portfolio";
+import { withErrors } from "../../../lib/apiHandler";
 
 const s = (v: unknown, n = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 type Box = { id: string; courseId: string; instrumentId: string | null };
 
 // Instructor: open hand-in points, grade submissions (score goes to the linked assessment), keep a submission as a work sample.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const course = await requireInstructorCourse(user, String(b.courseId || ""));
@@ -65,3 +66,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Online submissions are not set up yet — run prisma/migration_submissions.sql (and migration_portfolio.sql for samples)." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

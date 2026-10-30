@@ -7,12 +7,13 @@ import { chairmanIdFor } from "../../../../lib/reportScope";
 import { dayKey } from "../../../../lib/inactivity";
 import { attendancePolicy, closeDueSessions } from "../../../../lib/attendance";
 import { networkKeyOf, newSessionKey } from "../../../../lib/attendanceToken";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const MISSING = "QR attendance needs prisma/migration_qr_attendance.sql to be run in Supabase first.";
 const int = (v: unknown, def: number, min: number, max: number) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def; };
 
 // GET ?courseId= — the course's QR sessions, newest first (the instructor of the course).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, req.nextUrl.searchParams.get("courseId") || "");
   if (!course) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 // POST — start a live QR session for one lecture of the course.
 // body: { courseId, lectureRowId, presentMinutes?, lateMinutes?, rotateSeconds?, requireLogin?, sameNetwork?, checkLocation?, lat?, lng?, radiusM? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const course = await requireInstructorCourse(user, String(b.courseId || ""));
@@ -68,3 +69,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

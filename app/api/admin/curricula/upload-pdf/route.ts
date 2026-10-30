@@ -4,8 +4,9 @@ import { prisma } from "../../../../../lib/db";
 import { parseCurriculumText } from "../../../../../lib/curriculumPdfParser";
 import { extractPdfText } from "../../../../../lib/pdfText";
 import { adminCan, adminCurriculum, inTeamScope, teamCurriculumWhere } from "../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -60,3 +61,4 @@ export async function POST(req: NextRequest) {
       : `Auto-detected ${parsedCourses.length} course(s). Review titles, categories, and credit hours carefully before publishing — this extraction is best-effort.`,
   }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

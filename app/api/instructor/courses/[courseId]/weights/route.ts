@@ -7,6 +7,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 import { getPolicyForCourse, checkPolicyCompliance } from "../../../../../../lib/weightPolicy";
 import { ensureAllInstrumentCounts } from "../../../../../../lib/instrumentAutoFill";
 import { planFor } from "../../../../../../lib/assessmentWeights";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // The Instructor's own number of items per category (never below the OMC's minimum) and "best of" for quizzes / assignments.
 const COUNT_FIELDS: { field: string; column: string; policyMinKey: string }[] = [
@@ -18,7 +19,7 @@ const COUNT_FIELDS: { field: string; column: string; policyMinKey: string }[] = 
   { field: "finalCount", column: "instructorFinalCount", policyMinKey: "finalMinCount" },
 ];
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -104,3 +105,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   if (hasCounts) await ensureAllInstrumentCounts(course.id, "INSTRUCTOR", planFor(updated, "INSTRUCTOR"));
   return NextResponse.json({ course: updated, pendingApproval: false });
 }
+export const PUT = withErrors(PUT_handler);

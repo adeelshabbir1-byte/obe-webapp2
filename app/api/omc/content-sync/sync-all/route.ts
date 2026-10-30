@@ -3,6 +3,7 @@ import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
 import { syncCourseContentToLinkedCourses } from "../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // The one place actual content copying happens for linking — every link
 // action (pair, group-multiple, add-member, set-base) only ever flags a
@@ -18,7 +19,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // "did nothing" from the outside. The caller is expected to keep calling
 // this repeatedly (using the returned remainingPending) until it reaches
 // zero, showing progress along the way instead of one long silent wait.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -79,3 +80,4 @@ export async function POST(req: NextRequest) {
   const remainingPending = Math.max(0, totalPendingCount - groupsSynced - failures.length);
   return NextResponse.json({ groupsSynced, coursesSynced, coursesSkippedGraded, coursesSkippedOlderBatch, failures, totalPending: totalPendingCount, remainingPending });
 }
+export const POST = withErrors(POST_handler);

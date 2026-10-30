@@ -6,11 +6,12 @@ import { prisma } from "../../../lib/db";
 import { reviewBatchWhere } from "../../../lib/reviewScope";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { cdb, ATTRS, EA_ATTRS, KNOWLEDGE } from "../../../lib/complexProblems";
+import { withErrors } from "../../../lib/apiHandler";
 
 const EDIT = ["CHAIRMAN", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "OMC", "DEPARTMENT_COORDINATOR"];
 
 // Program Lead (or the course's instructor for tags): mark assessments as complex problems; map course codes to knowledge areas.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -65,3 +66,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: b.action === "target" ? "Run prisma/migration_complex_profiles.sql first." : "Run prisma/migration_teaching_extras.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

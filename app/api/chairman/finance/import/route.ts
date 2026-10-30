@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { logChange } from "../../../../../lib/changeLog";
 import { financeScope, EXPENSE_CATEGORIES, INCOME_CATEGORIES, recentFiscalYears } from "../../../../../lib/resources";
 import { readWorkbookGrids, findHeader, norm } from "../../../../../lib/excelRead";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
@@ -11,7 +12,7 @@ const money = (v: string | undefined) => { const t = String(v ?? "").replace(/[^
 
 // Reads the sheets "Budget and spending" (Category, Budget, Spent) and "Income" (Category, Amount) for the fiscal year
 // chosen on the page. Categories that are not in the file keep their current figures.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user ? financeScope(user) : null;
   if (!user || !scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -56,3 +57,4 @@ export async function POST(req: NextRequest) {
   await logChange(scope.chairmanId, "FINANCE", `Finance figures for ${year} imported from Excel (${rows.length} lines)`, user.id);
   return NextResponse.json({ ok: true, message: `${rows.length} figure(s) saved for ${year}.`, warnings: warnings.slice(0, 6) });
 }
+export const POST = withErrors(POST_handler);

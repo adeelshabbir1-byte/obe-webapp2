@@ -7,13 +7,14 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { nbdb, nationalMember, FRAMEWORKS } from "../../../lib/nationalBank";
 import { notifyUsers } from "../../../lib/notifications";
+import { withErrors } from "../../../lib/apiHandler";
 
 const t = (v: unknown, n = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // The national curriculum bank: the platform names the national authority (HEC); its committee reviews courses universities
 // share, builds versioned national releases from them, and every university can import a release course (crediting the
 // university whose course it came from).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -92,3 +93,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_national_bank.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

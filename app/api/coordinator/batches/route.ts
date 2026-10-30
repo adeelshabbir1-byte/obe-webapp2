@@ -5,8 +5,9 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { deleteBatchCompletely } from "../../../../lib/deleteBatchCompletely";
 import { autoCopyFromPreviousBatch } from "../../../../lib/autoCopyPreviousBatch";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -19,7 +20,7 @@ export async function GET() {
   return NextResponse.json({ batches });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
 // confirmation phrase in the body as a server-side backstop, since the
 // client-side confirmation alone shouldn't be the only thing standing
 // between a stray request and wiping out the whole curriculum.
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -100,3 +101,6 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ deleted, total: batches.length, errors: errors.length > 0 ? errors : undefined });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

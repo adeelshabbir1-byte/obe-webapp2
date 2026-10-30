@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { erpAccess, edb, post } from "../../../lib/erp";
 import { parsePLines, pTotal, type PLine } from "../../../lib/purchasing";
+import { withErrors } from "../../../lib/apiHandler";
 
 type PR = { id: string; title: string; linesJson: string; total: number; status: string; requestedById: string; vendorId: string | null; poNumber: string | null };
 
 // Purchasing: any staff member requests → Finance/Institute Head approve → store orders from a vendor (PO)
 // → goods received into stock (Dr Inventory / Supplies, Cr Payables) → vendor paid (Dr Payables, Cr Bank).
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const acc = await erpAccess(user);
@@ -73,3 +74,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Purchasing is not set up yet — run prisma/migration_erp.sql." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

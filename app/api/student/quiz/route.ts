@@ -3,10 +3,11 @@ import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { mdb, pick, finishAttempt, deadlineOf, type Quiz, type Attempt, type Q } from "../../../../lib/mcq";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Student side of an online quiz: start (questions drawn and shuffled once), save answers as they go, submit.
 // Correct answers never leave the server before submission.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -48,3 +49,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

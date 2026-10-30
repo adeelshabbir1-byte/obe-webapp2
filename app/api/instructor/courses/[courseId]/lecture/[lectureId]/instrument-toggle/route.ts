@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../../lib/instructorGuard";
 import { recomputeAffectedRows, recomputeRows } from "../../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -33,3 +34,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   const updatedRow = await prisma.lectureRow.findUnique({ where: { id: row.id } });
   return NextResponse.json({ weightPct: updatedRow?.weightPct ?? 0 });
 }
+export const PUT = withErrors(PUT_handler);

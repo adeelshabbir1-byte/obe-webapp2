@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { ensureBatchSections, getMaxSection, moveStudent, sectionOfStudents } from "../../../../lib/studentSections";
 import { timetableScopeFor } from "../../../../lib/timetableScope";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A batch's student sections (Section A, B, … of at most the limit) and who is in which — for the Student Directory.
 // The batch's Program Lead, or the Department Coordinator of its department.
@@ -20,7 +21,7 @@ async function access(batchId: string) {
 }
 
 /** GET ?batchId= — the sections with their sizes, and each student's section. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const a = await access(new URL(req.url).searchParams.get("batchId") || "");
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const sections = await ensureBatchSections(a.batch.id, a.max);
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 }
 
 /** POST { batchId, studentId, label } — move one student to another section (refused when it is full). */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const body = await req.json().catch(() => ({}));
   const a = await access(String(body.batchId || ""));
   if (!a) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -41,3 +42,5 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: a.user.id, action: "STUDENT_SECTION_MOVED", entityType: "Student", entityId: st.id, metadata: { label: String(body.label) } }).catch(() => null);
   return NextResponse.json({ ok: true, message: `${st.name} is now in Section ${body.label}.` });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

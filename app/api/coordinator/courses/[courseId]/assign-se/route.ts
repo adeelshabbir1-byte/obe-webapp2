@@ -9,8 +9,9 @@ import { blockedAsNonBaseCourse, syncSubjectExpertToLinkedCourses } from "../../
 import { pastTermError } from "../../../../../../lib/courseTerm";
 import { leaveBlock } from "../../../../../../lib/facultyLeave";
 import { collegeRoleBlock } from "../../../../../../lib/affiliates";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -130,3 +131,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ course: updated, labSibling });
 }
+export const PUT = withErrors(PUT_handler);

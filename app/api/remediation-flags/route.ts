@@ -5,10 +5,11 @@ import { chairmanIdFor } from "../../../lib/reportScope";
 import { rfdb, flagCapacity, FLAG_ROLE } from "../../../lib/remediationFlags";
 import { remediationScope } from "../../../lib/remediation";
 import { notifyUsers } from "../../../lib/notifications";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Flag students for remediation on topics of a course (advisor, the course's teacher, the next course's teacher, OMC,
 // Program Lead / Chairman), or — for planners — dismiss a flag.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -45,3 +46,4 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "Run prisma/migration_remediation_flags.sql first." }, { status: 500 }); }
 }
 void FLAG_ROLE;
+export const POST = withErrors(POST_handler);

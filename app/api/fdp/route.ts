@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { REPORT_VIEWER_ROLES, reportPeople } from "../../../lib/facultyProfile";
 import { saveSession, markAttendance, addExternal, setTarget, yearData, hoursBy, target, FDP_HINT, FDP_KINDS } from "../../../lib/fdp";
+import { withErrors } from "../../../lib/apiHandler";
 
 const day = (s: unknown) => (s && /^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? new Date(`${s}T00:00:00Z`) : null);
 
 // GET ?year=&csv=1 — the year's hours per teacher (council report). POST { action, ... } — session | attendance | external | target
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !REPORT_VIEWER_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(rows.join("\n"), { headers: { "Content-Type": "text/csv", "Content-Disposition": `attachment; filename="fdp-${year}.csv"` } });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -48,3 +49,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e) { console.error("fdp", e); return NextResponse.json({ error: FDP_HINT }, { status: 500 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

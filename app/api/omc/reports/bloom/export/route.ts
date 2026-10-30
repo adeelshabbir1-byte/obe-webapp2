@@ -4,8 +4,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { canViewReports } from "../../../../../../lib/reportScope";
 import { getBloomReport, BLOOM_ORDER } from "../../../../../../lib/reports";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!(await canViewReport(user, "omc.reports.bloom"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,3 +50,4 @@ export async function GET() {
     },
   ]);
 }
+export const GET = withErrors(GET_handler);

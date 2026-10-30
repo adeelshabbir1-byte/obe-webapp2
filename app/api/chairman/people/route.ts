@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { heldSet, packRoles } from "../../../../lib/dualRoles";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Institute Head edits one person on the "All Users and Roles" page: name, email, department, login on/off,
 // and the teaching / staff roles. Leader roles (Dean, Chairman, Program Lead, Program Coordinator), OMC and Course
@@ -13,7 +14,7 @@ const DEPT_BOUND = ["HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COO
 const TEACHING = ["SUBJECT_EXPERT", "INSTRUCTOR"];
 const STAFF = ["LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"];
 
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -104,3 +105,4 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PERSON_EDITED", entityType: "User", entityId: person.id, metadata: { changes: changes.join("; ") } });
   return NextResponse.json({ ok: true, result: changes.join(", ") });
 }
+export const PATCH = withErrors(PATCH_handler);

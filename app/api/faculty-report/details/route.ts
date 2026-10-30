@@ -5,6 +5,7 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { buildExcelResponse } from "../../../../lib/excelExport";
 import { reportPeople } from "../../../../lib/facultyProfile";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Faculty details as an Excel sheet to fill in, and its upload. The upload fills ONLY empty fields: anything already
 // there (e.g. what the teacher entered in My Profile) is never overwritten. People are matched by email, then CNIC,
@@ -17,7 +18,7 @@ const FIELDS: [key: string, header: string, kind?: "date"][] = [
 ];
 const d = (x: Date | null | undefined) => (x ? new Date(x).toISOString().slice(0, 10) : "");
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const people = await reportPeople(user);
@@ -31,7 +32,7 @@ export async function GET() {
   }]);
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const people = await reportPeople(user);
@@ -73,3 +74,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_DETAILS_UPLOADED", entityType: "User", entityId: user.id, metadata: { filled, kept, people: people_, unmatched: unmatched.length } });
   return NextResponse.json({ ok: true, message: `Filled ${filled} empty field(s) for ${people_} people. ${kept} field(s) already had a value and were left as they are.${unmatched.length ? ` ${unmatched.length} row(s) matched no one: ${unmatched.slice(0, 6).join(", ")}${unmatched.length > 6 ? "…" : ""}.` : ""}` });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

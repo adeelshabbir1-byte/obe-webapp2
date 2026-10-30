@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { adminCan, adminCurriculum } from "../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Bulk-stages newly-fetched/researched courses for Super User review,
 // rather than writing them straight into the curriculum. Each entry:
 // { title, source, category?, domain?, suggestedCode?, clos: [{ statement, bloomLevel }] }
-export async function POST(req: NextRequest, { params }: { params: { curriculumId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -39,3 +40,4 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
 
   return NextResponse.json({ created }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

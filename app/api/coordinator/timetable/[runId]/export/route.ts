@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
 import { buildExcelResponse } from "../../../../../../lib/excelExport";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export async function GET(req: Request, { params }: { params: { runId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { runId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -69,3 +70,4 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
 
   return buildExcelResponse(`Timetable-${params.runId.slice(0, 8)}.xlsx`, sheets);
 }
+export const GET = withErrors(GET_handler);

@@ -8,6 +8,7 @@ import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { overTargetError } from "../../../../../../../lib/assessmentGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeAffectedRows } from "../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 type Edit = { instrumentId: string; marksPct?: number; maxScore?: number; label?: string };
 
@@ -18,7 +19,7 @@ type Edit = { instrumentId: string; marksPct?: number; maxScore?: number; label?
 // through several quizzes' marks one after another fired that heavy sync
 // once per field. Same fix as the lecture-mapping save: apply every
 // change first, recompute weights once, sync once.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -83,3 +84,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     })),
   });
 }
+export const POST = withErrors(POST_handler);

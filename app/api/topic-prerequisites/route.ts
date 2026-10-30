@@ -5,12 +5,13 @@ import { writeAuditLog } from "../../../lib/audit";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { canEditLinks } from "../../../lib/topicLinks";
 import { announceLinkChange, dropReviewPlans, strengthOf } from "../../../lib/prereqCascade";
+import { withErrors } from "../../../lib/apiHandler";
 
 const clean = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const select = { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, instructorId: true } as const;
 
 // Link a topic of one course to the topic of another course that needs it ("Functions" in PF -> "Methods" in OOP).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Change a link's strength (Strong / Mild / Weak).
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -69,7 +70,7 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id") || "";
@@ -88,3 +89,6 @@ export async function DELETE(req: NextRequest) {
   await announceLinkChange(link, "REMOVED", user);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

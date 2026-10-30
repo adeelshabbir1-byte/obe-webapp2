@@ -4,8 +4,9 @@ import { prisma } from "../../../../lib/db";
 import { evdb } from "../../../../lib/evaluations";
 import { questionsFor, settingsFor, windowOf } from "../../../../lib/questionnaires";
 import { instituteOfBatch } from "../../../../lib/moduleLocks";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function POST(req: Request) {
   try { await evdb.courseEvaluation.upsert({ where: { courseId_studentId_kind: { courseId, studentId: st.id, kind } }, create: { courseId, studentId: st.id, kind, ...data }, update: data }); return NextResponse.json({ ok: true }); }
   catch { return NextResponse.json({ error: "Evaluations are not set up yet." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

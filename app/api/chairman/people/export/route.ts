@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { institutePeople } from "../../../../../lib/institutePeople";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const people = await institutePeople(user.id);
@@ -19,3 +20,4 @@ export async function GET() {
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="institute-users.xlsx"' } });
 }
+export const GET = withErrors(GET_handler);

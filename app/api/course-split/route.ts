@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { loadSplit } from "../../../lib/courseSplit";
+import { withErrors } from "../../../lib/apiHandler";
 
 // The Chairman (department head) decides who handles each course in his department; the Institute Head can do it for any department.
 async function scope(user: { id: string; role: string; managedById: string | null; departmentId?: string | null }, departmentId: string | null) {
@@ -14,7 +15,7 @@ async function scope(user: { id: string; role: string; managedById: string | nul
   return null;
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const s = await scope(user, new URL(req.url).searchParams.get("departmentId"));
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 // body: { departmentId?, assignments: [{ key, ownerId | null }] } - null clears the choice (back to "not decided").
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -53,7 +54,7 @@ export async function PUT(req: NextRequest) {
 // A course another department is asked to take can be accepted by that department's Chairman, by the Dean of its faculty,
 // or by the Program Lead who would handle it. The Institute Head does not have to, but can.
 // body: { id, action: "ACCEPT" | "DECLINE" } or { action: "ACCEPT_ALL" }
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["HEAD_OF_DEPARTMENT", "CHAIRMAN", "DEAN", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -82,3 +83,6 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: body.action === "ACCEPT" ? "COURSE_SPLIT_ACCEPTED" : "COURSE_SPLIT_DECLINED", entityType: "CourseOwner", entityId: row.id });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);
+export const PATCH = withErrors(PATCH_handler);

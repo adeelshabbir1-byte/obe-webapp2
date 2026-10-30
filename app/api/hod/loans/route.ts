@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { lendableWhere, LoanKind } from "../../../../lib/loans";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The lending Chairman decides: allow some of their people for this course (the requester then picks one), or decline.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "HEAD_OF_DEPARTMENT") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: decision === "APPROVE" ? "TEACHER_LOAN_APPROVED" : "TEACHER_LOAN_REJECTED", entityType: "Course", entityId: loan.courseId, metadata: { loanId: loan.id, kind: loan.kind, note } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

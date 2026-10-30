@@ -7,8 +7,9 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { lockedWeights } from "../../../../../../../lib/assessmentLock";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeRowWeight, recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   return NextResponse.json({ instrument: updated });
 }
 
-export async function DELETE(req: Request, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -83,3 +84,5 @@ export async function DELETE(req: Request, { params }: { params: { courseId: str
 
   return NextResponse.json({ ok: true });
 }
+export const PATCH = withErrors(PATCH_handler);
+export const DELETE = withErrors(DELETE_handler);

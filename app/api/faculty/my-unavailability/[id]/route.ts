@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const ALLOWED_ROLES = ["SUBJECT_EXPERT", "INSTRUCTOR"];
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -14,3 +15,4 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   await prisma.facultyUnavailability.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

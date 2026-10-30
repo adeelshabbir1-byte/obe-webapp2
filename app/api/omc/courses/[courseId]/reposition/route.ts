@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   // The OMC, or the Program Lead for their own batch (step 8 of the batch set-up).
   if (!user || (user.role !== "OMC" && user.role !== "PROGRAM_COORDINATOR")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,3 +50,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ course: updated });
 }
+export const PUT = withErrors(PUT_handler);

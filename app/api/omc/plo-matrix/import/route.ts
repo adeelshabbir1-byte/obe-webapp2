@@ -4,12 +4,13 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { syncCoursePloMappingToLinkedCourses } from "../../../../../lib/contentSync";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // Uploads a PLO-Course matrix in the layout Export produces. Every cell marked (X, x, 1, yes, a tick) adds that mapping.
 // Blank cells are ignored: an upload never removes a mapping that is already set.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
@@ -65,3 +66,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PLO_MATRIX_IMPORTED", entityType: "Batch", entityId: batch.id, metadata: { added, already, errors: errors.length } });
   return NextResponse.json({ added, already, errors: Array.from(new Set(errors)).slice(0, 20) });
 }
+export const POST = withErrors(POST_handler);

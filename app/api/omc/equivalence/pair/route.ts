@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { pairForEquivalence, combineRefusal } from "../../../../../lib/equivalencePairing";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -43,3 +44,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err?.message || "something went wrong pairing these courses" }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -4,12 +4,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { COURSE_KINDS, DEADLINE_KINDS, KIND_ROLE, ROLE_LABEL, SETTER_ROLES, chairmanOf, reach, topUpStanding } from "../../../lib/deadlines";
+import { withErrors } from "../../../lib/apiHandler";
 
 /**
  * A deadline belongs to a role / task, whoever holds it ("mode": "role"), or to one named person ("mode": "person").
  * Course work follows the course: the Subject Expert or Instructor the course has at the time.
  */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role)) return NextResponse.json({ error: "Only a Dean, Chairman, Program Lead or Institute Head can set deadlines" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -53,3 +54,5 @@ export async function DELETE(req: NextRequest) {
   await prisma.deadline.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

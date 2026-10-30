@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { buildExcelResponse } from "../../../../lib/excelExport";
 import { libraryScope } from "../../../../lib/resources";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The library record as a two-column sheet (Item, Value). The same file can be edited and uploaded back.
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await libraryScope(user);
@@ -19,3 +20,4 @@ export async function GET() {
   ].map(([item, value]) => ({ item, value }));
   return buildExcelResponse("library-inventory.xlsx", [{ name: "Library", columns: [{ header: "Item", key: "item", width: 40 }, { header: "Value", key: "value", width: 60 }], rows }]);
 }
+export const GET = withErrors(GET_handler);

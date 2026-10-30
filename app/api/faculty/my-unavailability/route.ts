@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const ALLOWED_ROLES = ["SUBJECT_EXPERT", "INSTRUCTOR"];
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const records = await prisma.facultyUnavailability.findMany({ where: { facultyId: user.id }, orderBy: [{ dayOfWeek: "asc" }, { startHour: "asc" }] });
   return NextResponse.json({ records });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !ALLOWED_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -24,3 +25,5 @@ export async function POST(req: NextRequest) {
   });
   return NextResponse.json({ record }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

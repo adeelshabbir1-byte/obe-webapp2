@@ -6,6 +6,7 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { createStudentSession, getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { closeSession, refreshShortageFlags } from "../../../../lib/attendance";
 import { checkClaim, checkToken, distanceM, issueClaim, networkKeyOf, tokenSessionId } from "../../../../lib/attendanceToken";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ async function describe(s: Sess) {
   return { code: course?.code || "", title: course?.title || "", instructor: instructor?.name || "" };
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const device = deviceOf(req);
   if (throttled(ipOf(req), device.id)) return reply({ error: "Too many attempts. Wait a minute and scan again." }, 429, device);
   const token = req.nextUrl.searchParams.get("t") || "";
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
   }, 200, device);
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const device = deviceOf(req);
   const ip = ipOf(req);
   if (throttled(ip, device.id)) return reply({ error: "Too many attempts. Wait a minute and try again." }, 429, device);
@@ -167,3 +168,5 @@ export async function POST(req: NextRequest) {
   if (s.status !== "OPEN") await refreshShortageFlags(s.courseId, s.chairmanId).catch(() => null);
   return reply({ ok: true, status, name: studentName, course: info, at: data.at, message: `${studentName}, you're marked ${status === "PRESENT" ? "present" : "late"} in ${info.code} at ${hhmm(data.at)}.` }, 200, device);
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

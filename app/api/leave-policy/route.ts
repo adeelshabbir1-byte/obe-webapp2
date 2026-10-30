@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { savePolicy, DEFAULT_POLICIES } from "../../../lib/leaveRules";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { kind, perYear, carryMax, maxDays, needsDean } — the Institute Head sets a leave type's rules.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -13,3 +14,4 @@ export async function POST(req: NextRequest) {
   catch { return NextResponse.json({ error: "Leave types need prisma/migration_campus_ops.sql — run it in Supabase." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

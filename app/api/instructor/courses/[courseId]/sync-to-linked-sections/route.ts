@@ -4,12 +4,13 @@ import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { getLinkedSections } from "../../../../../../lib/linkedSections";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Copies this course's actual weights (and, if requested, CLOs) onto every
 // other section of the same course this same Instructor teaches this
 // semester. Explicit, one-click action — never automatic/silent, so a
 // diverging section is never overwritten without the Instructor asking for it.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -49,3 +50,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   return NextResponse.json({ syncedCount: linked.length });
 }
+export const POST = withErrors(POST_handler);

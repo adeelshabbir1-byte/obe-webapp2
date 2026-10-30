@@ -4,12 +4,13 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { canEditLinks } from "../../../lib/topicLinks";
 import { topicKeyOf } from "../../../lib/overlapMatrix";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const select = { id: true, code: true, coordinatorId: true, subjectExpertId: true } as const;
 
 // Record whether a topic taught in two courses is an intentional progression or an accidental duplication (or clear it).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -38,3 +39,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Run prisma/migration_master_spec.sql in Supabase first." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

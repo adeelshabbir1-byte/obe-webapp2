@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../lib/instructorGuard";
 import { attendancePolicy, courseAttendance } from "../../../../../../lib/attendance";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -25,3 +26,4 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ deliveredLectures, threshold: p.minPct, summary, remaining: att.remaining });
 }
+export const GET = withErrors(GET_handler);

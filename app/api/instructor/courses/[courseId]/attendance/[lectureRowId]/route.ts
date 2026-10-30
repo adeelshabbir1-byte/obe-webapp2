@@ -4,8 +4,9 @@ import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { refreshShortageFlags } from "../../../../../../../lib/attendance";
 import { chairmanIdFor } from "../../../../../../../lib/reportScope";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
   });
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -62,3 +63,5 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ ok: true, actualDate: actualDate ? actualDate.toISOString().slice(0, 10) : lectureRow.actualDate?.toISOString().slice(0, 10) || null });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

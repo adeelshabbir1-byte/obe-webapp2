@@ -5,12 +5,13 @@ import { prisma } from "../../../lib/db";
 import { cdb } from "../../../lib/complexProblems";
 import { KINDS, SALARY } from "../../../lib/placements";
 import { chairmanIdFor } from "../../../lib/reportScope";
+import { withErrors } from "../../../lib/apiHandler";
 
 const s = (v: unknown, n = 160) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 const STAFF = ["CHAIRMAN", "PROGRAM_COORDINATOR", "STUDENT_AFFAIRS", "HEAD_OF_DEPARTMENT", "DEAN", "DEPARTMENT_COORDINATOR"];
 
 // Students record their own internships and jobs; placement staff add records for anyone and verify them.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const b = await req.json().catch(() => ({}));
   const st = await getAuthenticatedStudent();
   const user = st ? null : await getAuthenticatedUser();
@@ -38,3 +39,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Run prisma/migration_teaching_extras.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

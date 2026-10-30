@@ -4,9 +4,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { moodleGradebook, saveLmsConfig, LMS_HINT } from "../../../../lib/moodle";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // GET ?courseId=&moodleCourseId= — the course's Moodle grades as a gradebook CSV (teacher of the course or Program Lead).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const courseId = req.nextUrl.searchParams.get("courseId") || "";
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { url, token } — the Institute Head links Moodle.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const it = user && user.mfaVerified ? await itAccess(user) : null;
   if (!user || !it || !it.canAct) return NextResponse.json({ error: "Only the IT Manager does this (the Institute Head until one is named)." }, { status: 403 });
@@ -27,3 +28,5 @@ export async function POST(req: NextRequest) {
   try { await saveLmsConfig(it.chairmanId, String(b.url || ""), String(b.token || "")); return NextResponse.json({ ok: true, message: "Saved." }); }
   catch (e) { const m = (e as Error).message || ""; return NextResponse.json({ error: /lmsConfig|does not exist/.test(m) ? LMS_HINT : m }, { status: 400 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

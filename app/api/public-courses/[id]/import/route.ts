@@ -5,10 +5,11 @@ import { writeAuditLog } from "../../../../../lib/audit";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../lib/contentSync";
 import { applySnapshot, eligibleCourses, Snapshot } from "../../../../../lib/publicCourse";
 import { notifyUsers } from "../../../../../lib/notifications";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Imports a public course into one of the caller's own courses as an independent, editable copy.
 // Subject Experts and Coordinators fill the course's Subject Expert plan; an Instructor fills his own delivery plan.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -56,3 +57,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   return NextResponse.json({ ok: true, ...result });
 }
+export const POST = withErrors(POST_handler);

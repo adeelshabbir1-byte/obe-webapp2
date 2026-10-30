@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Same as auto-map-hec, but for ploMappingSource = "SYSTEM" — CLOs
 // whose PLO tag came from keyword-based inference, not an actual HEC
 // document tag. Kept as a fully separate action (not merged into
 // auto-map-hec) so an OMC always knows which kind of mapping they just
 // bulk-created: HEC-verified vs. an unverified system guess.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -60,3 +61,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ created, alreadyMapped, skippedNoPlo, skippedNoSuggestion });
 }
+export const POST = withErrors(POST_handler);

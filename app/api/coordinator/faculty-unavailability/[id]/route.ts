@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { timetableActor, READ_ONLY, scopeFaculty } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { id: string } }) {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -14,3 +15,4 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   await prisma.facultyUnavailability.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

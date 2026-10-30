@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { computePrerequisiteCorrelations } from "../../../../lib/prerequisiteCorrelation";
 import { deptScope } from "../../../../lib/omcScope";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -18,3 +19,4 @@ export async function GET() {
     return NextResponse.json({ error: err?.message || "something went wrong computing prerequisite correlations" }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);

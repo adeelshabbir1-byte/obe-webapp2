@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { importClosIntoMasterCurriculum } from "../../../../../../lib/masterClos";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
 // Loads CLOs (with their PLO mapping) into the courses of THIS institute's own master curriculum, from an Excel file
 // with the columns of the Export's "CLOs and PLO mapping" sheet. See lib/masterClos.ts.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const curriculum = await prisma.masterCurriculum.findUnique({ where: { id: params.id }, select: { id: true, chairmanId: true } });
@@ -22,3 +23,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_CLOS_IMPORTED_FROM_FILE", entityType: "MasterCurriculum", entityId: curriculum.id, metadata: { courses: r.courses, clos: r.clos, problems: r.errors.length } });
   return NextResponse.json({ courses: r.courses, clos: r.clos, errors: r.errors });
 }
+export const POST = withErrors(POST_handler);

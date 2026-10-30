@@ -5,10 +5,11 @@ import { requireInstructorCourse } from "../../../../../../../../lib/instructorG
 import { rdb, parseCriteria, scoreFor, type RubricRow } from "../../../../../../../../lib/rubrics";
 import { writePartMarks } from "../../../../../../../../lib/instrumentParts";
 import { resultLockMessage } from "../../../../../../../../lib/resultApproval";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
 // PUT { studentId, levels: { criterionId: levelIndex }, comment } — mark one student with the rubric. When every criterion
 // has a level, the item's mark is written to Marks Entry too.
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -37,3 +38,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
   await writePartMarks(inst.id, course.id, studentId, rubric.criteriaJson, levels, user.id).catch(() => null);
   return NextResponse.json({ ok: true, complete: !!r, score: r?.score ?? null, pct: r?.pct ?? null });
 }
+export const PUT = withErrors(PUT_handler);

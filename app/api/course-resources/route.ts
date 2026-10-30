@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { canEditResources, courseKey, TOOL_CATEGORIES, upsertTextbook } from "../../../lib/courseResources";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // A course's tools (software, languages, environments) and textbooks. Adding a book also adds it to the shared pool.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return bad("not logged in", 401);
   const b = await req.json().catch(() => ({}));
@@ -60,3 +61,4 @@ export async function POST(req: NextRequest) {
     return bad("Could not save.", 500);
   }
 }
+export const POST = withErrors(POST_handler);

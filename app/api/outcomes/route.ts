@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { withErrors } from "../../../lib/apiHandler";
 
 const int = (v: unknown) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n >= 0 ? n : 0; };
 const txt = (v: unknown, max = 3000) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const SURVEY_KINDS = ["STUDENT", "EXIT", "ALUMNI", "EMPLOYER", "COURSE"];
 
 // Program Lead records yearly figures (type "FIGURES") or a survey result (type "SURVEY"); DELETE ?type=&id=
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "only a Program Lead can record these" }, { status: 403 });
   const chairmanId = user.managedById || "none";
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ error: "unknown request" }, { status: 400 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = req.nextUrl.searchParams.get("id") || "";
@@ -45,3 +46,5 @@ export async function DELETE(req: NextRequest) {
   const r = type === "SURVEY" ? await prisma.surveyResult.deleteMany({ where: { id, leadId: user.id } as never }) : await prisma.outcomeFigure.deleteMany({ where: { id, leadId: user.id } as never });
   return r.count ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "not found" }, { status: 404 });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -4,8 +4,9 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { determineBaseCourseId, reconsiderGroupBase, syncSubjectExpertToLinkedCourses, syncGroupSubjectHome } from "../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../lib/equivalencePairing";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -125,3 +126,4 @@ export async function POST(req: NextRequest) {
   await afterLink(ctx, [courseIdA, courseIdB]);
   return NextResponse.json({ groupId, alsoMadeEquivalent, baseCourseCode: groupBase?.course.code || null });
 }
+export const POST = withErrors(POST_handler);

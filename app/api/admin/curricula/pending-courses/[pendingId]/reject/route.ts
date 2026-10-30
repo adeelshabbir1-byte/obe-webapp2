@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { pendingId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { pendingId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -20,3 +21,4 @@ export async function POST(req: NextRequest, { params }: { params: { pendingId: 
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

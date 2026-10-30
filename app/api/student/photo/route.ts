@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const pdb = prisma as unknown as Record<string, any>;
 
 // GET — the signed-in student's photo (data URL) or null. POST { photo } — save it (a small JPEG, resized in the browser).
-export async function GET() {
+async function GET_handler() {
   const s = await getAuthenticatedStudent();
   if (!s) return NextResponse.json({ photo: null });
   const row = await pdb.studentPhoto.findUnique({ where: { studentId: s.id } }).catch(() => null);
   return NextResponse.json({ photo: row?.photo || null });
 }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const s = await getAuthenticatedStudent();
   if (!s) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -23,3 +24,5 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: "Photos need prisma/migration_academic_rules.sql — ask the administrator." }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

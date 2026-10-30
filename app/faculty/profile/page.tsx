@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
+import { maskCnic } from "../../../lib/scrub";
 import FacultyProfileForm from "../../../components/FacultyProfileForm";
 import DetailsForm from "../../../components/DetailsForm";
 import { staffDetails } from "../../../lib/aas";
-import { selfFields, canonValues } from "../../../lib/aasFields";
+import { selfFields, canonValues, maskedValues } from "../../../lib/aasFields";
 import { portalLists } from "../../../lib/nceacPortal";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { completeness, experienceSummary, EXPERIENCE_HEADS, ymText } from "../../../lib/facultyProfile";
@@ -48,12 +49,12 @@ export default async function FacultyProfilePage() {
       </div>
       <FacultyProfileForm
         name={user.name}
-        profile={profile ? { ...profile, dateOfJoining: profile.dateOfJoining?.toISOString() || null, dateOfBirth: profile.dateOfBirth?.toISOString() || null } : null}
+        profile={profile ? { ...profile, cnic: profile.cnic ? maskCnic(profile.cnic) : profile.cnic, dateOfJoining: profile.dateOfJoining?.toISOString() || null, dateOfBirth: profile.dateOfBirth?.toISOString() || null } : null}
         records={records.map((r) => ({ ...r, createdAt: undefined }) as never)}
       />
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Details for NCEAC (Faculty Directory)</h3>
-        <DetailsForm fields={selfFields("staff", await portalLists(await chairmanIdFor(user).catch(() => null)))} values={canonValues("staff", { type: "Local", country: "Pakistan", ...((await staffDetails([user.id])).get(user.id) || {}) })} endpoint="/api/my-details" note="NCEAC's accreditation system asks for these about every teacher. Highest degree only. Dates as dd/mm/yyyy; CNIC as xxxxx-xxxxxxx-x (foreign faculty: passport number). Anything blank here is taken from your profile above." />
+        <DetailsForm fields={selfFields("staff", await portalLists(await chairmanIdFor(user).catch(() => null)))} values={maskedValues(canonValues("staff", { type: "Local", country: "Pakistan", ...((await staffDetails([user.id])).get(user.id) || {}) }))} endpoint="/api/my-details" note="NCEAC's accreditation system asks for these about every teacher. Highest degree only. Dates as dd/mm/yyyy; CNIC as xxxxx-xxxxxxx-x (foreign faculty: passport number). Anything blank here is taken from your profile above." />
       </div>
     </Shell>
   );

@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { writeAuditLog } from "../../../../lib/audit";
 import { canEditQuestionnaires, saveQuestion, reorder, saveSettings, QUESTIONNAIRE_HINT, type Kind } from "../../../../lib/questionnaires";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // POST { action: "save", kind, question } | { action: "reorder", kind, keys } | { action: "settings", fromWeek, toWeek, minResponses }
 // — the QEC In-charge (until named: the Institute Head or a Dean) keeps the feedback questionnaires.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const chairmanId = await chairmanIdFor(user);
@@ -40,3 +41,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation/i.test(m) ? QUESTIONNAIRE_HINT : m.slice(0, 200) }, { status: /Write the question/.test(m) ? 400 : 503 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { updateFeedback } from "../../../../lib/feedback";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Super User answers feedback, moves it along, and recognises the useful ones.
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "SUPPORT"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -18,3 +19,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await writeAuditLog({ actorUserId: user.id, action: "FEEDBACK_UPDATED", entityType: "SystemFeedback", entityId: params.id, metadata: { status: r.feedback.status, recognized: r.feedback.recognized } });
   return NextResponse.json(r);
 }
+export const PATCH = withErrors(PATCH_handler);

@@ -5,12 +5,13 @@ import { db, getCourseResult, canDecide, notify, logResult, resultSummary } from
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { alertStudents } from "../../../../lib/messaging";
 import { recordPloChange, PLO_DROP_ALERT } from "../../../../lib/ploDelta";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // POST { courseId, action: "approve" | "return", note } — the Chairman (Head of Department) or Institute Head decides a
 // submitted course result. Returning needs a note; the Instructor sees it and the marks unlock.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -51,3 +52,4 @@ export async function POST(req: NextRequest) {
   try { const ids = (await prisma.studentEnrollment.findMany({ where: { courseId }, select: { studentId: true } })).map((e) => e.studentId); await alertStudents(await chairmanIdFor(user), ids, "RESULT_STUDENT", `Result out: ${course?.code || "course"}`, "Your result is approved. See My Transcript in the student portal."); } catch { /* best effort */ }
   return NextResponse.json({ ok: true, status: "APPROVED" });
 }
+export const POST = withErrors(POST_handler);

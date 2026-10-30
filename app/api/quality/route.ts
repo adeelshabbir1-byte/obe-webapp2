@@ -6,12 +6,13 @@ import { writeAuditLog } from "../../../lib/audit";
 import { GE_REQS, pdb, UG_HINT } from "../../../lib/ugPolicy";
 import { notifyUsers } from "../../../lib/notifications";
 import { qdb, QUALITY_HINT, programsFor, canEditProgram, FACULTY_ITEMS, FACULTY_ROLES, POLICY_DEFAULTS, IPE_STANDARDS, INTL_KINDS, instituteOf, type PolicyRules } from "../../../lib/quality";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n = 2000) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const num = (v: unknown) => { const x = Number(v); return v === "" || v == null || !Number.isFinite(x) ? null : x; };
 
 // One endpoint for the accreditation-gap tools. POST { action, ... }.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -142,3 +143,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

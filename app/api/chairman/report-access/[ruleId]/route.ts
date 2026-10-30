@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function DELETE(req: Request, { params }: { params: { ruleId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { ruleId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -12,3 +13,4 @@ export async function DELETE(req: Request, { params }: { params: { ruleId: strin
   await prisma.reportAccessRule.delete({ where: { id: params.ruleId } });
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

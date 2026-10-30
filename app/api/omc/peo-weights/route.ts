@@ -6,10 +6,11 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { deptScope } from "../../../../lib/omcScope";
 import { wdb } from "../../../../lib/ploWeights";
 import { peosOf } from "../../../../lib/outcomeFlow";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // PUT { batchId, peoIndex, weights: { [ploNumber]: pct } } — the OMC sets which PLOs serve a PEO of the batch's
 // program and how much each counts (total 100). An empty set clears the PEO. Applies to every batch of the program.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function PUT(req: NextRequest) {
   revalidateTag("outcome-flow");
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

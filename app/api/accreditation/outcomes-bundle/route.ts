@@ -6,9 +6,10 @@ import { reviewBatchWhere } from "../../../../lib/reviewScope";
 import { outcomesData, FORMATS, toCsv } from "../../../../lib/outcomesReport";
 import { SOURCES } from "../../../../lib/indirectPlo";
 import { pdb } from "../../../../lib/portfolio";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // One-click evidence bundle for a cohort: outcome tables, course CLO results, CQI log, work-sample and portfolio indexes.
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const where = await reviewBatchWhere(user);
@@ -35,3 +36,4 @@ export async function GET(req: Request) {
   const name = `${d.batch.degreeProgram}-${d.batch.batchName}-${fk}-evidence.zip`.replace(/[^\w.-]+/g, "_");
   return new NextResponse(buf as unknown as BodyInit, { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${name}"` } });
 }
+export const GET = withErrors(GET_handler);

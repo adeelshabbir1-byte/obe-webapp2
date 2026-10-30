@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { CAL_KINDS, SETTER_ROLES, academicScope } from "../../../lib/academic";
+import { withErrors } from "../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role)) return NextResponse.json({ error: "Only the Institute Head or a Dean can set the academic calendar" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ entry }, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !SETTER_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -41,3 +42,5 @@ export async function DELETE(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "ACADEMIC_CALENDAR_REMOVED", entityType: "AcademicCalendarEntry", entityId: id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

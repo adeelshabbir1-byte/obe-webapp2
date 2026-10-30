@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { createFeedback } from "../../../lib/feedback";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Any signed-in staff user sends feedback to the platform owner.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -15,3 +16,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Feedback can't be saved yet — the feedback table is not in the database (run prisma/migration_oct2026_features.sql)." }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

@@ -6,11 +6,12 @@ import { aasContext } from "../../../../lib/aasAccess";
 import { adb, AAS_HINT, sectionOf, VISIT_TYPES } from "../../../../lib/aas";
 import { aasWorkbook, studentUploadFile, importAasWorkbook } from "../../../../lib/aasWorkbook";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 /** GET ?file=workbook|students&program=&batch= — the AAS workbook, or the Student Directory in AAS upload format. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
 }
 
 /** POST multipart { file, program, batch } — save what people filled in the AAS workbook. POST JSON { action: "focal", userId } — choose the focal person. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   try {
@@ -60,3 +61,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? AAS_HINT : `Could not read the file: ${m.slice(0, 160)}` }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

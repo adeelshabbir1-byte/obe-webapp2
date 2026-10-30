@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { chairmanOfKey } from "../../../../../lib/integrationKeys";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Campus management system → OBEHUB. Authorization: Bearer <institute API key>. JSON bodies, up to 2,000 rows a call.
 //   POST /api/integration/v1/students   { batch: { program, name }, students: [{ roll, name, status? }] }
@@ -19,7 +20,7 @@ async function batchOf(chairmanId: string, b: Row | undefined) {
   return prisma.batch.findFirst({ where: { degreeProgram: program, batchName: name, coordinator: { managedById: chairmanId } }, select: { id: true, coordinatorId: true } });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { resource: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { resource: string } }) {
   const chairmanId = await chairmanOfKey(req.headers.get("authorization"));
   if (!chairmanId) return bad("invalid API key", 401);
   if (params.resource !== "courses") return bad("unknown resource", 404);
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { resource: st
   return NextResponse.json({ courses: courses.map((c) => ({ code: c.code, title: c.title, batch: c.batch ? { program: c.batch.degreeProgram, name: c.batch.batchName } : null, assessments: c.assessmentInstruments })) });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { resource: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { resource: string } }) {
   const chairmanId = await chairmanOfKey(req.headers.get("authorization"));
   if (!chairmanId) return bad("invalid API key", 401);
   const body = (await req.json().catch(() => null)) as Row | null;
@@ -77,3 +78,5 @@ export async function POST(req: NextRequest, { params }: { params: { resource: s
   await writeAuditLog({ action: `INTEGRATION_${params.resource.toUpperCase()}`, entityType: "Batch", entityId: batch.id, metadata: { created, updated, skipped } });
   return NextResponse.json({ created, updated, skipped, errors: errors.slice(0, 20) });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

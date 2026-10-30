@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { courseAppliesToTrack } from "../../../../../../lib/tracks";
 import { studentContext, checkCourses, registerFromPlan, planLock } from "../../../../../../lib/registrationRules";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Enrolls every student in this batch into every offered, non-elective
 // course (Core/IDS/General Education/Lab — never Elective, since a
@@ -12,7 +13,7 @@ import { studentContext, checkCourses, registerFromPlan, planLock } from "../../
 // given course, and never touches Elective courses at all.
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest, { params }: { params: { batchId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { batchId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -68,3 +69,4 @@ export async function POST(req: NextRequest, { params }: { params: { batchId: st
     fromPlan, waitingForAdvisor, blockedByRules: blockedByRules.slice(0, 50),
   });
 }
+export const POST = withErrors(POST_handler);

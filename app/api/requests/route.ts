@@ -5,11 +5,12 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { OVERVIEW_ROLES, leadsInScope } from "../../../lib/readinessScope";
 import { requestRecipients, requestInboxIds } from "../../../lib/requests";
+import { withErrors } from "../../../lib/apiHandler";
 
 const txt = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
 // Ask someone to complete something found in the accreditation report.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !OVERVIEW_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 }
 
 // body: { id, action: "RESPOND" | "DONE" } by the person asked; { id, action: "REMIND" | "CLOSE" } by the sender.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -53,3 +54,5 @@ export async function PATCH(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: `TASK_REQUEST_${String(b.action)}`, entityType: "TaskRequest", entityId: r.id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

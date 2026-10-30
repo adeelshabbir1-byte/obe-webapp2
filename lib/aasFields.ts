@@ -29,6 +29,14 @@ export function canonValues(kind: "student" | "staff", v: Record<string, string>
 }
 /** Format problems with what was typed, or null. */
 export function checkValues(kind: "student" | "staff", v: Record<string, string>, lists: Lists = listsWith()) {
+  // A masked CNIC means "unchanged" (see lib/scrub.ts maskCnic).
+  if (v.cnic && v.cnic.includes("•")) v = { ...v, cnic: "" };
   const bad = selfFields(kind, lists).map((f) => { const p = problemOf(f, v[f.key] || "", lists); return p && p !== "missing" ? `${f.label}: ${p}` : null; }).filter(Boolean);
   return bad.length ? bad.join("; ") : null;
 }
+
+/** Details as shown in a form: the CNIC masked (35202-•••••••-3) for everyone but the Super Admin. */
+export function maskedValues(v: Record<string, string>, role = "") {
+  return v.cnic && role !== "SUPER_USER" ? { ...v, cnic: maskCnicPlain(v.cnic) } : v;
+}
+function maskCnicPlain(c: string) { const d = c.replace(/\D/g, ""); return d.length === 13 ? `${d.slice(0, 5)}-•••••••-${d.slice(12)}` : "•••••"; }

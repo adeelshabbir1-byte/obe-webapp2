@@ -5,8 +5,9 @@ import { hashPassword, verifyPassword } from "../../../../lib/auth";
 import { writeAuditLog } from "../../../../lib/audit";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -41,3 +42,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

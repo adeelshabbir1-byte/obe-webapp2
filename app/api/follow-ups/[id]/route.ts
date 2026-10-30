@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const STATUSES = ["OPEN", "IN_PROGRESS", "DONE", "DISMISSED"];
 const MANAGERS = ["OMC", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "DEAN", "CHAIRMAN", "DEPARTMENT_COORDINATOR"];
@@ -11,7 +12,7 @@ const ASSIGNERS = ["OMC", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN
 
 // Record what was done about a topic follow-up (the teacher of the target course, or the teacher assigned to it),
 // or assign a teacher to run the tutorial / extra class (OMC, Program Lead, Chairman, Institute Head).
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const f = await prisma.topicFollowUp.findUnique({ where: { id: params.id } }).catch(() => null);
@@ -59,3 +60,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   return NextResponse.json({ followUp: updated });
 }
+export const PATCH = withErrors(PATCH_handler);

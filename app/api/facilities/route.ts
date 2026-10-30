@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { facilitiesScope, OWNERSHIP, ROOM_TYPES, SERVICE_KINDS } from "../../../lib/facilities";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const num = (v: unknown) => { if (v === "" || v === null || v === undefined) return null; const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : null; };
@@ -17,7 +18,7 @@ async function scope() {
 }
 
 // Add or update a building, a room or a service; or copy the timetable's rooms into a building.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const s = await scope();
   if ("error" in s) return s.error;
   const { user, chairmanId } = s;
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const s = await scope();
   if ("error" in s) return s.error;
   const entity = req.nextUrl.searchParams.get("entity"), id = req.nextUrl.searchParams.get("id") || "";
@@ -81,3 +82,5 @@ export async function DELETE(req: NextRequest) {
   await writeAuditLog({ actorUserId: s.user.id, action: "FACILITY_REMOVED", entityType: entity, entityId: id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

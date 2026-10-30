@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSignedInUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 const xdb = prisma as unknown as Record<string, any>;
 
 // PUT { pins: string[] } saves the person's pinned menu links; { pins: null } goes back to the role's default list.
-export async function PUT(req: Request) {
+async function PUT_handler(req: Request) {
   const user = await getSignedInUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -19,3 +20,4 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Pins are not set up yet — the Super User needs to run prisma/migration_nav_pins.sql." }, { status: 500 });
   }
 }
+export const PUT = withErrors(PUT_handler);

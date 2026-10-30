@@ -3,12 +3,13 @@ import { prisma } from "../../../../lib/db";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { STANDING_LABEL, attendancePolicy, standing, tally } from "../../../../lib/attendance";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // GET — the signed-in student's attendance in each course this semester, with where they stand against the
 // institute's minimum. ?courseId= adds the lecture-by-lecture record of one course.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const me = await getAuthenticatedStudent();
   if (!me) return NextResponse.json({ error: "Sign in to see your attendance." }, { status: 401 });
   const batch = await prisma.batch.findUnique({ where: { id: me.batchId }, select: { coordinatorId: true } });
@@ -43,3 +44,4 @@ export async function GET(req: NextRequest) {
   }
   return NextResponse.json({ minPct: p.minPct, warnMarginPct: p.warnMarginPct, lateCountsPresent: p.lateCountsPresent, excusedExcluded: p.excusedExcluded, courses, history });
 }
+export const GET = withErrors(GET_handler);

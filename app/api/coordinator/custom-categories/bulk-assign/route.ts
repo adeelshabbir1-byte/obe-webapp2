@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Tags a batch of courses and/or faculty with one category (or clears
 // it, if categoryId is null) — either kind can be sent in the same
 // call, since a Coordinator often wants to tag a course and its likely
 // instructors together in one pass.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ coursesUpdated, facultyUpdated });
 }
+export const POST = withErrors(POST_handler);

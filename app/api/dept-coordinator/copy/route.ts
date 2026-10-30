@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Copies the current semester and/or holidays of one program to all the other programs of the department.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "DEPARTMENT_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "DEPARTMENT_CALENDAR_COPIED", entityType: "User", entityId: source.id, metadata: { term: !!body.term, holidays: !!body.holidays, programs: others.length, holidaysAdded } });
   return NextResponse.json({ ok: true, programs: others.length, holidaysAdded });
 }
+export const POST = withErrors(POST_handler);

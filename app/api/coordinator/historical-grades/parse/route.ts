@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getAuthenticatedUser } from "../../../../../lib/session";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Same split as the student bulk-upload: pure file/text parsing here, no
 // database work — the slow part (matching roll numbers, looking up the
 // grading scale, writing records) happens in small chunks in the sibling
 // /import endpoint. Expected columns, in order: Roll Number, Course Code,
 // Course Title, Credit Hours, Grade, Term Name, Term Year.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -55,3 +56,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ rows: dataRows });
 }
+export const POST = withErrors(POST_handler);

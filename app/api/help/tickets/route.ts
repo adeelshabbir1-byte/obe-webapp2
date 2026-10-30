@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { helpViewer, viewerById, type HelpViewer } from "../../../../lib/help/access";
 import { DESKS, deskOf, recipientsFor, type DeskKey } from "../../../../lib/help/desks";
 import { CATEGORIES, PRIORITIES, STATUS_LABEL, deskSetting, extrasOf, saveExtra, slaState, type Extra } from "../../../../lib/help/deskExtra";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ function view(t: Ticket, v: HelpViewer, e?: Extra) {
 }
 
 // GET ?id= one request with its replies; otherwise { mine, inbox } — what I asked, and what was routed to me.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const v = await helpViewer(sp.get("audience") === "student" ? "student" : "staff");
   if (!v) return NextResponse.json({ error: "Sign in to use help." }, { status: 401 });
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { desk, subject, body, query?, page?, audience } — raise a help request; it goes straight to the people who can answer it.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const v = await helpViewer(b.audience === "student" ? "student" : "staff");
   if (!v) return NextResponse.json({ error: "Sign in to use help." }, { status: 401 });
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH { id, action, body?, desk?, audience } — reply | resolve | reopen | close | forward.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const v = await helpViewer(b.audience === "student" ? "student" : "staff");
   if (!v) return NextResponse.json({ error: "Sign in to use help." }, { status: 401 });
@@ -185,3 +186,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

@@ -3,13 +3,14 @@ import { prisma } from "../../../../lib/db";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { govScope, inScope, openCycle } from "../../../../lib/accreditation/governance";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const MISSING = "Accreditation governance needs prisma/migration_accreditation_governance.sql to be run in Supabase first.";
 const dateOf = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null);
 
 // POST { leadId, title?, visitDate? } — plan an accreditation visit for a program (Institute Head, Dean, Chairman).
 // Its council's requirements become tasks, ready to assign.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   if (!user || !s?.canManage) return NextResponse.json({ error: "Only the Institute Head, a Dean or a Chairman plans visits." }, { status: 403 });
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH { id, title?, visitDate?, status? } — rename, re-date, close or reopen a visit.
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   if (!user || !s?.canManage) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -47,3 +48,5 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const POST = withErrors(POST_handler);
+export const PATCH = withErrors(PATCH_handler);

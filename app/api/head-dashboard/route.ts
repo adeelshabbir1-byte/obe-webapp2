@@ -6,6 +6,7 @@ import { whoIs, rdb, str } from "../../../lib/registers";
 import { PdfDoc, GREEN, RED, AMBER } from "../../../lib/pdfDoc";
 import { titlesFor, applyTitles } from "../../../lib/titles";
 import { DASH_ROLES, DASH_HINT, DEFAULT_TARGETS, latestSnapshot, refreshDashboard, scopeOf, inScope, figures, light, targetsOf, fmtFigure } from "../../../lib/headDashboard";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
@@ -17,7 +18,7 @@ async function who() {
 }
 
 /** GET ?dept=&program= — the dashboard as a PDF for the Board / Syndicate. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const snap = await latestSnapshot(me.w.chairmanId);
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
 }
 
 /** POST { action: "refresh" } — work the figures out now;  { action: "target", key, target } — the Institute Head. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const me = await who();
   if (!me) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -69,3 +70,5 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

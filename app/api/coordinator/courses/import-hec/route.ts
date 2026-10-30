@@ -6,8 +6,9 @@ import { copyBenchmarkIfAvailable, getBenchmarkCandidates, seedFromMasterCourseI
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
 import { electiveTitleFor } from "../../../../../lib/electiveNaming";
 import * as uc from "../../../../../lib/universityCurriculum";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   // Owning Coordinator imports into their own batch directly; OMC can
   // import into any batch belonging to a Coordinator under their own
@@ -165,3 +166,4 @@ export async function POST(req: NextRequest) {
     })),
   });
 }
+export const POST = withErrors(POST_handler);

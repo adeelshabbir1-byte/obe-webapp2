@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Full preview of a public course (CLOs, lecture plan, assessments). Anyone who can use the library may view a PUBLIC one;
 // the author and the author's coordinator may also view it while it is still pending.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+async function GET_handler(_req: Request, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const pc = await prisma.publicCourse.findUnique({ where: { id: params.id }, include: { author: { select: { name: true, managedById: true } } } });
@@ -14,3 +15,4 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const { snapshotJson, searchText, ...rest } = pc;
   return NextResponse.json({ course: { ...rest, authorName: pc.author.name }, snapshot: JSON.parse(snapshotJson) });
 }
+export const GET = withErrors(GET_handler);

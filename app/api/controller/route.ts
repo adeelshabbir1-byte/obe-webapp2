@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { controllerAccess, controllerChairman, publishResults, unpublish, decideRecheck, saveDebarList, setDebarStatus, standingList, CONTROLLER_HINT } from "../../../lib/examController";
+import { withErrors } from "../../../lib/apiHandler";
 
 const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
 
 // GET ?standing=<batchId> — the standing list as CSV.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const cid = user ? await controllerChairman(user) : null;
   if (!user || !cid) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action: publish | unpublish | recheck | debar-save | debar-status, ... } — Controller of Examinations only.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const acc = user ? await controllerAccess(user) : null;
   if (!user || !acc || acc.mode === "VIEW") return NextResponse.json({ error: "Only the Controller of Examinations (or the Dean acting as Controller while none is named) can do this. The Institute Head sees this page read-only." }, { status: 403 });
@@ -43,3 +44,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|P2021/.test(m) ? CONTROLLER_HINT : m }, { status: 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

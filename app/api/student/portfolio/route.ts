@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { pdb, storeFile, MAX_FILE, KINDS } from "../../../../lib/portfolio";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const clip = (v: FormDataEntryValue | null, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // A student adds or removes their own e-portfolio entries.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const fd = await req.formData();
@@ -27,9 +28,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   await pdb.studentPortfolioItem.deleteMany({ where: { id: new URL(req.url).searchParams.get("id") || "", studentId: st.id, verifiedAt: null } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { deptScope } from "../../../../../lib/omcScope";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Copies PLO-course mappings from a source batch to a target batch —
 // matching courses by code and PLOs by number, the same convention used
 // elsewhere (Course Equivalence pairing). Only fills in mappings the
 // target course doesn't already have; never overwrites existing work.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -63,3 +64,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ copiedCount, skippedNoMatch });
 }
+export const POST = withErrors(POST_handler);

@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Instructor counterpart to the SE lecture-mapping batch-save route —
 // same "apply everything, recompute once" shape, for the same reason
@@ -17,7 +18,7 @@ type QuestionsPayload = { lectureRowId: string; type: "Midterm" | "Final"; numbe
 
 export const maxDuration = 60;
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -91,3 +92,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     })),
   });
 }
+export const POST = withErrors(POST_handler);

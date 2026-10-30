@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { sectionKeysById } from "../../../../../lib/studentSections";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET(req: Request, { params }: { params: { runId: string } }) {
+async function GET_handler(req: Request, { params }: { params: { runId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -59,3 +60,4 @@ export async function GET(req: Request, { params }: { params: { runId: string } 
     }),
   });
 }
+export const GET = withErrors(GET_handler);

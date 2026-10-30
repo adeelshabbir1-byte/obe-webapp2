@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { buildExcelResponse } from "../../../../lib/excelExport";
 import { labScope } from "../../../../lib/resources";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -26,3 +27,4 @@ export async function GET() {
       rows: specs.map((s) => ({ lab: nameOf.get(s.labId) || "", qty: s.quantity, mm: s.makeModel || "", cpu: s.processor || "", ram: s.ramGb ?? "", st: s.storage || "", gpu: s.gpu || "", os: s.os || "", yr: s.purchaseYear ?? "", notes: s.notes || "" })) },
   ]);
 }
+export const GET = withErrors(GET_handler);

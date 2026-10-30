@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { idb } from "../../../../lib/indirectPlo";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A student rates how well they can now do each CLO of a course they are enrolled in (1-5), once per course.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -21,3 +22,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Course surveys are not set up yet." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

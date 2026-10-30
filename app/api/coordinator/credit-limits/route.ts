@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { minCreditsPerSemester: true, maxCreditsPerSemester: true } });
   return NextResponse.json({ minCreditsPerSemester: me?.minCreditsPerSemester ?? null, maxCreditsPerSemester: me?.maxCreditsPerSemester ?? null });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -21,3 +22,5 @@ export async function PUT(req: NextRequest) {
   await prisma.user.update({ where: { id: user.id }, data: { minCreditsPerSemester: min, maxCreditsPerSemester: max } });
   return NextResponse.json({ ok: true, minCreditsPerSemester: min, maxCreditsPerSemester: max });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

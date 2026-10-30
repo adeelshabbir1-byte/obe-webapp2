@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Bulk-loads (or updates) an entire program's worth of official courses
 // into this chairman's own Master Curriculum in one paste, instead of
@@ -16,7 +17,7 @@ import { writeAuditLog } from "../../../../../lib/audit";
 // platform-wide shared library, not a single institution's own copy).
 // Existing rows are matched and updated by course code, so re-pasting a
 // corrected sheet is always safe and never creates duplicates.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!user.managedById) return NextResponse.json({ error: "no chairman on record for this account" }, { status: 400 });
@@ -86,3 +87,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ curriculum, created, updated, errors });
 }
+export const POST = withErrors(POST_handler);

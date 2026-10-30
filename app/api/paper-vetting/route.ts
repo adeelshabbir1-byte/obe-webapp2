@@ -8,6 +8,7 @@ import { writeAuditLog } from "../../../lib/audit";
 import { vtdb, paperOf, systemCheck, aiCheck, type Vetting } from "../../../lib/paperVetting";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { checklistOf, repeatCheck, addRemark } from "../../../lib/moderation";
+import { withErrors } from "../../../lib/apiHandler";
 
 async function aiKey(chairmanId: string) {
   const c = (await vtdb.aiConfig.findUnique({ where: { chairmanId } }).catch(() => null)) as { enabled: boolean; apiKey: string | null; model: string } | null;
@@ -16,7 +17,7 @@ async function aiKey(chairmanId: string) {
 
 // Teacher writes the questions, runs the system check (and the AI check when the institute has AI on) and sends the paper
 // to the Program Lead; the Program Lead approves it or returns it with comments.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -77,3 +78,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_paper_vetting.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

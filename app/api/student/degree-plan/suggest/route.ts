@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../../lib/studentSession";
 import { suggestSchedule } from "../../../../../lib/suggestSchedule";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Preview only — computes a suggested semester-by-semester schedule but
 // writes nothing. The student reviews it, then hits /suggest/apply to
 // actually commit it to their DegreePlanEntry rows (still editable
 // afterward, same as any manually-placed course).
-export async function GET() {
+async function GET_handler() {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -15,3 +16,4 @@ export async function GET() {
 
   return NextResponse.json(schedule);
 }
+export const GET = withErrors(GET_handler);

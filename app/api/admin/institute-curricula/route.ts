@@ -5,9 +5,10 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { cloneGrandCurriculumForChairman } from "../../../../lib/cloneCurriculum";
 import { degreeGroupLabel, degreeSortKey } from "../../../../lib/degreeGroup";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Super User, institute-first: pick an institute, tick the curricula it should get, save once.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "CURRICULUM"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = new URL(req.url).searchParams.get("chairmanId");
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 
 // Replaces this institute's curricula. Newly ticked ones also get the institute's own editable copy;
 // unticking only stops the official one being offered - an institute's own copy is never deleted.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUPER_USER") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -61,3 +62,5 @@ export async function PUT(req: NextRequest) {
   });
   return NextResponse.json({ ok: true, total: wanted.size, added: toAdd.length, removed: toRemove.length });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

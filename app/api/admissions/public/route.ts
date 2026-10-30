@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { edb } from "../../../../lib/erp";
+import { hitLimit, ipOf, tooMany } from "../../../../lib/rateLimit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const clip = (v: unknown, n = 120) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // The public inquiry form on the institute's website feeds the admission CRM.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
+  // Public endpoint: at most 10 requests per address per 60 minutes.
+  { const lim = await hitLimit(`admission:${ipOf(req.headers)}`, 10, 3600_000); if (!lim.ok) return tooMany(lim.retryAfter); }
   const b = await req.json().catch(() => ({}));
   const head = await prisma.user.findFirst({ where: { id: String(b.institute || ""), role: "CHAIRMAN" as never }, select: { id: true } });
   if (!head) return NextResponse.json({ error: "Unknown institute." }, { status: 404 });
@@ -19,3 +23,4 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "Inquiries are not open yet." }, { status: 503 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

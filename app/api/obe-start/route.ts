@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { setObeStart } from "../../../lib/obeTerm";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 const odb = prisma as unknown as Record<string, any>;
 
 // POST { scope: "institute" | "program", program?, termName, termYear } (empty termYear clears) — the OBE start term.
 // POST { scope: "course", courseId, off: boolean, reason } — the Program Lead marks one course offering grades-only.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -44,3 +45,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation/i.test(m) ? "Run prisma/migration_obe_start.sql (System Health → Run migrations)." : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

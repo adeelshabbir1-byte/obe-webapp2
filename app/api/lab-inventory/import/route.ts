@@ -4,13 +4,14 @@ import { prisma } from "../../../../lib/db";
 import { logChange } from "../../../../lib/changeLog";
 import { labScope } from "../../../../lib/resources";
 import { readWorkbookGrids, findHeader, toInt, toText, toDate } from "../../../../lib/excelRead";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // Reads the file the Download gives (sheet "Labs" and sheet "PC specifications").
 // Labs are matched by name: existing ones are updated, new ones added. For every lab named on the PC sheet its
 // PC-specification lines are replaced by the lines in the file. Nothing else is deleted.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -96,3 +97,4 @@ export async function POST(req: NextRequest) {
   await logChange(scope.chairmanId, "LABS", `Lab data imported from Excel: ${added} labs added, ${updated} updated, ${specLines} PC lines`, user.id);
   return NextResponse.json({ ok: true, message: `${added} lab(s) added, ${updated} updated, ${specLines} PC specification line(s) saved.`, warnings: warnings.slice(0, 8) });
 }
+export const POST = withErrors(POST_handler);

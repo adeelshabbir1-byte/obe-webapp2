@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { labScope } from "../../../../lib/resources";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const optInt = (v: unknown, min = 0, max = 100000) => { if (v === "" || v == null) return null; const n = parseInt(String(v), 10); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
 
 // Adds or changes one line of PC specifications for a lab the person looks after.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const scope = await labScope(user);
@@ -41,3 +42,5 @@ export async function DELETE(req: NextRequest) {
   await prisma.labComputerSpec.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

@@ -5,13 +5,14 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { ORG_ROLES, GROUP_ROLES } from "../../../../lib/orgChart";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 const odb = prisma as unknown as Record<string, any>;
 
 // The Institute Head edits the organisation chart. Giving/removing the actual system role is done by the page through
 // the existing role endpoints (give-role, omc-hat, assigner-hat), which keep all their checks; here only the chart is saved.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head edits the organisation chart." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -244,3 +245,4 @@ async function applyEffects(effects: Effect[], undo: boolean) {
     }
   }
 }
+export const POST = withErrors(POST_handler);

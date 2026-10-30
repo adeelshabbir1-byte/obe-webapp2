@@ -5,9 +5,10 @@ import { prisma } from "../../../../../lib/db";
 import { govScope, inScope } from "../../../../../lib/accreditation/governance";
 import { BODIES, type BodyKey } from "../../../../../lib/accreditation/bodies";
 import { vdb, data, FINDING_TYPES, POSITIONS, OUTCOMES, labelOf, parseFinding, type VItem } from "../../../../../lib/accreditation/visit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 /** GET ?cycleId=&kind=rebuttal|compliance — the formal rebuttal letter, or the compliance report on accepted findings, as Word. */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const q = new URL(req.url).searchParams;
@@ -63,3 +64,4 @@ export async function GET(req: Request) {
   const fname = `${kind === "rebuttal" ? "Rebuttal" : "Compliance report"} - ${c.program}.docx`.replace(/[^\w .-]+/g, "");
   return new NextResponse(buf as unknown as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="${fname}"` } });
 }
+export const GET = withErrors(GET_handler);

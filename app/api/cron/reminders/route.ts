@@ -4,12 +4,13 @@ import { notifyUsers } from "../../../../lib/notifications";
 import { KIND_ROLE } from "../../../../lib/deadlines";
 import { runInactivityCheck } from "../../../../lib/inactivity";
 import { closeDueSessions } from "../../../../lib/attendance";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // Runs daily (vercel.json). Anyone with tasks overdue or due within 3 days gets one in-app reminder a week.
 // Set CRON_SECRET in Vercel; Vercel sends it as "Authorization: Bearer <secret>".
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const now = new Date();
@@ -154,3 +155,4 @@ async function bellReminders(now: Date, soon: Date) {
   }
   return n;
 }
+export const GET = withErrors(GET_handler);

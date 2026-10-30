@@ -5,10 +5,11 @@ import { writeAuditLog } from "../../../lib/audit";
 import { notifyUsers } from "../../../lib/notifications";
 import { sdb, syncClasses, approversForTeacher, type ShortLeaveRow } from "../../../lib/shortLeave";
 import { checkRequest, saveDetail, workingDays, policies } from "../../../lib/leaveRules";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { fromDate, toDate, reason } — a teacher asks for a few days' leave. Their classes in those days are listed
 // from the timetable so the Chairman can arrange cover.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getSignedInUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -30,3 +31,4 @@ export async function POST(req: NextRequest) {
   await notifyUsers(await approversForTeacher(user.id, chairmanId), { kind: "REQUEST", title: `${typed?.label || "Leave"} request: ${user.name}, ${b.fromDate}${b.toDate !== b.fromDate ? ` to ${b.toDate}` : ""}`, body: `${reason}. ${n} class(es) need cover.`, href: "/leave-approvals", exceptId: user.id });
   return NextResponse.json({ ok: true, id: row.id, classes: n });
 }
+export const POST = withErrors(POST_handler);

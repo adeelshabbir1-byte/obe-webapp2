@@ -6,8 +6,9 @@ import { requireOwnedCourse } from "../../../../../../lib/subjectExpertGuard";
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { ensureCoursePloMapping } from "../../../../../../lib/coursePloSync";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -40,3 +41,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 
   return NextResponse.json({ clo }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

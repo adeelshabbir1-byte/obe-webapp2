@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { AFFILIATE_HINT, collegeUniversity, takeDesign, savePolicy, deletePolicy, universitySave, collegeIdsOf } from "../../../lib/affiliates";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 // POST { action, ... }
 //  College (Institute Head or Program Lead): take / takeAll — the university Subject Expert's design into its courses.
 //  University (Institute Head): policy / policyDelete — marks distribution; marks — the heads the university enters.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -40,3 +41,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|P2021/.test(m) ? AFFILIATE_HINT : m }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

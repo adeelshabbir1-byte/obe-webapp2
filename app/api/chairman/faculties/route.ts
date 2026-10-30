@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 async function institute() {
   const user = await getAuthenticatedUser();
@@ -9,7 +10,7 @@ async function institute() {
 }
 
 // Create a faculty (a group of departments led by a Dean).
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await institute();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Put a department into a faculty (facultyId null = take it out), or rename a faculty.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await institute();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -47,7 +48,7 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ error: "departmentId or id+name required" }, { status: 400 });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await institute();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") || "";
@@ -57,3 +58,6 @@ export async function DELETE(req: NextRequest) {
   await prisma.faculty.delete({ where: { id } }); // its departments simply become "not in a faculty"
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

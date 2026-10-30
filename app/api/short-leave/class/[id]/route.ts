@@ -3,6 +3,7 @@ import { getSignedInUser, getAuthenticatedUser } from "../../../../../lib/sessio
 import { prisma } from "../../../../../lib/db";
 import { notifyUsers } from "../../../../../lib/notifications";
 import { sdb, canDecideLeave, type ShortLeaveRow, type SubRow } from "../../../../../lib/shortLeave";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const day = (d: Date) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
@@ -11,7 +12,7 @@ const day = (d: Date) => new Date(d).toLocaleDateString("en-GB", { weekday: "sho
 //   { action: "makeup", makeupDate } | { action: "cancel" }  (Chairman or the teacher)
 //   { action: "accept" | "decline" }  (the substitute)
 //   { action: "done", topic }  (the substitute, or the teacher for a make-up class)
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const me = await getSignedInUser();
   const user = await getAuthenticatedUser();
   if (!me || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -56,3 +57,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

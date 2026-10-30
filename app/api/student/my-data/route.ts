@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const sdb = prisma as unknown as Record<string, any>;
 
 // A student's own data, on request (data-protection right of access): profile, enrolments, marks, attendance, grades,
 // fees, notices — as one JSON file. Passwords and other people's data are never included.
-export async function GET() {
+async function GET_handler() {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const id = st.id;
@@ -27,3 +28,4 @@ export async function GET() {
   await writeAuditLog({ action: "STUDENT_DATA_EXPORTED", entityType: "Student", entityId: id });
   return new NextResponse(JSON.stringify(out, null, 2), { headers: { "Content-Type": "application/json", "Content-Disposition": `attachment; filename="my-data-${st.rollNumber || id}.json"` } });
 }
+export const GET = withErrors(GET_handler);

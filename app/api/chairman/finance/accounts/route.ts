@@ -4,12 +4,13 @@ import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { financeScope, recentFiscalYears } from "../../../../../lib/resources";
 import { SCHOLARSHIP_SCHEMES } from "../../../../../lib/accounts";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0; };
 
 // Fee structure (per program and intake session) and scholarships (per fiscal year): Finance Officer and Institute Head.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user ? financeScope(user) : null;
   if (!user || !scope?.canEdit) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const scope = user ? financeScope(user) : null;
   if (!user || !scope?.canEdit) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -55,3 +56,5 @@ export async function DELETE(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "ACCOUNTS_RECORD_REMOVED", entityType: entity, entityId: id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

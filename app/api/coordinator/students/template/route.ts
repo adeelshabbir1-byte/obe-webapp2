@@ -2,9 +2,10 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // GET: Excel template for the multi-batch student upload (A Name, B Roll Number, C Batch Name from a drop-down, D Track).
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const batches = await prisma.batch.findMany({ where: { coordinatorId: user.id }, orderBy: { batchName: "asc" }, select: { batchName: true } });
@@ -30,3 +31,4 @@ export async function GET() {
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="students_template.xlsx"' } });
 }
+export const GET = withErrors(GET_handler);

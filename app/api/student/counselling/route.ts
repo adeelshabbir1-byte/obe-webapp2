@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { book, requestTime, cancel, COUNSEL_HINT } from "../../../../lib/counselling";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** POST { action: "book", slotId, kind, mode, reason } | { action: "request", counsellorId, kind, mode, reason } | { action: "cancel", bookingId } */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -18,3 +19,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(m) ? COUNSEL_HINT : m.slice(0, 300) }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

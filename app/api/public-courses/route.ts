@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { findOwningChairmanId } from "../../../lib/institutionCurriculum";
 import { buildSnapshot, buildSearchText, eligibleCourses } from "../../../lib/publicCourse";
+import { withErrors } from "../../../lib/apiHandler";
 
 const VIEW_ROLES = ["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR", "OMC", "CHAIRMAN", "SUPER_USER"];
 
@@ -15,7 +16,7 @@ const SUMMARY_SELECT = {
 
 // scope=search (default): public courses matching ?q=   scope=mine: everything I published, any status
 // scope=pending: courses by faculty I manage that are waiting for my approval
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !VIEW_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scope = req.nextUrl.searchParams.get("scope") || "search";
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 }
 
 // Publish (or re-publish) one of my courses to the public library.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["SUBJECT_EXPERT", "INSTRUCTOR", "PROGRAM_COORDINATOR"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json();
@@ -75,3 +76,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "PUBLIC_COURSE_PUBLISHED", entityType: "PublicCourse", entityId: saved.id, metadata: { status: saved.status, version: saved.version } });
   return NextResponse.json({ ok: true, status: saved.status, id: saved.id });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

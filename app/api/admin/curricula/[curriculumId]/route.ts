@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { adminCan, adminCurriculum } from "../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function DELETE(req: Request, { params }: { params: { curriculumId: string } }) {
+async function DELETE_handler(req: Request, { params }: { params: { curriculumId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -27,3 +28,4 @@ export async function DELETE(req: Request, { params }: { params: { curriculumId:
 
   return NextResponse.json({ ok: true });
 }
+export const DELETE = withErrors(DELETE_handler);

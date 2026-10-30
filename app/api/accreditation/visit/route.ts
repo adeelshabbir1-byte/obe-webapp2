@@ -4,12 +4,13 @@ import { prisma } from "../../../../lib/db";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { vdb, agendaTemplate, LOGISTICS, FINDING_TYPES, POSITIONS, DECISIONS, OUTCOMES } from "../../../../lib/accreditation/visit";
 import type { BodyKey } from "../../../../lib/accreditation/bodyInfer";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const s = (v: unknown, n = 300) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const FIELDS: Record<string, string[]> = { AGENDA: ["day", "time", "session", "with", "venue", "host"], PANEL: ["name", "role", "organization", "contact", "arrival"], LOGISTICS: ["task", "note"], FINDING: ["criterion", "type", "observation", "response", "action"], IMPLEMENTATION: ["finding", "action", "responsible", "resources", "timeline", "indicator"], REPORT: ["reportReceived", "rebuttalDue", "rebuttalSent", "decisionReceived", "reference"] };
 
 // Managers (Institute Head, Dean, Chairman) and the program's own Lead plan the visit and answer its findings.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const sc = await govScope(user);
@@ -91,3 +92,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_visit.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

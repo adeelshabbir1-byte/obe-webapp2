@@ -8,6 +8,7 @@ import { accessWindow, assignablePeople, canWorkOn, def as taskDefOf, govScope, 
 import { SourceLoader } from "../../../../../lib/accreditation/sources";
 import type { BodyKey } from "../../../../../lib/accreditation/bodies";
 import { approverFor } from "../../../../../lib/approvers";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 const MISSING = "Accreditation governance needs prisma/migration_accreditation_governance.sql to be run in Supabase first.";
 const dateOf = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null);
@@ -32,7 +33,7 @@ const event = (taskId: string, action: string, byId: string, toId?: string | nul
   prisma.accreditationTask.update({ where: { id: taskId }, data: { updatedAt: new Date() } }).then(() => prisma.accreditationTaskEvent.create({ data: { taskId, action, byId, toId: toId || null, note: note || null } }));
 
 // GET ?file=<id> — an evidence file attached to the task.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const x = await load(params.id);
     if (!x?.t || !x.viewing) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PATCH { action, ... } — assign | revoke | save | verifyProfile | uploadFile | deleteFile | submit | approve | return | reopen
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const b = await req.json().catch(() => ({}));
   try {
     const x = await load(params.id);
@@ -173,3 +174,5 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: MISSING }, { status: 503 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const PATCH = withErrors(PATCH_handler);

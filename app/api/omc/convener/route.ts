@@ -5,9 +5,10 @@ import { chairmanIdFor } from "../../../../lib/reportScope";
 import { convenerView, shareOut } from "../../../../lib/omcConvener";
 import { notifyUsers } from "../../../../lib/notifications";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { action: "share" } | { action: "assign", courseId, reviewerId } — the department's OMC Convener shares out reviews.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { extraRoles: true, departmentId: true } });
@@ -31,3 +32,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

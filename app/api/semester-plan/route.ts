@@ -4,9 +4,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { writeAuditLog } from "../../../lib/audit";
 import { PLAN_PHASES, PLAN_ROLES, PLAN_TEMPLATE, customKey, topUpStanding, type PlanItem } from "../../../lib/deadlines";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** The Institute Head publishes the semester plan: one standing target per task, for a role, whoever holds it. */
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head sets the semester plan" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -37,3 +38,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "SEMESTER_PLAN_PUBLISHED", entityType: "Deadline", entityId: term });
   return NextResponse.json({ ok: true, count: chosen.length }, { status: 201 });
 }
+export const POST = withErrors(POST_handler);

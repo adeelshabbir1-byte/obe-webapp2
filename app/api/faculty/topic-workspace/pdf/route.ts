@@ -4,12 +4,13 @@ import { calendarOf } from "../../../../../lib/topicChecks";
 import { LEVEL_LABEL, type Level } from "../../../../../lib/topicPlanCore";
 import { PdfDoc, RED, AMBER, GREEN } from "../../../../../lib/pdfDoc";
 import { forbidden, wsUser, LINK_ROLES } from "../../../../../lib/topicApi";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 60;
 
 // GET ?courseId=&plan= — the lecture plan as a PDF: every topic with its week and date, importance, drop-safety,
 // prerequisite links and reading.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await wsUser(LINK_ROLES);
   if (!user) return forbidden();
   const sp = req.nextUrl.searchParams;
@@ -42,3 +43,4 @@ export async function GET(req: NextRequest) {
   const bytes = await pdf.save();
   return new NextResponse(Buffer.from(bytes), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${a.code.replace(/[^A-Za-z0-9-]/g, "")}-lecture-plan.pdf"` } });
 }
+export const GET = withErrors(GET_handler);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 async function getOwnedPlo(chairmanId: string, ploId: string) {
   const plo = await prisma.pLO.findUnique({ where: { id: ploId }, include: { coordinator: true } });
@@ -9,7 +10,7 @@ async function getOwnedPlo(chairmanId: string, ploId: string) {
   return plo;
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { ploId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { ploId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -33,3 +34,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { ploId: str
 
   return NextResponse.json({ plo: updated });
 }
+export const PATCH = withErrors(PATCH_handler);

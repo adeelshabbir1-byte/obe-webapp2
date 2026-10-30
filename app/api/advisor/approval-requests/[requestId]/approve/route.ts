@@ -3,11 +3,12 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { studentContext, checkCourses } from "../../../../../../lib/registrationRules";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Approving actually performs the underlying register/withdraw right
 // now — the request was only ever a hold on the action, not the action
 // itself, so nothing changed for the student until this point.
-export async function POST(req: NextRequest, { params }: { params: { requestId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { requestId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -42,3 +43,4 @@ export async function POST(req: NextRequest, { params }: { params: { requestId: 
   { const c = await prisma.course.findUnique({ where: { id: request.courseId }, select: { code: true } }); await (await import("../../../../../../lib/studentAlerts")).tellStudents([request.studentId], "REGISTRATION", `Advisor approved: ${request.actionType === "WITHDRAW" ? "withdraw from" : "register in"} ${c?.code || "the course"}`, undefined, "/student/registration"); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

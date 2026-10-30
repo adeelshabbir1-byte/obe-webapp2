@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, rdb, str, num, staffOf } from "../../../lib/registers";
 import { DEFAULT_RULES, FS_HINT, type Rules } from "../../../lib/facultySufficiency";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** POST { action: "override", userId, status: "AQ"|"PQ"|"OTHER"|"", note } — a reviewer's decision (blank = back to the profile's);
  *  POST { action: "rules", ...limits } — the institute's limits (head, Dean, HOD). */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -34,3 +35,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: /does not exist|relation|undefined/i.test(m) ? FS_HINT : m.slice(0, 200) }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

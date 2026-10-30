@@ -3,9 +3,10 @@ import { getAuthenticatedStudent } from "../../../lib/studentSession";
 import { schemeAccess } from "../../../lib/degreeScheme";
 import { parentLink, revokeParentLinks } from "../../../lib/parentLink";
 import { prisma } from "../../../lib/db";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { studentId?, action: "create" | "revoke" } — by the student, or their advisor / program staff.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const self = await getAuthenticatedStudent().catch(() => null);
   const access = self && !b.studentId ? { studentId: self.id, actorId: self.id } : await schemeAccess(b.studentId ? String(b.studentId) : null);
@@ -19,3 +20,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: wa ? `${url}   ·   WhatsApp to guardian: ${wa}` : url });
   } catch { return NextResponse.json({ error: "Run prisma/migration_platform_plus.sql in Supabase first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

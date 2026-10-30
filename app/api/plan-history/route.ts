@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { schemeAccess } from "../../../lib/degreeScheme";
 import { addComment, hdb, REASONS } from "../../../lib/planHistory";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: comment | reason, studentId?, body?, moveId?, reason?, note? } — the student or their advisor / Program Lead.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const access = await schemeAccess(b.studentId ? String(b.studentId) : null);
   if (!access) return NextResponse.json({ error: "not allowed" }, { status: 403 });
@@ -18,3 +19,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) { const m = (e as Error).message; return NextResponse.json({ error: /does not exist|relation/.test(m) ? "Run the latest migration (System Health)." : m }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

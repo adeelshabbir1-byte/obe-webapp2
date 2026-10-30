@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { ldb, LIB_HINT, renew, reserve } from "../../../../lib/library";
+import { withErrors } from "../../../../lib/apiHandler";
 
 /** POST { action: "renew", loanId } | { action: "reserve", titleId } | { action: "cancelHold", holdId } — the student's own. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const st = await getAuthenticatedStudent();
   if (!st) return NextResponse.json({ error: "Sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -17,3 +18,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties/.test(m) ? LIB_HINT : m.slice(0, 300) }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { chairmanIdFor } from "../../../../lib/reportScope";
 import { checkPeoAlignment } from "../../../../lib/peoAlignmentCheck";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 502 });
   return NextResponse.json({ results: result.results });
 }
+export const POST = withErrors(POST_handler);

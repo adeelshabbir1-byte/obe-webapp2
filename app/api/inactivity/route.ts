@@ -3,10 +3,11 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { writeAuditLog } from "../../../lib/audit";
 import { idb, WATCHERS, teamOf, checkBoss } from "../../../lib/inactivity";
+import { withErrors } from "../../../lib/apiHandler";
 
 // PUT { workingDays, exemptIds, offDays? } — a boss sets their sign-in limit (0 = no alerts) and who is left out.
 // The Institute Head's row is the institute default and also sets the weekly days off.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !WATCHERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest) {
 }
 
 // POST — check my team now (the daily run does the same for everyone) and send any alerts that are due.
-export async function POST() {
+async function POST_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !WATCHERS.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -40,3 +41,5 @@ export async function POST() {
   const sent = await checkBoss(user, chairmanId);
   return NextResponse.json({ ok: true, sent });
 }
+export const PUT = withErrors(PUT_handler);
+export const POST = withErrors(POST_handler);

@@ -3,12 +3,13 @@ import crypto from "crypto";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../../lib/reportScope";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 async function canManageSurveys(user: { role: string; isAlumniCustodian: boolean }) {
   return user.role === "PROGRAM_COORDINATOR" || user.isAlumniCustodian;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { surveyId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { surveyId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await canManageSurveys(user))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -48,3 +49,4 @@ export async function POST(req: NextRequest, { params }: { params: { surveyId: s
 
   return NextResponse.json({ links: created });
 }
+export const POST = withErrors(POST_handler);

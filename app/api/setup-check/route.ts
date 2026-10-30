@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { createKey, revokeKey } from "../../../lib/integrationKeys";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: "key", label } → a new API key (shown once) | { action: "revoke", id } — Institute Head only.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head manages API keys." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -15,3 +16,4 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: "Run prisma/migration_platform_plus.sql in Supabase first." }, { status: 500 }); }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../../../../lib/session";
 import { prisma } from "../../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
 import { adminCan, adminCurriculum } from "../../../../../../../../lib/platformTeam";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest, { params }: { params: { curriculumId: string; courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { curriculumId: string; courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCurriculum(user, params.curriculumId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -20,3 +21,4 @@ export async function POST(req: NextRequest, { params }: { params: { curriculumI
 
   return NextResponse.json({ clo });
 }
+export const POST = withErrors(POST_handler);

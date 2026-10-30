@@ -3,12 +3,13 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { hemisData, hemisWorkbook, hemisCsv, hemisSummary, datasetOf, saveHemisCode, logHemis, HEMIS_HINT, DATASETS, HEMIS_ROLES, type Dataset } from "../../../lib/hemis";
 import { writeAuditLog } from "../../../lib/audit";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 60;
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 /** GET ?dataset=all|students|faculty|programs|enrolment|results|graduates&format=xlsx|csv&only=ready */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !HEMIS_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const cid = await chairmanIdFor(user);
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 }
 
 /** POST { action: "code", program ("" = the institute), code, level, discipline, years } — the HEMIS codes. */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !["CHAIRMAN", "DEAN"].includes(user.role)) return NextResponse.json({ error: "Only the institute head or Dean sets the HEMIS codes." }, { status: 403 });
   const cid = await chairmanIdFor(user);
@@ -44,3 +45,5 @@ export async function POST(req: Request) {
   await writeAuditLog({ actorUserId: user.id, action: "HEMIS_CODE_SET", entityType: "HemisCode", entityId: program || "institute", metadata: { code: code.trim() } });
   return NextResponse.json({ ok: true });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -149,6 +149,7 @@ export default async function NceacPortalPage({ searchParams }: { searchParams: 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }} className="no-print">
         <a className="btn btn-brass btn-sm" href={href}>⬇ Download {kind} file (NCEAC format)</a>
         {s.rejected > 0 && s.ready > 0 && <a className="btn btn-secondary btn-sm" href={`${href}&only=ready`}>⬇ Only the {s.ready} ready row(s)</a>}
+        <a className="btn btn-secondary btn-sm" href={`${href}&withCnic=1`} title="CNICs are masked in every download. The portal upload needs them in full: Institute Head, Dean, HOD, Program Lead or Department Coordinator only; logged.">⬇ For the portal upload (full CNIC, logged)</a>
         {ctx.canEdit && <PortalImport kind={kind} program={ctx.program} batch={batchSel === "all" ? "" : batchSel} />}
       </div>
       <p className="small-note" style={{ marginBottom: 0 }}>{t.note} Columns: {t.cols.map((x) => x.header).join(" · ")}.</p>

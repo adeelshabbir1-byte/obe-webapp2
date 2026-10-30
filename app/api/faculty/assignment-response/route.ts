@@ -4,11 +4,12 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { syncSubjectExpertToLinkedCourses } from "../../../../lib/contentSync";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // A teacher accepts or declines a course given to them: a borrowed teacher (from another department), or any Subject
 // Expert (every new Subject Expert assignment waits for their answer). Declining takes them off the course again so
 // it can be given to someone else; the reason is shown to whoever assigns it next.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -53,3 +54,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: accept ? (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_ACCEPTED" : "BORROWED_ASSIGNMENT_ACCEPTED") : (as === "SUBJECT_EXPERT" ? "SE_ASSIGNMENT_DECLINED" : "BORROWED_ASSIGNMENT_DECLINED"), entityType: "Course", entityId: course.id, metadata: { as, note } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

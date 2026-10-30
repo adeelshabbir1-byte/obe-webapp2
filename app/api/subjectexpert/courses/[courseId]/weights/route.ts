@@ -7,6 +7,7 @@ import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { getPolicyForCourse, checkPolicyCompliance } from "../../../../../../lib/weightPolicy";
 import { ensureAllInstrumentCounts } from "../../../../../../lib/instrumentAutoFill";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 const COUNT_FIELDS: { field: string; policyMinKey: string }[] = [
   { field: "assignmentCount", policyMinKey: "assignmentMinCount" },
@@ -17,7 +18,7 @@ const COUNT_FIELDS: { field: string; policyMinKey: string }[] = [
   { field: "finalCount", policyMinKey: "finalMinCount" },
 ];
 
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -111,3 +112,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ course: updated, pendingApproval: false });
 }
+export const PUT = withErrors(PUT_handler);

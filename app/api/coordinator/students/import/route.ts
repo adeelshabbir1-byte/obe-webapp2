@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -43,3 +44,4 @@ export async function POST(req: NextRequest) {
   const freshStudents = await prisma.student.findMany({ where: { batchId: batch.id }, orderBy: { rollNumber: "asc" } });
   return NextResponse.json({ imported, skipped, errors: errors.length > 0 ? errors : undefined, students: freshStudents.map((s) => ({ id: s.id, name: s.name, rollNumber: s.rollNumber, currentSemesterNumber: s.currentSemesterNumber })) });
 }
+export const POST = withErrors(POST_handler);

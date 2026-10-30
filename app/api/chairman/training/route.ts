@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { tdb, BADGES, badgesOf } from "../../../../lib/training";
 import { notifyUsers } from "../../../../lib/notifications";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Institute Head: turn the certification rule on, set the grace date, exempt people, remind those not certified.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "CHAIRMAN") return NextResponse.json({ error: "Only the Institute Head sets the training rule." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -33,3 +34,4 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: "Run prisma/migration_training.sql first." }, { status: 500 }); }
 }
 void BADGES;
+export const POST = withErrors(POST_handler);

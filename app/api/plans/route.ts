@@ -4,11 +4,12 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { erpAccess, edb } from "../../../lib/erp";
 import { reschedule } from "../../../lib/fypSchedule";
 import { UNI_TEMPLATES } from "../../../lib/uniPlanTemplates";
+import { withErrors } from "../../../lib/apiHandler";
 
 const day = (v: unknown) => { const d = new Date(String(v || "") + "T00:00:00Z"); return isNaN(d.getTime()) ? null : d; };
 
 // University plans of any office. Creator / owner / Institute Head edit; task owners update their task's status.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { chairmanId } = await erpAccess(user);
@@ -52,3 +53,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Plans are not set up yet — run prisma/migration_erp.sql and migration_fyp_plan.sql." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

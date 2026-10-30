@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { REG_HINT, rdb, submit, uploadLink, attachFile, confirmMou, review, withdraw, addClause, link, deleteClause, canSee, type RegDoc } from "../../../lib/regulations";
 import { seedStarter } from "../../../lib/regulationsSeed";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n = 300) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 // POST { action: submit | uploadLink | attach | confirm | publish | reject | withdraw | clause | link | unlink | deleteClause | seed }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -36,3 +37,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

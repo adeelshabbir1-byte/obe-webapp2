@@ -4,8 +4,9 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { TRACKS } from "../../../../../../lib/tracks";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   // Owning Coordinator edits their own course directly; OMC can edit any
   // course in a batch belonging to a Coordinator under their own
@@ -91,3 +92,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
   return NextResponse.json({ course: updated, followersUpdated });
 }
+export const PATCH = withErrors(PATCH_handler);

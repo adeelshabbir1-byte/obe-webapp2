@@ -4,10 +4,11 @@ import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { notifyUsers } from "../../../../lib/notifications";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { id, action: hide | restore, reason } — the Shared Courses Moderator takes a shared course down (spam,
 // copyright, quality) or puts it back.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !(await adminCan(user, "SHARED_MODERATOR"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -24,3 +25,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: b.action === "hide" ? "SHARED_COURSE_TAKEN_DOWN" : "SHARED_COURSE_RESTORED", entityType: "PublicCourse", entityId: pc.id, metadata: { reason } });
   return NextResponse.json({ ok: true, message: b.action === "hide" ? "Taken down; the author was told why." : "Back in the catalog." });
 }
+export const POST = withErrors(POST_handler);

@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { courseScopeFor, chairmanIdFor } from "../../../../../../lib/reportScope";
 import { getOrCreateVisitingFaculty, headFacultyWhere } from "../../../../../../lib/departments";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Candidate list for the Program Semester Map's click-to-assign instructor
 // picker. Scoping mirrors assign-instructor/route.ts's PUT exactly (kept as
@@ -13,7 +14,7 @@ import { getOrCreateVisitingFaculty, headFacultyWhere } from "../../../../../../
 // able to see who's assignable either.
 const ASSIGNABLE_ROLES = ["COURSE_ASSIGNER", "PROGRAM_COORDINATOR", "OMC", "CHAIRMAN"];
 
-export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !ASSIGNABLE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -44,3 +45,4 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ instructors: list });
 }
+export const GET = withErrors(GET_handler);

@@ -36,7 +36,7 @@ export default function LoginPage({ searchParams }: { searchParams: { sso?: stri
             <ChevronRight size={16} />
           </Link>
         </div>
-        <p className="auth-foot"><Link href="/security">Security &amp; data protection</Link> · © {new Date().getFullYear()} Lets Innovate Pvt Ltd</p>
+        <p className="auth-foot"><Link href="/security">Security &amp; data protection</Link> · <Link href="/privacy">Privacy</Link> · © {new Date().getFullYear()} Lets Innovate Pvt Ltd</p>
       </div>
     </AuthLayout>
   );

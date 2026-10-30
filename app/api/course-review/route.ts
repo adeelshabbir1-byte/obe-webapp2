@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { cdb } from "../../../lib/complexProblems";
+import { withErrors } from "../../../lib/apiHandler";
 
 // The instructor's end-of-course review: per CLO reason and action, what worked, challenges, changes for next time.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   const b = await req.json().catch(() => ({}));
   const course = user ? await prisma.course.findUnique({ where: { id: String(b.courseId || "") }, select: { id: true, instructorId: true } }) : null;
@@ -16,3 +17,4 @@ export async function POST(req: Request) {
   try { await cdb.courseReview.upsert({ where: { courseId: course.id }, create: { courseId: course.id, ...data }, update: data }); return NextResponse.json({ ok: true }); }
   catch { return NextResponse.json({ error: "Run prisma/migration_teaching_extras.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

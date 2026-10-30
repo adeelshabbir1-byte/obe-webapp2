@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { timetableActor } from "../../../../../lib/timetableAccess";
 import { prisma } from "../../../../../lib/db";
 import { retiredSectionIds } from "../../../../../lib/studentSections";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Read-only pre/post-generation health check for the Timetable Generator.
 // Answers, in one glance, the questions a Coordinator has to otherwise
@@ -23,7 +24,7 @@ import { retiredSectionIds } from "../../../../../lib/studentSections";
 // some of those hours if no batch's window actually covers them. Good
 // enough to flag "you don't have nearly enough room-hours" before running
 // the generator; not a substitute for the GA's own exact conflict check.
-export async function GET() {
+async function GET_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = actor.user;
@@ -168,3 +169,4 @@ export async function GET() {
     note: "Room-hour availability is an approximation based on the union of your batches' working-day windows; it assumes any room can be used at any of those hours.",
   });
 }
+export const GET = withErrors(GET_handler);

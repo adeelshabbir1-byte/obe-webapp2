@@ -3,15 +3,16 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { writeAuditLog } from "../../../../lib/audit";
 import { createSuggestion, suggestionsFor } from "../../../../lib/topicSuggestions";
 import { WORKSPACE_ROLES } from "../../../../lib/facultyTopicWorkspace";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !WORKSPACE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   return NextResponse.json(await suggestionsFor(user));
 }
 
 // Suggest a topic to a course you do not teach; its Subject Expert and Instructor are told.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !WORKSPACE_ROLES.includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -24,3 +25,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "The topic suggestion table is not in the database yet — run prisma/migration_oct2026_features.sql in Supabase." }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

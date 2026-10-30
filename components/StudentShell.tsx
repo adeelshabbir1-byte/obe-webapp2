@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { moduleForPath } from "../lib/modules";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { greetingName } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
 import HelpButton from "./help/HelpButton";
@@ -54,6 +54,9 @@ export default function StudentShell({ studentName, children }: { studentName?: 
   const pathname = usePathname();
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  // On a phone the menu is a drawer, opened from the menu button and closed on every page change.
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [pathname]);
   // Licensing: hide links to modules the institute has not bought; say so when a closed page sent the student here.
   const [off, setOff] = useState<string[]>([]);
   const [lockedNote, setLockedNote] = useState("");
@@ -87,7 +90,9 @@ export default function StudentShell({ studentName, children }: { studentName?: 
             <img className="sb-mark" src={BRAND.mark.src} alt="" {...sized(BRAND.mark, 28)} />
             <img className="sb-word" src={BRAND.wordmark.src} alt="OBEHUB" {...sized(BRAND.wordmark, 18)} />
           </Link>
-          <nav className="st-nav" aria-label="Student portal" style={ur ? urduStyle : undefined}>
+          <button type="button" className="tb-icon-btn st-menu-btn" onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="st-nav" aria-label={menu ? "Close the menu" : "Open the menu"}>{menu ? <X size={18} /> : <Menu size={18} />}</button>
+          {menu && <div className="st-nav-scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
+          <nav id="st-nav" className={`st-nav${menu ? " st-nav-open" : ""}`} aria-label="Student portal" style={ur ? urduStyle : undefined}>
             {nav.map((n) => (
               <Link key={n.href} href={n.href} aria-current={pathname === n.href ? "page" : undefined}>{L(n.href, n.label)}</Link>
             ))}
@@ -105,7 +110,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
           </div>
         </div>
       </header>
-      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{pathname !== "/student/course-survey" && <FeedbackReminder />}{children}</main>
+      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{pathname !== "/student/course-survey" && <FeedbackReminder />}{children}<p className="small-note" style={{ textAlign: "center", marginTop: 24 }}><a href="/privacy">Privacy</a> · <a href="/security">Security</a></p></main>
     </div>
   );
 }

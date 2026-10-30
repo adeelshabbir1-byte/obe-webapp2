@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedStudent } from "../../../../lib/studentSession";
 import { prisma } from "../../../../lib/db";
 import { getPassingCriteria } from "../../../../lib/passingCriteria";
+import { withErrors } from "../../../../lib/apiHandler";
 
 type PloAttainmentEntry = { label: string; pct: number; passed: boolean };
 
@@ -10,7 +11,7 @@ function parsePloLabel(label: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
-export async function GET() {
+async function GET_handler() {
   const student = await getAuthenticatedStudent();
   if (!student) return NextResponse.json({ error: "not logged in" }, { status: 401 });
 
@@ -98,3 +99,4 @@ export async function GET() {
     allPloNumbers: realPlos.map((p) => p.number).sort((a, b) => a - b),
   });
 }
+export const GET = withErrors(GET_handler);

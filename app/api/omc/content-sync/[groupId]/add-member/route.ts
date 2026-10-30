@@ -4,12 +4,13 @@ import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { reconsiderGroupBase, syncGroupSubjectHome } from "../../../../../../lib/contentSync";
 import { pairForEquivalence } from "../../../../../../lib/equivalencePairing";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Adds a course directly to an existing group, as a follower — the
 // direct equivalent of the "pair" endpoint's "memberA && !memberB"
 // case, but reachable straight from a specific group in the UI rather
 // than needing to pick that group's base again in a separate dropdown.
-export async function POST(req: NextRequest, { params }: { params: { groupId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { groupId: string } }) {
   const ctx = await syncContext();
   if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const user = ctx.user;
@@ -59,3 +60,4 @@ export async function POST(req: NextRequest, { params }: { params: { groupId: st
   await afterLink(ctx, [courseId]);
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

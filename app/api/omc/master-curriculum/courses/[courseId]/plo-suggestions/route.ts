@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Replaces the FULL set of suggested PLO numbers for this course's code
 // at once — simpler and less error-prone from the UI than individual
 // add/remove calls for a set of checkboxes. HecPloSuggestion is keyed
 // by the bare course code string, not a foreign key to MasterCourse, so
 // this looks up the course's current code first.
-export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "OMC") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -29,3 +30,4 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
 
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);

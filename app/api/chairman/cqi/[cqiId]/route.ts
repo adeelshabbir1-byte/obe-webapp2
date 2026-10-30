@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import { chairmanIdFor } from "../../../../../lib/reportScope";
 import { writeAuditLog } from "../../../../../lib/audit";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function PATCH(req: NextRequest, { params }: { params: { cqiId: string } }) {
+async function PATCH_handler(req: NextRequest, { params }: { params: { cqiId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !["CHAIRMAN", "OMC"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -30,3 +31,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { cqiId: str
   await writeAuditLog({ actorUserId: user.id, action: "CQI_RECORD_UPDATED", entityType: "CqiRecord", entityId: params.cqiId });
   return NextResponse.json({ record: updated });
 }
+export const PATCH = withErrors(PATCH_handler);

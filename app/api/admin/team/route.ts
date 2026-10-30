@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { TEAM_HINT, saveTeam, deleteTeam, setMember, setRole, addStarterTeams } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const str = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 
 // POST { action: team | teamDelete | member | role } — the Super Admin sets up the platform team.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || user.role !== "SUPER_USER") return NextResponse.json({ error: "Only the Super Admin sets up the platform team." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -23,3 +24,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation|P2021/.test(m) ? TEAM_HINT : m }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

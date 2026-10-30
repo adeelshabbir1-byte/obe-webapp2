@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
 import { collegeRoleBlock } from "../../../../lib/affiliates";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // The Institute Head makes a faculty member an OMC member as well (same login, a role to choose at sign-in), or takes it back.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
@@ -25,3 +26,4 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: give ? "OMC_HAT_GIVEN" : "OMC_HAT_REMOVED", entityType: "User", entityId: person.id });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

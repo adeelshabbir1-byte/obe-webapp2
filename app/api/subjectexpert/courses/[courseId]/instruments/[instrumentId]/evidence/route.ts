@@ -4,13 +4,14 @@ import { prisma } from "../../../../../../../../lib/db";
 import { requireOwnedCourse } from "../../../../../../../../lib/subjectExpertGuard";
 import { uploadEvidenceFile, validateEvidence } from "../../../../../../../../lib/evidenceValidation";
 import { writeAuditLog } from "../../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../../lib/apiHandler";
 
 const MAX_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 
 // Uploads a rubric/paper/project as evidence for this instrument, then
 // runs the DotAI-style check (AI if configured, deterministic fallback
 // otherwise) against every CLO the instrument covers.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   return NextResponse.json({ evidence: updated }, { status: 201 });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -55,3 +56,5 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
   const evidence = await prisma.instrumentEvidence.findMany({ where: { instrumentId: params.instrumentId }, orderBy: { createdAt: "desc" } });
   return NextResponse.json({ evidence });
 }
+export const POST = withErrors(POST_handler);
+export const GET = withErrors(GET_handler);

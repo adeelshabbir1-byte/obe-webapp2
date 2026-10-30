@@ -4,13 +4,14 @@ import { verifyPassword } from "../../../../lib/auth";
 import { createStudentSession } from "../../../../lib/studentSession";
 import { writeAuditLog } from "../../../../lib/audit";
 import { ipBlocked, ipOf } from "../../../../lib/rateLimit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // rollNumber is only unique WITHIN a batch (not institution-wide), so a
 // login can genuinely match more than one Student row — try each
 // candidate's password rather than assuming the first match is right.
 // Never reveal which part (roll number vs. password) was wrong, same
 // principle as the staff login in lib/auth.ts's attemptLogin.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const body = await req.json();
   const rollNumber = String(body.rollNumber || "").trim();
   const password = String(body.password || "");
@@ -45,3 +46,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, mustChangePassword: matched.mustChangePassword });
 }
+export const POST = withErrors(POST_handler);

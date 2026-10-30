@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { hitLimit, ipOf, tooMany } from "../../../../lib/rateLimit";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Self-service password reset for staff: a one-time link, valid for 30 minutes, sent to the email on the account.
 // The answer is the same whether or not the account exists, so the form can't be used to find out who has one.
@@ -30,7 +32,9 @@ function appBase(req: NextRequest): string {
   return process.env.NODE_ENV === "production" ? "" : req.nextUrl.origin;
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
+  // Public endpoint: at most 10 requests per address per 60 minutes.
+  { const lim = await hitLimit(`forgot:${ipOf(req.headers)}`, 10, 3600_000); if (!lim.ok) return tooMany(lim.retryAfter); }
   const b = await req.json().catch(() => ({}));
   const identifier = String(b.identifier ?? "").trim().slice(0, 200);
   if (!identifier) return NextResponse.json({ error: "Enter your login name or email." }, { status: 400 });
@@ -63,3 +67,4 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ ok: true, message: GENERIC });
 }
+export const POST = withErrors(POST_handler);

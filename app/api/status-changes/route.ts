@@ -6,6 +6,7 @@ import { prisma } from "../../../lib/db";
 import { raise, decide, decideCredit, savePolicy, canRaise, stageApprovers, STATUS_HINT, GRADES, type Req } from "../../../lib/studentStatus";
 import { transferPack } from "../../../lib/transferPack";
 import { EXAM_CONTROLLER } from "../../../lib/academicRules";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,7 +25,7 @@ async function canSee(user: { id: string; role: string; managedById: string | nu
 }
 
 // GET ?doc=<requestId> — the supporting document; ?pack=<requestId> — the transfer-out transcript and outlines pack.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("doc") || req.nextUrl.searchParams.get("pack") || "";
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST { action: "raise" | "decide" | "credit" | "cancel" | "policy", … }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const b = await req.json().catch(() => ({}));
@@ -91,3 +92,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: /does not exist|relation/i.test(m) ? STATUS_HINT : m.slice(0, 300) }, { status: /does not exist|relation/i.test(m) ? 503 : 400 });
   }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

@@ -4,11 +4,12 @@ import { getAuthenticatedUser } from "../../../../../../../lib/session";
 import { prisma } from "../../../../../../../lib/db";
 import { requireInstructorCourse } from "../../../../../../../lib/instructorGuard";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Bulk-add students to this course by roll number — looked up from the
 // existing Student records in the course's home batch (no new student data
 // entered here, just referencing who's already registered).
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user || !course.batchId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
 }
 
 // Drop a single student from this course.
-export async function DELETE(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -68,3 +69,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);
+export const DELETE = withErrors(DELETE_handler);

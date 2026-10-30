@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { seed, addItem, updateItem, addFinding, closeFinding, VISIT_HINT, STATUSES } from "../../../../lib/visitDay";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const vdb = prisma as unknown as Record<string, any>;
 const day = (s: unknown) => (s && /^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? new Date(`${s}T00:00:00Z`) : null);
 const time = (s: unknown) => (s && /^\d{1,2}:\d{2}$/.test(String(s).trim()) ? String(s).trim() : null);
 
 // POST { cycleId, action, ... } — seed | add | update | delete | finding | close
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -57,3 +58,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: VISIT_HINT }, { status: 500 });
   }
 }
+export const POST = withErrors(POST_handler);

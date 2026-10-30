@@ -5,11 +5,12 @@ import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { cmdb, CATEGORIES, HANDLERS } from "../../../lib/complaints";
 import { notifyUsers, holdersOf } from "../../../lib/notifications";
+import { withErrors } from "../../../lib/apiHandler";
 
 const t = (v: unknown, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 // Complaints and grievances: students and staff lodge them; Student Affairs / heads assign, act and close them.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const b = await req.json().catch(() => ({}));
   const st = await getAuthenticatedStudent();
   const user = st ? null : await getAuthenticatedUser();
@@ -41,3 +42,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Run prisma/migration_visit_extras.sql first." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

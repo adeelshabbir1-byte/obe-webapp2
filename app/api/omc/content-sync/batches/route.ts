@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { syncContext } from "../../../../../lib/syncAccess";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Lightweight, fast list of batches (no course data at all) — used to
 // render the checkbox picker before the potentially large course list
 // is fetched, so the page has something to show almost instantly
 // regardless of how many hundreds of courses exist overall.
-export async function GET() {
+async function GET_handler() {
   try {
     const ctx = await syncContext();
     if (!ctx) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -34,3 +35,4 @@ export async function GET() {
     return NextResponse.json({ error: err?.message || "something went wrong loading batches" }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);

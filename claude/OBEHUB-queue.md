@@ -2,7 +2,11 @@
 
 ## Queue
 
-### Prompt 10 — taken by Irfan, 2026-10-30 (in progress; three builds)
+### Production hardening (error pages, Sentry, uptime, e2e, load test, restore drill, privacy, mobile) — taken by Irfan, 2026-10-30
+
+Runs before Prompt 10 (Prompt 10 is paused until this is merged).
+
+### Prompt 10 — taken by Irfan, 2026-10-30 (paused; three builds)
 
 - **Build A** — 1 Topic Workspace fixes (lecture numbers, which version opens / followers open the base, topic panel follows clicks, proposals by intent + redesigned view, book chapters per topic) · 2 Course Repositioning layout · 3 Reset this semester's offering (snapshot, restore within 7 days) — taken by Irfan, 2026-10-30
 - **Build B** — 4 Course Catalog (Computing, Management Sciences, Engineering) · 5 Counselling time pickers · 6 Teacher calendar & appointments · 9 Best / average / worst student samples — taken by Irfan, 2026-10-30

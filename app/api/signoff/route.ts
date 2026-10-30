@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { whoIs, rdb, str } from "../../../lib/registers";
 import { SIGN_HINT } from "../../../lib/signoff";
+import { withErrors } from "../../../lib/apiHandler";
 
 const MAX = 300 * 1024;
 
@@ -12,7 +13,7 @@ const MAX = 300 * 1024;
  *   stamp (the Institute Head). PNG or JPEG, up to 300 KB. Placed only on documents the person actually approved.
  * POST JSON { action: "revoke", id, reason } | { action: "removeAsset", kind } .
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const w = await whoIs(user as never);
@@ -60,3 +61,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

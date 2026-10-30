@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { importPlan } from "../../../lib/courseHistory";
 import { refreshInstructorCopy } from "../../../lib/instructorCopy";
 import { prisma } from "../../../lib/db";
+import { withErrors } from "../../../lib/apiHandler";
 
 // POST { action: import | useSePlan, targetCourseId, sourceCourseId?, plan? }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -21,3 +22,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message });
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
 }
+export const POST = withErrors(POST_handler);

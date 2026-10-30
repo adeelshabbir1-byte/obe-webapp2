@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { requireOwnedCourse } from "../../../../lib/subjectExpertGuard";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Lists candidate SOURCE courses for a Subject Expert's "Import from
 // another course" action on a specific target course — restricted to
@@ -12,7 +13,7 @@ import { requireOwnedCourse } from "../../../../lib/subjectExpertGuard";
 // course by mistake; equivalence is the institution's own, deliberate
 // statement that two courses really are the same thing, so it's the
 // right (and only) scope for this.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "SUBJECT_EXPERT") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -33,3 +34,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ courses, noEquivalenceGroup: false });
 }
+export const GET = withErrors(GET_handler);

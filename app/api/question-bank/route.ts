@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
 import { addQuestion, BLOOMS, markUsed, removeQuestion, QB_HINT } from "../../../lib/questionBank";
+import { withErrors } from "../../../lib/apiHandler";
 
 const str = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 // POST { action: "add", courseCode, cloCode, bloom, kind, marks, text } | { action: "remove", id } | { action: "used", ids }
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !["INSTRUCTOR", "SUBJECT_EXPERT", "OMC", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -22,3 +23,4 @@ export async function POST(req: NextRequest) {
   } catch { return NextResponse.json({ error: QB_HINT }, { status: 500 }); }
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+export const POST = withErrors(POST_handler);

@@ -6,6 +6,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse } from "../../../../../../../lib/contentSync";
 import { writeAuditLog } from "../../../../../../../lib/audit";
 import { recomputeCourseRows } from "../../../../../../../lib/lectureWeights";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Batched version of instrument-toggle + set-questions. The per-click
 // versions of those two routes each finish by re-syncing this course's
@@ -26,7 +27,7 @@ type QuestionsPayload = { lectureRowId: string; type: "Midterm" | "Final"; numbe
 // Saving many ticks at once can take a while on a big course.
 export const maxDuration = 60;
 
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -117,3 +118,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     })),
   });
 }
+export const POST = withErrors(POST_handler);

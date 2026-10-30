@@ -6,6 +6,7 @@ import { chapterHash, itemHash, itemKeys, setItemReady, SAR_STATUS_HINT } from "
 import { prisma } from "../../../../lib/db";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { sarData, sarGaps, chapters } from "../../../../lib/sarBuilder";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // Mark one NBEAC SAR table ready (approved as it stands) or open it again. Ready is given by the department's
 // managers: the Institute Head, Dean, Chairman (HOD), Department Coordinator and the Program Lead.
@@ -24,7 +25,7 @@ async function cycleChapter(user: { id: string; name: string; role: string; mana
   return NextResponse.json({ ok: true });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -43,3 +44,4 @@ export async function POST(req: NextRequest) {
   catch { return NextResponse.json({ error: SAR_STATUS_HINT }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

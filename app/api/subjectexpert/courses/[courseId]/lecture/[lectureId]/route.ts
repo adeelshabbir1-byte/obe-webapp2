@@ -7,6 +7,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { cascadeTopicRename, reconcileLinks } from "../../../../../../../lib/prereqCascade";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; lectureId: string } }) {
   const user = await getAuthenticatedUser();
@@ -72,5 +73,5 @@ async function DELETE_handler(req: Request, { params }: { params: { courseId: st
 }
 
 // A saved change to the lecture plan is checked against the course's lab plan; the instructor and Lab Engineer are told.
-export const PATCH = withLabSync(PATCH_handler);
-export const DELETE = withLabSync(DELETE_handler);
+export const PATCH = withErrors(withLabSync(PATCH_handler));
+export const DELETE = withErrors(withLabSync(DELETE_handler));

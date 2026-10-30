@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { writeAuditLog } from "../../../../lib/audit";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const scale = await prisma.gradingScale.findMany({ where: { coordinatorId: user.id }, orderBy: [{ effectiveFromYear: "desc" }, { orderIndex: "asc" }] });
   return NextResponse.json({ scale });
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "PROGRAM_COORDINATOR") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -30,3 +31,5 @@ export async function POST(req: NextRequest) {
   await writeAuditLog({ actorUserId: user.id, action: "GRADING_SCALE_ENTRY_SET", entityType: "GradingScale", entityId: entry.id });
   return NextResponse.json({ entry }, { status: 201 });
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

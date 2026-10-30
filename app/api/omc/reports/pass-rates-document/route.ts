@@ -5,8 +5,9 @@ import { canViewReport } from "../../../../../lib/reportAcl";
 import { generatePassRateReport } from "../../../../../lib/passRateReportGenerator";
 import { buildDocxResponse } from "../../../../../lib/docxExport";
 import { prisma } from "../../../../../lib/db";
+import { withErrors } from "../../../../../lib/apiHandler";
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!(await canViewReport(user, "omc.reports.pass-rates"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -24,3 +25,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message || "something went wrong generating the document" }, { status: 500 });
   }
 }
+export const GET = withErrors(GET_handler);

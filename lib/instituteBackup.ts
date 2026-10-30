@@ -84,11 +84,17 @@ function revive(r: Record<string, unknown>) {
   return o;
 }
 
-/** Dry run or restore: which rows of the backup are missing now, per table; with apply=true, put them back. */
+/**
+ * Dry run or restore: which rows of the backup are missing now, per table; with apply=true, put them back. Into an
+ * empty database too: rows whose parent isn't back yet are retried in further passes, and rows that point at each
+ * other (a department and its head, staff managed by staff) go in with those links blank first and get them back once
+ * every row is in.
+ */
 export async function restore(cid: string, b: Backup, apply: boolean, by?: string) {
   if (b.chairmanId !== cid) throw new Error("This backup belongs to another institute.");
   const temp = apply ? await hashPassword("12345678") : "";
-  const report: { model: string; label: string; inBackup: number; present: number; missing: number; restored: number; failed: number }[] = [];
+  type Row = Record<string, unknown>;
+  const state = new Map<string, { t: Table; rows: Row[]; present: number; pending: Row[]; restored: number; failed: number }>();
   for (const t of TABLES) {
     const rows = b.tables[t.model] || [];
     if (!bdb[t.model]) continue;
@@ -98,18 +104,39 @@ export async function restore(cid: string, b: Backup, apply: boolean, by?: strin
     const missing = rows.filter((r) => !present.has(String(r.id)));
     // Staff: people directly under the Institute Head first (others point to them).
     if (t.model === "user") missing.sort((a, b2) => (a.managedById === cid ? 0 : 1) - (b2.managedById === cid ? 0 : 1));
-    let restored = 0, failed = 0;
-    if (apply && missing.length) {
-      const data = missing.map((r) => { const o = revive(r); if (t.model === "user") { o.passwordHash = temp; o.mustChangePassword = true; o.mfaSecret = null; } return o; });
-      for (let i = 0; i < data.length; i += 300) {
-        const part = data.slice(i, i + 300);
-        try { restored += (await bdb[t.model].createMany({ data: part, skipDuplicates: true })).count; }
-        catch { for (const one of part) { try { await bdb[t.model].create({ data: one }); restored++; } catch { failed++; } } }
-      }
-    }
-    report.push({ model: t.model, label: t.label, inBackup: rows.length, present: rows.length - missing.length, missing: missing.length, restored, failed });
+    const pending = missing.map((r) => { const o = revive(r); if (t.model === "user") { o.passwordHash = temp; o.mustChangePassword = true; o.mfaSecret = null; } return o; });
+    state.set(t.model, { t, rows, present: present.size, pending, restored: 0, failed: 0 });
   }
-  if (apply) await writeAuditLog({ actorUserId: by || null, action: "INSTITUTE_RESTORED", metadata: { from: b.createdAt, restored: report.reduce((a, r) => a + r.restored, 0) } as never });
+  const insert = async (model: string, data: Row[]) => {
+    const done: Row[] = [];
+    for (let i = 0; i < data.length; i += 300) {
+      const part = data.slice(i, i + 300);
+      try { await bdb[model].createMany({ data: part, skipDuplicates: true }); done.push(...part); }
+      catch { for (const one of part) { try { await bdb[model].create({ data: one }); done.push(one); } catch { /* retried in the next pass */ } } }
+    }
+    return done;
+  };
+  const deferred: { model: string; id: unknown; data: Row }[] = [];
+  if (apply) {
+    // Normal passes (parent-first order), then one pass with self/cross links left blank, then normal passes again.
+    for (let pass = 0; pass < 8; pass++) {
+      let progress = 0;
+      const relaxed = pass === 3;
+      for (const s of Array.from(state.values())) {
+        if (!s.pending.length) continue;
+        const rows = relaxed ? s.pending.map((r) => { const links: Row = {}; const o: Row = { ...r }; for (const k of Object.keys(o)) if (k !== "id" && /Id$/.test(k) && o[k] != null && !["chairmanId", "coordinatorId", "batchId", "courseId", "studentId"].includes(k)) { links[k] = o[k]; o[k] = null; } return { o, links }; }) : s.pending.map((o) => ({ o, links: {} as Row }));
+        const done = new Set((await insert(s.t.model, rows.map((x) => x.o))).map((r) => String(r.id)));
+        if (relaxed) for (const x of rows) if (done.has(String(x.o.id)) && Object.keys(x.links).length) deferred.push({ model: s.t.model, id: x.o.id, data: x.links });
+        s.restored += done.size; progress += done.size;
+        s.pending = s.pending.filter((r) => !done.has(String(r.id)));
+      }
+      if (!progress && pass > 3) break;
+    }
+    for (const d of deferred) await bdb[d.model].update({ where: { id: d.id }, data: d.data }).catch(() => null);
+    for (const s of Array.from(state.values())) s.failed = s.pending.length;
+  }
+  const report = Array.from(state.values()).map((s) => ({ model: s.t.model, label: s.t.label, inBackup: s.rows.length, present: s.present, missing: s.rows.length - s.present, restored: s.restored, failed: s.failed }));
+  if (apply) await writeAuditLog({ actorUserId: by || null, action: "INSTITUTE_RESTORED", metadata: { from: b.createdAt, restored: report.reduce((a, r) => a + r.restored, 0) } as never }).catch(() => null);
   return report;
 }
 

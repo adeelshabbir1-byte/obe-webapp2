@@ -4,6 +4,7 @@ import { timetableActor, READ_ONLY } from "../../../../../lib/timetableAccess";
 import { writeAuditLog } from "../../../../../lib/audit";
 import { getOrCreateVisitingFaculty } from "../../../../../lib/departments";
 import { ensureBatchSections, getMaxSection, planSections, sectionKey, STUDENT_SECTIONS_HINT, type PlanCourse, type PlanGroup, type StudentSection } from "../../../../../lib/studentSections";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // Makes the timetable sections of EVERY offered course and combined group of every batch on this timetable (the whole
 // department, or the shared timetable): one section per student section (a batch over the limit — default 50 — is split
@@ -13,7 +14,7 @@ import { ensureBatchSections, getMaxSection, planSections, sectionKey, STUDENT_S
 // for "Visiting Faculty (to be decided)" and listed as to be assigned — nothing is dropped silently.
 const db = prisma as unknown as Record<string, any>;
 
-export async function POST() {
+async function POST_handler() {
   const actor = await timetableActor();
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!actor.canEdit) return NextResponse.json({ error: READ_ONLY(actor) }, { status: 403 });
@@ -100,3 +101,4 @@ export async function POST() {
     skippedNoInstructor: plan.toAssign.map((t) => ({ code: t, title: "to be assigned" })),
   });
 }
+export const POST = withErrors(POST_handler);

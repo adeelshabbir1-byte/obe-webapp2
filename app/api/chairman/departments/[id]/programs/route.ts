@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { isBody } from "../../../../../../lib/accreditation/bodyInfer";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Sets which degree programs belong to this department. A program belongs to exactly one department,
 // so ticking it here moves it out of whichever department had it before.
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+async function PUT_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || user.role !== "CHAIRMAN") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const dept = await prisma.department.findFirst({ where: { id: params.id, chairmanId: user.id } });
@@ -33,3 +34,4 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   return NextResponse.json({ ok: true, programs });
 }
+export const PUT = withErrors(PUT_handler);

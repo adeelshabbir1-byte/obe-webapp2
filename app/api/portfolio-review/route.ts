@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { pdb } from "../../../lib/portfolio";
 import { reviewBatchWhere } from "../../../lib/reviewScope";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Staff verify (or un-verify) a student's portfolio entry.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const where = await reviewBatchWhere(user);
@@ -16,3 +17,4 @@ export async function POST(req: Request) {
   await pdb.studentPortfolioItem.update({ where: { id: item.id }, data: b.undo ? { verifiedAt: null, verifiedById: null } : { verifiedAt: new Date(), verifiedById: user.id } });
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

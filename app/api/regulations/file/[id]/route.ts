@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { rdb, canSee, signedUrl, type RegDoc, type RegFile } from "../../../../../lib/regulations";
+import { withErrors } from "../../../../../lib/apiHandler";
 
 // A document's file, for signed-in users who may see the document: a five-minute signed link to the private bucket.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+async function GET_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.redirect(new URL("/login", req.url));
   const f = (await rdb.regFile.findUnique({ where: { id: params.id } }).catch(() => null)) as RegFile | null;
@@ -12,3 +13,4 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try { return NextResponse.redirect(await signedUrl(f.path, req.nextUrl.searchParams.get("download") ? f.name : undefined)); }
   catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 404 }); }
 }
+export const GET = withErrors(GET_handler);

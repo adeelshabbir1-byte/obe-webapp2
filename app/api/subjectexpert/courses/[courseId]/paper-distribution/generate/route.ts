@@ -5,6 +5,7 @@ import { requireOwnedCourse } from "../../../../../../../lib/subjectExpertGuard"
 import { blockedAsNonBaseCourse, syncCourseContentToLinkedCourses } from "../../../../../../../lib/contentSync";
 import { renumberPaperDistribution } from "../../../../../../../lib/paperDistributionOrdering";
 import { writeAuditLog } from "../../../../../../../lib/audit";
+import { withErrors } from "../../../../../../../lib/apiHandler";
 
 // Builds (or rebuilds) this exam's paper-distribution list straight from
 // what's already been set up on the Assessments & Submit tab — SE already
@@ -21,7 +22,7 @@ import { writeAuditLog } from "../../../../../../../lib/audit";
 // it, same "Generate" semantics as the 32-lecture template — so any
 // cognitive-level tweaks or manual topic edits made after a previous
 // generate are reset. The page warns about this before calling it.
-export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
   const course = await requireOwnedCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -99,3 +100,4 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   const items = await prisma.paperDistributionItem.findMany({ where: { courseId: course.id, source: "SE", examType }, orderBy: { orderIndex: "asc" } });
   return NextResponse.json({ items });
 }
+export const POST = withErrors(POST_handler);

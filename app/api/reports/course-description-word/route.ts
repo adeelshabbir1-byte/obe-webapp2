@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { canViewReports, coordinatorIdsFor } from "../../../../lib/reportScope";
 import { prisma } from "../../../../lib/db";
 import { buildDocxResponse, logoImageOptions } from "../../../../lib/docxExport";
+import { withErrors } from "../../../../lib/apiHandler";
 
 const PAGE_WIDTH_DXA = 12240; // US Letter
 const MARGIN_DXA = 1440; // 1 inch
@@ -27,7 +28,7 @@ function labelValueRow(label: string, value: string) {
   });
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !canViewReports(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -110,3 +111,4 @@ export async function GET(req: NextRequest) {
   const filename = `Course_Description_${course.code}.docx`;
   return buildDocxResponse(filename, doc);
 }
+export const GET = withErrors(GET_handler);

@@ -6,6 +6,7 @@ import { writeAuditLog } from "../../../../lib/audit";
 import { deptScope } from "../../../../lib/omcScope";
 import { wdb } from "../../../../lib/ploWeights";
 import { checkWeights } from "../../../../lib/ploWeightMath";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // PUT { ploId, weights: { courseId: pct }, source } — the OMC saves how much each course counts toward one PLO.
 // DELETE ?ploId= — back to the equal split.
@@ -18,7 +19,7 @@ async function guard(ploId: string) {
   return { user, plo };
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const g = await guard(String(b.ploId || ""));
   if ("error" in g) return g.error;
@@ -46,7 +47,7 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   const g = await guard(req.nextUrl.searchParams.get("ploId") || "");
   if ("error" in g) return g.error;
   try { await wdb.coursePloWeight.deleteMany({ where: { ploId: g.plo.id } }); } catch { /* table missing: nothing saved */ }
@@ -54,3 +55,5 @@ export async function DELETE(req: NextRequest) {
   revalidateTag("outcome-flow");
   return NextResponse.json({ ok: true });
 }
+export const PUT = withErrors(PUT_handler);
+export const DELETE = withErrors(DELETE_handler);

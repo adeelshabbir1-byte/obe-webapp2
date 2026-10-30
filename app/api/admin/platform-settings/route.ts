@@ -3,15 +3,16 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { invalidatePlatformBranding } from "../../../../lib/branding";
 import { adminCan } from "../../../../lib/platformTeam";
+import { withErrors } from "../../../../lib/apiHandler";
 
-export async function GET() {
+async function GET_handler() {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "SECURITY"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const settings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
   return NextResponse.json({ settings });
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user || !(await adminCan(user, "SECURITY"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -29,3 +30,5 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ settings });
 }
+export const GET = withErrors(GET_handler);
+export const PUT = withErrors(PUT_handler);

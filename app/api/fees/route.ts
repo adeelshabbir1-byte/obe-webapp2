@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { erpAccess, edb, post } from "../../../lib/erp";
 import { issueForBatch, statusOf } from "../../../lib/fees";
+import { withErrors } from "../../../lib/apiHandler";
 
 // Student fees (Institute Head / Finance): issue invoices per batch and term, discounts / scholarships, late fines, payments.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const acc = await erpAccess(user);
@@ -60,3 +61,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Fees are not set up yet — run prisma/migration_erp.sql." }, { status: 500 }); }
 }
+export const POST = withErrors(POST_handler);

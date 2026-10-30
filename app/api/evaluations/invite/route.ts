@@ -4,12 +4,13 @@ import { chairmanIdFor } from "../../../../lib/reportScope";
 import { writeAuditLog } from "../../../../lib/audit";
 import { inviteToFdp } from "../../../../lib/feedbackAnalysis";
 import { QEC_INCHARGE } from "../../../../lib/duties";
+import { withErrors } from "../../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
 
 // POST { sessionId, userId, questionKey, scoreBefore } — invite a teacher to an FDP session because a feedback question
 // scored low. The Institute Head, a Dean, a Chairman or the QEC In-charge.
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !(["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role) || (user.extraRoles || []).includes(QEC_INCHARGE))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const chairmanId = await chairmanIdFor(user);
@@ -24,3 +25,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Could not invite." }, { status: 400 });
   }
 }
+export const POST = withErrors(POST_handler);

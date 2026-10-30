@@ -3,9 +3,10 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { govScope, inScope } from "../../../../lib/accreditation/governance";
 import { flowOf, saveStep, FLOW_HINT } from "../../../../lib/accreditation/processFlow";
+import { withErrors } from "../../../../lib/apiHandler";
 
 // POST { cycleId, key, status, doneOn?, expectedOn?, note? } — the cycle's managers and its Program Lead.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();
   const s = user ? await govScope(user) : null;
   const b = await req.json().catch(() => ({}));
@@ -16,3 +17,4 @@ export async function POST(req: NextRequest) {
   catch { return NextResponse.json({ error: FLOW_HINT }, { status: 500 }); }
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

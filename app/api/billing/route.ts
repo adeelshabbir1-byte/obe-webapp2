@@ -9,9 +9,10 @@ import { MODULE_KEYS } from "../../../lib/modules";
 import { bdb, BILL_HINT, PERIODS, invoiceFor, recordPayment, applyLocks, type Invoice, type Plan } from "../../../lib/billing";
 import { adminCan } from "../../../lib/platformTeam";
 import { itAccess } from "../../../lib/itManager";
+import { withErrors } from "../../../lib/apiHandler";
 
 /** GET ?invoice=<id> — the invoice as a PDF (the Super User, or the institute's own Head). */
-export async function GET(req: Request) {
+async function GET_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const id = new URL(req.url).searchParams.get("invoice") || "";
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
  *   subscribe { chairmanId, planId, status, trialEndsAt, discountPct, discountNote, graceDays, readOnlyDays, billingEmail }
  *   invoiceNow { chairmanId }   pay { invoiceId, amount, method, reference, paidOn }   void { invoiceId, note }   suspend { chairmanId, on }
  */
-export async function POST(req: Request) {
+async function POST_handler(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified || !(await adminCan(user, "BILLING"))) return NextResponse.json({ error: "Only the Super User manages billing." }, { status: 403 });
   const b = await req.json().catch(() => ({}));
@@ -79,3 +80,5 @@ export async function POST(req: Request) {
     }
   } catch (e) { const m = String((e as Error).message || e); return NextResponse.json({ error: /does not exist|Cannot read properties of undefined/.test(m) ? BILL_HINT : m.slice(0, 300) }, { status: 400 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

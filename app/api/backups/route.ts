@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { writeAuditLog } from "../../../lib/audit";
 import { itAccess } from "../../../lib/itManager";
 import { makeBackup, readBackup, restore, storeBackup, fetchBackup, storageReady } from "../../../lib/instituteBackup";
+import { withErrors } from "../../../lib/apiHandler";
 
 export const maxDuration = 300;
 
@@ -15,7 +16,7 @@ async function head() {
 }
 
 // GET ?now=1 (make and download a backup) | ?name=<file> (download a stored one).
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   const u = await head();
   if (!u) return NextResponse.json({ error: "Only the IT Manager takes backups (the Institute Head until one is named)." }, { status: 403 });
   const name = req.nextUrl.searchParams.get("name");
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST JSON { action: "store" } | { action: "check" | "restore", name } ; or multipart { action, file }.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   const u = await head();
   if (!u) return NextResponse.json({ error: "Only the IT Manager restores backups (the Institute Head until one is named)." }, { status: 403 });
   try {
@@ -51,3 +52,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, from: bk.createdAt, report, message: action === "restore" ? `Restored ${restored} row(s).` : `${missing} row(s) of this backup are missing now.` });
   } catch (e) { return NextResponse.json({ error: (e as Error).message.slice(0, 300) }, { status: 400 }); }
 }
+export const GET = withErrors(GET_handler);
+export const POST = withErrors(POST_handler);

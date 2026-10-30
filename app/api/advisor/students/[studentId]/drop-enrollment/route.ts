@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { writeAuditLog } from "../../../../../../lib/audit";
+import { withErrors } from "../../../../../../lib/apiHandler";
 
 // Drops a student's current-semester enrollment directly — unlike the
 // student's own self-service withdraw (electives only, and gated behind
@@ -11,7 +12,7 @@ import { writeAuditLog } from "../../../../../../lib/audit";
 // the student needs to drop a course (core or elective) this semester
 // and will retake it later — drop it here, then use degree-plan/move to
 // schedule it into a future semester.
-export async function POST(req: NextRequest, { params }: { params: { studentId: string } }) {
+async function POST_handler(req: NextRequest, { params }: { params: { studentId: string } }) {
   const user = await getAuthenticatedUser();
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -46,3 +47,4 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
 
   return NextResponse.json({ ok: true });
 }
+export const POST = withErrors(POST_handler);

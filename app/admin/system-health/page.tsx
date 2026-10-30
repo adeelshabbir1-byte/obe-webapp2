@@ -5,6 +5,8 @@ import { navForRole } from "../../../components/reportNav";
 import { checkDatabase, fixScript, settingsCheck, type Issue } from "../../../lib/systemHealth";
 import { FixScript, CheckAgain } from "../../../components/SystemHealthControls";
 import { adminCan, adminNavFor } from "../../../lib/platformTeam";
+import { monitoringOn } from "../../../lib/monitoring";
+import { prisma } from "../../../lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function SystemHealthPage() {
   const sql = fixScript(issues);
   const settings = settingsCheck();
   const tables = Array.from(new Set(breaks.map((i) => i.table)));
+  const drill = await (prisma as unknown as Record<string, any>).restoreDrill.findFirst({ orderBy: { at: "desc" } }).catch(() => null) as { at: Date; passed: boolean; summary: string | null } | null;
 
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
@@ -41,6 +44,13 @@ export default async function SystemHealthPage() {
         it never drops or changes existing data, and it is safe to run more than once.
       </p>
       {error && <div className="err">Could not read the database structure: {error}</div>}
+
+      <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 18, fontSize: 13 }}>
+        <span><b>Monitoring:</b> {monitoringOn() ? <span className="badge badge-ok">on (Sentry)</span> : <span className="badge badge-neutral">off — set SENTRY_DSN to turn it on</span>}</span>
+        <span><b>Uptime check:</b> <a href="/api/health" target="_blank" rel="noreferrer">/api/health</a> (watched every 10 minutes by GitHub Actions)</span>
+        <span><b>Last restore test:</b> {drill ? <>{new Date(drill.at).toLocaleDateString()} · <span className={`badge ${drill.passed ? "badge-ok" : "badge-no"}`}>{drill.passed ? "passed" : "failed"}</span>{drill.summary ? <span className="small-note"> {drill.summary}</span> : null}</> : <span className="badge badge-neutral">never run</span>} · <a href="/admin/system-health/restore-guide">How to restore</a></span>
+        <span><b>Data retention:</b> <a href="/admin/privacy-retention">settings</a></span>
+      </div>
 
       {result && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 14 }}>
