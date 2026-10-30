@@ -4,7 +4,7 @@
 
 ### Prompt 10 — taken by Irfan, 2026-10-30 (next; three builds)
 
-- **Build A** — 1 Topic Workspace fixes (lecture numbers, which version opens / followers open the base, topic panel follows clicks, proposals by intent + redesigned view, book chapters per topic) · 2 Course Repositioning layout · 3 Reset this semester's offering (snapshot, restore within 7 days) — taken by Irfan, 2026-10-30
+- **Build A — built 2026-10-30** (migration `prisma/migration_prompt10a.sql`): Topic Workspace lecture numbers L1…, picker by course with versions (latest base plan first, other plans, teaching copies that changed topics), follower courses read-only with "Open the base course instead", topic panel follows clicks, proposals recorded by intent (MERGE / SPLIT / MOVE / ADD / REMOVE / RENAME / REORDER / IMPORTANCE / LINK) with a side-by-side colour-coded view, summary bar, legend and filter, book chapters per topic (AI or pasted contents); Course Repositioning S1–S8 column and two-line titles; Reset this semester's offering (current term only, typed confirmation, refused after approved results, 7-day restore, audit log). Tests: `tests/prompt10a.test.ts`, `tests/e2e/prompt10a.spec.ts`.
 - **Build B** — 4 Course Catalog (Computing, Management Sciences, Engineering) · 5 Counselling time pickers · 6 Teacher calendar & appointments · 9 Best / average / worst student samples — taken by Irfan, 2026-10-30
 - **Build C** — 7 FDP / training · 8 AI checks (exam papers, SE plan) · 10 Visiting faculty, biometric attendance, pay — taken by Irfan, 2026-10-30
 

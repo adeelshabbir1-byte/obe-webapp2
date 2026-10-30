@@ -15,7 +15,7 @@ type Row = {
   links: number; paperItems: number; midterm: boolean; pinned: boolean; importance: Level | null; confirmed: boolean; prefill: Level;
   suggestion: { level: Level; why: string; confidence: string }; safety: { mark: string; reason: string };
   dependents: Dep[]; needs: Dep[]; overlaps: { code: string; topic: string; verdict: string }[];
-  industry: string | null; reading: string | null; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
+  industry: string | null; reading: string | null; readingAuto: boolean; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
   inCouncil: boolean; gaOnly: number[]; comments: number; difficulty: number; bank: number;
 };
 type Column = {
@@ -185,6 +185,16 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
       dst.splice(Math.max(0, Math.min(i, dst.length)), 0, from.courseId === toCourse ? moving : { ...moving, fromCourseId: copy ? null : (colOf(from.courseId)?.planCourseId || null) });
       return { ...w, [from.courseId]: from.courseId === toCourse ? dst : src, ...(from.courseId === toCourse ? {} : { [toCourse]: dst }) };
     });
+  };
+  // Book chapters per topic: the system maps them; without the book's contents it asks for them once.
+  const [tocAsk, setTocAsk] = useState<{ col: Column; book: string } | null>(null);
+  const mapReadings = async (c: Column, toc?: string) => {
+    const r = await jsend(`${API}/readings`, "POST", { courseId: c.courseId, plan: c.plan, toc });
+    if (r.d.needToc) { setTocAsk({ col: c, book: r.d.book }); return; }
+    if (!r.ok) { setMsg({ kind: "err", text: r.d.error || "Could not map the readings." }); return; }
+    setTocAsk(null);
+    setMsg({ kind: r.d.unmatched?.length ? "info" : "ok", text: `${c.code}: ${r.d.filled} topic(s) mapped to ${r.d.book}${r.d.source === "AI" ? " (contents from the AI model — check the pages)" : ""}${r.d.kept ? `; ${r.d.kept} reading(s) you typed kept` : ""}${r.d.unmatched?.length ? `; no match for ${r.d.unmatched.length}: ${r.d.unmatched.slice(0, 4).join(", ")}${r.d.unmatched.length > 4 ? "…" : ""}` : ""}.` });
+    load(open, true);
   };
   const roCol = (c?: Column | null) => !!c && (c.mode === "FOLLOWER" || c.mode === "VIEW");
   const setLevel = (keys: { courseId: string; key: string }[], level: Level) => {
@@ -453,6 +463,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                       <option value="">Open the chain…</option><option value="down">Open the courses that need it</option><option value="up">Open what it needs</option><option value="both">Open the whole chain</option>
                     </select>
                     <a className="tw-link" href={`${API}/pdf?courseId=${c.courseId}&plan=${c.plan}`} target="_blank" rel="noreferrer">PDF</a>
+                    {c.mode === "APPLY" && c.textbook && !readOnly && <button type="button" className="tw-linkbtn" style={{ padding: 0 }} title={`Map each topic to a chapter of ${c.textbook}`} onClick={() => mapReadings(c)}>📖 Map readings</button>}
                   </div>
                   {n > 0 && <div className="tw-changed">{n} unsaved change{n === 1 ? "" : "s"}</div>}
                 </>}
@@ -489,6 +500,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                             {r?.notTaught && <span className="tw-flag">planned, not taught</span>}
                             {r && r.comments > 0 && <span>💬 {r.comments}</span>}
                             {r?.inCouncil && <span title="In the council (curriculum) outline">council</span>}
+                            {r?.reading ? <span title={r.readingAuto ? "Filled in from the book’s contents — check it" : "Reading"}>📖 {r.reading}{r.readingAuto ? " ·auto" : ""}</span> : r && c.textbook && !r.notTaught && <span className="tw-flag" title={`No chapter of ${c.textbook} matched`}>no reading</span>}
                           </div>
                         </div>
                         {!readOnly && !roCol(c) && <span className="tw-handle" draggable title="Drag onto a topic of another course to link them" onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData("application/x-topic-link", `${c.courseId}::${k.key}`); e.dataTransfer.effectAllowed = "link"; }}>⟶</span>}
@@ -544,6 +556,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
       {sugOpen && <SuggestionsPanel sugs={sugs} importance={importanceSugs.map((x) => ({ key: `${x.col.courseId}::${x.card.key}`, code: x.col.code, topic: x.card.topic, level: x.s.level, why: x.s.why, confidence: x.s.confidence }))} role={role}
         onClose={() => setSugOpen(false)} onAccept={acceptSug} onReject={rejectSug}
         onImportance={(keys, lv) => setLevel(keys.map((k) => { const [courseId, key] = k.split("::"); return { courseId, key }; }), lv)} />}
+      {tocAsk && <Modal title={`Contents of ${tocAsk.book}`} onClose={() => setTocAsk(null)}><TocPaste onSend={(t) => mapReadings(tocAsk.col, t)} /></Modal>}
       {short && <Modal title="I'm short of time" onClose={() => setShort(null)}><ShortOfTime courseId={short} columns={columns.filter((c) => c.ownTeaching)} onDone={(t) => { setShort(null); setMsg({ kind: "ok", text: t }); }} /></Modal>}
     </div>
   );
@@ -560,6 +573,17 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         <div className="tw-modal-head"><b>{title}</b><button className="tw-x" onClick={onClose} aria-label="Close">×</button></div>
         {children}
       </div>
+    </div>
+  );
+}
+
+function TocPaste({ onSend }: { onSend: (t: string) => void }) {
+  const [t, setT] = useState("");
+  return (
+    <div>
+      <p className="small-note">Paste the book&apos;s table of contents once (it is kept for every course using this book): one chapter or section per line with its pages, e.g. <code>4.2 Linked Lists 112-130</code>.</p>
+      <textarea rows={10} value={t} onChange={(e) => setT(e.target.value)} style={{ width: "100%", fontFamily: "monospace", fontSize: 12.5 }} aria-label="Table of contents" />
+      <button className="btn btn-sm" disabled={!t.trim()} onClick={() => onSend(t)}>Map the topics</button>
     </div>
   );
 }

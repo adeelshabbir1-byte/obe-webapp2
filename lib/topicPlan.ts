@@ -171,7 +171,7 @@ export type ColumnRow = {
   safety: { mark: string; reason: string };
   dependents: { code: string; topic: string; strength: string }[]; needs: { code: string; topic: string; strength: string }[];
   overlaps: { code: string; topic: string; verdict: string }[];
-  industry: string | null; reading: string | null; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
+  industry: string | null; reading: string | null; readingAuto: boolean; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
   inCouncil: boolean; gaOnly: number[]; comments: number; difficulty: number; bank: number;
 };
 
@@ -254,7 +254,7 @@ export async function columnData(a: Access) {
       id: r.id, topic: r.topic, subtopic: r.subtopic, week: r.week, lectureNumber: r.lectureNumber, cloId: r.cloId, clo: r.clo?.code || null, bloom: r.bloomLevel,
       links: r._count.instrumentLinks, paperItems: r.paperDistributionItems.length, midterm: r.paperDistributionItems.some((x) => x.examType === "Midterm"), pinned: r._count.attendanceRecords > 0,
       importance: level, confirmed: !!mm.importanceConfirmed, prefill, suggestion: suggestImportance(facts), safety,
-      dependents, needs, overlaps: ov, industry: mm.industry || null, reading: mm.reading || null, needsClo: !!mm.needsClo, cloSuggestion, movedFrom: mm.movedFrom || null, notTaught: !!mm.notTaught,
+      dependents, needs, overlaps: ov, industry: mm.industry || null, reading: mm.reading || null, readingAuto: !!mm.readingAuto, needsClo: !!mm.needsClo, cloSuggestion, movedFrom: mm.movedFrom || null, notTaught: !!mm.notTaught,
       inCouncil: facts.inCouncil!, gaOnly: p && (ploRows.get(p) || []).length === 1 ? [p] : [],
       comments: commentsOf.get(topicKey(r.topic)) || 0, difficulty: votesOf.get(topicKey(r.topic)) || 0,
       bank: bank.filter((b) => norm(b.text).includes(norm(r.topic)) || similarity(b.text, r.topic) >= 0.25).length,
@@ -744,7 +744,13 @@ export async function proposalsFor(user: Who) {
         id: p.id, course: c ? `${c.code} — ${c.title}` : "", courseId: p.courseId, kind: p.kind, status: p.status, note: p.note, reason: p.reason, from: people.get(p.fromUserId) || "", to: people.get(p.toUserId || "") || "",
         createdAt: p.createdAt, approved: c?.templateStatus === "approved", template: p.templateRequestId,
         before: JSON.parse(p.beforeJson || "[]") as Row[], after: JSON.parse(p.afterJson || "[]") as Entry[],
-        items: items.filter((i) => i.proposalId === p.id).map((i) => ({ id: i.id, kind: i.kind, status: i.status, reason: i.reason, lectureRowId: i.lectureRowId, line: itemLine(toItem(i), (cid) => courses.get(cid)?.code || "another course"), linked: i.linkKey ? linkState.get(i.linkKey) || "" : "" })),
+        items: items.filter((i) => i.proposalId === p.id).map((i) => {
+          const d = JSON.parse(i.detailJson || "{}") as Record<string, unknown>;
+          // Course codes for moves, so the view can say "← CS-205" / "→ CS-101".
+          if (d.fromCourseId) d.fromCode = courses.get(String(d.fromCourseId))?.code || "";
+          if (d.toCourseId) d.toCode = d.toCode || courses.get(String(d.toCourseId))?.code || "";
+          return { id: i.id, kind: i.kind, status: i.status, reason: i.reason, lectureRowId: i.lectureRowId, topic: i.topic, detail: d, line: itemLine(toItem(i), (cid) => courses.get(cid)?.code || "another course"), linked: i.linkKey ? linkState.get(i.linkKey) || "" : "" };
+        }),
         days: Math.floor((Date.now() - +new Date(p.createdAt)) / 864e5),
       };
     };

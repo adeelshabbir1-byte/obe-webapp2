@@ -17,7 +17,7 @@ async function PATCH_handler(req: NextRequest) {
   if (!row || row.courseId !== a.planCourseId || row.source !== a.plan) return NextResponse.json({ error: "That topic is not in this plan." }, { status: 404 });
   const data: Record<string, unknown> = {};
   if ("industry" in b) data.industry = ["HIGH", "MEDIUM", "LOW"].includes(b.industry) ? b.industry : null;
-  if ("reading" in b) data.reading = typeof b.reading === "string" ? b.reading.trim().slice(0, 300) || null : null;
+  if ("reading" in b) { data.reading = typeof b.reading === "string" ? b.reading.trim().slice(0, 300) || null : null; data.readingAuto = false; } // typed by a person: kept when readings are mapped again
   if ("cloId" in b) {
     const clo = b.cloId ? await prisma.cLO.findFirst({ where: { id: String(b.cloId), courseId: a.planCourseId, source: a.plan } }) : null;
     if (b.cloId && !clo) return NextResponse.json({ error: "That CLO is not in this plan." }, { status: 400 });

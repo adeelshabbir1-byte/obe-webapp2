@@ -14,8 +14,23 @@ export const RESET_HINT = "Semester reset needs prisma/migration_prompt10a.sql â
 
 type Scope = { coordinatorIds: string[]; label: string };
 
+/** This term's offering only: offered courses of each program's current term (else its latest offered term). */
+async function termFilter(coordinatorIds: string[]) {
+  const terms = await prisma.currentTerm.findMany({ where: { coordinatorId: { in: coordinatorIds.concat("none") } }, select: { coordinatorId: true, termName: true, year: true } });
+  const ors: Record<string, unknown>[] = [];
+  for (const id of coordinatorIds) {
+    let t = terms.find((x) => x.coordinatorId === id) as { termName: string; year: number } | undefined;
+    if (!t) {
+      const latest = await prisma.course.findFirst({ where: { coordinatorId: id, isOffered: true, offeredTermYear: { not: null } }, orderBy: [{ offeredTermYear: "desc" }, { offeredTermName: "asc" }], select: { offeredTermName: true, offeredTermYear: true } });
+      if (latest?.offeredTermName && latest.offeredTermYear) t = { termName: latest.offeredTermName, year: latest.offeredTermYear };
+    }
+    ors.push(t ? { coordinatorId: id, offeredTermName: t.termName, offeredTermYear: t.year } : { coordinatorId: id });
+  }
+  return ors.length ? { OR: ors } : { coordinatorId: "none" };
+}
+
 async function scopeData(scope: Scope) {
-  const courses = await prisma.course.findMany({ where: { coordinatorId: { in: scope.coordinatorIds.concat("none") }, isOffered: true }, select: { id: true, code: true, title: true, offeredTermName: true, offeredTermYear: true, batch: { select: { batchName: true } } } });
+  const courses = await prisma.course.findMany({ where: { ...(await termFilter(scope.coordinatorIds)), isOffered: true }, select: { id: true, code: true, title: true, offeredTermName: true, offeredTermYear: true, batch: { select: { batchName: true } } } });
   const ids = courses.map((c) => c.id).concat("none");
   const groupIds = (await prisma.courseEquivalenceMember.findMany({ where: { courseId: { in: ids } }, select: { groupId: true } })).map((g) => g.groupId);
   const sections = await prisma.scheduleSection.findMany({ where: { OR: [{ courseId: { in: ids } }, { groupId: { in: groupIds.concat("none") } }] } });
