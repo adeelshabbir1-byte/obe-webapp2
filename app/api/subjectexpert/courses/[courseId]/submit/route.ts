@@ -33,6 +33,14 @@ async function POST_handler(req: Request, { params }: { params: { courseId: stri
     }, { status: 400 });
   }
 
+  // CLO mapping rules: every item mapped (or "Not for CLO" with a reason), splits adding to 100, every CLO assessed
+  // (theory CLOs by a mid / final question, lab CLOs by a lab item), a lab CLO when the course has a lab, method-3
+  // weights adding to 100 within the limits, no lab row ahead of its theory without a reason.
+  const cloCheck = await import("../../../../../../lib/cloMethods").then((m) => m.planCheck(course.id, "SE")).catch(() => null);
+  if (cloCheck?.blocking.length) {
+    return NextResponse.json({ error: `Fix the CLO mapping first (CLO Mapping & Method tab): ${cloCheck.blocking.slice(0, 4).join(" · ")}${cloCheck.blocking.length > 4 ? ` · and ${cloCheck.blocking.length - 4} more` : ""}` }, { status: 400 });
+  }
+
   // The OMC's coverage rules: every PLO the course serves needs enough marks and enough assessment items.
   const coverage = await ploCoverageShortfalls(course.id, "SE");
   if (coverage.short.length > 0) {

@@ -8868,3 +8868,190 @@ model CatalogSetting {
   updatedById  String?
   updatedAt    DateTime @default(now())
 }
+
+// ---------------------------------------------------------------- CLO attainment methods (migration_clo_methods.sql)
+model CloMethodSetting {
+  id           String   @id
+  chairmanId   String
+  program      String   @default("") // "" = the institute's default
+  method       String   @default("GRADE") // SUM | ITEMS | WEIGHTS | GRADE
+  passPct      Float    @default(50)
+  itemsPct     Float    @default(50)
+  targetPct    Float    @default(60)
+  levelsJson   String   @default("{\"excellent\":80,\"good\":60,\"satisfactory\":50}")
+  faultyAvgPct Float    @default(40)
+  labSharePct  Float    @default(20)
+  labPassOn    Boolean  @default(false)
+  labPassPct   Float    @default(50)
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+
+  @@unique([chairmanId, program], map: "CloMethodSetting_scope_key")
+}
+
+model CourseCloRequest {
+  id            String    @id
+  courseId      String
+  kind          String // METHOD | LAB_SHARE
+  valueJson     String
+  reason        String
+  status        String    @default("PENDING")
+  requestedById String
+  votesJson     String    @default("[]")
+  decidedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([courseId, kind], map: "CourseCloRequest_course_idx")
+}
+
+model CloItemMap {
+  instrumentId    String    @id
+  courseId        String
+  source          String
+  splitsJson      String?
+  weightsJson     String?
+  typeKey         String?
+  part            String?
+  notForClo       Boolean   @default(false)
+  notForCloReason String?
+  excluded        Boolean   @default(false)
+  excludedReason  String?
+  faulty          Boolean   @default(false)
+  faultyReason    String?
+  faultyNoGrade   Boolean   @default(false)
+  faultyById      String?
+  faultyAt        DateTime?
+  updatedById     String?
+  updatedAt       DateTime  @default(now())
+
+  @@index([courseId, source], map: "CloItemMap_course_idx")
+}
+
+model CloPart {
+  cloId    String @id
+  courseId String
+  part     String @default("THEORY")
+
+  @@index([courseId], map: "CloPart_course_idx")
+}
+
+model CloTermLock {
+  id                 String    @id
+  courseId           String
+  termName           String
+  termYear           Int
+  settingsJson       String
+  resultJson         String
+  recalcSettingsJson String?
+  recalcResultJson   String?
+  lockedAt           DateTime  @default(now())
+  recalculatedAt     DateTime?
+  recalculatedById   String?
+
+  @@unique([courseId, termName, termYear], map: "CloTermLock_term_key")
+}
+
+model AssessmentTypeDef {
+  id               String  @id
+  chairmanId       String
+  key              String
+  name             String
+  family           String
+  part             String  @default("BOTH")
+  marking          String  @default("MARKS")
+  groupWork        Boolean @default(false)
+  defaultNotForClo Boolean @default(false)
+  evidence         String  @default("paper")
+  graded           Boolean @default(true)
+  ccp              Boolean @default(false)
+  retired          Boolean @default(false)
+  sort             Int     @default(0)
+
+  @@unique([chairmanId, key], map: "AssessmentTypeDef_key")
+}
+
+model WarnSetting {
+  id          String   @id
+  chairmanId  String
+  scope       String // DEPT:<departmentId or "">  |  PROGRAM:<coordinatorId>|<degreeProgram>
+  valuesJson  String   @default("{}")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, scope], map: "WarnSetting_scope_key")
+}
+
+model SettingChange {
+  id         String   @id
+  chairmanId String
+  area       String
+  scope      String
+  field      String
+  oldValue   String?
+  newValue   String?
+  byUserId   String
+  at         DateTime @default(now())
+
+  @@index([chairmanId, area, at], map: "SettingChange_idx")
+}
+
+model ItemWarning {
+  id            String    @id
+  courseId      String
+  instrumentId  String    @unique(map: "ItemWarning_item_key")
+  level         String
+  belowPct      Float
+  sat           Int
+  below         Int
+  topic         String?
+  diagnosis     String?
+  toJson        String    @default("[]")
+  ccJson        String    @default("[]")
+  stage         String    @default("TEACHER")
+  raisedAt      DateTime  @default(now())
+  respondedAt   DateTime?
+  respondedById String?
+  actionsJson   String    @default("[]")
+  note          String?
+  cqiRecordId   String?
+  effectJson    String?
+
+  @@index([courseId], map: "ItemWarning_course_idx")
+}
+
+model MarksDeadline {
+  instrumentId String    @id
+  courseId     String
+  heldOn       DateTime
+  dueOn        DateTime
+  enteredAt    DateTime?
+  late         Boolean   @default(false)
+  remindedJson String    @default("[]")
+  escalatedAt  DateTime?
+  unlockedById String?
+  unlockReason String?
+  updatedAt    DateTime  @default(now())
+
+  @@index([courseId], map: "MarksDeadline_course_idx")
+}
+
+model LabRowMeta {
+  labCourseId String
+  labNumber   Int
+  hours       Float   @default(3)
+  cloId       String?
+  tools       String?
+  deliverable String?
+  labOnly     Boolean @default(false)
+  kind        String  @default("TASK")
+  aheadReason String?
+  bestOf      String?
+
+  @@id([labCourseId, labNumber])
+}
+
+model TopicPractice {
+  lectureRowId  String  @id
+  courseId      String
+  needsPractice Boolean @default(true)
+}

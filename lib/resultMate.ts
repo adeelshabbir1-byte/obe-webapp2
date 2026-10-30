@@ -22,6 +22,9 @@ export async function computeResultMate(courseId: string) {
   }
 
   const marks = await prisma.studentMark.findMany({ where: { courseId } });
+  // An item the OMC marked faulty and left out of the grade: the grade is worked out on the remaining marks.
+  const noGrade = new Set(((await (prisma as unknown as Record<string, any>).cloItemMap.findMany({ where: { courseId, faultyNoGrade: true }, select: { instrumentId: true } }).catch(() => [])) as { instrumentId: string }[]).map((x) => x.instrumentId));
+  const noGradePct = instruments.filter((i) => noGrade.has(i.id)).reduce((a, i) => a + i.marksPct, 0);
   const marksByStudentInstrument = new Map<string, number>();
   for (const m of marks) marksByStudentInstrument.set(`${m.studentId}:${m.instrumentId}`, m.score);
 
@@ -51,7 +54,7 @@ export async function computeResultMate(courseId: string) {
       const raw = marksByStudentInstrument.get(`${e.studentId}:${inst.id}`);
       if (raw === undefined) continue;
       const weighted = (raw / inst.maxScore) * inst.marksPct;
-      (weightedByType[inst.type] ||= []).push(weighted);
+      if (!noGrade.has(inst.id)) (weightedByType[inst.type] ||= []).push(weighted);
 
       const cloId = instrumentToClo.get(inst.id);
       const clo = clos.find((c) => c.id === cloId);
@@ -68,6 +71,7 @@ export async function computeResultMate(courseId: string) {
     for (const type of Object.keys(weightedByType)) {
       totalPct += topKSum(weightedByType[type], bestOfByType[type]);
     }
+    if (noGradePct > 0 && noGradePct < 100) totalPct = (totalPct * 100) / (100 - noGradePct);
 
     const round1 = (n: number) => Math.round(n * 10) / 10;
     const rawScores: Record<string, number | null> = {};
@@ -95,8 +99,18 @@ export async function computeResultMate(courseId: string) {
   // An approved grade change (after the result was approved) overrides the computed grade for that student.
   const { approvedGradeOverrides } = await import("./resultApproval");
   const overrides = await approvedGradeOverrides(courseId);
+  const labRule = await import("./cloMethods").then((m) => m.courseSettings(courseId)).then((s) => (s.labPassOn ? { on: true, minPct: s.labPassPct } : null)).catch(() => null);
+  const labIds = new Set(instruments.filter((i) => /lab/i.test(i.type)).map((i) => i.id));
+  const labMax = instruments.filter((i) => labIds.has(i.id)).reduce((a, i) => a + i.marksPct, 0);
+  const labPartPct = (r: (typeof rows)[number]) => {
+    if (!labMax) return null;
+    let got = 0;
+    for (const i of instruments) if (labIds.has(i.id)) { const s = r.rawScores[i.id]; if (s !== null && s !== undefined) got += (s / i.maxScore) * i.marksPct; }
+    return (100 * got) / labMax;
+  };
   const graded = rows.map((r) => {
-    const computedGrade = gradeFor(r.totalPct);
+    const lp = labRule && labMax ? labPartPct(r) : null;
+    const computedGrade = labRule && labMax && (lp === null || lp < labRule.minPct - 1e-9) ? "F" : gradeFor(r.totalPct);
     const o = overrides.get(r.studentId);
     return { ...r, grade: o ? o.grade : computedGrade, computedGrade, gradeChanged: !!o && o.grade !== computedGrade };
   }).sort((a, b) => b.totalPct - a.totalPct);
@@ -179,11 +193,16 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
     }
   }
 
+  // CLO results follow the OMC's chosen method (and the term's locked method once results are approved):
+  // absent (blank) items are left out, "Not assessed" students are not counted, faulty / excluded items left out.
+  const byMethod = await import("./cloMethods").then((m) => m.courseCloResults(courseId)).catch(() => null);
   const cloStats = result.cloCodes.map((code) => {
     const max = cloMaxWeight[code] || 0;
+    const m = byMethod?.clos.find((x) => x.clo.code === code);
+    if (m) return { code, maxWeight: round1(max), passCount: m.cleared, failCount: m.assessed - m.cleared, assessed: m.assessed, notAssessed: m.notAssessed, clearedPct: m.clearedPct, achieved: m.achieved as boolean | null, levels: m.levels as Record<string, number> | null };
     const threshold = max * (c.cloPct / 100);
     const passCount = max > 0 ? result.rows.filter((r) => (r.byClo[code] || 0) >= threshold).length : 0;
-    return { code, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount };
+    return { code, maxWeight: round1(max), passCount, failCount: result.rows.length - passCount, assessed: result.rows.length, notAssessed: 0, clearedPct: result.rows.length ? round1((100 * passCount) / result.rows.length) : 0, achieved: null as boolean | null, levels: null as Record<string, number> | null };
   });
 
   const ploStats = result.ploLabels.map((label) => {
@@ -200,7 +219,7 @@ export async function computeCloPloPassRates(courseId: string, criteria?: { cloP
     if (idx >= 0) buckets[idx].count++;
   }
 
-  return { cloStats, ploStats, histogram: buckets, studentCount: result.rows.length };
+  return { cloStats, ploStats, histogram: buckets, studentCount: result.rows.length, method: byMethod ? { key: byMethod.method, label: byMethod.methodLabel, targetPct: byMethod.settings.targetPct, locked: byMethod.locked, leftOut: byMethod.leftOut } : null };
 }
 
 /** Suggests re-weighting the instruments within a CLO — shifting weight

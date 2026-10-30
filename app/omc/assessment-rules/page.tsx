@@ -36,6 +36,7 @@ export default async function AssessmentRulesPage() {
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Assessment Rules</h1>
+      <p style={{ margin: "0 0 6px" }}><a href="/omc/clo-attainment" className="btn btn-secondary btn-sm">CLO attainment method, faulty items, assessment types, warnings →</a></p>
       <p className="small-note" style={{ maxWidth: 900 }}>Limits on how much each type of assessment may count — for the course total or for each CLO&apos;s marks (e.g. &quot;Quiz + Assignment at most 25% of each CLO&quot;, &quot;Final at least 40%&quot;). A plan outside a rule can still be saved, but it needs the OMC&apos;s or the HOD&apos;s approval; the course expert and the teacher see this on their assessment plan.</p>
       <div className="card" style={{ overflowX: "auto" }}>
         <b>Rules</b>

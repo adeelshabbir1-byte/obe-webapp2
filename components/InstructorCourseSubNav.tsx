@@ -24,6 +24,7 @@ export default function InstructorCourseSubNav({ courseId, active, code, title }
     { key: "submissions", label: "Submissions", href: `/instructor/courses/${courseId}/submissions` },
     { key: "review", label: "Course Review", href: `/instructor/courses/${courseId}/review` },
     { key: "samples", label: "Work Samples", href: `/instructor/courses/${courseId}/samples` },
+    { key: "clo-attainment", label: "CLO Attainment & Warnings", href: `/courses/${courseId}/clo-attainment?source=INSTRUCTOR` },
   ];
 
   return (

@@ -96,7 +96,7 @@ export async function courseChain(courseId: string, forceSource?: "SE" | "INSTRU
     const { computeCloPloPassRates, computeResultMate } = await import("./resultMate");
     const [r, mate] = await Promise.all([computeCloPloPassRates(courseId, criteria).catch(() => null), computeResultMate(courseId).catch(() => null)]);
     if (r && r.studentCount) for (const s of r.cloStats) if (s.maxWeight > 0) {
-      cloPassPct.set(s.code, Math.round((1000 * s.passCount) / r.studentCount) / 10);
+      cloPassPct.set(s.code, Math.round((1000 * s.passCount) / Math.max(1, s.assessed ?? r.studentCount)) / 10);
       if (mate?.rows.length) cloAvg.set(s.code, Math.round((1000 * mate.rows.reduce((t, row) => t + (row.byClo[s.code] || 0), 0)) / mate.rows.length / s.maxWeight) / 10);
     }
   }

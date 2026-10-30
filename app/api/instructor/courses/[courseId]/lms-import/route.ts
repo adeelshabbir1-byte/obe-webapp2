@@ -36,6 +36,7 @@ async function POST_handler(req: NextRequest, { params }: { params: { courseId: 
       const inst = iOf.get(m.instrumentId); if (!inst) continue;
       const raw = String(r.scores?.[m.col] ?? "").trim().replace(/%$/, "");
       if (raw === "" || raw === "-") continue;
+      if (/^(a|abs|absent)$/i.test(raw)) { if (b.overwrite || !existing.has(`${sid}|${inst.id}`)) ops.push(prisma.studentMark.deleteMany({ where: { studentId: sid, instrumentId: inst.id } }) as never); continue; }
       const v = Number(raw), outOf = Number(m.outOf) > 0 ? Number(m.outOf) : inst.maxScore;
       if (!Number.isFinite(v)) continue;
       if (!b.overwrite && existing.has(`${sid}|${inst.id}`)) { skipped++; continue; }

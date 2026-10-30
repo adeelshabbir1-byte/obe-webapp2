@@ -16,6 +16,7 @@ export default function CourseSubNav({ courseId, active, code, title, status }: 
     { key: "paper-distribution", label: "5. Paper Distribution", href: `/subjectexpert/courses/${courseId}/paper-distribution` },
     { key: "delivery", label: "6. Delivery Feedback", href: `/subjectexpert/courses/${courseId}/delivery` },
     { key: "flow", label: "Flow & Weights", href: `/subjectexpert/courses/${courseId}/flow` },
+    { key: "clo-attainment", label: "CLO Mapping & Method", href: `/courses/${courseId}/clo-attainment?source=SE` },
   ];
   return (
     <div style={{ marginBottom: 20 }}>

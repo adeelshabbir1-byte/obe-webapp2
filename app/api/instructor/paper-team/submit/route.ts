@@ -23,6 +23,7 @@ async function POST_handler(req: NextRequest) {
 
   const items = await prisma.paperDistributionItem.count({ where: { courseId: row.courseId, source: "INSTRUCTOR", examType } });
   if (items === 0) return NextResponse.json({ error: `Set up the ${examType} paper first (Paper Distribution) - there are no questions yet.` }, { status: 400 });
+  { const un = await import("../../../../../lib/cloMethods").then((m) => m.unmappedQuestions(row.courseId, examType)).catch(() => []); if (un.length) return NextResponse.json({ error: `Every question must map to a CLO: ${un.join(", ")} ${un.length > 1 ? "are" : "is"} not mapped.` }, { status: 400 }); }
 
   const others = team.teachers.filter((t) => t.id !== user.id);
   const existing = await prisma.paperSubmission.findUnique({ where: { chairmanId_teamKey_examType: { chairmanId, teamKey: team.key, examType } } });

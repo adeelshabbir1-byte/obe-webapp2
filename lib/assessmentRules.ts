@@ -48,6 +48,11 @@ export async function courseBreaches(courseId: string, source: "SE" | "INSTRUCTO
   for (const l of links) if (l.lectureRow.cloId && !toClo.has(l.instrumentId)) toClo.set(l.instrumentId, l.lectureRow.cloId);
   const clos = await prisma.cLO.findMany({ where: { courseId, source }, select: { id: true, code: true } });
   const approvals = await approvalsOf(courseId, source);
+  const byMethod = await (async () => {
+    const m = await import("./cloMethods"); const core = await import("./cloMethodCore");
+    const [{ items: ci }, s] = await Promise.all([m.courseItems(courseId, source), m.courseSettings(courseId)]);
+    return { shares: new Map(clos.map((c) => [c.id, core.cloTypeShares(s.method, ci, c.id)])) };
+  })().catch(() => null);
   const out: Breach[] = [];
   const check = (r: Rule, scope: string, value: number) => {
     const lo = r.minPct !== null && value < r.minPct - 1e-6, hi = r.maxPct !== null && value > r.maxPct + 1e-6;
@@ -60,6 +65,10 @@ export async function courseBreaches(courseId: string, source: "SE" | "INSTRUCTO
     const inGroup = (t: string) => r.types.map(norm).includes(norm(t));
     if (r.level === "COURSE") check(r, "Course total", total ? (100 * items.filter((i) => inGroup(i.type)).reduce((a, i) => a + i.marksPct, 0)) / total : 0);
     else for (const c of clos) {
+      // Each item type's share of the CLO under the course's CLO method (weights, grade shares or marks; splits,
+      // Not for CLO, excluded and faulty items taken into account).
+      const sh = byMethod?.shares.get(c.id);
+      if (sh) { if (sh.total) check(r, c.code, Object.entries(sh.byType).filter(([t]) => inGroup(t)).reduce((a, [, x]) => a + x, 0)); continue; }
       const mine = items.filter((i) => toClo.get(i.id) === c.id);
       const w = mine.reduce((a, i) => a + i.marksPct, 0);
       if (!w) continue;

@@ -171,6 +171,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "ploContributionPct"
 },
 {
+"f": "migration_clo_methods.sql",
+"d": "CLO attainment methods chosen by the OMC, item mapping (splits, Not for CLO, excluded, faulty, method-3 weights),",
+"t": "TopicPractice"
+},
+{
 "f": "migration_clo_ordering.sql",
 "d": "Run in Supabase SQL Editor. Adds CLO.orderIndex, and backfills it for any",
 "t": "CLO",

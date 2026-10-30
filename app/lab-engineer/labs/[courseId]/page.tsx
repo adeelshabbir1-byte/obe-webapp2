@@ -7,6 +7,7 @@ import Shell from "../../../../components/Shell";
 import { navForRole } from "../../../../components/reportNav";
 import LabWorkspace from "../../../../components/LabWorkspace";
 import LabPlanPanel from "../../../../components/LabPlanPanel";
+import LabSyncExtras from "../../../../components/LabSyncExtras";
 import { checkLabSync, labFiles, labTasks, syncIssues, theoryLectures } from "../../../../lib/labPlan";
 import LabSessionsEditor from "../../../../components/LabSessionsEditor";
 import { labSessions, labCloOptions } from "../../../../lib/labSessions";
@@ -37,6 +38,7 @@ export default async function LabDetail({ params }: { params: { courseId: string
       <LabTheoryPanel labCourseId={access.lab.id} theoryCode={access.theory?.code || null} as={access.as} canSet={access.as === "LEAD"} status={{ sessions: st.sessions, manualsApproved: st.manualsApproved, manualsWaiting: st.manualsWaiting, manualsMissing: st.manualsMissing, held: st.held, marks: st.marks, attendance: st.attendance, issues: st.issues.length, badIssues: st.issues.filter((i) => i.level === "bad").length }} setting={{ intoTheory: st.setting.intoTheory, weightPct: st.setting.weightPct, approvedAt: st.setting.approvedAt ? new Date(st.setting.approvedAt).toISOString() : null, approvedBy: approver?.name || null, changeRequest: st.setting.changeRequest, ready: st.setting.ready }} />
       <LabSessionsEditor labCourseId={access.lab.id} sessions={await labSessions(access.lab.id)} clos={(await labCloOptions(access.lab.id, access.theory?.id || null)).map((c) => ({ id: c.id, code: c.code }))} template={templateCriteria("Lab")} />
       <LabPlanPanel labCourseId={access.lab.id} as={access.as} theoryCode={access.theory?.code || null} lectures={lectures} tasks={tasks} files={files as never} issues={syncIssues(tasks, lectures, !!access.theory)} />
+      <LabSyncExtras labCourseId={access.lab.id} theoryId={access.theory?.id || null} canEdit={true} />
       <LabWorkspace hideManuals courseId={access.lab.id} as={access.as} theoryCode={access.theory?.code || null} {...data} />
     </Shell>
   );
