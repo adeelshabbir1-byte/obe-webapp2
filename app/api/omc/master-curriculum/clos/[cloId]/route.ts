@@ -22,6 +22,7 @@ async function PUT_handler(req: NextRequest, { params }: { params: { cloId: stri
 
   const body = await req.json();
   const { statement, bloomLevel, orderIndex } = body;
+  { const why = await (await import("../../../../../../lib/goldenCopy")).guardClo(params.cloId, { statement }); if (why) return NextResponse.json({ error: why }, { status: 423 }); }
 
   await prisma.masterCourseClo.update({
     where: { id: params.cloId },
@@ -43,6 +44,7 @@ async function DELETE_handler(req: NextRequest, { params }: { params: { cloId: s
   const owned = await requireOwnedClo(params.cloId, user.managedById);
   if ("error" in owned) return NextResponse.json({ error: owned.error }, { status: owned.status });
 
+  { const why = await (await import("../../../../../../lib/goldenCopy")).guardClo(params.cloId, { remove: true }); if (why) return NextResponse.json({ error: why }, { status: 423 }); }
   await prisma.masterCourseClo.delete({ where: { id: params.cloId } });
   await writeAuditLog({ actorUserId: user.id, action: "MASTER_COURSE_CLO_DELETED", entityType: "MasterCourseClo", entityId: params.cloId });
 

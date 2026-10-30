@@ -9254,3 +9254,42 @@ model CategoryMap {
 
   @@id([curriculumId, fromName])
 }
+
+// ---------------------------------------------------------------- Hybrid synthesis & Golden Copy guardrails (migration_synthesis.sql)
+model CourseProposal {
+  id             String   @id
+  masterCourseId String
+  authorId       String
+  authorName     String
+  note           String?
+  partsJson      String
+  status         String   @default("SUBMITTED")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@index([masterCourseId], map: "CourseProposal_course_idx")
+}
+
+model MasterCourseAssessment {
+  masterCourseId String   @id
+  itemsJson      String   @default("[]")
+  updatedById    String?
+  updatedAt      DateTime @default(now())
+}
+
+model CourseSynthesis {
+  id             String   @id
+  masterCourseId String
+  byId           String
+  picksJson      String
+  at             DateTime @default(now())
+
+  @@index([masterCourseId], map: "CourseSynthesis_course_idx")
+}
+
+model CurriculumJustification {
+  curriculumId String   @id
+  text         String
+  byId         String
+  at           DateTime @default(now())
+}

@@ -11,6 +11,8 @@ import { typeOf } from "../../../lib/courseTypes";
 import { countedCredits } from "../../../lib/courseTypes";
 
 export const dynamic = "force-dynamic";
+import GoldenMeter from "../../../components/GoldenMeter";
+
 export const metadata = { title: "Curriculum" };
 
 const TABS = [["overview", "Overview"], ["semesters", "Semesters"], ["gas", "Graduate attributes"], ["used", "Who uses it"], ["versions", "Versions"]] as const;
@@ -47,6 +49,8 @@ export default async function CurriculumPage({ params, searchParams }: { params:
         {editLink && <Link href={editLink}>Edit courses, CLOs and topics</Link>}
         <a href={`/api/master-curriculum/${d.c.id}/download`}>Download</a>
       </div>
+      <p className="small-note" style={{ margin: "4px 0" }}><Link href={`/curricula/${d.c.id}/synthesis`}>Course proposals &amp; synthesis →</Link></p>
+      {d.c.chairmanId && <GoldenMeter curriculumId={d.c.id} canJustify={["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"].includes(user.role)} />}
       <div className="card" style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: 8, marginTop: 10 }}>
         {TABS.map(([k, l]) => <Link key={k} href={`/curricula/${d.c.id}?tab=${k}`} className={`btn btn-sm ${tab === k ? "" : "btn-secondary"}`}>{l}</Link>)}
       </div>
