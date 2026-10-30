@@ -10,7 +10,7 @@ const STEPS = [["types", "1  Course types"], ["place", "2  Place courses"], ["tr
 const STATUS: Record<string, [string, string]> = { DRAFT: ["Draft", "#B26A00"], SUBMITTED: ["Waiting to publish", "#1565C0"], PUBLISHED: ["Published", "#2E7D32"], SUPERSEDED: ["Superseded", "#6B7177"] };
 const UNPLACED = "__unplaced";
 
-export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[]; packs?: { key: string; label: string }[]; isSuper?: boolean; rules?: { typeName: string; passFail: boolean; onlyTrack: string | null }[] }) {
+export default function BuilderBoard(props: { gates?: { publishable: boolean; compliant: number; total: number; href: string } | null; canEdit: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; step: string; templates: Tpl[]; canPublish: boolean; older: { id: string; label: string }[]; packs?: { key: string; label: string }[]; isSuper?: boolean; rules?: { typeName: string; passFail: boolean; onlyTrack: string | null }[] }) {
   const router = useRouter();
   const [step, setStep] = useState(STEPS.some(([k]) => k === props.step) ? props.step : props.types.length ? "place" : "types");
   const [courses, setCourses] = useState(props.courses);
@@ -89,7 +89,7 @@ export default function BuilderBoard(props: { canEdit: boolean; cur: Cur; types:
       {step === "types" && <TypesStep types={props.types} templates={props.templates} post={post} busy={busy} locked={locked} onDone={() => setStep("place")} />}
       {step === "place" && <PlaceStep types={props.types} courses={courses} setCourses={setCourses} live={live} post={post} locked={locked} rules={props.rules || []} canEdit={props.canEdit} />}
       {step === "tracks" && <TracksStep types={props.types} tracks={props.tracks} courses={courses} setCourses={setCourses} post={post} locked={locked} />}
-      {step === "review" && <ReviewStep cur={props.cur} types={props.types} tracks={props.tracks} courses={courses} live={live} post={post} canPublish={props.canPublish} older={props.older} busy={busy} packs={props.packs || []} locked={locked} isSuper={!!props.isSuper} />}
+      {step === "review" && <ReviewStep cur={props.cur} types={props.types} tracks={props.tracks} courses={courses} live={live} post={post} canPublish={props.canPublish} older={props.older} busy={busy} packs={props.packs || []} locked={locked} isSuper={!!props.isSuper} gates={props.gates || null} />}
       {toast && <div role="status" className="bb-toast" style={{ background: toast.ok ? "#1E6B34" : "#B3261E" }}>{toast.text}</div>}
     </div>
   );
@@ -325,7 +325,7 @@ function TracksStep({ types, tracks, courses, setCourses, post, locked }: { type
 }
 
 // ============================================================ Step 4: review
-function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older, busy, packs, locked, isSuper }: { isSuper: boolean; packs: { key: string; label: string }[]; locked: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean }>; total: number; unplaced: BCourse[] }; post: Post; canPublish: boolean; older: { id: string; label: string }[]; busy: boolean }) {
+function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older, busy, packs, locked, isSuper, gates }: { gates: { publishable: boolean; compliant: number; total: number; href: string } | null; isSuper: boolean; packs: { key: string; label: string }[]; locked: boolean; cur: Cur; types: BType[]; tracks: BTrack[]; courses: BCourse[]; live: { per: Map<string, { cs: BCourse[]; ch: number; missing: string[]; ok: boolean }>; total: number; unplaced: BCourse[] }; post: Post; canPublish: boolean; older: { id: string; label: string }[]; busy: boolean }) {
   const [sup, setSup] = useState("");
   const listT = types.find((t) => t.kind === "ELECTIVE_LIST");
   const list = listT ? courses.filter((c) => c.category === listT.name) : [];
@@ -378,10 +378,11 @@ function ReviewStep({ cur, types, tracks, courses, live, post, canPublish, older
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 6 }}>{items.map(([l, good, d]) => <li key={l} style={{ display: "flex", gap: 10 }}><span style={{ fontWeight: 800, color: good ? "#2E7D32" : "#C62828", width: 16 }}>{good ? "✓" : "✗"}</span><span><b>{l}</b> — <span className="small-note">{d}</span></span></li>)}</ul>
       </div>
       <div className="card" style={{ margin: 0, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {cur.status === "DRAFT" && <button type="button" className="btn" disabled={busy} onClick={() => post({ action: "submit" })}>Submit for publishing</button>}
+        {gates && <span style={{ fontSize: 13 }} data-testid="gate-state">{gates.publishable ? "✅ HEC stage-gates passed" : <>🔒 HEC stage-gates not passed — {gates.compliant} of {gates.total} courses compliant. <a href={gates.href}>Open the stage-gates</a></>}</span>}
+        {cur.status === "DRAFT" && <button type="button" className="btn" disabled={busy || (!!gates && !gates.publishable)} onClick={() => post({ action: "submit" })}>Submit for publishing</button>}
         {canPublish && cur.status !== "PUBLISHED" && <>
           {older.length > 0 && <select value={sup} onChange={(e) => setSup(e.target.value)} aria-label="Version this one replaces"><option value="">Replaces no earlier version</option>{older.map((o) => <option key={o.id} value={o.id}>Replaces {o.label}</option>)}</select>}
-          <button type="button" className="btn btn-brass" disabled={busy} onClick={() => post({ action: "publish", supersede: sup || undefined })}>{ok ? "Publish" : "Publish anyway"}</button>
+          <button type="button" className="btn btn-brass" disabled={busy || (!!gates && !gates.publishable)} onClick={() => post({ action: "publish", supersede: sup || undefined })}>{gates ? "Publish Golden Copy" : ok ? "Publish" : "Publish anyway"}</button>
         </>}
         <span className="small-note">Published versions are read-only; universities import them from the Curriculum Library.</span>
       </div>

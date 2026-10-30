@@ -9207,3 +9207,50 @@ model DeptLeadProgram {
 
   @@id([chairmanId, departmentId])
 }
+
+// ---------------------------------------------------------------- HEC stage-gates (migration_stage_gates.sql)
+model CurriculumGateMeta {
+  curriculumId String   @id
+  totalCredits Int?
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+}
+
+model MasterCourseGate {
+  masterCourseId String  @id
+  noPrereq       Boolean @default(false)
+}
+
+model MasterCloWeight {
+  cloId String
+  ploId String
+  pct   Float
+
+  @@id([cloId, ploId])
+}
+
+model MasterLabPlan {
+  masterCourseId String
+  week           Int
+  experiment     String
+
+  @@id([masterCourseId, week])
+}
+
+model MasterTopicDep {
+  id             String @id
+  masterCourseId String
+  lectureNumber  Int
+  onCourseId     String
+  onLecture      Int
+
+  @@index([masterCourseId], map: "MasterTopicDep_course_idx")
+}
+
+model CategoryMap {
+  curriculumId String
+  fromName     String
+  toName       String
+
+  @@id([curriculumId, fromName])
+}
