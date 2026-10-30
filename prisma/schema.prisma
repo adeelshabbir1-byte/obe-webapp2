@@ -9140,3 +9140,70 @@ model CmtVote {
 
   @@id([itemId, memberId])
 }
+
+// ---------------------------------------------------------------- Course homes and codes (migration_course_homes.sql)
+model CodeChain {
+  chairmanId   String
+  departmentId String
+  chain        Int
+  name         String
+
+  @@id([chairmanId, departmentId, chain])
+}
+
+model CourseKeyMerge {
+  id         String   @id
+  chairmanId String
+  fromKey    String
+  toKey      String
+  reason     String?
+  byId       String
+  at         DateTime @default(now())
+
+  @@unique([chairmanId, fromKey], map: "CourseKeyMerge_from_key")
+}
+
+model CourseHomeDraft {
+  id          String    @id
+  chairmanId  String
+  entriesJson String    @default("{}")
+  status      String    @default("DRAFT") // DRAFT | SENT | APPROVED | REJECTED | SUPERSEDED
+  cmtItemId   String?
+  note        String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  sentAt      DateTime?
+  decidedAt   DateTime?
+
+  @@index([chairmanId, status], map: "CourseHomeDraft_chairman_idx")
+}
+
+model CourseHome {
+  id           String   @id
+  chairmanId   String
+  key          String
+  title        String
+  isLab        Boolean  @default(false)
+  level        String
+  departmentId String?
+  program      String?
+  track        String?
+  chain        Int?
+  code         String?
+  aliasesJson  String   @default("[]")
+  approvedAt   DateTime @default(now())
+  draftId      String?
+
+  @@unique([chairmanId, key], map: "CourseHome_key")
+  @@index([chairmanId, code], map: "CourseHome_code_idx")
+}
+
+model DeptLeadProgram {
+  chairmanId   String
+  departmentId String
+  program      String
+  setById      String?
+
+  @@id([chairmanId, departmentId])
+}

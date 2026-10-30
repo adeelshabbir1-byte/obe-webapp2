@@ -249,6 +249,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "instructorObservations"
 },
 {
+"f": "migration_course_homes.sql",
+"d": "Course homes and PREFIX-YCN codes: each department's chain table, confirmed \"same course\" matches, drafts the",
+"t": "DeptLeadProgram"
+},
+{
 "f": "migration_course_leads.sql",
 "d": "Course Lead (one teacher of a multi-section course finalises the paper, the others approve it)",
 "t": "PaperApproval"

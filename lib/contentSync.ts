@@ -30,6 +30,10 @@ export async function determineBaseCourseId(courseIdA: string, courseIdB: string
     prisma.course.findUnique({ where: { id: courseIdA }, include: { batch: true } }),
     prisma.course.findUnique({ where: { id: courseIdB }, include: { batch: true } }),
   ]);
+  // The course's home decides first: the copy inside its approved home (its program, the department's lead program,
+  // or the teaching department) is the base; only between copies equally in (or out of) the home does recency decide.
+  const [homeA, homeB] = await import("./courseHomes").then((m) => Promise.all([m.inHome(courseIdA), m.inHome(courseIdB)])).catch(() => [null, null]);
+  if (homeA !== null && homeB !== null && homeA !== homeB) return homeA ? courseIdA : courseIdB;
   const termA = termIndex(courseA?.batch?.startTerm, courseA?.batch?.startYear);
   const termB = termIndex(courseB?.batch?.startTerm, courseB?.batch?.startYear);
   if (termA !== termB) return termA > termB ? courseIdA : courseIdB; // later start = more recent = wins
