@@ -9293,3 +9293,77 @@ model CurriculumJustification {
   byId         String
   at           DateTime @default(now())
 }
+
+// ---------------------------------------------------------------- Scheduling, rescheduling, CQI flags (migration_resched.sql)
+model PlannedEvent {
+  id                String   @id
+  chairmanId        String
+  title             String
+  date              DateTime
+  startHour         Float
+  endHour           Float
+  batchIdsJson      String   @default("[]")
+  beforePublication Boolean  @default(false)
+  createdById       String
+  createdAt         DateTime @default(now())
+
+  @@index([chairmanId, date], map: "PlannedEvent_chairman_idx")
+}
+
+model ClassReschedule {
+  id           String   @id
+  chairmanId   String
+  eventId      String?
+  entryId      String
+  courseId     String
+  fromDate     DateTime
+  fromStart    Float
+  fromEnd      Float
+  toDate       DateTime
+  toStart      Float
+  toEnd        Float
+  reason       String
+  status       String   @default("PENDING_DEAN")
+  visiting     Boolean  @default(false)
+  plOk         Boolean?
+  facultyOk    Boolean?
+  deanId       String?
+  note         String?
+  forceMajeure Boolean  @default(false)
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  @@index([chairmanId, status], map: "ClassReschedule_chairman_idx")
+  @@index([courseId], map: "ClassReschedule_course_idx")
+}
+
+model CampusClosure {
+  id           String   @id
+  chairmanId   String
+  date         DateTime
+  reason       String
+  declaredById String
+  at           DateTime @default(now())
+
+  @@index([chairmanId, date], map: "CampusClosure_chairman_idx")
+}
+
+model CqiRevisionFlag {
+  id           String    @id
+  chairmanId   String
+  courseId     String
+  courseCode   String
+  courseTitle  String
+  batchId      String?
+  ploLabel     String
+  attainment   Float
+  termName     String?
+  termYear     Int?
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  @@unique([courseId, ploLabel], map: "CqiRevisionFlag_key")
+  @@index([chairmanId], map: "CqiRevisionFlag_chairman_idx")
+}

@@ -390,6 +390,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/consortium/teaching", "My Teaching Posts (other universities)", ["CHAIRMAN", "INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEAN", "OMC"]],
   ["/consortium/exams", "Consortium Exams", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT", "DEPARTMENT_COORDINATOR"]],
   ["/consortium/graduation", "Joint Degrees — Graduation", ["CHAIRMAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "HEAD_OF_DEPARTMENT"]],
+  ["/scheduling", "Scheduling & Rescheduling", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "DEPARTMENT_COORDINATOR", "INSTRUCTOR", "SUBJECT_EXPERT", "STUDENT_AFFAIRS", "OMC"]],
   ["/course-homes", "Course Homes & Codes", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/boards", "Boards & Committees (BOS)", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "SUBJECT_EXPERT", "INSTRUCTOR", "DEPARTMENT_COORDINATOR"]],
   ["/omc/clo-attainment", "CLO Attainment Method", ["OMC", "CHAIRMAN", "HEAD_OF_DEPARTMENT", "DEAN", "PROGRAM_COORDINATOR", "PROGRAM_LEAD"]],

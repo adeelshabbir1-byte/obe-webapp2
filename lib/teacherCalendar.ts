@@ -83,8 +83,12 @@ export async function busyItems(userId: string, fromDay: string, days: number, s
     db.appointmentRequest.findMany({ where: { OR: [{ teacherId: userId, status: { in: ["PENDING", "ACCEPTED"] } }, { requesterId: userId, status: "ACCEPTED" }], startsAt: { lt: new Date(to) }, endsAt: { gt: new Date(from) } } }).catch(() => []) as Promise<Appt[]>,
     externalBusy(userId, from, to).catch(() => []),
   ]);
+  const moves = (await db.classReschedule.findMany({ where: { status: "APPROVED", courseId: { in: (await prisma.course.findMany({ where: { instructorId: userId }, select: { id: true } })).map((c) => c.id).concat("none") }, OR: [{ fromDate: { gte: new Date(from - 864e5), lt: new Date(to) } }, { toDate: { gte: new Date(from - 864e5), lt: new Date(to) } }] } }).catch(() => [])) as { fromDate: Date; fromStart: number; toDate: Date; toStart: number; toEnd: number; courseId: string; forceMajeure: boolean }[];
+  const moveCodes = new Map((await prisma.course.findMany({ where: { id: { in: moves.map((m) => m.courseId).concat("none") } }, select: { id: true, code: true } })).map((c) => [c.id, c.code]));
+  const movedAway = new Set(moves.map((m) => `${moveCodes.get(m.courseId)}|${at(new Date(m.fromDate).toISOString().slice(0, 10), Math.round(m.fromStart * 60))}`));
   const items: Item[] = [
-    ...expandWeekly(classes, fromDay, days, (r, start, end) => ({ start, end, kind: "CLASS", label: r.label, privacy: set.classPrivacy })),
+    ...expandWeekly(classes, fromDay, days, (r, start, end) => ({ start, end, kind: "CLASS", label: r.label, privacy: set.classPrivacy })).filter((i) => !movedAway.has(`${i.label.split(" ")[0]}|${i.start}`)),
+    ...moves.map((m) => { const day = new Date(m.toDate).toISOString().slice(0, 10); return { start: at(day, Math.round(m.toStart * 60)), end: at(day, Math.round(m.toEnd * 60)), kind: "CLASS" as const, label: `${moveCodes.get(m.courseId) || "Class"} (rescheduled${m.forceMajeure ? " — make-up" : ""})`, privacy: set.classPrivacy }; }).filter((i) => i.start >= from && i.start < to),
     ...slots.map((x) => ({ start: new Date(x.startsAt).getTime(), end: new Date(x.endsAt).getTime(), kind: "COUNSELLING" as const, label: `Counselling hours${x.place ? ` · ${x.place}` : ""}`, privacy: set.counsellingPrivacy })),
     ...expandWeekly(blocks.filter((b) => b.dayOfWeek !== null).map((b) => ({ ...b, dow: b.dayOfWeek! })), fromDay, days, (b, start, end) => ({ start, end, kind: "BLOCK", label: b.label || "Busy", privacy: b.privacy, id: b.id })),
     ...blocks.filter((b) => b.date && b.date >= fromDay && b.date < addDays(fromDay, days)).map((b) => ({ start: at(b.date!, b.startMin), end: at(b.date!, b.endMin), kind: "BLOCK" as const, label: b.label || "Busy", privacy: b.privacy, id: b.id })),
