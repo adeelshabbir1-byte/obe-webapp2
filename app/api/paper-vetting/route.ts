@@ -70,6 +70,7 @@ async function POST_handler(req: Request) {
       if (!v.systemJson) return NextResponse.json({ error: "Run the check first." }, { status: 400 });
       const sys = JSON.parse(v.systemJson) as { findings: { level: string }[] };
       if (sys.findings.some((x) => x.level === "fail")) return NextResponse.json({ error: "Fix the problems marked red before sending." }, { status: 400 });
+      { const un = await import("../../../lib/cloMethods").then((m) => m.unmappedQuestions(course.id, examType)).catch(() => []); if (un.length) return NextResponse.json({ error: `Every question must map to a CLO: ${un.join(", ")} ${un.length > 1 ? "are" : "is"} not mapped.` }, { status: 400 }); }
       await vtdb.paperVetting.update({ where: { id: v.id }, data: { status: "SUBMITTED", submittedAt: new Date() } });
       const batch = course.batchId ? await prisma.batch.findUnique({ where: { id: course.batchId }, select: { coordinatorId: true } }) : null;
       await notifyUsers([batch?.coordinatorId], { kind: "ASSIGNMENT", title: `${examType} paper to vet: ${course.code}`, body: `${user.name} sent the ${examType.toLowerCase()} paper of ${course.code} ${course.title} for vetting.`, href: "/paper-vetting" });

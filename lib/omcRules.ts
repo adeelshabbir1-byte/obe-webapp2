@@ -183,7 +183,7 @@ export async function deletePanel(user: { id: string }, chairmanId: string, id: 
   await db.omcPanel.deleteMany({ where: { id, chairmanId } });
 }
 
-export type RequestKind = "WEIGHT" | "TEMPLATE";
+export type RequestKind = "WEIGHT" | "TEMPLATE" | "CLO_METHOD" | "LAB_SHARE";
 async function voters(courseId: string) {
   const omc = await omcOfCourse(courseId);
   if (!omc) return null;

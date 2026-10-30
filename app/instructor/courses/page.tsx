@@ -5,6 +5,7 @@ import { prisma } from "../../../lib/db";
 import SectionLinker from "../../../components/SectionLinker";
 import { sdb } from "../../../lib/sectionLink";
 import TrainingBanner from "../../../components/TrainingBanner";
+import MarksDuePanel from "../../../components/MarksDuePanel";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import Link from "next/link";
@@ -78,6 +79,7 @@ export default async function InstructorCoursesPage() {
     <Shell roleLabel="Faculty / Lecturer" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Semester Courses</h1>
       <TrainingBanner user={user} />
+      <MarksDuePanel userId={user.id} />
       {linkGroups.length > 0 && <SectionLinker groups={linkGroups} />}
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses currently offered and assigned to you. Click "Open" to record your actual delivery — starts as

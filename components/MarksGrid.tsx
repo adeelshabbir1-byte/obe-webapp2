@@ -256,7 +256,7 @@ export default function MarksGrid({ courseId, items, students, editable = true, 
                         onPaste={onPaste}
                         style={{ width: 54, padding: "4px 5px", textAlign: "center", fontSize: 12 }}
                       />
-                    ) : (s.marks[c.id] ?? "—")}
+                    ) : (s.marks[c.id] ?? <span className="small-note" title="Blank: absent — left out of CLO attainment and class averages">Absent</span>)}
                   </td>
                 ))}
                 {rowAction && <td>{rowAction(s)}</td>}

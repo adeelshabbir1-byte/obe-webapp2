@@ -29,14 +29,14 @@ export async function labMarksWorkbook(lab: { id: string; code: string; title: s
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: 1 }];
   const info = wb.addWorksheet("Instructions");
   info.getColumn(1).width = 110;
-  [`Lab marks — ${lab.code} ${lab.title}`, "Fill a mark under each lab. Leave a cell empty to keep what is already saved (or to leave it unmarked).",
+  [`Lab marks — ${lab.code} ${lab.title}`, "Fill a mark under each lab. 0 means present and scored zero; A or Abs means absent (any saved mark is removed). Leave a cell empty to keep what is already saved (or to leave it unmarked = absent).",
     "To change what a lab is marked out of, edit the number in its heading, e.g. Lab 3 (out of 20). Add a column such as Lab 13 (out of 10) for another lab.",
     "Keep the Roll Number column; names are only for reading. Students not enrolled in this lab are reported and skipped.",
     "Labs: " + cols.map((c) => `Lab ${c.labNumber}${c.title ? ` ${c.title}` : ""}`).join("; ")].forEach((t, i) => { const r = info.addRow([t]); if (i === 0) r.font = { bold: true, size: 13 }; });
   return wb.xlsx.writeBuffer();
 }
 
-export type Parsed = { labs: { labNumber: number; maxScore: number; filled: number; changed: number }[]; unknown: string[]; errors: string[]; writes: { studentId: string; labNumber: number; score: number; maxScore: number }[] };
+export type Parsed = { labs: { labNumber: number; maxScore: number; filled: number; changed: number }[]; unknown: string[]; errors: string[]; writes: { studentId: string; labNumber: number; score: number; maxScore: number }[]; absents?: { studentId: string; labNumber: number }[] };
 
 /** Read an uploaded lab marks sheet (.xlsx or .csv) and work out what would change. Nothing is saved here. */
 export async function parseLabMarks(labId: string, file: File): Promise<Parsed | { error: string }> {
@@ -75,6 +75,7 @@ export async function parseLabMarks(labId: string, file: File): Promise<Parsed |
       if (!roll || raw === "") return;
       const s = byRoll.get(roll.toLowerCase());
       if (!s) { if (!out.unknown.includes(roll)) out.unknown.push(roll); return; }
+      if (/^(a|abs|absent)$/i.test(raw)) { (out.absents ||= []).push({ studentId: s.id, labNumber: c.labNumber }); return; }
       const score = Number(raw);
       if (!Number.isFinite(score) || score < 0 || score > maxScore) { out.errors.push(`Row ${hi + k + 2}, ${roll}, Lab ${c.labNumber}: "${raw}" is not a mark between 0 and ${maxScore}.`); return; }
       lab.filled++;

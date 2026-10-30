@@ -65,7 +65,9 @@ async function GET_handler(req: NextRequest) {
   // for usually-hard topics offered to instructors a week before the lecture.
   const topicPlans = await import("../../../../lib/topicPlan").then((m) => m.proposalReminders(now)).catch(() => null);
   const topicHelp = await import("../../../../lib/topicChecks").then((m) => m.offerTopicHelp(now)).catch(() => 0);
-  void topicPlans; void topicHelp;
+  // Marks within one week (reminders on working days 4–5, HOD on day 8) and early-warning escalation.
+  const marksWeek = await import("../../../../lib/itemWarnings").then((m) => m.dailyMarksAndWarnings(now)).catch(() => null);
+  void topicPlans; void topicHelp; void marksWeek;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());

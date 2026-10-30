@@ -93,6 +93,7 @@ export async function termReport(userId: string, t: Term) {
     deadlines: card?.deadlines || null, results: card?.results || null, design: card?.design || null, recognition: card?.recognition || [],
     fyp: { groups: fyp as number, coSupervised: cosup as number }, fdpHours: fdp, alumni,
     cloAvg: avg(rows.map((r) => r.cloAvg).filter((x): x is number => x != null)), trend,
+    marksLate: await (prisma as unknown as Record<string, any>).marksDeadline.findMany({ where: { courseId: { in: courses.map((c: { id: string }) => c.id).concat("none") } }, select: { enteredAt: true, late: true } }).then((xs: { enteredAt: Date | null; late: boolean }[]) => ({ items: xs.length, late: xs.filter((x) => x.late).length, open: xs.filter((x) => !x.enteredAt).length })).catch(() => null),
   };
 }
 export type TermReport = Awaited<ReturnType<typeof termReport>>;
@@ -137,6 +138,7 @@ ${r.courses.map((c) => `<tr>${td(c.code)}${td(c.clo.map((x) => `${x.code} ${x.pc
 <tr><th>Student feedback (own sections)</th><td>${r.rating ? `${r.rating.avg}/5 from ${r.rating.n} students` : "not enough answers"}</td></tr>
 <tr><th>Lectures delivered</th><td>${r.delivery.pct !== null ? `${r.delivery.pct}% (${r.delivery.delivered} of ${r.delivery.planned})` : "—"}</td></tr>
 <tr><th>Attendance sessions marked</th><td>${r.delivery.attendanceSessions}</td></tr>
+<tr><th>Marks entered late (within one week rule)</th><td>${r.marksLate ? `${r.marksLate.late} of ${r.marksLate.items} item(s)${r.marksLate.open ? ` · ${r.marksLate.open} not entered yet` : ""}` : "—"}</td></tr>
 <tr><th>Deadlines met on time (year)</th><td>${r.deadlines?.rate != null ? `${r.deadlines.rate}% (${r.deadlines.ON_TIME} of ${r.deadlines.judged})` : "—"}</td></tr>
 <tr><th>Results approved</th><td>${r.results ? `${r.results.approved} approved, ${r.results.notSubmitted} not submitted` : "—"}</td></tr>
 <tr><th>FYP groups supervised</th><td>${r.fyp.groups}${r.fyp.coSupervised ? ` (+${r.fyp.coSupervised} co-supervised)` : ""}</td></tr>

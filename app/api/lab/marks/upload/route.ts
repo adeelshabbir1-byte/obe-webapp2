@@ -31,6 +31,7 @@ async function POST_handler(req: Request) {
     });
   }
   // A changed "out of" applies to the whole lab, so the other students' marks of that lab carry the same maximum.
+  for (const a of p.absents || []) await prisma.labMark.deleteMany({ where: { courseId: access.lab.id, studentId: a.studentId, labNumber: a.labNumber } });
   for (const l of p.labs) await prisma.labMark.updateMany({ where: { courseId: access.lab.id, labNumber: l.labNumber, NOT: { maxScore: l.maxScore } }, data: { maxScore: l.maxScore } });
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MARKS_UPLOADED", entityType: "Course", entityId: access.lab.id, metadata: { changes: p.writes.length, labs: p.labs.length, file: file.name } });
   return NextResponse.json({ ok: true, saved: p.writes.length, ...summary });

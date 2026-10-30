@@ -16,7 +16,8 @@ export const DEFAULT_LAB_WEIGHT = 20;
 export async function labSetting(labCourseId: string): Promise<LabSetting & { ready: boolean }> {
   try {
     const r = (await ltdb.labTheorySetting.findUnique({ where: { labCourseId } })) as LabSetting | null;
-    return { ready: true, ...(r || { labCourseId, theoryCourseId: null, intoTheory: false, weightPct: DEFAULT_LAB_WEIGHT, instrumentId: null, oldWeightsJson: null, approvedAt: null, approvedById: null, changeRequest: null, changeRequestedAt: null }) };
+    const omcShare = r ? null : await import("./cloMethods").then((m) => m.courseSettings(labCourseId)).then((s) => s.labSharePct).catch(() => null);
+    return { ready: true, ...(r || { labCourseId, theoryCourseId: null, intoTheory: false, weightPct: omcShare ?? DEFAULT_LAB_WEIGHT, instrumentId: null, oldWeightsJson: null, approvedAt: null, approvedById: null, changeRequest: null, changeRequestedAt: null }) };
   } catch { return { ready: false, labCourseId, theoryCourseId: null, intoTheory: false, weightPct: DEFAULT_LAB_WEIGHT, instrumentId: null, oldWeightsJson: null, approvedAt: null, approvedById: null, changeRequest: null, changeRequestedAt: null }; }
 }
 export async function saveLabSetting(labCourseId: string, data: Partial<LabSetting> & { updatedById: string }) {

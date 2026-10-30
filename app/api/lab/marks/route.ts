@@ -25,7 +25,7 @@ async function POST_handler(req: NextRequest) {
   let saved = 0, cleared = 0;
   for (const m of body.marks as { studentId: string; score: number | string | null }[]) {
     if (!allowed.has(m.studentId)) continue;
-    if (m.score === null || m.score === "" || m.score === undefined) {
+    if (m.score === null || m.score === undefined || /^\s*(a|abs|absent)?\s*$/i.test(String(m.score))) {
       const r = await prisma.labMark.deleteMany({ where: { courseId: access.lab.id, studentId: m.studentId, labNumber } });
       cleared += r.count;
       continue;
@@ -40,6 +40,8 @@ async function POST_handler(req: NextRequest) {
     saved++;
   }
   await writeAuditLog({ actorUserId: user.id, action: "LAB_MARKS_SAVED", entityType: "Course", entityId: access.lab.id, metadata: { labNumber, saved, cleared } });
+  // Early warning: a lab item with most students below the pass mark alerts the theory teacher of the linked topic.
+  await import("../../../../lib/itemWarnings").then((x) => x.afterLabMarks(access.lab.id, labNumber)).catch((e) => console.warn("lab warning:", (e as Error).message));
   return NextResponse.json({ ok: true, saved, cleared });
 }
 export const POST = withErrors(POST_handler);
