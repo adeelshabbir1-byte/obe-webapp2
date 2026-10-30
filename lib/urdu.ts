@@ -11,7 +11,7 @@ export const NAV_UR: Record<string, string> = {
   "/student/details": "میری تفصیلات", "/student/cv": "میرا پروفائل اور سی وی", "/student/fees": "میری فیس", "/student/activities": "سوسائٹیز اور سرگرمیاں",
   "/student/elections": "سوسائٹی انتخابات", "/student/transcript": "میرا ٹرانسکرپٹ", "/student/recheck": "نتیجہ کی دوبارہ جانچ", "/student/obe-analytics": "میری او بی ای پیش رفت",
   "/student/portfolio": "میرا پورٹ فولیو", "/student/course-survey": "کورس سروے اور جائزے", "/student/attendance": "میری حاضری", "/student/placements": "انٹرن شپ اور ملازمتیں",
-  "/student/counselling": "کونسلنگ", "/student/library": "لائبریری", "/student/complaints": "شکایات", "/student/alerts": "الرٹس اور رابطہ", "/student/help": "مدد",
+  "/student/counselling": "کونسلنگ", "/student/appointments": "ملاقاتیں", "/student/library": "لائبریری", "/student/complaints": "شکایات", "/student/alerts": "الرٹس اور رابطہ", "/student/help": "مدد",
 };
 export const UI_UR: Record<string, string> = { Hello: "السلام علیکم", "Sign out": "سائن آؤٹ" };
 

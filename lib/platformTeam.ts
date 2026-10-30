@@ -23,7 +23,7 @@ export const ROLES: Record<Exclude<Area, "CURRICULUM">, { label: string; does: s
   SHARED_MODERATOR: { label: "Shared Courses Moderator", does: "Screens Shared Courses (spam, copyright, quality) before the national teams review them.", pages: ["/admin/shared-courses", "/public-library"] },
   ANALYTICS: { label: "Analytics (read-only)", does: "Platform-wide figures: institutes, people, courses, adoption, consortium activity.", pages: ["/admin/analytics"] },
 };
-const CURRICULUM_PAGES = ["/curricula/builder", "/curricula", "/admin/curricula", "/admin/master-experts", "/admin/curriculum-migration", "/national-bank", "/regulations"];
+const CURRICULUM_PAGES = ["/course-catalog", "/curricula/builder", "/curricula", "/admin/curricula", "/admin/master-experts", "/admin/curriculum-migration", "/national-bank", "/regulations"];
 
 type U = { id: string; role: string; isPlatformExpert?: boolean | null };
 export type Team = { id: string; name: string; councilsJson: string; programsJson: string; createdAt: Date };
