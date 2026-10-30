@@ -23,7 +23,9 @@ export const ruleOf = (c: Committee): Rule => ({ kind: "QUORUM", quorumPct: c.qu
 
 // ---- what happens when an item is decided (other modules register their kinds)
 type Handler = (item: Item, outcome: Outcome, by: { id: string; name: string }) => Promise<void>;
-const handlers = new Map<string, () => Promise<Handler>>();
+const handlers = new Map<string, () => Promise<Handler>>([
+  ["COURSE_HOMES", async () => (await import("./courseHomes")).bosHandler],
+]);
 export function onDecided(kind: string, load: () => Promise<Handler>) { handlers.set(kind, load); }
 
 // ---- who may do what
