@@ -5,9 +5,9 @@ import { sleep } from "k6";
 export const options = {
   scenarios: {
     results: {
-      executor: "ramping-arrival-rate", startRate: 0, timeUnit: "1s", preAllocatedVUs: 80, maxVUs: 300,
+      executor: "ramping-arrival-rate", startRate: 0, timeUnit: "1m", preAllocatedVUs: 80, maxVUs: 300,
       // ≈ 2,000 students: a burst when results are published, then fewer.
-      stages: [{ target: 4, duration: "2m" }, { target: 4, duration: "4m" }, { target: 1.5, duration: "4m" }, { target: 0.5, duration: "5m" }],
+      stages: [{ target: 240, duration: "2m" }, { target: 240, duration: "4m" }, { target: 90, duration: "4m" }, { target: 30, duration: "5m" }],
     },
   },
   // One line per request name in the summary (k6 reports tagged timings only when a threshold names them).

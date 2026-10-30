@@ -6,9 +6,9 @@ import { api, page, roll, studentLogin, summaryTo, THRESHOLDS } from "./common.j
 export const options = {
   scenarios: {
     registration: {
-      executor: "ramping-arrival-rate", startRate: 0, timeUnit: "1s", preAllocatedVUs: 60, maxVUs: 200,
+      executor: "ramping-arrival-rate", startRate: 0, timeUnit: "1m", preAllocatedVUs: 60, maxVUs: 200,
       // ≈ 500 students: a rush in the first minutes, then a steady trickle.
-      stages: [{ target: 2, duration: "1m" }, { target: 2, duration: "2m" }, { target: 0.6, duration: "3m" }, { target: 0.4, duration: "4m" }],
+      stages: [{ target: 100, duration: "1m" }, { target: 100, duration: "2m" }, { target: 30, duration: "3m" }, { target: 20, duration: "4m" }],
     },
   },
   // One line per request name in the summary (k6 reports tagged timings only when a threshold names them).

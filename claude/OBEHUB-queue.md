@@ -2,17 +2,26 @@
 
 ## Queue
 
-### Production hardening (error pages, Sentry, uptime, e2e, load test, restore drill, privacy, mobile) — taken by Irfan, 2026-10-30
-
-Runs before Prompt 10 (Prompt 10 is paused until this is merged).
-
-### Prompt 10 — taken by Irfan, 2026-10-30 (paused; three builds)
+### Prompt 10 — taken by Irfan, 2026-10-30 (next; three builds)
 
 - **Build A** — 1 Topic Workspace fixes (lecture numbers, which version opens / followers open the base, topic panel follows clicks, proposals by intent + redesigned view, book chapters per topic) · 2 Course Repositioning layout · 3 Reset this semester's offering (snapshot, restore within 7 days) — taken by Irfan, 2026-10-30
 - **Build B** — 4 Course Catalog (Computing, Management Sciences, Engineering) · 5 Counselling time pickers · 6 Teacher calendar & appointments · 9 Best / average / worst student samples — taken by Irfan, 2026-10-30
 - **Build C** — 7 FDP / training · 8 AI checks (exam papers, SE plan) · 10 Visiting faculty, biometric attendance, pay — taken by Irfan, 2026-10-30
 
 ## Built — history
+
+### Production hardening · 2026-10-30
+
+Migration to run in Supabase: `prisma/migration_hardening.sql`. Optional Vercel settings: `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SUPPORT_EMAIL`.
+
+1. Friendly error pages with a reference code (app, role areas, 404); one wrapper for every API route (`{ error, ref }`, missing migration explained).
+2. Sentry, on only with `SENTRY_DSN`; no personal data; System Health shows Monitoring on/off.
+3. `/api/health` and a 10-minute uptime workflow that opens / closes a GitHub issue (repo variable `PRODUCTION_URL`).
+4. Playwright e2e on a seeded demo institute (journeys, every role's menu, privacy, phone size), in CI on PRs and main.
+5. k6 load tests (`docs/load-test.md`); Marks Entry and transcript N+1 fixed.
+6. Monthly restore drill into a scratch database, System Health "Last restore test", `docs/restore.md`; restore into an empty database fixed.
+7. CNIC masked on screen and in downloads, exports logged, retention with Super Admin confirmation, `/privacy`, rate limits.
+8. Phone fixes: student menu drawer, 40 px targets, marks entry one student at a time.
 
 ### Prompt 4 — batch set-up, OMC and SE workflow · commit `13b84aa6` · 2026-10-25
 

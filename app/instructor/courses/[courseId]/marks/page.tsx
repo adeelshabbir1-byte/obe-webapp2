@@ -39,8 +39,17 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
 
   // Histograms — grade distribution and CLO attainment, visible right here
   // while entering/reviewing marks, not just later in Result Mate.
-  const passCriteria = await getPassingCriteria(await chairmanIdFor(user), undefined, { degreeProgram: course.batch?.degreeProgram });
-  const result = await computeResultMate(course.id);
+  // Independent reads together (one round of waiting instead of six).
+  const [passCriteria, result, [instruments, enrollments, batchStudentCount, marks]] = await Promise.all([
+    chairmanIdFor(user).then((cid) => getPassingCriteria(cid, undefined, { degreeProgram: course.batch?.degreeProgram })),
+    computeResultMate(course.id),
+    Promise.all([
+      prisma.assessmentInstrument.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
+      prisma.studentEnrollment.findMany({ where: { courseId: course.id }, select: { isRepeat: true, student: { select: { id: true, name: true, rollNumber: true } } } }),
+      course.batchId ? prisma.student.count({ where: { batchId: course.batchId } }) : Promise.resolve(0),
+      prisma.studentMark.findMany({ where: { courseId: course.id }, select: { studentId: true, instrumentId: true, score: true } }),
+    ] as const),
+  ]);
   const gradeBuckets = new Map<string, number>();
   for (const r of result.rows) gradeBuckets.set(r.grade, (gradeBuckets.get(r.grade) || 0) + 1);
   const gradeOrder = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"];
@@ -52,13 +61,6 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
     return { label: code, value: passCount };
   });
 
-  const [instruments, enrollments, batchStudentCount] = await Promise.all([
-    prisma.assessmentInstrument.findMany({ where: { courseId: course.id, source: "INSTRUCTOR" }, orderBy: [{ type: "asc" }, { label: "asc" }] }),
-    prisma.studentEnrollment.findMany({ where: { courseId: course.id }, include: { student: true, } }),
-    course.batchId ? prisma.student.count({ where: { batchId: course.batchId } }) : Promise.resolve(0),
-  ]);
-
-  const marks = await prisma.studentMark.findMany({ where: { courseId: course.id } });
   const marksByStudent = new Map<string, Record<string, number>>();
   for (const m of marks) {
     const existing = marksByStudent.get(m.studentId) || {};

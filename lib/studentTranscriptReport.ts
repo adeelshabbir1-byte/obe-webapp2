@@ -84,11 +84,22 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
   // once the course offering closes out and snapshots a "W" record.
   let deficiencyPct: number | null = null; // looked up lazily, only if a non-credit course shows up
   const currentEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId, status: { not: "WITHDRAWN" } }, include: { course: { include: { batch: true } } } });
-  for (const e of currentEnrollments) {
-    const result = await computeResultMate(e.courseId);
+  // Each current course's figures are read together (not one course after another): result-day speed.
+  const scaleCache = new Map<string, ReturnType<typeof getGradingScaleForBatch>>();
+  const perCourse = await Promise.all(currentEnrollments.map(async (e) => {
+    const scaleKey = `${e.course.coordinatorId}|${e.course.batchId}`;
+    if (e.course.batch && !scaleCache.has(scaleKey)) scaleCache.set(scaleKey, getGradingScaleForBatch(e.course.coordinatorId, e.course.batch));
+    const [result, gradingScale, courseResult, publication] = await Promise.all([
+      computeResultMate(e.courseId),
+      e.course.batch ? scaleCache.get(scaleKey)! : Promise.resolve([] as Awaited<ReturnType<typeof getGradingScaleForBatch>>),
+      getCourseResult(e.courseId),
+      publicationOf(e.courseId),
+    ]);
+    return { e, result, gradingScale, approved: courseResult?.status === "APPROVED", published: !!publication };
+  }));
+  for (const { e, result, gradingScale, approved, published } of perCourse) {
     const row = result.rows.find((r) => r.studentId === studentId);
     if (!row) continue;
-    const gradingScale = e.course.batch ? await getGradingScaleForBatch(e.course.coordinatorId, e.course.batch) : [];
     const isDeficiency = e.course.creditHours === 0;
     if (isDeficiency && deficiencyPct === null) {
       const coordinator = await prisma.user.findUnique({ where: { id: e.course.coordinatorId } });
@@ -98,7 +109,7 @@ export async function computeStudentTranscriptReport(studentId: string): Promise
     courseRows.push({
       code: e.course.code, title: e.course.title, creditHours: e.course.creditHours, grade: isDeficiency ? (row.totalPct >= (deficiencyPct ?? 40) ? "P" : "F") : row.grade, gpaPoints,
       totalPct: row.totalPct, termName: e.course.offeredTermName || "Current", termYear: e.course.offeredTermYear || new Date().getFullYear(), isCurrent: true,
-      approved: (await getCourseResult(e.courseId))?.status === "APPROVED", published: !!(await publicationOf(e.courseId)), courseType: e.course.courseType,
+      approved, published, courseType: e.course.courseType,
     });
     attempts.push({ courseCode: e.course.code, creditHours: e.course.creditHours, gpaPoints });
     for (const code of result.cloCodes) {
