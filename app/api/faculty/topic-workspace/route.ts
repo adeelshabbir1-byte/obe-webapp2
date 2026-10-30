@@ -32,8 +32,9 @@ async function POST_handler(req: NextRequest) {
     const r = await saveWorkspace(user, b.courses);
     return NextResponse.json(r, { status: "error" in r ? 400 : 200 });
   }
-  if (!Array.isArray(b.courses) || !b.courses.length) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
-  return reply(await savePlans(user, { sessionId: String(b.sessionId || "").slice(0, 80) || undefined, note: typeof b.note === "string" ? b.note : undefined, courses: b.courses }));
+  const links = Array.isArray(b.links) ? b.links : [];
+  if ((!Array.isArray(b.courses) || !b.courses.length) && !links.length) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
+  return reply(await savePlans(user, { sessionId: String(b.sessionId || "").slice(0, 80) || undefined, note: typeof b.note === "string" ? b.note : undefined, courses: Array.isArray(b.courses) ? b.courses : [], links }));
 }
 export const GET = withErrors(GET_handler);
 export const POST = withErrors(POST_handler);

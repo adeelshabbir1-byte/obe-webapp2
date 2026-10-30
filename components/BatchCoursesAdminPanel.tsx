@@ -148,20 +148,18 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
         */}
         <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", tableLayout: "fixed" }}>
           <colgroup>
-            <col style={{ width: 70 }} />
-            <col />
-            <col style={{ width: 54 }} />
-            <col style={{ width: 46 }} />
-            <col style={{ width: 118 }} />
-            <col style={{ width: 48 }} />
-            <col style={{ width: 48 }} />
+            <col style={{ width: "auto" }} />
+            <col style={{ width: 64 }} />
+            <col style={{ width: 88 }} />
+            <col style={{ width: 128 }} />
+            <col style={{ width: 52 }} />
+            <col style={{ width: 64 }} />
           </colgroup>
           <thead>
             <tr style={{ textAlign: "left" }}>
-              <th style={{ padding: "4px 6px" }}>Code</th>
-              <th style={{ padding: "4px 6px" }}>Title</th>
+              <th style={{ padding: "4px 6px" }}>Course</th>
               <th style={{ padding: "4px 6px" }}>Credits</th>
-              <th style={{ padding: "4px 6px" }}>Sem</th>
+              <th style={{ padding: "4px 6px" }}>Semester</th>
               <th style={{ padding: "4px 6px" }}>Type</th>
               <th style={{ padding: "4px 6px" }}></th>
               <th style={{ padding: "4px 6px" }}></th>
@@ -171,16 +169,18 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
             {courses.map((c) => (
               <tr key={c.id} style={{ borderTop: "1px solid var(--line)" }}>
                 <td style={{ padding: "3px 6px" }}>
-                  <input value={c.code} onChange={(e) => updateLocal(c.id, { code: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
-                </td>
-                <td style={{ padding: "3px 6px" }}>
-                  <input value={c.title} onChange={(e) => updateLocal(c.id, { title: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  {/* The code on its own line; the title wraps on at most two lines, in full on hover. */}
+                  <input value={c.code} aria-label="Course code" onChange={(e) => updateLocal(c.id, { code: e.target.value })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: 110, boxSizing: "border-box", padding: "3px 6px", border: "1px solid var(--line)", fontWeight: 700, fontSize: 12 }} />
+                  <textarea value={c.title} title={c.title} aria-label="Course title" rows={2} onChange={(e) => updateLocal(c.id, { title: e.target.value.replace(/\s*\n\s*/g, " ") })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ display: "block", width: "100%", maxWidth: 360, boxSizing: "border-box", marginTop: 3, padding: "3px 6px", border: "1px solid var(--line)", resize: "none", lineHeight: 1.3, fontSize: 12.5, overflow: "hidden" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
                   <input type="number" value={c.creditHours} onChange={(e) => updateLocal(c.id, { creditHours: Number(e.target.value) })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
                 </td>
                 <td style={{ padding: "3px 6px" }}>
-                  <input type="number" min={1} max={8} value={c.semesterNumber ?? ""} onChange={(e) => updateLocal(c.id, { semesterNumber: e.target.value ? Number(e.target.value) : null })} onBlur={() => saveRow(courses.find((x) => x.id === c.id)!)} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)" }} />
+                  <select value={c.semesterNumber ?? ""} aria-label="Semester" onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; updateLocal(c.id, { semesterNumber: v }); saveRow({ ...c, semesterNumber: v }); }} style={{ width: "100%", boxSizing: "border-box", padding: "4px 6px", border: "1px solid var(--line)", fontWeight: 700 }}>
+                    <option value="">—</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>S{n}</option>)}
+                  </select>
                 </td>
                 <td style={{ padding: "3px 6px" }}>
                   <select value={c.courseType} onChange={(e) => { updateLocal(c.id, { courseType: e.target.value }); saveRow({ ...c, courseType: e.target.value }); }} style={{ width: "100%", boxSizing: "border-box", padding: "4px 4px", border: "1px solid var(--line)", fontSize: 11 }}>
@@ -197,7 +197,7 @@ export default function BatchCoursesAdminPanel({ batchId, initialCourses, curric
                 </td>
               </tr>
             ))}
-            {courses.length === 0 && <tr><td colSpan={7} style={{ color: "var(--slate)", padding: "6px" }}>No courses in this batch yet.</td></tr>}
+            {courses.length === 0 && <tr><td colSpan={6} style={{ color: "var(--slate)", padding: "6px" }}>No courses in this batch yet.</td></tr>}
           </tbody>
         </table>
       </div>

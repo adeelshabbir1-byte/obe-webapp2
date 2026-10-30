@@ -16,6 +16,12 @@ type Course = {
   slotCategory: string | null;
 };
 
+/** A title split over at most two lines of about `n` characters, the second ending in "…" when it is longer. */
+function twoLines(t: string, n: number): string[] {
+  if (t.length <= n) return [t];
+  const cut = t.lastIndexOf(" ", n); const a = cut > 8 ? t.slice(0, cut) : t.slice(0, n); const rest = t.slice(a.length).trim();
+  return [a, rest.length > n ? rest.slice(0, n - 1) + "…" : rest];
+}
 const BOX_W = 168, BOX_H = 56, H_GAP = 24, V_GAP = 64, TOP_MARGIN = 30, LEFT_MARGIN = 150;
 
 function contactHoursFor(c: Course) {
@@ -270,8 +276,10 @@ export default function InteractiveCourseMap({ courses: initialCoursesProp, mode
                       <text x={pos.x + BOX_W - 10} y={pos.y + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#fff">×</text>
                     </g>
                   )}
-                  <text x={pos.x + BOX_W / 2} y={pos.y + 40} textAnchor="middle" fontSize={10} fill="#fff" onClick={() => onCourseClick(c)}>
-                    {c.title.length > 22 ? c.title.slice(0, 20) + "…" : c.title}
+                  {/* The title on up to two lines under the code; the full title on hover. */}
+                  <text x={pos.x + BOX_W / 2} y={pos.y + 36} textAnchor="middle" fontSize={10} fill="#fff" onClick={() => onCourseClick(c)}>
+                    <title>{`${c.code} — ${c.title}`}</title>
+                    {twoLines(c.title, 27).map((l, i) => <tspan key={i} x={pos.x + BOX_W / 2} dy={i ? 12 : 0}>{l}</tspan>)}
                   </text>
                 </g>
               );

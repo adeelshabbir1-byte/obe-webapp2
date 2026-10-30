@@ -10,7 +10,7 @@ import { writeAuditLog } from "./audit";
 import { norm, similarity } from "./teachingAnalysis";
 import { rowsForTopic, sameTopic } from "./topicLinks";
 import {
-  applyItems, diffPlan, dropSafety, itemLine, layoutHash, prefillImportance, suggestImportance, topicKey,
+  applyItems, diffPlan, intentItems, dropSafety, itemLine, layoutHash, prefillImportance, suggestImportance, topicKey,
   type Entry, type Item, type Level, type Row, type TopicFacts,
 } from "./topicPlanCore";
 
@@ -52,10 +52,48 @@ export async function pickerCourses(user: Who, q: string, take = 80) {
   }));
 }
 
+/**
+ * The picker, one row per course (same code and title across batches), each with its versions: first the latest base
+ * plan set by any Subject Expert, then the other independent plans (courses that don't follow a base), then
+ * Instructors' teaching copies that changed topics ("changed 5 topics"). Courses that follow a base are not versions.
+ */
+export async function pickerGroups(user: Who, q: string) {
+  const flat = await pickerCourses(user, q, 200);
+  const keyOf = (c: { code: string; title: string }) => `${c.code}|${norm(c.title)}`;
+  const groups = new Map<string, typeof flat>();
+  for (const c of flat) groups.set(keyOf(c), (groups.get(keyOf(c)) || []).concat(c));
+  const ids = flat.map((c) => c.id).concat("none");
+  const [followers, rows, created] = await Promise.all([
+    prisma.courseContentSyncMember.findMany({ where: { courseId: { in: ids }, isBase: false }, select: { courseId: true } }),
+    prisma.lectureRow.findMany({ where: { courseId: { in: ids } }, select: { courseId: true, source: true, topic: true } }),
+    prisma.course.findMany({ where: { id: { in: ids } }, select: { id: true, createdAt: true, offeredTermName: true, offeredTermYear: true } }),
+  ]);
+  const follower = new Set(followers.map((f) => f.courseId));
+  const info = new Map(created.map((c) => [c.id, c]));
+  const topics = (id: string, src: string) => rows.filter((r) => r.courseId === id && r.source === src).map((r) => norm(r.topic)).filter(Boolean);
+  const changed = (a: string[], b: string[]) => { const A = new Set(a), B = new Set(b); let n = 0; A.forEach((x) => { if (!B.has(x)) n++; }); B.forEach((x) => { if (!A.has(x)) n++; }); return Math.ceil(n / 2) || (a.join("|") !== b.join("|") ? 1 : 0); };
+  const term = (id: string) => { const c = info.get(id); return c?.offeredTermName ? `${c.offeredTermName} ${c.offeredTermYear || ""}`.trim() : ""; };
+  const out = [];
+  for (const list of Array.from(groups.values()).slice(0, 40)) {
+    const bases = list.filter((c) => !follower.has(c.id)).sort((a, b) => +new Date(info.get(b.id)!.createdAt) - +new Date(info.get(a.id)!.createdAt));
+    const versions: { courseId: string; plan: "SE" | "INSTRUCTOR"; kind: "BASE" | "SE" | "INSTRUCTOR"; label: string; changed?: number; mine?: boolean }[] = [];
+    bases.forEach((c, i) => versions.push({ courseId: c.id, plan: "SE", kind: i === 0 ? "BASE" : "SE", label: `${i === 0 ? "Latest base plan" : "SE plan"} · ${c.se || "no SE"} · ${c.program} ${c.batch}${term(c.id) ? ` · ${term(c.id)}` : ""}`, mine: c.mine === "SE" }));
+    for (const c of list) {
+      const ins = topics(c.id, "INSTRUCTOR");
+      if (!ins.length) continue;
+      const n = changed(ins, topics(c.id, "SE"));
+      if (n > 0 || c.mine === "INSTRUCTOR") versions.push({ courseId: c.id, plan: "INSTRUCTOR", kind: "INSTRUCTOR", label: `Instructor copy · ${c.instructor || "—"} · ${c.program} ${c.batch}${term(c.id) ? ` · ${term(c.id)}` : ""}${n ? ` · changed ${n} topic${n === 1 ? "" : "s"}` : ""}`, changed: n, mine: c.mine === "INSTRUCTOR" });
+    }
+    const followerCount = list.filter((c) => follower.has(c.id)).length;
+    out.push({ key: keyOf(list[0]), code: list[0].code, title: list[0].title, semester: list[0].semester, programs: Array.from(new Set(list.map((c) => c.program))).filter(Boolean), followers: followerCount, versions });
+  }
+  return out;
+}
+
 export type Access = {
   courseId: string; code: string; title: string; semester: number | null; coordinatorId: string; program: string; batch: string;
-  plan: Src; planCourseId: string; mode: "APPLY" | "PROPOSE" | "TEMPLATE"; toUserId: string | null; toName: string;
-  followsBase: string | null; why: string; ownTeaching: boolean; courseType: string; masterCourseId: string | null; textbook: string;
+  plan: Src; planCourseId: string; mode: "APPLY" | "PROPOSE" | "TEMPLATE" | "FOLLOWER" | "VIEW"; toUserId: string | null; toName: string;
+  followsBase: string | null; baseCourseId?: string | null; why: string; ownTeaching: boolean; courseType: string; masterCourseId: string | null; textbook: string;
 };
 async function baseCourseOf(courseId: string): Promise<string | null> {
   const m = await prisma.courseContentSyncMember.findUnique({ where: { courseId }, select: { isBase: true, group: { select: { members: { where: { isBase: true }, select: { courseId: true } } } } } }).catch(() => null);
@@ -71,18 +109,27 @@ export async function accessFor(user: Who, courseId: string, want?: Src | null):
   const base = { courseId: c.id, code: c.code, title: c.title, semester: c.semesterNumber, coordinatorId: c.coordinatorId, program: c.batch?.degreeProgram || "", batch: c.batch?.batchName || "", courseType: c.courseType, masterCourseId: c.masterCourseId, textbook: c.textbook || "" };
   const ownTeaching = user.role === "INSTRUCTOR" && c.instructorId === user.id;
   if (ownTeaching && want !== "SE") return { ...base, plan: "INSTRUCTOR", planCourseId: c.id, mode: "APPLY", toUserId: user.id, toName: user.name, followsBase: null, why: "Your teaching copy — saves at once", ownTeaching };
+  // Another teacher's teaching copy: read-only (topics can be copied out of it).
+  if (want === "INSTRUCTOR" && !ownTeaching) {
+    const who = c.instructorId ? (await prisma.user.findUnique({ where: { id: c.instructorId }, select: { name: true } }))?.name || "" : "";
+    return { ...base, plan: "INSTRUCTOR", planCourseId: c.id, mode: "VIEW", toUserId: c.instructorId, toName: who, followsBase: null, why: `${who || "The Instructor"}'s teaching copy — read only`, ownTeaching: false };
+  }
+  // A course that follows a base course (content sync) is never edited itself: its plan comes from the base.
   const baseId = await baseCourseOf(c.id);
-  const p = baseId ? await prisma.course.findUnique({ where: { id: baseId }, select: sel }) : c;
-  const planCourse = p || c;
+  if (baseId) {
+    const p = await prisma.course.findUnique({ where: { id: baseId }, select: sel });
+    const followsBase = p ? `${p.code} — ${p.title}${p.batch ? ` (${p.batch.batchName})` : ""}` : "its base course";
+    return { ...base, plan: "SE", planCourseId: c.id, mode: "FOLLOWER", toUserId: null, toName: "", followsBase, baseCourseId: baseId, why: `Follows ${followsBase} — edit the base so the change carries forward`, ownTeaching };
+  }
+  const planCourse = c;
   const owner = user.role === "SUBJECT_EXPERT" && planCourse.subjectExpertId === user.id;
   const toUserId = planCourse.subjectExpertId || planCourse.coordinatorId;
   const toName = toUserId ? (await prisma.user.findUnique({ where: { id: toUserId }, select: { name: true } }))?.name || "" : "";
-  const followsBase = baseId && p ? `${p.code} — ${p.title}${p.batch ? ` (${p.batch.batchName})` : ""}` : null;
   const mode = owner ? (planCourse.templateStatus === "approved" ? "TEMPLATE" : "APPLY") : "PROPOSE";
-  const why = mode === "APPLY" ? `Your plan${followsBase ? ` (the base course ${followsBase})` : ""} — saves at once`
+  const why = mode === "APPLY" ? "Your plan — saves at once"
     : mode === "TEMPLATE" ? "Approved by the OMC — saving sends a Template Change Request"
-    : `Saving sends a proposal to ${toName || "the Subject Expert"}${followsBase ? ` (SE of the base course ${followsBase})` : ""}`;
-  return { ...base, plan: "SE", planCourseId: planCourse.id, mode, toUserId, toName, followsBase, why, ownTeaching };
+    : `Saving sends a proposal to ${toName || "the Subject Expert"}`;
+  return { ...base, plan: "SE", planCourseId: planCourse.id, mode, toUserId, toName, followsBase: null, why, ownTeaching };
 }
 
 // ------------------------------------------------------------------------------------------------ loading columns
@@ -323,7 +370,8 @@ export async function setMeta(lectureRowId: string, courseId: string, data: Reco
 export type SaveCourse = { courseId: string; plan?: Src | null; hash: string; entries: Entry[] };
 const asRow = (r: { id: string; topic: string; subtopic: string | null }, meta: Map<string, string | null>): Row => ({ id: r.id, topic: r.topic, subtopic: r.subtopic, importance: (meta.get(r.id) as Level) || null });
 
-export async function savePlans(user: Who, body: { sessionId?: string; note?: string; courses: SaveCourse[] }) {
+export type LinkDraft = { kind: string; level: string; action?: string; fromCourseId: string; fromTopic: string; toCourseId: string; toTopic: string; note?: string; fromCode?: string; toCode?: string };
+export async function savePlans(user: Who, body: { sessionId?: string; note?: string; courses: SaveCourse[]; links?: LinkDraft[] }) {
   if (!(await tablesReady())) return { error: MISSING, status: 500 };
   const chairmanId = await chairmanIdFor(user);
   const plans: { a: Access; c: SaveCourse; rows: PlanRowDb[] }[] = [];
@@ -331,6 +379,8 @@ export async function savePlans(user: Who, body: { sessionId?: string; note?: st
   for (const c of body.courses || []) {
     const a = await accessFor(user, c.courseId, c.plan);
     if (!a) return { error: "One of those courses is not in your institute.", status: 404 };
+    if (a.mode === "FOLLOWER") return { error: `${a.code} follows ${a.followsBase}. Open and edit the base course instead — the change carries forward.`, status: 409 };
+    if (a.mode === "VIEW") return { error: `${a.code}: ${a.why}.`, status: 403 };
     if (plans.some((p) => p.a.planCourseId === a.planCourseId && p.a.plan === a.plan)) return { error: `${a.code} is open twice (it follows the same base course). Close one of them.`, status: 400 };
     const rows = await planRows(a.planCourseId, a.plan);
     if (layoutHash(rows) !== c.hash) {
@@ -377,14 +427,14 @@ export async function savePlans(user: Who, body: { sessionId?: string; note?: st
       const stay = linked.filter((l) => l.from === p);
       for (const l of stay) { const at = p.rows.findIndex((r) => r.id === l.rowId); const r = p.rows[at]; entries.splice(Math.min(at, entries.length), 0, { id: r.id, topic: r.topic, subtopic: r.subtopic, importance: (meta.get(r.id) as Level) || null }); }
       entries = entries.filter((e) => !(e.id && linkedIds.has(e.id) && linked.some((l) => l.rowId === e.id && l.to === p)));
-      const items = diffPlan(before, entries, movedTo);
+      const items = intentItems(before, entries, movedTo);
       if (items.length || linked.some((l) => l.from === p || l.to === p)) direct.push({ courseId: p.a.planCourseId, source: p.a.plan, entries });
       const mine = linked.filter((l) => l.from === p || l.to === p).map((l): Item => l.from === p
         ? { kind: "MOVE_OUT", lectureRowId: l.rowId, topic: p.rows.find((r) => r.id === l.rowId)!.topic, subtopic: null, position: 0, detail: { toCourseId: l.to.a.planCourseId, toSource: l.to.a.plan }, linkKey: l.linkKey }
         : { kind: "MOVE_IN", lectureRowId: l.rowId, topic: l.from.rows.find((r) => r.id === l.rowId)!.topic, subtopic: l.from.rows.find((r) => r.id === l.rowId)!.subtopic, position: l.position, detail: { fromCourseId: l.from.a.planCourseId }, linkKey: l.linkKey });
       if (mine.length) own.push({ a: p.a, items: mine });
     } else {
-      const items = diffPlan(before, entries, movedTo).map((it) => {
+      const items = intentItems(before, entries, movedTo).map((it) => {
         const l = linked.find((x) => x.rowId === it.lectureRowId && (it.kind === "MOVE_IN" || it.kind === "MOVE_OUT"));
         return l ? { ...it, linkKey: l.linkKey, detail: { ...it.detail, ...(it.kind === "MOVE_OUT" ? { toCourseId: l.to.a.planCourseId, toSource: l.to.a.plan } : {}) } } : it;
       });
@@ -394,8 +444,10 @@ export async function savePlans(user: Who, body: { sessionId?: string; note?: st
   const applied = direct.length ? await writePlans(direct, user, { sessionId: body.sessionId || null }) : { ok: true as const };
   if ("error" in applied) return { error: applied.error, status: 400 };
   const sent: { code: string; to: string; items: number; template?: boolean }[] = [];
+  const proposalOf = new Map<string, string>();
   for (const p of proposals) {
     const id = await createProposal(user, chairmanId, p.a, p.items, p.before, p.after, body.note || null, "EDIT");
+    proposalOf.set(p.a.planCourseId, id);
     sent.push({ code: p.a.code, to: p.a.toName, items: p.items.length, template: p.a.mode === "TEMPLATE" });
     void id;
   }
@@ -404,9 +456,29 @@ export async function savePlans(user: Who, body: { sessionId?: string; note?: st
     await db.planProposal.create({ data: { id: randomUUID(), chairmanId, courseId: o.a.planCourseId, source: o.a.plan, kind: "EDIT", fromUserId: user.id, toUserId: user.id, status: "ACCEPTED", note: "Your side of a move between courses", respondedById: user.id, respondedAt: new Date() } }).then((pp: { id: string }) =>
       db.planProposalItem.createMany({ data: o.items.map((it, i) => ({ id: randomUUID(), proposalId: pp.id, kind: it.kind, lectureRowId: it.lectureRowId, topic: it.topic, subtopic: it.subtopic, detailJson: JSON.stringify(it.detail), position: it.position ?? i, linkKey: it.linkKey || null, status: "ACCEPTED", decidedAt: new Date() })) }));
   }
+  // Topic links drawn in the workspace: each is a link proposal (both SEs, then the PL…) and, in the proposal of each
+  // course whose Subject Expert has to agree, a LINK item — so the SE sees it with the other changes.
+  const linkErrors: string[] = []; let linksSent = 0;
+  for (const l of (body.links || []).slice(0, 100)) {
+    const { proposeLink } = await import("./topicLinkPlan");
+    const r = await proposeLink(user, l);
+    if ("error" in r && r.error) { linkErrors.push(`${l.fromCode || ""} → ${l.toCode || ""}: ${r.error}`); continue; }
+    linksSent++;
+    const lp = (r as { proposal: { id: string; fromCourseId: string; toCourseId: string; fromCode: string; toCode: string; fromTopic: string; toTopic: string; level: string; action: string; seFromAt: Date | null; seToAt: Date | null } }).proposal;
+    for (const [cid, done] of [[lp.fromCourseId, lp.seFromAt], [lp.toCourseId, lp.seToAt]] as const) {
+      if (done) continue; // the saver is that course's SE (or it has none)
+      const a = await accessFor(user, cid);
+      if (!a || a.mode === "FOLLOWER" || a.mode === "VIEW") continue;
+      let pid = proposalOf.get(a.planCourseId);
+      if (!pid) { pid = randomUUID(); await db.planProposal.create({ data: { id: pid, chairmanId, courseId: a.planCourseId, source: a.plan, kind: "EDIT", fromUserId: user.id, toUserId: a.toUserId, note: body.note?.slice(0, 2000) || null } }); proposalOf.set(a.planCourseId, pid); sent.push({ code: a.code, to: a.toName, items: 0 });
+        await notifyUsers([a.toUserId], { kind: "TOPIC_SUGGESTION", title: `${user.name} proposes a topic link with ${a.code}`, body: `${lp.fromCode} "${lp.fromTopic}" → ${lp.toCode} "${lp.toTopic}"`, href: INBOX, exceptId: user.id }); }
+      await db.planProposalItem.create({ data: { id: randomUUID(), proposalId: pid, kind: "LINK", topic: cid === lp.toCourseId ? lp.toTopic : lp.fromTopic, detailJson: JSON.stringify({ linkProposalId: lp.id, fromCode: lp.fromCode, toCode: lp.toCode, fromTopic: lp.fromTopic, toTopic: lp.toTopic, level: lp.level, action: lp.action }), position: 9999 } });
+      const s2 = sent.find((x) => x.code === a.code); if (s2) s2.items++;
+    }
+  }
   await db.workspaceState.updateMany({ where: { userId: user.id }, data: { draftJson: null, draftAt: null } }).catch(() => null);
   await writeAuditLog({ actorUserId: user.id, action: "TOPIC_WORKSPACE_SAVED", entityType: "User", entityId: user.id, metadata: { applied: direct.length, proposals: proposals.length, linkedMoves: linked.length } }).catch(() => null);
-  return { ok: true, applied: direct.map((d) => plans.find((p) => p.a.planCourseId === d.courseId)?.a.code || ""), proposals: sent, waitingMoves: linked.length, status: 200 };
+  return { ok: true, applied: direct.map((d) => plans.find((p) => p.a.planCourseId === d.courseId)?.a.code || ""), proposals: sent, waitingMoves: linked.length, linksSent, linkErrors, status: 200 };
 }
 
 export async function createProposal(user: Who, chairmanId: string, a: Access, items: Item[], before: Row[], after: Entry[], note: string | null, kind: "EDIT" | "SHORT_OF_TIME") {
@@ -452,6 +524,13 @@ export async function respondProposal(user: Who, id: string, d: { acceptAll?: bo
   const course = await prisma.course.findUnique({ where: { id: p.courseId }, select: { id: true, code: true, templateStatus: true } });
   if (!course) return { error: "course not found", status: 404 };
   const now = new Date();
+  // LINK items are answered on their link proposal (this SE's agreement; the Program Lead and OMC follow).
+  const { answerLink } = await import("./topicLinkPlan");
+  for (const it of items.filter((i) => i.kind === "LINK" && (accept.includes(i.id) || reject.includes(i.id)))) {
+    const lid = JSON.parse(it.detailJson || "{}").linkProposalId;
+    const r = await answerLink(user, String(lid || ""), accept.includes(it.id), reason);
+    if ("error" in r && r.error && !/already been decided/.test(String(r.error))) return { error: `Topic link: ${r.error}`, status: (r as { status?: number }).status || 400 };
+  }
   if (reject.length) await db.planProposalItem.updateMany({ where: { id: { in: reject } }, data: { status: "REJECTED", reason, decidedAt: now } });
   for (const r of items.filter((i) => reject.includes(i.id) && i.linkKey)) await db.planProposalItem.updateMany({ where: { linkKey: r.linkKey, status: { in: ["PENDING", "ACCEPTED"] } }, data: { status: "REJECTED", reason: `The other course's owner declined: ${reason}`, decidedAt: now } });
 
@@ -488,7 +567,7 @@ export async function respondProposal(user: Who, id: string, d: { acceptAll?: bo
 
 /** Applies accepted items: plain ones to the plan now; linked moves when all their sides are agreed. */
 export async function applyAccepted(user: Who, p: ProposalRow, chosen: ProposalItemRow[]) {
-  const plain = chosen.filter((i) => !i.linkKey && i.kind !== "DROP" && i.kind !== "SHORTEN");
+  const plain = chosen.filter((i) => !i.linkKey && i.kind !== "DROP" && i.kind !== "SHORTEN" && i.kind !== "LINK");
   if (plain.length) {
     const rows = await planRows(p.courseId, p.source);
     const meta = new Map<string, string | null>(((await db.topicMeta.findMany({ where: { lectureRowId: { in: rows.map((r) => r.id).concat("none") } } })) as { lectureRowId: string; importance: string | null }[]).map((m) => [m.lectureRowId, m.importance]));

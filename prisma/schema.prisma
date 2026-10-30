@@ -8465,6 +8465,7 @@ model TopicMeta {
   importanceConfirmed Boolean  @default(false)
   industry            String?  // HIGH | MEDIUM | LOW
   reading             String?
+  readingAuto         Boolean  @default(false) // filled in from the book's contents (not yet checked by a person)
   needsClo            Boolean  @default(false) // moved in from another course: map it to a CLO here
   movedFrom           String?
   notTaught           Boolean  @default(false) // planned but not taught (approved "short of time")
@@ -8720,4 +8721,29 @@ model PrivacySetting {
   graduatedDetailYears Int?
   updatedById          String?
   updatedAt            DateTime @default(now())
+}
+
+// ---------------------------------------------------------------- Prompt 10 A (migration_prompt10a.sql)
+model SemesterReset {
+  id           String    @id
+  scopeKey     String
+  label        String
+  byUserId     String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  restoredAt   DateTime?
+  restoredById String?
+  summaryJson  String    @default("{}")
+  dataJson     String
+
+  @@index([scopeKey, createdAt])
+}
+
+model BookToc {
+  bookKey     String   @id
+  title       String
+  entriesJson String   @default("[]")
+  source      String   @default("MANUAL") // MANUAL | AI
+  updatedById String?
+  updatedAt   DateTime @default(now())
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { diffPlan, mergeLayouts, LEVEL_LABEL, type Entry, type Level } from "../lib/topicPlanCore";
+import { intentItems, mergeLayouts, LEVEL_LABEL, type Entry, type Level } from "../lib/topicPlanCore";
 import { norm, similarity } from "../lib/textMatch";
 
 // The Topic Workspace: any number of courses of the institute side by side (scroll sideways, collapse, pin). Edit
@@ -20,7 +20,7 @@ type Row = {
 };
 type Column = {
   courseId: string; code: string; title: string; semester: number | null; program: string; batch: string; coordinatorId: string;
-  plan: "SE" | "INSTRUCTOR"; planCourseId: string; mode: "APPLY" | "PROPOSE" | "TEMPLATE"; toName: string; followsBase: string | null; why: string; ownTeaching: boolean;
+  plan: "SE" | "INSTRUCTOR"; planCourseId: string; mode: "APPLY" | "PROPOSE" | "TEMPLATE" | "FOLLOWER" | "VIEW"; toName: string; followsBase: string | null; baseCourseId?: string | null; why: string; ownTeaching: boolean;
   textbook: string; hash: string; rows: Row[]; lab: boolean;
 };
 type Card = Entry & { key: string; origin?: Row; home?: string };
@@ -74,6 +74,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
   const [drag, setDrag] = useState<{ courseId: string; key: string } | null>(null);
   const [dropAt, setDropAt] = useState<{ courseId: string; index: number } | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  const lastSave = useRef<{ linksSent?: number; linkErrors?: string[] } | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const [lines, setLines] = useState<Line[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -110,6 +111,11 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
     const add = ids.filter((id) => !open.some((o) => o.courseId === id)).map((courseId) => ({ courseId, plan: plan || null }));
     if (add.length) changeOpen(open.concat(add));
   };
+  const addRefs = (refs: OpenRef[]) => {
+    // One version per course offering at a time (its columns are keyed by the course).
+    const add = refs.filter((r, i) => !open.some((o) => o.courseId === r.courseId) && refs.findIndex((x) => x.courseId === r.courseId) === i);
+    if (add.length) changeOpen(open.concat(add));
+  };
   const closeCourse = (id: string) => {
     if (changedCount(id) && !window.confirm("This course has unsaved changes. Close it and lose them?")) return;
     changeOpen(open.filter((o) => o.courseId !== id), false);
@@ -135,12 +141,12 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
   const diffs = useMemo(() => {
     const homeOf = new Map<string, string>();
     for (const c of columns) for (const r of c.rows) homeOf.set(r.id, c.courseId);
-    const out: Record<string, ReturnType<typeof diffPlan>> = {};
+    const out: Record<string, ReturnType<typeof intentItems>> = {};
     for (const c of columns) {
       const cards = work[c.courseId] || [];
       const movedTo = new Map<string, string>();
       for (const [cid, list] of Object.entries(work)) if (cid !== c.courseId) for (const k of list) if (k.id && homeOf.get(k.id) === c.courseId) movedTo.set(k.id, cid);
-      out[c.courseId] = diffPlan(c.rows.map((r) => ({ id: r.id, topic: r.topic, subtopic: r.subtopic, importance: r.importance })), cards, movedTo);
+      out[c.courseId] = intentItems(c.rows.map((r) => ({ id: r.id, topic: r.topic, subtopic: r.subtopic, importance: r.importance })), cards, movedTo);
     }
     return out;
   }, [columns, work]);
@@ -166,6 +172,8 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
     const card = findCard(from.courseId, from.key);
     if (!card) return;
     const target = colOf(toCourse);
+    if (target && roCol(target)) { setMsg({ kind: "err", text: `${target.code}: ${target.why}.` }); return; }
+    if (roCol(colOf(from.courseId))) { if (from.courseId === toCourse) return; copy = true; }
     if (from.courseId !== toCourse && !copy && card.origin?.pinned) { setMsg({ kind: "err", text: `"${card.topic}" already has attendance recorded, so it can only be copied to another course.` }); return; }
     if (target && from.courseId !== toCourse && !copy && target.plan !== colOf(from.courseId)?.plan) copy = true; // a teaching copy and a Subject Expert plan never share rows
     setWork((w) => {
@@ -178,6 +186,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
       return { ...w, [from.courseId]: from.courseId === toCourse ? dst : src, ...(from.courseId === toCourse ? {} : { [toCourse]: dst }) };
     });
   };
+  const roCol = (c?: Column | null) => !!c && (c.mode === "FOLLOWER" || c.mode === "VIEW");
   const setLevel = (keys: { courseId: string; key: string }[], level: Level) => {
     setWork((w) => { const n = { ...w }; for (const k of keys) n[k.courseId] = (n[k.courseId] || []).map((c) => (c.key === k.key ? { ...c, importance: level } : c)); return n; });
   };
@@ -186,27 +195,24 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
   // ---------------------------------------------------------------- save, draft, discard
   const collect = (only?: string[]) => columns.filter((c) => (only ? only.includes(c.courseId) : changedCount(c.courseId) > 0)).map((c) => ({
     courseId: c.courseId, plan: c.plan, hash: c.hash,
-    entries: (work[c.courseId] || []).map((k) => ({ id: k.id, topic: k.topic, subtopic: k.subtopic, importance: k.importance || null, fromCourseId: k.fromCourseId || null })),
+    entries: (work[c.courseId] || []).map((k) => ({ id: k.id, topic: k.topic, subtopic: k.subtopic, importance: k.importance || null, fromCourseId: k.fromCourseId || null, mergedFrom: k.mergedFrom || null, splitFrom: k.splitFrom || null })),
   }));
   const save = async (body?: ReturnType<typeof collect>) => {
     if (busy || (!totalChanges && !body)) return;
     setBusy(true); setMsg(null);
     const courses = body || collect();
     let text = "";
-    if (courses.length) {
-      const r = await jsend(API, "POST", { sessionId, courses });
+    if (courses.length || links.length) {
+      const r = await jsend(API, "POST", { sessionId, courses, links: links.map(({ key, ...l }) => { void key; return l; }) });
       if (r.status === 409 && r.d.conflicts) { setBusy(false); setConflicts(r.d.conflicts); return; }
       if (!r.ok) { setBusy(false); setMsg({ kind: "err", text: r.d.error || "Could not save." }); return; }
+      lastSave.current = r.d;
       const applied = (r.d.applied || []).filter(Boolean);
       text = [applied.length ? `Saved ${applied.join(", ")}` : "", ...(r.d.proposals || []).map((p: { code: string; to: string; items: number; template?: boolean }) => p.template ? `${p.code}: Template Change Request sent to the OMC (${p.items} change(s))` : `${p.code}: ${p.items} change(s) sent to ${p.to || "its Subject Expert"} for approval`), r.d.waitingMoves ? `${r.d.waitingMoves} move(s) between courses wait for the other course's owner` : ""].filter(Boolean).join(" · ");
       setSavedOnce(true);
     }
     let linkErr = "";
-    for (const l of links) {
-      const r = await jsend(`${API}/links`, "POST", l);
-      if (!r.ok) linkErr += `${l.fromCode} → ${l.toCode}: ${r.d.error} `;
-    }
-    if (links.length && !linkErr) text += `${text ? " · " : ""}${links.length} topic link(s) sent for approval`;
+    if (lastSave.current) { const d = lastSave.current; if (d.linkErrors?.length) linkErr = d.linkErrors.join("; "); if (d.linksSent) text += `${text ? " · " : ""}${d.linksSent} topic link(s) sent for approval`; lastSave.current = null; }
     setLinks([]); setBusy(false);
     await jsend(`${API}/state`, "DELETE", {}).catch(() => null); setDraft(null);
     setMsg({ kind: linkErr ? "err" : "ok", text: (text || "Saved.") + (linkErr ? ` — Not sent: ${linkErr}` : "") });
@@ -253,7 +259,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
       const col = colOf(b.courseId)!;
       const base = col.rows.map((r) => ({ id: r.id, topic: r.topic, subtopic: r.subtopic }));
       const { merged } = mergeLayouts(base, b.entries, c.theirs);
-      return { ...b, hash: c.hash || b.hash, entries: merged.map((e) => ({ id: e.id, topic: e.topic, subtopic: e.subtopic, importance: e.importance || null, fromCourseId: e.fromCourseId || null })) };
+      return { ...b, hash: c.hash || b.hash, entries: merged.map((e) => ({ id: e.id, topic: e.topic, subtopic: e.subtopic, importance: e.importance || null, fromCourseId: e.fromCourseId || null, mergedFrom: e.mergedFrom || null, splitFrom: e.splitFrom || null })) };
     });
     // The new hash is the current plan's; reload it, then save the merged lists.
     const fresh = await jget(`${API}?open=${encodeURIComponent(JSON.stringify(conflicts.map((x) => ({ courseId: x.courseId, plan: colOf(x.courseId)?.plan || null }))))}`);
@@ -439,7 +445,8 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                 {!o?.collapsed && <>
                   <div className="tw-title">{c.title}</div>
                   <div className="tw-meta">{c.program} {c.batch}{c.followsBase ? ` · follows ${c.followsBase}` : ""}</div>
-                  <div className={`tw-mode tw-mode-${c.mode}`}>{c.mode === "APPLY" ? "✎ " : c.mode === "TEMPLATE" ? "🔒 " : "✉ "}{c.why}</div>
+                  <div className={`tw-mode tw-mode-${c.mode}`}>{c.mode === "APPLY" ? "✎ " : c.mode === "TEMPLATE" ? "🔒 " : c.mode === "FOLLOWER" ? "⇢ " : c.mode === "VIEW" ? "👁 " : "✉ "}{c.why}</div>
+                  {c.mode === "FOLLOWER" && c.baseCourseId && <button className="btn btn-sm" style={{ marginTop: 4 }} onClick={() => changeOpen(open.some((x) => x.courseId === c.baseCourseId) ? open.filter((x) => x.courseId !== c.courseId) : open.map((x) => (x.courseId === c.courseId ? { courseId: c.baseCourseId!, plan: null } : x)))}>Open the base course instead</button>}
                   <div className="tw-head-actions">
                     {c.ownTeaching || (role === "INSTRUCTOR" && c.plan === "SE" && open.find((x) => x.courseId === c.courseId)?.plan === "SE") ? <select value={c.plan} onChange={(e) => changeOpen(open.map((x) => (x.courseId === c.courseId ? { ...x, plan: e.target.value as "SE" | "INSTRUCTOR" } : x)))} aria-label="Which plan"><option value="INSTRUCTOR">My teaching copy</option><option value="SE">Subject Expert&apos;s plan (propose)</option></select> : null}
                     <select value="" onChange={(e) => { if (e.target.value) { setChain({ courseId: c.courseId, dir: e.target.value, data: null }); jget(`${API}/chain?courseId=${c.courseId}&dir=${e.target.value}`).then((r) => setChain({ courseId: c.courseId, dir: e.target.value, data: r.ok ? r.d : { confirmed: [], suggestedOnly: [], preview: r.d.error || "" } })); } }} aria-label="Open the chain">
@@ -460,7 +467,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                       {dropAt?.courseId === c.courseId && dropAt.index === i && <div className="tw-drop" />}
                       <div ref={(el) => { if (el) cardRefs.current.set(`${c.courseId}::${k.key}`, el); else cardRefs.current.delete(`${c.courseId}::${k.key}`); }}
                         className={`tw-card${selected ? " tw-sel" : ""}${hide ? " tw-dim" : ""}${r?.notTaught ? " tw-nottaught" : ""}`} title={hover(c, k)}
-                        draggable={!readOnly} onDragStart={(e) => { e.dataTransfer.setData("text/plain", k.topic); e.dataTransfer.effectAllowed = "copyMove"; setDrag({ courseId: c.courseId, key: k.key }); }}
+                        draggable={!readOnly && c.mode !== "FOLLOWER"} onDragStart={(e) => { e.dataTransfer.setData("text/plain", k.topic); e.dataTransfer.effectAllowed = "copyMove"; setDrag({ courseId: c.courseId, key: k.key }); }}
                         onDragEnd={() => { setDrag(null); setDropAt(null); }}
                         onDragOver={(e) => { if (!drag) return; e.preventDefault(); e.stopPropagation(); const b = e.currentTarget.getBoundingClientRect(); setDropAt({ courseId: c.courseId, index: e.clientY > b.top + b.height / 2 ? i + 1 : i }); }}
                         onDrop={(e) => {
@@ -469,11 +476,11 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                           if (ln) { const [fc, fk] = ln.split("::"); const fcol = colOf(fc), fcard = findCard(fc, fk); if (fcol && fcard && fc !== c.courseId) setLinkAsk((fcol.semester ?? 0) <= (c.semester ?? 0) ? { from: { col: fcol, card: fcard }, to: { col: c, card: k } } : { from: { col: c, card: k }, to: { col: fcol, card: fcard } }); return; }
                           if (drag && dropAt) move(drag, dropAt.courseId, dropAt.index, e.altKey || e.ctrlKey); setDrag(null); setDropAt(null);
                         }}
-                        onClick={(e) => { if (readOnly) return; const id = `${c.courseId}::${k.key}`; setSel((s) => { const n2 = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? s : []); if (n2.has(id) && (e.shiftKey || e.ctrlKey || e.metaKey)) n2.delete(id); else n2.add(id); return n2; }); }}>
+                        onClick={(e) => { if (detail) setDetail({ courseId: c.courseId, key: k.key }); if (readOnly) return; const id = `${c.courseId}::${k.key}`; setSel((s) => { const n2 = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? s : []); if (n2.has(id) && (e.shiftKey || e.ctrlKey || e.metaKey)) n2.delete(id); else n2.add(id); return n2; }); }}>
                         <button className={`tw-bar${lv.suggested ? " tw-bar-sug" : ""}`} style={{ background: lv.suggested ? "transparent" : LEVEL_COLOR[lv.lv], borderColor: LEVEL_COLOR[lv.lv] }} aria-label={`Importance ${LEVEL_LABEL[lv.lv]}${lv.suggested ? " (suggested)" : ""} — click to change`}
                           onClick={(e) => { e.stopPropagation(); if (readOnly) return; const next: Level = lv.suggested ? lv.lv : lv.lv === "CORE" ? "IMPORTANT" : lv.lv === "IMPORTANT" ? "OPTIONAL" : "CORE"; setLevel([{ courseId: c.courseId, key: k.key }], next); }} />
                         <div className="tw-body">
-                          <div className="tw-topic">{h && <i className="tw-heat" style={{ background: HEAT[h] }} />}{k.topic}{isChanged(c, k) && <span className="tw-tag">proposed</span>}</div>
+                          <div className="tw-topic"><span className="tw-ln" title="Lecture number in the plan">L{i + 1}</span>{h && <i className="tw-heat" style={{ background: HEAT[h] }} />}{k.topic}{isChanged(c, k) && <span className="tw-tag">proposed</span>}</div>
                           {k.subtopic && <div className="tw-sub">{k.subtopic}</div>}
                           <div className="tw-badges">
                             {r && <span className={`tw-safe tw-safe-${r.safety.mark === "⛔" ? "no" : r.safety.mark === "✓" ? "ok" : "warn"}`} title={r.safety.reason}>{r.safety.mark}</span>}
@@ -484,14 +491,14 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                             {r?.inCouncil && <span title="In the council (curriculum) outline">council</span>}
                           </div>
                         </div>
-                        {!readOnly && <span className="tw-handle" draggable title="Drag onto a topic of another course to link them" onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData("application/x-topic-link", `${c.courseId}::${k.key}`); e.dataTransfer.effectAllowed = "link"; }}>⟶</span>}
+                        {!readOnly && !roCol(c) && <span className="tw-handle" draggable title="Drag onto a topic of another course to link them" onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData("application/x-topic-link", `${c.courseId}::${k.key}`); e.dataTransfer.effectAllowed = "link"; }}>⟶</span>}
                         <button className="tw-more" aria-label={`Details of ${k.topic}`} onClick={(e) => { e.stopPropagation(); setDetail({ courseId: c.courseId, key: k.key }); }}>⋯</button>
                       </div>
                     </div>
                   );
                 })}
                 {dropAt?.courseId === c.courseId && dropAt.index >= cards.length && <div className="tw-drop" />}
-                {!readOnly && <AddTopic onAdd={(t) => setCards(c.courseId, (cs) => cs.concat({ key: tmpKey(), topic: t, subtopic: null, importance: null }))} />}
+                {!readOnly && !roCol(c) && <AddTopic onAdd={(t) => setCards(c.courseId, (cs) => cs.concat({ key: tmpKey(), topic: t, subtopic: null, importance: null }))} />}
               </div>}
             </section>
           );
@@ -506,7 +513,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
         </div>
       )}
 
-      {picker && <Picker onClose={() => setPicker(false)} onOpen={(ids) => { addCourses(ids); setPicker(false); }} openIds={open.map((o) => o.courseId)} />}
+      {picker && <Picker onClose={() => setPicker(false)} onOpen={(refs) => { addRefs(refs); setPicker(false); }} openIds={open.map((o) => o.courseId)} />}
       {chain && <Modal title="Open the chain" onClose={() => setChain(null)}><ChainPick data={chain.data} onOpen={(ids) => { addCourses(ids); setChain(null); }} /></Modal>}
       {linkAsk && <Modal title="Link these topics" onClose={() => setLinkAsk(null)}><LinkAsk ask={linkAsk} onDone={(kind, lvl, note) => { setLinks((l) => l.concat({ key: tmpKey(), kind, level: lvl, action: "ADD", fromCourseId: linkAsk.from.col.courseId, fromCode: linkAsk.from.col.code, fromTopic: linkAsk.from.card.topic, toCourseId: linkAsk.to.col.courseId, toCode: linkAsk.to.col.code, toTopic: linkAsk.to.card.topic, note })); setLinkAsk(null); }} /></Modal>}
       {lineMenu?.line.link && <div className="tw-pop" style={{ left: Math.min(lineMenu.x, window.innerWidth - 280), top: lineMenu.y }} role="dialog" aria-label="Change link">
@@ -530,8 +537,8 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
         onClose={() => setDetail(null)}
         onChange={(patch) => setCards(detailCol.courseId, (cs) => cs.map((x) => (x.key === detailCard.key ? { ...x, ...patch } : x)))}
         onDelete={() => { if (detailCard.origin && detailCard.origin.safety.mark === "⛔" && !window.confirm(`${detailCard.origin.safety.reason}. Delete it anyway?`)) return; setCards(detailCol.courseId, (cs) => cs.filter((x) => x.key !== detailCard.key)); setDetail(null); }}
-        onSplit={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); const n = cs.slice(); n.splice(i + 1, 0, { key: tmpKey(), topic: `${detailCard.topic} (part 2)`, subtopic: null, importance: detailCard.importance || null }); n[i] = { ...n[i], topic: `${detailCard.topic} (part 1)` }; return n; })}
-        onMerge={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); if (i < 0 || i >= cs.length - 1) return cs; const n = cs.slice(); const nx = n[i + 1]; if (nx.origin?.pinned) return cs; n[i] = { ...n[i], topic: `${n[i].topic}; ${nx.topic}`.slice(0, 300), subtopic: [n[i].subtopic, nx.subtopic].filter(Boolean).join("; ") || null }; n.splice(i + 1, 1); return n; })}
+        onSplit={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); const n = cs.slice(); const src = detailCard.id || detailCard.splitFrom || null; n.splice(i + 1, 0, { key: tmpKey(), topic: `${detailCard.topic} (part 2)`, subtopic: null, importance: detailCard.importance || null, splitFrom: src }); n[i] = { ...n[i], topic: `${detailCard.topic} (part 1)` }; return n; })}
+        onMerge={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); if (i < 0 || i >= cs.length - 1) return cs; const n = cs.slice(); const nx = n[i + 1]; if (nx.origin?.pinned) return cs; const parts = Array.from(new Set([...(n[i].mergedFrom || (n[i].id ? [n[i].id!] : [])), ...(nx.mergedFrom || (nx.id ? [nx.id] : []))])); n[i] = { ...n[i], topic: `${n[i].topic}; ${nx.topic}`.slice(0, 300), subtopic: [n[i].subtopic, nx.subtopic].filter(Boolean).join("; ") || null, mergedFrom: parts.length > 1 ? parts : n[i].mergedFrom || null }; n.splice(i + 1, 1); return n; })}
         onCopyMove={(to, copy) => { move({ courseId: detailCol.courseId, key: detailCard.key }, to, (work[to] || []).length, copy); setDetail(null); }}
         onSaved={() => load(open, true)} setMsg={setMsg} />}
       {sugOpen && <SuggestionsPanel sugs={sugs} importance={importanceSugs.map((x) => ({ key: `${x.col.courseId}::${x.card.key}`, code: x.col.code, topic: x.card.topic, level: x.s.level, why: x.s.why, confidence: x.s.confidence }))} role={role}
@@ -562,21 +569,47 @@ function AddTopic({ onAdd }: { onAdd: (t: string) => void }) {
   return <form className="tw-add" onSubmit={(e) => { e.preventDefault(); if (t.trim()) { onAdd(t.trim()); setT(""); } }}><input value={t} onChange={(e) => setT(e.target.value)} placeholder="Add a topic…" aria-label="Add a topic" /><button className="btn btn-secondary btn-sm" disabled={!t.trim()}>Add</button></form>;
 }
 
-function Picker({ onClose, onOpen, openIds }: { onClose: () => void; onOpen: (ids: string[]) => void; openIds: string[] }) {
+type Version = { courseId: string; plan: "SE" | "INSTRUCTOR"; kind: "BASE" | "SE" | "INSTRUCTOR"; label: string; changed?: number; mine?: boolean };
+type Group = { key: string; code: string; title: string; semester: number | null; programs: string[]; followers: number; versions: Version[] };
+
+/** One row per course; ticking it opens its latest base plan. "Versions" lists the other independent plans and the teaching copies that changed topics. */
+function Picker({ onClose, onOpen, openIds }: { onClose: () => void; onOpen: (refs: OpenRef[]) => void; openIds: string[] }) {
   const [q, setQ] = useState("");
-  const [list, setList] = useState<{ id: string; code: string; title: string; semester: number | null; program: string; batch: string; se: string; instructor: string; mine: string | null; offered: boolean }[]>([]);
-  const [pick, setPick] = useState<string[]>([]);
-  useEffect(() => { const t = setTimeout(() => jget(`${API}/courses?q=${encodeURIComponent(q)}`).then((r) => r.ok && setList(r.d.courses || [])), 250); return () => clearTimeout(t); }, [q]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [pick, setPick] = useState<string[]>([]); // "courseId|plan"
+  const [expanded, setExpanded] = useState<string[]>([]);
+  useEffect(() => { const t = setTimeout(() => jget(`${API}/courses?q=${encodeURIComponent(q)}`).then((r) => r.ok && setGroups(r.d.groups || [])), 250); return () => clearTimeout(t); }, [q]);
+  const id = (v: Version) => `${v.courseId}|${v.plan}`;
+  const toggle = (v: Version) => setPick((p) => (p.includes(id(v)) ? p.filter((x) => x !== id(v)) : p.concat(id(v))));
   return (
     <Modal title="Open courses" onClose={onClose}>
       <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by code, title, program or batch" style={{ width: "100%" }} aria-label="Search courses" />
       <div className="tw-picklist">
-        {list.map((c) => { const already = openIds.includes(c.id); return (
-          <label key={c.id} className={already ? "tw-muted" : ""}><input type="checkbox" disabled={already} checked={already || pick.includes(c.id)} onChange={() => setPick((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : p.concat(c.id)))} />
-            <b>{c.code}</b> {c.title} <span className="small-note">· {c.program} {c.batch} · S{c.semester ?? "?"}{c.mine ? ` · yours (${c.mine === "SE" ? "Subject Expert" : "Instructor"})` : ""}{c.se ? ` · SE ${c.se}` : ""}{c.offered ? " · offered" : ""}</span></label>); })}
-        {!list.length && <p className="small-note">No courses match.</p>}
+        {groups.map((g) => {
+          const first = g.versions[0];
+          const more = g.versions.slice(1);
+          const open = expanded.includes(g.key);
+          return (
+            <div key={g.key} className="tw-group">
+              {first ? (
+                <label className={openIds.includes(first.courseId) ? "tw-muted" : ""}>
+                  <input type="checkbox" disabled={openIds.includes(first.courseId)} checked={openIds.includes(first.courseId) || pick.includes(id(first))} onChange={() => toggle(first)} />
+                  <b>{g.code}</b> {g.title} <span className="small-note">· S{g.semester ?? "?"} · {g.programs.join(", ")}</span>
+                  <div className="small-note" style={{ marginLeft: 22 }}>{first.label}{first.mine ? " · yours" : ""}{g.followers ? ` · ${g.followers} batch(es) follow this plan` : ""}</div>
+                </label>
+              ) : <div><b>{g.code}</b> {g.title} <span className="small-note">· only follower copies (open the base course)</span></div>}
+              {more.length > 0 && <button type="button" className="tw-linkbtn" onClick={() => setExpanded((x) => (open ? x.filter((k) => k !== g.key) : x.concat(g.key)))} aria-expanded={open}>{open ? "▾" : "▸"} {more.length} other version{more.length === 1 ? "" : "s"}</button>}
+              {open && more.map((v) => (
+                <label key={id(v)} style={{ marginLeft: 22, display: "block" }} className={openIds.includes(v.courseId) ? "tw-muted" : ""}>
+                  <input type="checkbox" checked={pick.includes(id(v))} onChange={() => toggle(v)} /> <span className={`tw-vkind tw-vkind-${v.kind}`}>{v.kind === "INSTRUCTOR" ? "Instructor" : "SE"}</span> {v.label}{v.mine ? " · yours" : ""}
+                </label>
+              ))}
+            </div>
+          );
+        })}
+        {!groups.length && <p className="small-note">No courses match.</p>}
       </div>
-      <button className="btn btn-sm" disabled={!pick.length} onClick={() => onOpen(pick)}>Open {pick.length || ""} course{pick.length === 1 ? "" : "s"}</button>
+      <button className="btn btn-sm" disabled={!pick.length} onClick={() => onOpen(pick.map((x) => { const [courseId, plan] = x.split("|"); return { courseId, plan: plan as "SE" | "INSTRUCTOR" }; }))}>Open {pick.length || ""} version{pick.length === 1 ? "" : "s"}</button>
     </Modal>
   );
 }
@@ -761,6 +794,8 @@ const CSS = `
 .tw-title{font-size:12.5px;font-weight:600}
 .tw-meta{font-size:11px;color:var(--slate)}
 .tw-mode{font-size:11px;margin-top:3px;padding:2px 6px;border-radius:6px}
+.tw-ln{display:inline-block;min-width:24px;margin-right:5px;font-size:10.5px;font-weight:700;color:var(--slate);background:#F1E9EA;border-radius:4px;padding:0 3px;text-align:center}
+.tw-mode-FOLLOWER{background:#F1ECF8;color:#5B3A8A}.tw-mode-VIEW{background:#EEF1F4;color:#444}
 .tw-mode-APPLY{background:#E8F3EA;color:#1E6B34}.tw-mode-PROPOSE{background:#E9F0FB;color:#1C4E9B}.tw-mode-TEMPLATE{background:#FBEFE6;color:#8A3D0D}
 .tw-head-actions{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center}
 .tw-head-actions select{font-size:11.5px;max-width:170px;padding:2px}
@@ -793,6 +828,8 @@ const CSS = `
 .tw-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .tw-picklist{max-height:50vh;overflow:auto;margin:8px 0;display:flex;flex-direction:column;gap:3px;font-size:13px}
 .tw-muted{opacity:.5}
+.tw-group{border-bottom:1px solid var(--line);padding:5px 0}.tw-linkbtn{background:none;border:0;color:#1C4E9B;cursor:pointer;font-size:12px;padding:2px 0 0 22px}
+.tw-vkind{font-size:10.5px;border-radius:4px;padding:0 4px;background:#E9F0FB;color:#1C4E9B}.tw-vkind-INSTRUCTOR{background:#FFF4D6;color:#7A5A00}
 .tw-pop{position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;width:270px;box-shadow:0 6px 20px rgba(0,0,0,.12);font-size:12.5px}
 .tw-drawer{position:fixed;right:0;top:0;bottom:0;width:min(420px,100vw);background:#fff;z-index:40;box-shadow:-6px 0 20px rgba(0,0,0,.12);padding:14px;overflow:auto;font-size:13px}
 .tw-drawer h4{margin:12px 0 4px;font-size:13px}

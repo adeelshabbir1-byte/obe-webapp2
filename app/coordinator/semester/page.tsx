@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import Shell from "../../../components/Shell";
 import SemesterManager from "../../../components/SemesterManager";
+import SemesterResetPanel from "../../../components/SemesterResetPanel";
 import { navForRole } from "../../../components/reportNav";
 
 
@@ -11,6 +12,15 @@ export default async function CoordinatorSemesterPage() {
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (user.mustChangePassword) redirect("/change-password");
+  if (user.role === "DEPARTMENT_COORDINATOR") {
+    // The Department Coordinator resets the whole department's offering here (the offering itself is set per program).
+    return (
+      <Shell roleLabel="Department Coordinator" userName={user.name} navLinks={navForRole(user.role)}>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Current Semester</h1>
+        <SemesterResetPanel />
+      </Shell>
+    );
+  }
   if (user.role !== "PROGRAM_COORDINATOR") redirect("/dashboard");
 
   const currentTerm = await prisma.currentTerm.findUnique({ where: { coordinatorId: user.id } });
@@ -51,6 +61,7 @@ export default async function CoordinatorSemesterPage() {
         }))}
         instructors={instructors.map((i) => ({ id: i.id, name: i.name }))}
       />
+      <SemesterResetPanel />
     </Shell>
   );
 }

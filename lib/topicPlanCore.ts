@@ -24,8 +24,9 @@ export function textHash(s: string) {
 // ------------------------------------------------------------------------------------------------ plan differences
 export type Row = { id: string; topic: string; subtopic: string | null; importance?: Level | null };
 /** One entry of an edited plan: an existing lecture row (maybe from another course), or a new topic. */
-export type Entry = { id?: string; topic: string; subtopic: string | null; importance?: Level | null; fromCourseId?: string | null; lectureRowFrom?: string | null };
-export type ItemKind = "ADD" | "REMOVE" | "MOVE_IN" | "MOVE_OUT" | "RENAME" | "REORDER" | "IMPORTANCE" | "DROP" | "SHORTEN";
+/** mergedFrom: this entry is the merge of these rows (its own id first); splitFrom: this entry is a part of that row, split. */
+export type Entry = { id?: string; topic: string; subtopic: string | null; importance?: Level | null; fromCourseId?: string | null; lectureRowFrom?: string | null; mergedFrom?: string[] | null; splitFrom?: string | null };
+export type ItemKind = "ADD" | "REMOVE" | "MOVE_IN" | "MOVE_OUT" | "RENAME" | "REORDER" | "IMPORTANCE" | "MERGE" | "SPLIT" | "LINK" | "DROP" | "SHORTEN";
 export type Item = { kind: ItemKind; lectureRowId: string | null; topic: string; subtopic: string | null; position: number; detail: Record<string, unknown>; linkKey?: string | null };
 
 /**
@@ -51,6 +52,40 @@ export function diffPlan(before: Row[], after: Entry[], movedTo: Map<string, str
   const was = before.map((r) => r.id).filter((id) => kept.includes(id));
   if (was.join(",") !== kept.join(",")) items.push({ kind: "REORDER", lectureRowId: null, topic: "", subtopic: null, position: 0, detail: { order: kept, moved: movedRows(was, kept) } });
   return items;
+}
+
+/**
+ * What changed, by what the person did (recorded on the cards as they edited), not guessed from the result: a merge is
+ * one MERGE ("Merged L7 + L8 → L7"), a split one SPLIT; everything else as diffPlan finds it (ADD, REMOVE, MOVE,
+ * RENAME, REORDER, IMPORTANCE). Lecture numbers are the plan's L1, L2 … before the change.
+ */
+export function intentItems(before: Row[], after: Entry[], movedTo: Map<string, string> = new Map()): Item[] {
+  const L = new Map(before.map((r, i) => [r.id, i + 1]));
+  const byId = new Map(before.map((r) => [r.id, r]));
+  const consumedRows = new Set<string>(); // rows that disappear into a merge
+  const renamedBy = new Set<string>(); // rows whose new wording comes from a merge or split
+  const partEntries = new Set<Entry>(); // new entries that are parts of a split
+  const items: Item[] = [];
+  after.forEach((e, i) => {
+    const from = (e.mergedFrom || []).filter((id) => byId.has(id));
+    if (e.id && from.length > 1) {
+      for (const id of from) if (id !== e.id) consumedRows.add(id);
+      renamedBy.add(e.id);
+      items.push({ kind: "MERGE", lectureRowId: e.id, topic: e.topic, subtopic: e.subtopic, position: i, detail: { into: L.get(e.id), lectures: from.map((id) => L.get(id)), parts: from.map((id) => ({ id, topic: byId.get(id)!.topic })), oldTopic: byId.get(e.id)?.topic } });
+    }
+  });
+  const splits = new Map<string, Entry[]>();
+  for (const e of after) if (e.splitFrom && byId.has(e.splitFrom)) splits.set(e.splitFrom, (splits.get(e.splitFrom) || []).concat(e));
+  for (const [src, parts] of Array.from(splits.entries())) {
+    const own = after.find((e) => e.id === src);
+    const all = (own ? [own] : []).concat(parts.filter((p) => p !== own));
+    for (const p of all) if (!p.id) partEntries.add(p);
+    if (own) renamedBy.add(src);
+    items.push({ kind: "SPLIT", lectureRowId: src, topic: byId.get(src)!.topic, subtopic: null, position: after.indexOf(all[0]), detail: { lecture: L.get(src), parts: all.map((p) => ({ topic: p.topic, subtopic: p.subtopic, position: after.indexOf(p), id: p.id || null })) } });
+  }
+  const rest = diffPlan(before, after.filter((e) => !partEntries.has(e)), movedTo).filter((it) =>
+    !(it.kind === "REMOVE" && it.lectureRowId && consumedRows.has(it.lectureRowId)) && !(it.kind === "RENAME" && it.lectureRowId && renamedBy.has(it.lectureRowId)));
+  return items.concat(rest.map((it) => (it.lectureRowId && L.has(it.lectureRowId) ? { ...it, detail: { ...it.detail, lecture: L.get(it.lectureRowId) } } : it)));
 }
 
 /** The rows whose place changed (the fewest: everything outside the longest run kept in order). */
@@ -86,6 +121,19 @@ export function applyItems(current: Row[], items: Item[]): Entry[] {
     if (it.kind === "REMOVE" || it.kind === "MOVE_OUT" || it.kind === "DROP") list = list.filter((e) => e.id !== it.lectureRowId);
     if (it.kind === "RENAME") list = list.map((e) => (e.id === it.lectureRowId ? { ...e, topic: it.topic, subtopic: it.subtopic } : e));
     if (it.kind === "IMPORTANCE") list = list.map((e) => (e.id === it.lectureRowId ? { ...e, importance: it.detail.to as Level } : e));
+    if (it.kind === "MERGE") {
+      const gone = new Set(((it.detail.parts as { id: string }[]) || []).map((p) => p.id).filter((id) => id !== it.lectureRowId));
+      list = list.filter((e) => !(e.id && gone.has(e.id))).map((e) => (e.id === it.lectureRowId ? { ...e, topic: it.topic, subtopic: it.subtopic } : e));
+    }
+    if (it.kind === "SPLIT") {
+      const parts = (it.detail.parts as { topic: string; subtopic: string | null; id: string | null }[]) || [];
+      const at = list.findIndex((e) => e.id === it.lectureRowId);
+      if (at >= 0 && parts.length) {
+        const first = parts.find((p) => p.id === it.lectureRowId) || parts[0];
+        list[at] = { ...list[at], topic: first.topic, subtopic: first.subtopic };
+        list.splice(at + 1, 0, ...parts.filter((p) => p !== first).map((p) => ({ topic: p.topic, subtopic: p.subtopic, importance: list[at].importance || null })));
+      }
+    }
   }
   for (const it of items.filter((i) => i.kind === "ADD" || i.kind === "MOVE_IN").sort((a, b) => a.position - b.position)) {
     const e: Entry = it.kind === "ADD" ? { topic: it.topic, subtopic: it.subtopic, importance: (it.detail.importance as Level) || null } : { id: it.lectureRowId!, topic: it.topic, subtopic: it.subtopic, importance: (it.detail.importance as Level) || null, fromCourseId: (it.detail.fromCourseId as string) || null };
@@ -107,6 +155,9 @@ export const itemLine = (it: Pick<Item, "kind" | "topic" | "detail">, courseCode
     case "IMPORTANCE": return `"${it.topic}": ${d.from ? LEVEL_LABEL[d.from as Level] : "not set"} → ${LEVEL_LABEL[d.to as Level]}`;
     case "DROP": return `Drop "${it.topic}" (planned but not taught)`;
     case "SHORTEN": return `Shorten "${it.topic}" by one lecture`;
+    case "MERGE": return `Merged ${((d.lectures as number[]) || []).map((n) => `L${n}`).join(" + ")} → L${d.into}: "${it.topic}"`;
+    case "SPLIT": return `Split L${d.lecture} "${it.topic}" into ${((d.parts as unknown[]) || []).length}: ${((d.parts as { topic: string }[]) || []).map((p) => `"${p.topic}"`).join(" + ")}`;
+    case "LINK": return `${d.action === "REMOVE" ? "Remove link" : d.action === "CHANGE" ? "Change link" : "Link"}: ${d.fromCode} "${d.fromTopic}" → ${d.toCode} "${d.toTopic}" (${String(d.level || "").toLowerCase()})`;
   }
 };
 
