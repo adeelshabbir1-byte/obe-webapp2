@@ -1025,6 +1025,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "specialization"
 },
 {
+"f": "migration_stage_gates.sql",
+"d": "HEC stage-gates for national curricula: the degree's total credit hours, prerequisites marked \"none\", CLO\u2192PLO",
+"t": "CategoryMap"
+},
+{
 "f": "migration_student_marks.sql",
 "d": "Run in Supabase SQL Editor. Adds the Student/Enrollment/Marks system for",
 "t": "AssessmentInstrument",
