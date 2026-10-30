@@ -3,6 +3,7 @@ import { prisma } from "./db";
 import { writeAuditLog } from "./audit";
 import { notifyUsers } from "./notifications";
 import { omcOf, omcOfCourse, isMember, type Member } from "./omcMembers";
+import { tallyVotes } from "./committeeCore";
 
 // The OMC's own rules.
 //  · Assessment limits per course category (Core theory, Lab, General Education, Capstone, Elective): the Convener opens
@@ -207,8 +208,10 @@ export async function requestVotes(kind: RequestKind, requestId: string, courseI
   const votes = rows.map((r) => ({ ...r, name: names.get(r.memberId) || "—" }));
   const yes = votes.filter((x) => x.approve), no = votes.filter((x) => !x.approve);
   const need = v?.need || 2;
+  // The committee engine's FIXED rule (2 approvals, or a panel's 2 of 3) — every vote counts, as before.
+  const t = tallyVotes(votes.map((x) => ({ id: x.memberId, name: x.name })), votes.map((x) => ({ memberId: x.memberId, vote: x.approve ? "APPROVE" : "REJECT" })), { kind: "FIXED", need });
   const line = yes.length >= need ? `Approved by ${yes.map((x) => x.name).join(" and ")}` : no.length >= need ? `Rejected by ${no.map((x) => x.name).join(" and ")}` : `Waiting: ${yes.length} of ${need}${no.length ? ` · ${no.length} against` : ""}`;
-  return { votes, yes: yes.length, no: no.length, need, panel: v?.panel || null, voters: v?.voters || [], convenerId: v?.omc.convenerId || null, line, decided: yes.length >= need ? "approved" as const : no.length >= need ? "rejected" as const : null };
+  return { votes, yes: yes.length, no: no.length, need, panel: v?.panel || null, voters: v?.voters || [], convenerId: v?.omc.convenerId || null, line, decided: t.carried ? "approved" as const : t.failed ? "rejected" as const : null };
 }
 
 /** One OMC vote on a request. Returns the decision once it is reached (the caller applies it). */

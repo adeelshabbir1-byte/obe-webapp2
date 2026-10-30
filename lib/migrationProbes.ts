@@ -194,6 +194,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "mappedPeoLabel"
 },
 {
+"f": "migration_committee_engine.sql",
+"d": "One committee engine for the OMC, the Board of Studies and later the Faculty Board and the Academic Council:",
+"t": "CmtVote"
+},
+{
 "f": "migration_committees.sql",
 "d": "Mandatory committees (HEC policies): members and terms, meetings, cases handled (confidential, no names) and the",
 "t": "CommitteeCase"

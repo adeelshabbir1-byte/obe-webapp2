@@ -9055,3 +9055,88 @@ model TopicPractice {
   courseId      String
   needsPractice Boolean @default(true)
 }
+
+// ---------------------------------------------------------------- Committee engine (migration_committee_engine.sql)
+model CmtCommittee {
+  id          String   @id
+  chairmanId  String
+  type        String // OMC | BOS | FACULTY_BOARD | ACADEMIC_COUNCIL
+  scope       String   @default("INSTITUTE") // INSTITUTE | FACULTY | DEPARTMENT
+  scopeId     String?
+  name        String
+  mode        String   @default("FULL") // FULL | CONVENER_ONLY
+  quorumPct   Float    @default(50)
+  majorityPct Float    @default(50)
+  convenerId  String?
+  councilStep Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([chairmanId, type], map: "CmtCommittee_chairman_idx")
+}
+
+model CmtMember {
+  id           String    @id
+  committeeId  String
+  userId       String?
+  name         String
+  email        String?
+  organisation String?
+  external     Boolean   @default(false)
+  tokenHash    String?   @unique(map: "CmtMember_token_key")
+  tokenSetAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([committeeId], map: "CmtMember_committee_idx")
+}
+
+model CmtMeeting {
+  id             String   @id
+  committeeId    String
+  date           DateTime
+  venue          String?
+  attendanceJson String   @default("[]")
+  status         String   @default("PLANNED")
+  minutesRef     String?
+  minutesName    String?
+  createdAt      DateTime @default(now())
+
+  @@index([committeeId, date], map: "CmtMeeting_committee_idx")
+}
+
+model CmtItem {
+  id            String    @id
+  committeeId   String
+  meetingId     String?
+  kind          String    @default("GENERIC")
+  refId         String?
+  title         String
+  summary       String?
+  href          String?
+  status        String    @default("OPEN") // OPEN | DECIDED
+  outcome       String? // APPROVED | APPROVED_WITH_CHANGES | DEFERRED | REJECTED
+  decisionNote  String?
+  decidedById   String?
+  decidedAt     DateTime?
+  meetingDate   DateTime?
+  signedRef     String?
+  signedName    String?
+  councilStatus String? // NOTED | APPROVED
+  councilDate   DateTime?
+  councilRef    String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+
+  @@index([committeeId, status], map: "CmtItem_committee_idx")
+  @@index([kind, refId], map: "CmtItem_ref_idx")
+}
+
+model CmtVote {
+  itemId   String
+  memberId String
+  vote     String
+  comment  String?
+  at       DateTime @default(now())
+
+  @@id([itemId, memberId])
+}
