@@ -1,11 +1,23 @@
 import { meter } from "../lib/goldenCopy";
 import { ActionForm } from "./fyp/FypClient";
+import { prisma } from "../lib/db";
+import { revisionFlags } from "../lib/resched";
+
+/** CQI: courses of this curriculum flagged for the next revision (a batch's PLO attainment below 50%). */
+export async function cqiFlags(curriculumId: string) {
+  const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { chairmanId: true, courses: { select: { title: true } } } }).catch(() => null);
+  if (!c?.chairmanId) return null;
+  const fl = await revisionFlags(c.chairmanId, c.courses.map((x) => x.title)).catch(() => []);
+  if (!fl.length) return null;
+  return <div className="card" data-testid="cqi-flags" style={{ borderLeft: "5px solid #B76E00" }}><b>Flagged for the next revision (CQI)</b>{fl.slice(0, 20).map((f) => <p key={f.id} style={{ margin: "2px 0", fontSize: 13 }}>{f.courseCode} {f.courseTitle}: {f.ploLabel} attainment {f.attainment}%{f.termName ? ` (${f.termName} ${f.termYear})` : ""}</p>)}</div>;
+}
 
 // The live compliance meter of an institute's copy of an HEC Golden Copy: green 100%, yellow 80–99.99% (local
 // additions, justified at accreditation), red < 80% (core mandates missing — accreditation submission is blocked).
 export default async function GoldenMeter({ curriculumId, canJustify }: { curriculumId: string; canJustify: boolean }) {
   const m = await meter(curriculumId).catch(() => null);
-  if (!m) return null;
+  const flags = await cqiFlags(curriculumId);
+  if (!m) return flags;
   const colour = m.band === "GREEN" ? "#2F7A4D" : m.band === "YELLOW" ? "#B76E00" : "#B3261E";
   return (
     <div className="card" data-testid="golden-meter" style={{ borderLeft: `5px solid ${colour}` }}>
@@ -18,6 +30,7 @@ export default async function GoldenMeter({ curriculumId, canJustify }: { curric
       {m.lostClos.length > 0 && <p className="small-note" style={{ margin: "2px 0" }}>Mandatory CLOs not kept: {m.lostClos.slice(0, 6).join(", ")}</p>}
       {m.extras.length > 0 && <p className="small-note" style={{ margin: "2px 0" }}>Local additions: {m.extras.slice(0, 8).join(", ")}</p>}
       {m.band === "YELLOW" && (m.justification ? <p className="small-note" style={{ margin: "2px 0" }}>Justification: {m.justification}</p> : <p style={{ margin: "2px 0", fontSize: 13, color: colour }}>Give a justification for the local changes — accreditation submission waits for it.</p>)}
+      {flags}
       {m.band === "YELLOW" && canJustify && <ActionForm url="/api/synthesis" fixed={{ action: "justify", curriculumId }} submit="Save justification" collapsed openLabel={m.justification ? "Edit the justification" : "Justify the local changes"} initial={{ text: m.justification || "" }} fields={[{ name: "text", label: "Why the local changes (shown at accreditation)", type: "textarea" }]} />}
     </div>
   );

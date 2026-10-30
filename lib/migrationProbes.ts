@@ -957,6 +957,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "RemediationFlag"
 },
 {
+"f": "migration_resched.sql",
+"d": "Smart scheduling and rescheduling: events planned before the timetable is published (they hold their slot), class",
+"t": "CqiRevisionFlag"
+},
+{
 "f": "migration_research.sql",
 "d": "Research office / ORIC (Prompt 2 item 8): grant proposals, ORCID / Google Scholar links, imported publications waiting",
 "t": "ResearchSetting"

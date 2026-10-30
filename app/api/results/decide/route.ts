@@ -34,6 +34,8 @@ async function POST_handler(req: NextRequest) {
   await logResult(user.id, "RESULT_APPROVED", courseId, { students: summary.students, passRate: summary.passRate, note: note || null });
   // The CLO method and settings in force are saved with this term; later changes never silently change it.
   await import("../../../../lib/cloMethods").then((m) => m.lockTerm(courseId)).catch(() => null);
+  // CQI: a PLO below 50% in this batch flags the course for review in the next curriculum revision.
+  await import("../../../../lib/resched").then((m) => m.flagLowPlo(courseId)).catch(() => null);
   if (course?.instructorId) await notify(await chairmanIdFor(user), user.id, [course.instructorId], `Result approved: ${course.code}`, `${user.name} approved the result of ${course.code} ${course.title}. Marks are now locked; any change needs a grade change request.`, `/instructor/courses/${courseId}/marks`);
   // Cohort PLO change caused by this course; a drop beyond the threshold alerts the OMC and the Program Lead.
   try {
