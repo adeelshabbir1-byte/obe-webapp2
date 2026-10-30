@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { approverIds } from "./approvers";
+import { majorityOf, tallyVotes } from "./committeeCore";
 
 // A department's OMC: the Convener and the members from the organisation chart (the OMC Convener position and its
 // members); with no chart entry, the department's people who sit on the OMC. Used for batch approval, SE plan votes and
@@ -45,17 +46,13 @@ export async function omcOfCourse(courseId: string) {
   return { chairmanId: c.coordinator.managedById || "", ...(await omcOf(c.coordinator.managedById || "", c.subjectHomeDepartmentId || c.coordinator.departmentId || null)) };
 }
 
-/** More than half of the members. */
-export const majority = (memberCount: number) => Math.floor(Math.max(1, memberCount) / 2) + 1;
+/** More than half of the members. (The committee engine's MAJORITY_OF_MEMBERS rule.) */
+export const majority = (memberCount: number) => majorityOf(memberCount);
 
-/** "Endorsed 3 of 5 · waiting: A, B" — yes / no / waiting from a list of votes. */
+/** "Endorsed 3 of 5 · waiting: A, B" — yes / no / waiting from a list of votes, on the committee engine. */
 export function tally(members: Member[], votes: { memberId: string; yes: boolean }[]) {
-  const ids = new Set(members.map((m) => m.id));
-  const valid = votes.filter((v) => ids.has(v.memberId));
-  const yes = valid.filter((v) => v.yes).length, no = valid.filter((v) => !v.yes).length;
-  const waiting = members.filter((m) => !valid.some((v) => v.memberId === m.id)).map((m) => m.name);
-  const need = majority(members.length);
-  return { yes, no, waiting, total: members.length, need, carried: yes >= need, failed: no >= need };
+  const t = tallyVotes(members, votes.map((v) => ({ memberId: v.memberId, vote: v.yes ? "APPROVE" : "REJECT" })), { kind: "MAJORITY_OF_MEMBERS" });
+  return { yes: t.yes, no: t.no, waiting: t.waiting, total: t.total, need: t.need, carried: t.carried, failed: t.failed };
 }
 
 export function isMember(omc: Omc, userId: string) {
