@@ -8747,3 +8747,124 @@ model BookToc {
   updatedById String?
   updatedAt   DateTime @default(now())
 }
+
+// ---------------------------------------------------------------- Prompt 10 B (migration_prompt10b.sql)
+model TeacherBlock {
+  id        String   @id
+  userId    String
+  dayOfWeek Int? // 0 = Sunday … 6 = Saturday (repeats weekly), or
+  date      String? // one date (YYYY-MM-DD)
+  startMin  Int
+  endMin    Int
+  label     String   @default("")
+  privacy   String   @default("BUSY") // DETAILS | BUSY
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AppointmentSetting {
+  userId             String   @id
+  slotMinutes        Int      @default(30)
+  maxPerDay          Int      @default(4)
+  startMin           Int      @default(540)
+  endMin             Int      @default(960)
+  daysJson           String   @default("[1,2,3,4,5]")
+  classPrivacy       String   @default("DETAILS")
+  counsellingPrivacy String   @default("BUSY")
+  open               Boolean  @default(true)
+  updatedAt          DateTime @default(now())
+}
+
+model AppointmentRequest {
+  id            String    @id
+  chairmanId    String?
+  teacherId     String
+  requesterKind String // STUDENT | STAFF
+  requesterId   String
+  requesterName String
+  startsAt      DateTime
+  endsAt        DateTime
+  reason        String
+  status        String    @default("PENDING") // PENDING | ACCEPTED | DECLINED | CANCELLED
+  note          String?
+  decidedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([teacherId, startsAt], map: "AppointmentRequest_teacher_idx")
+  @@index([requesterId], map: "AppointmentRequest_requester_idx")
+}
+
+model CalendarLink {
+  userId          String
+  provider        String // GOOGLE | MICROSOFT
+  refreshTokenEnc String
+  account         String?
+  busyJson        String?
+  busyAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@id([userId, provider])
+}
+
+model CatalogCourse {
+  id                 String   @id
+  field              String // COMPUTING | MANAGEMENT | ENGINEERING
+  discipline         String
+  code               String   @unique(map: "CatalogCourse_code_key")
+  title              String
+  level              Int
+  area               Int
+  serial             Int
+  creditHours        Int
+  theoryCh           Int
+  labCh              Int      @default(0)
+  semester           Int?
+  semesterReason     String?
+  gaSet              String // CGA | BGA | EGA
+  source             String
+  sourceNote         String?
+  instituteCodesJson String   @default("[]")
+  closJson           String   @default("[]")
+  lecturesJson       String   @default("[]")
+  prereqCodesJson    String   @default("[]")
+  topicLinksJson     String   @default("[]")
+  booksJson          String   @default("[]")
+  version            Int      @default(1)
+  updatedById        String?
+  updatedAt          DateTime @default(now())
+
+  @@index([field, level], map: "CatalogCourse_field_idx")
+}
+
+model CatalogVersion {
+  id        String   @id
+  catalogId String
+  version   Int
+  dataJson  String
+  byUserId  String?
+  note      String?
+  at        DateTime @default(now())
+
+  @@index([catalogId, version])
+}
+
+model CatalogImport {
+  id          String   @id
+  courseId    String
+  catalogId   String
+  catalogCode String
+  version     Int
+  partsJson   String
+  byUserId    String
+  at          DateTime @default(now())
+
+  @@index([courseId])
+}
+
+model CatalogSetting {
+  id           String   @id
+  stopListJson String   @default("[]")
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+}

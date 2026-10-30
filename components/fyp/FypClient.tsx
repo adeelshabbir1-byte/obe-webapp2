@@ -38,7 +38,7 @@ export function ActionButton({ url, body, label, className = "btn btn-brass btn-
   );
 }
 
-type Field = { name: string; label: string; type?: "text" | "textarea" | "number" | "select" | "date" | "datetime-local" | "checkbox" | "plos"; options?: [string, string][]; width?: number; placeholder?: string; full?: boolean };
+type Field = { name: string; label: string; type?: "text" | "textarea" | "number" | "select" | "date" | "time" | "datetime-local" | "checkbox" | "plos"; options?: [string, string][]; width?: number; placeholder?: string; full?: boolean };
 /** A small form posting { action, ...fixed, ...fields }. */
 export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, done, collapsed, openLabel, showMessage }: {
   url: string; fixed: Record<string, unknown>; fields: Field[]; initial?: Record<string, unknown>; submit: string; onDone?: (data: Record<string, unknown>) => void; done?: string; collapsed?: boolean; openLabel?: string;
@@ -72,7 +72,7 @@ export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, d
         else if (f.type === "select") input = <select value={String(val ?? "")} onChange={(e) => set(e.target.value)} style={style}>{f.options!.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>;
         else if (f.type === "checkbox") input = <input type="checkbox" checked={!!val} onChange={(e) => set(e.target.checked)} />;
         else if (f.type === "plos") input = <input value={Array.isArray(val) ? (val as number[]).join(", ") : String(val ?? "")} onChange={(e) => set(e.target.value.split(/[^0-9]+/).filter(Boolean).map(Number))} placeholder="e.g. 3, 4, 5" style={style} />;
-        else input = <input type={f.type || "text"} value={String(val ?? "")} onChange={(e) => set(e.target.value)} placeholder={f.placeholder} style={style} step={f.type === "number" ? "any" : undefined} />;
+        else input = <input type={f.type || "text"} value={String(val ?? "")} onChange={(e) => set(e.target.value)} placeholder={f.placeholder} style={style} step={f.type === "number" ? "any" : f.type === "time" ? 300 : undefined} />;
         return (
           <label key={f.name} style={{ fontSize: 12, display: f.type === "checkbox" ? "flex" : "grid", gap: f.type === "checkbox" ? 6 : 3, alignItems: f.type === "checkbox" ? "center" : undefined, flex: f.full || f.type === "textarea" ? "1 1 100%" : undefined }}>
             {f.type === "checkbox" ? <>{input} {f.label}</> : <>{f.label}{input}</>}

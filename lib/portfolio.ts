@@ -40,5 +40,15 @@ export async function courseSampling(courseId: string) {
       suggest: { HIGH: pick(0), MEDIUM: pick(Math.floor(scored.length / 2)), LOW: pick(scored.length - 1) },
       samples: (samples || []).filter((s) => s.instrumentId === i.id).map((s) => ({ ...s, student: stu.get(s.studentId) })) };
   });
+  // The whole course: best, average and weakest by total marks (the scripts of the final, usually).
+  const { computeResultMate } = await import("./resultMate");
+  const rm = await computeResultMate(courseId).catch(() => null);
+  const ranked = (rm?.rows || []).filter((r) => stu.has(r.studentId)).sort((a, b) => b.totalPct - a.totalPct);
+  const pickC = (idx: number) => (ranked[idx] ? { ...stu.get(ranked[idx].studentId)!, score: Math.round(ranked[idx].totalPct * 10) / 10 } : null);
+  if (ranked.length) items.unshift({ id: COURSE_SAMPLE, label: "Whole course (total %)", type: "Course", maxScore: 100, clos: clos.map((c) => c.code).sort(), scored: ranked.length,
+    suggest: { HIGH: pickC(0), MEDIUM: pickC(Math.floor(ranked.length / 2)), LOW: pickC(ranked.length - 1) },
+    samples: (samples || []).filter((s) => s.instrumentId === COURSE_SAMPLE).map((s) => ({ ...s, student: stu.get(s.studentId) })) });
   return { items, ready: samples !== null, students: Array.from(stu.values()).sort((a, b) => a.rollNumber.localeCompare(b.rollNumber)) };
 }
+/** The instrument id used for the course-level samples (best / average / weakest by total). */
+export const COURSE_SAMPLE = "COURSE";

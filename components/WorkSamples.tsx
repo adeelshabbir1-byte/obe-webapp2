@@ -9,6 +9,7 @@ const LV: [string, string][] = [["HIGH", "Best"], ["MEDIUM", "Average"], ["LOW",
 
 /** Per assessment: the suggested best / average / weakest student and an upload slot for each scanned script. */
 export default function WorkSamples({ courseId, items, students }: { courseId: string; items: Item[]; students: Stu[] }) {
+  const [names, setNames] = useState(false);
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
@@ -27,16 +28,21 @@ export default function WorkSamples({ courseId, items, students }: { courseId: s
     <div>
       <p className="small-note">Accreditation reviewers ask for the best, an average and the weakest script of every assessment, by CLO. The system suggests the students from your marks; upload their scanned scripts. {done}/{items.length} assessments complete.</p>
       {msg && <div className="err">{msg}</div>}
+      <div className="card" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <a className="btn btn-sm" href={`/api/instructor/courses/${courseId}/samples/pdf${names ? "?names=1" : ""}`} target="_blank" rel="noreferrer">Print / PDF course-file samples</a>
+        <label style={{ fontSize: 13 }}><input type="checkbox" checked={names} onChange={(e) => setNames(e.target.checked)} /> Show student names (otherwise roll numbers only)</label>
+        <span className="small-note">Cover page, question papers, the three samples with marks and CLO attainment, and the scanned scripts. Scripts are kept in private storage.</span>
+      </div>
       {items.map((i) => (
         <div key={i.id} className="card">
-          <b>{i.label}</b> <span className="small-note">{i.type} · /{i.maxScore} · {i.clos.length ? i.clos.join(", ") : "no CLO linked"} · {i.scored} marked</span>
+          <b>{i.label}</b> <span className="small-note">{i.type} · /{i.maxScore} · {i.clos.length ? i.clos.join(", ") : "no CLO linked"} · {i.scored} marked</span> <a className="small-note" href={`/api/instructor/courses/${courseId}/samples/pdf?instrumentId=${i.id}${names ? "&names=1" : ""}`} target="_blank" rel="noreferrer">PDF of this assessment</a>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 8, marginTop: 6 }}>
             {LV.map(([l, name]) => {
               const have = i.samples.filter((s) => s.level === l); const sug = i.suggest[l];
               return (
                 <div key={l} style={{ border: "1px solid #D5DCE4", borderRadius: 8, padding: 8, fontSize: 13 }}>
                   <div style={{ fontWeight: 700 }}>{name}</div>
-                  {have.map((s) => <div key={s.id}><a href={s.fileUrl} target="_blank" rel="noopener noreferrer">{s.fileName}</a> <span className="small-note">{s.student?.rollNumber} · {s.score ?? "—"}</span> <button type="button" className="btn btn-secondary btn-sm" onClick={() => remove(s.id)}>Remove</button></div>)}
+                  {have.map((s) => <div key={s.id}><a href={`/api/instructor/courses/${courseId}/samples/file?id=${s.id}`} target="_blank" rel="noopener noreferrer">{s.fileName}</a> <span className="small-note">{s.student?.rollNumber} · {s.score ?? "—"}</span> <button type="button" className="btn btn-secondary btn-sm" onClick={() => remove(s.id)}>Remove</button></div>)}
                   {!have.length && <SlotForm students={students} sug={sug} busy={busy === i.id + l} onUpload={(sid, f) => upload(i.id, l, sid, f)} />}
                 </div>
               );

@@ -38,6 +38,7 @@ const NAV = [
   { href: "/student/attendance", label: "My Attendance" },
   { href: "/student/placements", label: "Internships & Jobs" },
   { href: "/student/counselling", label: "Counselling" },
+  { href: "/student/appointments", label: "Appointments" },
   { href: "/student/library", label: "Library" },
   { href: "/student/complaints", label: "Complaints" },
   { href: "/student/alerts", label: "Alerts & Contact" },
