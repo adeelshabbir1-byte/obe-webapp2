@@ -23,6 +23,8 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
 
   const body = await req.json();
   const { code, title, creditHours, category, semesterNumber, textbook, catalogDescription, referenceMaterial } = body;
+  // HEC Golden Copy: code, title and credit hours of its courses are locked in the institute's copy.
+  { const why = await (await import("../../../../../../lib/goldenCopy")).guardCourse(params.courseId, { code, title, creditHours: creditHours === undefined ? undefined : Number(creditHours) }); if (why) return NextResponse.json({ error: why }, { status: 423 }); }
 
   if (code !== undefined && code.trim() !== existing.code) {
     const clash = await prisma.masterCourse.findUnique({ where: { masterCurriculumId_code: { masterCurriculumId: existing.masterCurriculumId, code: code.trim() } } });
@@ -54,6 +56,7 @@ async function DELETE_handler(req: NextRequest, { params }: { params: { courseId
   const owned = await requireOwnedCourse(params.courseId, user.managedById);
   if ("error" in owned) return NextResponse.json({ error: owned.error }, { status: owned.status });
   const masterCourse = owned.course;
+  { const why = await (await import("../../../../../../lib/goldenCopy")).guardCourse(params.courseId, { remove: true }); if (why) return NextResponse.json({ error: why }, { status: 423 }); }
 
   // Blocked if any real course has already been adopted from this one —
   // deleting it would silently break that traceability link (and the

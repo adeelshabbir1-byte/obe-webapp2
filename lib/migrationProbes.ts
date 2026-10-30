@@ -1067,6 +1067,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "SurveyAnswer"
 },
 {
+"f": "migration_synthesis.sql",
+"d": "Collaborative drafting and the hybrid synthesizer (parallel course proposals, the synthesized assessment split, a",
+"t": "CurriculumJustification"
+},
+{
 "f": "migration_task_requests.sql",
 "d": "",
 "t": "TaskRequest"

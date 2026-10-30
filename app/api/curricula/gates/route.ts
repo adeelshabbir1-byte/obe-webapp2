@@ -23,7 +23,8 @@ async function POST_handler(req: Request) {
     switch (b.action) {
       case "total": await setTotal(user, c.id, Number(b.total)); break;
       case "noPrereq": await setNoPrereq(await own(String(b.masterCourseId)), b.on === true || b.on === "true"); break;
-      case "weights": await setWeights(await own(String(b.masterCourseId)), String(b.ploId || ""), b.weights || Object.fromEntries(Object.keys(b).filter((k) => k.startsWith("w_")).map((k) => [k.slice(2), Number(b[k])]))); break;
+      case "weights": if (await (await import("../../../../lib/goldenCopy")).goldenOf(c.id)) throw new Error("CLO-to-PLO weightages come from the HEC Golden Copy and are locked in your copy.");
+        await setWeights(await own(String(b.masterCourseId)), String(b.ploId || ""), b.weights || Object.fromEntries(Object.keys(b).filter((k) => k.startsWith("w_")).map((k) => [k.slice(2), Number(b[k])]))); break;
       case "lab": await setLabWeek(await own(String(b.masterCourseId)), Number(b.week), String(b.experiment || "")); break;
       case "dep": await addTopicDep(c.id, { masterCourseId: await own(String(b.masterCourseId)), lectureNumber: Number(b.lectureNumber), onCourseId: await own(String(b.onCourseId)), onLecture: Number(b.onLecture) }); break;
       case "removeDep": await db.masterTopicDep.deleteMany({ where: { id: String(b.id || ""), masterCourseId: { in: (await prisma.masterCourse.findMany({ where: { masterCurriculumId: c.id }, select: { id: true } })).map((x) => x.id) } } }); break;

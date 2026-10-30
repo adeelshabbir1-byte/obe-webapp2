@@ -134,6 +134,8 @@ async function PATCH_handler(req: NextRequest, { params }: { params: { id: strin
         if (!working) return NextResponse.json({ error: t.assigneeId === user.id ? "Your access to this task has ended." : "This task isn't assigned to you." }, { status: 403 });
         const dd = parseData(t);
         if (d.checklist.some((c) => !dd.checked?.[c])) return NextResponse.json({ error: "Tick every point of the checklist first (explain in the notes what isn't so)." }, { status: 400 });
+        // HEC guardrail: a program whose curriculum is red against the Golden Copy (or yellow without a justification) can't be submitted.
+        { const why = await (await import("../../../../../lib/goldenCopy")).accreditationBlock(cycle.chairmanId, cycle.program).catch(() => null); if (why) return NextResponse.json({ error: why }, { status: 409 }); }
         await prisma.accreditationTask.update({ where: { id: t.id }, data: { status: "SUBMITTED", submittedAt: now, submittedById: user.id } });
         await event(t.id, "SUBMITTED", user.id);
         await notifyUsers([t.assignedById, ...covering], { kind: "ACCREDITATION", title: `Accreditation task signed off: ${d.code} ${d.title}`, body: `${user.name} has verified it for ${cycle.title}.`, href: href(t.id), exceptId: user.id });
