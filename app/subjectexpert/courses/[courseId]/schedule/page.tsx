@@ -6,6 +6,7 @@ import CourseSubNav from "../../../../../components/CourseSubNav";
 import LectureContentManager from "../../../../../components/LectureContentManager";
 import { navForRole } from "../../../../../components/reportNav";
 import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
+import LectureExcelImport from "../../../../../components/LectureExcelImport";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
 import { isTeachingTopic } from "../../../../../lib/courseProgress";
@@ -70,6 +71,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         </div>
       )}
 
+      <LectureExcelImport courseId={course.id} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
 
       <LectureContentManager

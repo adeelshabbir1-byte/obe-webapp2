@@ -251,6 +251,8 @@ export default function MasterCurriculumEditor() {
               if (!confirm("For every course in the file, its existing CLOs will be replaced by the ones in the file. Continue?")) { e.target.value = ""; return; }
               setBusy(true); setError(""); setNotice("");
               const fd = new FormData(); fd.append("file", f);
+            // Into the curriculum selected above when it is your own copy; otherwise the file's Program sheet decides.
+            if (selectedId && detail?.isOwned && detail.id === selectedId) fd.append("curriculumId", selectedId);
               try {
                 const r = await fetch(`/api/omc/master-curriculum/${selectedId}/import-clos`, { method: "POST", body: fd });
                 const d = await r.json();
@@ -267,7 +269,7 @@ export default function MasterCurriculumEditor() {
         <h3 style={{ fontSize: 14, marginTop: 0 }}>Import a full curriculum from Excel</h3>
         <p style={{ fontSize: 12, color: "var(--slate)", marginTop: -4 }}>
           One file with sheets <b>Program</b> (Degree program, Authority, Version), <b>GAs</b>, <b>Courses</b>, <b>CLOs and GA mapping</b> and <b>Lecture topics</b> — the same layout as &quot;Download full curriculum&quot;.
-          It goes into your institute&apos;s own curriculum for that degree program (created if needed); courses are matched by code, and the CLOs and topics of every course in the file are replaced.
+          It goes into <b>the curriculum selected above</b> when that is your copy; otherwise into your institute&apos;s own curriculum for the degree program named in the Program sheet (created if needed); courses are matched by code, and the CLOs and topics of every course in the file are replaced.
         </p>
         <label className="btn btn-brass" style={{ fontSize: 12, padding: "6px 12px", cursor: "pointer", display: "inline-block" }}>
           {busy ? "Working…" : "Choose file and import"}

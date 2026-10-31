@@ -17,8 +17,27 @@ async function GET_handler() {
     orderBy: { title: "asc" },
   });
 
+  // An OMC member of a department sees only the curricula his department works with: the institute's own copies for
+  // the department's programs (by name, or used by those programs' batches) and the official curricula they came from
+  // or that carry one of those program names. Without a department (or programs) he sees everything, as before.
+  const { departmentsOf } = await import("../../../../lib/fyp");
+  const depts = await departmentsOf(user.id);
+  const programs = depts.length ? (await prisma.departmentProgram.findMany({ where: { departmentId: { in: depts }, chairmanId: user.managedById || "none" }, select: { degreeProgram: true } })).map((p) => p.degreeProgram) : [];
+  let list = curricula;
+  if (programs.length) {
+    const norm = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const names = programs.map(norm).filter(Boolean);
+    const extra = await prisma.masterCurriculum.findMany({ where: { id: { in: curricula.map((c) => c.id) } }, select: { id: true, degreeProgram: true, parentCurriculumId: true } });
+    const info = new Map(extra.map((x) => [x.id, x]));
+    const used = new Set((await prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: curricula.map((c) => c.id) }, adoptedInto: { some: { batch: { degreeProgram: { in: programs } } } } }, select: { masterCurriculumId: true }, distinct: ["masterCurriculumId"] }).catch(() => [])).map((m: { masterCurriculumId: string }) => m.masterCurriculumId));
+    const matches = (c: { id: string; title: string }) => { const t = `${norm(info.get(c.id)?.degreeProgram)} ${norm(c.title)}`; return names.some((n) => t.includes(n)) || used.has(c.id); };
+    const own = curricula.filter((c) => c.chairmanId === user.managedById && matches(c));
+    const parents = new Set(own.map((c) => info.get(c.id)?.parentCurriculumId).filter(Boolean) as string[]);
+    list = curricula.filter((c) => own.includes(c) || (c.chairmanId !== user.managedById && (parents.has(c.id) || matches(c))));
+  }
   return NextResponse.json({
-    curricula: curricula.map((c) => ({ ...c, isOwned: c.chairmanId === user.managedById })),
+    curricula: list.map((c) => ({ ...c, isOwned: c.chairmanId === user.managedById })),
+    scopedTo: programs,
   });
 }
 export const GET = withErrors(GET_handler);
