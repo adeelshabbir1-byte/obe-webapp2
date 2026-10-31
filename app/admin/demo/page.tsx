@@ -4,6 +4,8 @@ import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import { demoSummary, sourceOptions, DEMO_PASSWORD, DEMO_NAME } from "../../../lib/demoInstitute";
 import DemoInstituteRunner from "../../../components/DemoInstituteRunner";
+import DemoReadyRunner from "../../../components/DemoReadyRunner";
+import { readyStatus } from "../../../lib/demoReady";
 import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +17,7 @@ export default async function DemoInstitutePage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (!(await adminCan(user, "ONBOARDING"))) redirect("/dashboard");
   const adminNav = await adminNavFor(user);
-  const [summary, sources] = await Promise.all([demoSummary(), sourceOptions()]);
+  const [summary, sources, ready] = await Promise.all([demoSummary(), sourceOptions(), readyStatus()]);
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Demo Institute</h1>
@@ -24,7 +26,10 @@ export default async function DemoInstitutePage() {
         now in semester 5), fake faculty and 30 students per batch. Semesters 1–4 are completed with approved results and transcripts; semester 5 is
         running (lectures to week 8, attendance, quizzes, assignments and midterm marked). Nothing is emailed. Real institutes are not touched.
       </p>
+      <DemoReadyRunner status={JSON.parse(JSON.stringify(ready))} />
+      <details style={{ marginBottom: 12 }}><summary style={{ fontSize: 13, cursor: "pointer" }}>Older builder: copy a real institute&apos;s curriculum instead</summary>
       <DemoInstituteRunner summary={summary ? { ...summary, createdAt: summary.createdAt.toISOString() } : null} sources={sources} password={DEMO_PASSWORD} />
+      </details>
     </Shell>
   );
 }

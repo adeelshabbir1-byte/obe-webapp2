@@ -18,6 +18,8 @@ import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEn
 import { navForRole } from "../../../../../components/reportNav";
 import Link from "next/link";
 import ResultApprovalPanel from "../../../../../components/ResultApprovalPanel";
+import FillSampleMarks from "../../../../../components/FillSampleMarks";
+import { isDemoInstitute } from "../../../../../lib/demoReady";
 import TopicFollowUpsCard from "../../../../../components/TopicFollowUpsCard";
 import { db as resultDb, getCourseResult, type GradeChangeRow } from "../../../../../lib/resultApproval";
 import { getGradingScaleForBatch } from "../../../../../lib/gradingScaleLookup";
@@ -143,6 +145,15 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
   const dist: Record<string, number> = {};
   for (const r of result.rows) dist[r.grade] = (dist[r.grade] || 0) + 1;
   const failedN = result.rows.filter((r) => r.grade === "F").length;
+  // Demo institute only, while the result is still open: how many final-exam marks are blank ("Fill sample marks").
+  let demoMissing: number | null = null;
+  if (!courseResult || ["DRAFT", "RETURNED"].includes(courseResult.status)) {
+    const head = (await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } }))?.managedById;
+    if (await isDemoInstitute(head)) {
+      const have = new Set(marks.map((m) => `${m.studentId}|${m.instrumentId}`));
+      demoMissing = instruments.filter((i) => i.type === "Final").reduce((t, i) => t + enrollments.filter((e) => !have.has(`${e.student.id}|${i.id}`)).length, 0);
+    }
+  }
   const rowById = new Map(result.rows.map((r) => [r.studentId, r]));
 
   return (
@@ -162,6 +173,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
         letters={scale.length ? scale.map((g) => g.letter) : ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"]}
         requests={gradeRequests.map((g) => ({ id: g.id, studentId: g.studentId, roll: rowById.get(g.studentId)?.rollNumber || "—", name: rowById.get(g.studentId)?.name || "—", oldGrade: g.oldGrade, newGrade: g.newGrade, reason: g.reason, status: g.status, decisionNote: g.decisionNote, createdAt: new Date(g.createdAt).toISOString(), decidedAt: g.decidedAt ? new Date(g.decidedAt).toISOString() : null, decidedBy: g.decidedById ? deciders.get(g.decidedById) || null : null }))}
       />
+      {demoMissing !== null && <FillSampleMarks courseId={course.id} missing={demoMissing} />}
       <h2 style={{ fontSize: 16, marginBottom: 12 }}>Marks Entry</h2>
       <div className="card" style={{ borderColor: "var(--brass)" }}>
         <p style={{ fontSize: 12.5, marginBottom: 8 }}>Once marks are entered, view computed grades, CLO/GA attainment, and set grade cutoffs for this course.</p>

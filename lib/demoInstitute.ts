@@ -6,6 +6,8 @@ import { courseFamily, suggestedWeights } from "./ploWeightMath";
 import { recomputeCourseRows } from "./lectureWeights";
 import { BBA_SCHEME, bbaPlos } from "./demoBba";
 import { BBA_CONTENT, topicForLecture } from "./demoBbaContent";
+import { PU_BSCS_2021 } from "./puBscs2021";
+import { CD2023_PLOS, CD2023_COURSES } from "./computing2023Content";
 
 // "My Dream Institute": a demo copy of a real institute for presentations. Two batches (BS CS, BS AI) in their 5th
 // semester in Fall 2026, curriculum copied from the real institute, fake people, semesters 1-4 completed with approved
@@ -16,8 +18,36 @@ const db = prisma as unknown as Record<string, any>;
 export const DEMO_HEAD = "dream.head";
 export const DEMO_PASSWORD = "Dream@2026";
 export const DEMO_NAME = "My Dream Institute (DEMO)";
-const TERMS = [["Fall", 2024], ["Spring", 2025], ["Fall", 2025], ["Spring", 2026], ["Fall", 2026]] as const; // semesters 1..5
 const CURRENT = 5;
+/** The demo's running term. A batch's semesters are counted from its own start term (S1 Fall 2026 … S7 Fall 2023). */
+export const NOW_TERM = ["Fall", 2026] as const;
+const tIdx = (t: string, y: number) => y * 2 + (t === "Fall" ? 1 : 0);
+export function termOfSem(startTerm: string, startYear: number, sem: number): [string, number] { const i = tIdx(startTerm, startYear) + sem - 1; return [i % 2 ? "Fall" : "Spring", Math.floor(i / 2)]; }
+export function currentSemOf(startTerm: string, startYear: number) { return tIdx(NOW_TERM[0], NOW_TERM[1]) - tIdx(startTerm, startYear) + 1; }
+/** The curriculum built into the code (PU BSCS 2021 scheme with the NCEAC 2023 CLOs and topics), so the demo needs no source institute. */
+export const BUILTIN_CS = "BUILTIN:CS";
+type SrcCourse = { id: string; code: string; title: string; creditHours: number; courseType: string; isNonCredit?: boolean; catalogDescription: string | null; textbook?: string | null; referenceMaterial?: string | null; content?: { clos: { statement: string; bloom: string }[]; topics: string[] }; ploMappings: { plo: { number: number } }[] };
+/** The course of semester 5 taught as a theory course plus a separate lab (3 + 1 credit hours) with its own Lab Engineer. */
+export const BUILTIN_LAB_SPLIT = "CC-312";
+function builtinCs(semester: number): SrcCourse[] {
+  const seen = new Set<string>(), out: SrcCourse[] = [];
+  const nPlo = CD2023_PLOS.length;
+  let k = 0;
+  for (const c of PU_BSCS_2021) {
+    if (seen.has(c.code) || c.semester < 1 || c.semester > 8) continue;
+    seen.add(c.code);
+    k++;
+    if (c.semester !== semester) continue;
+    const cd = c.nceac2023 ? CD2023_COURSES[c.nceac2023] : undefined;
+    // Each course contributes to three GAs, in turn, so every GA is taught somewhere.
+    const plos = [0, 1, 2].map((j) => ({ plo: { number: ((k * 3 + j) % nPlo) + 1 } }));
+    const type = /Final Year Project/i.test(c.title) ? "Capstone Project" : /General/i.test(c.type) ? "General Education" : /Elective/i.test(c.type) ? "Elective" : "Core";
+    const split = c.code === BUILTIN_LAB_SPLIT && c.lab > 0;
+    out.push({ id: "", code: c.code, title: c.title, creditHours: split ? c.ch - 1 : c.ch, courseType: type, isNonCredit: /^MD-/.test(c.code), catalogDescription: c.description, textbook: c.textbook, referenceMaterial: c.reference, content: cd ? { clos: cd.clos.map((x) => ({ statement: x.s, bloom: x.b })), topics: cd.topics } : undefined, ploMappings: plos });
+    if (split) out.push({ id: "", code: `${c.code}-L`, title: `${c.title} Lab`, creditHours: 1, courseType: "Lab", catalogDescription: `Lab of ${c.title}: 15 weekly lab tasks, one of them open-ended.`, textbook: c.textbook, referenceMaterial: c.reference, ploMappings: [{ plo: { number: 5 } }, { plo: { number: 9 } }] });
+  }
+  return out;
+}
 const FIRST = ["Ali", "Sara", "Hamza", "Ayesha", "Bilal", "Zainab", "Usman", "Hira", "Fahad", "Maryam", "Saad", "Iqra", "Omar", "Noor", "Taha", "Amna", "Danish", "Fatima", "Hassan", "Laiba", "Zain", "Areeba", "Talha", "Mahnoor", "Asad", "Rabia", "Shayan", "Kinza", "Ahmed", "Eman", "Rayan", "Sana"];
 const LAST = ["Khan", "Ahmed", "Raza", "Malik", "Shah", "Iqbal", "Butt", "Qureshi", "Javed", "Riaz", "Aslam", "Siddiqui", "Mirza", "Haider", "Anwar", "Nadeem"];
 const GRADES: [string, number, number][] = [["A", 85, 4], ["A-", 80, 3.67], ["B+", 75, 3.33], ["B", 71, 3], ["B-", 68, 2.67], ["C+", 64, 2.33], ["C", 61, 2], ["C-", 58, 1.67], ["D+", 54, 1.33], ["D", 50, 1], ["F", 0, 0]];
@@ -52,12 +82,15 @@ export async function demoSummary() {
 }
 
 /** Step 1: the institute, its people, two programs and batches, PLOs/PEOs, grading scale, current term and students. */
-export async function setupDemo(superUserId: string, sources: { sourceBatchId: string; short: "CS" | "AI" }[]) {
+export async function setupDemo(superUserId: string, sources: { sourceBatchId: string; short: "CS" | "AI" }[], opts: { students?: number; teachers?: number } = {}) {
   if (await demoHead()) throw new Error("The demo institute already exists. Delete it first.");
+  const N = Math.max(1, Math.min(200, opts.students || 30));
   const hash = await hashPassword(DEMO_PASSWORD);
   const mk = (username: string, name: string, role: string, extra: Record<string, unknown> = {}) => ({ id: randomUUID(), username, email: `${username}@dreaminstitute.demo`, passwordHash: hash, name, role, mustChangePassword: false, ...extra });
   const head = mk(DEMO_HEAD, "Prof. Kamran Aziz", "CHAIRMAN", { managedById: superUserId, instituteName: DEMO_NAME });
   await prisma.user.create({ data: head as never });
+  // Flagged as a demo: only a flagged institute can be rebuilt, reset or signed into with the one-click demo logins.
+  await db.demoFlag?.upsert({ where: { chairmanId: head.id }, create: { chairmanId: head.id }, update: {} }).catch(() => null);
   const dept = await prisma.department.create({ data: { chairmanId: head.id, name: "Department of Computing" } as never });
   const people = [
     mk("dream.omc", "Dr. Nida Farooq", "OMC", { managedById: head.id, departmentId: dept.id }),
@@ -67,30 +100,32 @@ export async function setupDemo(superUserId: string, sources: { sourceBatchId: s
   const out: { demoBatchId: string; sourceBatchId: string; leadId: string; teacherIds: string[] }[] = [];
   let t = 0;
   for (const src of sources) {
-    const sb = await prisma.batch.findUnique({ where: { id: src.sourceBatchId }, select: { degreeProgram: true, coordinatorId: true } });
-    if (!sb) throw new Error("Source batch not found.");
+    const builtin = src.sourceBatchId === BUILTIN_CS;
+    const sb = builtin ? null : await prisma.batch.findUnique({ where: { id: src.sourceBatchId }, select: { degreeProgram: true, coordinatorId: true } });
+    if (!sb && !builtin) throw new Error("Source batch not found.");
     const prog = src.short === "CS" ? { name: "BS Computer Science", code: "BSCS" } : { name: "BS Artificial Intelligence", code: "BSAI" };
     const lead = mk(`dream.lead.${src.short.toLowerCase()}`, src.short === "CS" ? "Dr. Imran Saeed" : "Dr. Hina Tariq", "PROGRAM_COORDINATOR", { managedById: head.id, departmentId: dept.id });
     await prisma.user.create({ data: lead as never });
-    const teachers = Array.from({ length: 5 }, (_, i) => {
+    const per = Math.max(5, Math.min(20, opts.teachers || 5));
+    const teachers = Array.from({ length: per }, (_, i) => {
       const n = `${["Mr.", "Ms.", "Dr."][(t + i) % 3]} ${FIRST[(t + i * 3 + 5) % FIRST.length]} ${LAST[(t + i * 5 + 2) % LAST.length]}`;
       const uname = t === 0 && i === 0 ? "dream.instructor" : t === 0 && i === 1 ? "dream.se" : `dream.t${t + i + 1}`;
       return mk(uname, n, uname === "dream.se" ? "SUBJECT_EXPERT" : "INSTRUCTOR", { managedById: lead.id, departmentId: dept.id, ...(uname === "dream.se" ? { secondaryRole: "INSTRUCTOR" } : {}) });
     });
-    t += 5;
+    t += per;
     await prisma.user.createMany({ data: teachers as never });
     await prisma.degreeProgram.create({ data: { coordinatorId: lead.id, name: prog.name, shortCode: prog.code } as never });
-    const batch = await prisma.batch.create({ data: { coordinatorId: lead.id, degreeProgram: prog.name, batchName: `${prog.code} Fall 2024`, startTerm: "Fall", startYear: 2024, studentCount: 30, advisorId: teachers[2].id } as never });
+    const batch = await prisma.batch.create({ data: { coordinatorId: lead.id, degreeProgram: prog.name, batchName: `${prog.code} Fall 2024`, startTerm: "Fall", startYear: 2024, studentCount: N, advisorId: teachers[2].id } as never });
     await prisma.currentTerm.create({ data: { coordinatorId: lead.id, termName: "Fall", year: 2026 } as never });
     await prisma.gradingScale.createMany({ data: GRADES.map(([letter, , gpa], i) => ({ coordinatorId: lead.id, letter, gpaValue: gpa, orderIndex: i })) as never });
-    const plos = await prisma.pLO.findMany({ where: { batchId: src.sourceBatchId }, orderBy: { number: "asc" } });
+    const plos = builtin ? (CD2023_PLOS as { number: number; title: string; description?: string }[]).map((p) => ({ number: p.number, title: p.title, description: p.description || p.title })) : await prisma.pLO.findMany({ where: { batchId: src.sourceBatchId }, orderBy: { number: "asc" } });
     await prisma.pLO.createMany({ data: plos.map((p) => ({ coordinatorId: lead.id, batchId: batch.id, number: p.number, title: p.title, description: p.description, status: "approved" })) as never });
-    const prof = (await prisma.programProfile.findFirst({ where: { coordinatorId: sb.coordinatorId, degreeProgram: sb.degreeProgram } })) as { peos?: string | null; peoPloJson?: string | null; departmentVision?: string | null; departmentMission?: string | null } | null;
+    const prof = (sb ? await prisma.programProfile.findFirst({ where: { coordinatorId: sb.coordinatorId, degreeProgram: sb.degreeProgram } }) : null) as { peos?: string | null; peoPloJson?: string | null; departmentVision?: string | null; departmentMission?: string | null } | null;
     const peos = prof?.peos && prof.peos !== "[]" ? prof.peos : JSON.stringify(["Graduates apply sound computing knowledge to solve real problems in industry and research.", "Graduates communicate and work effectively in teams with professional and ethical responsibility.", "Graduates keep learning and adapt to new technologies throughout their careers."]);
-    await prisma.programProfile.create({ data: { coordinatorId: lead.id, degreeProgram: prog.name, peos, peoPloJson: prof?.peoPloJson || JSON.stringify({ PEO1: [1, 2, 3, 4, 5], PEO2: [6, 7, 8, 9], PEO3: [10] }), departmentVision: prof?.departmentVision || null, departmentMission: prof?.departmentMission || null } as never });
+    await prisma.programProfile.create({ data: { coordinatorId: lead.id, degreeProgram: prog.name, peos, peoPloJson: prof?.peoPloJson || JSON.stringify({ PEO1: [1, 2, 3, 4, 5], PEO2: [6, 7, 8, 9], PEO3: [10] }), departmentVision: prof?.departmentVision || (builtin ? "To be a leading department of computing that produces competent, ethical and innovative graduates for the nation." : null), departmentMission: prof?.departmentMission || (builtin ? "To provide quality computing education through outcome-based teaching, research and industry linkages, and to serve the community." : null) } as never });
     const r = rng(`students-${src.short}`);
     await prisma.student.createMany({
-      data: Array.from({ length: 30 }, (_, i) => ({ id: randomUUID(), batchId: batch.id, name: `${FIRST[Math.floor(r() * FIRST.length)]} ${LAST[Math.floor(r() * LAST.length)]}`, rollNumber: `DRM-${src.short}-24-${String(i + 1).padStart(3, "0")}`, passwordHash: hash, mustChangePassword: false, currentSemesterNumber: CURRENT })) as never,
+      data: Array.from({ length: N }, (_, i) => ({ id: randomUUID(), batchId: batch.id, name: `${FIRST[Math.floor(r() * FIRST.length)]} ${LAST[Math.floor(r() * LAST.length)]}`, rollNumber: `DRM-${src.short}-24-${String(i + 1).padStart(3, "0")}`, passwordHash: hash, mustChangePassword: false, currentSemesterNumber: CURRENT })) as never,
     });
     out.push({ demoBatchId: batch.id, sourceBatchId: src.sourceBatchId, leadId: lead.id, teacherIds: teachers.map((x) => x.id) });
   }
@@ -100,8 +135,9 @@ export async function setupDemo(superUserId: string, sources: { sourceBatchId: s
 type Plan = { clos: { code: string; statement: string; bloom: string; plo: number | null }[]; rows: { n: number; topic: string; sub: string | null; clo: number | null }[] };
 
 /** The course content: real CLO statements and topics when the source course has them, a sensible generic plan otherwise. */
-async function planFor(src: { id: string; title: string; courseType: string } | null, title: string, courseType: string, ploNumbers: number[], code?: string): Promise<Plan> {
-  const known = !src && code ? BBA_CONTENT[code] : undefined;
+async function planFor(src: { id: string; title: string; courseType: string } | null, title: string, courseType: string, ploNumbers: number[], code?: string, content?: SrcCourse["content"]): Promise<Plan> {
+  const given = !src ? (code && BBA_CONTENT[code]) || content : undefined;
+  const known = given && given.clos.length >= 2 && given.topics.length ? given : undefined; // too little content: the generic plan
   const [sClos, sRows] = src ? await Promise.all([
     prisma.cLO.findMany({ where: { courseId: src.id, source: "SE" }, orderBy: { orderIndex: "asc" }, select: { id: true, statement: true, bloomLevel: true, mappedPlo: { select: { number: true } } } }),
     prisma.lectureRow.findMany({ where: { courseId: src.id, source: "SE" }, orderBy: { lectureNumber: "asc" }, select: { lectureNumber: true, topic: true, subtopic: true, cloId: true } }),
@@ -145,25 +181,31 @@ function instrumentsFor(n: number) {
 /** Step 2: one semester's courses of a demo batch, with the SE plan and an identical Instructor copy, PLO mapping and assessments. */
 export async function coursesStep(demoBatchId: string, sourceBatchId: string, semester: number, teacherIds: string[]) {
   const [db_, srcCourses, plos] = await Promise.all([
-    prisma.batch.findUnique({ where: { id: demoBatchId }, select: { coordinatorId: true } }),
+    prisma.batch.findUnique({ where: { id: demoBatchId }, select: { coordinatorId: true, startTerm: true, startYear: true } }),
     sourceBatchId === "BUILTIN:BBA"
-      ? Promise.resolve(BBA_SCHEME.filter((x) => x[0] === semester).map(([, code, title, creditHours, courseType]) => ({ id: "", code, title, creditHours, courseType, catalogDescription: null as string | null, ploMappings: bbaPlos(code, courseType).map((number) => ({ plo: { number } })) })))
-      : prisma.course.findMany({ where: { batchId: sourceBatchId, semesterNumber: semester }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, catalogDescription: true, ploMappings: { select: { plo: { select: { number: true } } } } } }),
+      ? Promise.resolve<SrcCourse[]>(BBA_SCHEME.filter((x) => x[0] === semester).map(([, code, title, creditHours, courseType]) => ({ id: "", code, title, creditHours, courseType, catalogDescription: null as string | null, ploMappings: bbaPlos(code, courseType).map((number) => ({ plo: { number } })) })))
+      : sourceBatchId === BUILTIN_CS ? Promise.resolve(builtinCs(semester))
+      : (prisma.course.findMany({ where: { batchId: sourceBatchId, semesterNumber: semester }, orderBy: { code: "asc" }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, catalogDescription: true, textbook: true, referenceMaterial: true, ploMappings: { select: { plo: { select: { number: true } } } } } }) as Promise<SrcCourse[]>),
     prisma.pLO.findMany({ where: { batchId: demoBatchId }, select: { id: true, number: true } }),
   ]);
   if (!db_) throw new Error("Demo batch missing.");
-  if (await prisma.course.count({ where: { batchId: demoBatchId, semesterNumber: semester } })) return 0; // already done
+  // Courses already made (a step that stopped half-way is simply run again) are skipped.
+  const made0 = new Set((await prisma.course.findMany({ where: { batchId: demoBatchId, semesterNumber: semester }, select: { code: true } })).map((c) => c.code));
+  const cur = currentSemOf(db_.startTerm, db_.startYear);
   const ploId = new Map(plos.map((p) => [p.number, p.id]));
   let made = 0;
   for (const [k, s] of srcCourses.entries()) {
-    const offered = semester <= CURRENT;
+    if (made0.has(s.code)) continue;
+    const offered = semester <= cur;
+    const [tName, tYear] = termOfSem(db_.startTerm, db_.startYear, semester);
     const teacher = teacherIds[(k + semester) % teacherIds.length];
     const ploNumbers = s.ploMappings.map((m) => m.plo.number).filter((n) => ploId.has(n)).sort((a, b) => a - b);
-    const plan = await planFor(s.id ? s : null, s.title, s.courseType, ploNumbers, s.code);
+    const plan = await planFor(s.id ? s : null, s.title, s.courseType, ploNumbers, s.code, s.content);
     const course = await prisma.course.create({ data: {
       code: s.code, title: s.title, creditHours: s.creditHours, courseType: s.courseType, coordinatorId: db_.coordinatorId, batchId: demoBatchId, semesterNumber: semester,
-      catalogDescription: s.catalogDescription, subjectExpertId: teacher, instructorId: offered ? teacher : null, templateStatus: "approved",
-      isOffered: offered, offeredTermName: offered ? TERMS[semester - 1][0] : null, offeredTermYear: offered ? TERMS[semester - 1][1] : null,
+      isNonCredit: !!s.isNonCredit, hasLab: s.courseType === "Lab" ? false : undefined,
+      catalogDescription: s.catalogDescription, textbook: s.textbook || null, referenceMaterial: s.referenceMaterial || null, subjectExpertId: teacher, instructorId: offered ? teacher : null, templateStatus: "approved",
+      isOffered: offered, offeredTermName: offered ? tName : null, offeredTermYear: offered ? tYear : null,
     } as never });
     // PLOs on the course: the source mapping, plus whatever the CLOs point to.
     const onCourse = Array.from(new Set([...ploNumbers, ...plan.clos.map((c) => c.plo).filter((n): n is number => n !== null && ploId.has(n))]));
@@ -192,7 +234,7 @@ export async function coursesStep(demoBatchId: string, sourceBatchId: string, se
       await prisma.lectureRowInstrument.createMany({ data: links as never, skipDuplicates: true });
       await recomputeCourseRows(course.id, source as "SE" | "INSTRUCTOR").catch(() => null);
     }
-    if (semester === CURRENT) await prisma.courseSectionAssignment.create({ data: { courseId: course.id, instructorId: teacher, sectionCount: 1 } as never }).catch(() => null);
+    if (semester === cur) await prisma.courseSectionAssignment.create({ data: { courseId: course.id, instructorId: teacher, sectionCount: 1 } as never }).catch(() => null);
     made++;
   }
   return made;
@@ -201,14 +243,16 @@ export async function coursesStep(demoBatchId: string, sourceBatchId: string, se
 /** Step 3: enrolments and marks for one semester; completed semesters also get approved results and transcript records. */
 export async function activityStep(demoBatchId: string, semester: number) {
   const [batch, students, courses] = await Promise.all([
-    prisma.batch.findUnique({ where: { id: demoBatchId }, select: { coordinatorId: true, coordinator: { select: { managedById: true } } } }),
+    prisma.batch.findUnique({ where: { id: demoBatchId }, select: { coordinatorId: true, startTerm: true, startYear: true, coordinator: { select: { managedById: true } } } }),
     prisma.student.findMany({ where: { batchId: demoBatchId }, orderBy: { rollNumber: "asc" }, select: { id: true, rollNumber: true } }),
     prisma.course.findMany({ where: { batchId: demoBatchId, semesterNumber: semester }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, instructorId: true } }),
   ]);
   if (!batch || !courses.length) return 0;
   if (await prisma.studentEnrollment.count({ where: { courseId: { in: courses.map((c) => c.id) } } })) return 0; // already done
-  const done = semester < CURRENT;
-  const [term, year] = TERMS[semester - 1];
+  const cur = currentSemOf(batch.startTerm, batch.startYear);
+  if (semester > cur) return 0;
+  const done = semester < cur;
+  const [term, year] = termOfSem(batch.startTerm, batch.startYear, semester);
   await prisma.studentEnrollment.createMany({ data: courses.flatMap((c) => students.map((s) => ({ studentId: s.id, courseId: c.id }))) as never, skipDuplicates: true });
   // Ability per student (stable across semesters), so transcripts tell a consistent story.
   const ability = new Map(students.map((s) => { const r = rng(`ability-${s.rollNumber}`); return [s.id, clamp(0.7 + 0.13 * normal(r), 0.3, 0.97)]; }));
@@ -281,7 +325,9 @@ export async function finishDemo(onlyBatchIds?: string[]) {
 
 /** Removes everything the demo institute owns: any row in any table pointing at one of its ids, then the rows themselves.
  * One pass per call; call until it reports nothing left. Only rows reachable from the demo head are touched. */
-export async function deletePass() {
+export async function deletePass(budgetMs = 30_000) {
+  const deadline = Date.now() + budgetMs;
+  let timedOut = false;
   const s = await demoScope();
   if (!s) return { left: 0 };
   const ids = new Set<string>([s.head.id, ...s.leads.map((l) => l.id), ...s.batches.map((b) => b.id)]);
@@ -312,20 +358,51 @@ export async function deletePass() {
       try { add(await prisma.$queryRawUnsafe<{ id: string }[]>(`SELECT "id" FROM "${t}" WHERE "${col}" = ANY($1::text[])`, Array.from(ids).concat(s.head.id))); } catch { /* skip */ }
     }
   }
-  // One statement per table: rows pointing at a demo id, then the demo rows themselves. FK order is handled by repeating calls.
+  // A table keyed by the institute (its row id is the head's id) must not put the head back: it goes last, alone.
+  ids.delete(s.head.id);
+  // Only tables that have rows (one round trip per 150 tables).
+  const allTables = Array.from(new Set([...Array.from(byTable.keys()), ...Array.from(hasId)]));
+  const filled = new Set<string>();
+  for (let i = 0; i < allTables.length; i += 150) {
+    const part = allTables.slice(i, i + 150);
+    const rows = await prisma.$queryRawUnsafe<{ t: string }[]>(part.map((t) => `SELECT '${t.replace(/'/g, "''")}' AS t WHERE EXISTS (SELECT 1 FROM "${t}")`).join(" UNION ALL ")).catch(() => part.map((t) => ({ t })));
+    rows.forEach((r) => filled.add(r.t));
+  }
+  // One statement per table: rows pointing at a demo id, then the demo rows themselves. FK order is handled by repeating
+  // calls, each visiting the tables from a different place so a big demo never stalls on the same slow tables.
+  const rotate = <T,>(xs: T[]) => { const k = xs.length ? Math.floor(Math.random() * xs.length) : 0; return [...xs.slice(k), ...xs.slice(0, k)]; };
   const sweep = async (all: string[]) => {
     let removed = 0;
-    for (const [t, cs] of Array.from(byTable.entries())) {
+    for (const [t, cs] of rotate(Array.from(byTable.entries()).filter(([t]) => filled.has(t)))) {
+      if (Date.now() > deadline) { timedOut = true; break; } // the rest on the next call (stays within the time limit)
       try { removed += await prisma.$executeRawUnsafe(`DELETE FROM "${t}" WHERE ${cs.map((c) => `"${c}" = ANY($1::text[])`).join(" OR ")}`, all); } catch { /* blocked by a reference: next call */ }
     }
-    for (const t of Array.from(hasId)) {
+    for (const t of rotate(Array.from(hasId).filter((x) => filled.has(x)))) {
+      if (timedOut || Date.now() > deadline) { timedOut = true; break; }
       try { removed += await prisma.$executeRawUnsafe(`DELETE FROM "${t}" WHERE "id" = ANY($1::text[])`, all); } catch { /* next call */ }
     }
     return removed;
   };
+  // Rows under demo rows (a survey template's questions, a meeting's items …) are demo rows too. Looked for only when a
+  // pass is stuck (nothing more could be removed), since on a big demo the search itself takes time.
+  const followChildren = async () => {
+    for (let round = 0; round < 3 && Date.now() < deadline; round++) {
+      const before = ids.size, arr = Array.from(ids);
+      for (const t of Array.from(hasId).filter((x) => filled.has(x) && (byTable.get(x) || []).length)) {
+        if (Date.now() > deadline) { timedOut = true; break; }
+        try { add(await prisma.$queryRawUnsafe<{ id: string }[]>(`SELECT "id" FROM "${t}" WHERE ${byTable.get(t)!.map((c) => `"${c}" = ANY($1::text[])`).join(" OR ")}`, arr)); } catch { /* skip */ }
+      }
+      ids.delete(s.head.id);
+      if (ids.size === before) break;
+    }
+  };
   let removed = await sweep(Array.from(ids));
-  if (removed === 0) removed = await sweep([s.head.id]);
-  return { left: (await demoHead()) ? 1 : 0, removed };
+  if (removed === 0 && !timedOut) { await followChildren(); if (!timedOut) removed = await sweep(Array.from(ids)); }
+  // The head goes only when nobody of the institute is left under it (else its people would be cut loose, unreachable).
+  const under = await prisma.user.count({ where: { OR: [{ managedById: s.head.id }, { managedBy: { managedById: s.head.id } }] } });
+  if (removed === 0 && !timedOut && under === 0) removed = await sweep([s.head.id]);
+  else if (removed === 0 && !timedOut) throw new Error(`${under} people of the demo institute could not be removed yet (other records still point at them).`);
+  return { left: timedOut || (await demoHead()) ? 1 : 0, removed };
 }
 
 /** The batches of a real institute that can be copied (for the setup form). */
