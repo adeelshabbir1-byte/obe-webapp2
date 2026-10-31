@@ -387,6 +387,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "officeHours"
 },
 {
+"f": "migration_exam_board.sql",
+"d": "Collaborative question bank and peer-reviewed exam papers: each bank question's required metadata (lecture topic,",
+"t": "ExamBlueprint"
+},
+{
 "f": "migration_exam_branch.sql",
 "d": "Exam branch: staff who run exams for the Institute Head, the duty pool from Program Leads, faculty preferences,",
 "t": "ExamPublishLog"

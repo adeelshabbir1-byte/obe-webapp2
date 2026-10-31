@@ -9367,3 +9367,87 @@ model CqiRevisionFlag {
   @@unique([courseId, ploLabel], map: "CqiRevisionFlag_key")
   @@index([chairmanId], map: "CqiRevisionFlag_chairman_idx")
 }
+
+// Collaborative question bank and peer-reviewed exam papers (prisma/migration_exam_board.sql).
+model QbMeta {
+  itemId        String   @id
+  lectureNumber Int?
+  week          Int?
+  topic         String   @default("")
+  difficulty    String   @default("MEDIUM") // EASY | MEDIUM | HARD
+  cloCodesJson  String   @default("[]")
+  rubric        String?
+  optionsJson   String?
+  correctIndex  Int?
+  codeSnippet   String?
+  imageData     String?
+  imageType     String?
+  duplicateOfId String?
+  updatedById   String?
+  updatedAt     DateTime @default(now())
+}
+
+model ExamDraft {
+  id          String    @id
+  chairmanId  String
+  teamKey     String
+  examType    String
+  authorId    String
+  itemIdsJson String    @default("[]")
+  status      String    @default("DRAFT") // DRAFT | SUBMITTED
+  checkJson   String?
+  submittedAt DateTime?
+  updatedAt   DateTime  @default(now())
+
+  @@unique([chairmanId, teamKey, examType, authorId], map: "ExamDraft_key")
+}
+
+model QbRating {
+  id         String   @id
+  chairmanId String
+  teamKey    String
+  examType   String
+  itemId     String
+  raterId    String
+  stars      Int
+  comment    String?
+  updatedAt  DateTime @default(now())
+
+  @@unique([teamKey, examType, itemId, raterId], map: "QbRating_key")
+  @@index([chairmanId, teamKey, examType], map: "QbRating_round_idx")
+}
+
+model ExamFinal {
+  id            String    @id
+  chairmanId    String
+  teamKey       String
+  examType      String
+  status        String    @default("OPEN") // OPEN | PUBLISHED
+  decisionsJson String    @default("{}")
+  extraJson     String    @default("[]")
+  removedJson   String    @default("[]")
+  editsJson     String    @default("{}")
+  paperJson     String?
+  leadCourseId  String?
+  publishedAt   DateTime?
+  publishedById String?
+  updatedAt     DateTime  @default(now())
+
+  @@unique([chairmanId, teamKey, examType], map: "ExamFinal_key")
+}
+
+model ExamBlueprint {
+  id           String   @id
+  chairmanId   String
+  examType     String
+  easyPct      Float    @default(20)
+  mediumPct    Float    @default(60)
+  hardPct      Float    @default(20)
+  tolerancePct Float    @default(10)
+  minCloPct    Float    @default(10)
+  maxCloPct    Float    @default(50)
+  updatedById  String?
+  updatedAt    DateTime @default(now())
+
+  @@unique([chairmanId, examType], map: "ExamBlueprint_key")
+}
