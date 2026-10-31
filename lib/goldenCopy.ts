@@ -64,3 +64,18 @@ export async function accreditationBlock(chairmanId: string, program: string) {
   }
   return null;
 }
+
+/** Is this curriculum an institute's copy of an HEC Golden Copy? */
+export async function isGoldenCopy(curriculumId: string) { return !!(await goldenOf(curriculumId)); }
+/**
+ * Replacing a course's CLOs and topics in a Golden Copy import (CLO file import, CLO copy, BOS revision): refused when
+ * the new content drops a mandatory CLO or core topic of the Golden Copy. Returns the reason, or null.
+ */
+export async function guardContent(masterCourseId: string, next: { clos?: string[]; topics?: string[] }) {
+  const g = await goldenCourse(masterCourseId);
+  if (!g) return null;
+  const n = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (next.clos) { const have = new Set(next.clos.map(n)); const lost = g.clos.filter((c) => !have.has(n(c))); if (lost.length) return `${g.code} ${g.title}: ${lost.length} mandatory CLO(s) of the HEC Golden Copy would be lost.`; }
+  if (next.topics) { const have = new Set(next.topics.map(n)); const lost = g.topics.filter((t) => !have.has(n(t))); if (lost.length) return `${g.code} ${g.title}: ${lost.length} core topic(s) of the HEC Golden Copy would be lost.`; }
+  return null;
+}

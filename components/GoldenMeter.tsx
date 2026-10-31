@@ -1,22 +1,33 @@
 import { meter } from "../lib/goldenCopy";
-import { ActionForm } from "./fyp/FypClient";
+import { ActionButton, ActionForm } from "./fyp/FypClient";
 import { prisma } from "../lib/db";
 import { revisionFlags } from "../lib/resched";
 
-/** CQI: courses of this curriculum flagged for the next revision (a batch's PLO attainment below 50%). */
-export async function cqiFlags(curriculumId: string) {
-  const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { chairmanId: true, courses: { select: { title: true } } } }).catch(() => null);
-  if (!c?.chairmanId) return null;
+/** CQI: courses of this curriculum flagged for the next revision (a batch's PLO attainment below 50%). A national
+ *  curriculum (no owner) shows the flags of every institute teaching its courses. */
+export async function cqiFlags(curriculumId: string, o: { canResolve?: boolean } = {}) {
+  const c = await prisma.masterCurriculum.findUnique({ where: { id: curriculumId }, select: { chairmanId: true, parentCurriculumId: true, courses: { select: { title: true } } } }).catch(() => null);
+  if (!c) return null;
   const fl = await revisionFlags(c.chairmanId, c.courses.map((x) => x.title)).catch(() => []);
   if (!fl.length) return null;
-  return <div className="card" data-testid="cqi-flags" style={{ borderLeft: "5px solid #B76E00" }}><b>Flagged for the next revision (CQI)</b>{fl.slice(0, 20).map((f) => <p key={f.id} style={{ margin: "2px 0", fontSize: 13 }}>{f.courseCode} {f.courseTitle}: {f.ploLabel} attainment {f.attainment}%{f.termName ? ` (${f.termName} ${f.termYear})` : ""}</p>)}</div>;
+  return (
+    <div className="card" data-testid="cqi-flags" style={{ borderLeft: "5px solid #B76E00" }}>
+      <b>Flagged for {c.chairmanId ? "the next revision" : "this revision"} (CQI — PLO attainment below 50%)</b>
+      {fl.slice(0, 30).map((f) => (
+        <p key={f.id} style={{ margin: "2px 0", fontSize: 13, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }} data-flag={f.courseCode}>
+          <span>{f.courseCode} {f.courseTitle}: {f.ploLabel} attainment {f.attainment}%{f.termName ? ` (${f.termName} ${f.termYear})` : ""}</span>
+          {o.canResolve && <ActionButton url="/api/scheduling" body={{ action: "resolveFlag", id: f.id }} label="Resolved" className="btn btn-secondary btn-sm" confirmText="Mark this flag resolved (the revision has dealt with it)?" />}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 // The live compliance meter of an institute's copy of an HEC Golden Copy: green 100%, yellow 80–99.99% (local
 // additions, justified at accreditation), red < 80% (core mandates missing — accreditation submission is blocked).
 export default async function GoldenMeter({ curriculumId, canJustify }: { curriculumId: string; canJustify: boolean }) {
   const m = await meter(curriculumId).catch(() => null);
-  const flags = await cqiFlags(curriculumId);
+  const flags = await cqiFlags(curriculumId, { canResolve: canJustify });
   if (!m) return flags;
   const colour = m.band === "GREEN" ? "#2F7A4D" : m.band === "YELLOW" ? "#B76E00" : "#B3261E";
   return (

@@ -28,6 +28,7 @@ async function POST_handler(req: Request) {
       case "request": return NextResponse.json({ ok: true, id: await requestMove(user, chairmanId, { entryId: String(b.entryId || ""), fromDate: String(b.fromDate || ""), toDate: String(b.toDate || ""), toStart: toH(b.toStart), reason: String(b.reason || ""), eventId: b.eventId || null }), message: "Sent to the Chairman / Dean." });
       case "decide": return NextResponse.json({ ok: true, message: await decideRequest(user, chairmanId, String(b.id || ""), b.ok === true || b.ok === "true", String(b.note || "")) });
       case "event": await addEvent(user, chairmanId, { title: String(b.title || ""), date: String(b.date || ""), start: toH(b.start), end: toH(b.end), batchIds }); return NextResponse.json({ ok: true });
+      case "resolveFlag": { const { resolveFlag } = await import("../../../lib/resched"); await resolveFlag(user, chairmanId, String(b.id || "")); return NextResponse.json({ ok: true }); }
       case "closure": { const r = await forceMajeure(user, chairmanId, String(b.date || ""), String(b.reason || "")); return NextResponse.json({ ok: true, message: `${r.plan.length} class(es) moved to make-up slots${r.unplaced.length ? `; no slot found for ${r.unplaced.join(", ")}` : ""}.` }); }
       default: return NextResponse.json({ error: "Unknown action." }, { status: 400 });
     }

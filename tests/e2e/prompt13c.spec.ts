@@ -50,6 +50,9 @@ test("a move: Dean → Program Lead + teacher; a visiting teacher who can't come
   expect((await pl.request.post(API, { data: { action: "decide", id, ok: true } })).ok()).toBeTruthy();
   expect((await t3c.request.post(API, { data: { action: "decide", id, ok: true } })).ok()).toBeTruthy();
   expect((await db.classReschedule.findUniqueOrThrow({ where: { id } })).status).toBe("APPROVED");
+  // The course's students hear about it.
+  const enrolled = await db.studentEnrollment.findMany({ where: { courseId: r.courseId }, select: { studentId: true } });
+  if (enrolled.length) expect(await db.studentNotice.count({ where: { studentId: { in: enrolled.map((e) => e.studentId) }, kind: "TIMETABLE", title: { contains: "moved: 2026-11-02" } } })).toBeGreaterThan(0);
   // Visiting teacher: not available → blocked.
   const t4c = await as(browser, "dream.t4");
   const vid = (await json(await head.request.post(API, { data: { action: "request", entryId: t4Entry, fromDate: "2026-11-02", toDate: "2026-11-05", toStart: "14:00", reason: "Convocation rehearsal" } }))).id;

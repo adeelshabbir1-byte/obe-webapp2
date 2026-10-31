@@ -27,7 +27,9 @@ export type Slot = {
 };
 
 export type Room = { id: string; type: string; capacity: number };
-export type Unavailability = { facultyId: string; dayOfWeek: string; startHour: number; endHour: number };
+// A teacher's unavailable time — or, with batchIds, a time no class of those batches may take (an event planned before
+// the timetable: [] means every batch).
+export type Unavailability = { facultyId: string; dayOfWeek: string; startHour: number; endHour: number; batchIds?: string[] };
 
 export type Gene = { day: string; startHour: number; roomId: string };
 
@@ -67,7 +69,8 @@ function fitness(chromosome: Gene[], slots: Slot[], rooms: Room[], unavailabilit
     if (room && room.capacity < slot.studentCount) { score += HARD_PENALTY; hardViolations++; }
 
     for (const u of unavailability) {
-      if (u.facultyId === slot.instructorId && u.dayOfWeek === gene.day && overlaps(gene.startHour, end, u.startHour, u.endHour)) {
+      const who = u.batchIds ? (!u.batchIds.length || slot.batchIds.some((k) => u.batchIds!.includes(k.split("#")[0]))) : u.facultyId === slot.instructorId;
+      if (who && u.dayOfWeek === gene.day && overlaps(gene.startHour, end, u.startHour, u.endHour)) {
         score += HARD_PENALTY; hardViolations++;
       }
     }

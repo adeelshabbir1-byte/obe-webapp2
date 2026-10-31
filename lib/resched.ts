@@ -85,8 +85,26 @@ export async function decideRequest(user: U, chairmanId: string, id: string, ok:
   await db.classReschedule.update({ where: { id }, data: { status: n.status, plOk: n.plOk, facultyOk: n.facultyOk, ...(who === "DEAN" ? { deanId: user.id } : {}), note: note.trim().slice(0, 500) || r.note, updatedAt: new Date() } });
   const line = `${c?.code} ${r.fromDate.toISOString().slice(0, 10)} → ${r.toDate.toISOString().slice(0, 10)} ${hh(r.toStart)}`;
   if (n.status === "PROVISIONAL" && who === "DEAN") await notifyUsers([c?.coordinatorId, teacher], { kind: "REQUEST", title: `Please confirm: ${line}`, body: r.visiting ? "You are teaching as visiting faculty — the class moves only if you confirm you can come." : r.reason.slice(0, 200), href: "/scheduling?tab=requests" }).catch(() => null);
+  if (n.status === "APPROVED") await tellStudents(r.courseId, chairmanId, `${c?.code} moved: ${r.fromDate.toISOString().slice(0, 10)} ${hh(r.fromStart)} → ${r.toDate.toISOString().slice(0, 10)} ${hh(r.toStart)}–${hh(r.toEnd)}`, r.reason);
   if (["APPROVED", "REJECTED", "BLOCKED"].includes(n.status)) await notifyUsers([r.createdById, c?.coordinatorId, teacher], { kind: "REQUEST", title: `${n.status === "APPROVED" ? "Class moved" : n.status === "BLOCKED" ? "Reschedule blocked" : "Reschedule declined"}: ${line}`, body: n.message, href: "/scheduling?tab=requests", exceptId: user.id }).catch(() => null);
   return n.message;
+}
+
+/** A flag is resolved once the revision has dealt with it (logged). */
+export async function resolveFlag(user: { id: string; role: string }, chairmanId: string, id: string) {
+  const f = await db.cqiRevisionFlag.findUnique({ where: { id } });
+  if (!f || (user.role !== "SUPER_USER" && f.chairmanId !== chairmanId)) throw new Error("Not found.");
+  if (!["SUPER_USER", "CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC", "PROGRAM_COORDINATOR", "PROGRAM_LEAD"].includes(user.role)) throw new Error("The curriculum team resolves CQI flags.");
+  await db.cqiRevisionFlag.update({ where: { id }, data: { resolvedAt: new Date(), resolvedById: user.id } });
+  await writeAuditLog({ actorUserId: user.id, action: "CQI_FLAG_RESOLVED", entityType: "CqiRevisionFlag", entityId: id, metadata: { course: f.courseCode, plo: f.ploLabel } });
+}
+
+/** The course's students hear that their class moved. */
+async function tellStudents(courseId: string, chairmanId: string, title: string, body: string) {
+  const en = await prisma.studentEnrollment.findMany({ where: { courseId, status: { not: "WITHDRAWN" } }, select: { studentId: true } });
+  if (!en.length) return;
+  const { notifyStudents } = await import("./studentNotices");
+  await notifyStudents(en.map((e) => e.studentId), { kind: "TIMETABLE", title, body: body.slice(0, 200), href: "/student/timetable" }, chairmanId).catch(() => null);
 }
 
 // ---- events and closures
@@ -114,6 +132,7 @@ export async function forceMajeure(user: U, chairmanId: string, date: string, re
   for (const p of plan.plan) {
     const c = onDay.find((x) => x.entryId === p.entryId)!;
     await db.classReschedule.create({ data: { id: randomUUID(), chairmanId, entryId: c.entryId, courseId: c.courseId, fromDate: d, fromStart: c.start, fromEnd: c.end, toDate: dateOnly(p.date), toStart: p.start, toEnd: p.end, reason: `Force majeure: ${reason.trim().slice(0, 200)}`, status: "APPROVED", forceMajeure: true, deanId: user.id, createdById: user.id } });
+    await tellStudents(c.courseId, chairmanId, `Campus closed ${date}: ${c.code} make-up class ${p.date} ${hh(p.start)}–${hh(p.end)}`, reason);
   }
   const teachers = Array.from(new Set(onDay.map((c) => c.instructorId)));
   await notifyUsers(teachers, { kind: "REQUEST", title: `Campus closed ${date} — your classes moved to make-up slots`, body: reason.slice(0, 200), href: "/scheduling?tab=requests" }).catch(() => null);
@@ -152,9 +171,36 @@ export async function flagLowPlo(courseId: string) {
   }
   return n;
 }
-export async function revisionFlags(chairmanId: string, titles?: string[]) {
-  const rows = (await db.cqiRevisionFlag.findMany({ where: { chairmanId, resolvedAt: null }, orderBy: { attainment: "asc" } }).catch(() => [])) as { id: string; courseCode: string; courseTitle: string; ploLabel: string; attainment: number; termName: string | null; termYear: number | null }[];
+/** Open CQI flags of an institute (null: every institute — for a national revision). */
+export async function revisionFlags(chairmanId: string | null, titles?: string[]) {
+  const rows = (await db.cqiRevisionFlag.findMany({ where: { ...(chairmanId ? { chairmanId } : {}), resolvedAt: null }, orderBy: { attainment: "asc" }, take: 500 }).catch(() => [])) as { id: string; chairmanId: string; courseCode: string; courseTitle: string; ploLabel: string; attainment: number; termName: string | null; termYear: number | null }[];
   if (!titles) return rows;
   const t = new Set(titles.map((x) => x.toLowerCase()));
   return rows.filter((r) => t.has(r.courseTitle.toLowerCase()));
+}
+
+/**
+ * Cohort lock for transcripts: a student from another batch (a repeater, an out-of-batch student) is recorded under the
+ * course of his own batch's curriculum it maps to — Course Equivalence first, then the same course by name — so his
+ * transcript keeps his curriculum's code. Unmapped students keep the course as taught.
+ */
+export async function ownCurriculumCourses(courseId: string, studentIds: string[]) {
+  const out = new Map<string, { code: string; title: string }>();
+  const c = await prisma.course.findUnique({ where: { id: courseId }, select: { batchId: true, title: true } });
+  if (!c?.batchId || !studentIds.length) return out;
+  const studs = await prisma.student.findMany({ where: { id: { in: studentIds }, batchId: { not: c.batchId } }, select: { id: true, batchId: true } });
+  if (!studs.length) return out;
+  const batches = Array.from(new Set(studs.map((s) => s.batchId)));
+  const [own, grp] = await Promise.all([
+    prisma.course.findMany({ where: { batchId: { in: batches } }, select: { batchId: true, code: true, title: true } }),
+    prisma.courseEquivalenceMember.findFirst({ where: { courseId }, select: { group: { select: { members: { select: { course: { select: { batchId: true, code: true, title: true } } } } } } } }).catch(() => null),
+  ]);
+  const keys = new Set(courseKeys(c.title, null));
+  for (const s of studs) {
+    const eq = grp?.group.members.find((m) => m.course.batchId === s.batchId)?.course;
+    const same = own.find((x) => x.batchId === s.batchId && courseKeys(x.title, null).some((k) => keys.has(k)));
+    const hit = eq || same;
+    if (hit) out.set(s.id, { code: hit.code, title: hit.title });
+  }
+  return out;
 }

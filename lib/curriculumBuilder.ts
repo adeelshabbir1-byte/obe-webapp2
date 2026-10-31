@@ -98,15 +98,23 @@ async function seedCourses(curriculumId: string, types: { name: string; kind: Ki
 /** Start a curriculum: from a template (types only), from an existing curriculum (its courses copied), or both. */
 export async function startCurriculum(user: U, o: { program: string; council: string; version: string; templateKey?: string; sourceId?: string }) {
   const tpl = TEMPLATES.find((t) => t.key === o.templateKey) || null;
-  const src = o.sourceId ? await prisma.masterCurriculum.findUnique({ where: { id: o.sourceId }, include: { courses: true, plos: true } }) : null;
+  const src = o.sourceId ? await prisma.masterCurriculum.findUnique({ where: { id: o.sourceId }, include: { courses: { include: { seedClos: { orderBy: { orderIndex: "asc" } }, seedTopics: true } }, plos: true } }) : null;
   const chairmanId = user.role === "SUPER_USER" || (await builderScope(user.id)) ? null : await findOwningChairmanId(user.id);
   if (!(await canBuild(user, { chairmanId, authority: o.council, title: o.program }))) throw new Error("You may not build curricula for this council or program.");
   const title = o.program.trim().slice(0, 120), version = (o.version.trim() || String(new Date().getFullYear())).slice(0, 40);
   if (await prisma.masterCurriculum.findFirst({ where: { title, version, authority: o.council, chairmanId } })) throw new Error(`${o.council} ${title} ${version} already exists — open it from the list.`);
   const c = await prisma.masterCurriculum.create({ data: { authority: o.council.slice(0, 20), title, version, status: "DRAFT", degreeProgram: title, chairmanId, parentCurriculumId: src?.id || null, sourceReference: src?.sourceReference || null } });
   if (src) {
-    for (const mc of src.courses) await prisma.masterCourse.create({ data: { masterCurriculumId: c.id, code: mc.code, title: mc.title, creditHours: mc.creditHours, category: mc.category, domain: mc.domain, semesterNumber: mc.semesterNumber, textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial } });
-    for (const p of src.plos) await prisma.masterPLO.create({ data: { masterCurriculumId: c.id, number: p.number, title: p.title, description: p.description } as never }).catch(() => null);
+    // PLOs first, so the copied CLOs keep their PLO mapping (by PLO number). A copy of an HEC curriculum (the Golden
+    // Copy) carries its CLOs and lecture topics too — it starts 100% aligned.
+    const ploNo = new Map(src.plos.map((p) => [p.id, p.number]));
+    const ploId = new Map<number, string>();
+    for (const p of src.plos) { const np = await prisma.masterPLO.create({ data: { masterCurriculumId: c.id, number: p.number, title: p.title, description: p.description } as never }).catch(() => null) as { id: string } | null; if (np) ploId.set(p.number, np.id); }
+    for (const mc of src.courses) {
+      const n = await prisma.masterCourse.create({ data: { masterCurriculumId: c.id, code: mc.code, title: mc.title, creditHours: mc.creditHours, category: mc.category, domain: mc.domain, semesterNumber: mc.semesterNumber, textbook: mc.textbook, catalogDescription: mc.catalogDescription, referenceMaterial: mc.referenceMaterial } });
+      if (mc.seedClos.length) await prisma.masterCourseClo.createMany({ data: mc.seedClos.map((x) => ({ masterCourseId: n.id, statement: x.statement, bloomLevel: x.bloomLevel, orderIndex: x.orderIndex, mappedPloId: x.mappedPloId ? ploId.get(ploNo.get(x.mappedPloId) ?? -1) ?? null : null, ploMappingSource: x.ploMappingSource })) });
+      if (mc.seedTopics.length) await prisma.masterCourseTopic.createMany({ data: mc.seedTopics.map((x) => ({ masterCourseId: n.id, lectureNumber: x.lectureNumber, topic: x.topic, subtopic: x.subtopic, cloNumber: x.cloNumber })), skipDuplicates: true });
+    }
   }
   if (tpl) {
     await writeTypes(c.id, tpl.types, true);
@@ -193,6 +201,7 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
     case "place": { await course(); await prisma.masterCourse.update({ where: { id: s("courseId") }, data: { category: s("type", 60) } }); return "Moved."; }
     case "updateCourse": {
       const x = await course();
+      { const why = await (await import("./goldenCopy")).guardCourse(x.id, { code: a.code !== undefined ? String(a.code) : undefined, title: a.title !== undefined ? String(a.title) : undefined, creditHours: a.creditHours !== undefined ? Number(a.creditHours) : undefined }); if (why) throw new Error(why); }
       const data: Record<string, unknown> = {};
       if (a.code !== undefined) { const code = s("code", 20).toUpperCase(); if (!code) throw new Error("A course needs a code."); if (code !== x.code && (await prisma.masterCourse.findFirst({ where: { masterCurriculumId: c.id, code } }))) throw new Error(`${code} is already used in this curriculum.`); data.code = code; }
       if (a.title !== undefined) { if (!s("title")) throw new Error("A course needs a title."); data.title = s("title"); }
@@ -219,6 +228,7 @@ export async function act(user: U, curriculumId: string, a: Record<string, unkno
     }
     case "removeCourse": {
       const x = await course();
+      { const why = await (await import("./goldenCopy")).guardCourse(x.id, { remove: true }); if (why) throw new Error(why); }
       if (await prisma.course.count({ where: { masterCourseId: x.id } })) throw new Error("Batches already use this course; it can't be removed (move it, or start a new version).");
       await bdb.masterCourseTrack.deleteMany({ where: { masterCourseId: x.id } });
       await prisma.masterCourse.delete({ where: { id: x.id } }).catch(() => { throw new Error("This course has CLOs or topics; remove them in the full editor first."); });
