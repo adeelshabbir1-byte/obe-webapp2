@@ -60,6 +60,8 @@ async function main() {
     await demo.finishDemo();
   }
   const head = (await demo.demoHead())!;
+  // The demo institute is flagged as a demo (one-click logins, sample marks); safe to repeat.
+  await db.demoFlag?.upsert({ where: { chairmanId: head.id }, create: { chairmanId: head.id }, update: {} }).catch(() => null);
   const lead = await prisma.user.findUniqueOrThrow({ where: { username: "dream.lead.cs" } });
   const leadAi = await prisma.user.findUniqueOrThrow({ where: { username: "dream.lead.ai" } });
   const dept = lead.departmentId;

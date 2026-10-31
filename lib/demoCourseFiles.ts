@@ -14,13 +14,16 @@ const NOTES = [
   "The case studies worked well; students asked for more local examples, which will be added to the outline.",
 ];
 
-export async function campusCourseFiles() {
+export async function campusCourseFiles(budgetMs = 1e9) {
+  const deadline = Date.now() + budgetMs;
   const head = await prisma.user.findUnique({ where: { username: DEMO_HEAD }, select: { id: true } });
   if (!head) throw new Error("Build the demo institute first.");
   const batches = await prisma.batch.findMany({ where: { coordinator: { managedById: head.id } }, select: { id: true, startTerm: true, startYear: true } });
   const courses = await prisma.course.findMany({ where: { batchId: { in: batches.map((b) => b.id) }, isOffered: true, semesterNumber: { gte: 1, lte: 4 } }, select: { id: true, code: true, batchId: true, coordinatorId: true, instructorId: true, semesterNumber: true, offeredTermName: true, offeredTermYear: true, instructorObservations: true } });
   let dated = 0, att = 0, notes = 0;
   for (const c of courses) {
+    // Big batches: stop before the time limit; the next call carries on (only empty things are filled).
+    if (Date.now() > deadline) return Object.assign([`${dated} lectures dated, ${att} attendance marks so far — continuing`], { more: true });
     const b = batches.find((x) => x.id === c.batchId)!;
     // The term the course ran in: its own stamp, or the batch's start term plus the semester.
     let term = c.offeredTermName, year = c.offeredTermYear;

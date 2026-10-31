@@ -31,7 +31,8 @@ async function headId() {
 }
 
 /** People, the business school, the BBA program and batch, council bindings. Returns the BBA batch id. */
-export async function addBusinessSchool() {
+export async function addBusinessSchool(opts: { students?: number } = {}) {
+  const N = Math.max(1, Math.min(200, opts.students || 30));
   const head = await headId();
   const hash = await hashPassword(DEMO_PASSWORD);
   const mk = (username: string, name: string, role: string, extra: Record<string, unknown> = {}) => ({ id: randomUUID(), username, email: `${username}@dreaminstitute.demo`, passwordHash: hash, name, role, mustChangePassword: false, managedById: head, ...extra });
@@ -68,7 +69,7 @@ export async function addBusinessSchool() {
   if (!batch) {
     const teachers = await prisma.user.findMany({ where: { managedById: lead }, orderBy: { username: "asc" }, select: { id: true } });
     await prisma.degreeProgram.create({ data: { coordinatorId: lead, name: "BBA (Hons)", shortCode: "BBA" } });
-    batch = await prisma.batch.create({ data: { coordinatorId: lead, degreeProgram: "BBA (Hons)", batchName: "BBA Fall 2024", startTerm: "Fall", startYear: 2024, studentCount: 30, advisorId: teachers[2]?.id || null } as never, select: { id: true } });
+    batch = await prisma.batch.create({ data: { coordinatorId: lead, degreeProgram: "BBA (Hons)", batchName: "BBA Fall 2024", startTerm: "Fall", startYear: 2024, studentCount: N, advisorId: teachers[2]?.id || null } as never, select: { id: true } });
     await prisma.currentTerm.create({ data: { coordinatorId: lead, termName: "Fall", year: 2026 } as never });
     const GR: [string, number][] = [["A", 4], ["A-", 3.67], ["B+", 3.33], ["B", 3], ["B-", 2.67], ["C+", 2.33], ["C", 2], ["C-", 1.67], ["D+", 1.33], ["D", 1], ["F", 0]];
     await prisma.gradingScale.createMany({ data: GR.map(([letter, gpaValue], i) => ({ coordinatorId: lead, letter, gpaValue, orderIndex: i })) as never });
@@ -76,7 +77,7 @@ export async function addBusinessSchool() {
     await prisma.programProfile.create({ data: { coordinatorId: lead, degreeProgram: "BBA (Hons)", peos: JSON.stringify(["Graduates hold responsible managerial and entrepreneurial positions in national and international organisations.", "Graduates make ethical, evidence-based business decisions and contribute to society.", "Graduates continue professional development through higher studies and certifications."]), peoPloJson: JSON.stringify({ PEO1: [1, 2, 5, 7], PEO2: [3, 4, 6], PEO3: [8] }), departmentVision: "To be a leading business school that develops ethical and innovative business leaders.", departmentMission: "To impart quality business education through research-led teaching, industry linkages and community engagement." } as never });
     const r = rng("students-BBA");
     const F = ["Ali", "Sara", "Hamza", "Ayesha", "Bilal", "Zainab", "Usman", "Hira", "Fahad", "Maryam", "Saad", "Iqra", "Omar", "Noor", "Taha", "Amna"], L = ["Khan", "Ahmed", "Raza", "Malik", "Shah", "Iqbal", "Butt", "Qureshi", "Javed", "Riaz"];
-    await prisma.student.createMany({ data: Array.from({ length: 30 }, (_, i) => ({ id: randomUUID(), batchId: batch!.id, name: `${F[Math.floor(r() * F.length)]} ${L[Math.floor(r() * L.length)]}`, rollNumber: `DRM-BB-24-${String(i + 1).padStart(3, "0")}`, passwordHash: hash, mustChangePassword: false, currentSemesterNumber: 5 })) as never });
+    await prisma.student.createMany({ data: Array.from({ length: N }, (_, i) => ({ id: randomUUID(), batchId: batch!.id, name: `${F[Math.floor(r() * F.length)]} ${L[Math.floor(r() * L.length)]}`, rollNumber: `DRM-BB-24-${String(i + 1).padStart(3, "0")}`, passwordHash: hash, mustChangePassword: false, currentSemesterNumber: 5 })) as never });
   }
   return { demoBatchId: batch.id, sourceBatchId: "BUILTIN:BBA" };
 }

@@ -9451,3 +9451,15 @@ model ExamBlueprint {
 
   @@unique([chairmanId, examType], map: "ExamBlueprint_key")
 }
+
+// "Make demo ready" (prisma/migration_demo_ready.sql): the institute flagged as a demo — only it can be rebuilt, reset,
+// filled with sample marks or signed into with the one-click demo logins — and the one course left for the live demo.
+model DemoFlag {
+  chairmanId   String    @id
+  demoCourseId String?
+  loginsOn     Boolean   @default(true)
+  readyAt      DateTime?
+  resetAt      DateTime?
+  stateJson    String    @default("{}")
+  createdAt    DateTime  @default(now())
+}

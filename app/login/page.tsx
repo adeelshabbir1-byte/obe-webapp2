@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { GraduationCap, Building2, ChevronRight } from "lucide-react";
+import { GraduationCap, Building2, ChevronRight, PlayCircle } from "lucide-react";
 import AuthLayout from "../../components/auth/AuthLayout";
 import LoginForm from "../../components/auth/LoginForm";
 import SsoButtons from "../../components/auth/SsoButtons";
 import { BRAND } from "../../lib/brandAssets";
+import { theDemo } from "../../lib/demoReady";
 
 export const metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
 
-export default function LoginPage({ searchParams }: { searchParams: { sso?: string } }) {
+export default async function LoginPage({ searchParams }: { searchParams: { sso?: string } }) {
+  const demo = await theDemo().catch(() => null);
   return (
     <AuthLayout
       heroTitle={<>Outcome-based education, <em>measured end to end.</em></>}
@@ -28,6 +30,15 @@ export default function LoginPage({ searchParams }: { searchParams: { sso?: stri
             </span>
             <ChevronRight size={16} />
           </Link>
+          {demo?.flag.loginsOn && (
+            <Link href="/demo" className="auth-link-row">
+              <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <PlayCircle size={18} style={{ color: "var(--brass)" }} />
+                <span>Demo institute<small>One-click demo logins and the demo script</small></span>
+              </span>
+              <ChevronRight size={16} />
+            </Link>
+          )}
           <Link href="/request-account" className="auth-link-row">
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Building2 size={18} style={{ color: "var(--sage)" }} />

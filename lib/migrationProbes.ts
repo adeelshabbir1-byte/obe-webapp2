@@ -329,6 +329,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "DegreeVerification"
 },
 {
+"f": "migration_demo_ready.sql",
+"d": "\"Make demo ready\": the institute flagged as a demo (only a flagged institute can be rebuilt, reset, filled with sample",
+"t": "DemoFlag"
+},
+{
 "f": "migration_department_approvals.sql",
 "d": "Step 2 of Departments: head-of-department approval of teacher assignments.",
 "t": "Course",

@@ -2,25 +2,8 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { setupDemo, coursesStep, activityStep, finishDemo, deletePass, demoSummary } from "../../../../lib/demoInstitute";
-import { campusGovernance } from "../../../../lib/demoGovernance";
-import { campusNceacPortal } from "../../../../lib/demoNceacPortal";
-import { campusComplexProblems } from "../../../../lib/demoComplex";
-import { campusUgPolicy } from "../../../../lib/demoUgPolicy";
-import { campusHemis } from "../../../../lib/demoHemis";
-import { campusCourseFiles } from "../../../../lib/demoCourseFiles";
-import { campusLabTheory } from "../../../../lib/demoLabTheory";
-import { campusModeration } from "../../../../lib/demoModeration";
-import { campusRegisters } from "../../../../lib/demoRegisters";
-import { campusApprovals } from "../../../../lib/demoApprovals";
-import { campusDashboard } from "../../../../lib/demoDashboard";
-import { campusSignoff } from "../../../../lib/demoSignoff";
-import { campusSupport } from "../../../../lib/demoSupport";
-import { campusLibrary } from "../../../../lib/demoLibrary";
-import { campusAssets } from "../../../../lib/demoAssets";
-import { campusRecruitment } from "../../../../lib/demoRecruitment";
-import { campusResearch } from "../../../../lib/demoResearch";
-import { campusBilling } from "../../../../lib/demoBilling";
-import { addBusinessSchool, campusPeople, campusStudents, campusAccreditation, campusActivity, campusSurveys, campusBbaContent, campusFixes } from "../../../../lib/demoCampus";
+import { addBusinessSchool } from "../../../../lib/demoCampus";
+import { campusPart, runReadyStep, readyStatus, resetDemo, setLogins } from "../../../../lib/demoReady";
 import { adminCan } from "../../../../lib/platformTeam";
 import { withErrors } from "../../../../lib/apiHandler";
 
@@ -49,9 +32,14 @@ async function POST_handler(req: Request) {
     if (b.step === "finishBatch") { await finishDemo([String(b.demoBatchId)]); return NextResponse.json({ ok: true }); }
     if (b.step === "campus") {
       const part = String(b.part);
-      const done = part === "people" ? await campusPeople() : part === "students" ? await campusStudents() : part === "accreditation" ? await campusAccreditation() : part === "activity" ? await campusActivity() : part === "surveys" ? await campusSurveys() : part === "content" ? await campusBbaContent() : part === "fixes" ? await campusFixes() : part === "governance" ? await campusGovernance() : part === "nceac" ? await campusNceacPortal() : part === "complex" ? await campusComplexProblems() : part === "ugpolicy" ? await campusUgPolicy() : part === "hemis" ? await campusHemis() : part === "coursefiles" ? await campusCourseFiles() : part === "labs" ? await campusLabTheory() : part === "moderation" ? await campusModeration() : part === "registers" ? await campusRegisters() : part === "approvals" ? await campusApprovals() : part === "dashboard" ? await campusDashboard() : part === "signoff" ? await campusSignoff() : part === "support" ? await campusSupport() : part === "library" ? await campusLibrary() : part === "assets" ? await campusAssets() : part === "recruitment" ? await campusRecruitment() : part === "research" ? await campusResearch() : part === "billing" ? await campusBilling() : part === "quality" ? await (await import("../../../../lib/demoQuality")).campusQuality() : part === "campusfees" ? await (await import("../../../../lib/demoQuality")).campusMultiFees() : null;
+      const done = await campusPart(part);
       return NextResponse.json({ done, summary: part === "activity" ? await demoSummary() : undefined });
     }
+    // "Make demo ready": the page runs the plan one step at a time (each call fits the time limit).
+    if (b.step === "readyStatus") return NextResponse.json(await readyStatus());
+    if (b.step === "ready") return NextResponse.json(await runReadyStep(Number(b.index), user.id));
+    if (b.step === "reset") return NextResponse.json(await resetDemo(user));
+    if (b.step === "logins") { await setLogins(!!b.on); return NextResponse.json({ ok: true }); }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }
     if (b.step === "delete") return NextResponse.json(await deletePass());
     return NextResponse.json({ error: "Unknown step." }, { status: 400 });
