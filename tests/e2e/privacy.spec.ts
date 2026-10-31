@@ -8,7 +8,7 @@ import { signIn, signInStudent, testDb } from "./helpers";
 const FULL = /\b\d{5}-?\d{7}-?\d\b/;
 
 async function fileText(ctx: BrowserContext, url: string) {
-  const r = await ctx.request.get(url);
+  const r = await ctx.request.get(url, { timeout: 120_000 }); // whole-institute exports are slow
   const ct = r.headers()["content-type"] || "";
   const buf = await r.body();
   if (r.status() !== 200) return { status: r.status(), text: buf.toString("utf8") };

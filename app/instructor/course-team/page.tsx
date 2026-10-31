@@ -47,7 +47,7 @@ export default async function CourseTeamPage() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Course Teams</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Courses you teach together with other teachers. The Course Lead finalises the Midterm and Final paper and sends it to the others, who approve it or ask for changes.
-        When everyone approves, every section receives the approved paper.
+        When everyone approves, every section receives the approved paper. The team can also build the paper together — shared bank, peer star ratings, consensus paper — on <a href="/exam-board">Team Exam Papers</a>.
       </p>
       <CourseTeamPanel teams={views} />
     </Shell>

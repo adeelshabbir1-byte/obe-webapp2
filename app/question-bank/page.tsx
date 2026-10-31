@@ -5,8 +5,10 @@ import { navForRole } from "../../components/reportNav";
 import { roleLabel, chairmanIdFor, coordinatorIdsFor } from "../../lib/reportScope";
 import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
-import { ActionButton, ActionForm } from "../../components/fyp/FypClient";
-import { BLOOMS, draftPaper, questions } from "../../lib/questionBank";
+import { ActionButton } from "../../components/fyp/FypClient";
+import { draftPaper, questions } from "../../lib/questionBank";
+import { QuestionForm } from "../../components/ExamBoardClient";
+import { bankOf, planOf } from "../../lib/examBoard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Question bank" };
@@ -26,17 +28,20 @@ export default async function QuestionBankPage({ searchParams }: { searchParams:
   const clos = Array.from(new Set((await prisma.cLO.findMany({ where: { course: { code }, source: "SE" }, select: { code: true }, orderBy: { orderIndex: "asc" } })).map((c) => c.code)));
   const pick = (searchParams.clos || "").split(",").filter(Boolean);
   const draft = pick.length && bank ? draftPaper(bank, pick, Number(searchParams.total) || 50) : null;
+  // The course plan behind the code (topics and CLOs for the question form) and each question's metadata.
+  const base = code ? await prisma.course.findFirst({ where: { code, ...where }, orderBy: { createdAt: "desc" }, select: { id: true, title: true } }) : null;
+  const plan = base ? await planOf({ key: "", code, title: base.title, term: "", rows: [{ courseId: base.id, batch: "", semester: null, teachers: [], instructorId: null }], teachers: [], leadId: null }).catch(() => null) : null;
+  const meta = new Map((code ? await bankOf(chairmanId, [code]).catch(() => []) : []).map((q) => [q.id, q]));
   const mcqCount = code ? await (prisma as unknown as Record<string, any>).mcqQuestion.count({ where: { chairmanId, courseCode: code, active: true } }).catch(() => 0) : 0;
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Question Bank</h1>
-      <p className="small-note">Written questions for each course, tagged with their CLO, Bloom level and marks ({mcqCount} MCQs are in the MCQ bank too). Draft a paper: choose the CLOs and the total marks, and the system picks questions covering each CLO in proportion with a spread of Bloom levels — least-used first.</p>
+      <p className="small-note">A course taught in several sections by different teachers has a shared bank, peer-rated papers and an official paper on <Link href="/exam-board">Team Exam Papers</Link>. Written questions for each course, tagged with their CLO, Bloom level and marks ({mcqCount} MCQs are in the MCQ bank too). Draft a paper: choose the CLOs and the total marks, and the system picks questions covering each CLO in proportion with a spread of Bloom levels — least-used first.</p>
       {bank === null && <div className="err">Run prisma/migration_platform_plus.sql in Supabase first.</div>}
       <div className="card" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{codes.map(([c, t]) => <Link key={c} href={`/question-bank?course=${encodeURIComponent(c)}`} className={`btn btn-sm ${c === code ? "btn-brass" : "btn-secondary"}`} title={t}>{c}</Link>)}</div>
       {code && <>
         <div className="card">
-          <ActionForm url="/api/question-bank" fixed={{ action: "add", courseCode: code }} submit="Add" collapsed openLabel="+ Add a question" initial={{ cloCode: clos[0] || "CLO-1", bloom: "C3", kind: "SHORT", marks: 5 }}
-            fields={[{ name: "cloCode", label: "CLO", type: "select", options: (clos.length ? clos : ["CLO-1"]).map((c) => [c, c] as [string, string]) }, { name: "bloom", label: "Bloom", type: "select", options: BLOOMS.map((b) => [b, b] as [string, string]) }, { name: "kind", label: "Kind", type: "select", options: [["SHORT", "Short"], ["LONG", "Long"], ["PROBLEM", "Problem / numerical"]] }, { name: "marks", label: "Marks", type: "number", width: 80 }, { name: "text", label: "Question", type: "textarea" }]} />
+          {plan ? <QuestionForm scope={{ courseCode: code }} lectures={plan.lectures} clos={plan.clos} /> : <p className="small-note">This course has no lecture plan yet — questions are linked to its topics.</p>}
           <form style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginTop: 10 }}>
             <input type="hidden" name="course" value={code} />
             <label style={{ fontSize: 12 }}>CLOs (comma)<br /><input name="clos" defaultValue={searchParams.clos || clos.join(",")} style={{ width: 240 }} /></label>
@@ -54,8 +59,8 @@ export default async function QuestionBankPage({ searchParams }: { searchParams:
         )}
         <div className="card" style={{ overflowX: "auto" }}>
           <b>{(bank || []).length} question{(bank || []).length === 1 ? "" : "s"}</b>
-          <table style={{ fontSize: 12.5, marginTop: 6 }}><thead><tr><th>CLO</th><th>Bloom</th><th>Kind</th><th>Marks</th><th>Question</th><th>Used</th><th></th></tr></thead>
-            <tbody>{(bank || []).map((q) => <tr key={q.id}><td>{q.cloCode}</td><td>{q.bloom}</td><td>{q.kind.toLowerCase()}</td><td>{q.marks}</td><td style={{ whiteSpace: "pre-wrap", maxWidth: 520 }}>{q.text}</td><td>{q.usedCount}</td><td>{(q.createdById === user.id || user.role !== "INSTRUCTOR") && <ActionButton url="/api/question-bank" body={{ action: "remove", id: q.id }} label="Remove" className="btn btn-secondary btn-sm" confirmText="Remove this question?" />}</td></tr>)}</tbody></table>
+          <table style={{ fontSize: 12.5, marginTop: 6 }}><thead><tr><th>CLO</th><th>Topic</th><th>Difficulty</th><th>Bloom</th><th>Kind</th><th>Marks</th><th>Question</th><th>Used</th><th></th></tr></thead>
+            <tbody>{(bank || []).map((q) => <tr key={q.id}><td>{meta.get(q.id)?.cloCodes.join(", ") || q.cloCode}</td><td>{meta.get(q.id)?.lectureNumber != null ? `W${meta.get(q.id)!.week} L${meta.get(q.id)!.lectureNumber}` : "—"}</td><td>{meta.get(q.id)?.difficulty?.toLowerCase() || "—"}</td><td>{q.bloom}</td><td>{q.kind.toLowerCase()}</td><td>{q.marks}</td><td style={{ whiteSpace: "pre-wrap", maxWidth: 520 }}>{q.text}</td><td>{q.usedCount}</td><td>{(q.createdById === user.id || user.role !== "INSTRUCTOR") && <ActionButton url="/api/question-bank" body={{ action: "remove", id: q.id }} label="Remove" className="btn btn-secondary btn-sm" confirmText="Remove this question?" />}</td></tr>)}</tbody></table>
         </div>
       </>}
     </Shell>
