@@ -101,7 +101,7 @@ export default async function Scheduling({ searchParams }: { searchParams: { tab
         return (
           <div className="card">
             <p className="small-note" style={{ margin: "0 0 6px" }}>When a course&apos;s results are approved, any PLO with batch attainment below 50% flags the course for review in the next curriculum revision.</p>
-            {fl.map((f) => <p key={f.id} style={{ margin: "2px 0", fontSize: 13 }} data-flag={f.courseCode}>{f.courseCode} {f.courseTitle}: {f.ploLabel} {f.attainment}%{f.termName ? ` (${f.termName} ${f.termYear})` : ""}</p>)}
+            {fl.map((f) => <p key={f.id} style={{ margin: "2px 0", fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }} data-flag={f.courseCode}><span>{f.courseCode} {f.courseTitle}: {f.ploLabel} {f.attainment}%{f.termName ? ` (${f.termName} ${f.termYear})` : ""}</span>{["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "OMC", "PROGRAM_COORDINATOR", "PROGRAM_LEAD"].includes(user.role) && <ActionButton url="/api/scheduling" body={{ action: "resolveFlag", id: f.id }} label="Resolved" className="btn btn-secondary btn-sm" />}</p>)}
             {!fl.length && <p className="small-note" style={{ margin: 0 }}>No flags.</p>}
           </div>
         );

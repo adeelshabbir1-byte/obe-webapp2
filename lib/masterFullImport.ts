@@ -41,6 +41,8 @@ export async function readProgramInfo(file: File) {
 }
 
 export async function importFullCurriculum(curriculumId: string, file: File) {
+  // An institute's copy of an HEC Golden Copy isn't overwritten wholesale: local changes go through the editors, which keep the locked fields.
+  if (await (await import("./goldenCopy")).isGoldenCopy(curriculumId)) throw new Error("This curriculum is your copy of an HEC Golden Copy: a full import would overwrite its locked content. Make local changes in the curriculum editor (books, lab manuals, electives), or start your own curriculum.");
   const sheets = await readSheets(file);
   const errors: string[] = [];
   const counts = { plos: 0, coursesCreated: 0, coursesUpdated: 0, clos: 0, topics: 0 };

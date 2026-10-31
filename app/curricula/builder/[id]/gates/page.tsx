@@ -9,6 +9,7 @@ import { ActionButton, ActionForm } from "../../../../../components/fyp/FypClien
 import { canBuild } from "../../../../../lib/curriculumBuilder";
 import { contactHours, poolBuffer, poolRequired, COUNTED, POOLS } from "../../../../../lib/stageGateCore";
 import { GATES_HINT, categoryMap, gateData, seedCategories } from "../../../../../lib/stageGates";
+import { cqiFlags } from "../../../../../components/GoldenMeter";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -44,6 +45,7 @@ export default async function Gates({ params, searchParams }: { params: { id: st
       <p className="small-note" style={{ margin: 0 }}><Link href={`/curricula/builder/${c.id}`}>← Curriculum Builder</Link></p>
       <h1 style={{ fontSize: 22, margin: "2px 0 4px" }}>Stage-gates — {c.authority} {c.title} {c.version}</h1>
       <p className="small-note">Publishing{c.chairmanId === null ? " this national curriculum" : ""} is possible only when all three gates pass and every course is 100% compliant ({r.g3.compliant} of {r.g3.total}). {c.status === "PUBLISHED" ? "Published: a read-only Golden Copy." : ""}</p>
+      {await cqiFlags(c.id, { canResolve: true })}
       <div className="card" data-testid="publish-state"><b>{r.publishable ? "✅ Ready to publish" : "🔒 Publish is disabled"}</b> <span className="small-note">— {r.g3.compliant} of {r.g3.total} courses compliant</span></div>
 
       <Gate n={1} title="Categories and total credit hours" open issues={r.g1}>

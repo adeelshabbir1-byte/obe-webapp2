@@ -166,10 +166,12 @@ async function snapshotStudentTranscripts(courseId: string, course: { coordinato
   const isDeficiency = course.creditHours === 0;
   const deficiencyPct = criteria.deficiencyPct ?? 40;
 
+  // Cohort lock: a student from another batch is recorded under his own curriculum's course (equivalence mapping).
+  const own = await import("./resched").then((m) => m.ownCurriculumCourses(courseId, result.rows.map((r) => r.studentId))).catch(() => new Map<string, { code: string; title: string }>());
   await prisma.studentTranscriptRecord.createMany({
     data: result.rows.map((r) => ({
       studentId: r.studentId, coordinatorId: course.coordinatorId,
-      courseCode: course.code, courseTitle: course.title, creditHours: course.creditHours, courseType: course.courseType,
+      courseCode: own.get(r.studentId)?.code ?? course.code, courseTitle: own.get(r.studentId)?.title ?? course.title, creditHours: course.creditHours, courseType: course.courseType,
       termName: course.offeredTermName, termYear: course.offeredTermYear,
       totalPct: r.totalPct,
       grade: isDeficiency ? (r.totalPct >= deficiencyPct ? "P" : "F") : r.grade,

@@ -55,6 +55,9 @@ export async function importClosIntoMasterCurriculum(curriculumId: string, file:
   }
   if (byCourse.size === 0) return { ok: false, error: "no usable CLO rows found", errors: errors.slice(0, 10) };
 
+  // HEC Golden Copy: a course whose new CLOs drop a mandatory CLO keeps its CLOs.
+  { const { guardContent } = await import("./goldenCopy"); for (const [code, list] of Array.from(byCourse.entries())) { const why = await guardContent(courseByCode.get(code)!, { clos: list.map((c) => c.statement) }); if (why) { errors.push(why); byCourse.delete(code); } } }
+  if (byCourse.size === 0) return { ok: false, error: "nothing could be imported", errors: errors.slice(0, 10) };
   // Two queries in one transaction for the whole file (one per course used to run past the time limit on large curricula).
   const ids = Array.from(byCourse.keys()).map((code) => courseByCode.get(code)!);
   const data = Array.from(byCourse.entries()).flatMap(([code, list]) => list.map((c, i) => ({ masterCourseId: courseByCode.get(code)!, statement: c.statement, bloomLevel: c.bloom, orderIndex: i, mappedPloId: c.ploId, ploMappingSource: c.ploId ? "MANUAL" : null })));
@@ -89,6 +92,8 @@ export async function copyMasterClos(fromId: string, toId: string, opts: { onlyE
     if (opts.onlyEmpty && tgt._count.seedClos > 0) { keptOwn++; continue; }
     pairs.push({ src, tgt });
   }
+  // HEC Golden Copy: a target course that would lose mandatory CLOs is left as it is.
+  { const { guardContent } = await import("./goldenCopy"); for (const p of [...pairs]) if (await guardContent(p.tgt.id, { clos: p.src.seedClos.map((c) => c.statement) })) { pairs.splice(pairs.indexOf(p), 1); keptOwn++; } }
   // Everything in a handful of bulk queries so even a 300-course curriculum finishes well inside the time limit.
   const tgtIds = pairs.map((p) => p.tgt.id);
   const cloData = pairs.flatMap(({ src, tgt }) => src.seedClos.map((c, i) => ({ masterCourseId: tgt.id, statement: c.statement, bloomLevel: c.bloomLevel, orderIndex: i, mappedPloId: c.mappedPlo ? toPlo.get(c.mappedPlo.number) || null : null, ploMappingSource: c.mappedPlo ? c.ploMappingSource || "MANUAL" : null })));

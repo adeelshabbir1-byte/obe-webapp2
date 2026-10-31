@@ -63,6 +63,7 @@ async function POST_handler(req: NextRequest) {
     const existingId = existingByCode.get(code);
     try {
       if (existingId) {
+        { const why = await (await import("../../../../../lib/goldenCopy")).guardCourse(existingId, { title, creditHours }); if (why) { errors.push(`${code}: ${why}`); continue; } }
         await prisma.masterCourse.update({
           where: { id: existingId },
           data: { title, creditHours, category, domain, semesterNumber },

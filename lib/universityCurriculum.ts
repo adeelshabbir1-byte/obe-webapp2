@@ -142,6 +142,7 @@ export async function forward(by: { id: string }, chairmanId: string, recId: str
   if (!r || r.status !== "BOS_APPROVED") throw new Error("Only BOS-approved changes can be forwarded.");
   if (!r.masterCourseId || !r.curriculumId) throw new Error("This course doesn't come from a university curriculum copy — make the university's copy of its curriculum first (Curricula → copy).");
   const snap = JSON.parse(r.snapshotJson) as Snapshot;
+  { const why = await (await import("./goldenCopy")).guardContent(r.masterCourseId, { clos: snap.clos.map((c) => c.statement), topics: snap.lectureRows.map((l) => l.topic) }); if (why) throw new Error(`${why} Keep the HEC content and add local material instead.`); }
   const number = (await currentRevision(r.curriculumId)) + 1;
   // Course plan (full) for new batches.
   await udb.universityCoursePlan.upsert({ where: { masterCourseId: r.masterCourseId }, create: { masterCourseId: r.masterCourseId, snapshotJson: r.snapshotJson, revision: number }, update: { snapshotJson: r.snapshotJson, revision: number, updatedAt: new Date() } });

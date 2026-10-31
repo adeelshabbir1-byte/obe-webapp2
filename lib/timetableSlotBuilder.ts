@@ -104,11 +104,14 @@ export async function buildSlots(user: { id: string; managedById: string | null 
 
   // Already teaching in another department's own timetable -> not free here.
   const elsewhere = await busyElsewhere(chairmanId || "", scope.key, teacherIds);
-  const unavailability = [...unavailabilityRaw, ...elsewhere].map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
+  const unavailability: { facultyId: string; dayOfWeek: string; startHour: number; endHour: number; batchIds?: string[] }[] = [...unavailabilityRaw, ...elsewhere].map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
   // Jummah break: nobody is scheduled to teach during it, so no class (of any batch) can fall in that hour.
   for (const instructorId of new Set(slots.map((sl) => sl.instructorId).filter(Boolean))) {
     unavailability.push({ facultyId: instructorId, dayOfWeek: JUMMAH_BREAK.day, startHour: JUMMAH_BREAK.startHour, endHour: JUMMAH_BREAK.endHour });
   }
+  // Events planned before the timetable is published hold their slot: no class of the batches they involve is put there.
+  const events = (await (prisma as unknown as Record<string, any>).plannedEvent.findMany({ where: { chairmanId: chairmanId || "", beforePublication: true, date: { gte: new Date(Date.now() - 864e5) } } }).catch(() => [])) as { date: Date; startHour: number; endHour: number; batchIdsJson: string }[];
+  for (const e of events) unavailability.push({ facultyId: "", dayOfWeek: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(e.date).getUTCDay()], startHour: e.startHour, endHour: e.endHour, batchIds: JSON.parse(e.batchIdsJson || "[]") });
   const roomsForGA = rooms.map((r) => ({ id: r.id, type: r.type, capacity: r.capacity }));
 
   return { slots, rooms: roomsForGA, unavailability, scope, max, duplicates };
