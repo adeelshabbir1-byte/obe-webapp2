@@ -104,8 +104,15 @@ export async function hemisData(chairmanId: string, only?: Dataset[]) {
   const students = await prisma.student.findMany({ where: { batchId: { in: batches.map((b) => b.id).concat(["none"]) } }, select: { id: true, rollNumber: true, name: true, status: true, statusDate: true, batchId: true, currentSemesterNumber: true } });
   const records = want("results") || want("graduates") ? await prisma.studentTranscriptRecord.findMany({ where: { studentId: { in: students.map((s) => s.id).concat(["none"]) } }, select: { studentId: true, courseCode: true, creditHours: true, gpaPoints: true, termName: true, termYear: true } }) : [];
 
+  // Grouped once: a whole institute has thousands of students and ~20 records each (scanning every record per student
+  // made the full export take over 10 s).
+  const recordsOf = new Map<string, typeof records>();
+  for (const r of records) { const a = recordsOf.get(r.studentId); if (a) a.push(r); else recordsOf.set(r.studentId, [r]); }
+  const studentsOf = new Map<string, typeof students>();
+  for (const s of students) { if (!s.batchId) continue; const a = studentsOf.get(s.batchId); if (a) a.push(s); else studentsOf.set(s.batchId, [s]); }
+
   for (const b of batches) {
-    const mine = students.filter((s) => s.batchId === b.id);
+    const mine = studentsOf.get(b.id) || [];
     const details = want("students") || want("graduates") || want("enrolment") ? await sectionRows("students", ctxOf(b.degreeProgram, b.id)) : [];
     const det = new Map(details.map((r) => [r.ref, canonValues("student", r.values, lists)]));
     const session = `${b.startTerm} ${b.startYear}`;
@@ -125,7 +132,7 @@ export async function hemisData(chairmanId: string, only?: Dataset[]) {
       }
     }
     if (want("results")) for (const s of mine) {
-      const rs = records.filter((r) => r.studentId === s.id);
+      const rs = recordsOf.get(s.id) || [];
       const terms = Array.from(new Set(rs.map((r) => `${r.termName}|${r.termYear}`))).map((k) => { const [t, y] = k.split("|"); return { t, y: Number(y) }; }).sort((a, b2) => TERM_ORDER(a.t, a.y) - TERM_ORDER(b2.t, b2.y));
       for (const term of terms) {
         const inTerm = rs.filter((r) => r.termName === term.t && r.termYear === term.y);
@@ -138,7 +145,7 @@ export async function hemisData(chairmanId: string, only?: Dataset[]) {
       }
     }
     if (want("graduates")) for (const s of mine.filter((x) => x.status === "GRADUATED")) {
-      const t = bestAttemptTotals(records.filter((r) => r.studentId === s.id));
+      const t = bestAttemptTotals(recordsOf.get(s.id) || []);
       const v = { ...base(b.degreeProgram), ...det.get(s.rollNumber), roll: s.rollNumber, name: s.name, cgpa: t.credits ? (t.points / t.credits).toFixed(2) : "", credits: String(t.credits || ""), graduated: dmyS(s.statusDate) };
       out.graduates.push(row(DATASETS[5].cols, v, lists, { ref: s.rollNumber, kind: "student", id: s.id, name: s.name, program: b.degreeProgram }));
     }
