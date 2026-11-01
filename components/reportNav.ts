@@ -517,12 +517,22 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/my-payslips", "My Payslips", ["DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN", "LAB_ENGINEER", "INSTRUCTOR", "SUBJECT_EXPERT", "DEPARTMENT_COORDINATOR"]],
 ];
 const navCache = new Map<string, { href: string; label: string }[]>();
+// Operator desks belong to the person who runs them (UX review): managers see them through one read-only
+// "Institute operations" page instead of each desk in their menu. Their rights to open a desk don't change.
+export const OPERATOR_DESKS: Record<string, string[]> = {
+  "/library-desk": ["LIBRARIAN"], "/library-inventory": ["LIBRARIAN"], "/lab-inventory": ["LAB_MANAGER", "LAB_ENGINEER"], "/inventory": ["FINANCE_OFFICER", "FACILITIES_MANAGER", "LAB_MANAGER", "LIBRARIAN"],
+  "/assets": ["LAB_ENGINEER", "LAB_MANAGER", "FACILITIES_MANAGER"], "/facilities": ["FACILITIES_MANAGER"], "/fees": ["FINANCE_OFFICER"], "/hr": ["FINANCE_OFFICER"], "/accounts": ["FINANCE_OFFICER"],
+  "/student-activities": ["STUDENT_AFFAIRS"],
+};
+const MANAGERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"];
 export function navForRole(role: string) {
   const hit = navCache.get(role);
   if (hit) return hit;
-  const base = baseNavForRole(role);
-  const extra = ERP_LINKS.filter(([h, , rs]) => rs.includes(role) && !base.some((l) => l.href === h)).map(([href, label]) => ({ href, label }));
-  const out = extra.length ? [...base, ...extra] : base;
+  const base0 = baseNavForRole(role);
+  const extra0 = ERP_LINKS.filter(([h, , rs]) => rs.includes(role) && !base0.some((l) => l.href === h)).map(([href, label]) => ({ href, label }));
+  const all = extra0.length ? [...base0, ...extra0] : base0;
+  const strip = MANAGERS.includes(role) ? all.filter((l) => OPERATOR_DESKS[l.href] && !OPERATOR_DESKS[l.href].includes(role)) : [];
+  const out = strip.length ? [...all.filter((l) => !strip.includes(l)), ...(["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(role) ? [{ href: "/operations", label: "Institute Operations" }] : [])] : all;
   navCache.set(role, out);
   return out;
 }

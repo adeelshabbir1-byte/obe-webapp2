@@ -192,7 +192,28 @@ const remedies: Source<NextUser> = { name: "remedies", run: async (u, now) => {
   return rows.map((r) => ({ title: `Choose a remedy: weak “${r.prereqTopic}” before “${r.dependentTopic}”`, href: "/cqi/remedies", due: r.dueBy, urgency: r.dueBy && r.dueBy < now ? "overdue" as const : "soon" as const, source: "remedies" }));
 } };
 
-export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions, remedies, bank];
+// Affiliated colleges (Adeel prompt §28.5): the university disclosed the final's lectures — the teacher sees what is not taught yet.
+const finalCoverage: Source<NextUser> = { name: "finalCoverage", run: async (u, now) => {
+  const cs = await prisma.course.findMany({ where: { isOffered: true, OR: [{ instructorId: u.id }, { sectionAssignments: { some: { instructorId: u.id } } }] }, select: { id: true, code: true, coordinator: { select: { managedById: true } } } });
+  if (!cs.length || !db.affRecord) return [];
+  const college = cs[0].coordinator?.managedById || "";
+  const uni = await (await import("./curriculumLibrary")).universityOf(college).catch(() => null);
+  if (!uni) return [];
+  const papers = ((await db.affRecord.findMany({ where: { universityId: uni, kind: "FINAL_PAPER", status: "RELEASED", OR: [{ collegeId: null }, { collegeId: college }] }, take: 50 }).catch(() => [])) || []) as { dataJson: string }[];
+  const { lectureSet } = await import("./affWork");
+  const out: { title: string; href: string; due: Date | null; urgency: "overdue" | "soon"; source: string }[] = [];
+  for (const p of papers) {
+    let d: Record<string, any> = {}; try { d = JSON.parse(p.dataJson); } catch { continue; }
+    if (!/Topic/.test(d.disclosure || "") || !d.releaseDate || new Date(d.releaseDate) > now) continue;
+    const mine = cs.filter((c) => c.code.toUpperCase() === String(d.course || "").toUpperCase()); if (!mine.length) continue;
+    const want = lectureSet(d.topics || "");
+    const done = new Set((await prisma.lectureRow.findMany({ where: { courseId: { in: mine.map((c) => c.id) }, source: "INSTRUCTOR", actualDate: { not: null } }, select: { lectureNumber: true } })).map((x) => x.lectureNumber));
+    const miss = want.filter((n) => !done.has(n));
+    if (miss.length) out.push({ title: `${d.course}: final covers ${miss.length} lecture(s) not taught yet (${miss.slice(0, 6).map((n) => `L${n}`).join(", ")}${miss.length > 6 ? "…" : ""})`, href: "/instructor/courses", due: null, urgency: "soon", source: "finalCoverage" });
+  }
+  return out;
+} };
+export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions, remedies, finalCoverage, bank];
 
 /** This person's open tasks, in order (overdue, due soon, the rest). */
 export async function nextTasks(user: NextUser, now = new Date()) {

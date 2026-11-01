@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
-import { ASSIGNERS, assignOwner, canWork, createProg, draftCem, saveData, type Prog } from "../../../lib/collab";
+import { ASSIGNERS, assignOwner, canWork, createProg, draftCem, saveData, saveModes, type Prog } from "../../../lib/collab";
 import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +26,7 @@ async function POST_handler(req: NextRequest) {
       await assignOwner(user, p, to?.id || "", to?.name || ""); return NextResponse.json({ ok: true });
     }
     if (b.action === "save") { await saveData(p, b.data || {}, b.status); return NextResponse.json({ ok: true }); }
+    if (b.action === "modes") return NextResponse.json({ ok: true, pct: await saveModes(p, user.id, String(b.courseId), String(b.code), b.modes || {}) });
     if (b.action === "cem") { const cem = await draftCem(String(b.ours), String(b.theirs)); await saveData(p, { cem }); return NextResponse.json({ ok: true, lines: cem.length }); }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
