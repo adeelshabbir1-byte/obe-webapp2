@@ -17,6 +17,7 @@ import NotificationBell from "./NotificationBell";
 import HelpButton from "./help/HelpButton";
 import WhatsNewNotice from "./WhatsNewNotice";
 import UndoToast from "./UndoToast";
+import OfflineMarks from "./OfflineMarks";
 import DisplayPrefs, { DISPLAY_CSS } from "./DisplayPrefs";
 import GlobalSearch from "./GlobalSearch";
 
@@ -543,6 +544,7 @@ export default function AppShell({
           <style>{"@media (max-width: 767px){.obe-watermark{display:none}} .main > *:not(.obe-watermark){position:relative;z-index:1}"}</style>
           {display && <style>{display.split(",").map((k) => DISPLAY_CSS[k as keyof typeof DISPLAY_CSS] || "").join("\n")}</style>}
           <WhatsNewNotice />
+          <OfflineMarks />
           <UndoToast />
           {children}
           <div className="app-footer">

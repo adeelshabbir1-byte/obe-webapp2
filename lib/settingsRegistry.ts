@@ -17,6 +17,8 @@ export type SettingDef = {
 };
 
 export const SETTINGS: SettingDef[] = [
+  { kind: "scoped", key: "msg.monthlyCap", label: "SMS / WhatsApp messages per month (0 = no cap)", area: "Messages", who: ["Institute Head"], href: "/settings/who-decides", def: "0", unit: "messages", min: 0, max: 1000000 },
+  { kind: "scoped", key: "feedback.midWeek", label: "Mid-semester feedback opens in week", area: "Quality", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "6", unit: "", min: 3, max: 12, help: "A 2-minute survey per course opens in this week and stays open 14 days. Results show the teacher after 5 responses." },
   { kind: "scoped", key: "ga.rule", label: "GA attainment rule (0 = average, 1 = count)", area: "Outcomes", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "0", min: 0, max: 1, help: "0: the credit-weighted average across the student's courses for a GA must reach the pass mark (default). 1: the GA must be attained in at least N courses." },
   { kind: "scoped", key: "ga.countN", label: "Courses needed under the count rule", area: "Outcomes", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "3", unit: "courses", min: 1, max: 20 },
   { kind: "scoped", key: "se.maxCourses", label: "Most SE courses per person", area: "Curriculum", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "3", unit: "courses", min: 1, max: 20, help: "Base courses one teacher may be Subject Expert of. At the limit the count turns amber; going over needs a reason." },

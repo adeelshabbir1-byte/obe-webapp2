@@ -37,6 +37,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "TimetableToken"
 },
 {
+"f": "migration_adeel_p7.sql",
+"d": "Adeel prompt part 7: web push subscriptions, mid-semester feedback (anonymous answers + who has answered), committee",
+"t": "CmtAction"
+},
+{
 "f": "migration_affiliates.sql",
 "d": "Affiliated colleges follow their university: the course design a college course took from the university's",
 "t": "AffiliateMarksPolicy"

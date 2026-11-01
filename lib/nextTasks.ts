@@ -171,7 +171,13 @@ const waitingOnMe: Source<NextUser> = { name: "waiting", run: async (u, now) => 
   return out;
 } };
 
-export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe];
+// Committee action items owned by this person (Adeel prompt §24.6).
+const cmtActions: Source<NextUser> = { name: "meetings", run: async (u, now) => {
+  const rows = ((await db.cmtAction?.findMany({ where: { ownerId: u.id, status: "OPEN" }, take: 20 }).catch(() => [])) || []) as { title: string; due: Date | null }[];
+  return rows.map((a) => ({ title: `Committee action: ${a.title}`, href: "/meetings-hub", due: a.due, urgency: urgencyOf(a.due, now), source: "meetings" }));
+} };
+
+export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions];
 
 /** This person's open tasks, in order (overdue, due soon, the rest). */
 export async function nextTasks(user: NextUser, now = new Date()) {

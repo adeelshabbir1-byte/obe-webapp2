@@ -33,6 +33,8 @@ const NAV = [
   { href: "/student/transcript", label: "My Transcript" },
   { href: "/student/recheck", label: "Result Re-checking" },
   { href: "/student/obe-analytics", label: "My OBE Progress" },
+  { href: "/student/my-clos", label: "My Course Outcomes" },
+  { href: "/student/mid-feedback", label: "Mid-semester Feedback" },
   { href: "/student/portfolio", label: "My Portfolio" },
   { href: "/student/course-survey", label: "Course Surveys & Evaluations" },
   { href: "/student/attendance", label: "My Attendance" },

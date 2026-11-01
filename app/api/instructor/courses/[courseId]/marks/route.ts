@@ -43,6 +43,9 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
   if (!enrolled) return NextResponse.json({ error: "that student is not enrolled in this course" }, { status: 400 });
 
   const before = await prisma.studentMark.findUnique({ where: { studentId_instrumentId: { studentId, instrumentId } } });
+  // A mark typed offline (Adeel prompt §4): if someone changed it meanwhile, the teacher chooses — never overwritten silently.
+  const offlineAt = req.headers.get("x-offline-at");
+  if (offlineAt && before && before.updatedAt > new Date(offlineAt) && before.score !== numScore) return NextResponse.json({ code: "CONFLICT", error: `Changed meanwhile to ${before.score}.`, current: before.score }, { status: 409 });
   const mark = await prisma.studentMark.upsert({
     where: { studentId_instrumentId: { studentId, instrumentId } },
     create: { studentId, courseId: course.id, instrumentId, score: numScore, enteredById: user.id },

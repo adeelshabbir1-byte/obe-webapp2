@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-r", date: "2026-11-01", roles: ["*"], text: "Install OBEHUB on your phone and turn on notifications; marks typed offline sync when you're back online.", href: "/dashboard" },
+  { id: "2026-11-01-s", date: "2026-11-01", roles: ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR"], text: "Mid-semester feedback: anonymous pace, clarity and hardest-topic results for your courses, with a suggested action.", href: "/instructor/mid-feedback" },
+  { id: "2026-11-01-t", date: "2026-11-01", roles: ["*"], text: "My Role Handbook (PDF) and Meetings — every committee, scheduling, invitations, action items and the minutes format in one place.", href: "/meetings-hub" },
   { id: "2026-11-01-o", date: "2026-11-01", roles: ["*"], text: "Timetable Views & Changes: master grid with teacher colours and clashes, room door sheets with QR, next 7 days of rooms, reschedule / cancel / make-up / substitute, free-slot finder, reports, floor register and class log, and a calendar link.", href: "/timetable/live" },
   { id: "2026-11-01-p", date: "2026-11-01", roles: ["*"], text: "Advisors: “Suggest plan” builds a student's remaining semesters within the load you set; retakes with another batch raise the out-of-batch request.", href: "/advisor/dashboard" },
   { id: "2026-11-01-q", date: "2026-11-01", roles: ["OMC", "SUPER_USER"], text: "Full curriculum template import now reads all sheets (Lab CH, importance, topic links, lab plan, assessment plan, questions, rubrics) with a per-sheet preview first.", href: "/omc/master-curriculum" },
