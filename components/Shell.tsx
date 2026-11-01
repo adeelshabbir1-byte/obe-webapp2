@@ -77,7 +77,9 @@ export default async function Shell({
   const staffUser = !!user && !["STUDENT", "SUPER_USER"].includes(String((user as { rawRole?: string }).rawRole || user.role));
   const approvalsCount = staffUser ? await badgeCount(user as never).catch(() => 0) : 0;
   // "What's next": the number of open tasks next to the name (cached for a few minutes).
-  const tasksCount = staffUser ? await import("../lib/nextTasks").then((m) => m.nextTasksCount(user as never)).catch(() => 0) : 0;
+  // Menu colours (Adeel prompt §1): each page's status for this person, from the same tasks (cached per person).
+  const menu = staffUser ? await import("../lib/menuStatus").then((m) => m.menuState(user as never, rawLinks.map((l) => l.href).concat("/approvals"))).catch(() => null) : null;
+  const tasksCount = menu ? menu.count : 0;
   // "Report a problem" (pilot): on every page, unless the institute's pilot switch leaves this person out.
   const reportButton = !!user && await import("../lib/problemReports").then((m) => m.showButton(user as never)).catch(() => false);
   const withInbox = staffUser && !rawLinks.some((l) => l.href === "/approvals") ? [{ href: "/approvals", label: "My Approvals" }, ...rawLinks] : rawLinks;
@@ -110,6 +112,7 @@ export default async function Shell({
       requestsCount={requestsCount}
       approvalsCount={approvalsCount}
       tasksCount={tasksCount}
+      linkStatus={menu?.statuses || {}}
       unreadNotifications={unreadNotifications}
       pins={pins}
       defaultPins={defaultWork(role, links)}

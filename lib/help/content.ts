@@ -802,6 +802,24 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     pages: ["/omc/passing-criteria"], keywords: ["attendance policy", "minimum attendance", "75", "late counts", "excused", "leave policy"],
     href: "/omc/passing-criteria", related: ["passing-criteria", "attendance-report"],
   }),
+  A({
+    key: "who-decides", kind: "guide", category: "people", roles: [IH, DEAN, HOD, PL, OMC, DC],
+    title: "See every setting and who decides it",
+    summary: "“Who Decides What” lists every setting of your institute: its value, who sets it, who changed it last and a link to where it is changed. Where a department default and a program value both exist, both are shown; the program's value applies to that program.",
+    steps: ["Open Who Decides What from the menu.", "Find the setting by its area (Examinations, Curriculum, Timetable …).", "Click “Change →” to go to the page where it is set — or, for settings with levels, change your own level right there.", "Clear removes your level's value, so the level above applies again."],
+    who: "Institute Head, Deans and HODs see everything. Program Leads and OMC members see it and change only their own program / department level.",
+    affects: "Changing the amber window changes when menu items and the home page turn amber for everyone in that scope.",
+    pages: ["/settings/who-decides"], keywords: ["settings", "who sets", "configuration", "amber", "deadline window"], href: "/settings/who-decides",
+  }),
+  A({
+    key: "menu-colours", kind: "faq", category: "help", roles: [],
+    title: "What do the coloured counts in my menu mean?",
+    summary: "Each page in your menu shows your open work there: red (!) overdue or blocking someone, amber (⚠) due within a few working days, blue (•) in progress. The number is how many items; hover for the reasons. A group heading shows a dot with the worst colour inside it.",
+    steps: ["Hover a count to see what is open on that page.", "On your home page, What's next lists the same items in order, and My week shows the next 7 days by date.", "Can't act yet? Click “Waiting…” on the item, say what you wait for (and on whom): it turns grey for you and red for them, until the recheck date.", "Choose a daily or weekly digest at the bottom of What's next."],
+    who: "Everyone on staff, for their own work.",
+    affects: "The counts refresh every few minutes. The amber window is set in Who Decides What (OMC per department, Program Lead per program).",
+    pages: ["/dashboard", "/whats-new"], keywords: ["red", "amber", "colours", "badge", "menu", "my week", "digest", "waiting"], href: "/dashboard#whats-next",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

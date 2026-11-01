@@ -153,7 +153,25 @@ const publish: Source<NextUser> = { name: "publish", run: async (u) => {
   return n ? [{ title: `${n} approved result${n > 1 ? "s" : ""} to publish`, href: "/controller", due: null, urgency: "soon" as const, source: "publish" }] : [];
 } };
 
-export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish];
+// "Waiting on someone else" (Adeel prompt §1): someone marked a task as waiting on this person — it is red for them.
+// When the recheck date passes without it being cleared, it is red again for the person who was waiting too.
+const waitingOnMe: Source<NextUser> = { name: "waiting", run: async (u, now) => {
+  const rows = ((await db.userFlag?.findMany({ where: { key: { startsWith: "wait:" }, value: { contains: `"onUserId":"${u.id}"` } }, take: 20 }).catch(() => [])) || []) as { userId: string; key: string; value: string }[];
+  if (!rows.length) return [];
+  const who = new Map((await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId) } }, select: { id: true, name: true } })).map((x) => [x.id, x.name]));
+  const out: Task[] = [];
+  for (const r of rows) {
+    try {
+      const w = JSON.parse(r.value) as { reason: string; title?: string };
+      const [title, href] = r.key.slice(5).split("|");
+      out.push({ title: `${who.get(r.userId) || "A colleague"} is waiting on you: ${w.title || title}`, detail: w.reason, href: href || "/dashboard", due: null, urgency: "overdue", source: "waiting" });
+    } catch { /* skip */ }
+  }
+  void now;
+  return out;
+} };
+
+export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe];
 
 /** This person's open tasks, in order (overdue, due soon, the rest). */
 export async function nextTasks(user: NextUser, now = new Date()) {
