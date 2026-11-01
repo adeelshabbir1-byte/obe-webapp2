@@ -12,7 +12,8 @@ test("a merge is recorded as MERGE (\"Merged L2 + L3 → L2\"), not as a rename 
   const items = intentItems(before, after);
   assert.deepEqual(items.map((i) => i.kind), ["MERGE"]);
   assert.equal(itemLine(items[0]), 'Merged L2 + L3 → L2: "Arrays; Strings"');
-  assert.deepEqual(applyItems(before, items).map((e) => e.topic), ["Intro", "Arrays; Strings", "Loops"]);
+  // Accepted as a real merge: the absorbed lecture keeps its slot as a "Free" lecture (Part 2 rules).
+  assert.deepEqual(applyItems(before, items).map((e) => e.topic), ["Intro", "Arrays; Strings", "Free — created by merging L2 + L3", "Loops"]);
 });
 
 test("a split is recorded as SPLIT and applies as the parts", () => {

@@ -6,7 +6,7 @@ import { writeAuditLog } from "./audit";
 import { announceLinkChange, dropReviewPlans, strengthOf } from "./prereqCascade";
 import { topicKeyOf } from "./overlapMatrix";
 import { requestVotes, voteOnRequest, type RequestKind } from "./omcRules";
-import { findCycle, linkSteps, loopText } from "./topicPlanCore";
+import { findCycle, linkSteps, loopText, topicLoop, isDuplicateLink } from "./topicPlanCore";
 import { db, MISSING, type Who } from "./topicPlan";
 
 // Topic links drawn in the Topic Workspace. A drawn link is a proposal: the Subject Experts of both courses agree,
@@ -48,12 +48,25 @@ export async function proposeLink(user: Who, b: { kind: string; level: string; a
   const sel = { id: true, code: true, title: true, coordinatorId: true, subjectExpertId: true, semesterNumber: true, coordinator: { select: { managedById: true } } } as const;
   const [f, t] = await Promise.all([prisma.course.findUnique({ where: { id: b.fromCourseId }, select: sel }), prisma.course.findUnique({ where: { id: b.toCourseId }, select: sel })]);
   if (!f || !t || f.coordinator.managedById !== chairmanId || t.coordinator.managedById !== chairmanId) return { error: "course not found", status: 404 };
-  if (f.code === t.code) return { error: "Link topics of two different courses.", status: 400 };
+  // Within one course a link sets the order of its topics (A must come before B); across courses, as before.
+  if (f.code === t.code && fromTopic.toLowerCase() === toTopic.toLowerCase()) return { error: "A topic can't be its own prerequisite.", status: 400 };
   if (f.coordinatorId !== t.coordinatorId) return { error: "Topic links are kept per program; these two courses belong to different programs.", status: 400 };
   try { await db.topicLinkProposal.count({ where: { id: "none" } }); } catch { return { error: MISSING, status: 500 }; }
   if (kind === "PREREQ" && action !== "REMOVE") {
-    const loop = findCycle(await courseEdges(f.coordinatorId), [f.code, t.code]);
-    if (loop) return { error: loopText(loop), loop, status: 409 };
+    if (f.code !== t.code) {
+      const loop = findCycle(await courseEdges(f.coordinatorId), [f.code, t.code]);
+      if (loop) return { error: loopText(loop), loop, status: 409 };
+    }
+    // Topic by topic: a link that closes a loop of topics is refused, naming the loop.
+    const [saved, waiting] = await Promise.all([
+      prisma.topicPrerequisite.findMany({ where: { coordinatorId: f.coordinatorId, orphanedAt: null }, select: { prereqCourseCode: true, prereqTopic: true, dependentCourseCode: true, dependentTopic: true } }).catch(() => []),
+      db.topicLinkProposal.findMany({ where: { coordinatorId: f.coordinatorId, status: "PENDING", kind: "PREREQ", action: { not: "REMOVE" } }, select: { fromCode: true, fromTopic: true, toCode: true, toTopic: true } }).catch(() => []) as Promise<{ fromCode: string; fromTopic: string; toCode: string; toTopic: string }[]>,
+    ]);
+    const edges = [...saved.map((s) => ({ fromCode: s.prereqCourseCode, fromTopic: s.prereqTopic, toCode: s.dependentCourseCode, toTopic: s.dependentTopic })), ...waiting];
+    const add = { fromCode: f.code, fromTopic, toCode: t.code, toTopic };
+    if (action === "ADD" && isDuplicateLink(edges, add)) return { error: "This link is already there.", status: 409 };
+    const tl = topicLoop(edges, add);
+    if (tl) return { error: `This would make a loop: ${tl.join(" → ")}.`, loop: tl, status: 409 };
   }
   const dup = await db.topicLinkProposal.findFirst({ where: { coordinatorId: f.coordinatorId, status: "PENDING", fromCode: f.code, toCode: t.code, fromTopic, toTopic, kind } });
   if (dup) return { error: "This link is already waiting for approval.", status: 409 };

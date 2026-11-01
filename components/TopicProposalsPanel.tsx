@@ -68,6 +68,30 @@ const K = (k: string) => KINDS.find((x) => x.key === kindOf(k)) || KINDS[6];
 const LEVEL: Record<string, string> = { CORE: "Core", IMPORTANT: "Important", OPTIONAL: "Optional" };
 const Chip = ({ k, children }: { k: string; children?: React.ReactNode }) => { const c = K(k); return <span style={{ fontSize: 10.5, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 5, padding: "1px 6px", whiteSpace: "nowrap" }}>{children ?? c.label}</span>; };
 
+/** One merge or split as one purple card: the lectures, their CLOs and weights, what moves, the Free lecture. */
+function MergeCard({ i }: { i: Item }) {
+  const d = (i.detail || {}) as Record<string, unknown>;
+  const parts = (d.parts as { topic: string; clo?: string | null; weight?: number; items?: string[] }[]) || [];
+  const box: React.CSSProperties = { flexBasis: "100%", background: "#F3EDF9", borderLeft: "3px solid #6B3FA0", borderRadius: 8, padding: "6px 10px", fontSize: 12.5, margin: "2px 0 4px" };
+  if (i.kind === "SPLIT") return (
+    <div style={box} data-split-card>
+      <b>Split L{String(d.lecture ?? "?")} {i.topic} → {parts.map((p) => p.topic).join(" + ")}</b>
+      <div className="small-note">{d.clo ? `CLO ${d.clo} goes with both parts` : "CLOs follow their topics"}{typeof d.weight === "number" ? ` · weight ${d.weight}% shared between them (editable)` : ""} · prerequisite links stay with their topics.</div>
+    </div>
+  );
+  return (
+    <div style={box} data-merge-card>
+      <b>Merged {((d.lectures as number[]) || []).map((n, k) => `L${n} ${parts[k]?.topic || ""}`.trim()).join(" + ")} → L{String(d.into ?? "?")}</b>
+      <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+        {parts.map((p, k) => <li key={k}>{p.topic}{p.clo ? ` · ${p.clo}` : ""}{typeof p.weight === "number" ? ` · ${p.weight}%` : ""}</li>)}
+      </ul>
+      <div className="small-note">
+        {typeof d.newWeight === "number" ? `New weight ${d.newWeight}% · ` : ""}every CLO is kept{((d.moved as string[]) || []).length ? ` · re-pointed to L${d.into}: ${((d.moved as string[]) || []).join(", ")}` : ""}{d.free ? ` · leaves “${d.free}”` : ""}
+      </div>
+    </div>
+  );
+}
+
 function ProposalCard({ p, canAnswer, onDone }: { p: Proposal; canAnswer: boolean; onDone: (t: string) => void }) {
   const [pick, setPick] = useState<string[]>([]);
   const [reason, setReason] = useState("");
@@ -151,6 +175,7 @@ function ProposalCard({ p, canAnswer, onDone }: { p: Proposal; canAnswer: boolea
           <li key={i.id} style={{ padding: "3px 0", display: "flex", gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
             {canAnswer && i.status === "PENDING" ? <input type="checkbox" aria-label={`Choose: ${i.line}`} checked={pick.includes(i.id)} onChange={() => setPick((x) => (x.includes(i.id) ? x.filter((y) => y !== i.id) : x.concat(i.id)))} /> : null}
             <Chip k={i.kind} /> <span>{i.line}</span>
+            {(i.kind === "MERGE" || i.kind === "SPLIT") && <MergeCard i={i} />}
             <span className="small-note">{i.status !== "PENDING" ? i.status.toLowerCase() : ""}{i.reason ? ` — ${i.reason}` : ""}{i.linked ? ` · linked move: ${i.linked}` : ""}</span>
           </li>
         ))}
