@@ -1,5 +1,6 @@
 "use client";
 
+import HistoryLink from "./HistoryLink";
 import { useState } from "react";
 import { GripIcon, useRowReorder, useDraftOrder, DraftOrderBar, topicGroups, isExamRow } from "./lectureDrag";
 
@@ -99,7 +100,7 @@ export default function LectureContentManager({ courseId, initialRows, clos, api
                     onMouseEnter={() => setHoverTopic(groups[idx].key)} onMouseLeave={() => setHoverTopic("")}>
                     <td style={{ textAlign: "center" }}><button {...gripProps(r.id, `lecture ${r.lectureNumber}`)}><GripIcon /></button></td>
                     <td className="lp-week">{weekStart ? r.week : ""}</td>
-                    <td className="lp-num">{r.lectureNumber}</td>
+                    <td className="lp-num">{r.lectureNumber} <HistoryLink type="LectureRow" id={r.id} label="⟲" /></td>
                     <td className="lp-topic" style={{ background: groups[idx].tint }}>
                       <span className={`lp-accent${groups[idx].first ? "" : " lp-join-top"}${groups[idx].last ? "" : " lp-join-bottom"}`} style={{ background: groups[idx].tone }} />
                       {groups[idx].first && groups[idx].total > 1 && <span className="lp-count" title={`${groups[idx].total} lectures in the plan have this topic`}>{groups[idx].run > 1 && groups[idx].run === groups[idx].total ? `${groups[idx].run} lectures` : `${groups[idx].run} of ${groups[idx].total}`}</span>}

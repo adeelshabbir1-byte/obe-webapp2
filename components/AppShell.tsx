@@ -16,6 +16,8 @@ import BusyBanner from "./BusyBanner";
 import NotificationBell from "./NotificationBell";
 import HelpButton from "./help/HelpButton";
 import WhatsNewNotice from "./WhatsNewNotice";
+import UndoToast from "./UndoToast";
+import DisplayPrefs, { DISPLAY_CSS } from "./DisplayPrefs";
 import GlobalSearch from "./GlobalSearch";
 
 type NavLink = { href: string; label: string };
@@ -57,6 +59,7 @@ export default function AppShell({
   defaultPins = [],
   otherWork = [],
   linkStatus = {},
+  display = "",
   children,
 }: {
   roleLabel: string;
@@ -77,6 +80,7 @@ export default function AppShell({
   pins?: string[] | null;
   defaultPins?: string[];
   otherWork?: { role: string; label: string; links: NavLink[] }[];
+  display?: string;
   linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
   children: React.ReactNode;
 }) {
@@ -477,6 +481,7 @@ export default function AppShell({
               )}
               <Link prefetch={false} href="/help" className="sb-action"><LifeBuoy size={14} /> Help &amp; Support</Link>
               <Link prefetch={false} href="/whats-new" className="sb-action"><Star size={14} /> What&apos;s new</Link>
+              <DisplayPrefs value={display} />
               <Link prefetch={false} href={`/feedback?page=${encodeURIComponent(pathname)}`} className="sb-action"><MessageSquarePlus size={14} /> Send Feedback</Link>
               <Link prefetch={false} href="/change-password" className="sb-action"><KeyRound size={14} /> Change Password</Link>
               <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={14} /> Security Settings</Link>
@@ -529,7 +534,9 @@ export default function AppShell({
         </header>
 
         <div className="main">
+          {display && <style>{display.split(",").map((k) => DISPLAY_CSS[k as keyof typeof DISPLAY_CSS] || "").join("\n")}</style>}
           <WhatsNewNotice />
+          <UndoToast />
           {children}
           <div className="app-footer">
             {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}

@@ -820,6 +820,15 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     affects: "The counts refresh every few minutes. The amber window is set in Who Decides What (OMC per department, Program Lead per program).",
     pages: ["/dashboard", "/whats-new"], keywords: ["red", "amber", "colours", "badge", "menu", "my week", "digest", "waiting"], href: "/dashboard#whats-next",
   }),
+  A({
+    key: "undo-history", kind: "faq", category: "help", roles: [],
+    title: "Can I undo a change, and see who changed something?",
+    summary: "After saving or deleting a CLO or a lecture topic, “Done · Undo” shows for 10 seconds at the bottom of the page — Undo puts it back exactly. The ⟲ next to a CLO code or lecture number shows its history: who changed it, when, and old → new.",
+    steps: ["Save or delete as usual.", "Changed your mind? Click Undo within 10 seconds.", "Click ⟲ next to a CLO or lecture to see its history; filter by person.", "Long forms keep a draft on the server every few seconds; if you leave without saving, the page offers to restore it."],
+    who: "Undo: the person who made the change. History: staff of the institute who can see the record.",
+    affects: "Undo is not offered for things already sent to others (emails, approvals, published results).",
+    pages: ["/subjectexpert/courses"], keywords: ["undo", "history", "who changed", "audit", "draft", "restore", "autosave"],
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));
