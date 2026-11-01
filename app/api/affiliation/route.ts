@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { chairmanIdFor } from "../../../lib/reportScope";
-import { create, edit, move, saveRates, sessionMarks, sideOf, type Side } from "../../../lib/affWork";
+import { create, edit, move, saveRates, scriptMarks, sessionMarks, setCodes, sideOf, type Side } from "../../../lib/affWork";
 import { setFlag } from "../../../lib/scopedSettings";
 import { withErrors } from "../../../lib/apiHandler";
 
@@ -29,6 +29,8 @@ async function POST_handler(req: NextRequest) {
       case "move": await move(user, side, rec, String(b.to), String(b.note || "")); return NextResponse.json({ ok: true });
       case "marks": await sessionMarks(user, side, rec, (b.rows || []).map((r: { roll: string; mark: unknown }) => ({ roll: String(r.roll), mark: r.mark === "" || r.mark == null ? null : Number(r.mark) })), !!b.confirm); return NextResponse.json({ ok: true });
       case "ack": if (side !== "COLLEGE") break; await setFlag(inst, `aff:ack:${rec.id}`, new Date().toISOString()); await db.affEvent.create({ data: { id: randomUUID(), recordId: rec.id, byId: user.id, action: "ACKNOWLEDGED", note: null } }); return NextResponse.json({ ok: true });
+      case "codes": if (side !== "UNI" || rec?.kind !== "MARKING") break; await setCodes(user, rec, String(b.rolls || "").split(/[\n,;]+/)); return NextResponse.json({ ok: true });
+      case "scripts": if (side !== "UNI" || rec?.kind !== "MARKING") break; await scriptMarks(user, rec, (b.rows || []).map((r: { code: string; mark: unknown }) => ({ code: String(r.code), mark: r.mark === "" || r.mark == null ? null : Number(r.mark) }))); return NextResponse.json({ ok: true });
       case "rates": if (side !== "UNI" || user.role !== "CHAIRMAN") break; await saveRates(s.universityId, b.rates, user.id); return NextResponse.json({ ok: true });
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }

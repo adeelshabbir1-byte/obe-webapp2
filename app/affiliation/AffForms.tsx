@@ -44,3 +44,13 @@ export function RatesForm({ rates }: { rates: Record<string, unknown> }) {
   const [t, setT] = useState(JSON.stringify(rates, null, 1)); const [m, setM] = useState("");
   return <div style={{ fontSize: 12.5 }}><textarea rows={8} value={t} onChange={(e) => setT(e.target.value)} style={{ width: "100%", fontFamily: "monospace" }} /><button type="button" className="btn btn-sm" onClick={async () => { try { const r = await post({ action: "rates", rates: JSON.parse(t) }); setM(r.error || "Saved ✓"); } catch { setM("Not valid JSON."); } }}>Save rates</button> {m}<p className="small-note">perStudent / paperSetting / perScript / duty are taxable (taxPct); TA/DA is tax-free: perKm (own car, both ways), fare as paid, daily allowance by pay scale (daBps: up to BPS → amount), night stay.</p></div>;
 }
+
+export function Codes({ id }: { id: string }) {
+  const [v, setV] = useState(""); const [m, setM] = useState("");
+  return <div><textarea rows={3} value={v} onChange={(e) => setV(e.target.value)} placeholder="Roll numbers, one per line" style={{ width: "100%" }} /><button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "codes", id, rolls: v }); if (r.error) setM(r.error); else location.reload(); }}>Generate script codes</button> {m}</div>;
+}
+export function ScriptMarks({ id, codes, marks, max }: { id: string; codes: string[]; marks: Record<string, number | null>; max: number }) {
+  const [v, setV] = useState<Record<string, string>>(Object.fromEntries(codes.map((c) => [c, marks[c] == null ? "" : String(marks[c])]))); const [m, setM] = useState("");
+  return <div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 4 }}>{codes.map((c) => <label key={c} style={{ fontSize: 12 }}>{c} <input value={v[c]} onChange={(e) => setV({ ...v, [c]: e.target.value })} style={{ width: 50 }} />/{max}</label>)}</div>
+    <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={async () => { const r = await post({ action: "scripts", id, rows: codes.map((c) => ({ code: c, mark: v[c] })) }); setM(r.error || "Saved ✓"); }}>Save marks</button> <span className="small-note">{m}</span></div>;
+}

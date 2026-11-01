@@ -56,6 +56,14 @@ export const KINDS: KindDef[] = [
   { key: "FINAL_PAPER", label: "Final exam papers", createdBy: "UNI", statuses: ["DRAFT", "RELEASED", "HELD"],
     fields: [{ key: "course", label: "Course code" }, { key: "mode", label: "Who sets the final", type: "select", options: ["University sets (central paper)", "College sets, university approves", "College sets under university rules"] }, { key: "disclosure", label: "What colleges are told", type: "select", options: ["Full syllabus only", "Topic list disclosed", "CLO weights disclosed", "Nothing (date and duration only)"] }, { key: "topics", label: "Topic list (e.g. L1–L28, excluding L12)", side: "UNI" }, { key: "cloWeights", label: "Marks per CLO (e.g. CLO-1 20, CLO-2 30)", side: "UNI" }, { key: "releaseDate", label: "Release date to colleges", type: "date", side: "UNI" }, { key: "examDate", label: "Exam date and duration", side: "UNI" }, { key: "paper", label: "Paper (secure link — university only)", side: "UNI" }],
     moves: { DRAFT: S(["RELEASED"], "UNI"), RELEASED: S(["HELD"], "UNI") } },
+  // §30.2: answer sheets marked by code; only the Controller's office holds the code ↔ roll number key.
+  { key: "MARKING", label: "Answer-sheet marking (coded)", createdBy: "UNI", statuses: ["CODED", "MARKING", "DECODED"],
+    fields: [{ key: "course", label: "Course code" }, { key: "marker", label: "Paper marker (name)", side: "UNI" }, { key: "markerInstitute", label: "Marker's institute", side: "UNI" }, { key: "maxMarks", label: "Maximum marks", type: "number", side: "UNI" }],
+    moves: { CODED: S(["MARKING"], "UNI"), MARKING: S(["DECODED"], "UNI") } },
+  // §30.8: withdrawing an affiliation — teach-out (enrolled batches finish, no new admissions) or migrate.
+  { key: "DISAFFILIATION", label: "Disaffiliation", createdBy: "UNI", statuses: ["PROPOSED", "DECIDED", "COMPLETED"],
+    fields: [{ key: "decision", label: "Decision", type: "select", options: ["Teach-out (enrolled batches finish, no new admissions)", "Migrate students to named colleges"] }, { key: "toColleges", label: "Colleges students move to (for migrate)" }, { key: "reason", label: "Reason and the authority's decision", type: "long" }, { key: "students", label: "Student status tracking (roll — status)", type: "long" }],
+    moves: { PROPOSED: S(["DECIDED"], "UNI"), DECIDED: S(["COMPLETED"], "UNI") } },
 ];
 /** Lecture numbers from "L1–L28, excluding L12" / "L1-L10, L14". */
 export function lectureSet(s: string) {
@@ -67,7 +75,9 @@ export function lectureSet(s: string) {
  *  when that is the disclosure and the release date has come. */
 export function viewData(r: { kind: string; dataJson: string }, side: Side) {
   const d = J<Record<string, any>>(r.dataJson, {});
-  if (r.kind !== "FINAL_PAPER" || side === "UNI") return d;
+  if (side === "UNI") return d;
+  if (r.kind === "MARKING") { const { key: _k, marks: _m, ...rest } = d; return rest; }
+  if (r.kind !== "FINAL_PAPER") return d;
   const released = !!d.releaseDate && new Date(d.releaseDate) <= new Date();
   const { paper: _p, ...rest } = d;
   if (!released || !/Topic/.test(d.disclosure || "")) delete rest.topics;
@@ -132,6 +142,12 @@ export async function edit(user: { id: string }, side: Side, rec: Rec, data: Rec
   const k = kindOf(rec.kind)!;
   const d = dataOf(rec);
   for (const f of k.fields) if ((!f.side || f.side === side) && f.key in data) d[f.key] = data[f.key];
+  if (rec.kind === "SESSION" && d.externalId && rec.collegeId) {
+    const ex = (await db.affRecord.findUnique({ where: { id: String(d.externalId) } })) as Rec | null;
+    const col = await prisma.user.findUnique({ where: { id: rec.collegeId }, select: { instituteName: true, name: true } });
+    const why = ex ? (await import("./examLogistics")).conflictOf({ institute: String(dataOf(ex).institute || ""), relatives: String(dataOf(ex).relatives || "") }, col?.instituteName || col?.name || "") : "Examiner not found in the pool.";
+    if (why) throw new Error(why);
+  }
   await db.affRecord.update({ where: { id: rec.id }, data: { dataJson: JSON.stringify(d), updatedAt: new Date() } });
   await log(rec.id, user.id, "EDITED");
 }
@@ -151,6 +167,11 @@ export async function move(user: { id: string; name: string }, side: Side, rec: 
     const s = d.sessionId ? ((await db.affRecord.findUnique({ where: { id: d.sessionId } })) as Rec | null) : null;
     if (!s || !String(dataOf(s).condition || "").trim()) throw new Error("The external examiner's condition report is required before payment.");
   }
+  if (rec.kind === "DISAFFILIATION" && to === "DECIDED" && rec.collegeId) {
+    if (!d.decision) throw new Error("Choose teach-out or migrate first.");
+    await db.instituteAffiliation.update({ where: { collegeId: rec.collegeId }, data: { status: /Teach/.test(d.decision) ? "TEACH_OUT" : "ENDED", note: String(d.decision).slice(0, 200) } }).catch(() => null);
+  }
+  if (rec.kind === "MARKING" && to === "MARKING" && !Object.keys(d.key || {}).length) throw new Error("Generate the script codes first.");
   if (rec.kind === "APPLICATION" && to === "APPROVED") {
     if (!d.validUntil) throw new Error("Set “Valid until” first.");
     if (rec.collegeId) await setAffiliation(user.id, rec.collegeId, rec.universityId, `Approved by ${d.authority || "Syndicate"}`).catch(() => null);
@@ -225,4 +246,45 @@ export async function sessionalVsFinal(universityId: string, gap = 25) {
     }
   }
   return out.sort((a, b) => b.sessional - b.final - (a.sessional - a.final));
+}
+
+/** §30.2: generate the code key for the roll numbers (once), record marks per code, and decode (university only). */
+export async function setCodes(user: { id: string }, rec: Rec, rolls: string[]) {
+  const d = dataOf(rec);
+  if (Object.keys(d.key || {}).length) throw new Error("Codes are already generated for this paper.");
+  const list = Array.from(new Set(rolls.map((r) => r.trim()).filter(Boolean)));
+  if (!list.length) throw new Error("Paste the roll numbers first.");
+  d.key = (await import("./examLogistics")).codeScripts(list);
+  await db.affRecord.update({ where: { id: rec.id }, data: { dataJson: JSON.stringify(d), updatedAt: new Date() } });
+  await log(rec.id, user.id, "CODED", `${list.length} scripts`);
+}
+export async function scriptMarks(user: { id: string }, rec: Rec, rows: { code: string; mark: number | null }[]) {
+  const d = dataOf(rec);
+  if (rec.status !== "MARKING") throw new Error("Marks are entered while the paper is with the marker.");
+  const max = Number(d.maxMarks) || 100;
+  d.marks = { ...(d.marks || {}) };
+  for (const r of rows) { if (!(r.code in (d.key || {}))) continue; if (r.mark != null && (r.mark < 0 || r.mark > max)) throw new Error(`${r.code}: mark must be 0–${max}.`); d.marks[r.code] = r.mark; }
+  await db.affRecord.update({ where: { id: rec.id }, data: { dataJson: JSON.stringify(d), updatedAt: new Date() } });
+  await log(rec.id, user.id, "SCRIPT_MARKS", `${rows.length} codes`);
+}
+/** §29.C: the pool ranked for one session, with conflicts shown. */
+export async function examinerSuggestions(rec: Rec) {
+  const d = dataOf(rec);
+  const pool = ((await db.affRecord.findMany({ where: { universityId: rec.universityId, kind: "EXAMINER", status: "APPROVED" }, take: 500 })) || []) as Rec[];
+  const sessions = ((await db.affRecord.findMany({ where: { universityId: rec.universityId, kind: "SESSION" }, select: { dataJson: true }, take: 3000 })) || []) as { dataJson: string }[];
+  const duties = new Map<string, number>(); for (const x of sessions) { const e = J<Record<string, any>>(x.dataJson, {}).externalId; if (e) duties.set(e, (duties.get(e) || 0) + 1); }
+  const col = rec.collegeId ? await prisma.user.findUnique({ where: { id: rec.collegeId }, select: { instituteName: true, name: true } }) : null;
+  const centre = d.centreId ? ((await db.affRecord.findUnique({ where: { id: String(d.centreId) } })) as Rec | null) : null;
+  const L = await import("./examLogistics");
+  const ranked = L.rankExaminers(pool.map((p) => { const x = dataOf(p); return { id: p.id, name: p.title, institute: String(x.institute || ""), city: String(x.city || ""), courses: String(x.courses || ""), relatives: String(x.relatives || ""), duties: duties.get(p.id) || 0 }; }), { course: String(d.courseCode || ""), collegeName: col?.instituteName || col?.name || "", city: centre ? String(dataOf(centre).city || "") : "" });
+  const cap = centre ? Number(dataOf(centre).capacity) || 0 : 0;
+  return { ranked: ranked.slice(0, 12), split: cap && Number(d.students) ? L.splitSessions(Number(d.students), cap) : [], capacity: cap };
+}
+/** §29.E: the yearly tax deduction certificate of one examiner (paid claims). */
+export async function taxYear(universityId: string, examinerId: string, year: number) {
+  const r = await ratesOf(universityId);
+  const claims = ((await db.affRecord.findMany({ where: { universityId, kind: "CLAIM", status: "PAID" }, take: 5000 })) || []) as Rec[];
+  const mine = claims.filter((c) => dataOf(c).examinerId === examinerId && new Date(c.updatedAt).getUTCFullYear() === year);
+  const rows = mine.map((c) => ({ title: c.title, date: c.updatedAt, ...claimAmounts(dataOf(c), r) }));
+  return { rows, taxable: rows.reduce((a, x) => a + x.taxable, 0), tax: rows.reduce((a, x) => a + x.tax, 0), tada: rows.reduce((a, x) => a + x.tada, 0) };
 }

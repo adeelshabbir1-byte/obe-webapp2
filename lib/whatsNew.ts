@@ -5,6 +5,7 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-ze", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], text: "Affiliation: coded answer-sheet marking (markers see only codes), suggested external examiners with conflict checks, sessions split by centre capacity, the yearly tax certificate, and disaffiliation (teach-out or migrate).", href: "/affiliation?tab=MARKING" },
   { id: "2026-11-01-za", date: "2026-11-01", roles: ["COURSE_ASSIGNER", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN"], text: "An approved year plan now fills the term's section assignments and picks the Course Leads; it checks the same-teacher lab rule, the two-ODL-courses limit and the university's faculty approvals.", href: "/allocation/year-plan" },
   { id: "2026-11-01-zb", date: "2026-11-01", roles: ["CHAIRMAN", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"], text: "Affiliation: final exam papers with what colleges are told and when, and a coverage check of the disclosed lectures; expired affiliation blocks new batches; unpaid fees can hold results.", href: "/affiliation?tab=FINAL_PAPER" },
   { id: "2026-11-01-zc", date: "2026-11-01", roles: ["LAB_ENGINEER", "INSTRUCTOR"], text: "Repeaters who passed a lab before can keep their old lab marks (when the Controller allows it) — one click on the lab page.", href: "/dashboard" },
