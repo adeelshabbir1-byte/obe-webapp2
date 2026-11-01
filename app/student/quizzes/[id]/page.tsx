@@ -5,6 +5,8 @@ import { prisma } from "../../../../lib/db";
 import StudentShell from "../../../../components/StudentShell";
 import QuizTaker from "../../../../components/QuizTaker";
 import QuizStart from "../../../../components/QuizStart";
+import SecureQuizPage from "../../../../components/SecureQuizPage";
+import { settingsOf } from "../../../../lib/quizzes";
 import { mdb, fmt, deadlineOf, expired, finishAttempt, letter, type Quiz, type Attempt, type Q } from "../../../../lib/mcq";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,7 @@ export default async function TakeQuiz({ params }: { params: { id: string } }) {
   if (!quiz || quiz.status === "DRAFT") notFound();
   const enr = await prisma.studentEnrollment.findUnique({ where: { studentId_courseId: { studentId: st.id, courseId: quiz.courseId } } });
   if (!enr) notFound();
+  if (await settingsOf(quiz.id).catch(() => null)) return <StudentShell studentName={st.name}><SecureQuizPage student={st} quiz={quiz} /></StudentShell>;
   const course = await prisma.course.findUnique({ where: { id: quiz.courseId }, select: { code: true, title: true } });
   let att = (await mdb.quizAttempt.findUnique({ where: { quizId_studentId: { quizId: quiz.id, studentId: st.id } } })) as Attempt | null;
   if (att && expired(att, quiz)) { await finishAttempt(att, quiz); att = (await mdb.quizAttempt.findUnique({ where: { id: att.id } })) as Attempt; }

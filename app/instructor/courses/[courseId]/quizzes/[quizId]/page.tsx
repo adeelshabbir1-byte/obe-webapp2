@@ -6,6 +6,8 @@ import Shell from "../../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../../components/InstructorCourseSubNav";
 import { navForRole } from "../../../../../../components/reportNav";
 import { ActionForm, ActionButton } from "../../../../../../components/fyp/FypClient";
+import { settingsOf, quizBank } from "../../../../../../lib/quizzes";
+import { QuizMonitor } from "../../../../../../components/SecureQuizTeacher";
 import { mdb, itemAnalysis, letter, fmt, inputValue, expired, type Quiz, type Attempt, type Q } from "../../../../../../lib/mcq";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,19 @@ export default async function QuizResults({ params }: { params: { courseId: stri
   if (!course || user.role !== "INSTRUCTOR" || course.instructorId !== user.id) notFound();
   const quiz = (await mdb.onlineQuiz.findFirst({ where: { id: params.quizId, courseId: course.id } })) as Quiz | null;
   if (!quiz) notFound();
+  // A secure quiz from the question bank: the live monitor, marking and make-ups.
+  if (await settingsOf(quiz.id).catch(() => null)) {
+    const bank = await quizBank({ courseId: course.id, createdById: (quiz as Quiz & { createdById: string }).createdById });
+    return (
+      <Shell roleLabel="Instructor" userName={user.name} navLinks={navForRole(user.role)}>
+        <InstructorCourseSubNav courseId={course.id} active="quizzes" code={course.code} title={course.title} />
+        <p><Link href={`/instructor/courses/${course.id}/quizzes`}>← All quizzes</Link></p>
+        <div className="card"><h3 style={{ marginTop: 0 }}>{quiz.title}</h3><p className="small-note">{fmt(quiz.opensAt)} → {fmt(quiz.closesAt)} · {quiz.durationMin} min · secure quiz from the question bank</p>
+          <div style={{ display: "flex", gap: 6 }}>{quiz.status !== "PUBLISHED" ? <ActionButton url="/api/mcq" body={{ courseId: course.id, quizId: quiz.id, action: "status", status: "PUBLISHED" }} label="Publish" /> : <ActionButton url="/api/mcq" body={{ courseId: course.id, quizId: quiz.id, action: "status", status: "CLOSED" }} label="Close" className="btn btn-secondary btn-sm" />}</div></div>
+        <QuizMonitor quizId={quiz.id} courseId={course.id} bank={bank.map((q) => ({ id: q.id, type: q.type, text: q.text, marks: q.marks }))} />
+      </Shell>
+    );
+  }
   const atts = (await mdb.quizAttempt.findMany({ where: { quizId: quiz.id } })) as Attempt[];
   const qIds = Array.from(new Set(atts.flatMap((a) => JSON.parse(a.questionIdsJson) as string[])));
   const qs = (await mdb.mcqQuestion.findMany({ where: { id: { in: qIds } } })) as Q[];

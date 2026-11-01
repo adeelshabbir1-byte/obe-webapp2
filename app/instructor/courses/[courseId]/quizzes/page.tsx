@@ -9,6 +9,7 @@ import InstructorCourseSubNav from "../../../../../components/InstructorCourseSu
 import { navForRole } from "../../../../../components/reportNav";
 import { ActionForm, ActionButton } from "../../../../../components/fyp/FypClient";
 import McqImport from "../../../../../components/McqImport";
+import { SecureQuizForm } from "../../../../../components/SecureQuizTeacher";
 import { mdb, bankOf, DIFF, BLOOM, letter, fmt, inputValue, plannedCount, type Quiz } from "../../../../../lib/mcq";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ export default async function QuizzesPage({ params, searchParams }: { params: { 
     <div className="card">
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         <h3 style={{ margin: 0 }}>Online quizzes</h3>
+        <SecureQuizForm courseId={course.id} clos={cloCodes} instruments={insts.filter((i) => i.type === "Quiz").map((i) => ({ id: i.id, label: i.label }))} />
       </div>
       <ActionForm url="/api/mcq" fixed={{ action: "saveQuiz", courseId: course.id }} submit="Create quiz" collapsed openLabel="New quiz" initial={{ title: `Quiz ${quizzes.length + 1}`, opensAt: inputValue(now), closesAt: inputValue(later), durationMin: 20, shuffle: true, showResults: true, negativePct: 0, instrumentId: insts.find((i) => i.type === "Quiz")?.id || "" }}
         fields={[{ name: "title", label: "Title", width: 180 }, { name: "instrumentId", label: "Marks go to", type: "select", options: [["", "— not linked —"], ...insts.map((i) => [i.id, `${i.label} (${i.type})`] as [string, string])] },
