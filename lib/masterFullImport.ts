@@ -14,8 +14,8 @@ const BLOOM = ["C1", "C2", "C3", "C4", "C5", "C6", "P1", "P2", "P3", "P4", "P5",
 const norm = (s?: string) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const up = (s?: string) => (s || "").trim().toUpperCase();
 
-type Sheet = { headers: string[]; rows: string[][] };
-async function readSheets(file: File): Promise<Map<string, Sheet>> {
+export type Sheet = { headers: string[]; rows: string[][] };
+export async function readSheets(file: File): Promise<Map<string, Sheet>> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as any);
   const out = new Map<string, Sheet>();
@@ -26,8 +26,8 @@ async function readSheets(file: File): Promise<Map<string, Sheet>> {
   }
   return out;
 }
-const colOf = (s: Sheet, re: RegExp) => s.headers.findIndex((h) => re.test(h));
-const get = (r: string[], i: number) => (i >= 0 ? (r[i] || "").trim() : "");
+export const colOf = (s: Sheet, re: RegExp) => s.headers.findIndex((h) => re.test(h));
+export const get = (r: string[], i: number) => (i >= 0 ? (r[i] || "").trim() : "");
 
 export async function readProgramInfo(file: File) {
   const sheets = await readSheets(file);
@@ -138,5 +138,7 @@ export async function importFullCurriculum(curriculumId: string, file: File) {
     if (ids.length) await prisma.$transaction([prisma.masterCourseTopic.deleteMany({ where: { masterCourseId: { in: ids } } }), prisma.masterCourseTopic.createMany({ data: data as never })]);
     counts.topics = data.length;
   }
-  return { ...counts, errors: errors.slice(0, 20) };
+  // The template's other sheets (Lab CH, topic importance / PR / chapter, topic links, lab plan, assessment plan, questions, rubrics).
+  const extras = await (await import("./masterTemplateExtras")).importExtras(curriculumId, sheets, false).catch((e) => ({ sheets: [], error: String(e?.message || e) }));
+  return { ...counts, errors: errors.slice(0, 20), extras };
 }

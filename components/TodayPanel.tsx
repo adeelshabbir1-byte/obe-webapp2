@@ -27,6 +27,8 @@ export default async function TodayPanel({ user }: { user: NextUser }) {
   let tasks: Task[] = [];
   try { tasks = (await nextTasks(user)).tasks; } catch { tasks = []; }
   const now = new Date();
+  // Today's changes to this teacher's classes (reschedules, cancellations, substitutes) — Adeel prompt §23.4.
+  const changes = await chainFor({ id: user.id, role: user.role, managedById: user.managedById, departmentId: user.departmentId }).then((c) => (c.chairmanId ? import("../lib/timetableLive").then((m) => m.todaysChanges(c.chairmanId, { teacherId: user.id })) : [])).catch(() => []);
   const [amber, waiting, digest] = await Promise.all([
     chainFor({ id: user.id, role: user.role, managedById: user.managedById, departmentId: user.departmentId }).then((c) => numberSetting(c, AMBER_KEY, 3)).catch(() => 3),
     waitingFor(user.id).catch(() => Object.assign(new Set<string>(), { expired: new Set<string>() })),
@@ -39,6 +41,7 @@ export default async function TodayPanel({ user }: { user: NextUser }) {
   const week = open.filter((t) => t.due && new Date(t.due).getTime() - now.getTime() <= 7 * 864e5).sort((a, b) => +new Date(a.due!) - +new Date(b.due!));
   return (
     <div className="card" id="whats-next" style={{ marginBottom: 14 }} data-whats-next>
+      {changes.length > 0 && <div style={{ background: "#FFF8E1", border: "1px solid #E0B54A", borderRadius: 8, padding: "6px 10px", marginBottom: 8, fontSize: 13 }}><b>Today&apos;s changes:</b> {changes.map((c) => `${c.courseCode} ${c.status === "CANCELLED" ? "cancelled" : c.status === "SUBSTITUTE" ? "by a substitute" : `moved to ${String(Math.floor(c.startHour)).padStart(2, "0")}:${String(Math.round((c.startHour % 1) * 60)).padStart(2, "0")} ${c.roomName}`}`).join(" · ")} — <Link href="/timetable/live?tab=week">details</Link></div>}
       <h3 style={{ fontSize: 15, margin: "0 0 6px" }}>What&apos;s next {open.length > 0 && <span className="small-note">({open.length})</span>}</h3>
       {open.length === 0 ? <p style={{ fontSize: 13, color: "var(--slate)", margin: 0 }}>Nothing waiting for you ✓</p> : (
         <>

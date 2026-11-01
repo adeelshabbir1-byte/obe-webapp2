@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-o", date: "2026-11-01", roles: ["*"], text: "Timetable Views & Changes: master grid with teacher colours and clashes, room door sheets with QR, next 7 days of rooms, reschedule / cancel / make-up / substitute, free-slot finder, reports, floor register and class log, and a calendar link.", href: "/timetable/live" },
+  { id: "2026-11-01-p", date: "2026-11-01", roles: ["*"], text: "Advisors: “Suggest plan” builds a student's remaining semesters within the load you set; retakes with another batch raise the out-of-batch request.", href: "/advisor/dashboard" },
+  { id: "2026-11-01-q", date: "2026-11-01", roles: ["OMC", "SUPER_USER"], text: "Full curriculum template import now reads all sheets (Lab CH, importance, topic links, lab plan, assessment plan, questions, rubrics) with a per-sheet preview first.", href: "/omc/master-curriculum" },
   { id: "2026-11-01-m", date: "2026-11-01", roles: ["*"], text: "Advisor student page in tabs; F / D courses first with where to retake them; the GA matrix (courses × GAs, with what is still needed per GA) on the OBE transcript tab and the student transcript.", href: "/advisor/dashboard" },
   { id: "2026-11-01-n", date: "2026-11-01", roles: ["CHAIRMAN"], text: "Look of the app: your institute's main colour (contrast-checked) and a faint logo watermark.", href: "/chairman/institute-settings" },
   { id: "2026-11-01-j", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"], text: "My Delegations: hand chosen tasks to a colleague for a period (e.g. HOD Delegate for naming SEs), or let someone act for you on leave. You can override or revoke any time.", href: "/delegations" },
