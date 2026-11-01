@@ -876,6 +876,28 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     summary: "In Institute Settings → Look of the app, choose the main colour (it must keep white text readable: WCAG AA 4.5:1, or a darker suggestion is offered) and whether the logo shows as a very faint watermark behind pages (centre, bottom-right or off). It never covers text and is hidden on mark sheets, timetables and phones.",
     who: "Institute Head.", pages: ["/chairman/institute-settings"], keywords: ["logo", "colour", "color", "brand", "watermark", "theme"], href: "/chairman/institute-settings",
   }),
+  A({
+    key: "suggest-plan", kind: "guide", category: "registration", roles: [PL, INS, SE, HOD],
+    title: "Suggest a student's remaining semesters",
+    summary: "On an advisee's Degree plan tab, set the credit-hour load per semester (lower on probation), any semesters off, and press Suggest plan. It places failed courses first, then courses that many others need, core before electives — only in semesters when each is offered, and always after its prerequisite. You see the plan, what can't fit and the expected graduation; Save makes it the degree plan (a new version; the student is told).",
+    steps: ["Degree plan tab → Suggest plan.", "Set the load (e.g. 15–18 CH) and semesters to skip.", "Check the result, then Save as the degree plan.", "Adjust by dragging in the board; every move is kept in the plan history.", "For a retake with another batch, Overview → “Request out-of-batch registration” when that course is open."],
+    who: "The batch advisor.", pages: ["/advisor/students"], keywords: ["suggest plan", "load", "credit hours", "graduation", "retake", "out of batch", "prerequisite"], href: "/advisor/dashboard",
+  }),
+  A({
+    key: "template-import", kind: "guide", category: "curriculum", roles: [OMC, SU],
+    title: "Import the full curriculum template (all sheets)",
+    summary: "Master Curriculum → Import a full curriculum reads every sheet of the template: Program, PLOs, Courses (with Lab CH), CLOs and PLO mapping, Lecture topics (with Importance, PR, Book chapter), Topic links, Lab plan, Assessment plan, Questions and Rubrics. Into a selected copy it first shows a preview per sheet — rows OK and rows with problems — and imports only after you confirm.",
+    steps: ["Select your copy of the curriculum.", "Choose the filled template file.", "Read the preview: problems are listed and those rows are skipped (unknown course codes are never created from these sheets).", "Confirm to import. Importing the same file again updates instead of duplicating.", "Then use “Update my courses from this curriculum” to offer the changes to the base courses' SEs."],
+    who: "OMC members (their own copy) and the Super Admin.", pages: ["/omc/master-curriculum"], keywords: ["import", "template", "excel", "curriculum", "lab plan", "assessment plan", "questions", "rubrics", "topic links"],
+  }),
+  A({
+    key: "timetable-live", kind: "guide", category: "teaching", roles: [IH, DEAN, HOD, PL, DC, INS, SE, LE],
+    title: "Timetable views, reschedules, free rooms and the class log",
+    summary: "Timetable Views & Changes has: the master grid (one row per section and day, one colour per teacher, clashes in red), printable room sheets with a QR code, the next 7 days of every room, a free-slot finder, reports (room use, long days and gaps, clashes), the floor register, the Program Lead's review and each course's full class log.",
+    steps: ["Master grid: filter by program, batch, teacher, room or day; group by day or by batch.", "Next 7 days: move a class once or from a date, cancel it (the room is then free that day), add a make-up, set a substitute, or book a free room. Students and the teacher are told.", "Free-slot finder: common free times of chosen sections / teachers with a fitting room; the slot with the most sections free; who is free at a time.", "Floor register: the attendant marks each class on time / actual times / not held; differences go to the Program Lead, who chooses Penalise or Excused (with the reason).", "Get your calendar link (.ics) for Google / Outlook / phone; leaders make screen links for rooms."],
+    who: "Leaders change any class; a teacher changes his own (permanent moves need the PL / Department Coordinator). The floor attendant is a delegated task of the Department Coordinator.",
+    pages: ["/timetable/live", "/kiosk"], keywords: ["timetable", "reschedule", "free room", "substitute", "cancel", "make-up", "kiosk", "ics", "calendar", "floor register", "class log", "utilisation"], href: "/timetable/live",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

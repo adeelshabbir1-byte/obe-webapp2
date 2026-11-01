@@ -21,6 +21,7 @@ import Tabs from "../../../../components/Tabs";
 import GaMatrix from "../../../../components/GaMatrix";
 import TranscriptView from "../../../../components/TranscriptView";
 import { repeatsOf } from "../../../../lib/repeats";
+import SuggestPlanPanel from "../../../../components/SuggestPlanPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,8 @@ export default async function AdvisorStudentPage({ params, searchParams }: { par
             <ul style={{ paddingLeft: 18, fontSize: 13, margin: 0 }}>{repeats.map((r) => (
               <li key={r.code} style={{ marginBottom: 4 }}>
                 <b style={{ color: r.kind === "MUST" ? "#B3261E" : r.kind === "IMPROVE" ? "#B26A00" : "inherit" }}>{r.code} {r.title}</b> — {r.grade} ({r.term}) <span className="badge" style={{ background: r.kind === "MUST" ? "#FBE9E7" : "#FBF3E4" }}>{r.kind === "MUST" ? "Must repeat" : r.kind === "IMPROVE" ? "Can improve" : "Check"}</span>
-                {r.options.length ? <div className="small-note">Retake {r.options.map((o) => `${o.when === "now" ? "this term" : "next term"} ${o.label}`).join(" · or ")}</div> : <div className="small-note">Not offered to another batch now or next term — consider a summer / repeat offering.</div>}
+                {r.options.length ? <div className="small-note">Retake {r.options.map((o) => `${o.when === "now" ? "this term" : "next term"} ${o.label}`).join(" · or ")}
+                  {r.options.filter((o) => o.when === "now").slice(0, 1).map((o) => <span key={o.courseId}> · <ActionButton url={`/api/advisor/students/${s.id}/retake-request`} body={{ courseId: o.courseId }} label="Request out-of-batch registration" className="btn btn-sm" done="Requested ✓" /></span>)}</div> : <div className="small-note">Not offered to another batch now or next term — consider a summer / repeat offering.</div>}
               </li>
             ))}</ul>
           </div>
@@ -112,7 +114,7 @@ export default async function AdvisorStudentPage({ params, searchParams }: { par
       </>}
       {tab === "register" && <AdvisorStudentPlanner studentId={s.id} part="register" />}
       {tab === "transcript" && <AdvisorStudentPlanner studentId={s.id} part="transcript" />}
-      {tab === "plan" && <AdvisorStudentPlanner studentId={s.id} part="plan" />}
+      {tab === "plan" && <><SuggestPlanPanel studentId={s.id} probation={label === "Probation"} /><AdvisorStudentPlanner studentId={s.id} part="plan" /></>}
       {tab === "history" && <PlanHistoryPanel studentId={s.id} staff />}
       {tab === "obe" && <>
         <div className="no-print" style={{ fontSize: 13, margin: "4px 0 8px" }}>View: {searchParams.view === "plo" ? <Link href={`${base}?tab=obe`}>GA matrix</Link> : <b>GA matrix</b>} · {searchParams.view === "plo" ? <b>GA list & degree audit</b> : <Link href={`${base}?tab=obe&view=plo`}>GA list & degree audit</Link>}</div>

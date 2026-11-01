@@ -34,6 +34,8 @@ async function POST_handler(req: NextRequest) {
     })).id;
   }
   try {
+    // Preview first (Adeel prompt §17): per sheet, rows OK and rows with problems; nothing is written.
+    if (form?.get("preview") === "1") return NextResponse.json({ curriculumId, preview: await (await import("../../../../lib/masterTemplateExtras")).previewTemplate(curriculumId, file) });
     const r = await importFullCurriculum(curriculumId, file);
     await writeAuditLog({ actorUserId: user.id, action: "MASTER_CURRICULUM_FULL_IMPORT", entityType: "MasterCurriculum", entityId: curriculumId, metadata: { plos: r.plos, courses: r.coursesCreated + r.coursesUpdated, clos: r.clos, topics: r.topics } });
     return NextResponse.json({ curriculumId, ...r });

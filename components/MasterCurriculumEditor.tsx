@@ -257,7 +257,7 @@ export default function MasterCurriculumEditor() {
                 const r = await fetch(`/api/omc/master-curriculum/${selectedId}/import-clos`, { method: "POST", body: fd });
                 const d = await r.json();
                 if (!r.ok) setError(d.error || "Import failed.");
-                else { setNotice(`${d.clos} CLO(s) loaded for ${d.courses} course(s).${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`); await loadDetail(selectedId); }
+                else { setNotice(`${d.clos} CLO(s) loaded for ${d.courses} course(s).${d.extras?.sheets?.length ? " Also: " + d.extras.sheets.map((x: { sheet: string; ok: number }) => `${x.sheet} ${x.ok}`).join(", ") + "." : ""}${d.errors?.length ? " Problems: " + d.errors.join("; ") : ""}`); await loadDetail(selectedId); }
               } catch { setError("Import failed."); }
               setBusy(false); e.target.value = "";
             }} />
@@ -278,6 +278,16 @@ export default function MasterCurriculumEditor() {
             setBusy(true); setError(""); setNotice("");
             const fd = new FormData(); fd.append("file", f);
             try {
+              // Preview first: rows OK and problems per sheet, then confirm.
+              if (fd.get("curriculumId")) {
+                const pf = new FormData(); fd.forEach((v, k) => pf.append(k, v)); pf.append("preview", "1");
+                const pv = await fetch("/api/master-curriculum/import-full", { method: "POST", body: pf }).then((x) => x.json()).catch(() => null);
+                const rows = (pv?.preview?.sheets || []) as { sheet: string; ok: number; problemCount: number; problems: string[] }[];
+                if (rows.length) {
+                  const text = rows.map((x) => `${x.sheet}: ${x.ok} OK${x.problemCount ? `, ${x.problemCount} with problems — e.g. ${x.problems.slice(0, 3).join("; ")}` : ""}`).join("\n");
+                  if (!window.confirm(`Preview\n\n${text}\n\nRows with problems are skipped; the rest import. Import now?`)) { setBusy(false); e.target.value = ""; return; }
+                }
+              }
               const r = await fetch("/api/master-curriculum/import-full", { method: "POST", body: fd });
               const d = await r.json();
               if (!r.ok) setError(d.error || "Import failed.");

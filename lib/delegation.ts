@@ -34,6 +34,9 @@ export const TASKS: Task[] = [
   // Program Lead
   { key: "pl.nameSE", label: "Name Subject Experts of the program's own courses", role: "PROGRAM_COORDINATOR", delegable: true, scopeType: "program" },
   { key: "pl.review", label: "Review differences in the floor register", role: "PROGRAM_COORDINATOR", delegable: true, scopeType: "program" },
+  // Department Coordinator
+  { key: "dc.floorRegister", label: "Floor attendant: keep the daily class register of a floor", role: "DEPARTMENT_COORDINATOR", delegable: true, scopeType: "department" },
+  { key: "dc.timetableChanges", label: "Reschedule classes and book rooms", role: "DEPARTMENT_COORDINATOR", delegable: true, scopeType: "department" },
   // Never delegable (shown as "needs the holder")
   { key: "x.finalResult", label: "Final result approval", role: "*", delegable: false, scopeType: "none" },
   { key: "x.evaluation", label: "Faculty performance evaluations", role: "*", delegable: false, scopeType: "none" },

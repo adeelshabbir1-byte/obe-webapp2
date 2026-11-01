@@ -9873,3 +9873,74 @@ model ArchiveAmendment {
 
   @@index([courseId], map: "ArchiveAmendment_course_idx")
 }
+
+// Template extras of a master course (Adeel prompt §17): kind = topicMeta | labPlan | questions | rubrics (JSON rows).
+model MasterCourseExtra {
+  masterCourseId String
+  kind           String
+  dataJson       String
+  updatedAt      DateTime @default(now())
+
+  @@id([masterCourseId, kind])
+}
+
+// Classes in reality (Adeel prompt §22–23, lib/timetableLive.ts): kind = MOVE_ONCE | MOVE_FROM (permanent from fromDate) |
+// CANCEL | MAKEUP | BOOKING | SUBSTITUTE. A one-off change leaves the base timetable unchanged.
+model TimetableChange {
+  id           String    @id
+  chairmanId   String
+  entryId      String?
+  kind         String
+  date         DateTime?
+  fromDate     DateTime?
+  toDay        String?
+  toStart      Float?
+  toEnd        Float?
+  toRoomId     String?
+  substituteId String?
+  sectionId    String?
+  title        String?
+  reason       String?
+  status       String    @default("ACTIVE")
+  byId         String
+  approvedById String?
+  createdAt    DateTime  @default(now())
+
+  @@index([chairmanId, date], map: "TimetableChange_chairman_date_idx")
+  @@index([entryId], map: "TimetableChange_entry_idx")
+}
+
+// The floor attendant's register for one class on one date; differences go to the Program Lead (review PENALISE | EXCUSED).
+model FloorRegister {
+  id           String    @id
+  chairmanId   String
+  entryId      String
+  date         DateTime
+  startedAt    Float?
+  endedAt      Float?
+  roomId       String?
+  held         Boolean   @default(true)
+  note         String?
+  byId         String
+  review       String?
+  reviewReason String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  teacherReply String?
+  updatedAt    DateTime  @default(now())
+
+  @@unique([entryId, date], map: "FloorRegister_entry_date")
+}
+
+// Private links: ICS (a person's calendar feed) or KIOSK (a room / floor screen). Revocable.
+model TimetableToken {
+  token      String    @id
+  chairmanId String
+  kind       String
+  userId     String?
+  studentId  String?
+  roomId     String?
+  label      String?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
