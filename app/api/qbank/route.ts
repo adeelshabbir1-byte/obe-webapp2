@@ -5,7 +5,7 @@ import { withErrors } from "../../../lib/apiHandler";
 import * as qb from "../../../lib/qbank";
 import { SHEET_COLUMNS, TYPES } from "../../../lib/qbankCore";
 import { readWorkbookGrids } from "../../../lib/excelRead";
-import { paperPdf, paperDocx, type Layout, type PaperQ } from "../../../lib/paperExport";
+import { paperPdf, paperDocx } from "../../../lib/paperExport";
 
 // The question bank (Part 6, build A). Every call except the PIN ones needs the bank PIN (15 minutes idle).
 // GET ?courseId=&q= the visible bank · ?template=1 the Excel template · ?paper=<id>&format=pdf|docx · ?mine=1 who used my
@@ -21,6 +21,7 @@ async function guard(): Promise<{ user: Awaited<ReturnType<typeof getAuthenticat
 }
 const fail = (e: unknown) => {
   if ((e as { code?: string }).code) throw e;
+  if ((e as { status?: number }).status === 403) return NextResponse.json({ error: (e as Error).message }, { status: 403 });
   if ((e as { pin?: boolean }).pin) return NextResponse.json({ error: (e as Error).message, pin: true }, { status: 401 });
   return NextResponse.json({ error: (e as Error).message }, { status: 400 });
 };
@@ -31,15 +32,6 @@ const shape = (x: Awaited<ReturnType<typeof qb.items>>[number], names: Map<strin
   options: (() => { try { return JSON.parse(x.meta?.optionsJson || "[]"); } catch { return []; } })(), correct: x.ext?.correctJson ? JSON.parse(x.ext.correctJson) : x.meta?.correctIndex != null ? [x.meta.correctIndex] : [],
   modelAnswer: x.ext?.modelAnswer || x.meta?.rubric || null, numericAnswer: x.ext?.numericAnswer ?? null, tolerance: x.ext?.tolerance ?? null, tolMode: x.ext?.tolMode ?? null, source: [x.ext?.sourceKind, x.ext?.sourceNote].filter(Boolean).join(" · "), reviewNote: x.ext?.reviewNote || null, aiDraft: !!x.ext?.aiDraft, stats: (() => { try { return JSON.parse(x.ext?.statsJson || "{}"); } catch { return {}; } })(),
 });
-
-async function layoutFor(paperId: string): Promise<{ l: Layout; qs: PaperQ[]; name: string }> {
-  const { p, ctx, questions } = await qb.paperOf(paperId);
-  const qs: PaperQ[] = questions.map((q, i) => ({ no: `Q${i + 1}`, text: q.text, marks: q.marks, clo: q.cloCodes[0], options: (() => { try { return JSON.parse(q.meta?.optionsJson || "[]"); } catch { return []; } })(), parts: q.parts.map((x) => ({ label: x.label, text: x.text, marks: x.marks, clo: x.cloCode })) }));
-  const total = questions.reduce((a, q) => a + q.marks, 0);
-  const o = JSON.parse(p.optsJson || "{}");
-  const l: Layout = { title: `${ctx.course.code} ${ctx.course.title} — ${p.examType} examination${p.variant !== "A" ? ` (version ${p.variant})` : ""}`, header: [["Term", p.termLabel], ["Total marks", String(total)], ["Time", `${o.minutes || ""} minutes`]], instructions: "Attempt all questions. Marks are shown against each question.", showMarks: true, showClo: false, numbering: "Q1", footer: `${ctx.course.code} ${p.examType}`, rollBoxes: true };
-  return { l, qs, name: `${ctx.course.code}-${p.examType}-${p.variant}` };
-}
 
 async function GET_handler(req: NextRequest) {
   const g = await guard(); if (g instanceof NextResponse) return g;
@@ -65,9 +57,11 @@ async function GET_handler(req: NextRequest) {
     await qb.requirePin(user.id);
     if (sp.get("mine")) return NextResponse.json(await qb.usageOfMine(user));
     if (sp.get("paper")) {
-      const { p, ctx } = await qb.paperOf(String(sp.get("paper")));
-      if (!qb.mayOpen(ctx, user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      const { l, qs, name } = await layoutFor(p.id);
+      // In the Controller's template, through the paper's security (official papers are logged; locked ones refused).
+      const { touch, layoutOf } = await import("../../../lib/paperTemplates");
+      const id = String(sp.get("paper"));
+      const t = await touch(user as never, id, sp.get("format") === "docx" ? "DOWNLOADED" : "PRINTED").catch((e) => { throw Object.assign(e, { status: 403 }); });
+      const { l, qs, name } = await layoutOf(id, t.official ? t.watermark : null);
       if (sp.get("format") === "docx") return new NextResponse(await paperDocx(l, qs), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="${name}.docx"` } });
       return new NextResponse(Buffer.from(await paperPdf(l, qs)), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${name}.pdf"` } });
     }

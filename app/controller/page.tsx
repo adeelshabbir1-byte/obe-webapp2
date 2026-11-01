@@ -54,6 +54,7 @@ export default async function ControllerPage({ searchParams }: { searchParams: {
       </div>
       <div className="card" style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: 8 }}>
         {TABS.map(([k, l]) => <Link key={k} href={`/controller?tab=${k}`} className={`btn btn-sm ${tab === k ? "" : "btn-secondary"}`}>{l}</Link>)}
+        <Link href="/controller/paper-templates" className="btn btn-sm btn-secondary">Paper templates</Link>
       </div>
       {tab === "results" && <Results s={s} prog={searchParams.prog} />}
       {tab === "recheck" && <Rechecks cid={cid} />}

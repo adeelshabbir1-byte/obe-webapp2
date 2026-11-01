@@ -115,7 +115,8 @@ export async function visibleBank(u: U, courseId: string, q = "") {
 export type NewQ = { text: string; type: string; marks: number; cloCodes: string[]; bloom: string; difficulty: string; lectureNumber: number | null; modelAnswer?: string; rubric?: string; options?: string[]; correct?: number[]; numericAnswer?: number | null; tolerance?: number | null; tolMode?: "ABS" | "PCT"; testCases?: { input: string; output: string }[]; parts?: Part[]; minutes?: number | null; sourceKind?: string; sourceNote?: string; visibility?: Visibility; sharedWith?: string[]; lab?: boolean; image?: { type: string; data: string } | null; aiDraft?: boolean };
 
 async function planOfCourse(courseId: string) {
-  const own = await prisma.lectureRow.count({ where: { courseId, source: "SE" } });
+  // The Subject Expert's plan when it has anything (CLOs or lectures), else the teacher's copy.
+  const own = (await prisma.lectureRow.count({ where: { courseId, source: "SE" } })) + (await prisma.cLO.count({ where: { courseId, source: "SE" } }));
   const src = own ? "SE" : "INSTRUCTOR";
   const [lectures, clos] = await Promise.all([
     prisma.lectureRow.findMany({ where: { courseId, source: src }, orderBy: { lectureNumber: "asc" }, select: { lectureNumber: true, week: true, topic: true, clo: { select: { code: true } } } }),

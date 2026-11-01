@@ -10232,3 +10232,47 @@ model QuizMakeup {
 
   @@index([quizId, studentId], map: "QuizMakeup_quiz_idx")
 }
+
+// Part 6 build C — paper templates set by the Controller, values filled on a paper and their edits, the read-only access log.
+model PaperTemplate {
+  id          String   @id
+  chairmanId  String
+  scope       String
+  scopeId     String?
+  examType    String   @default("ALL")
+  configJson  String   @default("{}")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@index([chairmanId])
+}
+
+model PaperValues {
+  paperId    String   @id
+  valuesJson String   @default("{}")
+  updatedAt  DateTime @default(now())
+}
+
+model PaperFieldEdit {
+  id       String   @id
+  paperId  String
+  field    String
+  oldValue String   @default("")
+  newValue String   @default("")
+  byId     String
+  at       DateTime @default(now())
+
+  @@index([paperId])
+}
+
+// Read-only by a database trigger (prisma/migration_paper_templates.sql): no entry can be changed or deleted.
+model PaperAccessLog {
+  id      String   @id
+  paperId String
+  userId  String
+  role    String
+  action  String
+  at      DateTime @default(now())
+
+  @@index([paperId])
+}

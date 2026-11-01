@@ -826,6 +826,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "PaperDistributionItem"
 },
 {
+"f": "migration_paper_templates.sql",
+"d": "Part 6 build C: paper templates set by the Controller (institute, department / program variants, per exam type), the",
+"t": "PaperAccessLog"
+},
+{
 "f": "migration_paper_vetting.sql",
 "d": "Exam paper vetting: the teacher's question text, the system's and the AI's checks, and the Program Lead's decision. Safe to re-run.",
 "t": "PaperVetting"

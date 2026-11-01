@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
+import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import { readinessBoard, BOARD_ROLES } from "../../lib/semesterReadiness";
@@ -29,6 +30,10 @@ export default async function SemesterReadinessPage() {
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (!BOARD_ROLES.includes(user.role)) redirect("/dashboard");
   const { programs, line } = await readinessBoard(user);
+  // Question banks below the target (a warning; it blocks nothing).
+  const { bankWarnings } = await import("../../lib/qbankAnalytics");
+  const leadIds = Array.from(new Set(programs.map((p) => p.leadId)));
+  const warnings = await bankWarnings(await prisma.course.findMany({ where: { coordinatorId: { in: leadIds.concat("none") }, isOffered: true }, orderBy: { createdAt: "desc" }, take: 40, select: { id: true, code: true } })).catch(() => []);
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Semester readiness</h1>
@@ -37,6 +42,7 @@ export default async function SemesterReadinessPage() {
         <a className="btn btn-brass btn-sm" href="/api/semester-readiness?format=xlsx">Excel</a>
         <a className="btn btn-brass btn-sm" href="/api/semester-readiness?format=pdf">PDF</a>
       </div>
+      {warnings.length > 0 && <div className="card" data-bank-warnings style={{ borderLeft: "4px solid #B7791F" }}><b style={{ fontSize: 13 }}>Question banks below target (3 approved per CLO per Bloom level)</b><ul style={{ fontSize: 12.5, margin: "4px 0 0" }}>{warnings.map((w) => <li key={w.courseId}><a href={`/question-bank?courseId=${w.courseId}`}>{w.code}</a> — {w.text}</li>)}</ul></div>}
       {programs.length === 0 ? <div className="card">No programs to show.</div> : (
         <div className="card" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", minWidth: 900 }}>

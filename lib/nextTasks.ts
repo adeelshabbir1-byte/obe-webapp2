@@ -143,6 +143,14 @@ const timetable: Source<NextUser> = { name: "timetable", run: async (u) => {
   return withCourses.filter((b) => !b.courses.some((c) => has.has(c.id))).slice(0, 6).map((b) => ({ title: `Timetable: ${b.batchName} has no sections`, href: "/coordinator/timetable", due: null, urgency: "normal" as const, source: "timetable" }));
 } };
 
+// The question bank below the readiness target (3 approved per CLO per Bloom level): a warning, never a block.
+const bank: Source<NextUser> = { name: "bank", run: async (u) => {
+  if (u.role !== "SUBJECT_EXPERT") return [];
+  const courses = await prisma.course.findMany({ where: { subjectExpertId: u.id }, orderBy: { createdAt: "desc" }, take: 6, select: { id: true, code: true } });
+  const { bankWarnings } = await import("./qbankAnalytics");
+  return (await bankWarnings(courses)).map((w) => ({ title: `Question bank of ${w.code} is below target`, detail: w.text, href: `/question-bank?courseId=${w.courseId}`, due: null, urgency: "normal" as const, source: "bank" }));
+} };
+
 const publish: Source<NextUser> = { name: "publish", run: async (u) => {
   if (!(u.extraRoles || []).includes("EXAM_CONTROLLER")) return [];
   const cid = await chairmanIdFor(u as never);
@@ -184,7 +192,7 @@ const remedies: Source<NextUser> = { name: "remedies", run: async (u, now) => {
   return rows.map((r) => ({ title: `Choose a remedy: weak “${r.prereqTopic}” before “${r.dependentTopic}”`, href: "/cqi/remedies", due: r.dueBy, urgency: r.dueBy && r.dueBy < now ? "overdue" as const : "soon" as const, source: "remedies" }));
 } };
 
-export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions, remedies];
+export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions, remedies, bank];
 
 /** This person's open tasks, in order (overdue, due soon, the rest). */
 export async function nextTasks(user: NextUser, now = new Date()) {

@@ -198,6 +198,7 @@ function DraftPaper({ courseId, plan, onMsg }: { courseId: string; plan: Plan; o
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button className="btn btn-secondary btn-sm" data-variant onClick={async () => { const d = await run({ action: "variant", paperId: papers[0].id }); if (d) setPapers(papers.concat({ id: d.id, variant: d.variant, chosen: d.chosen, check: d.check, missing: d.missing })); }}>Make version {String.fromCharCode(65 + papers.length)}</button>
             <button className="btn btn-sm" disabled={!p.check.ok} data-adopt onClick={async () => { const d = await run({ action: "adopt", paperId: p.id }); if (d) onMsg({ ok: true, text: `Version ${p.variant} is now the course's ${o.examType.toLowerCase()} paper (${d.questions} questions in the question plan and in paper vetting).` }); }}>Use as the {o.examType.toLowerCase()} paper</button>
+            <a className="btn btn-secondary btn-sm" href={`/papers/${p.id}`} target="_blank" rel="noreferrer" data-open-paper>Open in the paper template</a>
             <a className="btn btn-secondary btn-sm" href={`${API}?paper=${p.id}&format=pdf`} target="_blank" rel="noreferrer">PDF</a>
             <a className="btn btn-secondary btn-sm" href={`${API}?paper=${p.id}&format=docx`}>Word</a>
           </div>

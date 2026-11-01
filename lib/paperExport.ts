@@ -10,7 +10,7 @@ import { mathSegments } from "./qbankCore";
 export type PaperQ = { no: string; text: string; marks: number; clo?: string | null; options?: string[]; parts?: { label: string; text: string; marks: number; clo?: string | null }[] };
 export type Layout = {
   header: [string, string][]; title: string; instructions: string; showMarks: boolean; showClo: boolean; numbering: "Q1" | "1.1";
-  sections?: { title: string; note?: string; questions: PaperQ[] }[]; footer: string; watermark?: string | null; fontSize?: number; margins?: number; rollBoxes?: boolean; page?: "A4" | "Letter";
+  sections?: { title: string; note?: string; questions: PaperQ[] }[]; footer: string; watermark?: string | null; fontSize?: number; margins?: number; rollBoxes?: boolean; page?: "A4" | "Letter"; answerSheet?: boolean;
 };
 
 const INK = rgb(0.14, 0.1, 0.11);
@@ -65,6 +65,12 @@ export async function paperPdf(l: Layout, questions: PaperQ[]): Promise<Uint8Arr
       d.y -= 4;
     }
   }
+  // A separate MCQ answer sheet: one row of bubbles per multiple-choice question.
+  const mcqs = (l.sections?.length ? l.sections.flatMap((s) => s.questions) : questions).filter((q) => (q.options || []).length);
+  if (l.answerSheet && mcqs.length) {
+    d.newPage(); d.title("MCQ answer sheet"); d.text("Roll number: ____________________     Name: ________________________________", { size: 10, gap: 10 });
+    for (const q of mcqs) d.text(`${q.no}   ${(q.options || []).map((_, i) => `( ${String.fromCharCode(97 + i)} )`).join("   ")}`, { size: 11, gap: 6 });
+  }
   if (l.watermark) {
     const { degrees } = await import("pdf-lib");
     for (const p of d.doc.getPages()) p.drawText(clean(l.watermark), { x: 70, y: 260, size: 26, font: d.bold, color: rgb(0.75, 0.2, 0.25), opacity: 0.18, rotate: degrees(35) });
@@ -106,7 +112,7 @@ export async function paperDocx(l: Layout, questions: PaperQ[]): Promise<Buffer>
   }
   const doc = new dx.Document({
     sections: [{
-      properties: { page: { margin: { top: (l.margins || 1) * 1440, bottom: (l.margins || 1) * 1440, left: (l.margins || 1) * 1440, right: (l.margins || 1) * 1440 } } },
+      properties: { page: { size: l.page === "Letter" ? { width: 12240, height: 15840 } : { width: 11906, height: 16838 }, margin: { top: (l.margins || 1) * 1440, bottom: (l.margins || 1) * 1440, left: (l.margins || 1) * 1440, right: (l.margins || 1) * 1440 } } },
       headers: l.watermark ? { default: new dx.Header({ children: [new dx.Paragraph({ children: [new dx.TextRun({ text: l.watermark, color: "C0303F", size: 18 })] })] }) } : undefined,
       footers: { default: new dx.Footer({ children: [new dx.Paragraph({ children: [new dx.TextRun(`${l.footer}  ·  page `), new dx.TextRun({ children: [dx.PageNumber.CURRENT] }), new dx.TextRun(" of "), new dx.TextRun({ children: [dx.PageNumber.TOTAL_PAGES] })] })] }) },
       children: paras as never,
