@@ -60,6 +60,7 @@ export default function AppShell({
   otherWork = [],
   linkStatus = {},
   display = "",
+  look = null,
   children,
 }: {
   roleLabel: string;
@@ -81,6 +82,7 @@ export default function AppShell({
   defaultPins?: string[];
   otherWork?: { role: string; label: string; links: NavLink[] }[];
   display?: string;
+  look?: { color: string | null; watermark: string } | null;
   linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
   children: React.ReactNode;
 }) {
@@ -534,6 +536,11 @@ export default function AppShell({
         </header>
 
         <div className="main">
+          {look?.color && <style>{`:root{--brass:${look.color};--royal-600:${look.color};--brass-dark:color-mix(in srgb, ${look.color} 75%, black);--royal-700:color-mix(in srgb, ${look.color} 85%, black);--royal-800:color-mix(in srgb, ${look.color} 70%, black)}`}</style>}
+          {branding.instituteLogoUrl && look?.watermark !== "off" && !/\/(marks|timetable|assigner|grid|matrix|attendance|seating)/.test(pathname) && (
+            <div aria-hidden="true" className="no-print obe-watermark" style={{ position: "fixed", pointerEvents: "none", zIndex: 0, opacity: 0.05, ...(look?.watermark === "corner" ? { right: 24, bottom: 24, width: 220, height: 220 } : { left: "50%", top: "50%", transform: "translate(-30%, -50%)", width: 420, height: 420 }), background: `center / contain no-repeat url(${branding.instituteLogoUrl})` }} />
+          )}
+          <style>{"@media (max-width: 767px){.obe-watermark{display:none}} .main > *:not(.obe-watermark){position:relative;z-index:1}"}</style>
           {display && <style>{display.split(",").map((k) => DISPLAY_CSS[k as keyof typeof DISPLAY_CSS] || "").join("\n")}</style>}
           <WhatsNewNotice />
           <UndoToast />

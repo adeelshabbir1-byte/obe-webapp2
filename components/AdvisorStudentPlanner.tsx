@@ -11,7 +11,9 @@ type Planned = {
 type CurrentEnrollment = { courseId: string; code: string; title: string; creditHours: number };
 type Transcript = { courseCode: string; courseTitle: string; creditHours: number; termName: string; termYear: number; grade: string; gpaPoints: number | null };
 
-export default function AdvisorStudentPlanner({ studentId }: { studentId: string }) {
+export default function AdvisorStudentPlanner({ studentId, part }: { studentId: string; part?: "register" | "semester" | "transcript" | "plan" }) {
+  // part: show one section only (the advisor page shows each on its own tab); without it, everything as before.
+  const show = (k: "register" | "semester" | "transcript" | "plan") => !part || part === k;
   const [data, setData] = useState<{
     currentSemesterNumber: number; gradingScale: { letter: string; gpaValue: number }[];
     transcriptRecords: Transcript[]; currentEnrollments: CurrentEnrollment[]; planned: Planned[];
@@ -105,7 +107,8 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--brass-dark)" }}>{cgpa ?? "—"}</div>
       </div>
 
-      {registerNow.length > 0 && (
+      {show("register") && registerNow.length === 0 && part === "register" && <p style={{ fontSize: 12.5 }}>Nothing to register right now ✓</p>}
+      {show("register") && registerNow.length > 0 && (
         <div style={{ marginBottom: 14, padding: "8px 10px", background: "#fff", border: "1px solid var(--line)" }}>
           <h4 style={{ fontSize: 12.5, marginBottom: 2 }}>Recommended: Register For These Now</h4>
           <p style={{ fontSize: 11, color: "var(--slate)", marginBottom: 6 }}>
@@ -127,7 +130,7 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
       )}
 
-      {data.currentEnrollments.length > 0 && (
+      {show("semester") && data.currentEnrollments.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <h4 style={{ fontSize: 12.5, marginBottom: 6 }}>Currently enrolled this semester</h4>
           {data.currentEnrollments.map((e) => (
@@ -141,7 +144,7 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
       )}
 
-      {data.transcriptRecords.length > 0 && (
+      {show("transcript") && data.transcriptRecords.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <h4 style={{ fontSize: 12.5, marginBottom: 6 }}>Transcript (completed courses)</h4>
           {data.transcriptRecords.map((t, i) => (
@@ -158,8 +161,10 @@ export default function AdvisorStudentPlanner({ studentId }: { studentId: string
         </div>
       )}
 
+      {show("plan") && <>
       <h4 style={{ fontSize: 12.5, margin: "12px 0 6px" }}>Full degree plan (every semester — taken and still to take)</h4>
       <DegreeSchemeBoard studentId={studentId} onChange={load} />
+      </>}
     </div>
   );
 }

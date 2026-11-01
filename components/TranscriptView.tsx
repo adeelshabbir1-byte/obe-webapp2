@@ -1,3 +1,4 @@
+import GaMatrix from "./GaMatrix";
 import Link from "next/link";
 import { computeStudentTranscriptReport, type TranscriptCourseRow } from "../lib/studentTranscriptReport";
 import { ploTranscript, degreeAudit } from "../lib/transcriptPlus";
@@ -11,14 +12,14 @@ import HowCalculated from "./HowCalculated";
 import { StatusBadge } from "./Meaning";
 
 // One student's record in tabs — the same for the student, the advisor and the program staff.
-export const TABS: [string, string][] = [["now", "This semester"], ["grades", "Grades transcript"], ["plo", "PLO transcript"], ["audit", "Degree audit"], ["plan", "Semester plan"]];
+export const TABS: [string, string][] = [["now", "This semester"], ["grades", "Grades transcript"], ["ga", "GA matrix"], ["plo", "PLO transcript"], ["audit", "Degree audit"], ["plan", "Semester plan"]];
 const GOOD = "#1E7B45", BLUE = "#1565C0", WARN = "#B26A00", BAD = "#C62828";
 const TYPE_COLOR: Record<string, string> = { Core: "#1565C0", Elective: "#6A1B9A", "General Education": "#00796B", IDS: "#5D4037", Lab: "#283593", "Capstone Project": "#AD1457", "Field Experience": "#EF6C00" };
 const gradeColor = (g: string) => (/^A/.test(g) ? GOOD : /^B/.test(g) ? BLUE : /^C/.test(g) ? WARN : /^(D|F|W)/.test(g) ? BAD : "#555");
 const chip = (t: string, bg: string) => <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 10, background: bg, color: "#fff", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{t}</span>;
 const termKey = (r: { termName: string; termYear: number }) => r.termYear * 3 + (/spring/i.test(r.termName) ? 0 : /summer/i.test(r.termName) ? 1 : 2);
 
-export default async function TranscriptView({ studentId, tab, base, staff = false }: { studentId: string; tab: string; base: string; staff?: boolean }) {
+export default async function TranscriptView({ studentId, tab, base, staff = false, param = "tab" }: { studentId: string; tab: string; base: string; staff?: boolean; param?: string }) {
   const t = TABS.some(([k]) => k === tab) ? tab : "now";
   const st = await prisma.student.findUnique({ where: { id: studentId }, select: { name: true, rollNumber: true, currentSemesterNumber: true, batch: { select: { degreeProgram: true, batchName: true, coordinator: { select: { managedById: true } } } } } });
   if (!st) return null;
@@ -39,7 +40,7 @@ export default async function TranscriptView({ studentId, tab, base, staff = fal
         </div>
       </div>
       <div role="tablist" className="tabs no-print" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-        {TABS.map(([k, l]) => <Link key={k} role="tab" className="tab" aria-selected={t === k} href={`${base}${sep}tab=${k}`} scroll={false}>{l}</Link>)}
+        {TABS.map(([k, l]) => <Link key={k} role="tab" className="tab" aria-selected={t === k} href={`${base}${sep}${param}=${k}`} scroll={false}>{l}</Link>)}
       </div>
       {t === "now" && <HowCalculated shows="The courses the student is registered in this semester, with attendance and marks so far.">Attendance is the share of lectures held so far that the student attended (late counts as present unless the OMC's attendance policy says otherwise); marks so far are the weighted marks of the assessments already marked, out of what has been assessed. Nothing here is a final grade.</HowCalculated>}
       {t === "grades" && <HowCalculated shows="Every course attempted, by term, with grade, grade points and GPA.">GPA is the credit-hour weighted average of the grade points of a term. CGPA uses every term, but when a course was taken more than once only the <b>best attempt</b> counts. Non-credit deficiency courses and W (withdrawn) carry no grade points. Standing follows the Controller of Examinations&apos; limits shown below the tabs.</HowCalculated>}
@@ -48,6 +49,7 @@ export default async function TranscriptView({ studentId, tab, base, staff = fal
       {t === "now" && <NowTab studentId={studentId} />}
       {t === "grades" && <GradesTab rows={report.courseRows} remaining={report.remaining} />}
       {t === "plo" && <PloTab studentId={studentId} />}
+      {t === "ga" && <GaMatrix studentId={studentId} base={base} tabParam={param} tabValue="ga" />}
       {t === "audit" && <AuditTab studentId={studentId} />}
       {t === "plan" && <DegreeSchemeBoard studentId={staff ? studentId : undefined} />}
       {standing !== "GOOD_STANDING" && <p className="small-note">Standing uses the limits set by the Controller of Examinations: warning below {rules.warningCgpa.toFixed(2)}, probation below {rules.probationCgpa.toFixed(2)}.</p>}
