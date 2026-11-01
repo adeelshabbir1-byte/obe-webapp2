@@ -6,8 +6,8 @@ import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { staffOf } from "../../lib/registers";
-import { ASSIGNERS, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
-import { Assign, Cem, CemOk, Check, Courses, Field, Kpis, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
+import { ASSIGNERS, lectureModes, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
+import { Assign, Cem, CemOk, Check, Courses, Field, Kpis, LectureModes, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
 
 export const dynamic = "force-dynamic";
 const LEADERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"];
@@ -89,6 +89,8 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
             {(d.cem || []).length > 0 && <div style={{ overflowX: "auto" }}><table className="table" style={{ fontSize: 12.5 }}><thead><tr><th>Our course</th><th>Partner course</th><th>CH</th><th>Contact h</th><th>Assessment · equivalent</th></tr></thead><tbody>{(d.cem || []).map((r: any, i: number) => <tr key={i}><td>{r.ours} {r.oursTitle}</td><td>{r.theirs ? `${r.theirs} ${r.theirsTitle}` : <span className="small-note">no match</span>}</td><td>{r.ch}</td><td>{r.contactHours}</td><td><CemOk id={p.id} i={i} cem={d.cem} /></td></tr>)}</tbody></table></div>}
           </>}
           {st.widgets.includes("courses") && <Courses id={p.id} courses={d.courses || []} />}
+          {st.widgets.includes("courses") && (d.courses || []).length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>Delivery mode of each lecture</b> <span className="small-note">from the course&apos;s lecture plan; saving updates the course&apos;s face-to-face / live share above</span>
+            {(await lectureModes(p.chairmanId, (d.courses || []).map((x: { code: string }) => x.code))).map((x) => <LectureModes key={x.courseId} id={p.id} code={x.code} courseId={x.courseId} lectures={x.lectures} pct={x.pct} />)}</div>}
 
           {st.moc.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>What the MoC says</b>{st.moc.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>({k}) {MOC_ITEMS.find((x) => x[0] === k)?.[1]}<br /><MocField id={p.id} k={k} value={d.moc?.[k] || ""} all={d.moc || {}} /></div>)}</div>}
           {st.fields.map(([k, label, t]) => <Field key={k} id={p.id} k={k} label={label} type={t} value={d[k] == null ? "" : String(d[k])} />)}
