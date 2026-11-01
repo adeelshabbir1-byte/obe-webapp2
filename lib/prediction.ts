@@ -55,7 +55,7 @@ async function loadData(chairmanId: string) {
 /** Per student, records grouped by term with the CGPA before each term. */
 function timelines(recs: Rec[]) {
   const by = new Map<string, Rec[]>();
-  for (const r of recs) by.set(r.sid, [...(by.get(r.sid) || []), r]);
+  for (const r of recs) { const g = by.get(r.sid); if (g) g.push(r); else by.set(r.sid, [r]); }
   const out = new Map<string, { t: number; prior: number | null; cgpaAfter: number; recs: Rec[]; termGpa: number }[]>();
   for (const [sid, rs] of Array.from(by.entries())) {
     const terms = Array.from(new Set(rs.map((r) => r.t))).sort((a, b) => a - b);
@@ -86,7 +86,8 @@ export async function buildModel(chairmanId: string, opts: { before?: number } =
   const tl = timelines(recs);
   const pairs = new Map<string, { x: number; y: number; fail: boolean }[]>();
   const all: { x: number; fail: boolean }[] = [];
-  for (const list of Array.from(tl.values())) for (const term of list) if (term.prior !== null) for (const r of term.recs) { pairs.set(r.code, [...(pairs.get(r.code) || []), { x: term.prior, y: r.gp, fail: r.fail }]); all.push({ x: term.prior, fail: r.fail }); }
+  // Appended in place (copying each course's list per result was quadratic and blocked the server on big institutes).
+  for (const list of Array.from(tl.values())) for (const term of list) if (term.prior !== null) for (const r of term.recs) { const p = { x: term.prior, y: r.gp, fail: r.fail }; const g = pairs.get(r.code); if (g) g.push(p); else pairs.set(r.code, [p]); all.push({ x: term.prior, fail: r.fail }); }
   const courses = new Map<string, { n: number; meanGp: number; meanPrior: number; failRate: number; line: ReturnType<typeof fit> | null }>();
   for (const [code, ps] of Array.from(pairs.entries())) courses.set(code, { n: ps.length, meanGp: ps.reduce((a, p) => a + p.y, 0) / ps.length, meanPrior: ps.reduce((a, p) => a + p.x, 0) / ps.length, failRate: ps.filter((p) => p.fail).length / ps.length, line: ps.length >= MIN_FIT ? fit(ps) : null });
   const globalFail = all.length ? all.filter((p) => p.fail).length / all.length : 0.1;
@@ -101,13 +102,21 @@ export async function buildModel(chairmanId: string, opts: { before?: number } =
     if (c && c.n >= 3) { const off = c.meanGp - c.meanPrior; return { gp: r2(Math.max(0, Math.min(4, prior + off))), why: `CGPA ${r2(prior)} ${off >= 0 ? "+" : "−"} ${r2(Math.abs(off))} (this course is ${off >= 0 ? "easier" : "harder"} than average for its ${c.n} past students)` }; }
     return { gp: r2(prior), why: "Few past results for this course — taken as the student's CGPA" };
   };
+  // Students within ±BAND of a CGPA (and how many of them failed), by binary search on lists sorted by CGPA — the
+  // old filter over every past result for each prediction took ~30 s on a large institute and blocked the server.
+  type Band = { xs: number[]; fails: number[] };
+  const band = (ps: { x: number; fail: boolean }[]): Band => { const s = ps.slice().sort((a, b) => a.x - b.x); const fails = [0]; for (const p of s) fails.push(fails[fails.length - 1] + (p.fail ? 1 : 0)); return { xs: s.map((p) => p.x), fails }; };
+  const lower = (xs: number[], v: number) => { let lo = 0, hi = xs.length; while (lo < hi) { const m = (lo + hi) >> 1; if (xs[m] < v) lo = m + 1; else hi = m; } return lo; };
+  const upper = (xs: number[], v: number) => { let lo = 0, hi = xs.length; while (lo < hi) { const m = (lo + hi) >> 1; if (xs[m] <= v) lo = m + 1; else hi = m; } return lo; };
+  const within = (b: Band, prior: number) => { const i = lower(b.xs, prior - BAND), j = upper(b.xs, prior + BAND); return { n: Math.max(0, j - i), f: b.fails[j] - b.fails[i] }; };
+  const bands = new Map<string, Band>(); const allBand = band(all);
   const failRisk = (code: string, prior: number | null) => {
-    const ps = pairs.get(up(code)) || [];
+    const key = up(code); let bd = bands.get(key); if (!bd) { bd = band(pairs.get(key) || []); bands.set(key, bd); }
     if (prior === null) { const c = courses.get(up(code)); return { risk: c ? r2(c.failRate) : r2(globalFail), why: c ? `${Math.round(100 * c.failRate)}% of ${c.n} past students failed this course` : "Average fail rate" }; }
-    const near = ps.filter((p) => Math.abs(p.x - prior) <= BAND);
-    if (near.length >= MIN_NEAR) { const f = near.filter((p) => p.fail).length; return { risk: r2((f + 0.5) / (near.length + 1)), why: `${f} of ${near.length} past students with CGPA ${r2(prior - BAND)}–${r2(prior + BAND)} failed this course` }; }
-    const nearAll = all.filter((p) => Math.abs(p.x - prior) <= BAND);
-    const base = nearAll.length ? nearAll.filter((p) => p.fail).length / nearAll.length : globalFail;
+    const near = within(bd, prior);
+    if (near.n >= MIN_NEAR) { const f = near.f; return { risk: r2((f + 0.5) / (near.n + 1)), why: `${f} of ${near.n} past students with CGPA ${r2(prior - BAND)}–${r2(prior + BAND)} failed this course` }; }
+    const nearAll = within(allBand, prior);
+    const base = nearAll.n ? nearAll.f / nearAll.n : globalFail;
     const c = courses.get(up(code)), ratio = c && c.n >= 3 && globalFail > 0 ? Math.max(0.5, Math.min(2.5, c.failRate / globalFail)) : 1;
     return { risk: r2(Math.min(0.95, base * ratio)), why: `${Math.round(100 * base)}% of students with a similar CGPA fail a course${ratio !== 1 ? `; this course fails ${r2(ratio)}× the usual share` : ""}` };
   };
