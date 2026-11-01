@@ -79,6 +79,19 @@ async function GET_handler(req: NextRequest) {
   await import("../../../../lib/prereqRemedy").then((m) => m.remedyJobs(now)).catch(() => 0);
   // Course Leads by the rule, for every institute (Adeel prompt §36).
   await (async () => { const { ensureAutoLeads } = await import("../../../../lib/autoLead"); for (const h of await prisma.user.findMany({ where: { role: "CHAIRMAN", isActive: true }, select: { id: true } })) await ensureAutoLeads(h.id).catch(() => null); })().catch(() => null);
+  // Committee member terms ending within 30 days: the Convener (and Secretary) are told on Mondays (UX review).
+  if (now.getUTCDay() === 1) await (async () => {
+    const rows = ((await (prisma as unknown as Record<string, any>).scopedSetting?.findMany({ where: { key: { startsWith: "cmt.meta." } }, select: { chairmanId: true, key: true, value: true } }).catch(() => [])) || []) as { chairmanId: string; key: string; value: string }[];
+    const M = await import("../../../../lib/committeeMeta");
+    for (const r of rows) {
+      let meta: import("../../../../lib/committeeMeta").Meta; try { meta = { roles: {}, rules: [], history: [], ...JSON.parse(r.value) }; } catch { continue; }
+      const soon = M.endingSoon(meta, 30, now); if (!soon.length) continue;
+      const cid = r.key.slice("cmt.meta.".length);
+      const c = await (prisma as unknown as Record<string, any>).cmtCommittee?.findUnique({ where: { id: cid }, select: { name: true, convenerId: true } }).catch(() => null);
+      const to = [c?.convenerId, meta.secretaryId].filter((x): x is string => !!x);
+      if (c && to.length) await (await import("../../../../lib/notifications")).notifyUsers(to, { kind: "DEADLINE", title: `${c.name}: ${soon.length} member term(s) end soon`, body: "Renew or replace them on the committee page.", href: `/boards/${cid}` }).catch(() => null);
+    }
+  })().catch(() => null);
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
   if (!ids.length) return NextResponse.json({ sent: 0, digest, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });

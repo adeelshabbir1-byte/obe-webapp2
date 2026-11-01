@@ -24,6 +24,8 @@ export default async function Boards() {
   const list = await committeesFor(chairmanId, user).catch(() => { missing = true; return []; });
   const [staff, departments, faculties] = await Promise.all([staffOf(chairmanId), prisma.department.findMany({ where: { chairmanId }, select: { id: true, name: true }, orderBy: { name: "asc" } }), (prisma as unknown as Record<string, any>).faculty?.findMany({ where: { chairmanId }, select: { id: true, name: true } }).catch(() => []) ?? []]);
   const omcs = await Promise.all(departments.map(async (d) => ({ d, omc: await omcOf(chairmanId, d.id) })));
+  const myIds = new Set(((await (prisma as unknown as Record<string, any>).cmtMember?.findMany({ where: { userId: user.id }, select: { committeeId: true } }).catch(() => [])) || []).map((m: { committeeId: string }) => m.committeeId));
+  const mineList = list.filter((c) => myIds.has(c.id) || c.convenerId === user.id);
   const canCreate = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role);
   const scopeName = (c: { scope: string; scopeId: string | null }) => c.scope === "DEPARTMENT" ? departments.find((d) => d.id === c.scopeId)?.name || "department" : c.scope === "FACULTY" ? (faculties as { id: string; name: string }[]).find((f) => f.id === c.scopeId)?.name || "faculty" : "institute";
 
@@ -32,6 +34,7 @@ export default async function Boards() {
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Boards &amp; committees</h1>
       <p className="small-note" style={{ marginBottom: 10 }}>One engine for decision bodies: members (with external experts on a guest link that shows only their committee&apos;s items), meetings and attendance, agenda items with votes (approve / approve with changes / reject), quorum and majority, the Convener&apos;s decision, minutes as a PDF and the signed copy. A Board of Studies can instead run Convener-only: the Convener records each decision with the meeting date and the signed minutes.</p>
       {missing && <div className="card"><p style={{ color: "#B3261E", margin: 0 }}>{CMT_HINT}</p></div>}
+      {mineList.length > 0 && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 10, marginBottom: 12 }}>{mineList.map((c) => <Link key={c.id} href={`/boards/${c.id}`} className="card" style={{ margin: 0, textDecoration: "none", color: "inherit", borderTop: "3px solid #1B5FAA" }}><div className="small-note">My committee · {TYPES[c.type]}</div><b>{c.name}</b><div className="small-note">{c.convenerId === user.id ? "You are the Convener" : "Member"}</div></Link>)}</div>}
       <div className="card" style={{ overflowX: "auto" }}>
         <table className="table" style={{ width: "100%", fontSize: 13 }}>
           <thead><tr><th>Committee</th><th>Scope</th><th>Mode</th><th>Rules</th></tr></thead>
@@ -42,15 +45,7 @@ export default async function Boards() {
           </tbody>
         </table>
       </div>
-      {canCreate && (
-        <div className="card">
-          <b>Set up a committee</b>
-          <ActionForm url="/api/cmt" fixed={{ action: "save" }} submit="Create" done="Created." collapsed openLabel="+ New committee" initial={{ type: "BOS", scope: user.role === "HEAD_OF_DEPARTMENT" ? "DEPARTMENT" : user.role === "DEAN" ? "FACULTY" : "INSTITUTE", scopeId: user.role === "HEAD_OF_DEPARTMENT" ? user.departmentId || "" : "", mode: "FULL", quorumPct: 50, majorityPct: 50, convenerId: user.id, councilStep: false }}
-            fields={[{ name: "name", label: "Name", type: "text", width: 260, placeholder: "e.g. Board of Studies — Computer Science" }, { name: "type", label: "Type", type: "select", options: Object.entries(TYPES).filter(([k]) => k !== "OMC") }, { name: "scope", label: "Scope", type: "select", options: [["INSTITUTE", "Institute"], ["FACULTY", "Faculty"], ["DEPARTMENT", "Department"]] },
-              { name: "scopeId", label: "Department / faculty", type: "select", options: [["", "—"], ...departments.map((d) => [d.id, d.name] as [string, string]), ...(faculties as { id: string; name: string }[]).map((f) => [f.id, `Faculty: ${f.name}`] as [string, string])] }, { name: "mode", label: "Mode", type: "select", options: [["FULL", "Full committee (votes)"], ["CONVENER_ONLY", "Convener only"]] },
-              { name: "quorumPct", label: "Quorum % of members", type: "number", width: 90 }, { name: "majorityPct", label: "Majority: more than % of votes", type: "number", width: 110 }, { name: "convenerId", label: "Convener", type: "select", options: staff.map((s) => [s.id, s.name] as [string, string]), width: 200 }, { name: "councilStep", label: "Then Academic Council noted / approved", type: "checkbox" }]} />
-        </div>
-      )}
+      {canCreate && <p style={{ marginTop: 10 }}><Link className="btn btn-sm" href="/boards/new">+ New committee (step by step)</Link></p>}
     </Shell>
   );
 }

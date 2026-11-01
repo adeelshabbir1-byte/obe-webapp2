@@ -5,6 +5,8 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-zj", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], text: "Committees: a step-by-step “New committee”, and the Members card first — roles and terms, people suggested to tick, add by email, replace with history, your composition rule, and a Secretary who manages members.", href: "/boards" },
+  { id: "2026-11-01-zk", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], text: "Desks run by others (Library Desk, fees, payroll, facilities, stores) left your menu; see them on one Institute operations page.", href: "/operations" },
   { id: "2026-11-01-zg", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"], text: "Joint degrees and ODL are now a step-by-step wizard (8 steps for a joint / dual / double degree, 6 for ODL), each with “still missing” for HEC. The Dean assigns each programme to one person.", href: "/collab" },
   { id: "2026-11-01-zh", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN"], text: "Affiliation work can be handed to one person (the Affiliation office); they get it under “Working as”.", href: "/affiliation" },
   { id: "2026-11-01-zi", date: "2026-11-01", roles: ["*"], text: "The Controller of Examinations can build a team and give each member the programs they handle (Controller Dashboard › My team).", href: "/controller" },
