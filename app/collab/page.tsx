@@ -34,7 +34,7 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
       {p && d && c && <>
         <h2 style={{ marginTop: 20 }}>{p.title} <span className="small-note">{KINDS[p.kind]}</span></h2>
         {TYPE_RULE[p.kind] && <p className="small-note">{TYPE_RULE[p.kind]}</p>}
-        <p><a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=noc`}>HEC NOC file (PDF)</a> <a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=audit`}>Audit pack (PDF)</a> {isDdjd(p.kind) && <a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=supplement`}>Diploma Supplement template (PDF)</a>}</p>
+        <p><a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=noc`}>HEC NOC file (PDF)</a> <a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=audit`}>Audit pack (PDF)</a> {isDdjd(p.kind) && <a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=supplement`}>Diploma Supplement template (PDF)</a>} {isDdjd(p.kind) && <a className="btn-link" href={`/programme/${p.id}`} target="_blank">Public programme page</a>}</p>
         <div style={{ ...box, background: c.enrolmentOpen ? "#eef9ee" : "#fff4e5" }}>{c.enrolmentOpen ? "Enrolment open." : `Enrolment locked: ${c.lockReason}`}{c.problems.length > 0 && <ul style={{ margin: "6px 0 0" }}>{c.problems.map((x) => <li key={x}>{x}</li>)}</ul>}</div>
         <div style={box}><b>Details</b><Basics id={p.id} d={d as Record<string, unknown>} ddjd={isDdjd(p.kind)} /></div>
         <div style={box}><b>Conditions</b><table className="table"><tbody>{c.items.map((i) => <tr key={i.key}><td style={{ fontSize: 12.5 }}>{i.label}</td><td><Check id={p.id} k={i.key} done={i.done} note={i.note} all={d.checks || {}} /></td></tr>)}</tbody></table></div>

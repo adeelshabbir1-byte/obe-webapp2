@@ -8,6 +8,8 @@ import { navForRole } from "../../../../components/reportNav";
 import LabWorkspace from "../../../../components/LabWorkspace";
 import LabPlanPanel from "../../../../components/LabPlanPanel";
 import LabSyncExtras from "../../../../components/LabSyncExtras";
+import LabCarryForward from "../../../../components/LabCarryForward";
+import { carryCandidates } from "../../../../lib/labCarry";
 import { checkLabSync, labFiles, labTasks, syncIssues, theoryLectures } from "../../../../lib/labPlan";
 
 export default async function LabDetail({ params }: { params: { courseId: string } }) {
@@ -28,6 +30,7 @@ export default async function LabDetail({ params }: { params: { courseId: string
         {access.lab.batch ? `${access.lab.batch.degreeProgram} ${access.lab.batch.batchName}` : "—"} · Lab Engineer: {access.lab.labEngineer?.name || "not named yet"} · Lab lead: {access.lead?.name || "not named yet"}
       </p>
       <LabPlanPanel labCourseId={access.lab.id} as={access.as} theoryCode={access.theory?.code || null} lectures={lectures} tasks={tasks} files={files as never} issues={syncIssues(tasks, lectures, !!access.theory)} />
+      <LabCarryForward courseId={access.lab.id} rows={(await carryCandidates(access.lab.id).catch(() => ({ rows: [] }))).rows} />
       <LabSyncExtras labCourseId={access.lab.id} theoryId={access.theory?.id || null} canEdit={true} />
       <LabWorkspace hideManuals courseId={access.lab.id} as={access.as} theoryCode={access.theory?.code || null} {...data} />
     </Shell>

@@ -942,9 +942,9 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
   A({
     key: "affiliation", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL],
     title: "Affiliated colleges: applications, centres, examiners, claims",
-    summary: "The university and each affiliated college (a separate institute on OBEHUB) work on one shared record per item: affiliation applications and inspections, lab test centres, external examiners and practical sessions (agreed marks), TA / DA claims with rates, notices, faculty approvals, fees, migrations, accreditation visits and rechecks. Sessional marks stay the college's; the university sees comparison reports across colleges.",
+    summary: "The university and each affiliated college (a separate institute on OBEHUB) work on one shared record per item: affiliation applications and inspections, lab test centres, external examiners and practical sessions (agreed marks), TA / DA claims with rates, notices, faculty approvals, fees, migrations, accreditation visits and rechecks. Sessional marks stay the college's; the university sees comparison reports across colleges. Final exam papers record who sets the paper and what colleges are told (full syllabus, topic list, CLO weights or nothing) from a release date; the paper itself is never shown to a college, and the disclosed lectures are checked against each college's class record.",
     steps: ["Open Affiliation and pick the tab (Applications, Centres, Examiners, …).", "Create the record; the other side acknowledges.", "Move it through its steps; each move is logged.", "Download the letter PDF when needed.", "University: set TA / DA rates and see the college comparison reports."],
-    who: "University Affiliation Committee and the college's Institute Head.", pages: ["/affiliation"], keywords: ["affiliation", "affiliated college", "examiner", "practical", "ta da", "centre", "inspection", "agreed marks"], href: "/affiliation",
+    who: "University Affiliation Committee and the college's Institute Head.", pages: ["/affiliation"], keywords: ["affiliation", "affiliated college", "examiner", "practical", "ta da", "centre", "inspection", "agreed marks", "final paper", "disclosure", "coverage", "fees", "dues"], href: "/affiliation",
   }),
   A({
     key: "adp-transfers", kind: "guide", category: "registration", roles: [IH, HOD, PL],

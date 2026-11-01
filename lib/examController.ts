@@ -114,6 +114,16 @@ export async function debarList(chairmanId: string, sessionId: string) {
   const saved = (await xdb.debarEntry.findMany({ where: { sessionId } }).catch(() => [])) as { id: string; courseId: string; studentId: string; pct: number; status: string; note: string | null }[];
   const key = (c: string, s: string) => `${c}|${s}`;
   const sv = new Map(saved.map((x) => [key(x.courseId, x.studentId), x]));
+  // Combined theory + lab (Adeel prompt §31.5): with "lab.attendancePerPart" = 1 the lab part's attendance must also
+  // reach the minimum; a lab shortage debars the student from the theory course's final.
+  const perPart = await import("./scopedSettings").then(async (m) => (await m.allStored(chairmanId)).find((r) => r.key === "lab.attendancePerPart" && r.scopeType === "INSTITUTE")?.value === "1").catch(() => false);
+  if (perPart) {
+    const links = ((await xdb.labTheorySetting?.findMany({ where: { theoryCourseId: { in: ids }, intoTheory: true } }).catch(() => [])) || []) as { theoryCourseId: string; labCourseId: string }[];
+    if (links.length) {
+      const lab = await coursesAttendance(links.map((l) => l.labCourseId), { ...pol, minPct: rules.minAttendanceForExam || pol.minPct });
+      for (const s of lab.shortages as typeof shortages) { const l = links.find((x) => x.labCourseId === s.courseId); if (l) shortages.push({ ...s, courseId: l.theoryCourseId, code: `${s.code} (lab part)` }); }
+    }
+  }
   const rows = shortages.filter((s) => s.pct < (rules.minAttendanceForExam || pol.minPct)).map((s) => ({ courseId: s.courseId, code: s.code, studentId: s.studentId, name: s.name, rollNumber: s.rollNumber, pct: s.pct, saved: sv.get(key(s.courseId, s.studentId)) || null }));
   return { min: rules.minAttendanceForExam || pol.minPct, rows, savedCount: saved.length, condoned: saved.filter((x) => x.status === "CONDONED").length };
 }
