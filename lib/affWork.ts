@@ -52,7 +52,45 @@ export const KINDS: KindDef[] = [
   { key: "RECHECK", label: "Re-checking and re-marking", createdBy: "COLLEGE", statuses: ["APPLIED", "DONE", "REFUSED"],
     fields: [{ key: "student", label: "Student (roll number)" }, { key: "course", label: "Course code" }, { key: "type", label: "Request", type: "select", options: ["Re-checking (totals, unmarked)", "Re-marking (another marker)"] }, { key: "fee", label: "Fee paid", type: "number" }, { key: "outcome", label: "Outcome", type: "long", side: "UNI" }],
     moves: { APPLIED: S(["DONE", "REFUSED"], "UNI") } },
+  // §28.4–5: the final exam and what colleges are told before it. The paper itself is never shown to a college.
+  { key: "FINAL_PAPER", label: "Final exam papers", createdBy: "UNI", statuses: ["DRAFT", "RELEASED", "HELD"],
+    fields: [{ key: "course", label: "Course code" }, { key: "mode", label: "Who sets the final", type: "select", options: ["University sets (central paper)", "College sets, university approves", "College sets under university rules"] }, { key: "disclosure", label: "What colleges are told", type: "select", options: ["Full syllabus only", "Topic list disclosed", "CLO weights disclosed", "Nothing (date and duration only)"] }, { key: "topics", label: "Topic list (e.g. L1–L28, excluding L12)", side: "UNI" }, { key: "cloWeights", label: "Marks per CLO (e.g. CLO-1 20, CLO-2 30)", side: "UNI" }, { key: "releaseDate", label: "Release date to colleges", type: "date", side: "UNI" }, { key: "examDate", label: "Exam date and duration", side: "UNI" }, { key: "paper", label: "Paper (secure link — university only)", side: "UNI" }],
+    moves: { DRAFT: S(["RELEASED"], "UNI"), RELEASED: S(["HELD"], "UNI") } },
 ];
+/** Lecture numbers from "L1–L28, excluding L12" / "L1-L10, L14". */
+export function lectureSet(s: string) {
+  const [inc, exc = ""] = String(s || "").split(/exclud\w*/i);
+  const nums = (t: string) => { const out = new Set<number>(); for (const m of Array.from(t.matchAll(/L?\s*(\d+)\s*(?:[–-]\s*L?\s*(\d+))?/gi))) { const a = Number(m[1]), b = Number(m[2] || m[1]); for (let i = Math.min(a, b); i <= Math.max(a, b) && i - a < 64; i++) out.add(i); } return out; };
+  const x = nums(exc); return Array.from(nums(inc)).filter((n) => !x.has(n)).sort((a, b) => a - b);
+}
+/** What one side may see of a record: a college never sees the paper, and sees the topic list / CLO weights only
+ *  when that is the disclosure and the release date has come. */
+export function viewData(r: { kind: string; dataJson: string }, side: Side) {
+  const d = J<Record<string, any>>(r.dataJson, {});
+  if (r.kind !== "FINAL_PAPER" || side === "UNI") return d;
+  const released = !!d.releaseDate && new Date(d.releaseDate) <= new Date();
+  const { paper: _p, ...rest } = d;
+  if (!released || !/Topic/.test(d.disclosure || "")) delete rest.topics;
+  if (!released || !/CLO/.test(d.disclosure || "")) delete rest.cloWeights;
+  return rest;
+}
+/** Coverage of the disclosed lectures in each college's class record (taught = lecture with an actual date). */
+export async function paperCoverage(rec: Rec, onlyCollege?: string | null) {
+  const d = J<Record<string, any>>(rec.dataJson, {});
+  const want = lectureSet(d.topics || "");
+  if (!want.length || !d.course) return [];
+  const cols = onlyCollege ? [onlyCollege] : rec.collegeId ? [rec.collegeId] : (await collegesOf(rec.universityId)).map((c) => c.collegeId);
+  const out: { collegeId: string; course: string; taught: number; of: number; missing: number[] }[] = [];
+  for (const cid of cols) {
+    const courses = await prisma.course.findMany({ where: { code: { equals: String(d.course), mode: "insensitive" }, isOffered: true, coordinator: { managedById: cid } }, select: { id: true } });
+    if (!courses.length) continue;
+    const rows = await prisma.lectureRow.findMany({ where: { courseId: { in: courses.map((c) => c.id) }, source: "INSTRUCTOR", actualDate: { not: null } }, select: { lectureNumber: true } });
+    const done = new Set(rows.map((x) => x.lectureNumber));
+    const missing = want.filter((n) => !done.has(n));
+    out.push({ collegeId: cid, course: String(d.course), taught: want.length - missing.length, of: want.length, missing });
+  }
+  return out;
+}
 export const kindOf = (k: string) => KINDS.find((x) => x.key === k);
 type Rec = { id: string; universityId: string; collegeId: string | null; kind: string; status: string; title: string; dataJson: string; createdById: string; createdAt: Date; updatedAt: Date };
 const J = <T>(s: string, d: T): T => { try { return JSON.parse(s) as T; } catch { return d; } };

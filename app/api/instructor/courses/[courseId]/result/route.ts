@@ -49,6 +49,7 @@ async function POST_handler(req: NextRequest, { params }: { params: { courseId: 
   await db.courseResult.upsert({ where: { courseId: course.id }, update: data, create: { courseId: course.id, ...data } });
   await logResult(user.id, "RESULT_SUBMITTED", course.id, { students: summary.students, passRate: summary.passRate, mean: summary.mean });
   const ap = await approversFor(course.id);
+  { const why = await (await import("../../../../../../lib/affGate")).duesBlock(ap.chairmanId || "").catch(() => null); if (why) return NextResponse.json({ error: why }, { status: 409 }); }
   await notify(ap.chairmanId, user.id, ap.ids, `Result to approve: ${course.code} ${course.title}`,
     `${user.name} submitted the result of ${course.code} (${summary.students} students, mean ${summary.mean}%, pass rate ${summary.passRate}%). Please approve it or return it with a note.`, "/results-approval");
   return NextResponse.json({ ok: true, status: "SUBMITTED" });

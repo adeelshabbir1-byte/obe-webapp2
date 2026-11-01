@@ -1,3 +1,4 @@
+import EmptyState from "../../components/EmptyState";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
@@ -31,7 +32,7 @@ export default async function PlansPage() {
               fields={[{ name: "title", label: "Plan name", width: 260 }, { name: "area", label: "Office / area", width: 160 }, { name: "template", label: "Start from", type: "select", options: [["", "Empty plan"], ...Object.entries(UNI_TEMPLATES).map(([k, v]) => [k, v.label] as [string, string])] }, { name: "startDate", label: "Starts", type: "date" }]} />
           </div>
           <div className="card">
-            {plans.length === 0 ? <p style={{ margin: 0 }}>No plans yet.</p> : (
+            {plans.length === 0 ? <EmptyState title="No plans yet" hint="Create the first one with “New plan” above — start from a template to get its tasks." /> : (
               <table><thead><tr><th>Plan</th><th>Office</th><th>Owner</th><th>Dates</th><th>Progress</th></tr></thead>
                 <tbody>{plans.map((p) => { const ts = tasks.filter((t) => t.cycleId === p.id) as never[]; const pr = progress(ts); const d = tasks.filter((t) => t.cycleId === p.id);
                   return <tr key={p.id}><td><Link href={`/plans/${p.id}`}><b>{p.title}</b></Link></td><td>{p.area || "—"}</td><td>{owners.find((o) => o.id === p.ownerId)?.name || "—"}</td>

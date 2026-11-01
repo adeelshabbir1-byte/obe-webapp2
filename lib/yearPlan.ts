@@ -61,6 +61,7 @@ export async function editRow(user: MatrixUser & { name?: string }, plan: Plan, 
   const approved = plan.status === "APPROVED";
   if (approved && (!reason || reason.trim().length < 5)) throw new Error("The plan is approved: give a reason for the change.");
   if (approved) { const lock = await termLocked(plan.chairmanId, r.term); if (lock) throw new Error(`${r.term} has started — it is locked.`); }
+  { const probs = await (await import("./yearPlanApply")).rowProblems(plan, r, teachers.filter((t) => t.n > 0)); if (probs.length) throw new Error(probs.join(" ")); }
   const before = r.teachers.map((t) => t.id);
   r.teachers = teachers.filter((t) => t.n > 0); r.visiting = Math.max(0, visiting);
   const changes = J<unknown[]>(plan.changesJson, []);
@@ -69,6 +70,7 @@ export async function editRow(user: MatrixUser & { name?: string }, plan: Plan, 
   if (approved) {
     const told = Array.from(new Set([...before, ...r.teachers.map((t) => t.id)]));
     await notifyUsers(told, { kind: "ASSIGNMENT", title: `Allocation changed: ${r.code} (${r.term})`, body: reason, href: "/allocation/year-card" }).catch(() => null);
+    await (await import("./yearPlanApply")).applyPlan({ ...plan, rowsJson: JSON.stringify(rows) }).catch(() => null);
     await writeAuditLog({ actorUserId: user.id, action: "ALLOCATION_CHANGED", entityType: "AllocationPlan", entityId: plan.id, metadata: { key, reason: reason || "" } }).catch(() => null);
   }
 }
@@ -94,6 +96,7 @@ export async function decide(user: { id: string; role: string; name: string }, p
   if (plan.status !== "SUBMITTED") throw new Error("Not submitted.");
   await db.allocationPlan.update({ where: { id: plan.id }, data: { status: approve ? "APPROVED" : "DRAFT", approvedById: approve ? user.id : null, approvedAt: approve ? new Date() : null, updatedAt: new Date() } });
   if (approve) {
+    await (await import("./yearPlanApply")).applyPlan(plan).catch(() => null);
     const ids = Array.from(new Set(rowsOf(plan).flatMap((r) => r.teachers.map((t) => t.id))));
     await notifyUsers(ids, { kind: "ASSIGNMENT", title: `Your teaching for ${plan.yearLabel} is ready`, body: "See your year card; accept it or raise a concern within 3 working days.", href: "/allocation/year-card" }).catch(() => null);
   }

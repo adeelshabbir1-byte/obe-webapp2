@@ -54,7 +54,7 @@ export const ODL_CHECKS: [string, string][] = [
   ["practical", "Practical work done and evaluated face-to-face before the semester exam (ODL 11.x)"],
   ["grading", "Same assessment and grading policy as face-to-face (ODL 11.ix)"],
 ];
-export type Data = { partners?: { name: string; foreign?: boolean; recognised?: boolean; country?: string }[]; sameDiscipline?: boolean; checks?: Record<string, { done: boolean; note?: string }>; moc?: Record<string, string>; cem?: { ours: string; oursTitle: string; theirs: string; theirsTitle: string; ch: number; contactHours: number; assessment: string; ok: boolean }[]; nocNo?: string; nocDate?: string; nocUntil?: string; seats?: number; published?: string; withdrawalNotice?: string; mocFrom?: string; mocUntil?: string; kpis?: Record<string, number>; moderationPct?: number; currency?: string; timezone?: string; gradeScale?: string;
+export type Data = { partners?: { name: string; foreign?: boolean; recognised?: boolean; country?: string }[]; sameDiscipline?: boolean; checks?: Record<string, { done: boolean; note?: string }>; moc?: Record<string, string>; cem?: { ours: string; oursTitle: string; theirs: string; theirsTitle: string; ch: number; contactHours: number; assessment: string; ok: boolean }[]; nocNo?: string; nocDate?: string; nocUntil?: string; seats?: number; published?: string; withdrawalNotice?: string; mocFrom?: string; mocUntil?: string; kpis?: Record<string, number>; moderationPct?: number; currency?: string; fees?: string; feeCapPct?: number; timezone?: string; gradeScale?: string;
   courses?: { code: string; mode: "SYNC" | "ASYNC" | "BLENDED"; ch: number; f2fPct?: number; recordedMin?: number; moderatedH?: number; gradedH?: number; labH?: number; teacher?: string }[] };
 const J = <T>(s: string, d: T): T => { try { return JSON.parse(s) as T; } catch { return d; } };
 export type Prog = { id: string; chairmanId: string; kind: string; title: string; dataJson: string; status: string; createdAt: Date; updatedAt: Date };
@@ -97,6 +97,7 @@ export function compliance(p: Prog) {
   for (const [t, n] of Array.from(teachers.entries())) if (n > 2) problems.push(`${t} has ${n} ODL courses — at most two per semester (ODL 13.1.2).`);
   const kpis = isDdjd(p.kind) ? KPI.map(([k, label, bench]) => ({ key: k, label, bench, value: d.kpis?.[k] ?? null, ok: d.kpis?.[k] == null ? null : k === "enrolment" ? d.kpis[k] >= bench : d.kpis[k] > bench })) : [];
   const ready = items.every((i) => i.done) && moc.every((m) => m.done) && !problems.length;
+  if (isDdjd(p.kind) && d.published && !(d.fees || "").trim()) problems.push("The full fee structure must be published before enrolment (DDJD 2.iv, 5.i).");
   const enrolmentOpen = isDdjd(p.kind) ? !!d.nocNo && !!d.published && !d.withdrawalNotice : !!d.nocNo;
   return { items, moc, problems, kpis, ready, enrolmentOpen, lockReason: enrolmentOpen ? null : d.withdrawalNotice ? "Withdrawal notice given — no new enrolment (DDJD 4.ii)." : !d.nocNo ? "No HEC NOC recorded yet." : "Programme information not published yet (DDJD 2.iv)." };
 }

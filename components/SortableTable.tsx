@@ -40,6 +40,18 @@ export default function SortableTable({ pageSize = 25, paginate = true, searchab
   const [counts, setCounts] = useState({ total: 0, matched: 0 });
   const [ready, setReady] = useState(false);
 
+  // Tables remember their filter and page size per user and page (Adeel prompt §19.5), in this browser only.
+  const memKey = useRef("");
+  useEffect(() => {
+    try {
+      const t = ref.current; if (!t) return;
+      memKey.current = `tbl:${location.pathname}:${Array.from(document.querySelectorAll("table")).indexOf(t)}`;
+      const m = JSON.parse(localStorage.getItem(memKey.current) || "{}") as { q?: string; s?: number };
+      if (m.q) setQuery(m.q);
+      if (m.s && PAGE_SIZES.includes(m.s)) setSize(m.s);
+    } catch { /* storage unavailable */ }
+  }, []);
+  useEffect(() => { try { if (memKey.current) localStorage.setItem(memKey.current, JSON.stringify({ q: query, s: size })); } catch { /* ignore */ } }, [query, size]);
   const view = useRef({ query, page, size, paginate });
   view.current = { query, page, size, paginate };
   const onSortRef = useRef(onSort);

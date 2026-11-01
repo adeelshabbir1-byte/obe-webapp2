@@ -7,6 +7,9 @@ import { ActionForm } from "../../../components/fyp/FypClient";
 import MessagingTools from "../../../components/MessagingTools";
 import { xdb, configOf, mask, ALERT_KINDS } from "../../../lib/messaging";
 import { itAccess } from "../../../lib/itManager";
+import TemplatesForm from "./TemplatesForm";
+import { parseTpl, DEFAULT_UR } from "../../../lib/msgTemplates";
+import { allStored } from "../../../lib/scopedSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +55,7 @@ export default async function MessagingPage() {
       <p className="small-note">Meta WhatsApp: create a template in WhatsApp Manager with body like “OBEHUB: {"{{1}}"} — {"{{2}}"}” and use its name here. Business-started WhatsApp messages must use an approved template.</p>
     </div>
     <MessagingTools audiences={audiences} />
+    <TemplatesForm kinds={ALERT_KINDS} initial={parseTpl((await allStored(cid).catch(() => [])).find((r) => r.key === "msg.tpl")?.value)} urDefaults={DEFAULT_UR} />
     <div className="card" style={{ overflowX: "auto" }}><h3 style={{ marginTop: 0 }}>Recent messages</h3>
       <table><thead><tr><th>When</th><th>Channel</th><th>To</th><th>Message</th><th>Status</th></tr></thead>
         <tbody>{log.map((l, i) => <tr key={i}><td style={{ fontSize: 12 }}>{l.createdAt.toISOString().slice(0, 16).replace("T", " ")}</td><td>{l.channel}</td><td>{l.to.replace(/\d{4}$/, "••••")}</td><td style={{ fontSize: 12, maxWidth: 320 }}>{l.body.slice(0, 120)}</td><td style={{ color: l.status === "SENT" ? "#1F5E36" : "#B3261E", fontSize: 12 }}>{l.status}{l.error ? `: ${l.error.slice(0, 120)}` : ""}</td></tr>)}</tbody></table>

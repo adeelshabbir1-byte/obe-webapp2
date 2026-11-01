@@ -33,6 +33,7 @@ async function POST_handler(req: NextRequest) {
     return NextResponse.json({ error: "startTerm must be Fall or Spring" }, { status: 400 });
   }
 
+  if (user.managedById) { const why = await (await import("../../../../lib/affGate")).newBatchBlock(user.managedById); if (why) return NextResponse.json({ error: why }, { status: 409 }); }
   const existing = await prisma.batch.findFirst({
     where: { coordinatorId: user.id, degreeProgram: body.degreeProgram, batchName: body.batchName },
   });

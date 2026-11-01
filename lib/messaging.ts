@@ -70,7 +70,8 @@ export async function sendAlert(chairmanId: string, kind: string, phones: { to: 
   const usedMonth = cap ? ((await xdb.messageLog.count({ where: { chairmanId, createdAt: { gte: month } } }).catch(() => 0)) as number) : 0;
   const room = Math.max(0, Math.min(c.dailyLimit - used, cap ? cap - usedMonth : Infinity));
   const list = Array.from(new Map(phones.map((p) => [normPhone(p.to), p] as const)).entries()).filter(([n]) => !!n).slice(0, room);
-  const text = `${title}${body ? `\n${body}` : ""}`.slice(0, 600);
+  const tpl = await import("./scopedSettings").then(async (m) => (await m.allStored(chairmanId)).find((r) => r.key === "msg.tpl" && r.scopeType === "INSTITUTE")?.value).catch(() => null);
+  const text = (await import("./msgTemplates")).render((await import("./msgTemplates")).parseTpl(tpl), kind, title, body).slice(0, 600);
   let sent = 0, failed = 0;
   for (let i = 0; i < list.length; i += 10) {
     await Promise.all(list.slice(i, i + 10).map(async ([to, p]) => {

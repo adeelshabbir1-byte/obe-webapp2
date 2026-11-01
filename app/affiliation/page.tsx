@@ -6,7 +6,7 @@ import Shell from "../../components/Shell";
 import Tabs from "../../components/Tabs";
 import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
-import { claimAmounts, comparison, dataOf, eventsOf, KINDS, kindOf, list, ratesOf, sessionalVsFinal, sideOf } from "../../lib/affWork";
+import { claimAmounts, comparison, dataOf, eventsOf, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
 import { getFlag } from "../../lib/scopedSettings";
 import { Ack, EditRecord, Marks, Move, NewRecord, RatesForm } from "./AffForms";
 
@@ -44,24 +44,27 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   const rates = k.key === "CLAIM" ? await ratesOf(s.universityId) : null;
   const open = searchParams.open ? rows.find((r) => r.id === searchParams.open) : null;
   const ev = open ? await eventsOf(open.id) : [];
+  const cover = open && open.kind === "FINAL_PAPER" && (side === "UNI" || "topics" in viewData(open, side)) ? await paperCoverage(open as never, side === "COLLEGE" ? inst : null) : [];
+  if (open && open.kind === "FINAL_PAPER" && side === "UNI") await (await import("../../lib/audit")).writeAuditLog({ actorUserId: user.id, action: "FINAL_PAPER_VIEWED", entityType: "AffRecord", entityId: open.id }).catch(() => null);
   const names = new Map((await prisma.user.findMany({ where: { id: { in: ev.map((e) => e.byId).concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   return shell(<>
     <Tabs base="/affiliation" current={k.key} tabs={tabs.map((t) => ({ ...t, badge: t.key === k.key ? rows.length || null : null }))} />
     <p className="small-note">You are working as the {side === "UNI" ? "affiliating university" : "affiliated college"}. {k.createdBy === side ? "" : `${k.label} are started by the ${k.createdBy === "UNI" ? "university" : "college"}.`}</p>
     {k.createdBy === side && <div style={{ marginBottom: 10 }}><NewRecord kind={k.key} fields={k.fields} side={side} colleges={colleges} /></div>}
     <div className="card"><table className="table" style={{ fontSize: 12.5, width: "100%" }}><tbody>{await Promise.all(rows.map(async (r) => {
-      const d = dataOf(r);
+      const d = viewData(r, side);
       const amounts = rates ? claimAmounts(d, rates) : null;
       const ack = k.key === "NOTICE" && side === "COLLEGE" ? await getFlag(inst, `aff:ack:${r.id}`) : null;
       return <tr key={r.id}><td><Link href={`/affiliation?tab=${k.key}&open=${r.id}`}><b>{r.title}</b></Link> <span className="small-note">{r.collegeId ? colName.get(r.collegeId) || "" : "all colleges"}</span>{amounts && <div className="small-note">fees Rs {amounts.taxable} − tax {amounts.tax} = {amounts.netFees} · TA/DA (tax-free) Rs {amounts.tada} · total Rs {amounts.total}</div>}</td><td>{r.status.toLowerCase().replace(/_/g, " ")}</td><td>{new Date(r.updatedAt).toLocaleDateString("en-GB")}</td><td>{k.key === "NOTICE" && side === "COLLEGE" ? (ack ? <span className="small-note">acknowledged ✓</span> : <Ack id={r.id} />) : null}{k.key === "APPLICATION" && ["APPROVED", "CONDITIONAL"].includes(r.status) && <a className="small-note" href={`/api/affiliation/letter?id=${r.id}`}>letter (PDF)</a>}</td></tr>;
     }))}</tbody></table>{rows.length === 0 && <p className="small-note">Nothing yet.</p>}</div>
-    {open && (() => { const d = dataOf(open); const m = k.moves[open.status]; return (
+    {open && (() => { const d = viewData(open, side); const m = k.moves[open.status]; return (
       <div className="card" style={{ marginTop: 10 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>{open.title} — {open.status.toLowerCase().replace(/_/g, " ")}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div style={{ fontSize: 12.5 }}>{k.fields.map((f) => <div key={f.key}><span className="small-note">{f.label}:</span> {String(d[f.key] ?? "") || "—"}</div>)}</div>
           <EditRecord id={open.id} fields={k.fields} side={side} data={d} />
         </div>
+        {cover.length > 0 && <div style={{ marginTop: 8, fontSize: 12.5 }}><b>Coverage of the disclosed lectures</b>{cover.map((c) => <div key={c.collegeId} style={{ color: c.missing.length ? "#b3261e" : "#1b5e20" }}>{side === "UNI" ? `${colName.get(c.collegeId) || "College"}: ` : ""}{c.taught}/{c.of} taught{c.missing.length ? ` — not yet: ${c.missing.length > 12 ? `${c.missing.slice(0, 12).map((n) => `L${n}`).join(", ")}…` : c.missing.map((n) => `L${n}`).join(", ")}` : " ✓"}</div>)}</div>}
         {k.key === "SESSION" && <div style={{ marginTop: 8 }}><Marks id={open.id} rows={d.marks || []} side={side} /></div>}
         {m && m.by === side && <div style={{ marginTop: 8 }}>Next: <Move id={open.id} to={m.to} /></div>}
         <details style={{ marginTop: 8 }}><summary className="small-note" style={{ cursor: "pointer" }}>Trail ({ev.length})</summary><ul style={{ fontSize: 12 }}>{ev.map((e, i) => <li key={i}>{new Date(e.at).toLocaleString("en-GB")} · {names.get(e.byId) || "—"} · {e.action.toLowerCase()}{e.note ? ` — ${e.note}` : ""}</li>)}</ul></details>
