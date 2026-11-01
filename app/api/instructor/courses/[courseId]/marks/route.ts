@@ -8,6 +8,8 @@ import { collegeMarksBlock } from "../../../../../../lib/affiliates";
 import { withErrors } from "../../../../../../lib/apiHandler";
 
 async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
+  // An archived term's marks change only through an approved amendment (Adeel prompt §10).
+  { const blk = await (await import("../../../../../../lib/termArchive")).archiveBlock(params.courseId); if (blk) return NextResponse.json({ error: blk }, { status: 423 }); }
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });

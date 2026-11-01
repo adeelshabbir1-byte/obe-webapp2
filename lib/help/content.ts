@@ -838,6 +838,29 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     affects: "The server refuses an SE named by the wrong person, and on a follower copy.",
     pages: ["/hod/assign-subject-experts", "/coordinator/assign-subject-experts", "/course-leads"], keywords: ["subject expert", "assign se", "home", "limit", "load", "course lead", "request se"], href: "/coordinator/assign-subject-experts",
   }),
+  A({
+    key: "delegations", kind: "guide", category: "people", roles: [IH, DEAN, HOD, PL, OMC, DC, INS, SE],
+    title: "Delegate tasks, or let someone act for you on leave",
+    summary: "My Delegations hands chosen tasks of your role to a colleague for a period (an “HOD Delegate” naming Subject Experts for the Programming chain, say), or lets someone act in your whole position while you are on leave. You keep control: act yourself, override, revoke; every action they take is logged “by them for you”, and you get a weekly summary.",
+    steps: ["Open My Delegations.", "Choose Chosen tasks (tick the tasks) or Acting (the whole position).", "Pick the person, the dates, and limits (chains for SE naming, the most leave days they may approve).", "Tick “may pass on” only if they may delegate further; “shared” lets two people hold the same task.", "Revoke any time; it also ends anything they passed on."],
+    who: "Every position holder, for their own role's tasks. Final result approval, performance evaluations, hiring and pay approval, disciplinary cases and statutory signatures can't be delegated.",
+    affects: "A delegate never approves their own request. Delegations end by themselves on the end date.",
+    pages: ["/delegations", "/hod/assign-subject-experts"], keywords: ["delegate", "delegation", "acting", "on leave", "hod delegate", "dean delegate", "revoke"], href: "/delegations",
+  }),
+  A({
+    key: "data-quality", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL, DC],
+    title: "Find and fix data problems",
+    summary: "Data Quality lists problems — duplicate students, missing roll numbers, offered courses with no SE, instructor, sections or lecture plan, CLOs not mapped to a GA, exam questions without a CLO, teachers without a department — each with a count, examples and a Fix link. Program Leads see their program's part.",
+    steps: ["Open Data Quality.", "Click Fix → next to an example to go straight to where it is corrected.", "“Check again now” re-runs the checks (they also run every night)."],
+    who: "Institute Head, Deans, HODs, Program Leads and Department Coordinators.", pages: ["/data-quality"], keywords: ["data quality", "duplicates", "missing", "fix"], href: "/data-quality",
+  }),
+  A({
+    key: "term-archive", kind: "guide", category: "exams", roles: [IH, DEAN, HOD, PL, INS],
+    title: "Archive a finished term, and correct it later",
+    summary: "When a term's results are approved, the Controller, HOD or Institute Head archives it: each course is kept as a read-only snapshot, so accreditation evidence can't change by later edits. Marks of an archived course can then change only through an amendment approved by the Controller or HOD, which opens editing for 48 hours.",
+    steps: ["Open Term Archive; terms show how many results are approved.", "Click Archive this term.", "To correct an archived course: choose it, say what must change and why, and Request an amendment.", "The Controller / HOD approves (never their own request); editing is open for 48 hours and both versions are kept."],
+    who: "Archive: Controller, HOD, Institute Head, Dean. Amendments: requested by the teacher or a leader, approved by the Controller or HOD.", pages: ["/term-archive"], keywords: ["archive", "term", "amendment", "locked", "snapshot"], href: "/term-archive",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

@@ -25,6 +25,14 @@ async function POST_handler(req: NextRequest) {
   if (kind === "LEFT") await onEmployeeLeft(userId, chairmanId, user.id);
   if (kind === "LEFT" && b.disableLogin !== false) await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
   await writeAuditLog({ actorUserId: user.id, action: "FACULTY_LEAVE_RECORDED", entityType: "User", entityId: userId, metadata: { kind, fromTerm, toTerm } });
+  // A position holder on leave is asked "Who acts for you?" (Adeel prompt §13: Acting delegation).
+  if (kind !== "LEFT") {
+    const holder = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } }).catch(() => null);
+    if (holder && ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"].includes(holder.role)) {
+      const { notifyUsers } = await import("../../../lib/notifications");
+      await notifyUsers([userId], { kind: "DELEGATION", title: "Your leave is recorded — who acts for you?", body: "Choose a colleague to act in your position until you return. It ends by itself on the end date.", href: "/delegations" }).catch(() => null);
+    }
+  }
   return NextResponse.json({ ok: true, id: row.id, affected: await affectedCourses(row) });
 }
 export const POST = withErrors(POST_handler);

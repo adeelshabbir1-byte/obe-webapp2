@@ -15,14 +15,15 @@ import { namingBlock, seLimitFor, seLoads } from "../../../../../../lib/seNaming
 
 async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || !["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role)) {
+  const delegate = !!user && !["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role) && (await (await import("../../../../../../lib/delegation")).heldBy(user.id)).some((d) => d.tasksJson.includes("hod.nameSE") || d.kind === "ACTING");
+  if (!user || (!["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role) && !delegate)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
   const chairmanId = await chairmanIdFor(user as never);
-  const isHod = user.role === "HEAD_OF_DEPARTMENT";
+  const isHod = user.role === "HEAD_OF_DEPARTMENT" || delegate;
   if (isHod) {
     // The HOD names SEs of department-common and service courses whose home is his department (Adeel prompt §11).
     const owner = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });
@@ -75,6 +76,8 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
     let ok = !!se && hasSubjectExpertHat(se) && (se.managedById === user.id || (se.role !== "SUBJECT_EXPERT" && se.managedById === user.managedById));
     // An HOD picks from his own department's experts.
     if (!ok && isHod && se && hasSubjectExpertHat(se) && !!user.departmentId && se.departmentId === user.departmentId) ok = true;
+    // A delegate picks from the delegating HOD's department.
+    if (!ok && delegate && se && hasSubjectExpertHat(se) && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId) ok = true;
     if (!ok && se && hasSubjectExpertHat(se) && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId && se.managedById) {
       // An expert from the course's subject-home department (another coordinator's, same institute).
       const theirCoordinator = await prisma.user.findUnique({ where: { id: se.managedById }, select: { managedById: true } });
@@ -112,6 +115,12 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
     actorUserId: user.id, action: "SUBJECT_EXPERT_ASSIGNED", entityType: "Course", entityId: course.id,
     metadata: { subjectExpertId: subjectExpertId || "none", borrowed: borrowedSe },
   });
+  // Done by an HOD Delegate: logged "by <delegate> for HOD" (Adeel prompt §13).
+  if (delegate) {
+    const { canDo, logDelegated } = await import("../../../../../../lib/delegation");
+    const via = await canDo(user, "hod.nameSE", { departmentId: course.subjectHomeDepartmentId });
+    await logDelegated(user.id, "SUBJECT_EXPERT_ASSIGNED", "Course", course.id, via);
+  }
   if (subjectExpertId && subjectExpertId !== course.subjectExpertId) {
     await notifyUsers([subjectExpertId], { kind: "ASSIGNMENT", title: `New course to build: ${course.code} ${course.title}`, body: `${user.name} assigned you as Subject Expert of ${course.code} ${course.title}. Accept or decline it on your dashboard.`, href: "/dashboard" });
   }

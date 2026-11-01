@@ -9,13 +9,13 @@ import { chainFor, numberSetting } from "./scopedSettings";
 const db = prisma as unknown as Record<string, any>;
 export const SE_MAX_KEY = "se.maxCourses";
 
-type HomeRow = { key: string; level: "GE" | "SERVICE" | "DEPARTMENT" | "PROGRAM"; departmentId: string | null; program: string | null };
+type HomeRow = { key: string; level: "GE" | "SERVICE" | "DEPARTMENT" | "PROGRAM"; departmentId: string | null; program: string | null; chain: number | null };
 const homesCache = new Map<string, { at: number; rows: HomeRow[]; merges: Map<string, string> }>();
 async function homes(chairmanId: string) {
   const c = homesCache.get(chairmanId);
   if (c && Date.now() - c.at < 60_000) return c;
   const [rows, merges] = await Promise.all([
-    (db.courseHome?.findMany({ where: { chairmanId }, select: { key: true, level: true, departmentId: true, program: true } }).catch(() => []) || []) as Promise<HomeRow[]>,
+    (db.courseHome?.findMany({ where: { chairmanId }, select: { key: true, level: true, departmentId: true, program: true, chain: true } }).catch(() => []) || []) as Promise<HomeRow[]>,
     (db.courseKeyMerge?.findMany({ where: { chairmanId } }).catch(() => []) || []) as Promise<{ fromKey: string; toKey: string }[]>,
   ]);
   const v = { at: Date.now(), rows: rows || [], merges: new Map((merges || []).map((m) => [m.fromKey, m.toKey])) };
@@ -45,6 +45,13 @@ export async function namingBlock(user: { id: string; role: string; departmentId
   const n = await namerOf(chairmanId, course);
   if (n.kind === "PL" && user.role === "PROGRAM_COORDINATOR") return null;
   if (n.kind === "HOD" && user.role === "HEAD_OF_DEPARTMENT" && n.departmentId && n.departmentId === user.departmentId) return null;
+  // An HOD Delegate holding "Name SEs" for that department (and chain, when the delegation is limited to chains).
+  if (n.kind === "HOD") {
+    const home = await homeOf(chairmanId, course.title);
+    const { canDo } = await import("./delegation");
+    const via = await canDo(user, "hod.nameSE", { departmentId: n.departmentId, chain: home?.chain ?? null });
+    if (via.ok && !via.own) return null;
+  }
   if (n.kind === "HOD" && user.role === "PROGRAM_COORDINATOR") return `${course.code} is a department-common / service course: its Subject Expert is named by the ${n.label}. Use “Request SE”.`;
   return `Only the ${n.label} names the Subject Expert of ${course.code}.`;
 }
