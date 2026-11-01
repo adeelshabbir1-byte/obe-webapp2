@@ -22,6 +22,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "ProgramProfile"
 },
 {
+"f": "migration_adeel_p1.sql",
+"d": "Adeel prompt part 1: settings by scope (institute / department / program) with \"who set it last\", and small per-user",
+"t": "UserFlag"
+},
+{
 "f": "migration_affiliates.sql",
 "d": "Affiliated colleges follow their university: the course design a college course took from the university's",
 "t": "AffiliateMarksPolicy"

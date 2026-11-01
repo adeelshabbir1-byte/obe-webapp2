@@ -9692,3 +9692,28 @@ model MasterCourseRetired {
   byUserId       String?
   at             DateTime @default(now())
 }
+
+// A setting held at one scope: INSTITUTE (scopeId = chairmanId), DEPARTMENT or PROGRAM. A program value beats its
+// department's, which beats the institute's (lib/scopedSettings.ts). Registered in lib/settingsRegistry.ts.
+model ScopedSetting {
+  id          String   @id
+  chairmanId  String
+  scopeType   String
+  scopeId     String
+  key         String
+  value       String
+  updatedById String?
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, scopeType, scopeId, key], map: "ScopedSetting_scope_key")
+}
+
+// Small per-person flags: "whatsnew" (last entry seen), "digest" (off | daily | weekly), "wait:<task>" (waiting on someone).
+model UserFlag {
+  userId String
+  key    String
+  value  String
+  at     DateTime @default(now())
+
+  @@id([userId, key])
+}

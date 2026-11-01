@@ -69,9 +69,10 @@ async function GET_handler(req: NextRequest) {
   const marksWeek = await import("../../../../lib/itemWarnings").then((m) => m.dailyMarksAndWarnings(now)).catch(() => null);
   void topicPlans; void topicHelp; void marksWeek;
   // Mondays: early-warning notices to advisors, automatic CQI records; in January, the yearly survey reminder.
+  const digest = await import("../../../../lib/digest").then((m) => m.runDigest(now)).catch(() => 0);
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
+  if (!ids.length) return NextResponse.json({ sent: 0, digest, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -86,7 +87,7 @@ async function GET_handler(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
+  return NextResponse.json({ sent: data.length, digest, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.

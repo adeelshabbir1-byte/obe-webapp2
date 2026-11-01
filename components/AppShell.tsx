@@ -15,6 +15,7 @@ import type { SessionInfo } from "../lib/shellData";
 import BusyBanner from "./BusyBanner";
 import NotificationBell from "./NotificationBell";
 import HelpButton from "./help/HelpButton";
+import WhatsNewNotice from "./WhatsNewNotice";
 import GlobalSearch from "./GlobalSearch";
 
 type NavLink = { href: string; label: string };
@@ -55,6 +56,7 @@ export default function AppShell({
   pins = null,
   defaultPins = [],
   otherWork = [],
+  linkStatus = {},
   children,
 }: {
   roleLabel: string;
@@ -75,6 +77,7 @@ export default function AppShell({
   pins?: string[] | null;
   defaultPins?: string[];
   otherWork?: { role: string; label: string; links: NavLink[] }[];
+  linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -130,6 +133,21 @@ export default function AppShell({
   }, [navLinks, deptCoordinator]);
   // Lighter menus: the main menu holds what this role acts on; other pages and view-only reports fold away below.
   const allSections = useMemo(() => groupNavLinks(links), [links]);
+  // Menu colours (Adeel prompt §1): red overdue / blocking, amber due soon, blue in progress; icons too, for colour-blind users.
+  const DOT = { red: ["#B3261E", "!"], amber: ["#B26A00", "⚠"], blue: ["#1B5FAA", "•"] } as const;
+  const RANKS = { red: 0, amber: 1, blue: 2 } as const;
+  const dot = (href: string) => {
+    const st = linkStatus[href];
+    if (!st) return null;
+    const [c, icon] = DOT[st.status];
+    const why = st.reasons.join(" · ") + (st.count > st.reasons.length ? ` · +${st.count - st.reasons.length} more` : "");
+    return <span className="nl-status" title={why} aria-label={`${st.count} open: ${why}`} style={{ marginLeft: "auto", background: c, color: "#fff", borderRadius: 9, fontSize: 10.5, fontWeight: 700, padding: "0 6px", lineHeight: "16px", minWidth: 16, textAlign: "center" }}>{icon} {st.count}</span>;
+  };
+  const groupDot = (hrefs: string[]) => {
+    let w: "red" | "amber" | "blue" | null = null;
+    for (const h of hrefs) { const st = linkStatus[h]?.status; if (st && (!w || RANKS[st] < RANKS[w])) w = st; }
+    return w ? <span title="Something here needs you" style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: DOT[w][0], marginLeft: 6 }} /> : null;
+  };
   const split = useMemo(() => (deptCoordinator ? null : splitMenu(menuRole, links, dutyHrefs, groupNavLinks)), [menuRole, links, dutyHrefs, deptCoordinator]);
   const sections = split ? split.main : allSections;
   const [extraOpen, setExtraOpen] = useState<"" | "more" | "view">("");
@@ -336,6 +354,7 @@ export default function AppShell({
                     <span className="nl-label">{n.label}</span>
                     {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
                     {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
+                    {n.href !== "/approvals" && dot(n.href)}
                     {star(n.href)}
                   </Link>
                 );
@@ -394,7 +413,7 @@ export default function AppShell({
                   onClick={() => setSections({ ...openSec, [section.title]: !open })}
                   aria-expanded={open}
                 >
-                  <span>{section.title}</span>
+                  <span>{section.title}{groupDot(section.links.map((l) => l.href))}</span>
                   {crowded && <span className="sb-sec-right">{!open && <span className="sb-count">{section.links.length}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>}
                 </button>
                 {open && section.links.map((n) => {
@@ -406,6 +425,7 @@ export default function AppShell({
                       <span className="nl-label">{n.label}</span>
                       {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
                     {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
+                      {n.href !== "/approvals" && dot(n.href)}
                       {star(n.href)}
                     </Link>
                   );
@@ -420,7 +440,7 @@ export default function AppShell({
             return (
               <div className="sb-section" key={key}>
                 <button type="button" className="sb-section-title" data-collapsible="true" aria-expanded={open} onClick={() => setExtraOpen(extraOpen === key ? "" : key)}>
-                  <span>{title}</span><span className="sb-sec-right">{!open && <span className="sb-count">{n}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>
+                  <span>{title}{groupDot(secs.flatMap((x) => x.links.map((l) => l.href)))}</span><span className="sb-sec-right">{!open && <span className="sb-count">{n}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>
                 </button>
                 {open && secs.map((sec) => (
                   <div key={sec.title}>
@@ -429,7 +449,7 @@ export default function AppShell({
                       const Icon = getNavIcon(l.label);
                       return (
                         <Link key={l.href} href={l.href} prefetch={false} className="nav-link nl-compact" aria-current={l.href === current ? "page" : undefined} title={l.label}>
-                          <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span><span className="nl-label">{l.label}</span>{star(l.href)}
+                          <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span><span className="nl-label">{l.label}</span>{dot(l.href)}{star(l.href)}
                         </Link>
                       );
                     })}
@@ -456,6 +476,7 @@ export default function AppShell({
                 </>
               )}
               <Link prefetch={false} href="/help" className="sb-action"><LifeBuoy size={14} /> Help &amp; Support</Link>
+              <Link prefetch={false} href="/whats-new" className="sb-action"><Star size={14} /> What&apos;s new</Link>
               <Link prefetch={false} href={`/feedback?page=${encodeURIComponent(pathname)}`} className="sb-action"><MessageSquarePlus size={14} /> Send Feedback</Link>
               <Link prefetch={false} href="/change-password" className="sb-action"><KeyRound size={14} /> Change Password</Link>
               <Link prefetch={false} href="/settings/mfa" className="sb-action"><ShieldCheck size={14} /> Security Settings</Link>
@@ -508,6 +529,7 @@ export default function AppShell({
         </header>
 
         <div className="main">
+          <WhatsNewNotice />
           {children}
           <div className="app-footer">
             {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}

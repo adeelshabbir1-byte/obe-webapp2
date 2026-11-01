@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { articlesFor, helpViewer } from "../../../../lib/help/access";
-import { searchArticles, suggestFor } from "../../../../lib/help/search";
+import { pageMatch, searchArticles, suggestFor } from "../../../../lib/help/search";
 import { helpAiCredentials } from "../../../../lib/help/rerank";
 import { forAudience, type HelpArticle } from "../../../../lib/help/types";
 import { toCard } from "../../../../lib/help/cards";
@@ -29,7 +29,16 @@ async function GET_handler(req: NextRequest) {
     const related = (visible.related || []).map((k) => all.find((x) => x.key === k)).filter((x): x is HelpArticle => !!x).map((x) => ({ key: x.key, title: x.title }));
     return NextResponse.json({ article: card(visible), related });
   }
-  if (!q) return NextResponse.json({ results: [], suggestions: suggestFor(all, ctx).map(card) });
+  if (!q) {
+    // A page with no help of its own is logged once a day per page (Adeel prompt §8), so the admin sees where help is missing.
+    if (path && !all.some((a) => forAudience(a, viewer.role) && pageMatch(a, path) > 0)) {
+      const page = path.replace(/\/[0-9a-z]{20,}(?=\/|$)/gi, "/[id]");
+      const since = new Date(Date.now() - 864e5);
+      const logged = await prisma.helpSearchLog.findFirst({ where: { chairmanId: viewer.chairmanId, query: "(no page help)", page, createdAt: { gte: since } } as never }).catch(() => null);
+      if (!logged) await prisma.helpSearchLog.create({ data: { chairmanId: viewer.chairmanId, role: viewer.role, query: "(no page help)", results: 0, page } }).catch(() => null);
+    }
+    return NextResponse.json({ results: [], suggestions: suggestFor(all, ctx).map(card) });
+  }
 
   const hits = searchArticles(all, q, ctx);
   // Searches that found nothing tell the Institute Head which answers are missing. No person is recorded.
