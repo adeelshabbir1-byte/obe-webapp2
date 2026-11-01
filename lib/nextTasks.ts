@@ -177,7 +177,14 @@ const cmtActions: Source<NextUser> = { name: "meetings", run: async (u, now) => 
   return rows.map((a) => ({ title: `Committee action: ${a.title}`, href: "/meetings-hub", due: a.due, urgency: urgencyOf(a.due, now), source: "meetings" }));
 } };
 
-export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions];
+// Weak prerequisite topics waiting for a remedy (Adeel prompt §26).
+const remedies: Source<NextUser> = { name: "remedies", run: async (u, now) => {
+  const cs = await prisma.course.findMany({ where: { isOffered: true, OR: [{ instructorId: u.id }, { sectionAssignments: { some: { instructorId: u.id } } }] }, select: { id: true } });
+  const rows = ((await db.prereqRemedy?.findMany({ where: { courseId: { in: cs.map((c) => c.id).concat("none") }, status: "OPEN" }, take: 10 }).catch(() => [])) || []) as { prereqTopic: string; dependentTopic: string; dueBy: Date | null }[];
+  return rows.map((r) => ({ title: `Choose a remedy: weak “${r.prereqTopic}” before “${r.dependentTopic}”`, href: "/cqi/remedies", due: r.dueBy, urgency: r.dueBy && r.dueBy < now ? "overdue" as const : "soon" as const, source: "remedies" }));
+} };
+
+export const SOURCES: Source<NextUser>[] = [marks, approvals, deadlines, sePlans, omcWork, leadWork, proposals, timetable, publish, waitingOnMe, cmtActions, remedies];
 
 /** This person's open tasks, in order (overdue, due soon, the rest). */
 export async function nextTasks(user: NextUser, now = new Date()) {

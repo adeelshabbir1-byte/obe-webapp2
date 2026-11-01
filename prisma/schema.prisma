@@ -9994,3 +9994,104 @@ model CmtAction {
   @@index([committeeId], map: "CmtAction_committee_idx")
   @@index([ownerId], map: "CmtAction_owner_idx")
 }
+
+// One-year allocation plan (Adeel prompt §25, lib/yearPlan.ts): rows per term × course with teachers / "Visiting needed".
+model AllocationPlan {
+  id            String    @id
+  chairmanId    String
+  scopeKey      String
+  yearLabel     String
+  draft         String    @default("A")
+  status        String    @default("DRAFT")
+  rowsJson      String    @default("[]")
+  deadline      DateTime?
+  submittedById String?
+  submittedAt   DateTime?
+  approvedById  String?
+  approvedAt    DateTime?
+  changesJson   String    @default("[]")
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+
+  @@unique([chairmanId, scopeKey, yearLabel, draft], map: "AllocationPlan_scope_year_draft")
+}
+
+model AllocPrefDetail {
+  facultyId  String
+  courseCode String
+  sections   String?
+  times      String?
+  updatedAt  DateTime @default(now())
+
+  @@id([facultyId, courseCode])
+}
+
+// HOD allocation rules: MUST (teacher must teach course), MUST_NOT, MAX_NEW (at most n brand-new courses per term).
+model AllocRule {
+  id         String   @id
+  chairmanId String
+  kind       String
+  facultyId  String?
+  courseCode String?
+  n          Int?
+  reason     String?
+  byId       String
+  createdAt  DateTime @default(now())
+}
+
+model AllocSwap {
+  id        String   @id
+  planId    String
+  aId       String
+  aRow      String
+  bId       String
+  bRow      String
+  status    String   @default("ASKED")
+  createdAt DateTime @default(now())
+}
+
+// A weak prerequisite topic that needs a remedy before its dependent topic is taught (Adeel prompt §26–27).
+model PrereqRemedy {
+  id                  String    @id
+  chairmanId          String
+  courseId            String
+  instrumentId        String
+  prereqTopic         String
+  dependentCourseCode String
+  dependentTopic      String
+  dependentLectureId  String?
+  strength            String
+  avg                 Float
+  belowPct            Float
+  cause               String?
+  weakStudentsJson    String    @default("[]")
+  status              String    @default("OPEN")
+  remedy              String?
+  remedyNote          String?
+  dueBy               DateTime?
+  chosenById          String?
+  chosenAt            DateTime?
+  afterPct            Float?
+  excusedById         String?
+  excuseReason        String?
+  notifiedNextAt      DateTime?
+  createdAt           DateTime  @default(now())
+
+  @@index([courseId], map: "PrereqRemedy_course_idx")
+}
+
+// Remedy material per topic, set once by the SE and used by every teacher of the course (Adeel prompt §27.3).
+model TopicRemedy {
+  courseCode String
+  topic      String
+  chairmanId String
+  video      String?
+  examples   String?
+  practice   String?
+  quiz       String?
+  byId       String
+  updatedAt  DateTime @default(now())
+
+  @@id([chairmanId, courseCode, topic])
+}

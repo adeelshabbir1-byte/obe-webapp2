@@ -91,6 +91,8 @@ export async function afterMarks(courseId: string, instrumentId: string) {
     prisma.studentEnrollment.count({ where: { courseId, status: { not: "WITHDRAWN" } } }),
   ]);
   await evaluate(c, w, { instrumentId, label: inst.label, type: inst.type, scores: marks.map((m) => m.score), max: inst.maxScore, enrolled });
+  // Weak prerequisite topics → remedy before the dependent topic (Adeel prompt §26–27).
+  await import("./prereqRemedy").then((m) => m.onMarks(courseId, instrumentId)).catch(() => 0);
 }
 /** Lab marks (entered by the lab engineer) are checked the same way; the alert goes to the theory teacher of the topic. */
 export async function afterLabMarks(labCourseId: string, labNumber: number) {

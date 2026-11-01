@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-u", date: "2026-11-01", roles: ["COURSE_ASSIGNER", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN"], text: "Year Allocation Plan (Fall + Spring + tentative Summer, Draft A / B, HOD approval) and the Preferences board (uncontested / contested, points, HOD rules, fairness).", href: "/allocation/year-plan" },
+  { id: "2026-11-01-v", date: "2026-11-01", roles: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"], text: "My Teaching: rank courses with sections and times, see your year card and allocation letter, accept or raise a concern, ask for a swap.", href: "/allocation/year-card" },
+  { id: "2026-11-01-w", date: "2026-11-01", roles: ["*"], text: "CQI Remedies: a weak prerequisite topic gets a remedy before the next topic is taught; the loop is closed with a re-check.", href: "/cqi/remedies" },
   { id: "2026-11-01-r", date: "2026-11-01", roles: ["*"], text: "Install OBEHUB on your phone and turn on notifications; marks typed offline sync when you're back online.", href: "/dashboard" },
   { id: "2026-11-01-s", date: "2026-11-01", roles: ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR"], text: "Mid-semester feedback: anonymous pace, clarity and hardest-topic results for your courses, with a suggested action.", href: "/instructor/mid-feedback" },
   { id: "2026-11-01-t", date: "2026-11-01", roles: ["*"], text: "My Role Handbook (PDF) and Meetings — every committee, scheduling, invitations, action items and the minutes format in one place.", href: "/meetings-hub" },

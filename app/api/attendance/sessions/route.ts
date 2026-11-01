@@ -35,6 +35,7 @@ async function POST_handler(req: NextRequest) {
   const course = await requireInstructorCourse(user, String(b.courseId || ""));
   if (!course || !user) return NextResponse.json({ error: "Only the course's instructor can take its attendance." }, { status: 403 });
   const lecture = await prisma.lectureRow.findUnique({ where: { id: String(b.lectureRowId || "") } });
+  { const g = lecture ? await (await import("../../../../lib/prereqRemedy")).remedyGate(lecture.id) : null; if (g) return NextResponse.json({ error: g }, { status: 409 }); }
   if (!lecture || lecture.courseId !== course.id || lecture.source !== "INSTRUCTOR") return NextResponse.json({ error: "Choose a lecture of your plan." }, { status: 400 });
   const chairmanId = (await chairmanIdFor(user)) || null;
   const p = await attendancePolicy(chairmanId);

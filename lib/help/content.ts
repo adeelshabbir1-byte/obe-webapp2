@@ -925,6 +925,20 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Open Meetings; click Open on a committee to vote, decide and print minutes.", "Suggest times → schedule the meeting on the committee page → Send invitations.", "Add action items with an owner and a deadline.", "Minutes format: the institute default, or this committee's own (Reset to institute default)."],
     who: "Conveners and the Institute Head manage; members see their committees.", pages: ["/meetings-hub", "/boards"], keywords: ["meeting", "committee", "minutes", "agenda", "quorum", "action items", "bos", "omc"], href: "/meetings-hub",
   }),
+  A({
+    key: "year-allocation", kind: "guide", category: "teaching", roles: [CA, PL, HOD, IH],
+    title: "Plan the whole year's teaching (Fall, Spring, Summer)",
+    summary: "Year Allocation Plan starts from the forecast of every batch's courses and sections, with suggested teachers. Edit each row's teachers or mark sections “Visiting needed”; submitting is blocked until every Fall and Spring section is covered (Summer is tentative). Keep Draft A and Draft B and compare their scores. The HOD approves the whole year; after that each change needs a reason and the teachers are told, and a term locks when it starts.",
+    steps: ["Start from the forecast.", "Edit rows per term (the bar shows what is still open).", "Submit (or mark the rest Visiting needed and submit).", "The HOD approves; teachers see their year card and allocation letter, and accept or raise a concern.", "Teachers can ask to swap a section; when both agree, the assigner approves."],
+    who: "Course Assigner / Program Lead plan; the HOD (or his delegate) approves.", pages: ["/allocation/year-plan", "/allocation/board", "/allocation/year-card"], keywords: ["allocation", "year plan", "fall", "spring", "summer", "visiting", "preferences", "contested", "swap", "allocation letter", "fairness"], href: "/allocation/year-plan",
+  }),
+  A({
+    key: "cqi-remedies", kind: "guide", category: "quality", roles: [INS, SE, PL, HOD],
+    title: "Remedy a weak prerequisite topic before the next topic",
+    summary: "When the class does badly on a topic that a later topic needs (a topic link), you get a red task: choose a remedy before the later topic is taught — re-teach, a tutorial for only the weak students, or practice with a short re-quiz. A strong link blocks taking attendance for the dependent lecture until a remedy is chosen or the Program Lead excuses it. Record the re-check result to close the loop; it is saved as CQI evidence.",
+    steps: ["Open CQI Remedies (or the red task in What's next).", "Read why it happened and who is weak.", "Choose the remedy; for a tutorial, find a free slot.", "After the re-quiz, record the class average: closed — effective, or choose the next step.", "SEs fill the remedy bank per topic once for every teacher of the course."],
+    who: "The course's teachers; the Program Lead excuses; SEs keep the remedy bank.", pages: ["/cqi/remedies"], keywords: ["cqi", "remedy", "weak topic", "prerequisite", "tutorial", "re-quiz", "early warning"], href: "/cqi/remedies",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

@@ -17,6 +17,11 @@ export type SettingDef = {
 };
 
 export const SETTINGS: SettingDef[] = [
+  { kind: "scoped", key: "cqi.weakAvg", label: "Weak topic: class average below", area: "Quality", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "50", unit: "%", min: 10, max: 90, help: "A prerequisite topic is weak when the class average on it is below this, or when too many students are below the pass mark." },
+  { kind: "scoped", key: "cqi.weakBelowPct", label: "Weak topic: students below the pass mark more than", area: "Quality", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "40", unit: "%", min: 5, max: 90 },
+  { kind: "scoped", key: "cqi.remedyDays", label: "Remedy due within", area: "Quality", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "5", unit: "working days", min: 1, max: 20 },
+  { kind: "scoped", key: "lab.sameTeacher", label: "Combined course: the same teacher teaches theory and lab (1) or a separate lab teacher is allowed (0)", area: "Examinations", who: ["Controller"], href: "/settings/who-decides", def: "0", min: 0, max: 1 },
+  { kind: "scoped", key: "lab.carryForward", label: "Repeating a combined course: keep passed lab marks (1) or repeat all (0)", area: "Examinations", who: ["Controller"], href: "/settings/who-decides", def: "0", min: 0, max: 1 },
   { kind: "scoped", key: "msg.monthlyCap", label: "SMS / WhatsApp messages per month (0 = no cap)", area: "Messages", who: ["Institute Head"], href: "/settings/who-decides", def: "0", unit: "messages", min: 0, max: 1000000 },
   { kind: "scoped", key: "feedback.midWeek", label: "Mid-semester feedback opens in week", area: "Quality", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "6", unit: "", min: 3, max: 12, help: "A 2-minute survey per course opens in this week and stays open 14 days. Results show the teacher after 5 responses." },
   { kind: "scoped", key: "ga.rule", label: "GA attainment rule (0 = average, 1 = count)", area: "Outcomes", who: ["OMC (department)", "Program Lead (program)"], href: "/settings/who-decides", def: "0", min: 0, max: 1, help: "0: the credit-weighted average across the student's courses for a GA must reach the pass mark (default). 1: the GA must be attained in at least N courses." },
