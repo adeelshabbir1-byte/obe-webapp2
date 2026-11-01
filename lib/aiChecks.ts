@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "./db";
-import { DEFAULT_MODELS, DEFAULT_PRICES, costOf, overBudget, versionKey, readJson, paperPrompt, planPrompt, mockReply, type Kind, type PaperInput, type PlanInput, type PaperResult, type PlanResult, type Price } from "./aiChecksCore";
+import { DEFAULT_MODELS, DEFAULT_PRICES, costOf, overBudget, versionKey, readJson, paperPrompt, planPrompt, splitPrompt, mockReply, type Kind, type PaperInput, type PlanInput, type SplitInput, type SplitResult, type PaperResult, type PlanResult, type Price } from "./aiChecksCore";
 
 // AI checks with the university's own API key (ANTHROPIC_API_KEY in Vercel, or the institute's AI Configuration): the
 // Instructor's "AI check" of a mid / final paper and the SE's "AI review" of the plan. The prompt is built from data the
@@ -34,10 +34,10 @@ async function keyFor(chairmanId: string) {
 }
 
 /** One AI run: cache (same version → no new cost), budget, the call, the usage log. */
-async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; courseId: string; input: PaperInput | PlanInput; build: () => { system: string; user: string }; document?: { data: string; mediaType: string } | null }): Promise<{ result: T; cached: boolean; costUsd: number; model: string }> {
+async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; courseId: string; input: PaperInput | PlanInput | SplitInput; build: () => { system: string; user: string }; document?: { data: string; mediaType: string } | null }): Promise<{ result: T; cached: boolean; costUsd: number; model: string }> {
   const s = await settingsOf(a.chairmanId);
   if (!s.enabled) throw new Error("AI checks are switched off for this institute.");
-  const model = a.kind === "PAPER" ? s.paperModel : s.planModel;
+  const model = a.kind === "PLAN" ? s.planModel : s.paperModel;
   const vk = versionKey({ input: a.input, doc: a.document ? a.document.data.length : 0, model });
   const key = `${a.kind}|${a.courseId}|${vk}`;
   const hit = await db.aiCheckCache?.findUnique({ where: { key } }).catch(() => null);
@@ -69,6 +69,13 @@ async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; cours
   const result = readJson<T>(text);
   await db.aiCheckCache.upsert({ where: { key }, create: { key, chairmanId: a.chairmanId, kind: a.kind, courseId: a.courseId, resultJson: JSON.stringify(result) }, update: { resultJson: JSON.stringify(result), createdAt: new Date() } }).catch(() => null);
   return { result, cached: false, costUsd, model };
+}
+
+/** A past paper's PDF split into questions by the AI (scans included): the cheaper paper model, the same budget and log. */
+export async function paperSplit(user: { id: string }, chairmanId: string, pdfBase64: string) {
+  const input: SplitInput = { pages: 0, size: pdfBase64.length };
+  const r = await run<SplitResult>({ chairmanId, userId: user.id, kind: "SPLIT", courseId: `split:${versionKey({ d: pdfBase64.slice(0, 5000), n: pdfBase64.length })}`, input, build: () => splitPrompt(), document: { data: pdfBase64, mediaType: "application/pdf" } });
+  return { questions: (r.result.questions || []).map((q) => ({ no: Number(q.no) || 0, text: String(q.text || ""), marks: q.marks == null ? null : Number(q.marks), parts: (q.parts || []).map((p) => ({ label: String(p.label || ""), text: String(p.text || ""), marks: p.marks == null ? null : Number(p.marks) })) })), model: r.model, costUsd: r.costUsd, cached: r.cached };
 }
 
 /** The paper's questions with the course's CLOs, Bloom levels, topics and marks (or an uploaded sample paper, PDF). */

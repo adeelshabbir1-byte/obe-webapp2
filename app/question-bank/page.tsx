@@ -2,67 +2,37 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../lib/session";
 import { navForRole } from "../../components/reportNav";
-import { roleLabel, chairmanIdFor, coordinatorIdsFor } from "../../lib/reportScope";
+import { roleLabel } from "../../lib/reportScope";
 import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
-import { ActionButton } from "../../components/fyp/FypClient";
-import { draftPaper, questions } from "../../lib/questionBank";
-import { QuestionForm } from "../../components/ExamBoardClient";
-import { bankOf, planOf } from "../../lib/examBoard";
+import QuestionBankApp from "../../components/QuestionBankApp";
+import { courseCtx, planOfCourse, mayOpen } from "../../lib/qbank";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Question bank" };
-const ROLES = ["INSTRUCTOR", "SUBJECT_EXPERT", "OMC", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"];
+const ROLES = ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR"];
 
-// Written questions tagged by CLO and Bloom level, and a drafted paper that covers the chosen CLOs.
-export default async function QuestionBankPage({ searchParams }: { searchParams: { course?: string; clos?: string; total?: string } }) {
+// The course's question bank — every question type, the MCQ bank in the same search. Confidential: only the course's
+// Subject Expert, its teachers and the Program Lead (paper vetting sees the questions of the papers it vets). Opening it
+// asks for the bank PIN.
+export default async function QuestionBankPage({ searchParams }: { searchParams: { courseId?: string; course?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
   if (!ROLES.includes(user.role)) redirect("/dashboard");
-  const chairmanId = await chairmanIdFor(user);
-  const where = user.role === "INSTRUCTOR" ? { instructorId: user.id } : user.role === "SUBJECT_EXPERT" ? { subjectExpertId: user.id } : { coordinatorId: { in: (await coordinatorIdsFor(user)).concat(["none"]) } };
-  const codes = Array.from(new Map((await prisma.course.findMany({ where, select: { code: true, title: true }, orderBy: { code: "asc" }, take: 500 })).map((c) => [c.code, c.title])).entries());
-  const code = codes.find(([c]) => c === searchParams.course)?.[0] || codes[0]?.[0] || "";
-  const bank = code ? await questions(chairmanId, code) : [];
-  const clos = Array.from(new Set((await prisma.cLO.findMany({ where: { course: { code }, source: "SE" }, select: { code: true }, orderBy: { orderIndex: "asc" } })).map((c) => c.code)));
-  const pick = (searchParams.clos || "").split(",").filter(Boolean);
-  const draft = pick.length && bank ? draftPaper(bank, pick, Number(searchParams.total) || 50) : null;
-  // The course plan behind the code (topics and CLOs for the question form) and each question's metadata.
-  const base = code ? await prisma.course.findFirst({ where: { code, ...where }, orderBy: { createdAt: "desc" }, select: { id: true, title: true } }) : null;
-  const plan = base ? await planOf({ key: "", code, title: base.title, term: "", rows: [{ courseId: base.id, batch: "", semester: null, teachers: [], instructorId: null }], teachers: [], leadId: null }).catch(() => null) : null;
-  const meta = new Map((code ? await bankOf(chairmanId, [code]).catch(() => []) : []).map((q) => [q.id, q]));
-  const mcqCount = code ? await (prisma as unknown as Record<string, any>).mcqQuestion.count({ where: { chairmanId, courseCode: code, active: true } }).catch(() => 0) : 0;
+  const where = user.role === "INSTRUCTOR" ? { instructorId: user.id } : user.role === "SUBJECT_EXPERT" ? { subjectExpertId: user.id } : { coordinatorId: user.id };
+  const courses = await prisma.course.findMany({ where, select: { id: true, code: true, title: true, batch: { select: { batchName: true } } }, orderBy: [{ code: "asc" }, { createdAt: "desc" }], take: 400 });
+  const course = courses.find((c) => c.id === searchParams.courseId) || courses.find((c) => c.code === searchParams.course) || courses[0];
+  const ctx = course ? await courseCtx(course.id).catch(() => null) : null;
+  const plan = ctx ? await planOfCourse(ctx.baseId) : { lectures: [], clos: [] };
+  const colleagues = ctx ? await prisma.user.findMany({ where: { id: { in: ctx.teacherIds.concat(ctx.seId || "none").filter((x) => x !== user.id) } }, select: { id: true, name: true } }) : [];
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Question Bank</h1>
-      <p className="small-note">A course taught in several sections by different teachers has a shared bank, peer-rated papers and an official paper on <Link href="/exam-board">Team Exam Papers</Link>. Written questions for each course, tagged with their CLO, Bloom level and marks ({mcqCount} MCQs are in the MCQ bank too). Draft a paper: choose the CLOs and the total marks, and the system picks questions covering each CLO in proportion with a spread of Bloom levels — least-used first.</p>
-      {bank === null && <div className="err">Run prisma/migration_platform_plus.sql in Supabase first.</div>}
-      <div className="card" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{codes.map(([c, t]) => <Link key={c} href={`/question-bank?course=${encodeURIComponent(c)}`} className={`btn btn-sm ${c === code ? "btn-brass" : "btn-secondary"}`} title={t}>{c}</Link>)}</div>
-      {code && <>
-        <div className="card">
-          {plan ? <QuestionForm scope={{ courseCode: code }} lectures={plan.lectures} clos={plan.clos} /> : <p className="small-note">This course has no lecture plan yet — questions are linked to its topics.</p>}
-          <form style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginTop: 10 }}>
-            <input type="hidden" name="course" value={code} />
-            <label style={{ fontSize: 12 }}>CLOs (comma)<br /><input name="clos" defaultValue={searchParams.clos || clos.join(",")} style={{ width: 240 }} /></label>
-            <label style={{ fontSize: 12 }}>Total marks<br /><input name="total" type="number" defaultValue={searchParams.total || "50"} style={{ width: 90 }} /></label>
-            <button className="btn btn-secondary btn-sm">Draft a paper</button>
-          </form>
-        </div>
-        {draft && (
-          <div className="card">
-            <b>Draft paper — {code}, {draft.total} marks</b>
-            {draft.gaps.length > 0 && <p className="small-note" style={{ color: "#c93c3c" }}>{draft.gaps.join(" · ")}</p>}
-            <ol style={{ fontSize: 13.5 }}>{draft.chosen.map((q) => <li key={q.id} style={{ marginBottom: 8 }}><span style={{ whiteSpace: "pre-wrap" }}>{q.text}</span> <span className="small-note">[{q.marks} marks · {q.cloCode} · {q.bloom}]</span></li>)}</ol>
-            <ActionButton url="/api/question-bank" body={{ action: "used", ids: draft.chosen.map((q) => q.id) }} label="Use this paper (count the questions as used)" className="btn btn-brass btn-sm" done="Counted — next drafts prefer other questions." />
-          </div>
-        )}
-        <div className="card" style={{ overflowX: "auto" }}>
-          <b>{(bank || []).length} question{(bank || []).length === 1 ? "" : "s"}</b>
-          <table style={{ fontSize: 12.5, marginTop: 6 }}><thead><tr><th>CLO</th><th>Topic</th><th>Difficulty</th><th>Bloom</th><th>Kind</th><th>Marks</th><th>Question</th><th>Used</th><th></th></tr></thead>
-            <tbody>{(bank || []).map((q) => <tr key={q.id}><td>{meta.get(q.id)?.cloCodes.join(", ") || q.cloCode}</td><td>{meta.get(q.id)?.lectureNumber != null ? `W${meta.get(q.id)!.week} L${meta.get(q.id)!.lectureNumber}` : "—"}</td><td>{meta.get(q.id)?.difficulty?.toLowerCase() || "—"}</td><td>{q.bloom}</td><td>{q.kind.toLowerCase()}</td><td>{q.marks}</td><td style={{ whiteSpace: "pre-wrap", maxWidth: 520 }}>{q.text}</td><td>{q.usedCount}</td><td>{(q.createdById === user.id || user.role !== "INSTRUCTOR") && <ActionButton url="/api/question-bank" body={{ action: "remove", id: q.id }} label="Remove" className="btn btn-secondary btn-sm" confirmText="Remove this question?" />}</td></tr>)}</tbody></table>
-        </div>
-      </>}
+      <p className="small-note">The bank belongs to the course (its base course: every linked section shares it); questions stay when a teacher leaves and keep the author&apos;s name. The Subject Expert adds directly; other teachers&apos; shared questions are reviewed first. A question used in a mid or final is locked for 3 terms. Course teams also have <Link href="/exam-board">Team Exam Papers</Link>.</p>
+      <div className="card" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{courses.map((c) => <Link key={c.id} href={`/question-bank?courseId=${c.id}`} className={`btn btn-sm ${c.id === course?.id ? "btn-brass" : "btn-secondary"}`} title={`${c.title} ${c.batch?.batchName || ""}`}>{c.code}{c.batch ? ` · ${c.batch.batchName}` : ""}</Link>)}</div>
+      {!course ? <p className="small-note">No courses yet.</p> : !ctx || !mayOpen(ctx, user) ? <div className="err">Only the course&apos;s Subject Expert, its teachers and the Program Lead open this bank.</div>
+        : <QuestionBankApp key={course.id} courseId={course.id} plan={plan} userId={user.id} colleagues={colleagues} />}
     </Shell>
   );
 }

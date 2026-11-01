@@ -15,7 +15,7 @@ const nextConfig = {
     instrumentationHook: true,
     // Loaded from node_modules at runtime instead of being bundled — the PDF
     // libraries read their own files/workers and break when webpack inlines them.
-    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"],
+    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "mathjax-full", "@resvg/resvg-js"],
     // The Regulations Library's starter documents are read from disk by the API route that loads them.
     outputFileTracingIncludes: { "/api/regulations": ["./regulations-seed/**/*"], "/admin/system-health/restore-guide": ["./docs/restore.md"] },
     // Import only the icons actually used instead of the whole barrel.

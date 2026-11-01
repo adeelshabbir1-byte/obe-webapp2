@@ -944,6 +944,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "QaaAction"
 },
 {
+"f": "migration_qbank.sql",
+"d": "Part 6 build A: one question bank for every type \u2014 review, visibility and access codes, the 3-term re-use lock,",
+"t": "QbPin",
+"c": "sessionToken"
+},
+{
 "f": "migration_qr_attendance.sql",
 "d": "QR attendance: live attendance sessions with a rotating encrypted QR code, each student's check-in, the institute's",
 "t": "AttendanceThreshold",

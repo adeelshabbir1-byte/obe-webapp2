@@ -9692,3 +9692,104 @@ model MasterCourseRetired {
   byUserId       String?
   at             DateTime @default(now())
 }
+
+// Part 6 build A — the question bank: type, review, visibility, parts, answers, re-use lock, results (beside QuestionBankItem / QbMeta).
+model QbExt {
+  itemId             String    @id
+  baseCourseId       String?
+  type               String    @default("SHORT")
+  status             String    @default("APPROVED")
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+  visibility         String    @default("COURSE")
+  sharedWithJson     String    @default("[]")
+  modelAnswer        String?
+  minutes            Int?
+  sourceKind         String    @default("OWN")
+  sourceNote         String?
+  partsJson          String    @default("[]")
+  correctJson        String?
+  numericAnswer      Float?
+  tolerance          Float?
+  tolMode            String?
+  testCasesJson      String?
+  lab                Boolean   @default(false)
+  lockedUntil        Int?
+  aiDraft            Boolean   @default(false)
+  measuredDifficulty String?
+  flagsJson          String    @default("[]")
+  statsJson          String    @default("{}")
+  updatedAt          DateTime  @default(now())
+
+  @@index([baseCourseId])
+}
+
+model QbUse {
+  id         String   @id
+  itemId     String
+  courseId   String
+  examType   String
+  termLabel  String   @default("")
+  paperId    String?
+  questionNo Int?
+  byUserId   String?
+  at         DateTime @default(now())
+
+  @@index([itemId])
+}
+
+model QbGrant {
+  id          String    @id
+  authorId    String
+  itemIdsJson String
+  granteeId   String?
+  codeHash    String?
+  purpose     String?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  usedById    String?
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([authorId])
+  @@index([granteeId])
+}
+
+model QbLog {
+  id      String   @id
+  itemId  String?
+  actorId String
+  action  String
+  detail  String   @default("")
+  at      DateTime @default(now())
+
+  @@index([itemId])
+  @@index([actorId])
+}
+
+model QbPin {
+  userId       String    @id
+  pinHash      String
+  failed       Int       @default(0)
+  lastActiveAt DateTime?
+  sessionToken String?
+  updatedAt    DateTime  @default(now())
+}
+
+model QbPaper {
+  id          String   @id
+  courseId    String
+  examType    String
+  termLabel   String   @default("")
+  variant     String   @default("A")
+  parentId    String?
+  itemIdsJson String
+  optsJson    String   @default("{}")
+  checkJson   String   @default("{}")
+  status      String   @default("DRAFT")
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([courseId])
+}
