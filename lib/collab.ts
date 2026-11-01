@@ -54,7 +54,7 @@ export const ODL_CHECKS: [string, string][] = [
   ["practical", "Practical work done and evaluated face-to-face before the semester exam (ODL 11.x)"],
   ["grading", "Same assessment and grading policy as face-to-face (ODL 11.ix)"],
 ];
-export type Data = { partners?: { name: string; foreign?: boolean; recognised?: boolean; country?: string }[]; sameDiscipline?: boolean; checks?: Record<string, { done: boolean; note?: string }>; moc?: Record<string, string>; cem?: { ours: string; oursTitle: string; theirs: string; theirsTitle: string; ch: number; contactHours: number; assessment: string; ok: boolean }[]; nocNo?: string; nocDate?: string; nocUntil?: string; seats?: number; published?: string; withdrawalNotice?: string; mocFrom?: string; mocUntil?: string; kpis?: Record<string, number>; moderationPct?: number; currency?: string; fees?: string; feeCapPct?: number; timezone?: string; gradeScale?: string;
+export type Data = { ownerId?: string; ownerName?: string; focal?: string; partners?: { name: string; foreign?: boolean; recognised?: boolean; country?: string }[]; sameDiscipline?: boolean; checks?: Record<string, { done: boolean; note?: string }>; moc?: Record<string, string>; cem?: { ours: string; oursTitle: string; theirs: string; theirsTitle: string; ch: number; contactHours: number; assessment: string; ok: boolean }[]; nocNo?: string; nocDate?: string; nocUntil?: string; seats?: number; published?: string; withdrawalNotice?: string; mocFrom?: string; mocUntil?: string; kpis?: Record<string, number>; moderationPct?: number; currency?: string; fees?: string; feeCapPct?: number; timezone?: string; gradeScale?: string;
   courses?: { code: string; mode: "SYNC" | "ASYNC" | "BLENDED"; ch: number; f2fPct?: number; recordedMin?: number; moderatedH?: number; gradedH?: number; labH?: number; teacher?: string }[] };
 const J = <T>(s: string, d: T): T => { try { return JSON.parse(s) as T; } catch { return d; } };
 export type Prog = { id: string; chairmanId: string; kind: string; title: string; dataJson: string; status: string; createdAt: Date; updatedAt: Date };
@@ -69,7 +69,9 @@ export async function createProg(user: { id: string }, chairmanId: string, kind:
   return id;
 }
 export async function saveData(p: Prog, patch: Data, status?: string) {
-  const d = { ...dataOf(p), ...patch };
+  const cur = dataOf(p);
+  // checks and MoC items merge key by key, so two steps saved one after the other never undo each other.
+  const d = { ...cur, ...patch, ...(patch.checks ? { checks: { ...(cur.checks || {}), ...patch.checks } } : {}), ...(patch.moc ? { moc: { ...(cur.moc || {}), ...patch.moc } } : {}) };
   await db.collabProgramme.update({ where: { id: p.id }, data: { dataJson: JSON.stringify(d), ...(status ? { status } : {}), updatedAt: new Date() } });
 }
 
@@ -100,4 +102,54 @@ export function compliance(p: Prog) {
   if (isDdjd(p.kind) && d.published && !(d.fees || "").trim()) problems.push("The full fee structure must be published before enrolment (DDJD 2.iv, 5.i).");
   const enrolmentOpen = isDdjd(p.kind) ? !!d.nocNo && !!d.published && !d.withdrawalNotice : !!d.nocNo;
   return { items, moc, problems, kpis, ready, enrolmentOpen, lockReason: enrolmentOpen ? null : d.withdrawalNotice ? "Withdrawal notice given — no new enrolment (DDJD 4.ii)." : !d.nocNo ? "No HEC NOC recorded yet." : "Programme information not published yet (DDJD 2.iv)." };
+}
+
+// ---- Step-by-step wizard (one job per step, plain words plus the HEC clause; "What's missing" per step).
+export type Step = { key: string; title: string; intro: string; checks: string[]; moc: string[]; fields: [string, string, "text" | "date" | "number" | "long"][]; widgets: ("partners" | "cem" | "courses" | "kpis" | "docs" | "moc-all" | "same")[] };
+export const DDJD_STEPS: Step[] = [
+  { key: "type", title: "Type and partners", intro: "Choose the partners. Each must be recognised or chartered (DDJD 2.ii); a foreign partner must be in WHED or recognised at home.", checks: ["recognised"], moc: [], fields: [], widgets: ["partners", "same"] },
+  { key: "cem", title: "Course mapping", intro: "Map both curricula into the HEC Credit Equivalency Matrix (DDJD 1.v.c, Annexure-II): learning outcomes, contact hours (1 CH ≥ 16 lecture or 48 lab hours) and assessment.", checks: ["cem"], moc: [], fields: [], widgets: ["cem"] },
+  { key: "structure", title: "Structure", intro: "Who teaches what and where, mobility, residency and language (Annexure-I vii b–d, g–i), and the joint calendar (Annexure-II).", checks: ["calendar", "language"], moc: ["a", "b", "c", "d", "g", "h", "i"], fields: [], widgets: [] },
+  { key: "assessment", title: "Assessment", intro: "One grading picture for all partners: rubric harmonisation, joint moderation of a share of exams, and the grade conversion (Annexure-II).", checks: ["moderation"], moc: ["e", "f"], fields: [["moderationPct", "Share of exams co-evaluated (%) — the policy's example is 20", "number"], ["gradeScale", "Partner's grade scale and conversion", "long"]], widgets: [] },
+  { key: "protect", title: "Student protections", intro: "Teach-out, exit pathways, the 12-month withdrawal notice and the full fee structure with an agreed cap (DDJD 4–5).", checks: ["teachout", "exit", "notice", "fees", "refund", "finance"], moc: ["j", "k", "o"], fields: [["fees", "Full fee structure for the whole duration", "long"], ["feeCapPct", "Cap on yearly fee increase (%)", "number"]], widgets: [] },
+  { key: "governance", title: "Governance", intro: "Student representation, the grievance route (institution, then HEC), data protection, IP and a focal person per partner (DDJD 7, 9; Annexure-I vi).", checks: ["students", "grievance"], moc: ["l", "n", "p", "q", "r"], fields: [["focal", "Focal person of each partner (name — institution)", "long"]], widgets: [] },
+  { key: "moc", title: "Memorandum of Commitment", intro: "The MoC covers every item of Annexure-I vii (a–r), is valid for at least 5 years (DDJD 2.iii) and is approved by each partner's statutory bodies.", checks: ["moc5", "statutory"], moc: ["m"], fields: [["mocFrom", "MoC valid from", "date"], ["mocUntil", "MoC valid until", "date"]], widgets: ["moc-all"] },
+  { key: "noc", title: "HEC NOC and publishing", intro: "Download the NOC file, record the NOC, then publish the programme page (DDJD 2.iv). Enrolment opens only after both.", checks: ["website"], moc: [], fields: [["nocNo", "HEC NOC number", "text"], ["nocDate", "NOC date", "date"], ["nocUntil", "NOC valid until", "date"], ["seats", "Seats", "number"], ["published", "Programme page published (date)", "date"], ["withdrawalNotice", "Withdrawal notice given (date — blank if none)", "date"]], widgets: ["docs", "kpis"] },
+];
+export const ODL_STEPS: Step[] = [
+  { key: "eligibility", title: "Eligibility", intro: "The institution qualifies for ODL in this programme (ODL 2, Toolkit Part-A).", checks: ["twoBatches", "statutory", "faculty", "plan", "ict", "council"], moc: [], fields: [], widgets: [] },
+  { key: "proposal", title: "Proposal and roles", intro: "The programme proposal with its risk assessment (ODL 5) and the ODL roles (ODL 13).", checks: ["risk", "roles"], moc: [], fields: [], widgets: [] },
+  { key: "courses", title: "Courses and delivery mode", intro: "Each course's mode and its credit-hour rule (ODL 8): synchronous 15–16 live hours per CH; asynchronous 7 h recorded + 5 h moderated + 4 h graded per CH; blended at least 1/3 face-to-face or live; labs 45–48 hours per CH face-to-face. At most two ODL courses per teacher (ODL 13.1.2).", checks: [], moc: [], fields: [], widgets: ["courses"] },
+  { key: "systems", title: "LMS and student systems", intro: "The LMS features (ODL 10), the Student Information System (ODL 17.1), the grievance e-portal (ODL 18) and content review every 3 years (ODL 7). OBEHUB provides each of these.", checks: ["lms", "sis", "grievanceEportal", "review"], moc: [], fields: [], widgets: [] },
+  { key: "exams", title: "Exams", intro: "Exams by the Controller at HEC-approved centres with CCTV, biometric attendance and faculty invigilation; practicals face-to-face; the same grading as face-to-face (ODL 11).", checks: ["centres", "cctv", "practical", "grading"], moc: [], fields: [], widgets: [] },
+  { key: "noc", title: "HEC NOC and admission", intro: "Admit only after HEC recognition (ODL 2.10–2.11), within the seats and yearly intake.", checks: ["noc"], moc: [], fields: [["nocNo", "HEC NOC number", "text"], ["nocDate", "NOC date", "date"], ["nocUntil", "NOC valid until (up to 3 years)", "date"], ["seats", "Seats / yearly intake", "number"]], widgets: ["docs"] },
+];
+export const stepsOf = (kind: string) => (isDdjd(kind) ? DDJD_STEPS : ODL_STEPS);
+/** What is still missing in one step (empty = the step is done). */
+export function missingIn(p: Prog, st: Step) {
+  const d = dataOf(p) as Record<string, any>;
+  const lab = new Map((isDdjd(p.kind) ? DDJD_CHECKS : ODL_CHECKS));
+  const out: string[] = [];
+  for (const c of st.checks) if (!d.checks?.[c]?.done) out.push(lab.get(c) || c);
+  for (const m of st.moc) if (!String(d.moc?.[m] || "").trim()) out.push(`MoC (${m}) ${MOC_ITEMS.find((x) => x[0] === m)?.[1] || ""}`);
+  for (const [k, label, t] of st.fields) if (k !== "withdrawalNotice" && k !== "gradeScale" && (d[k] == null || String(d[k]).trim() === "") && t !== "long") out.push(label);
+  if (st.widgets.includes("partners") && !(d.partners || []).length) out.push("At least one partner");
+  if (st.widgets.includes("cem") && (!(d.cem || []).length || (d.cem || []).some((r: { ok: boolean }) => !r.ok))) out.push((d.cem || []).length ? "Every matrix line checked as equivalent" : "Draft the Credit Equivalency Matrix");
+  if (st.widgets.includes("courses")) { if (!(d.courses || []).length) out.push("Add the ODL courses"); out.push(...compliance(p).problems.filter((x) => /ODL|blended|asynchronous|lab work/i.test(x))); }
+  if (st.key === "moc") out.push(...compliance(p).problems.filter((x) => /5 years/.test(x)));
+  return out;
+}
+/** Dean / Institute Head assign the programme to one person, who then works on it (and only it) like a lead. */
+export const ASSIGNERS = ["CHAIRMAN", "DEAN"];
+export async function assignOwner(by: { id: string; name: string }, p: Prog, userId: string, name: string) {
+  const sf = await import("./scopedSettings");
+  const old = dataOf(p).ownerId;
+  if (old && old !== userId) await sf.setFlag(old, `duty:collab:${p.id}`, null);
+  if (userId) await sf.setFlag(userId, `duty:collab:${p.id}`, p.title.slice(0, 120));
+  await saveData(p, { ownerId: userId || undefined, ownerName: userId ? name : undefined });
+  if (userId) await (await import("./notifications")).notifyUsers([userId], { kind: "ASSIGNMENT", title: `${by.name} assigned you: ${p.title}`, body: "You lead this programme's HEC work, step by step.", href: `/collab?id=${p.id}` }).catch(() => null);
+}
+export async function canWork(user: { id: string; role: string }, p: Prog) {
+  if (["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"].includes(user.role)) return true;
+  return dataOf(p).ownerId === user.id;
 }

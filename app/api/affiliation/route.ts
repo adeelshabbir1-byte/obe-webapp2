@@ -31,6 +31,7 @@ async function POST_handler(req: NextRequest) {
       case "ack": if (side !== "COLLEGE") break; await setFlag(inst, `aff:ack:${rec.id}`, new Date().toISOString()); await db.affEvent.create({ data: { id: randomUUID(), recordId: rec.id, byId: user.id, action: "ACKNOWLEDGED", note: null } }); return NextResponse.json({ ok: true });
       case "codes": if (side !== "UNI" || rec?.kind !== "MARKING") break; await setCodes(user, rec, String(b.rolls || "").split(/[\n,;]+/)); return NextResponse.json({ ok: true });
       case "scripts": if (side !== "UNI" || rec?.kind !== "MARKING") break; await scriptMarks(user, rec, (b.rows || []).map((r: { code: string; mark: unknown }) => ({ code: String(r.code), mark: r.mark === "" || r.mark == null ? null : Number(r.mark) }))); return NextResponse.json({ ok: true });
+      case "officer": { if (!["CHAIRMAN", "DEAN"].includes(user.role)) break; await (await import("../../../lib/dutyAssign")).setAffiliationOfficer(user, inst, side, String(b.userId || "")); return NextResponse.json({ ok: true }); }
       case "rates": if (side !== "UNI" || user.role !== "CHAIRMAN") break; await saveRates(s.universityId, b.rates, user.id); return NextResponse.json({ ok: true });
     }
   } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }

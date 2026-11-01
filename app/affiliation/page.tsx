@@ -8,7 +8,7 @@ import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { claimAmounts, comparison, dataOf, eventsOf, examinerSuggestions, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
 import { getFlag } from "../../lib/scopedSettings";
-import { Ack, Codes, EditRecord, Marks, Move, NewRecord, RatesForm, ScriptMarks } from "./AffForms";
+import { Ack, Codes, EditRecord, Marks, Move, NewRecord, Officer, RatesForm, ScriptMarks } from "./AffForms";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,12 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   if (!user.mfaVerified) redirect("/mfa-verify");
   const inst = await chairmanIdFor(user as never);
   const s = await sideOf(user as never, inst);
-  const shell = (body: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}><h1>Affiliation</h1>{body}</Shell>;
+  let bar: React.ReactNode = null;
+  const shell = (body: React.ReactNode) => <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}><h1>Affiliation</h1>{bar}{body}</Shell>;
   if (!s.universityId || (!s.asUni && !s.asCollege)) return shell(<div className="card"><p>Your institute is not an affiliating university with colleges, nor an affiliated college. The link is set on <Link href="/chairman/affiliates">Affiliated colleges</Link>.</p></div>);
   const side = s.asUni ? "UNI" : "COLLEGE";
+  { const off = await (await import("../../lib/dutyAssign")).affiliationOfficer(inst, side);
+    bar = ["CHAIRMAN", "DEAN"].includes(user.role) ? <div className="card" style={{ padding: "8px 12px", fontSize: 13 }}><Officer current={off?.userId || ""} side={side} staff={(await (await import("../../lib/registers")).staffOf(inst)).filter((x) => x.id !== user.id)} /></div> : off ? <p className="small-note">Handled by {off.name}.</p> : null; }
   const tab = searchParams.tab || "APPLICATION";
   const colleges = s.colleges.map((c) => ({ id: c.collegeId, name: c.head?.instituteName || c.head?.name || "College" }));
   const colName = new Map(colleges.map((c) => [c.id, c.name]));

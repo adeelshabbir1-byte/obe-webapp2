@@ -69,6 +69,11 @@ export default async function Shell({
     ...(hats.includes("IT_MANAGER") ? [{ key: "IT_MANAGER", label: "IT Manager", home: "/chairman/backups", links: [{ href: "/chairman/backups", label: "Backups" }, { href: "/billing", label: "Subscription & Invoices" }, { href: "/chairman/lms", label: "Moodle Link" }, { href: "/chairman/messaging", label: "SMS & WhatsApp" }, { href: "/data-import", label: "Data Import" }] }] : []),
     ...(hats.includes("CURRICULUM_BUILDER") ? [{ key: "CURRICULUM_BUILDER", label: "Curriculum Builder", home: "/curricula/builder", links: [{ href: "/curricula/builder", label: "National Curriculum Builder" }, { href: "/curricula", label: "National Curricula" }] }] : []),
   ];
+  // Duties handed to this person by a head (lib/dutyAssign.ts, lib/collab.ts): their own workspaces too.
+  const given = user ? await import("../lib/scopedSettings").then((m) => m.flagsLike(user.id, "duty:")).catch(() => []) : [];
+  if (given.some((f) => f.key === "duty:coe") && !dutyGroups.some((g) => g.key === "EXAM_CONTROLLER")) dutyGroups.push({ key: "COE_TEAM", label: "Examinations office", home: "/controller", links: [{ href: "/controller", label: "Controller Dashboard" }] });
+  if (given.some((f) => f.key === "duty:affiliation")) dutyGroups.push({ key: "AFFILIATION", label: "Affiliation office", home: "/affiliation", links: [{ href: "/affiliation", label: "Affiliation" }] });
+  if (given.some((f) => f.key.startsWith("duty:collab:"))) dutyGroups.push({ key: "COLLAB", label: "Joint degrees & ODL", home: "/collab", links: [{ href: "/collab", label: "Joint degrees and ODL" }] });
   const focusFlag = user && dutyGroups.length ? await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "menuFocus")).catch(() => null) : null;
   const focus = dutyGroups.find((g) => g.key === focusFlag) || null;
   const dutyLinks = focus ? focus.links : [];

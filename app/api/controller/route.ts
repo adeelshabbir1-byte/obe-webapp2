@@ -1,3 +1,4 @@
+import { prisma } from "../../../lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { controllerAccess, controllerChairman, publishResults, unpublish, decideRecheck, saveDebarList, setDebarStatus, standingList, CONTROLLER_HINT } from "../../../lib/examController";
@@ -25,8 +26,16 @@ async function POST_handler(req: NextRequest) {
   const cid = acc.chairmanId;
   const b = await req.json().catch(() => ({}));
   try {
+    if (b.action === "team") {
+      if (acc.mode !== "HOLDER" && acc.mode !== "ACTING") return NextResponse.json({ error: "Only the Controller manages the team." }, { status: 403 });
+      await (await import("../../../lib/dutyAssign")).saveExamTeam(user, cid, Array.isArray(b.team) ? b.team : []);
+      return NextResponse.json({ ok: true, message: "Team saved; new members were told." });
+    }
+    // Team members act only on courses of their programs.
+    const allowed = async (ids: string[]) => { if (acc.mode !== "TEAM") return ids; const cs = await prisma.course.findMany({ where: { id: { in: ids.concat("none") } }, select: { id: true, batch: { select: { degreeProgram: true } } } }); return cs.filter((c) => (acc.programs || []).includes(c.batch?.degreeProgram || "")).map((c) => c.id); };
+    if (b.action === "unpublish" && !(await allowed([String(b.courseId)])).length) return NextResponse.json({ error: "That course isn't in your programs." }, { status: 403 });
     if (b.action === "publish") {
-      const ids: string[] = Array.isArray(b.courseIds) ? b.courseIds : String(b.courseIds || "").split(",").filter(Boolean);
+      const ids: string[] = await allowed(Array.isArray(b.courseIds) ? b.courseIds : String(b.courseIds || "").split(",").filter(Boolean));
       const n = await publishResults(cid, user, ids, Math.max(0, Math.min(60, Number(b.recheckDays ?? 7))));
       return NextResponse.json({ ok: true, message: `${n} result(s) published; students were told.` });
     }
