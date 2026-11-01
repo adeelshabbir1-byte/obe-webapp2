@@ -9792,6 +9792,7 @@ model QbPaper {
   createdAt   DateTime @default(now())
 
   @@index([courseId])
+}
 
 // A setting held at one scope: INSTITUTE (scopeId = chairmanId), DEPARTMENT or PROGRAM. A program value beats its
 // department's, which beats the institute's (lib/scopedSettings.ts). Registered in lib/settingsRegistry.ts.
