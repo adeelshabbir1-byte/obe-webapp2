@@ -9717,6 +9717,7 @@ model QbExt {
   lab                Boolean   @default(false)
   lockedUntil        Int?
   aiDraft            Boolean   @default(false)
+  reusable           Boolean   @default(false)
   measuredDifficulty String?
   flagsJson          String    @default("[]")
   statsJson          String    @default("{}")
@@ -10166,4 +10167,68 @@ model CollabProgramme {
   updatedAt   DateTime @default(now())
 
   @@index([chairmanId], map: "CollabProgramme_chairman_idx")
+}
+
+// Part 6 build B — secure online quizzes from the question bank (beside OnlineQuiz / QuizAttempt).
+model QuizSetting {
+  quizId       String   @id
+  settingsJson String   @default("{}")
+  rulesJson    String   @default("[]")
+  idsJson      String   @default("[]")
+  createdAt    DateTime @default(now())
+}
+
+model QuizRun {
+  id              String    @id
+  quizId          String
+  studentId       String
+  attemptNo       Int       @default(1)
+  makeup          Boolean   @default(false)
+  seed            String
+  questionIdsJson String
+  orderJson       String    @default("{}")
+  answersJson     String    @default("{}")
+  teacherJson     String    @default("{}")
+  startedAt       DateTime  @default(now())
+  submittedAt     DateTime?
+  autoSubmitted   Boolean   @default(false)
+  flagged         Boolean   @default(false)
+  events          Int       @default(0)
+  lostMs          Int       @default(0)
+  pos             Int       @default(0)
+  lastBeatAt      DateTime?
+  untilAt         DateTime?
+  score           Float?
+  maxScore        Float?
+  perCloJson      String?
+  pending         Int       @default(0)
+
+  @@unique([quizId, studentId, attemptNo], map: "QuizRun_attempt_key")
+  @@index([quizId])
+}
+
+model QuizEvent {
+  id        String   @id
+  runId     String
+  quizId    String
+  studentId String
+  kind      String
+  awayMs    Int?
+  at        DateTime @default(now())
+
+  @@index([quizId])
+  @@index([runId])
+}
+
+model QuizMakeup {
+  id        String   @id
+  quizId    String
+  studentId String
+  reason    String
+  byId      String
+  until     DateTime
+  used      Boolean  @default(false)
+  at        DateTime @default(now())
+
+  @@index([quizId, studentId], map: "QuizMakeup_quiz_idx")
 }

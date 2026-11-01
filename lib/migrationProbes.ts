@@ -998,6 +998,12 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "templateReviewedById"
 },
 {
+"f": "migration_quiz_secure.sql",
+"d": "Part 6 build B: secure online quizzes from the question bank \u2014 settings, attempts (several, make-ups), integrity",
+"t": "QbExt",
+"c": "reusable"
+},
+{
 "f": "migration_recognition.sql",
 "d": "Recognition layer: semester badges for teachers, and department goals everyone can see.",
 "t": "RecognitionGoal"
