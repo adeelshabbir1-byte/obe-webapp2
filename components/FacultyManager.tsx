@@ -52,7 +52,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fd.get("name"), email: fd.get("email"), username: fd.get("username"), password: fd.get("password"),
-          role: fd.get("role"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
+          role: fd.get("role"), facultyType: fd.get("facultyType"), normalLoad: fd.get("normalLoad"), specialization: fd.get("specialization"),
           secondaryRole: fd.get("alsoInstructor") === "on" ? "INSTRUCTOR" : null,
           organization: fd.get("organization"), outsideExpert: fd.get("outsideExpert") === "on",
         }),
@@ -238,7 +238,7 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               </tr>
             ) : (
               <tr key={f.id}>
-                <td>{f.username}</td><td>{f.name}</td>
+                <td>{f.username}</td><td>{f.name}{(f as { facultyType?: string | null }).facultyType ? <span className="badge badge-neutral" style={{ marginLeft: 6 }} data-faculty-type-badge>{(f as { facultyType?: string | null }).facultyType}</span> : null}</td>
                 <td><span className="badge badge-neutral">{f.role === "SUBJECT_EXPERT" ? "Subject Expert" : f.role === "LAB_ENGINEER" ? "Lab Engineer" : f.role === "LAB_MANAGER" ? "Lab Manager" : "Course Instructor"}</span>{f.secondaryRole === "INSTRUCTOR" && <span className="badge badge-ok" style={{ marginLeft: 4 }}>+ Instructor</span>}{f.canTeach === false && <span className="badge badge-neutral" style={{ marginLeft: 4 }}>Outside expert{f.organization ? ` — ${f.organization}` : ""}</span>}</td>
                 <td>{f.mustChangePassword ? <span className="badge badge-warn">Temp Password</span> : <span className="badge badge-ok">Active</span>}</td>
                 <td style={{ fontSize: 12 }}>{f.specialization || <span style={{ color: "var(--slate)" }}>—</span>}</td>
@@ -274,6 +274,15 @@ export default function FacultyManager({ initialFaculty }: { initialFaculty: Fac
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 400, marginTop: 6 }}>
                 <input type="checkbox" name="outsideExpert" /> Outside expert (industry / other institute): designs courses, can never be assigned to teach
               </label>
+            </div>
+            <div className="field">
+              <label>Faculty type (required for teachers)</label>
+              <select name="facultyType" defaultValue="" data-faculty-type>
+                <option value="">Choose…</option>
+                <option value="Permanent">Permanent — our institute</option>
+                <option value="Shared">Shared — borrowed from another department</option>
+                <option value="Visiting">Visiting — not part of our institute</option>
+              </select>
             </div>
             <div className="field">
               <label>Normal Load (courses/labs per semester)</label>

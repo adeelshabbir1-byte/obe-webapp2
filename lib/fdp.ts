@@ -47,7 +47,7 @@ export async function fdpHours(chairmanId: string, userIds: string[], year: numb
 export async function saveSession(chairmanId: string, d: Omit<Session, "id" | "chairmanId"> & { id?: string }, by: string) {
   if (d.id) { await fdb.fdpSession.updateMany({ where: { id: d.id, chairmanId }, data: { ...d, id: undefined } }); return d.id; }
   const id = randomUUID();
-  await fdb.fdpSession.create({ data: { id, chairmanId, ...d, createdById: by, createdAt: new Date() } });
+  await fdb.fdpSession.create({ data: { ...d, id, chairmanId, createdById: by, createdAt: new Date() } }); // d may carry id: undefined
   return id;
 }
 

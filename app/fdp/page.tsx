@@ -8,6 +8,8 @@ import { REPORT_VIEWER_ROLES, reportPeople } from "../../lib/facultyProfile";
 import { yearData, hoursBy, target, suggestions, FDP_HINT, FDP_KINDS } from "../../lib/fdp";
 import { ActionForm } from "../../components/fyp/FypClient";
 import FdpAttendance from "../../components/FdpAttendance";
+import FdpTrainingPanel from "../../components/FdpTrainingPanel";
+import { detailsOf } from "../../lib/fdpPlan";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Faculty Development" };
@@ -30,6 +32,14 @@ export default async function FdpPage({ searchParams }: { searchParams: { year?:
   const pick = people.map((p) => [p.id, p.name] as [string, string]).sort((a, b) => a[1].localeCompare(b[1]));
   const myAtt = d ? d.att.filter((a) => a.userId === user.id) : [];
   const sOf = new Map((d?.sessions || []).map((s) => [s.id, s]));
+  // Trainings over several days: plans, nominations (the HOD approves), attendance per day, certificates.
+  const det = d ? await detailsOf(d.sessions.map((s) => s.id)) : { plans: [], noms: [], days: [], certs: [] };
+  const planOf = (id: string) => { const r = det.plans.find((x) => x.sessionId === id); try { return r ? JSON.parse(r.planJson) : null; } catch { return null; } };
+  const nomPeople = d ? await (await import("../../lib/db")).prisma.user.findMany({ where: { id: { in: Array.from(new Set(det.noms.map((n) => n.userId))).concat("none") } }, select: { id: true, name: true, departmentId: true } }) : [];
+  const allPeople = Array.from(new Map([...pick, ...nomPeople.map((u) => [u.id, u.name] as [string, string])].map((x) => [x[0], x])).values());
+  const canDecide = user.role === "CHAIRMAN" ? allPeople.map((x) => x[0]) : user.role === "HEAD_OF_DEPARTMENT" ? nomPeople.filter((u) => u.departmentId && u.departmentId === user.departmentId).map((u) => u.id).concat(people.filter((x) => (x as { departmentId?: string | null }).departmentId === user.departmentId).map((x) => x.id)) : [];
+  const mineNoms = det.noms.filter((n) => n.userId === user.id);
+  const panel = (sid: string, manageIt: boolean) => { const s = sOf.get(sid)!; return <FdpTrainingPanel sessionId={sid} date={s.date.toISOString().slice(0, 10)} plan={planOf(sid)} people={allPeople} noms={det.noms.filter((n) => n.sessionId === sid)} days={det.days.filter((x) => x.sessionId === sid)} certs={det.certs.filter((x) => x.sessionId === sid)} me={user.id} manage={manageIt} canDecide={canDecide} />; };
 
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -44,6 +54,7 @@ export default async function FdpPage({ searchParams }: { searchParams: { year?:
           <h3 style={{ marginTop: 0 }}>My development hours</h3>
           <p style={{ fontSize: 14, margin: "0 0 6px" }}><b style={{ color: mine.internal + mine.external >= t ? "#2E7D4F" : "#C58A12" }}>{mine.internal + mine.external}</b> of {t} hours ({mine.internal} here, {mine.external} outside)</p>
           {myAtt.length > 0 && <p className="small-note" style={{ margin: "0 0 6px" }}>Certificates: {myAtt.map((a) => <span key={a.id}><Link href={`/fdp/certificate/${a.id}`}>{sOf.get(a.sessionId)?.title} ({a.certificateNo})</Link> · </span>)}</p>}
+          {mineNoms.length > 0 && <div style={{ margin: "6px 0" }}><b style={{ fontSize: 13 }}>My nominations</b>{mineNoms.map((n) => <div key={n.id} style={{ fontSize: 13 }}>{sOf.get(n.sessionId)?.title} — <i>{n.status.toLowerCase()}</i>{!manage && panel(n.sessionId, false)}</div>)}</div>}
           {d.ext.filter((e) => e.userId === user.id).map((e) => <div key={e.id} className="small-note">Outside: {e.title}{e.organizer ? `, ${e.organizer}` : ""} — {e.hours} h ({e.date.toISOString().slice(0, 10)})</div>)}
           <ActionForm url="/api/fdp" fixed={{ action: "external" }} collapsed openLabel="+ Add hours earned outside" submit="Add" fields={[{ name: "title", label: "Training / workshop", width: 240 }, { name: "organizer", label: "Organizer", width: 160 }, { name: "date", label: "Date", type: "date" }, { name: "hours", label: "Hours", type: "number", width: 70 }]} />
         </div>
@@ -64,6 +75,7 @@ export default async function FdpPage({ searchParams }: { searchParams: { year?:
                 <b>{s.title}</b> <span className="small-note">{FDP_KINDS[s.kind]} · {s.date.toISOString().slice(0, 10)} · {s.hours} h{s.facilitator ? ` · ${s.facilitator}` : ""}{s.venue ? ` · ${s.venue}` : ""} · {s.status === "HELD" ? "held" : s.status === "CANCELLED" ? "cancelled" : "planned"}</span>
                 {s.reason && <div className="small-note">Why: {s.reason}</div>}
                 <FdpAttendance sessionId={s.id} people={pick} attended={d!.att.filter((a) => a.sessionId === s.id).map((a) => a.userId)} />
+                {panel(s.id, true)}
               </div>
             ))}
             <div style={{ marginTop: 8 }}><ActionForm url="/api/fdp" fixed={{ action: "session" }} collapsed openLabel="+ Plan a session" submit="Save" fields={[

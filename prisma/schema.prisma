@@ -9532,3 +9532,133 @@ model ProblemPilot {
   updatedById       String?
   updatedAt         DateTime @default(now())
 }
+
+// Prompt 10 sections 7, 8, 10 (prisma/migration_prompt10c.sql).
+model FdpSessionPlan {
+  sessionId   String   @id
+  planJson    String   @default("{}")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
+model FdpNomination {
+  id            String    @id
+  sessionId     String
+  userId        String
+  status        String    @default("PENDING")
+  nominatedById String
+  decidedById   String?
+  decidedAt     DateTime?
+  reason        String?
+  createdAt     DateTime  @default(now())
+
+  @@index([sessionId], map: "FdpNomination_session_idx")
+}
+model FdpDayAttendance {
+  id         String   @id
+  sessionId  String
+  userId     String
+  date       String
+  markedById String?
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId], map: "FdpDayAttendance_session_idx")
+}
+model FdpCertificate {
+  id           String   @id
+  sessionId    String
+  userId       String
+  fileName     String   @default("")
+  fileRef      String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([sessionId], map: "FdpCertificate_session_idx")
+}
+model AiCheckSetting {
+  chairmanId       String   @id
+  enabled          Boolean  @default(true)
+  monthlyBudgetUsd Float    @default(20)
+  paperModel       String   @default("claude-haiku-5-5")
+  planModel        String   @default("claude-opus-5-5")
+  pricesJson       String   @default("{}")
+  updatedById      String?
+  updatedAt        DateTime @default(now())
+}
+model AiUsage {
+  id           String   @id
+  chairmanId   String
+  userId       String
+  kind         String
+  courseId     String?
+  versionKey   String?
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  costUsd      Float    @default(0)
+  cached       Boolean  @default(false)
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([chairmanId, createdAt], map: "AiUsage_month_idx")
+}
+model AiCheckCache {
+  key        String   @id
+  chairmanId String
+  kind       String
+  courseId   String?
+  resultJson String
+  createdAt  DateTime @default(now())
+}
+model VisitingPayProfile {
+  userId      String   @id
+  chairmanId  String
+  category    String?
+  ratePerHour Float?
+  filer       Boolean  @default(true)
+  updatedAt   DateTime @default(now())
+}
+model VisitingRateCard {
+  id          String   @id
+  chairmanId  String
+  termLabel   String
+  category    String
+  ratePerHour Float
+  updatedAt   DateTime @default(now())
+
+  @@unique([chairmanId, termLabel, category], map: "VisitingRateCard_key")
+}
+model VisitingPaySetting {
+  chairmanId       String   @id
+  lateMode         String   @default("PCT")
+  lateFixed        Float    @default(0)
+  lateEveryN       Int      @default(3)
+  periodWeeks      Int      @default(4)
+  taxJson          String   @default("{\"mode\":\"PCT\",\"filerPct\":10,\"nonFilerPct\":20,\"slabs\":[]}")
+  biometricMapJson String   @default("{}")
+  updatedById      String?
+  updatedAt        DateTime @default(now())
+}
+model VisitingPaySheet {
+  id           String    @id
+  chairmanId   String
+  userId       String
+  periodStart  DateTime
+  periodEnd    DateTime
+  claimIdsJson String    @default("[]")
+  linesJson    String    @default("[]")
+  hours        Float     @default(0)
+  rate         Float     @default(0)
+  gross        Float     @default(0)
+  deductions   Float     @default(0)
+  bonus        Float     @default(0)
+  tax          Float     @default(0)
+  net          Float     @default(0)
+  status       String    @default("DRAFT")
+  hodId        String?
+  hodAt        DateTime?
+  paidRef      String?
+  paidAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, periodStart], map: "VisitingPaySheet_user_idx")
+}

@@ -6,6 +6,7 @@ import { prisma } from "../../../../../lib/db";
 import AssessmentRuleBanner from "../../../../../components/AssessmentRuleBanner";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
+import AiPlanReview from "../../../../../components/AiPlanReview";
 import AssessmentsManager from "../../../../../components/AssessmentsManager";
 import SubmitTemplateButton from "../../../../../components/SubmitTemplateButton";
 import { navForRole } from "../../../../../components/reportNav";
@@ -70,6 +71,7 @@ export default async function InstrumentsPage({ params }: { params: { courseId: 
   return (
     <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="instruments" code={course.code} title={course.title} status={course.templateStatus} />
+      <AiPlanReview courseId={course.id} />
       <AssessmentRuleBanner courseId={course.id} source="SE" />
       <PrereqTopicChecks courseId={course.id} source="SE" />
 

@@ -15,7 +15,9 @@ async function GET_handler() {
     where: { role: { in: ["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"] }, managedById: user.id },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json({ faculty: faculty.map(({ passwordHash, ...u }) => u) });
+  // The faculty type (Permanent / Shared / Visiting) shown beside each teacher.
+  const types = new Map((await prisma.facultyProfile.findMany({ where: { userId: { in: faculty.map((f) => f.id) } }, select: { userId: true, employmentType: true } })).map((p) => [p.userId, p.employmentType]));
+  return NextResponse.json({ faculty: faculty.map(({ passwordHash, ...u }) => ({ ...u, facultyType: types.get(u.id) || null })) });
 }
 
 async function POST_handler(req: NextRequest) {
@@ -29,6 +31,9 @@ async function POST_handler(req: NextRequest) {
     return NextResponse.json({ error: "name, email, username, password, role are required" }, { status: 400 });
   }
   { const no = await collegeRoleBlock(user.managedById, body.role); if (no) return NextResponse.json({ error: no }, { status: 409 }); }
+  // Teachers: the faculty type is required (Permanent: ours · Shared: borrowed from another department · Visiting).
+  const facultyType = ["Permanent", "Shared", "Visiting"].includes(String(body.facultyType)) ? String(body.facultyType) : null;
+  if (["SUBJECT_EXPERT", "INSTRUCTOR"].includes(body.role) && !facultyType) return NextResponse.json({ error: "Choose the faculty type: Permanent, Shared or Visiting." }, { status: 400 });
   if (!["SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "LAB_MANAGER"].includes(body.role)) {
     return NextResponse.json({ error: "role must be SUBJECT_EXPERT, INSTRUCTOR, LAB_ENGINEER or LAB_MANAGER" }, { status: 400 });
   }
@@ -57,7 +62,8 @@ async function POST_handler(req: NextRequest) {
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "FACULTY_ONBOARDED", entityType: "User", entityId: created.id, metadata: { role: body.role } });
+  if (facultyType) await prisma.facultyProfile.upsert({ where: { userId: created.id }, create: { userId: created.id, employmentType: facultyType }, update: { employmentType: facultyType } }).catch(() => null);
+  await writeAuditLog({ actorUserId: user.id, action: "FACULTY_ONBOARDED", entityType: "User", entityId: created.id, metadata: { role: body.role, facultyType } });
 
   const { passwordHash: _omit, ...safe } = created;
   return NextResponse.json({ user: safe }, { status: 201 });

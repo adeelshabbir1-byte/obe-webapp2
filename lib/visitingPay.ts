@@ -26,7 +26,7 @@ export async function saveRule(by: { id: string }, chairmanId: string, a: Record
   const num = (k: string, d = 0) => { const n = Number(a[k]); return Number.isFinite(n) && n >= 0 ? n : d; };
   const departmentId = a.departmentId ? String(a.departmentId) : null;
   const basis = BASES.some(([k]) => k === a.basis) ? String(a.basis) : "LECTURE";
-  const data = { basis, rateTheory: num("rateTheory"), rateLab: num("rateLab"), phdBonusPct: num("phdBonusPct"), period: a.period === "SEMESTER" ? "SEMESTER" : "MONTHLY", lateGraceMin: num("lateGraceMin", 10), latePenaltyPct: num("latePenaltyPct", 0), marksWithinDays: num("marksWithinDays", 14), requireAttendance: a.requireAttendance !== false, requireTopics: a.requireTopics !== false, updatedById: by.id };
+  const data = { basis, rateTheory: num("rateTheory"), rateLab: num("rateLab"), phdBonusPct: num("phdBonusPct"), period: a.period === "SEMESTER" ? "SEMESTER" : a.period === "WEEKS" ? "WEEKS" : "MONTHLY", lateGraceMin: num("lateGraceMin", 10), latePenaltyPct: num("latePenaltyPct", 0), marksWithinDays: num("marksWithinDays", 14), requireAttendance: a.requireAttendance !== false, requireTopics: a.requireTopics !== false, updatedById: by.id };
   const ex = ((await vdb.visitingPayRule.findFirst({ where: { chairmanId, departmentId } })) as Rule | null);
   if (ex) await vdb.visitingPayRule.update({ where: { id: ex.id }, data });
   else await vdb.visitingPayRule.create({ data: { id: crypto.randomUUID(), chairmanId, departmentId, ...data } });
@@ -116,6 +116,8 @@ export async function buildClaim(assignmentId: string, at = new Date()) {
   let amount = basis === "LECTURE" ? counted.length * rate : basis === "CREDIT_HOUR" ? c.creditHours * rate : rate;
   const late = counted.filter((l) => l.flag && /Arrived|Left/.test(l.flag)).length;
   if (rule?.latePenaltyPct && basis === "LECTURE") amount -= late * rate * (rule.latePenaltyPct / 100);
+  // PhD bonus: a teacher with a PhD on record gets the rule's bonus %.
+  if (rule?.phdBonusPct && (await prisma.facultyRecord.count({ where: { userId: a.userId, kind: "EDUCATION", title: { contains: "PhD", mode: "insensitive" } } }).catch(() => 0)) > 0) amount *= 1 + rule.phdBonusPct / 100;
   amount = Math.round(amount);
   const data = { linesJson: JSON.stringify(lines), requirementsJson: JSON.stringify(reqs), amount, updatedAt: new Date() };
   if (old) { if (["DRAFT", "DEAN_RETURNED", "PL_HELD"].includes(old.status)) await vdb.visitingClaim.update({ where: { id: old.id }, data }); return old.id; }
