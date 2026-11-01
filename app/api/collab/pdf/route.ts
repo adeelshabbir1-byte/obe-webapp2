@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { chairmanIdFor } from "../../../../lib/reportScope";
-import { compliance, dataOf, isDdjd, KINDS, TYPE_RULE, type Prog } from "../../../../lib/collab";
+import { canWork, compliance, dataOf, isDdjd, KINDS, TYPE_RULE, type Prog } from "../../../../lib/collab";
 import { PdfDoc } from "../../../../lib/pdfDoc";
 import { withErrors } from "../../../../lib/apiHandler";
 
@@ -16,7 +16,7 @@ async function GET_handler(req: NextRequest) {
   if (!user || !user.mfaVerified) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const cid = await chairmanIdFor(user as never);
   const p = (await db.collabProgramme?.findUnique({ where: { id: String(req.nextUrl.searchParams.get("id") || "") } })) as Prog | null;
-  if (!p || p.chairmanId !== cid) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!p || p.chairmanId !== cid || !(await canWork(user as never, p))) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const doc = req.nextUrl.searchParams.get("doc") || "noc";
   const d = dataOf(p), c = compliance(p);
   const inst = await prisma.user.findUnique({ where: { id: cid }, select: { instituteName: true, instituteLogo: true } });

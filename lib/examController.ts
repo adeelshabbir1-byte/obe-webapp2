@@ -18,16 +18,19 @@ export const CONTROLLER_HINT = "Needs prisma/migration_exam_controller.sql — r
 
 type U = { id: string; role: string; managedById: string | null; extraRoles?: string[] | null };
 export const isController = (u: U) => (u.extraRoles || []).includes(EXAM_CONTROLLER);
-export type ControllerMode = "HOLDER" | "ACTING" | "VIEW";
+export type ControllerMode = "HOLDER" | "ACTING" | "VIEW" | "TEAM";
 
 /** How this person reaches the Controller's work: as the Controller (HOLDER), as the Dean acting while none is named
  *  (ACTING), or the Institute Head looking on (VIEW, read-only). Null = no access. */
-export async function controllerAccess(u: U): Promise<{ chairmanId: string; mode: ControllerMode } | null> {
+export async function controllerAccess(u: U): Promise<{ chairmanId: string; mode: ControllerMode; programs?: string[] } | null> {
   if (u.role === "CHAIRMAN") return { chairmanId: u.id, mode: isController(u) ? "HOLDER" : "VIEW" };
   const cid = await chairmanIdFor(u as never).catch(() => null);
   if (!cid) return null;
   if (isController(u)) return { chairmanId: cid, mode: "HOLDER" };
   if (u.role === "DEAN" && (await actingControllerDean(cid)) === u.id) return { chairmanId: cid, mode: "ACTING" };
+  // A member of the Controller's team works on the programs the Controller gave him (lib/dutyAssign.ts).
+  const m = (await (await import("./dutyAssign")).examTeam(cid)).find((x) => x.userId === u.id);
+  if (m) return { chairmanId: cid, mode: "TEAM", programs: m.programs };
   return null;
 }
 /** The institute this person may see the Controller's work for, else null. */
