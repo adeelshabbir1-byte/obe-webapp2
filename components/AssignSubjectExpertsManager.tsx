@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SortableTable from "./SortableTable";
 import { withProgress } from "../lib/busy";
@@ -12,6 +12,8 @@ type CourseGroup = {
   customCategoryName: string | null;
   homeDepartmentId: string | null; homeDepartmentName: string | null;
   linkedFollowerCodes: string[]; sections: Section[];
+  /** Set when another home names this course's SE (e.g. "HOD of Mathematics"): read-only here, with "Request SE". */
+  namedBy?: string | null; seName?: string | null;
 };
 type SubjectExpert = { id: string; name: string; customCategoryName: string | null };
 type Batch = { id: string; degreeProgram: string; batchName: string };
@@ -24,6 +26,22 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  // Live SE load across the institute (base courses only), refreshed every 8 s (Adeel prompt §35).
+  const [loads, setLoads] = useState<Record<string, { total: number; byProgram: Record<string, number>; codes: string[] }>>({});
+  const [limit, setLimit] = useState(3);
+  useEffect(() => {
+    let live = true;
+    const pull = () => fetch("/api/se-load").then((r) => r.json()).then((d) => { if (live && d.loads) { setLoads(d.loads); setLimit(d.limit || 3); } }).catch(() => null);
+    pull();
+    const t = setInterval(() => { if (document.visibilityState === "visible") pull(); }, 8000);
+    return () => { live = false; clearInterval(t); };
+  }, []);
+  const loadTag = (id: string) => {
+    const l = loads[id];
+    if (!l) return " — SE of 0";
+    const parts = Object.entries(l.byProgram).map(([p, n]) => `${n} ${p}`).join(" · ");
+    return ` — SE of ${l.total}${parts ? ` (${parts})` : ""}${l.total > limit ? " ⛔ over limit" : l.total === limit ? " ⚠ at limit" : ""}`;
+  };
 
   const [syncing, setSyncing] = useState(false);
   async function syncLabs() {
@@ -149,15 +167,15 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
         <option value="">— Unassigned —</option>
         {fromHome.length > 0 && (
           <optgroup label={`Subject home: ${g.homeDepartmentName || "other department"}`}>
-            {fromHome.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+            {fromHome.map((h) => <option key={h.id} value={h.id}>{h.name}{loadTag(h.id)}</option>)}
           </optgroup>
         )}
         {seCategoryOrder.map((cat) => (
           cat === "" ? (
-            categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)
+            categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}{loadTag(se.id)}</option>)
           ) : (
             <optgroup key={cat} label={cat}>
-              {categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}</option>)}
+              {categorizedSes.get(cat)!.map((se) => <option key={se.id} value={se.id}>{se.name}{loadTag(se.id)}</option>)}
             </optgroup>
           )
         ))}
@@ -219,6 +237,15 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
                       {g.linkedFollowerCodes.length > 0 ? g.linkedFollowerCodes.join(", ") : <span style={{ color: "var(--slate)" }}>—</span>}
                     </td>
                     <td>
+                      {g.namedBy ? (
+                        <div style={{ fontSize: 12.5 }}>
+                          <div>SE named by the {g.namedBy} · {g.seName ? <b>{g.seName} ✓</b> : <span style={{ color: "#B3261E" }}>not named yet ⚠</span>}</div>
+                          {!g.seName && <button type="button" className="btn btn-sm" style={{ marginTop: 4 }} onClick={async () => {
+                            const r = await fetch("/api/se-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId: g.sections[0].id }) }).then((x) => x.json()).catch(() => ({ error: "Could not send." }));
+                            if (r.error) setError(r.error); else setNotice(`Request sent to the ${g.namedBy}.`);
+                          }}>Request SE</button>}
+                        </div>
+                      ) : (<>
                       <select
                         value={currentValue} disabled={loading}
                         onChange={(e) => assignSeToGroup(g.code, e.target.value, e.target, currentValue)}
@@ -232,6 +259,7 @@ export default function AssignSubjectExpertsManager({ courseGroups: initialGroup
                           Applies to all {g.sections.length} sections above.
                         </div>
                       )}
+                      </>)}
                     </td>
                   </tr>
                 );

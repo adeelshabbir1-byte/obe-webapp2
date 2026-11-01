@@ -80,6 +80,17 @@ export default async function AssignSubjectExpertsPage({ searchParams }: { searc
       })),
     };
   });
+  // Course homes (Adeel prompt §11–12): department-common and service courses are named by their home department's HOD.
+  {
+    const { namerOf } = await import("../../../lib/seNaming");
+    const seIds = Array.from(new Set(courseGroups.map((g) => g.sections[0]?.subjectExpertId).filter((x): x is string => !!x)));
+    const seNames = new Map((await prisma.user.findMany({ where: { id: { in: seIds.concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+    for (const g of courseGroups as (typeof courseGroups[number] & { namedBy?: string | null; seName?: string | null })[]) {
+      const n = await namerOf(user.managedById || "", { title: g.title }).catch(() => null);
+      g.namedBy = n && n.kind === "HOD" ? n.label : null;
+      g.seName = g.sections[0]?.subjectExpertId ? seNames.get(g.sections[0].subjectExpertId) || null : null;
+    }
+  }
   courseGroups.sort((a, b) => (a.semesterNumber ?? 99) - (b.semesterNumber ?? 99) || a.code.localeCompare(b.code));
 
   const subjectExperts = await prisma.user.findMany({

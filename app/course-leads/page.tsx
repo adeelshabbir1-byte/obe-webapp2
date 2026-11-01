@@ -16,6 +16,8 @@ export default async function CourseLeadsPage() {
   if (!LEAD_MANAGER_ROLES.includes(user.role)) redirect("/dashboard");
 
   const chairmanId = user.role === "CHAIRMAN" ? user.id : user.managedById || "";
+  // Course Leads are chosen by the rule first (lib/autoLead.ts); people override.
+  const autoReasons = await (await import("../../lib/autoLead")).ensureAutoLeads(chairmanId).catch(() => ({} as Record<string, string>));
   const teams = await loadTeams(chairmanId);
   const scope = user.role === "COURSE_ASSIGNER" ? { coordinator: { managedById: chairmanId, ...assignerDept(user) } } : courseScopeFor(user);
   const visible = new Set<string>((await prisma.course.findMany({ where: { id: { in: teams.flatMap((t) => t.rows.map((r) => r.courseId)) }, ...scope }, select: { id: true } })).map((c) => c.id));
@@ -28,6 +30,12 @@ export default async function CourseLeadsPage() {
         When a course (or equivalent courses) is taught in several sections by different teachers, one of them is the Course Lead.
         The lead finalises the Midterm and Final paper; the other teachers approve it. Once everyone approves, every section gets the approved paper.
       </p>
+      {mine.some((t) => autoReasons[t.key]) && (
+        <div className="card" style={{ marginBottom: 12, fontSize: 13 }}>
+          <b>Chosen automatically</b> <span className="small-note">— change any of them below; your choice is kept.</span>
+          <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{mine.filter((t) => autoReasons[t.key]).map((t) => <li key={t.key}>{t.code} ({t.term}): {t.teachers.find((x) => x.id === t.leadId)?.name || "—"} <span className="small-note">· auto — {autoReasons[t.key]}</span></li>)}</ul>
+        </div>
+      )}
       <CourseLeadManager teams={mine.map((t) => ({ key: t.key, code: t.code, title: t.title, term: t.term, leadId: t.leadId, teachers: t.teachers, rows: t.rows.map((r) => ({ batch: r.batch, teachers: r.teachers.map((x) => x.name).join(", ") })) }))} />
     </Shell>
   );

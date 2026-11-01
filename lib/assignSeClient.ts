@@ -7,7 +7,7 @@ export async function putAssignSe(courseId: string, subjectExpertId: string | nu
   });
   let res = await send();
   let data = await res.json().catch(() => ({}));
-  if (res.status === 409 && data.code === "REASON_REQUIRED") {
+  if (res.status === 409 && (data.code === "REASON_REQUIRED" || data.code === "OVER_LIMIT")) {
     if (reasonBox.reason === null) return { ok: false, data: { error: "Cancelled — nothing changed." } };
     const r = window.prompt(`${data.error}\n\nReason (recorded in the audit log and shown to the Subject Expert):`);
     if (!r || r.trim().length < 5) { reasonBox.reason = null; return { ok: false, data: { error: "A reason of at least 5 characters is needed — nothing changed." } }; }

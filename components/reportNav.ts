@@ -354,7 +354,7 @@ export const HOD_NAV = [
   { href: "/move-program", label: "Move Program Data" },
   { href: "/program-moves", label: "Teacher Program Moves" },
   { href: "/hod/department", label: "My Department" },
-  { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/course-leads", label: "Course Leads" },
+  { href: "/hod/borrow-teacher", label: "Teachers from Other Departments" }, { href: "/hod/assign-subject-experts", label: "Name Subject Experts" }, { href: "/course-leads", label: "Course Leads" },
   { href: "/omc/reports", label: "Reports" },
   { href: "/topic-prerequisites", label: "Prerequisite Topics" },
   { href: "/topic-overlaps", label: "Topic Overlap Matrix" },
