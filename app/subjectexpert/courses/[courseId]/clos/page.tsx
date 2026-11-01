@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
 import Shell from "../../../../../components/Shell";
 import CourseSubNav from "../../../../../components/CourseSubNav";
+import PlanWorkbookImport from "../../../../../components/PlanWorkbookImport";
 import ClosManager from "../../../../../components/ClosManager";
 import CourseDescriptionFieldsForm from "../../../../../components/CourseDescriptionFieldsForm";
 import CourseResourcesSection from "../../../../../components/CourseResourcesSection";
@@ -54,6 +55,7 @@ export default async function ClosPage({ params }: { params: { courseId: string 
   return (
     <Shell roleLabel="University Subject Expert" userName={user.name} navLinks={navForRole(user.role)}>
       <CourseSubNav courseId={course.id} active="clos" code={course.code} title={course.title} status={course.templateStatus} />
+      <PlanWorkbookImport courseId={course.id} source="SE" />
       {course.benchmarkSource && (
         <div className="card" style={{ borderColor: "var(--brass)" }}>
           <p style={{ fontSize: 12.5, color: "var(--brass-dark)" }}>
