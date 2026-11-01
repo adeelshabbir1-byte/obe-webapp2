@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
 import Shell from "../../components/Shell";
+import TodayPanel from "../../components/TodayPanel";
 import { planProgress } from "../../lib/deadlines";
 import { OVERVIEW_ROLES, leadsInScope } from "../../lib/readinessScope";
 
@@ -88,6 +89,7 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
     <Shell roleLabel="Home" userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Needs your attention</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>What is late, waiting for you, or waiting on others, as of today. Green means nothing to do. For every program&apos;s risks in one table, open the <Link href="/risk">Risk Register</Link>.</p>
+      <TodayPanel user={user as never} />
       {deptTabs.length > 1 && (
         <nav className="tabs no-print" aria-label="Departments" style={{ marginBottom: 14 }}>
           <Link href="/home" className="tab" aria-current={!dept ? "page" : undefined}>All departments</Link>

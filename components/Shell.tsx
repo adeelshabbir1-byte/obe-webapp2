@@ -12,6 +12,7 @@ import { moduleForPath } from "../lib/modules";
 import { defaultWork, ROLE_WORK_LABEL } from "../lib/navDefaults";
 import { applyTitles, titlesFor } from "../lib/titles";
 import { badgeCount } from "../lib/approvals/inbox";
+import ReportProblemButton from "./ReportProblemButton";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -75,6 +76,10 @@ export default async function Shell({
   // My Approvals: every member of staff gets it, with a count of what is waiting for them (cached for a few minutes).
   const staffUser = !!user && !["STUDENT", "SUPER_USER"].includes(String((user as { rawRole?: string }).rawRole || user.role));
   const approvalsCount = staffUser ? await badgeCount(user as never).catch(() => 0) : 0;
+  // "What's next": the number of open tasks next to the name (cached for a few minutes).
+  const tasksCount = staffUser ? await import("../lib/nextTasks").then((m) => m.nextTasksCount(user as never)).catch(() => 0) : 0;
+  // "Report a problem" (pilot): on every page, unless the institute's pilot switch leaves this person out.
+  const reportButton = !!user && await import("../lib/problemReports").then((m) => m.showButton(user as never)).catch(() => false);
   const withInbox = staffUser && !rawLinks.some((l) => l.href === "/approvals") ? [{ href: "/approvals", label: "My Approvals" }, ...rawLinks] : rawLinks;
   const links = withInbox.filter((l, i, a) => a.findIndex((x) => x.href === l.href) === i).map((l) => ({ ...l, label: applyTitles(l.label, titles) }));
   const shownRole = applyTitles(roleLabel, titles);
@@ -104,6 +109,7 @@ export default async function Shell({
       currentTerm={currentTerm}
       requestsCount={requestsCount}
       approvalsCount={approvalsCount}
+      tasksCount={tasksCount}
       unreadNotifications={unreadNotifications}
       pins={pins}
       defaultPins={defaultWork(role, links)}
@@ -117,6 +123,7 @@ export default async function Shell({
       )}
       {guideFor(role) && <NextStepTip role={role} steps={guideFor(role)!.steps} />}
       {children}
+      {reportButton && <ReportProblemButton />}
     </AppShell>
   );
 }

@@ -9481,3 +9481,54 @@ model LectureMerge {
 
   @@index([courseId, source], map: "LectureMerge_course_idx")
 }
+
+// Part 3 (prisma/migration_part3_pilot.sql): Excel course-plan imports, their remembered column mapping, the pilot's
+// "Report a problem" details and switch.
+model PlanImport {
+  id         String    @id
+  courseId   String
+  source     String
+  byUserId   String
+  fileName   String    @default("")
+  fileRef    String?
+  partsJson  String    @default("[]")
+  parsedJson String    @default("{}")
+  beforeJson String    @default("{}")
+  summary    String    @default("")
+  status     String    @default("APPLIED")
+  createdAt  DateTime  @default(now())
+  appliedAt  DateTime?
+  undoneAt   DateTime?
+
+  @@index([courseId, source], map: "PlanImport_course_idx")
+}
+
+model PlanImportMapping {
+  chairmanId  String   @id
+  mappingJson String   @default("{}")
+  updatedById String?
+  updatedAt   DateTime @default(now())
+}
+
+model ProblemReport {
+  feedbackId    String   @id
+  chairmanId    String?
+  userId        String
+  role          String
+  departmentId  String?
+  kind          String   @default("BUG")
+  pageUrl       String   @default("")
+  browser       String?
+  screenshotRef String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt], map: "ProblemReport_created_idx")
+}
+
+model ProblemPilot {
+  chairmanId        String   @id
+  mode              String   @default("ALL")
+  departmentIdsJson String   @default("[]")
+  updatedById       String?
+  updatedAt         DateTime @default(now())
+}

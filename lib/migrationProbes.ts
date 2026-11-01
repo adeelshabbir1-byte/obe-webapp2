@@ -796,6 +796,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "PaperVetting"
 },
 {
+"f": "migration_part3_pilot.sql",
+"d": "Part 3: Excel course-plan imports (each a version that can be undone, the file kept), the column mapping remembered per",
+"t": "ProblemPilot"
+},
+{
 "f": "migration_passing_criteria.sql",
 "d": "Run in Supabase SQL Editor. Adds PassingCriteria \u2014 OMC-configurable",
 "t": "PassingCriteria"

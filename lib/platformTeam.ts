@@ -18,7 +18,7 @@ export const ROLES: Record<Exclude<Area, "CURRICULUM">, { label: string; does: s
   REGULATIONS: { label: "Regulations Officer", does: "Keeps the National Regulations library: council notifications, versions, clauses, screenshots; publishes documents.", pages: ["/regulations"] },
   BILLING: { label: "Billing & Accounts", does: "Institute plans and licences, modules, invoices, payments, renewals.", pages: ["/admin/billing", "/admin/modules"] },
   ONBOARDING: { label: "Onboarding & Institute Success", does: "Account requests, new institutes and their Institute Heads, affiliations, the demo institute, the landing page.", pages: ["/admin/account-requests", "/admin/users", "/admin/affiliations", "/admin/demo", "/admin/landing-page"] },
-  SUPPORT: { label: "Support Desk", does: "System feedback and help requests; password resets for Institute Heads.", pages: ["/admin/feedback", "/admin/users"] },
+  SUPPORT: { label: "Support Desk", does: "System feedback and help requests; password resets for Institute Heads.", pages: ["/admin/feedback", "/admin/problem-reports", "/admin/users"] },
   SECURITY: { label: "Data, Security & Compliance Officer", does: "System Health and migrations, platform settings, audit; the only role besides the Super Admin allowed a CNIC look-up.", pages: ["/admin/system-health", "/admin/migrations", "/admin/platform-settings"] },
   SHARED_MODERATOR: { label: "Shared Courses Moderator", does: "Screens Shared Courses (spam, copyright, quality) before the national teams review them.", pages: ["/admin/shared-courses", "/public-library"] },
   ANALYTICS: { label: "Analytics (read-only)", does: "Platform-wide figures: institutes, people, courses, adoption, consortium activity.", pages: ["/admin/analytics"] },

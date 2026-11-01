@@ -10,6 +10,7 @@ import LectureExcelImport from "../../../../../components/LectureExcelImport";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
 import LectureMergeSplit from "../../../../../components/LectureMergeSplit";
+import PlanWorkbookImport from "../../../../../components/PlanWorkbookImport";
 import { mergesOf } from "../../../../../lib/topicPlan";
 import { isTeachingTopic } from "../../../../../lib/courseProgress";
 
@@ -73,6 +74,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         </div>
       )}
 
+      <PlanWorkbookImport courseId={course.id} source="SE" />
       <LectureExcelImport courseId={course.id} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
 

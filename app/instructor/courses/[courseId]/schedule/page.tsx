@@ -12,6 +12,7 @@ import PrereqReviewCard from "../../../../../components/PrereqReviewCard";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
 import LectureMergeSplit from "../../../../../components/LectureMergeSplit";
+import PlanWorkbookImport from "../../../../../components/PlanWorkbookImport";
 import { mergesOf } from "../../../../../lib/topicPlan";
 
 
@@ -53,6 +54,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
       </div>
       <CourseEvaluationSection courseId={course.id} initialObservations={course.instructorObservations || ""} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
+      <PlanWorkbookImport courseId={course.id} source="INSTRUCTOR" />
       <LectureMergeSplit courseId={course.id} plan="INSTRUCTOR" rows={instructorRows.map((r) => ({ id: r.id, n: r.lectureNumber, topic: r.topic, subtopic: r.subtopic }))} merges={(await mergesOf(course.id, "INSTRUCTOR").catch(() => [])).filter((m) => m.kind === "MERGE").map((m) => ({ id: m.id, label: `Merged ${m.parts.map((p) => `L${p.lectureNumber}`).join(" + ")} → L${m.parts[0]?.lectureNumber}` }))} />
       <InstructorLectureContentManager
         courseId={course.id}

@@ -50,6 +50,7 @@ export default function AppShell({
   currentTerm,
   requestsCount,
   approvalsCount = 0,
+  tasksCount = 0,
   unreadNotifications = 0,
   pins = null,
   defaultPins = [],
@@ -69,6 +70,7 @@ export default function AppShell({
   currentTerm: { termName: string; year: number } | null;
   requestsCount: number;
   approvalsCount?: number;
+  tasksCount?: number;
   unreadNotifications?: number;
   pins?: string[] | null;
   defaultPins?: string[];
@@ -497,6 +499,7 @@ export default function AppShell({
             <HelpButton />
             <NotificationBell initialUnread={unreadNotifications} />
             <span className="tb-hello">Hello, <b>{greetingName(userName)}</b></span>
+            {tasksCount > 0 && <a href="/dashboard#whats-next" className="nl-badge" style={{ textDecoration: "none" }} title={`${tasksCount} open task${tasksCount === 1 ? "" : "s"} — What's next`} aria-label={`${tasksCount} open tasks`} data-tasks-count>{tasksCount}</a>}
             <a href="/faculty/profile" className="avatar" title={`${userName} — my profile`} style={userPhoto ? { background: `center / cover no-repeat url(${userPhoto})` } : { textDecoration: "none" }}>{userPhoto ? "" : initials(userName)}</a>
             <button type="button" className="tb-icon-btn" onClick={logout} disabled={loggingOut} aria-label="Sign out" title="Sign out">
               <LogOut size={17} />
