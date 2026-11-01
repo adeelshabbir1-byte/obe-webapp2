@@ -16,7 +16,7 @@ export type Area = "CURRICULUM" | "CONSORTIUM_ODL" | "REGULATIONS" | "BILLING" |
 export const ROLES: Record<Exclude<Area, "CURRICULUM">, { label: string; does: string; pages: string[] }> = {
   CONSORTIUM_ODL: { label: "Consortium & ODL Manager", does: "Admits universities to the consortium, checks their HEC NOCs, agreements, MoUs, exam centres and sponsored industry accounts.", pages: ["/admin/consortium"] },
   REGULATIONS: { label: "Regulations Officer", does: "Keeps the National Regulations library: council notifications, versions, clauses, screenshots; publishes documents.", pages: ["/regulations"] },
-  BILLING: { label: "Billing & Accounts", does: "Institute plans and licences, modules, invoices, payments, renewals.", pages: ["/admin/billing", "/admin/modules"] },
+  BILLING: { label: "Billing & Accounts", does: "Institute plans and licences, modules, invoices, payments, renewals.", pages: ["/admin/billing", "/admin/modules", "/admin/ai-usage"] },
   ONBOARDING: { label: "Onboarding & Institute Success", does: "Account requests, new institutes and their Institute Heads, affiliations, the demo institute, the landing page.", pages: ["/admin/account-requests", "/admin/users", "/admin/affiliations", "/admin/demo", "/admin/landing-page"] },
   SUPPORT: { label: "Support Desk", does: "System feedback and help requests; password resets for Institute Heads.", pages: ["/admin/feedback", "/admin/problem-reports", "/admin/users"] },
   SECURITY: { label: "Data, Security & Compliance Officer", does: "System Health and migrations, platform settings, audit; the only role besides the Super Admin allowed a CNIC look-up.", pages: ["/admin/system-health", "/admin/migrations", "/admin/platform-settings"] },

@@ -918,6 +918,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "CatalogSetting"
 },
 {
+"f": "migration_prompt10c.sql",
+"d": "Prompt 10 sections 7, 8 and 10. FDP trainings over several days (times per day, what the university provides, HOD-approved",
+"t": "VisitingPaySheet"
+},
+{
 "f": "migration_public_library.sql",
 "d": "Run in Supabase SQL Editor (safe to run more than once).",
 "t": "MasterCourse",

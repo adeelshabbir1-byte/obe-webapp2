@@ -6,6 +6,7 @@ type Item = { id: string; no: number; clo: string; level: string; marks: number;
 export default function PaperVettingEditor({ courseId, examType, items, initial, note, status }: { courseId: string; examType: string; items: Item[]; initial: Record<string, string>; note: string; status: string }) {
   const router = useRouter();
   const [qs, setQs] = useState(initial); const [tn, setTn] = useState(note); const [msg, setMsg] = useState(""); const [busy, setBusy] = useState("");
+  const [pdf, setPdf] = useState<string | null>(null);
   const locked = status === "SUBMITTED" || status === "APPROVED";
   async function go(action: string, extra: Record<string, unknown> = {}) {
     setBusy(action); setMsg("");
@@ -24,7 +25,8 @@ export default function PaperVettingEditor({ courseId, examType, items, initial,
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6, alignItems: "center" }}>
         {!locked && <><button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => go("save")}>Save</button>
           <button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => go("check")}>{busy === "check" ? "Checking…" : "Run system check"}</button>
-          <button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => go("check", { ai: true })}>Run system + AI check</button>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => go("check", { ai: true, pdf })} data-ai-check>{busy === "check" ? "Checking…" : "Run system + AI check"}</button>
+          <label className="small-note" title="Optional: the AI reads an uploaded sample paper (PDF) instead of the typed questions">Sample paper (PDF) <input type="file" accept="application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (!f) { setPdf(null); return; } const r = new FileReader(); r.onload = () => setPdf(String(r.result).split(",")[1] || null); r.readAsDataURL(f); }} /></label>
           <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => go("submit")}>Send to Program Lead</button></>}
         {locked && <button type="button" className="btn btn-secondary btn-sm" onClick={() => go("reopen")}>Reopen to change</button>}
         <span style={{ fontSize: 13 }}>{busy && busy !== "check" ? "Working…" : msg}</span>

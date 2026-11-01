@@ -53,15 +53,15 @@ async function POST_handler(req: Request) {
       const sys = await systemCheck(course.id, examType);
       let ai: unknown = null, aiError = "";
       if (b.action === "check" && b.ai) {
-        const key = await aiKey(await chairmanIdFor(user));
-        if (!key) aiError = "AI checking is off: the Institute Head can turn it on under AI Configuration.";
-        else {
-          const { items, clos } = await paperOf(course.id, examType);
-          const cOf = new Map(clos.map((c) => [c.id, c]));
-          const list = items.filter((i) => (qs[i.id] || "").trim()).map((i) => ({ no: i.questionNo, text: qs[i.id], clo: (i.cloId && cOf.get(i.cloId)?.code) || "none", level: i.cognitiveLevel || "?", marks: i.marks }));
-          if (!list.length) aiError = "Write the questions first; the AI reads their wording.";
-          else { try { ai = await aiCheck(key, `${course.code} ${course.title}`, clos.map((c) => ({ code: c.code, statement: c.statement, bloomLevel: c.bloomLevel })), list); } catch (e) { aiError = e instanceof Error ? e.message : "AI check failed."; } }
-        }
+        // The AI check (lib/aiChecks.ts): the questions, or an uploaded sample paper, with the course's CLOs, Bloom levels,
+        // topics and marks; cached per version, logged with its cost, within the institute's monthly budget.
+        const { items, clos } = await paperOf(course.id, examType);
+        const cOf = new Map(clos.map((c) => [c.id, c]));
+        const list = items.filter((i) => (qs[i.id] || "").trim()).map((i) => ({ no: i.questionNo, text: qs[i.id], clo: (i.cloId && cOf.get(i.cloId)?.code) || "none", bloom: i.cognitiveLevel || "?", marks: i.marks }));
+        const pdf = typeof b.pdf === "string" && /^[A-Za-z0-9+/=]+$/.test(b.pdf) && b.pdf.length < 14_000_000 ? b.pdf : null;
+        try { const { paperCheck } = await import("../../../lib/aiChecks"); const r = await paperCheck(user, await chairmanIdFor(user), course, examType, list, pdf); ai = { ...r.result, model: r.model, cached: r.cached, costUsd: r.costUsd }; }
+        catch (e) { aiError = e instanceof Error ? e.message : "AI check failed."; }
+        void aiKey; void aiCheck;
       }
       await vtdb.paperVetting.update({ where: { id: v.id }, data: { questionsJson: JSON.stringify(qs), teacherNote: typeof b.teacherNote === "string" ? b.teacherNote.slice(0, 3000) : v.teacherNote, systemJson: JSON.stringify({ ...sys, at: new Date() }), ...(ai ? { aiJson: JSON.stringify({ ...(ai as object), at: new Date() }) } : {}) } });
       return NextResponse.json({ ok: true, aiError });
