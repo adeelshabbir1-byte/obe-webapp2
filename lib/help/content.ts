@@ -829,6 +829,15 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     affects: "Undo is not offered for things already sent to others (emails, approvals, published results).",
     pages: ["/subjectexpert/courses"], keywords: ["undo", "history", "who changed", "audit", "draft", "restore", "autosave"],
   }),
+  A({
+    key: "se-by-home", kind: "guide", category: "curriculum", roles: [HOD, PL],
+    title: "Name Subject Experts by course home, with live SE load",
+    summary: "A course's Subject Expert is named by its home: the Program Lead for his program's own courses, the HOD for department-common and service / GE courses of his department. Followers use their base course's SE. Next to every name you see how many SE courses that teacher already has across the institute, updated live.",
+    steps: ["Program Lead: Assign Subject Experts — courses named by a department show who names them and “Request SE” when none is named.", "HOD: Name Subject Experts — one row per department course (base copies only), one column per expert, with the SE count in each header.", "At the limit the count turns amber (⚠); going over asks for a reason.", "Course Leads are chosen automatically when several teachers share a course (the SE first, then last term's lead, then the most experienced); change any of them on Course Leads."],
+    who: "Program Leads (own program's courses) and HODs (their department's common and service courses). The limit is set in Who Decides What.",
+    affects: "The server refuses an SE named by the wrong person, and on a follower copy.",
+    pages: ["/hod/assign-subject-experts", "/coordinator/assign-subject-experts", "/course-leads"], keywords: ["subject expert", "assign se", "home", "limit", "load", "course lead", "request se"], href: "/coordinator/assign-subject-experts",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

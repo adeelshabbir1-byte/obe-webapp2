@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-g", date: "2026-11-01", roles: ["HEAD_OF_DEPARTMENT"], text: "Name Subject Experts: a matrix of your department's common and service courses × your experts, with each expert's live SE load.", href: "/hod/assign-subject-experts" },
+  { id: "2026-11-01-h", date: "2026-11-01", roles: ["PROGRAM_COORDINATOR"], text: "Assign Subject Experts shows each teacher's SE load across the institute, live; courses named by a department show who names them and “Request SE”.", href: "/coordinator/assign-subject-experts" },
+  { id: "2026-11-01-i", date: "2026-11-01", roles: ["*"], text: "Course Leads are now chosen automatically (the SE first, then last term's lead, then the most experienced). Anyone who manages leads can still change them.", href: "/course-leads" },
   { id: "2026-11-01-e", date: "2026-11-01", roles: ["SUBJECT_EXPERT", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN", "OMC"], text: "CLOs and lecture topics: Undo for 10 seconds after a save or delete, ⟲ history (who · when · old → new), and unsaved CLO edits kept as a draft you can restore.", href: "/subjectexpert/courses" },
   { id: "2026-11-01-f", date: "2026-11-01", roles: ["*"], text: "Text & contrast: larger text and high contrast for you, from the sidebar (A+ and ◐). ⓘ next to CLO, GA and Bloom explains the term.", href: "/help/glossary" },
   { id: "2026-11-01-a", date: "2026-11-01", roles: [STAFF], text: "Menu colours: each page in your menu shows red (overdue), amber (due soon) or blue (in progress), with a count. Hover for the reason.", href: "/dashboard#whats-next" },

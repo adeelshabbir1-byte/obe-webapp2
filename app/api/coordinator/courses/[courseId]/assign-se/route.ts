@@ -10,20 +10,34 @@ import { pastTermError } from "../../../../../../lib/courseTerm";
 import { leaveBlock } from "../../../../../../lib/facultyLeave";
 import { collegeRoleBlock } from "../../../../../../lib/affiliates";
 import { withErrors } from "../../../../../../lib/apiHandler";
+import { chairmanIdFor } from "../../../../../../lib/reportScope";
+import { namingBlock, seLimitFor, seLoads } from "../../../../../../lib/seNaming";
 
 async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
   const user = await getAuthenticatedUser();
-  if (!user || user.role !== "PROGRAM_COORDINATOR") {
+  if (!user || !["PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
   if (!course) return NextResponse.json({ error: "not found" }, { status: 404 });
-  // Own program's course, unless the Chairman gave it to another lead; another program's course only if he handles it.
-  const access = await handlingAccess(user.id, course);
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
-
+  const chairmanId = await chairmanIdFor(user as never);
+  const isHod = user.role === "HEAD_OF_DEPARTMENT";
+  if (isHod) {
+    // The HOD names SEs of department-common and service courses whose home is his department (Adeel prompt §11).
+    const owner = await prisma.user.findUnique({ where: { id: course.coordinatorId }, select: { managedById: true } });
+    if (!owner || owner.managedById !== chairmanId) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  } else {
+    // Own program's course, unless the Chairman gave it to another lead; another program's course only if he handles it.
+    const access = await handlingAccess(user.id, course);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  }
   const body = await req.json();
+  // Course homes decide who names the SE (only once the BOS has approved homes).
+  if (body.subjectExpertId) {
+    const no = await namingBlock(user as never, chairmanId, course);
+    if (no) return NextResponse.json({ error: no, code: "NOT_NAMER" }, { status: 403 });
+  }
   const subjectExpertId = body.subjectExpertId || null;
   if (subjectExpertId) { const no = await collegeRoleBlock(user.managedById, "SUBJECT_EXPERT"); if (no) return NextResponse.json({ error: no }, { status: 409 }); }
 
@@ -59,6 +73,8 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
   if (subjectExpertId) {
     const se = await prisma.user.findUnique({ where: { id: subjectExpertId } });
     let ok = !!se && hasSubjectExpertHat(se) && (se.managedById === user.id || (se.role !== "SUBJECT_EXPERT" && se.managedById === user.managedById));
+    // An HOD picks from his own department's experts.
+    if (!ok && isHod && se && hasSubjectExpertHat(se) && !!user.departmentId && se.departmentId === user.departmentId) ok = true;
     if (!ok && se && hasSubjectExpertHat(se) && course.subjectHomeDepartmentId && se.departmentId === course.subjectHomeDepartmentId && se.managedById) {
       // An expert from the course's subject-home department (another coordinator's, same institute).
       const theirCoordinator = await prisma.user.findUnique({ where: { id: se.managedById }, select: { managedById: true } });
@@ -73,6 +89,16 @@ async function PUT_handler(req: NextRequest, { params }: { params: { courseId: s
     }
   }
 
+  // SE limit (Adeel prompt §35): at the limit it warns, above it a reason is needed; the count is re-checked here.
+  if (subjectExpertId && subjectExpertId !== course.subjectExpertId) {
+    const [loads, limit] = await Promise.all([seLoads(chairmanId), seLimitFor(user as never)]);
+    const now = loads[subjectExpertId];
+    const already = !!now && now.codes.includes(course.code);
+    if (!already && now && now.total + 1 > limit && reason.length < 5) {
+      const se = await prisma.user.findUnique({ where: { id: subjectExpertId }, select: { name: true } });
+      return NextResponse.json({ code: "OVER_LIMIT", error: `${se?.name || "This teacher"} is already SE of ${now.total} course${now.total === 1 ? "" : "s"} (${now.codes.join(", ")}); the limit is ${limit}. Give a reason to assign one more.` }, { status: 409 });
+    }
+  }
   const updated = await prisma.course.update({ where: { id: course.id }, data: { subjectExpertId, ...(subjectExpertId !== course.subjectExpertId ? { seResponse: subjectExpertId ? "PENDING" : "NONE", seResponseNote: null } : {}) } });
 
   // A course linked in a content-sync group only shows the BASE on the
