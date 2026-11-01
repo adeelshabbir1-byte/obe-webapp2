@@ -818,7 +818,7 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Hover a count to see what is open on that page.", "On your home page, What's next lists the same items in order, and My week shows the next 7 days by date.", "Can't act yet? Click “Waiting…” on the item, say what you wait for (and on whom): it turns grey for you and red for them, until the recheck date.", "Choose a daily or weekly digest at the bottom of What's next."],
     who: "Everyone on staff, for their own work.",
     affects: "The counts refresh every few minutes. The amber window is set in Who Decides What (OMC per department, Program Lead per program).",
-    pages: ["/dashboard", "/whats-new"], keywords: ["red", "amber", "colours", "badge", "menu", "my week", "digest", "waiting"], href: "/dashboard#whats-next",
+    pages: ["/dashboard", "/whats-new"], keywords: ["red", "amber", "colours", "badge", "menu", "my week", "digest", "waiting"], href: "/dashboard",
   }),
   A({
     key: "undo-history", kind: "faq", category: "help", roles: [],
