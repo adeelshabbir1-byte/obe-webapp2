@@ -939,6 +939,27 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Open CQI Remedies (or the red task in What's next).", "Read why it happened and who is weak.", "Choose the remedy; for a tutorial, find a free slot.", "After the re-quiz, record the class average: closed — effective, or choose the next step.", "SEs fill the remedy bank per topic once for every teacher of the course."],
     who: "The course's teachers; the Program Lead excuses; SEs keep the remedy bank.", pages: ["/cqi/remedies"], keywords: ["cqi", "remedy", "weak topic", "prerequisite", "tutorial", "re-quiz", "early warning"], href: "/cqi/remedies",
   }),
+  A({
+    key: "affiliation", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL],
+    title: "Affiliated colleges: applications, centres, examiners, claims",
+    summary: "The university and each affiliated college (a separate institute on OBEHUB) work on one shared record per item: affiliation applications and inspections, lab test centres, external examiners and practical sessions (agreed marks), TA / DA claims with rates, notices, faculty approvals, fees, migrations, accreditation visits and rechecks. Sessional marks stay the college's; the university sees comparison reports across colleges.",
+    steps: ["Open Affiliation and pick the tab (Applications, Centres, Examiners, …).", "Create the record; the other side acknowledges.", "Move it through its steps; each move is logged.", "Download the letter PDF when needed.", "University: set TA / DA rates and see the college comparison reports."],
+    who: "University Affiliation Committee and the college's Institute Head.", pages: ["/affiliation"], keywords: ["affiliation", "affiliated college", "examiner", "practical", "ta da", "centre", "inspection", "agreed marks"], href: "/affiliation",
+  }),
+  A({
+    key: "adp-transfers", kind: "guide", category: "registration", roles: [IH, HOD, PL],
+    title: "Associate Degree, exit awards and credit transfer",
+    summary: "Mark a program as BS or ADP (and which BS an ADP feeds into). A student leaving after 60+ credit hours, 4 semesters, 30 GE credit hours and CGPA 2.00 can be awarded an Associate Degree on exit — the Controller decides. Lateral entry and transfer requests show suggested equivalent courses (same code, same subject, similar title); the Program Lead accepts or rejects each line.",
+    steps: ["Associate Degree: set each program's kind.", "Pick a batch to see who qualifies for an exit award; request it.", "Controller: award or refuse.", "Transfers: open a request, accept the strong suggestions, decide the rest line by line."],
+    who: "Program Lead and Controller of Examinations.", pages: ["/adp", "/status-changes"], keywords: ["associate degree", "adp", "exit", "lateral entry", "transfer", "equivalence", "credit transfer"], href: "/adp",
+  }),
+  A({
+    key: "collab-odl", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL],
+    title: "Joint, dual and double degrees, and ODL programmes",
+    summary: "Start a programme, record partners, fill the Memorandum of Commitment items (a–r), draft the Credit Equivalency Matrix from two curricula, tick each HEC condition with its evidence, and record the NOC. ODL courses are checked for their mode (synchronous, asynchronous, blended) and credit-hour rules, and teachers for the two-ODL-courses limit. Enrolment stays locked until the NOC is recorded. Download the NOC file, audit pack and Diploma Supplement as PDFs.",
+    steps: ["Open Joint degrees and ODL; start a programme.", "Fill the details, partners and courses.", "Tick the conditions and MoC items.", "Draft and check the matrix.", "Download the NOC file / audit pack."],
+    who: "Institute Head, Dean, HOD and Program Lead.", pages: ["/collab"], keywords: ["joint degree", "dual degree", "double degree", "odl", "distance learning", "moc", "credit equivalency", "noc", "diploma supplement", "blended"], href: "/collab",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

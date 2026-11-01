@@ -10095,3 +10095,75 @@ model TopicRemedy {
 
   @@id([chairmanId, courseCode, topic])
 }
+
+// One register for affiliation work (Adeel prompt §28–30, lib/affWork.ts): kind = APPLICATION | CENTRE | EXAMINER | SESSION |
+// CLAIM | NOTICE | FACULTY | FEE | MIGRATION | ACCREDITATION | RECHECK. universityId = the affiliating university's IH.
+model AffRecord {
+  id           String   @id
+  universityId String
+  collegeId    String?
+  kind         String
+  status       String
+  title        String
+  dataJson     String   @default("{}")
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  @@index([universityId, kind], map: "AffRecord_uni_kind_idx")
+  @@index([collegeId], map: "AffRecord_college_idx")
+}
+
+model AffEvent {
+  id       String   @id
+  recordId String
+  byId     String
+  action   String
+  note     String?
+  at       DateTime @default(now())
+
+  @@index([recordId], map: "AffEvent_record_idx")
+}
+
+// A degree program's kind (Adeel prompt §32): BS or ADP, and for an ADP the BS program(s) it feeds into.
+model ProgramKind {
+  chairmanId    String
+  degreeProgram String
+  kind          String   @default("BS")
+  feedsInto     String?
+  discipline    String?
+  updatedAt     DateTime @default(now())
+
+  @@id([chairmanId, degreeProgram])
+}
+
+// Exit from BS with an Associate Degree (UGEP VI): the eligibility check, the Controller's decision, the degree number.
+model ExitAward {
+  id            String    @id
+  studentId     String
+  kind          String
+  checkJson     String
+  status        String    @default("PENDING")
+  requestedById String
+  decidedById   String?
+  decidedAt     DateTime?
+  degreeNo      String?
+  createdAt     DateTime  @default(now())
+
+  @@index([studentId], map: "ExitAward_student_idx")
+}
+
+// A dual / double / joint degree programme or an ODL programme / course being prepared for HEC (Adeel prompt §34).
+model CollabProgramme {
+  id          String   @id
+  chairmanId  String
+  kind        String
+  title       String
+  dataJson    String   @default("{}")
+  status      String   @default("DRAFT")
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  @@index([chairmanId], map: "CollabProgramme_chairman_idx")
+}
