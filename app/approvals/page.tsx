@@ -8,6 +8,7 @@ import { whoIs, staffOf } from "../../lib/registers";
 import { inboxFor, settingsOf, settingFor } from "../../lib/approvals/inbox";
 import { allProviders } from "../../lib/approvals/registry";
 import { delegationsOf } from "../../lib/approvals/delegation";
+import { APPROVAL_PAGES } from "../../lib/hubMenu";
 import ApprovalsInbox, { type InboxRow } from "../../components/ApprovalsInbox";
 import { ActionForm, ActionButton } from "../../components/fyp/FypClient";
 
@@ -48,7 +49,7 @@ export default async function ApprovalsPage() {
           <li>Overdue = past its due date, or waiting longer than the escalation days set for its kind (default {7}). A reminder goes after the reminder days (default 3); after the escalation days the position above is told. A digest of what is waiting comes once a day.</li>
         </ul>
       </HowCalculated>
-      <ApprovalsInbox rows={rows} />
+      <ApprovalsInbox rows={rows} pages={navForRole(user.role).filter((l) => APPROVAL_PAGES.includes(l.href))} />
 
       <h2 style={{ fontSize: 17, margin: "22px 0 6px" }}>Hand over my approvals while I am away</h2>
       <div className="card">

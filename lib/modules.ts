@@ -37,7 +37,7 @@ export const MODULES: ModuleDef[] = [
   { key: "messaging", label: "SMS & WhatsApp", group: "Operations", about: "Alerts to staff, students and guardians by SMS and WhatsApp", paths: [p("^/(api/)?chairman/messaging(/|$)"), p("^/api/messaging(/|$)"), p("^/(api/)?student/alerts(/|$)")] },
   // ERP
   { key: "admissions", label: "Admissions CRM", group: "University ERP", about: "Inquiries, applications, admission criteria", paths: [p("^/(api/)?(admissions|admission-criteria)(/|$)")] },
-  { key: "finance", label: "Fees, HR & accounts", group: "University ERP", about: "Student fees, payroll and payslips, accounts, budgets, appraisals", paths: [p("^/(api/)?(fees|hr|accounts|my-payslips|appraisals)(/|$)"), p("^/(api/)?chairman/finance(/|$)"), p("^/(api/)?student/fees(/|$)")] },
+  { key: "finance", label: "Fees, HR & accounts", group: "University ERP", about: "Student fees, payroll and payslips, accounts, budgets", paths: [p("^/(api/)?(fees|hr|accounts|my-payslips)(/|$)"), p("^/(api/)?chairman/finance(/|$)"), p("^/(api/)?student/fees(/|$)")] },
   { key: "inventory", label: "Inventory & purchasing", group: "University ERP", about: "Store, purchasing, library inventory, facilities", paths: [p("^/(api/)?(inventory|purchasing|library-inventory|facilities)(/|$)")] },
 ];
 
