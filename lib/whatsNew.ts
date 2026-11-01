@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-x", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"], text: "Affiliation: university and affiliated colleges share applications, centres, examiners and agreed marks, TA / DA claims, notices and comparison reports.", href: "/affiliation" },
+  { id: "2026-11-01-y", date: "2026-11-01", roles: ["CHAIRMAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"], text: "Associate Degree programs and exit awards, and suggested course equivalences for transfers.", href: "/adp" },
+  { id: "2026-11-01-z", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"], text: "Joint / dual / double degrees and ODL: HEC conditions with clauses, MoC checklist, Credit Equivalency Matrix, NOC file and audit pack.", href: "/collab" },
   { id: "2026-11-01-u", date: "2026-11-01", roles: ["COURSE_ASSIGNER", "PROGRAM_COORDINATOR", "HEAD_OF_DEPARTMENT", "CHAIRMAN"], text: "Year Allocation Plan (Fall + Spring + tentative Summer, Draft A / B, HOD approval) and the Preferences board (uncontested / contested, points, HOD rules, fairness).", href: "/allocation/year-plan" },
   { id: "2026-11-01-v", date: "2026-11-01", roles: ["INSTRUCTOR", "SUBJECT_EXPERT", "LAB_ENGINEER"], text: "My Teaching: rank courses with sections and times, see your year card and allocation letter, accept or raise a concern, ask for a swap.", href: "/allocation/year-card" },
   { id: "2026-11-01-w", date: "2026-11-01", roles: ["*"], text: "CQI Remedies: a weak prerequisite topic gets a remedy before the next topic is taught; the loop is closed with a re-check.", href: "/cqi/remedies" },

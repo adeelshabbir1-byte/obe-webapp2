@@ -150,7 +150,7 @@ async function Detail({ r, user, stageTitle, label, student, batches }: { r: Req
       {canDecide && <DecideForm id={r.id} leftWithFees={due} />}
       {credits.length > 0 && (
         <>
-          <h3 style={{ fontSize: 14.5, margin: "12px 0 4px" }}>{r.type === "TRANSFER_IN" ? "Credit transfer" : "Courses carried over"}</h3>
+          <h3 style={{ fontSize: 14.5, margin: "12px 0 4px" }}>{r.type === "TRANSFER_IN" ? "Credit transfer" : "Courses carried over"} <a href={`/transfers/${r.id}`} style={{ fontSize: 12, fontWeight: 400 }}>suggested matches →</a></h3>
           <table style={{ fontSize: 12.5 }}><thead><tr><th>Course</th><th>CH</th><th>Grade</th><th>Counts as</th><th>Decision</th></tr></thead>
             <tbody>{credits.map((c) => <tr key={c.id}><td>{c.fromCode} {c.fromTitle}</td><td>{c.creditHours}</td><td>{c.grade || "—"}</td><td>{c.toCode || "—"}</td>
               <td>{c.status === "PENDING" && canCredit ? <CreditForm creditId={c.id} toCode={c.toCode} /> : <StatusBadge status={c.status === "MATCHED" ? "APPROVED" : c.status === "ACCEPTED" ? "APPROVED" : c.status} label={c.status === "MATCHED" ? "Matched — carried over" : c.status === "ACCEPTED" ? "Accepted" : undefined} />}</td></tr>)}</tbody></table>
