@@ -10,6 +10,8 @@ import { withErrors } from "../../../../../../../../lib/apiHandler";
 // PUT { studentId, levels: { criterionId: levelIndex }, comment } — mark one student with the rubric. When every criterion
 // has a level, the item's mark is written to Marks Entry too.
 async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; instrumentId: string } }) {
+  // An archived term's marks change only through an approved amendment (Adeel prompt §10).
+  { const blk = await (await import("../../../../../../../../lib/termArchive")).archiveBlock(params.courseId); if (blk) return NextResponse.json({ error: blk }, { status: 423 }); }
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });

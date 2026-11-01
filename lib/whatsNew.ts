@@ -5,6 +5,9 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-j", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"], text: "My Delegations: hand chosen tasks to a colleague for a period (e.g. HOD Delegate for naming SEs), or let someone act for you on leave. You can override or revoke any time.", href: "/delegations" },
+  { id: "2026-11-01-k", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"], text: "Data Quality: duplicate students, courses with no SE / instructor / sections / plan, unmapped CLOs and questions — each with a Fix link.", href: "/data-quality" },
+  { id: "2026-11-01-l", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "INSTRUCTOR"], text: "Term Archive: archive a term once its results are approved; later corrections go through an approved amendment.", href: "/term-archive" },
   { id: "2026-11-01-g", date: "2026-11-01", roles: ["HEAD_OF_DEPARTMENT"], text: "Name Subject Experts: a matrix of your department's common and service courses × your experts, with each expert's live SE load.", href: "/hod/assign-subject-experts" },
   { id: "2026-11-01-h", date: "2026-11-01", roles: ["PROGRAM_COORDINATOR"], text: "Assign Subject Experts shows each teacher's SE load across the institute, live; courses named by a department show who names them and “Request SE”.", href: "/coordinator/assign-subject-experts" },
   { id: "2026-11-01-i", date: "2026-11-01", roles: ["*"], text: "Course Leads are now chosen automatically (the SE first, then last term's lead, then the most experienced). Anyone who manages leads can still change them.", href: "/course-leads" },

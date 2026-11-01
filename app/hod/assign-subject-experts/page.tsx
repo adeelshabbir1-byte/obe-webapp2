@@ -16,8 +16,18 @@ export default async function HodAssignSePage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
-  if (user.role !== "HEAD_OF_DEPARTMENT") redirect("/dashboard");
-  const chairmanId = user.managedById || "";
+  // The HOD, or his HOD Delegate holding "Name Subject Experts" (Adeel prompt §13) — then the delegator's department.
+  let deptId = user.departmentId || null;
+  let chairmanId = user.managedById || "";
+  let asDelegate: string | null = null;
+  if (user.role !== "HEAD_OF_DEPARTMENT") {
+    const { heldBy } = await import("../../../lib/delegation");
+    const d = (await heldBy(user.id)).find((x) => x.tasksJson.includes("hod.nameSE") || x.kind === "ACTING");
+    if (!d) redirect("/dashboard");
+    const hod = await prisma.user.findUnique({ where: { id: d.fromUserId }, select: { departmentId: true, managedById: true, name: true, role: true } });
+    if (!hod || hod.role !== "HEAD_OF_DEPARTMENT") redirect("/dashboard");
+    deptId = hod.departmentId; chairmanId = hod.managedById || ""; asDelegate = hod.name;
+  }
   const courses = await prisma.course.findMany({
     where: { coordinator: { managedById: chairmanId }, OR: [{ contentSyncMember: { is: null } }, { contentSyncMember: { is: { isBase: true } } }] },
     select: { id: true, code: true, title: true, semesterNumber: true, subjectExpertId: true, isOffered: true, templateStatus: true, batch: { select: { degreeProgram: true, batchName: true } }, },
@@ -27,7 +37,7 @@ export default async function HodAssignSePage() {
   for (const c of courses) {
     if (!c.isOffered && c.templateStatus === "approved") continue;
     const h = await homeOf(chairmanId, c.title);
-    if (h && h.level !== "PROGRAM" && h.departmentId === user.departmentId) mine.push(c);
+    if (h && h.level !== "PROGRAM" && h.departmentId === deptId) mine.push(c);
   }
   const byCode = new Map<string, { code: string; title: string; semester: number | null; ids: string[]; batches: string[]; seId: string | null }>();
   for (const c of mine) {
@@ -36,11 +46,12 @@ export default async function HodAssignSePage() {
     if (!g.seId) g.seId = c.subjectExpertId;
     byCode.set(c.code, g);
   }
-  const staff = await prisma.user.findMany({ where: { departmentId: user.departmentId || "none", isActive: true }, select: { id: true, name: true, role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true }, orderBy: { name: "asc" } });
+  const staff = await prisma.user.findMany({ where: { departmentId: deptId || "none", isActive: true }, select: { id: true, name: true, role: true, secondaryRole: true, tertiaryRole: true, extraRoles: true }, orderBy: { name: "asc" } });
   const experts = staff.filter((s) => hasSubjectExpertHat(s as never)).map((s) => ({ id: s.id, name: s.name }));
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1>Name Subject Experts — department courses</h1>
+      {asDelegate && <p style={{ fontSize: 13 }}>You are working as <b>HOD Delegate</b> for {asDelegate}. Your choices are recorded “by you for HOD”.</p>}
       <p className="small-note">Courses whose approved home is your department (department-common, service and General Education). One row per course: its base copies only — followers use the base&apos;s SE. The count next to each name is that teacher&apos;s SE load across the whole institute, updated live.</p>
       {byCode.size === 0 ? <div className="card"><p>No department-common or service courses have their home in your department yet. Homes are set by the Dean / HOD and approved by the BOS (Course Homes &amp; Codes).</p></div>
         : <HodSeMatrix rows={Array.from(byCode.values())} experts={experts} />}

@@ -14,6 +14,8 @@ type Body = { source?: string; rows: { key: string; name?: string; scores: Recor
 // Each LMS column is mapped to one assessment; scores are rescaled from the LMS "out of" to the assessment's own max,
 // so the marks then flow to CLOs and PLOs exactly like typed marks.
 async function POST_handler(req: NextRequest, { params }: { params: { courseId: string } }) {
+  // An archived term's marks change only through an approved amendment (Adeel prompt §10).
+  { const blk = await (await import("../../../../../../lib/termArchive")).archiveBlock(params.courseId); if (blk) return NextResponse.json({ error: blk }, { status: 423 }); }
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });

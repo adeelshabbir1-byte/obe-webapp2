@@ -9818,3 +9818,58 @@ model UserFlag {
 
   @@id([userId, key])
 }
+
+// Delegation engine (Adeel prompt §13, lib/delegation.ts): kind TASKS (chosen tasks, e.g. "HOD Delegate"), APPROVALS, or
+// ACTING (the whole position while on leave). Existing OrgActing / ApprovalDelegation keep working alongside.
+model TaskDelegation {
+  id           String    @id
+  chairmanId   String
+  kind         String
+  fromUserId   String
+  toUserId     String
+  roleLabel    String
+  tasksJson    String    @default("[]")
+  scopeJson    String    @default("{}")
+  maxLeaveDays Int?
+  startAt      DateTime
+  endAt        DateTime
+  mayPassOn    Boolean   @default(false)
+  shared       Boolean   @default(false)
+  parentId     String?
+  note         String?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([toUserId], map: "TaskDelegation_to_idx")
+  @@index([fromUserId], map: "TaskDelegation_from_idx")
+}
+
+// End-of-term archive (Adeel prompt §10): a read-only snapshot of one course for one term; reports read from it.
+model TermArchive {
+  id         String   @id
+  chairmanId String
+  term       String
+  courseId   String
+  dataJson   String
+  byId       String
+  createdAt  DateTime @default(now())
+
+  @@unique([courseId, term], map: "TermArchive_course_term")
+  @@index([chairmanId, term], map: "TermArchive_chairman_idx")
+}
+
+// A correction to an archived term: requested with a reason, approved by the Controller / HOD; opens editing briefly.
+model ArchiveAmendment {
+  id            String    @id
+  courseId      String
+  term          String
+  reason        String
+  requestedById String
+  approvedById  String?
+  approvedAt    DateTime?
+  openUntil     DateTime?
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now())
+
+  @@index([courseId], map: "ArchiveAmendment_course_idx")
+}

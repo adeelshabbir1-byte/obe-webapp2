@@ -14,7 +14,7 @@ async function GET_handler(req: NextRequest) {
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { departmentId: true, managedById: true, managedBy: { select: { managedById: true } } } });
   const up = [me?.managedById, me?.managedBy?.managedById].filter((x): x is string => !!x);
   const people = await prisma.user.findMany({
-    where: { isActive: true, id: { not: user.id }, role: { not: "SUPER_USER" }, name: { contains: q, mode: "insensitive" }, OR: [...(me?.departmentId ? [{ departmentId: me.departmentId }] : []), { id: { in: up.concat("none") } }] },
+    where: { isActive: true, id: { not: user.id }, role: { not: "SUPER_USER" }, name: { contains: q, mode: "insensitive" }, OR: [...(me?.departmentId ? [{ departmentId: me.departmentId }] : []), { id: { in: up.concat("none") } }, { managedById: user.id }, ...(me?.managedById ? [{ managedById: me.managedById }] : [])] },
     select: { id: true, name: true, role: true }, take: 8, orderBy: { name: "asc" },
   });
   return NextResponse.json({ people });
