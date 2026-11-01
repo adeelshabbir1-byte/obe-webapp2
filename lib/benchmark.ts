@@ -34,7 +34,8 @@ export function metric(rows: BRow[], m: string): number | null {
 /** Group rows by up to two dimensions and compute the chosen metrics. */
 export function pivot(rows: BRow[], by: (keyof BRow)[], metrics: string[]) {
   const groups = new Map<string, BRow[]>();
-  for (const r of rows) { const k = by.map((d) => String(r[d])).join("\u0001"); groups.set(k, [...(groups.get(k) || []), r]); }
+  // Appended in place: copying the group for each row made 60,000 results quadratic (seconds, blocking the server).
+  for (const r of rows) { const k = by.map((d) => String(r[d])).join("\u0001"); const g = groups.get(k); if (g) g.push(r); else groups.set(k, [r]); }
   return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })).map(([k, rs]) => ({ keys: k.split("\u0001"), values: metrics.map((m) => metric(rs, m)) }));
 }
 
@@ -42,5 +43,8 @@ export function pivot(rows: BRow[], by: (keyof BRow)[], metrics: string[]) {
 export function ploByCohort(rows: BRow[]) {
   const cohorts = Array.from(new Set(rows.map((r) => `${r.intake}|${r.batch}`))).sort();
   const nums = Array.from(new Set(rows.flatMap((r) => r.plos.map((p) => p.n)))).sort((a, b) => a - b);
-  return { cohorts: cohorts.map((c) => c.split("|")[1]), nums, grid: nums.map((n) => cohorts.map((c) => { const ps = rows.filter((r) => `${r.intake}|${r.batch}` === c).flatMap((r) => r.plos.filter((p) => p.n === n)); return ps.length ? Math.round((1000 * ps.filter((p) => p.passed).length) / ps.length) / 10 : null; })) };
+  // One pass: met / total per cohort and GA (was a scan of every row for each cell).
+  const tally = new Map<string, [number, number]>();
+  for (const r of rows) for (const p of r.plos) { const k = `${r.intake}|${r.batch}#${p.n}`; const t = tally.get(k) || [0, 0]; t[1]++; if (p.passed) t[0]++; tally.set(k, t); }
+  return { cohorts: cohorts.map((c) => c.split("|")[1]), nums, grid: nums.map((n) => cohorts.map((c) => { const t = tally.get(`${c}#${n}`); return t && t[1] ? Math.round((1000 * t[0]) / t[1]) / 10 : null; })) };
 }

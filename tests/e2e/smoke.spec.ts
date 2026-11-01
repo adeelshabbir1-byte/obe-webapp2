@@ -22,8 +22,15 @@ async function crawl(page: Page, home: string) {
   await expect(page.locator("body")).not.toContainText(BROKEN);
   const expand = page.getByRole("button", { name: "Expand all" }).first();
   if (await expand.isVisible().catch(() => false)) await expand.click();
-  const links = await menuLinks(page);
-  expect(links.length, "the menu has links").toBeGreaterThan(3);
+  const menu = await menuLinks(page);
+  // The short menu (hubs of cards): each hub's page holds the rest of the role's pages — crawl those too.
+  const links = menu.slice();
+  for (const hub of menu.filter((h) => h.startsWith("/hub/"))) {
+    await page.goto(hub); await page.waitForLoadState("networkidle").catch(() => null);
+    const cards = await page.locator("a[href^='/']").evaluateAll((as) => as.filter((a) => !a.closest("nav, aside, header, .sidebar")).map((a) => (a as HTMLAnchorElement).getAttribute("href") || ""));
+    for (const h of cards) { const x = h.split("#")[0]; if (x && !x.startsWith("/api/") && !/logout|sign-?out/i.test(x) && !links.includes(x)) links.push(x); }
+  }
+  expect(links.length, "the menu (with its hubs) has links").toBeGreaterThan(3);
   const bad: string[] = [];
   for (const href of links) {
     if (CNIC_RE.test(href)) bad.push(`${href}: CNIC in the address`);
