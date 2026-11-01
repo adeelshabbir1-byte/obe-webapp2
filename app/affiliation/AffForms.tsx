@@ -54,3 +54,8 @@ export function ScriptMarks({ id, codes, marks, max }: { id: string; codes: stri
   return <div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 4 }}>{codes.map((c) => <label key={c} style={{ fontSize: 12 }}>{c} <input value={v[c]} onChange={(e) => setV({ ...v, [c]: e.target.value })} style={{ width: 50 }} />/{max}</label>)}</div>
     <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={async () => { const r = await post({ action: "scripts", id, rows: codes.map((c) => ({ code: c, mark: v[c] })) }); setM(r.error || "Saved ✓"); }}>Save marks</button> <span className="small-note">{m}</span></div>;
 }
+
+export function Officer({ current, staff, side }: { current: string; staff: { id: string; name: string }[]; side: string }) {
+  const [v, setV] = useState(current); const [m, setM] = useState("");
+  return <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>{side === "UNI" ? "Affiliation office handled by" : "Affiliation focal person"} <select value={v} onChange={(e) => setV(e.target.value)}><option value="">— nobody —</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select><button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "officer", userId: v }); setM(r.error || "Assigned ✓ — they were told"); }}>Assign</button> <span className="small-note">{m}</span></span>;
+}

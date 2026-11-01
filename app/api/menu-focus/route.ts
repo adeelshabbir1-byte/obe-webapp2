@@ -4,7 +4,7 @@ import { setFlag } from "../../../lib/scopedSettings";
 import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
-const OK = ["", "EXAM_CONTROLLER", "QEC", "OMC_CONVENER", "IT_MANAGER", "CURRICULUM_BUILDER"];
+const OK = ["", "EXAM_CONTROLLER", "QEC", "OMC_CONVENER", "IT_MANAGER", "CURRICULUM_BUILDER", "COE_TEAM", "AFFILIATION", "COLLAB"];
 // POST { focus } — which workspace's menu this person sees ("" = their role). The menu only; rights don't change.
 async function POST_handler(req: NextRequest) {
   const user = await getAuthenticatedUser();

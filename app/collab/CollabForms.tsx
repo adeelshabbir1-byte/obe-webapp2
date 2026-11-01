@@ -11,12 +11,12 @@ export function NewProg({ kinds }: { kinds: Record<string, string> }) {
 }
 export function Check({ id, k, done, note, field = "checks", all }: { id: string; k: string; done: boolean; note: string; field?: "checks"; all: Record<string, { done: boolean; note?: string }> }) {
   const [d, setD] = useState(done); const [n, setN] = useState(note); const [m, setM] = useState("");
-  const save = async (dd: boolean, nn: string) => { const r = await post({ action: "save", id, data: { [field]: { ...all, [k]: { done: dd, note: nn } } } }); setM(r.error || "✓"); };
+  const save = async (dd: boolean, nn: string) => { const r = await post({ action: "save", id, data: { [field]: { [k]: { done: dd, note: nn } } } }); setM(r.error || "✓"); };
   return <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><input type="checkbox" checked={d} onChange={(e) => { setD(e.target.checked); save(e.target.checked, n); }} /><input value={n} onChange={(e) => setN(e.target.value)} onBlur={() => save(d, n)} placeholder="evidence / note" style={{ width: 200, fontSize: 12 }} /> <span className="small-note">{m}</span></span>;
 }
 export function MocField({ id, k, value, all }: { id: string; k: string; value: string; all: Record<string, string> }) {
   const [v, setV] = useState(value); const [m, setM] = useState("");
-  return <span><input value={v} onChange={(e) => setV(e.target.value)} onBlur={async () => { const r = await post({ action: "save", id, data: { moc: { ...all, [k]: v } } }); setM(r.error || "✓"); }} placeholder="what the MoC says" style={{ width: 320, fontSize: 12 }} /> <span className="small-note">{m}</span></span>;
+  return <span><input value={v} onChange={(e) => setV(e.target.value)} onBlur={async () => { const r = await post({ action: "save", id, data: { moc: { [k]: v } } }); setM(r.error || "✓"); }} placeholder="what the MoC says" style={{ width: 320, fontSize: 12 }} /> <span className="small-note">{m}</span></span>;
 }
 /** Simple fields + line lists (partners, ODL courses, KPIs) edited as text. */
 export function Basics({ id, d, ddjd }: { id: string; d: Record<string, any>; ddjd: boolean }) {
@@ -55,4 +55,51 @@ export function CemOk({ id, i, cem }: { id: string; i: number; cem: { ok: boolea
   const [ok, setOk] = useState(cem[i].ok); const [as, setAs] = useState(cem[i].assessment);
   const save = (o: boolean, x: string) => post({ action: "save", id, data: { cem: cem.map((r, j) => (j === i ? { ...r, ok: o, assessment: x } : r)) } });
   return <span style={{ display: "inline-flex", gap: 4 }}><input value={as} onChange={(e) => setAs(e.target.value)} onBlur={() => save(ok, as)} placeholder="assessment" style={{ width: 110, fontSize: 12 }} /><input type="checkbox" checked={ok} onChange={(e) => { setOk(e.target.checked); save(e.target.checked, as); }} /></span>;
+}
+
+const save = (id: string, data: Record<string, unknown>) => post({ action: "save", id, data });
+export function Field({ id, k, label, type, value }: { id: string; k: string; label: string; type: "text" | "date" | "number" | "long"; value: string }) {
+  const [v, setV] = useState(value); const [m, setM] = useState("");
+  const commit = async () => { if (v === value && !m) return; const r = await save(id, { [k]: type === "number" ? (v === "" ? undefined : Number(v)) : v }); setM(r.error || "✓"); };
+  return <label style={{ display: "block", fontSize: 13, margin: "6px 0" }}>{label}<br />
+    {type === "long" ? <textarea rows={3} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} style={{ width: "100%" }} /> : <input type={type === "number" ? "number" : type === "date" ? "date" : "text"} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} style={{ width: type === "text" ? 320 : 170 }} />} <span className="small-note">{m}</span></label>;
+}
+type Partner = { name: string; country?: string; foreign?: boolean; recognised?: boolean };
+export function Partners({ id, partners }: { id: string; partners: Partner[] }) {
+  const [list, setList] = useState<Partner[]>(partners.length ? partners : [{ name: "" }]); const [m, setM] = useState("");
+  const set = (i: number, p: Partial<Partner>) => setList(list.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  return <div>{list.map((p, i) => <div key={i} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", margin: "4px 0" }}>
+    <input value={p.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Partner university / department" style={{ width: 260 }} />
+    <input value={p.country || ""} onChange={(e) => set(i, { country: e.target.value })} placeholder="Country" style={{ width: 110 }} />
+    <label style={{ fontSize: 12.5 }}><input type="checkbox" checked={!!p.foreign} onChange={(e) => set(i, { foreign: e.target.checked })} /> foreign</label>
+    <label style={{ fontSize: 12.5 }}><input type="checkbox" checked={!!p.recognised} onChange={(e) => set(i, { recognised: e.target.checked })} /> recognised / chartered {p.foreign ? "(WHED or home country)" : "(HEC)"}</label>
+    <button type="button" className="btn-link" onClick={() => setList(list.filter((_, j) => j !== i))}>remove</button></div>)}
+    <button type="button" className="btn-link" onClick={() => setList([...list, { name: "" }])}>+ partner</button> <button type="button" className="btn btn-sm" onClick={async () => { const r = await save(id, { partners: list.filter((x) => x.name.trim()) }); setM(r.error || "Saved ✓"); }}>Save partners</button> <span className="small-note">{m}</span></div>;
+}
+export function SameDiscipline({ id, value }: { id: string; value: boolean }) {
+  const [v, setV] = useState(value);
+  return <label style={{ fontSize: 13, display: "block", marginTop: 8 }}><input type="checkbox" checked={v} onChange={async (e) => { setV(e.target.checked); await save(id, { sameDiscipline: e.target.checked }); }} /> Both degrees are in the same discipline (required for a double degree)</label>;
+}
+type Course = { code: string; mode: "SYNC" | "ASYNC" | "BLENDED"; ch: number; f2fPct?: number; recordedMin?: number; moderatedH?: number; gradedH?: number; labH?: number; teacher?: string };
+export function Courses({ id, courses }: { id: string; courses: Course[] }) {
+  const [list, setList] = useState<Course[]>(courses.length ? courses : [{ code: "", mode: "SYNC", ch: 3 }]); const [m, setM] = useState("");
+  const set = (i: number, p: Partial<Course>) => setList(list.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const n = (v: string) => (v === "" ? undefined : Number(v));
+  const need = (c: Course) => c.mode === "ASYNC" ? `needs ${425 * c.ch} min recorded, ${5 * c.ch} h moderated, ${4 * c.ch} h graded` : c.mode === "BLENDED" ? "needs ≥ 34% face-to-face / live" : `needs ${15 * c.ch}–${16 * c.ch} live hours`;
+  return <div style={{ overflowX: "auto" }}><table className="table" style={{ fontSize: 12.5 }}><thead><tr><th>Course</th><th>Mode</th><th>CH</th><th>F2F / live %</th><th>Recorded min</th><th>Moderated h</th><th>Graded h</th><th>Lab h</th><th>Teacher</th><th /></tr></thead><tbody>
+    {list.map((c, i) => <tr key={i}><td><input value={c.code} onChange={(e) => set(i, { code: e.target.value })} style={{ width: 80 }} /></td>
+      <td><select value={c.mode} onChange={(e) => set(i, { mode: e.target.value as Course["mode"] })}><option value="SYNC">Synchronous</option><option value="ASYNC">Asynchronous</option><option value="BLENDED">Blended</option></select><div className="small-note">{need(c)}</div></td>
+      <td><input type="number" value={c.ch} onChange={(e) => set(i, { ch: Number(e.target.value) || 1 })} style={{ width: 45 }} /></td>
+      {(["f2fPct", "recordedMin", "moderatedH", "gradedH", "labH"] as const).map((k) => <td key={k}><input type="number" value={c[k] ?? ""} onChange={(e) => set(i, { [k]: n(e.target.value) })} style={{ width: 60 }} /></td>)}
+      <td><input value={c.teacher || ""} onChange={(e) => set(i, { teacher: e.target.value })} style={{ width: 120 }} /></td><td><button type="button" className="btn-link" onClick={() => setList(list.filter((_, j) => j !== i))}>×</button></td></tr>)}
+  </tbody></table><button type="button" className="btn-link" onClick={() => setList([...list, { code: "", mode: "SYNC", ch: 3 }])}>+ course</button> <button type="button" className="btn btn-sm" onClick={async () => { const r = await save(id, { courses: list.filter((x) => x.code.trim()) }); if (r.error) setM(r.error); else location.reload(); }}>Save and check</button> <span className="small-note">{m}</span></div>;
+}
+export function Kpis({ id, kpis, defs }: { id: string; kpis: Record<string, number>; defs: [string, string, number][] }) {
+  const [v, setV] = useState<Record<string, string>>(Object.fromEntries(defs.map(([k]) => [k, kpis[k] == null ? "" : String(kpis[k])]))); const [m, setM] = useState("");
+  return <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>{defs.map(([k, label, b]) => <label key={k} style={{ fontSize: 12.5 }}>{label}<br /><input type="number" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} style={{ width: 70 }} /> <span className="small-note">bench {k === "enrolment" ? "≥" : ">"} {b}</span></label>)}
+    <button type="button" className="btn btn-sm" onClick={async () => { const r = await save(id, { kpis: Object.fromEntries(Object.entries(v).filter(([, x]) => x !== "").map(([a, x]) => [a, Number(x)])) }); setM(r.error || "Saved ✓"); }}>Save KPIs</button> <span className="small-note">{m}</span></div>;
+}
+export function Assign({ id, current, staff }: { id: string; current: string; staff: { id: string; name: string; role: string }[] }) {
+  const [v, setV] = useState(current); const [m, setM] = useState("");
+  return <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><select value={v} onChange={(e) => setV(e.target.value)}><option value="">— nobody —</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select><button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "assign", id, userId: v }); setM(r.error || "Assigned ✓ — they were told"); }}>Assign</button> <span className="small-note">{m}</span></span>;
 }

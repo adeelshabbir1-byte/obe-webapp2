@@ -6,6 +6,7 @@ import { roleLabel } from "../../lib/reportScope";
 import { prisma } from "../../lib/db";
 import Shell from "../../components/Shell";
 import { ActionButton, ActionForm } from "../../components/fyp/FypClient";
+import ExamTeamForm from "./ExamTeamForm";
 import { controllerAccess, controllerChairman, controllerSummary, debarList, standingList, xdb, CONTROLLER_HINT } from "../../lib/examController";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,13 @@ export default async function ControllerPage({ searchParams }: { searchParams: {
   const cid = acc.chairmanId;
   const ctrlNow = acc.mode === "VIEW" ? await (await import("../../lib/academicRules")).examController(cid) : null;
   const tab = TABS.some(([k]) => k === searchParams.tab) ? searchParams.tab! : "results";
-  const s = await controllerSummary(cid);
+  const s0 = await controllerSummary(cid);
+  // A team member sees only the programs the Controller gave him.
+  const mine = (c: { batch?: { degreeProgram: string } | null }) => acc.mode !== "TEAM" || (acc.programs || []).includes(c.batch?.degreeProgram || "");
+  const s = acc.mode === "TEAM" ? { ...s0, board: s0.board.filter(mine), toPublish: s0.board.filter((c) => mine(c) && c.status === "APPROVED" && !c.published).length, published: s0.board.filter((c) => mine(c) && c.published).length } : s0;
+  const team = acc.mode === "HOLDER" || acc.mode === "ACTING" ? await (await import("../../lib/dutyAssign")).examTeam(cid) : null;
+  const teamStaff = team ? (await (await import("../../lib/registers")).staffOf(cid)).filter((x) => x.id !== user.id) : [];
+  const teamProgs: string[] = team ? Array.from(new Set<string>(s0.board.map((c) => String(c.batch?.degreeProgram || "")).filter(Boolean))).sort() : [];
   const tile = (n: number | null, label: string, href: string, warn = false) => (
     <Link href={href} className="card" style={{ flex: "1 1 150px", margin: 0, textDecoration: "none", borderTop: `4px solid ${warn && n ? "#C62828" : "#1565C0"}` }}>
       <div style={{ fontSize: 26, fontWeight: 800, color: warn && n ? "#C62828" : "#0D2A4A" }}>{n ?? "—"}</div><div className="small-note">{label}</div>
@@ -33,6 +40,8 @@ export default async function ControllerPage({ searchParams }: { searchParams: {
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Controller of Examinations</h1>
       {acc.mode === "VIEW" && <div className="card" style={{ borderLeft: "5px solid #1565C0", padding: "8px 12px", fontSize: 13 }}><b>Oversight view.</b> {ctrlNow ? `${ctrlNow.name} is the Controller of Examinations` : "No Controller of Examinations is named yet — name one on the organisation chart (until then a Dean acts)"}; publishing, re-checking and debarring are done by them, not here.</div>}
+      {acc.mode === "TEAM" && <div className="card" style={{ borderLeft: "5px solid #1B5FAA", padding: "8px 12px", fontSize: 13 }}><b>Examinations team</b> — you handle {(acc.programs || []).join(", ") || "no program yet"} for the Controller.</div>}
+      {team && <details className="card" style={{ padding: "8px 12px" }}><summary style={{ cursor: "pointer", fontWeight: 700 }}>My team ({team.length})</summary><ExamTeamForm team={team} staff={teamStaff} programs={teamProgs} /></details>}
       {acc.mode === "ACTING" && <div className="card" style={{ borderLeft: "5px solid #B26A00", padding: "8px 12px", fontSize: 13 }}><b>Acting Controller</b> — no Controller of Examinations is named yet, so you act as Controller. This goes away when the Institute Head names one.</div>}
       <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Exam sessions, date sheets, seating and invigilation are on <Link href="/exams">Exam Sessions</Link>. Here: publishing approved results, re-checking, debarred lists, admit cards and standing lists. Also: <Link href="/results-approval">grade changes</Link> · <Link href="/official-transcript">official transcripts</Link> · <Link href="/degrees">degrees</Link> · <Link href="/academic-rules">academic rules</Link>.</p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>

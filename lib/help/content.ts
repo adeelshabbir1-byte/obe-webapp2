@@ -957,7 +957,7 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     key: "collab-odl", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL],
     title: "Joint, dual and double degrees, and ODL programmes",
     summary: "Start a programme, record partners, fill the Memorandum of Commitment items (a–r), draft the Credit Equivalency Matrix from two curricula, tick each HEC condition with its evidence, and record the NOC. ODL courses are checked for their mode (synchronous, asynchronous, blended) and credit-hour rules, and teachers for the two-ODL-courses limit. Enrolment stays locked until the NOC is recorded. Download the NOC file, audit pack and Diploma Supplement as PDFs.",
-    steps: ["Open Joint degrees and ODL; start a programme.", "Fill the details, partners and courses.", "Tick the conditions and MoC items.", "Draft and check the matrix.", "Download the NOC file / audit pack."],
+    steps: ["Open Joint degrees and ODL; start a programme (Dean, Institute Head, HOD or Program Lead).", "The Dean assigns it to one person, who finds it under “Working as → Joint degrees & ODL”.", "Go through the steps; each shows what is still missing for HEC.", "Draft and check the Credit Equivalency Matrix; fill the MoC items a–r.", "Download the NOC file, record the NOC, publish the programme page."],
     who: "Institute Head, Dean, HOD and Program Lead.", pages: ["/collab"], keywords: ["joint degree", "dual degree", "double degree", "odl", "distance learning", "moc", "credit equivalency", "noc", "diploma supplement", "blended"], href: "/collab",
   }),
 ];

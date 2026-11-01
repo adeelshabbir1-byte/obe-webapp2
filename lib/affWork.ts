@@ -111,7 +111,9 @@ const UNI_ROLES = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"];
 export async function sideOf(user: { id: string; role: string; extraRoles?: string[] }, instituteId: string) {
   const [colleges, uni] = await Promise.all([collegesOf(instituteId).catch(() => []), universityOf(instituteId).catch(() => null)]);
   const controller = (user.extraRoles || []).includes("EXAM_CONTROLLER");
-  return { asUni: colleges.length > 0 && (UNI_ROLES.includes(user.role) || controller), asCollege: !!uni && ["CHAIRMAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role), universityId: colleges.length ? instituteId : uni, colleges };
+  // The one person the head named to handle affiliation work (lib/dutyAssign.ts) works as that side too.
+  const officer = await (await import("./scopedSettings")).getFlag((user as { id: string }).id, "duty:affiliation").catch(() => null);
+  return { asUni: colleges.length > 0 && (UNI_ROLES.includes(user.role) || controller || officer === `UNI:${instituteId}`), asCollege: !!uni && (["CHAIRMAN", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "HEAD_OF_DEPARTMENT"].includes(user.role) || officer === `COLLEGE:${instituteId}`), universityId: colleges.length ? instituteId : uni, colleges };
 }
 
 export async function list(universityId: string, kind: string, collegeId?: string | null) {
