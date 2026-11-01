@@ -24,7 +24,7 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
   const list = leader ? all : all.filter((x) => dataOf(x).ownerId === user.id);
   const p = searchParams.id ? list.find((x) => x.id === searchParams.id) : list.length === 1 && !leader ? list[0] : null;
   const canAssign = ASSIGNERS.includes(user.role);
-  const staff = canAssign ? (await staffOf(cid)).filter((s) => s.role !== "STUDENT") : [];
+  const staff = canAssign ? await staffOf(cid) : [];
   const box = { border: "1px solid var(--line, #ddd)", borderRadius: 10, padding: 14, background: "var(--card, #fff)" } as const;
 
   if (!p) return (
