@@ -6,8 +6,8 @@ import Shell from "../../components/Shell";
 import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { staffOf } from "../../lib/registers";
-import { ASSIGNERS, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
-import { Assign, Cem, CemOk, Check, Courses, Field, Kpis, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
+import { ASSIGNERS, lectureModes, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
+import { Assign, Cem, CemOk, Check, Courses, Field, Kpis, LectureModes, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
 
 export const dynamic = "force-dynamic";
 const LEADERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"];
@@ -89,13 +89,18 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
             {(d.cem || []).length > 0 && <div style={{ overflowX: "auto" }}><table className="table" style={{ fontSize: 12.5 }}><thead><tr><th>Our course</th><th>Partner course</th><th>CH</th><th>Contact h</th><th>Assessment · equivalent</th></tr></thead><tbody>{(d.cem || []).map((r: any, i: number) => <tr key={i}><td>{r.ours} {r.oursTitle}</td><td>{r.theirs ? `${r.theirs} ${r.theirsTitle}` : <span className="small-note">no match</span>}</td><td>{r.ch}</td><td>{r.contactHours}</td><td><CemOk id={p.id} i={i} cem={d.cem} /></td></tr>)}</tbody></table></div>}
           </>}
           {st.widgets.includes("courses") && <Courses id={p.id} courses={d.courses || []} />}
+          {st.widgets.includes("courses") && (d.courses || []).length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>Delivery mode of each lecture</b> <span className="small-note">from the course&apos;s lecture plan; saving updates the course&apos;s face-to-face / live share above</span>
+            {(await lectureModes(p.chairmanId, (d.courses || []).map((x: { code: string }) => x.code))).map((x) => <LectureModes key={x.courseId} id={p.id} code={x.code} courseId={x.courseId} lectures={x.lectures} pct={x.pct} />)}</div>}
 
           {st.moc.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>What the MoC says</b>{st.moc.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>({k}) {MOC_ITEMS.find((x) => x[0] === k)?.[1]}<br /><MocField id={p.id} k={k} value={d.moc?.[k] || ""} all={d.moc || {}} /></div>)}</div>}
           {st.fields.map(([k, label, t]) => <Field key={k} id={p.id} k={k} label={label} type={t} value={d[k] == null ? "" : String(d[k])} />)}
           {st.checks.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>HEC conditions</b>{st.checks.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>{checkLabel.get(k)}<br /><Check id={p.id} k={k} done={!!d.checks?.[k]?.done} note={d.checks?.[k]?.note || ""} all={d.checks || {}} /></div>)}</div>}
           {st.widgets.includes("moc-all") && <div style={{ marginTop: 10, fontSize: 12.5 }}><b style={{ fontSize: 13 }}>MoC checklist — Annexure-I vii (a–r)</b><div style={{ columns: "2 240px", marginTop: 4 }}>{c.moc.map((m) => <div key={m.key} style={{ color: m.done ? "#1E6B3A" : "#B3261E" }}>{m.done ? "✓" : "✗"} {m.label}</div>)}</div></div>}
           {st.widgets.includes("kpis") && <div style={{ marginTop: 12 }}><b style={{ fontSize: 13 }}>Yearly KPIs (Annexure-III)</b><Kpis id={p.id} kpis={d.kpis || {}} defs={KPI} /></div>}
-          {st.widgets.includes("docs") && <p style={{ marginTop: 12 }}><a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=noc`}>HEC NOC file (PDF)</a> <a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=audit`}>Audit pack (PDF)</a> {isDdjd(p.kind) && <><a className="btn btn-sm" href={`/api/collab/pdf?id=${p.id}&doc=supplement`}>Diploma Supplement (PDF)</a> <a className="btn-link" href={`/programme/${p.id}`} target="_blank">Public programme page</a></>}</p>}
+          {st.widgets.includes("docs") && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 8 }}>
+            {([["noc", "HEC NOC file"], ["audit", "Audit pack"], ...(isDdjd(p.kind) ? [["moc", "Memorandum of Commitment (draft)"], ["supplement", "Diploma Supplement"]] : [])] as [string, string][]).map(([k, label]) => <div key={k} style={{ border: "1px solid var(--line, #ddd)", borderRadius: 8, padding: 10, fontSize: 13 }}><b>{label}</b><div style={{ marginTop: 4 }}><a href={`/api/collab/pdf?id=${p.id}&doc=${k}`}>PDF</a> · <a href={`/api/collab/pdf?id=${p.id}&doc=${k}&format=docx`}>Word</a></div></div>)}
+            {isDdjd(p.kind) && <div style={{ border: "1px solid var(--line, #ddd)", borderRadius: 8, padding: 10, fontSize: 13 }}><b>Public programme page</b><div style={{ marginTop: 4 }}><a href={`/programme/${p.id}`} target="_blank">Open</a></div></div>}
+          </div>}
 
           <div style={{ marginTop: 14, padding: 10, borderRadius: 8, background: missing.length ? "#FFF6E5" : "#E6F4EA", fontSize: 13 }}>
             {missing.length ? <><b>Still missing in this step</b><ul style={{ margin: "4px 0 0 18px", padding: 0 }}>{missing.map((m) => <li key={m}>{m}</li>)}</ul></> : <b>This step is complete ✓</b>}

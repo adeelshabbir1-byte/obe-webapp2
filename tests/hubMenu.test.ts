@@ -18,3 +18,9 @@ test("approval pages leave the menu", () => {
   const h = hubsOf([{ href: "/leave-approvals", label: "Leave" }, { href: "/coordinator/semester", label: "Semester" }]);
   assert.equal(Array.from(h.values()).flat().flatMap((s) => s.links).length, 1);
 });
+
+test("operator desks stay with their operators", () => {
+  const ih = navForRole("CHAIRMAN" as never).map((l) => l.href);
+  assert.ok(!ih.includes("/library-desk") && ih.includes("/operations"));
+  assert.ok(navForRole("LIBRARIAN" as never).some((l) => l.href === "/library-desk"));
+});

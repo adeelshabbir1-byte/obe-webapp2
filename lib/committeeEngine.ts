@@ -36,6 +36,11 @@ export async function membersOf(committeeId: string) { return (await db.cmtMembe
 export function canManage(user: U, c: Pick<Committee, "scope" | "convenerId">) {
   return user.role === "CHAIRMAN" || (c.scope === "FACULTY" && user.role === "DEAN") || (c.scope === "DEPARTMENT" && ["HEAD_OF_DEPARTMENT", "DEAN"].includes(user.role)) || c.convenerId === user.id;
 }
+/** The Convener's rights, plus the Secretary the Dean / Institute Head named (lib/committeeMeta.ts). */
+export async function manages(user: U, c: Pick<Committee, "id" | "chairmanId" | "scope" | "convenerId">) {
+  if (canManage(user, c)) return true;
+  return (await (await import("./committeeMeta")).metaOf(c.chairmanId, c.id)).secretaryId === user.id;
+}
 export async function committeesFor(chairmanId: string, user: U) {
   const all = (await db.cmtCommittee.findMany({ where: { chairmanId }, orderBy: [{ type: "asc" }, { name: "asc" }] }).catch(() => [])) as Committee[];
   const mine = new Set(((await db.cmtMember.findMany({ where: { userId: user.id }, select: { committeeId: true } }).catch(() => [])) as { committeeId: string }[]).map((m) => m.committeeId));
@@ -70,7 +75,7 @@ export async function saveCommittee(user: U, chairmanId: string, d: Partial<Comm
 export async function addMember(user: U, committeeId: string, m: { userId?: string | null; name?: string; email?: string; organisation?: string; external?: boolean }) {
   const c = await committee(committeeId);
   if (!c) throw new Error("Not found.");
-  if (!canManage(user, c)) throw new Error("Only the committee's Convener or the person who set it up adds members.");
+  if (!(await manages(user, c))) throw new Error("Only the committee's Convener or the person who set it up adds members.");
   if (m.userId) {
     if (await db.cmtMember.count({ where: { committeeId, userId: m.userId } })) return { id: null, link: null };
     const u = await prisma.user.findUnique({ where: { id: m.userId }, select: { name: true, email: true } });
@@ -89,7 +94,7 @@ export async function newGuestLink(user: U, memberId: string) {
   const m = (await db.cmtMember.findUnique({ where: { id: memberId } })) as Member | null;
   const c = m ? await committee(m.committeeId) : null;
   if (!m || !c || !m.external) throw new Error("Not an external member.");
-  if (!canManage(user, c)) throw new Error("Only the Convener issues guest links.");
+  if (!(await manages(user, c))) throw new Error("Only the Convener issues guest links.");
   const token = crypto.randomBytes(24).toString("base64url");
   await db.cmtMember.update({ where: { id: memberId }, data: { tokenHash: hash(token), tokenSetAt: new Date() } });
   return `/committee-guest/${token}`;
@@ -98,7 +103,7 @@ export async function removeMember(user: U, memberId: string) {
   const m = (await db.cmtMember.findUnique({ where: { id: memberId } })) as Member | null;
   const c = m ? await committee(m.committeeId) : null;
   if (!m || !c) throw new Error("Not found.");
-  if (!canManage(user, c)) throw new Error("Only the Convener removes members.");
+  if (!(await manages(user, c))) throw new Error("Only the Convener removes members.");
   await db.cmtMember.delete({ where: { id: memberId } });
 }
 const hash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
@@ -114,7 +119,7 @@ export async function guest(token: string) {
 // ---- meetings and items
 export async function addMeeting(user: U, committeeId: string, d: { date: string; venue?: string }) {
   const c = await committee(committeeId);
-  if (!c || !canManage(user, c)) throw new Error("Only the Convener schedules meetings.");
+  if (!c || !(await manages(user, c))) throw new Error("Only the Convener schedules meetings.");
   const date = new Date(d.date);
   if (isNaN(+date)) throw new Error("Choose the date.");
   const id = randomUUID();
@@ -126,7 +131,7 @@ export async function addMeeting(user: U, committeeId: string, d: { date: string
 export async function setAttendance(user: U, meetingId: string, present: string[]) {
   const mt = (await db.cmtMeeting.findUnique({ where: { id: meetingId } })) as Meeting | null;
   const c = mt ? await committee(mt.committeeId) : null;
-  if (!mt || !c || !canManage(user, c)) throw new Error("Only the Convener records attendance.");
+  if (!mt || !c || !(await manages(user, c))) throw new Error("Only the Convener records attendance.");
   const ids = new Set((await membersOf(c.id)).map((m) => m.id));
   await db.cmtMeeting.update({ where: { id: meetingId }, data: { attendanceJson: JSON.stringify(present.filter((p) => ids.has(p))), status: "HELD" } });
 }
@@ -210,7 +215,7 @@ export async function councilNote(user: U, itemId: string, d: { status: "NOTED" 
 export async function uploadMinutes(user: U, meetingId: string, f: { buf: Buffer; name: string; type: string }) {
   const mt = (await db.cmtMeeting.findUnique({ where: { id: meetingId } })) as Meeting | null;
   const c = mt ? await committee(mt.committeeId) : null;
-  if (!mt || !c || !canManage(user, c)) throw new Error("Only the Convener uploads the signed minutes.");
+  if (!mt || !c || !(await manages(user, c))) throw new Error("Only the Convener uploads the signed minutes.");
   const ref = await storePrivate(f.buf, f.name, f.type || "application/pdf", `minutes-${c.id}`);
   await db.cmtMeeting.update({ where: { id: meetingId }, data: { minutesRef: ref, minutesName: f.name.slice(0, 200), status: "MINUTED" } });
 }

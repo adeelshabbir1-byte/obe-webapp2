@@ -9,7 +9,9 @@ import { staffOf } from "../../../lib/registers";
 import { ActionButton, ActionForm } from "../../../components/fyp/FypClient";
 import { FinaliseForm, PdfForm, VoteForm } from "../../../components/BoardClient";
 import { OUTCOME_LABEL, VOTE_LABEL, tallyLine } from "../../../lib/committeeCore";
-import { TYPES, canManage, committee, itemTally, itemsOf, membersOf, memberFor, type Meeting } from "../../../lib/committeeEngine";
+import { TYPES, committee, itemTally, itemsOf, manages, membersOf, memberFor, type Meeting } from "../../../lib/committeeEngine";
+import { CMT_ROLES, composition, endingSoon, metaOf } from "../../../lib/committeeMeta";
+import CommitteeMembers from "../../../components/CommitteeMembers";
 
 export const dynamic = "force-dynamic";
 const db = prisma as unknown as Record<string, any>;
@@ -23,7 +25,14 @@ export default async function Board({ params }: { params: { id: string } }) {
   if (!c || c.chairmanId !== (await chairmanIdFor(user as never).catch(() => ""))) notFound();
   const [members, items, meetings, staff] = await Promise.all([membersOf(c.id), itemsOf(c.id), db.cmtMeeting.findMany({ where: { committeeId: c.id }, orderBy: { date: "desc" } }) as Promise<Meeting[]>, staffOf(c.chairmanId)]);
   const me = await memberFor(user.id, c.id);
-  const manage = canManage(user, c), convener = c.convenerId === user.id;
+  const manage = await manages(user, c), convener = c.convenerId === user.id;
+  const meta = await metaOf(c.chairmanId, c.id);
+  const comp = composition(meta, members, c.convenerId);
+  const ending = new Set(endingSoon(meta, 60).map((x) => x.memberId));
+  // People to suggest: the committee's department / faculty, or the heads for an institute committee.
+  const inScope = manage ? await prisma.user.findMany({ where: { isActive: true, ...(c.scope === "DEPARTMENT" && c.scopeId ? { departmentId: c.scopeId } : c.scope === "FACULTY" && c.scopeId ? { OR: [{ facultyId: c.scopeId }, { department_: { is: { facultyId: c.scopeId } } }] } : { role: { in: ["DEAN", "HEAD_OF_DEPARTMENT"] as ("DEAN" | "HEAD_OF_DEPARTMENT")[] }, OR: [{ id: c.chairmanId }, { managedById: c.chairmanId }] }) } as never, select: { id: true, name: true, role: true }, take: 80 }).catch(() => []) : [];
+  const memberIds = new Set(members.map((m) => m.userId).filter(Boolean));
+  const ROLE_NOTE: Record<string, string> = { DEAN: "Dean", HEAD_OF_DEPARTMENT: "HOD", PROGRAM_COORDINATOR: "Program Lead", SUBJECT_EXPERT: "Subject Expert", INSTRUCTOR: "Faculty" };
   const tallies = await Promise.all(items.map((i) => itemTally(i, c, members)));
   const convenerName = members.find((m) => m.userId === c.convenerId)?.name || staff.find((s) => s.id === c.convenerId)?.name || "—";
 
@@ -34,6 +43,10 @@ export default async function Board({ params }: { params: { id: string } }) {
       <p className="small-note" style={{ margin: "0 0 8px" }}>{TYPES[c.type]} · {c.mode === "FULL" ? `Full committee: quorum ${c.quorumPct}% of members, approval needs more than ${c.majorityPct}% of the votes cast, the Convener finalises` : "Convener only: the Convener records each decision with the meeting date and the signed minutes"} · Convener: {convenerName}{c.councilStep ? " · then Academic Council noted / approved" : ""}</p>
       {manage && <ActionForm url="/api/cmt" fixed={{ action: "save", id: c.id, type: c.type, scope: c.scope, scopeId: c.scopeId }} submit="Save" collapsed openLabel="Settings…" initial={{ name: c.name, mode: c.mode, quorumPct: c.quorumPct, majorityPct: c.majorityPct, convenerId: c.convenerId || "", councilStep: c.councilStep }} fields={[{ name: "name", label: "Name", type: "text", width: 260 }, { name: "mode", label: "Mode", type: "select", options: [["FULL", "Full committee (votes)"], ["CONVENER_ONLY", "Convener only"]] }, { name: "quorumPct", label: "Quorum %", type: "number", width: 80 }, { name: "majorityPct", label: "Majority over %", type: "number", width: 90 }, { name: "convenerId", label: "Convener", type: "select", options: staff.map((s) => [s.id, s.name] as [string, string]), width: 200 }, { name: "councilStep", label: "Academic Council step", type: "checkbox" }]} />}
 
+      <CommitteeMembers committeeId={c.id} manage={manage} roles={CMT_ROLES} secretary={meta.secretaryId || ""} canSecretary={["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"].includes(user.role)}
+        members={members.map((m) => ({ id: m.id, name: m.name, external: m.external, organisation: m.organisation, role: comp.roleOf(m), from: meta.roles[m.id]?.from, until: meta.roles[m.id]?.until, ending: ending.has(m.id) }))}
+        suggested={inScope.filter((u) => !memberIds.has(u.id)).map((u) => ({ id: u.id, name: u.name, note: ROLE_NOTE[u.role] }))}
+        staff={staff.map((x) => ({ id: x.id, name: x.name }))} rules={comp.rows} />
       <h2 style={{ fontSize: 17, margin: "12px 0 6px" }}>Agenda</h2>
       {(me || manage) && <ActionForm url="/api/cmt" fixed={{ action: "item", committeeId: c.id }} submit="Add to agenda" collapsed openLabel="+ Add an item" initial={{ meetingId: meetings[0]?.id || "" }} fields={[{ name: "title", label: "Item", type: "text", width: 320 }, { name: "summary", label: "Details", type: "textarea" }, { name: "meetingId", label: "Meeting", type: "select", options: [["", "Not yet scheduled"], ...meetings.map((m) => [m.id, new Date(m.date).toISOString().slice(0, 10)] as [string, string])] }]} />}
       {items.length === 0 && <div className="card"><p className="small-note" style={{ margin: 0 }}>Nothing on the agenda.</p></div>}
@@ -74,21 +87,6 @@ export default async function Board({ params }: { params: { id: string } }) {
         {manage && <ActionForm url="/api/cmt" fixed={{ action: "meeting", committeeId: c.id }} submit="Schedule" collapsed openLabel="+ Schedule a meeting" fields={[{ name: "date", label: "Date", type: "date", width: 150 }, { name: "venue", label: "Venue", type: "text", width: 200 }]} />}
       </div>
 
-      <h2 style={{ fontSize: 17, margin: "12px 0 6px" }}>Members ({members.length})</h2>
-      <div className="card">
-        {members.map((m) => (
-          <div key={m.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "3px 0", fontSize: 13, flexWrap: "wrap" }}>
-            <span>{m.name}{m.userId === c.convenerId ? " (Convener)" : ""}{m.external ? <span className="small-note"> · external{m.organisation ? `, ${m.organisation}` : ""}{m.tokenSetAt ? ` · guest link issued ${new Date(m.tokenSetAt).toLocaleDateString("en-GB")}` : ""}</span> : null}</span>
-            {manage && <span style={{ display: "inline-flex", gap: 6 }}>{m.external && <ActionButton url="/api/cmt" body={{ action: "guestLink", memberId: m.id }} label="New guest link" className="btn btn-secondary btn-sm" showMessage />}<ActionButton url="/api/cmt" body={{ action: "removeMember", memberId: m.id }} label="Remove" className="btn btn-secondary btn-sm" confirmText={`Remove ${m.name}?`} /></span>}
-          </div>
-        ))}
-        {manage && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <ActionForm url="/api/cmt" fixed={{ action: "addMember", committeeId: c.id }} submit="Add" collapsed openLabel="+ Staff member" initial={{ userId: staff[0]?.id }} fields={[{ name: "userId", label: "Member", type: "select", options: staff.map((s) => [s.id, s.name] as [string, string]), width: 240 }]} />
-            <ActionForm url="/api/cmt" fixed={{ action: "addMember", committeeId: c.id }} submit="Add and make a guest link" collapsed openLabel="+ External member" showMessage fields={[{ name: "name", label: "Name", type: "text", width: 200 }, { name: "organisation", label: "University / company", type: "text", width: 200 }, { name: "email", label: "Email", type: "text", width: 200 }]} />
-          </div>
-        )}
-      </div>
     </Shell>
   );
 }

@@ -960,6 +960,20 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Open Joint degrees and ODL; start a programme (Dean, Institute Head, HOD or Program Lead).", "The Dean assigns it to one person, who finds it under “Working as → Joint degrees & ODL”.", "Go through the steps; each shows what is still missing for HEC.", "Draft and check the Credit Equivalency Matrix; fill the MoC items a–r.", "Download the NOC file, record the NOC, publish the programme page."],
     who: "Institute Head, Dean, HOD and Program Lead.", pages: ["/collab"], keywords: ["joint degree", "dual degree", "double degree", "odl", "distance learning", "moc", "credit equivalency", "noc", "diploma supplement", "blended"], href: "/collab",
   }),
+  A({
+    key: "committee-members", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL],
+    title: "Set up a committee and its members (BOS, Faculty Board, Academic Council …)",
+    summary: "Create a committee step by step: type, scope, Convener and Secretary, members, voting rules. On the committee page the Members card comes first: each member's role and term, people suggested from the org chart to tick, add by email, external experts with a guest link, replace a member (the history is kept) and your statute's composition rule with a ✓ / ✗ check. The Convener and Secretary are reminded when terms end.",
+    steps: ["Committees → “+ New committee (step by step)”.", "Pick the type and scope, the Convener and (optionally) the Secretary.", "Tick the members; create.", "On the committee page add external experts, set terms, enter the composition rule."],
+    who: "The Institute Head, the Dean (faculty) or HOD (department) set it up; the Convener or Secretary manages members.", pages: ["/boards", "/boards/new"], keywords: ["committee", "bos", "board of studies", "bof", "faculty board", "academic council", "members", "external expert", "secretary", "convener"], href: "/boards",
+  }),
+  A({
+    key: "institute-operations", kind: "guide", category: "help", roles: [IH, DEAN, HOD],
+    title: "Institute operations at a glance",
+    summary: "The desks other people run — library, fees, payroll, facilities, assets, stores and student life — as read-only cards with their key numbers. Open a card to look; the work stays with the person who runs that desk.",
+    steps: ["Menu → Institute → Institute operations.", "Red cards need attention (overdue loans, past-due fees, open faults).", "Open a card to see the desk."],
+    who: "Institute Head, Dean and HOD.", pages: ["/operations"], keywords: ["operations", "library", "fees", "payroll", "facilities", "assets", "store"], href: "/operations",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

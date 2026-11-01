@@ -153,3 +153,33 @@ export async function canWork(user: { id: string; role: string }, p: Prog) {
   if (["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"].includes(user.role)) return true;
   return dataOf(p).ownerId === user.id;
 }
+
+// ---- ODL delivery mode per lecture (ODL 8.2.3): each lecture of the plan is tagged face-to-face, live online or
+// recorded; a blended course needs at least 1/3 face-to-face or live. Kept beside the plan (ScopedSetting odl.modes.<courseId>).
+export const MODES: Record<string, string> = { F2F: "Face-to-face", LIVE: "Live online", REC: "Recorded" };
+export async function lectureModes(chairmanId: string, codes: string[]) {
+  if (!codes.length) return [];
+  const courses = await prisma.course.findMany({ where: { code: { in: codes }, coordinator: { managedById: chairmanId } }, select: { id: true, code: true, isOffered: true }, orderBy: { isOffered: "desc" } });
+  const { allStored } = await import("./scopedSettings");
+  const stored = await allStored(chairmanId).catch(() => []);
+  const out: { code: string; courseId: string; lectures: { n: number; topic: string; mode: string }[]; pct: number | null }[] = [];
+  for (const code of codes) {
+    const c = courses.find((x) => x.code === code); if (!c) continue;
+    const rows = await prisma.lectureRow.findMany({ where: { courseId: c.id, source: "SE" }, select: { lectureNumber: true, topic: true }, orderBy: { lectureNumber: "asc" } });
+    const m = J<Record<string, string>>(stored.find((r) => r.key === `odl.modes.${c.id}`)?.value || "{}", {});
+    const lectures = rows.map((r) => ({ n: r.lectureNumber, topic: r.topic, mode: m[String(r.lectureNumber)] || "" }));
+    const tagged = lectures.filter((l) => l.mode);
+    out.push({ code, courseId: c.id, lectures, pct: tagged.length ? Math.round((100 * tagged.filter((l) => l.mode !== "REC").length) / lectures.length) : null });
+  }
+  return out;
+}
+export async function saveModes(p: Prog, byId: string, courseId: string, code: string, modes: Record<string, string>) {
+  const clean = Object.fromEntries(Object.entries(modes).filter(([, v]) => MODES[v]));
+  const { saveSetting } = await import("./scopedSettings");
+  await saveSetting(p.chairmanId, "INSTITUTE", p.chairmanId, `odl.modes.${courseId}`, JSON.stringify(clean), byId);
+  const total = await prisma.lectureRow.count({ where: { courseId, source: "SE" } });
+  const pct = total ? Math.round((100 * Object.values(clean).filter((v) => v !== "REC").length) / total) : 0;
+  const d = dataOf(p);
+  await saveData(p, { courses: (d.courses || []).map((c) => (c.code === code ? { ...c, f2fPct: pct } : c)) });
+  return pct;
+}
