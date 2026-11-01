@@ -861,6 +861,21 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Open Term Archive; terms show how many results are approved.", "Click Archive this term.", "To correct an archived course: choose it, say what must change and why, and Request an amendment.", "The Controller / HOD approves (never their own request); editing is open for 48 hours and both versions are kept."],
     who: "Archive: Controller, HOD, Institute Head, Dean. Amendments: requested by the teacher or a leader, approved by the Controller or HOD.", pages: ["/term-archive"], keywords: ["archive", "term", "amendment", "locked", "snapshot"], href: "/term-archive",
   }),
+  A({
+    key: "advisor-tabs-ga", kind: "guide", category: "registration", roles: [PL, INS, SE, HOD],
+    title: "Advisor student page: tabs, failed courses and the GA matrix",
+    summary: "An advisee's page is split into tabs — Overview, This semester, Register next, Transcript, Degree plan, History & notes and OBE transcript. Overview lists F (must repeat) and D (can improve) courses first, with where each can be retaken. The OBE transcript opens on the GA matrix: every course of the plan × every GA, coloured by result, with a footer of what is still needed per GA.",
+    steps: ["Open an advisee; the tab is in the address, so a link opens the same tab.", "Overview: courses to repeat, with “Retake this term / next term with <batch>”.", "OBE transcript: green attained, red not attained, amber in progress, grey planned. The footer shows remaining chances, slack and the status.", "Click a GA heading for its detail: what is done, what is required, what is left and advice."],
+    who: "The batch advisor; the GA matrix also shows on the Program Lead's student transcript.",
+    affects: "The GA rule (average or count) is set per program in Who Decides What.",
+    pages: ["/advisor/students", "/coordinator/student-transcript"], keywords: ["advisor", "tabs", "ga matrix", "retake", "failed", "repeat", "obe transcript", "graduate attribute"], href: "/advisor/dashboard",
+  }),
+  A({
+    key: "institute-look", kind: "guide", category: "people", roles: [IH],
+    title: "Set the institute's colour and logo watermark",
+    summary: "In Institute Settings → Look of the app, choose the main colour (it must keep white text readable: WCAG AA 4.5:1, or a darker suggestion is offered) and whether the logo shows as a very faint watermark behind pages (centre, bottom-right or off). It never covers text and is hidden on mark sheets, timetables and phones.",
+    who: "Institute Head.", pages: ["/chairman/institute-settings"], keywords: ["logo", "colour", "color", "brand", "watermark", "theme"], href: "/chairman/institute-settings",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

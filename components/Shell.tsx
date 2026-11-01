@@ -113,6 +113,7 @@ export default async function Shell({
       approvalsCount={approvalsCount}
       tasksCount={tasksCount}
       linkStatus={menu?.statuses || {}}
+      look={user && user.role !== "SUPER_USER" ? await import("../lib/brandLookServer").then(async (m) => m.lookOf(await (await import("../lib/branding")).cachedChairmanIdFor(user as never))).catch(() => null) : null}
       display={user ? (await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "display")).catch(() => null)) || "" : ""}
       unreadNotifications={unreadNotifications}
       pins={pins}

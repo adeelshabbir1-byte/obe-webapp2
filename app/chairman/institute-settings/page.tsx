@@ -1,3 +1,4 @@
+import BrandLookEditor from "../../../components/BrandLookEditor";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -35,6 +36,7 @@ export default async function InstituteSettingsPage() {
         <p className="small-note">Download every academic table of your institute (staff, batches, students, courses, GAs, CLOs, assessments, marks, results) as spreadsheets in one ZIP — your own backup. Passwords are never included.</p>
         <a className="btn btn-sm" href="/api/institute-export">Download institute data</a> <a className="act" href="/security" target="_blank" rel="noopener noreferrer">Security &amp; data protection</a>
       </div>
+      <BrandLookEditor {...(await (await import("../../../lib/brandLookServer")).lookOf(user.id))} />
     </Shell>
   );
 }

@@ -5,6 +5,8 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-01-m", date: "2026-11-01", roles: ["*"], text: "Advisor student page in tabs; F / D courses first with where to retake them; the GA matrix (courses × GAs, with what is still needed per GA) on the OBE transcript tab and the student transcript.", href: "/advisor/dashboard" },
+  { id: "2026-11-01-n", date: "2026-11-01", roles: ["CHAIRMAN"], text: "Look of the app: your institute's main colour (contrast-checked) and a faint logo watermark.", href: "/chairman/institute-settings" },
   { id: "2026-11-01-j", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"], text: "My Delegations: hand chosen tasks to a colleague for a period (e.g. HOD Delegate for naming SEs), or let someone act for you on leave. You can override or revoke any time.", href: "/delegations" },
   { id: "2026-11-01-k", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR"], text: "Data Quality: duplicate students, courses with no SE / instructor / sections / plan, unmapped CLOs and questions — each with a Fix link.", href: "/data-quality" },
   { id: "2026-11-01-l", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "INSTRUCTOR"], text: "Term Archive: archive a term once its results are approved; later corrections go through an approved amendment.", href: "/term-archive" },
