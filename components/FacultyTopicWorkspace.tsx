@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { intentItems, mergeLayouts, LEVEL_LABEL, type Entry, type Level } from "../lib/topicPlanCore";
+import { intentItems, mergeLayouts, LEVEL_LABEL, freeLabel, mergeWarnings, splitSubtopics, topicLoop, isDuplicateLink, linkWarnings, type Entry, type Level, type TopicEdge } from "../lib/topicPlanCore";
 import { norm, similarity } from "../lib/textMatch";
 
 // The Topic Workspace: any number of courses of the institute side by side (scroll sideways, collapse, pin). Edit
@@ -17,6 +17,7 @@ type Row = {
   dependents: Dep[]; needs: Dep[]; overlaps: { code: string; topic: string; verdict: string }[];
   industry: string | null; reading: string | null; readingAuto: boolean; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
   inCouncil: boolean; gaOnly: number[]; comments: number; difficulty: number; bank: number;
+  merge: { id: string; label: string; clos: string[] } | null; free: boolean;
 };
 type Column = {
   courseId: string; code: string; title: string; semester: number | null; program: string; batch: string; coordinatorId: string;
@@ -64,6 +65,11 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
   const [detail, setDetail] = useState<{ courseId: string; key: string } | null>(null);
   const [linkAsk, setLinkAsk] = useState<{ from: { col: Column; card: Card }; to: { col: Column; card: Card } } | null>(null);
   const [lineMenu, setLineMenu] = useState<{ x: number; y: number; line: Line } | null>(null);
+  // Link mode: click the topic needed first (A), then the topic that needs it (B); a small popup asks the strength.
+  const [linkMode, setLinkMode] = useState(false);
+  const [linkFrom, setLinkFrom] = useState<{ courseId: string; key: string; x: number; y: number } | null>(null);
+  const [mouse, setMouse] = useState<{ x: number; y: number } | null>(null);
+  const [strengthAsk, setStrengthAsk] = useState<{ from: { courseId: string; key: string }; to: { courseId: string; key: string }; x: number; y: number; level: string; warn: { text: string; move: boolean } | null } | null>(null);
   const [chain, setChain] = useState<{ courseId: string; dir: string; data: ChainData | null } | null>(null);
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [others, setOthers] = useState<{ courseId: string; name: string }[]>([]);
@@ -278,13 +284,63 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
     await save(body.map((b) => ({ ...b, hash: hashes.get(b.courseId) || b.hash })));
   };
 
+  // ---------------------------------------------------------------- link mode
+  /** Every prerequisite link known here (saved, waiting, unsaved), for the loop and duplicate checks. */
+  const knownEdges = (): TopicEdge[] => {
+    const out: TopicEdge[] = [];
+    for (const c of columns) for (const k of work[c.courseId] || []) for (const d of k.origin?.dependents || []) out.push({ fromCode: c.code, fromTopic: k.topic, toCode: d.code, toTopic: d.topic });
+    for (const p of pendingLinks) if (p.kind === "PREREQ" && p.action !== "REMOVE") out.push({ fromCode: p.fromCode, fromTopic: p.fromTopic, toCode: p.toCode, toTopic: p.toTopic });
+    for (const l of links) if (l.kind === "PREREQ" && l.action !== "REMOVE") out.push({ fromCode: l.fromCode, fromTopic: l.fromTopic, toCode: l.toCode, toTopic: l.toTopic });
+    return out;
+  };
+  const pointOf = (courseId: string, key: string) => {
+    const el = cardEl(courseId, key), area = areaRef.current;
+    if (!el || !area) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect(), b = area.getBoundingClientRect();
+    return { x: r.right - b.left + area.scrollLeft, y: r.top + r.height / 2 - b.top + area.scrollTop };
+  };
+  /** A → B chosen (by clicks or by dragging A's handle): checks, then the strength popup at B. */
+  const askLink = (from: { courseId: string; key: string }, to: { courseId: string; key: string }, x: number, y: number) => {
+    const fc = colOf(from.courseId), tc = colOf(to.courseId), fa = findCard(from.courseId, from.key), tb = findCard(to.courseId, to.key);
+    setLinkFrom(null);
+    if (!fc || !tc || !fa || !tb) return;
+    const add = { fromCode: fc.code, fromTopic: fa.topic, toCode: tc.code, toTopic: tb.topic };
+    const edges = knownEdges();
+    if (isDuplicateLink(edges, add)) { setMsg({ kind: "info", text: `${fc.code} “${fa.topic}” → ${tc.code} “${tb.topic}” is already linked.` }); return; }
+    const loop = topicLoop(edges, add);
+    if (loop) { setMsg({ kind: "err", text: `Refused: this link would make a loop — ${loop.join(" → ")}.` }); return; }
+    const pos = (cid: string, key: string) => (work[cid] || []).findIndex((k) => k.key === key);
+    const warn = linkWarnings({ code: fc.code, topic: fa.topic, semester: fc.semester, position: pos(from.courseId, from.key) }, { code: tc.code, topic: tb.topic, semester: tc.semester, position: pos(to.courseId, to.key) });
+    setStrengthAsk({ from, to, x, y, level: "MILD", warn });
+  };
+  const linkClick = (c: Column, k: Card, e: React.MouseEvent) => {
+    if (linkFrom && linkFrom.courseId === c.courseId && linkFrom.key === k.key) { setLinkFrom(null); return; } // clicking A again cancels
+    if (!linkFrom) { const p = pointOf(c.courseId, k.key); setLinkFrom({ courseId: c.courseId, key: k.key, ...p }); return; }
+    askLink(linkFrom, { courseId: c.courseId, key: k.key }, e.clientX, e.clientY);
+  };
+  function confirmLink(move: boolean) {
+    const a = strengthAsk;
+    if (!a) return;
+    const fc = colOf(a.from.courseId)!, tc = colOf(a.to.courseId)!, fa = findCard(a.from.courseId, a.from.key)!, tb = findCard(a.to.courseId, a.to.key)!;
+    if (move && a.from.courseId === a.to.courseId) setCards(a.from.courseId, (cs) => { const n = cs.filter((x) => x.key !== a.from.key); const at = n.findIndex((x) => x.key === a.to.key); n.splice(Math.max(0, at), 0, cs.find((x) => x.key === a.from.key)!); return n; });
+    setLinks((l) => l.concat({ key: tmpKey(), kind: "PREREQ", level: a.level, action: "ADD", fromCourseId: fc.courseId, fromCode: fc.code, fromTopic: fa.topic, toCourseId: tc.courseId, toCode: tc.code, toTopic: tb.topic }));
+    setStrengthAsk(null);
+    setMsg({ kind: "info", text: `Link ${fc.code} “${fa.topic}” → ${tc.code} “${tb.topic}” (${a.level.toLowerCase()}) — saved with Save.` });
+  }
+
   // ---------------------------------------------------------------- keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = /INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement)?.tagName || "");
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (e.shiftKey) saveDraft(); else save(); return; }
-      if (e.key === "Escape") { setDrag(null); setDropAt(null); setLinkAsk(null); setLineMenu(null); setSel(new Set()); setDetail(null); return; }
+      if (e.key === "Escape") { setDrag(null); setDropAt(null); setLinkAsk(null); setLineMenu(null); setSel(new Set()); setDetail(null); setLinkMode(false); setLinkFrom(null); setStrengthAsk(null); return; }
       if (typing || mobile) return;
+      if (strengthAsk) {
+        const lvK = ({ s: "STRONG", m: "MILD", w: "WEAK" } as Record<string, string>)[e.key.toLowerCase()];
+        if (lvK) { e.preventDefault(); setStrengthAsk({ ...strengthAsk, level: lvK }); return; }
+        if (e.key === "Enter") { e.preventDefault(); confirmLink(false); return; }
+      }
+      if (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setLinkMode((v) => !v); setLinkFrom(null); setStrengthAsk(null); return; }
       const lv = ({ "1": "CORE", "2": "IMPORTANT", "3": "OPTIONAL" } as Record<string, Level>)[e.key];
       if (lv && sel.size) { e.preventDefault(); setLevel(selKeys(), lv); }
     };
@@ -347,7 +403,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
     };
     if (show.prereqs) for (const c of columns) for (const k of work[c.courseId] || []) for (const d of k.origin?.dependents || []) {
       const t = findTopic(d.code, d.topic);
-      if (t && t.col.courseId !== c.courseId) add(`p:${c.courseId}:${k.key}:${t.col.courseId}:${t.card.key}`, { col: c, card: k }, t, LINK_COLOR[d.strength] || "#888", "", `${d.strength.toLowerCase()} prerequisite`, { kind: "PREREQ", level: d.strength, fromCol: c, fromTopic: k.topic, toCol: t.col, toTopic: t.card.topic, confirmed: true });
+      if (t && t.card.key !== k.key) add(`p:${c.courseId}:${k.key}:${t.col.courseId}:${t.card.key}`, { col: c, card: k }, t, LINK_COLOR[d.strength] || "#888", "", `${d.strength.toLowerCase()} prerequisite`, { kind: "PREREQ", level: d.strength, fromCol: c, fromTopic: k.topic, toCol: t.col, toTopic: t.card.topic, confirmed: true });
     }
     if (show.overlaps) for (const c of columns) for (const k of work[c.courseId] || []) for (const o of k.origin?.overlaps || []) {
       if (o.code < c.code) continue;
@@ -412,6 +468,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
 
       <div className="tw-toolbar no-print">
         {!readOnly && <button className="btn btn-sm" onClick={() => setPicker(true)}>＋ Open a course</button>}
+        {!readOnly && <button className={`btn btn-sm${linkMode ? "" : " btn-secondary"}`} aria-pressed={linkMode} title="Click the topic needed first, then the topic that needs it (L)" onClick={() => { setLinkMode(!linkMode); setLinkFrom(null); setStrengthAsk(null); }} data-link-mode>🔗 Set prerequisites</button>}
         <label><input type="checkbox" checked={show.prereqs} onChange={(e) => setShow({ ...show, prereqs: e.target.checked })} /> Show prerequisites</label>
         <label><input type="checkbox" checked={show.overlaps} onChange={(e) => setShow({ ...show, overlaps: e.target.checked })} /> Show overlaps</label>
         <label><input type="checkbox" checked={show.droppable} onChange={(e) => setShow({ ...show, droppable: e.target.checked })} /> Show what can be dropped</label>
@@ -424,16 +481,20 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
           <span><i className="tw-outline" />suggested</span><span>⛔ keep · ! care · ✓ can drop</span><span><b style={{ color: LINK_COLOR.STRONG }}>━</b> strong <b style={{ color: LINK_COLOR.MILD }}>━</b> mild <b style={{ color: LINK_COLOR.WEAK }}>━</b> weak <b style={{ color: LINK_COLOR.PROGRESSION }}>━</b> progression <b style={{ color: LINK_COLOR.DUPLICATION }}>━</b> duplication · dashed = waiting · dotted = suggested</span>
         </span>
       </div>
+      {linkMode && <div className="tw-banner tw-linkbar" role="status" data-link-bar>{linkFrom ? <>Now click the topic that needs <b>“{findCard(linkFrom.courseId, linkFrom.key)?.topic}”</b> — in this or any open course. Click it again to cancel.</> : <>Click the topic that is needed first.</>} <span className="small-note">Esc leaves link mode.</span></div>}
       {msg && <div className={msg.kind === "err" ? "err" : "tw-banner"} role="status">{msg.text} <button className="tw-x" onClick={() => setMsg(null)} aria-label="Dismiss">×</button></div>}
       {!columns.length && <div className="card"><p style={{ fontSize: 13.5 }}>Open any courses of the institute side by side — yours and others&apos;. In courses you own, saved changes apply at once; in other courses they are sent to their Subject Expert as one proposal per course. {readOnly ? "On a phone the workspace is read-only." : <button className="btn btn-sm" onClick={() => setPicker(true)}>Open a course</button>}</p></div>}
 
-      <div className={`tw-area${readOnly ? " tw-mobile" : ""}`} ref={areaRef} onScroll={() => setWork((w) => ({ ...w }))}>
+      <div className={`tw-area${readOnly ? " tw-mobile" : ""}${linkMode ? " tw-linking" : ""}`} ref={areaRef} onScroll={() => setWork((w) => ({ ...w }))}
+        onMouseMove={(e) => { if (!linkFrom || !areaRef.current) return; const b = areaRef.current.getBoundingClientRect(); setMouse({ x: e.clientX - b.left + areaRef.current.scrollLeft, y: e.clientY - b.top + areaRef.current.scrollTop }); }}>
         <svg className="tw-lines" width={size.w} height={size.h} aria-hidden={lines.length === 0}>
-          {lines.map((l) => { const mx = (l.x1 + l.x2) / 2; return (
+          {lines.map((l) => { const same = Math.abs(l.x1 - l.x2) < 4; const mx = (l.x1 + l.x2) / 2; const d = same ? `M${l.x1},${l.y1} C${l.x1 - 46},${l.y1} ${l.x2 - 46},${l.y2} ${l.x2},${l.y2}` : `M${l.x1},${l.y1} C${mx},${l.y1} ${mx},${l.y2} ${l.x2},${l.y2}`; return (
             <g key={l.id} onClick={(e) => { if (l.link && !readOnly) setLineMenu({ x: e.clientX, y: e.clientY, line: l }); }} style={{ cursor: l.link ? "pointer" : "default" }}>
-              <path d={`M${l.x1},${l.y1} C${mx},${l.y1} ${mx},${l.y2} ${l.x2},${l.y2}`} stroke="transparent" strokeWidth={10} fill="none" />
-              <path d={`M${l.x1},${l.y1} C${mx},${l.y1} ${mx},${l.y2} ${l.x2},${l.y2}`} stroke={l.color} strokeWidth={1.8} strokeDasharray={l.dash} fill="none" opacity={0.85}><title>{l.label}</title></path>
+              <path d={d} stroke="transparent" strokeWidth={10} fill="none" />
+              <path d={d} stroke={l.color} strokeWidth={1.8} strokeDasharray={l.dash} fill="none" opacity={0.85} markerEnd="url(#tw-arrow)"><title>{l.label}</title></path>
             </g>); })}
+          <defs><marker id="tw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888" /></marker></defs>
+          {linkFrom && mouse && <line x1={linkFrom.x} y1={linkFrom.y} x2={mouse.x} y2={mouse.y} stroke="#7A1F2B" strokeWidth={2} strokeDasharray="5 4" markerEnd="url(#tw-arrow)" data-link-band />}
         </svg>
         {ordered.map((c) => {
           const o = open.find((x) => x.courseId === c.courseId);
@@ -477,22 +538,24 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                     <div key={k.key}>
                       {dropAt?.courseId === c.courseId && dropAt.index === i && <div className="tw-drop" />}
                       <div ref={(el) => { if (el) cardRefs.current.set(`${c.courseId}::${k.key}`, el); else cardRefs.current.delete(`${c.courseId}::${k.key}`); }}
-                        className={`tw-card${selected ? " tw-sel" : ""}${hide ? " tw-dim" : ""}${r?.notTaught ? " tw-nottaught" : ""}`} title={hover(c, k)}
+                        className={`tw-card${selected ? " tw-sel" : ""}${hide ? " tw-dim" : ""}${r?.notTaught ? " tw-nottaught" : ""}${k.free || r?.free ? " tw-free" : ""}${linkFrom?.courseId === c.courseId && linkFrom.key === k.key ? " tw-linkfrom" : ""}`} title={hover(c, k)}
                         draggable={!readOnly && c.mode !== "FOLLOWER"} onDragStart={(e) => { e.dataTransfer.setData("text/plain", k.topic); e.dataTransfer.effectAllowed = "copyMove"; setDrag({ courseId: c.courseId, key: k.key }); }}
                         onDragEnd={() => { setDrag(null); setDropAt(null); }}
-                        onDragOver={(e) => { if (!drag) return; e.preventDefault(); e.stopPropagation(); const b = e.currentTarget.getBoundingClientRect(); setDropAt({ courseId: c.courseId, index: e.clientY > b.top + b.height / 2 ? i + 1 : i }); }}
+                        onDragOver={(e) => { if (!drag && Array.from(e.dataTransfer.types).includes("application/x-topic-link")) { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "link"; return; } if (!drag) return; e.preventDefault(); e.stopPropagation(); const b = e.currentTarget.getBoundingClientRect(); setDropAt({ courseId: c.courseId, index: e.clientY > b.top + b.height / 2 ? i + 1 : i }); }}
                         onDrop={(e) => {
                           e.preventDefault(); e.stopPropagation();
                           const ln = e.dataTransfer.getData("application/x-topic-link");
-                          if (ln) { const [fc, fk] = ln.split("::"); const fcol = colOf(fc), fcard = findCard(fc, fk); if (fcol && fcard && fc !== c.courseId) setLinkAsk((fcol.semester ?? 0) <= (c.semester ?? 0) ? { from: { col: fcol, card: fcard }, to: { col: c, card: k } } : { from: { col: c, card: k }, to: { col: fcol, card: fcard } }); return; }
+                          if (ln) { const [fc, fk] = ln.split("::"); if (fc && fk && !(fc === c.courseId && fk === k.key)) { if (e.altKey) { const fcol = colOf(fc), fcard = findCard(fc, fk); if (fcol && fcard) setLinkAsk({ from: { col: fcol, card: fcard }, to: { col: c, card: k } }); } else askLink({ courseId: fc, key: fk }, { courseId: c.courseId, key: k.key }, e.clientX, e.clientY); } return; }
                           if (drag && dropAt) move(drag, dropAt.courseId, dropAt.index, e.altKey || e.ctrlKey); setDrag(null); setDropAt(null);
                         }}
-                        onClick={(e) => { if (detail) setDetail({ courseId: c.courseId, key: k.key }); if (readOnly) return; const id = `${c.courseId}::${k.key}`; setSel((s) => { const n2 = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? s : []); if (n2.has(id) && (e.shiftKey || e.ctrlKey || e.metaKey)) n2.delete(id); else n2.add(id); return n2; }); }}>
+                        data-topic={k.topic}
+                        onClick={(e) => { if (linkMode && !readOnly) { e.stopPropagation(); linkClick(c, k, e); return; } if (detail) setDetail({ courseId: c.courseId, key: k.key }); if (readOnly) return; const id = `${c.courseId}::${k.key}`; setSel((s) => { const n2 = new Set(e.shiftKey || e.ctrlKey || e.metaKey ? s : []); if (n2.has(id) && (e.shiftKey || e.ctrlKey || e.metaKey)) n2.delete(id); else n2.add(id); return n2; }); }}>
                         <button className={`tw-bar${lv.suggested ? " tw-bar-sug" : ""}`} style={{ background: lv.suggested ? "transparent" : LEVEL_COLOR[lv.lv], borderColor: LEVEL_COLOR[lv.lv] }} aria-label={`Importance ${LEVEL_LABEL[lv.lv]}${lv.suggested ? " (suggested)" : ""} — click to change`}
                           onClick={(e) => { e.stopPropagation(); if (readOnly) return; const next: Level = lv.suggested ? lv.lv : lv.lv === "CORE" ? "IMPORTANT" : lv.lv === "IMPORTANT" ? "OPTIONAL" : "CORE"; setLevel([{ courseId: c.courseId, key: k.key }], next); }} />
                         <div className="tw-body">
                           <div className="tw-topic"><span className="tw-ln" title="Lecture number in the plan">L{i + 1}</span>{h && <i className="tw-heat" style={{ background: HEAT[h] }} />}{k.topic}{isChanged(c, k) && <span className="tw-tag">proposed</span>}</div>
                           {k.subtopic && <div className="tw-sub">{k.subtopic}</div>}
+                          {r?.merge && !isChanged(c, k) && <div className="tw-sub" title={`CLOs: ${r.merge.clos.join(", ") || "—"}`}>⇄ {r.merge.label}</div>}
                           <div className="tw-badges">
                             {r && <span className={`tw-safe tw-safe-${r.safety.mark === "⛔" ? "no" : r.safety.mark === "✓" ? "ok" : "warn"}`} title={r.safety.reason}>{r.safety.mark}</span>}
                             {r?.clo && <span>{r.clo}</span>}
@@ -503,7 +566,7 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
                             {r?.reading ? <span title={r.readingAuto ? "Filled in from the book’s contents — check it" : "Reading"}>📖 {r.reading}{r.readingAuto ? " ·auto" : ""}</span> : r && c.textbook && !r.notTaught && <span className="tw-flag" title={`No chapter of ${c.textbook} matched`}>no reading</span>}
                           </div>
                         </div>
-                        {!readOnly && !roCol(c) && <span className="tw-handle" draggable title="Drag onto a topic of another course to link them" onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData("application/x-topic-link", `${c.courseId}::${k.key}`); e.dataTransfer.effectAllowed = "link"; }}>⟶</span>}
+                        {!readOnly && !roCol(c) && <span className="tw-handle" draggable title="Drag onto the topic that needs this one (any open course) to link them; hold Alt for an overlap" onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData("application/x-topic-link", `${c.courseId}::${k.key}`); e.dataTransfer.effectAllowed = "link"; }}>⟶</span>}
                         <button className="tw-more" aria-label={`Details of ${k.topic}`} onClick={(e) => { e.stopPropagation(); setDetail({ courseId: c.courseId, key: k.key }); }}>⋯</button>
                       </div>
                     </div>
@@ -528,6 +591,18 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
       {picker && <Picker onClose={() => setPicker(false)} onOpen={(refs) => { addRefs(refs); setPicker(false); }} openIds={open.map((o) => o.courseId)} />}
       {chain && <Modal title="Open the chain" onClose={() => setChain(null)}><ChainPick data={chain.data} onOpen={(ids) => { addCourses(ids); setChain(null); }} /></Modal>}
       {linkAsk && <Modal title="Link these topics" onClose={() => setLinkAsk(null)}><LinkAsk ask={linkAsk} onDone={(kind, lvl, note) => { setLinks((l) => l.concat({ key: tmpKey(), kind, level: lvl, action: "ADD", fromCourseId: linkAsk.from.col.courseId, fromCode: linkAsk.from.col.code, fromTopic: linkAsk.from.card.topic, toCourseId: linkAsk.to.col.courseId, toCode: linkAsk.to.col.code, toTopic: linkAsk.to.card.topic, note })); setLinkAsk(null); }} /></Modal>}
+      {strengthAsk && (() => { const fa = findCard(strengthAsk.from.courseId, strengthAsk.from.key), tb = findCard(strengthAsk.to.courseId, strengthAsk.to.key), fc = colOf(strengthAsk.from.courseId), tc = colOf(strengthAsk.to.courseId); return (
+        <div className="tw-pop" style={{ left: Math.min(strengthAsk.x, window.innerWidth - 300), top: strengthAsk.y + 8 }} role="dialog" aria-label="Link strength" data-strength-popup>
+          <b>{fc?.code} “{fa?.topic}” → {tc?.code} “{tb?.topic}”</b>
+          <div className="small-note">“{fa?.topic}” is needed for “{tb?.topic}”. Strength (S / M / W), Enter to confirm:</div>
+          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>{["STRONG", "MILD", "WEAK"].map((lv) => <button key={lv} className={`btn btn-sm${strengthAsk.level === lv ? "" : " btn-secondary"}`} style={strengthAsk.level === lv ? { background: LINK_COLOR[lv] } : undefined} onClick={() => setStrengthAsk({ ...strengthAsk, level: lv })} aria-pressed={strengthAsk.level === lv}>{lv[0] + lv.slice(1).toLowerCase()}</button>)}</div>
+          {strengthAsk.warn && <div className="small-note" style={{ color: "#8A5300", marginTop: 6 }}>⚠ {strengthAsk.warn.text}</div>}
+          <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+            <button className="btn btn-sm" onClick={() => confirmLink(false)}>Link</button>
+            {strengthAsk.warn?.move && <button className="btn btn-sm btn-brass" onClick={() => confirmLink(true)}>Move it before, and link</button>}
+            <button className="btn btn-secondary btn-sm" onClick={() => setStrengthAsk(null)}>Cancel</button>
+          </div>
+        </div>); })()}
       {lineMenu?.line.link && <div className="tw-pop" style={{ left: Math.min(lineMenu.x, window.innerWidth - 280), top: lineMenu.y }} role="dialog" aria-label="Change link">
         <b>{lineMenu.line.link.fromCol.code} “{lineMenu.line.link.fromTopic}” → {lineMenu.line.link.toCol.code} “{lineMenu.line.link.toTopic}”</b>
         <div className="small-note">Now: {lineMenu.line.label}. Changes are proposals (both SEs, then the Program Lead).</div>
@@ -549,8 +624,21 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
         onClose={() => setDetail(null)}
         onChange={(patch) => setCards(detailCol.courseId, (cs) => cs.map((x) => (x.key === detailCard.key ? { ...x, ...patch } : x)))}
         onDelete={() => { if (detailCard.origin && detailCard.origin.safety.mark === "⛔" && !window.confirm(`${detailCard.origin.safety.reason}. Delete it anyway?`)) return; setCards(detailCol.courseId, (cs) => cs.filter((x) => x.key !== detailCard.key)); setDetail(null); }}
-        onSplit={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); const n = cs.slice(); const src = detailCard.id || detailCard.splitFrom || null; n.splice(i + 1, 0, { key: tmpKey(), topic: `${detailCard.topic} (part 2)`, subtopic: null, importance: detailCard.importance || null, splitFrom: src }); n[i] = { ...n[i], topic: `${detailCard.topic} (part 1)` }; return n; })}
-        onMerge={() => setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); if (i < 0 || i >= cs.length - 1) return cs; const n = cs.slice(); const nx = n[i + 1]; if (nx.origin?.pinned) return cs; const parts = Array.from(new Set([...(n[i].mergedFrom || (n[i].id ? [n[i].id!] : [])), ...(nx.mergedFrom || (nx.id ? [nx.id] : []))])); n[i] = { ...n[i], topic: `${n[i].topic}; ${nx.topic}`.slice(0, 300), subtopic: [n[i].subtopic, nx.subtopic].filter(Boolean).join("; ") || null, mergedFrom: parts.length > 1 ? parts : n[i].mergedFrom || null }; n.splice(i + 1, 1); return n; })}
+        onSplit={() => { const nk = tmpKey(); setCards(detailCol.courseId, (cs) => { const i = cs.findIndex((x) => x.key === detailCard.key); const n = cs.slice(); const src = detailCard.id || detailCard.splitFrom || null; const [keep, rest] = splitSubtopics(detailCard.subtopic); n.splice(i + 1, 0, { key: nk, topic: rest ? `${detailCard.topic} (continued)` : `${detailCard.topic} (part 2)`, subtopic: rest, importance: detailCard.importance || null, splitFrom: src }); n[i] = { ...n[i], topic: rest ? n[i].topic : `${detailCard.topic} (part 1)`, subtopic: keep }; return n; }); setDetail({ courseId: detailCol.courseId, key: nk }); setMsg({ kind: "info", text: "Split: choose the topic and sub-topics of the second lecture here. Its CLO follows the lecture it came from." }); }}
+        onMerge={() => {
+          const cs = work[detailCol.courseId] || []; const i = cs.findIndex((x) => x.key === detailCard.key);
+          if (i < 0 || i >= cs.length - 1) return;
+          const a = cs[i], nx = cs[i + 1];
+          if (nx.origin?.pinned && !nx.id) return;
+          const side = (k: Card) => ({ topic: k.topic, importance: (k.importance || k.origin?.importance || null) as Level | null, hard: (k.origin?.difficulty || 0) >= 2 || perfOf(detailCol, k)?.overall.heat === "red", perf: perfOf(detailCol, k) || null });
+          const w = mergeWarnings(side(a), side(nx));
+          if (w.length && !window.confirm(`Merge L${i + 1} and L${i + 2} anyway?\n\n${w.join("\n")}`)) return;
+          setCards(detailCol.courseId, (list) => { const n = list.slice(); const parts = Array.from(new Set([...(a.mergedFrom || (a.id ? [a.id] : [])), ...(nx.mergedFrom || (nx.id ? [nx.id] : []))])); const label = freeLabel([i + 1, i + 2]);
+            n[i] = { ...a, topic: `${a.topic}; ${nx.topic}`.slice(0, 300), subtopic: [a.subtopic, nx.subtopic].filter(Boolean).join("; ") || null, mergedFrom: parts.length > 1 ? parts : a.mergedFrom || null, importance: [a.importance, nx.importance].includes("CORE") ? "CORE" : [a.importance, nx.importance].includes("IMPORTANT") ? "IMPORTANT" : a.importance || nx.importance || null };
+            n[i + 1] = { ...nx, topic: label, subtopic: null, importance: null, free: label, mergedFrom: null };
+            return n; });
+          setMsg({ kind: "info", text: `Merged L${i + 1} + L${i + 2}. The freed slot is a “Free” lecture for a new topic (or delete it). Saved with Save.` });
+        }}
         onCopyMove={(to, copy) => { move({ courseId: detailCol.courseId, key: detailCard.key }, to, (work[to] || []).length, copy); setDetail(null); }}
         onSaved={() => load(open, true)} setMsg={setMsg} />}
       {sugOpen && <SuggestionsPanel sugs={sugs} importance={importanceSugs.map((x) => ({ key: `${x.col.courseId}::${x.card.key}`, code: x.col.code, topic: x.card.topic, level: x.s.level, why: x.s.why, confidence: x.s.confidence }))} role={role}
@@ -695,6 +783,8 @@ function TopicDetail({ col, card, readOnly, columns, perf, perfLine, onClose, on
       <div className="tw-field">Importance {(["CORE", "IMPORTANT", "OPTIONAL"] as Level[]).map((l) => <button key={l} className={`btn btn-sm ${card.importance === l ? "" : "btn-secondary"}`} disabled={readOnly} onClick={() => onChange({ importance: l })}>{LEVEL_LABEL[l]}</button>)}
         {r && <div className="small-note">Suggested: {LEVEL_LABEL[r.suggestion.level]} ({r.suggestion.confidence}) — {r.suggestion.why}</div>}</div>
       {r && <p className="small-note">Drop: {r.safety.mark} {r.safety.reason}{r.gaOnly.length ? ` · the only topic reaching GA/PLO ${r.gaOnly.join(", ")}` : ""} · {r.bank} question(s) in the bank</p>}
+      {r?.merge && card.id && <div className="tw-field" data-merge-info>⇄ <b>{r.merge.label}</b>{r.merge.clos.length ? <> · CLOs {r.merge.clos.join(", ")}</> : null}
+        {owner && !readOnly && <button className="btn btn-secondary btn-sm" style={{ marginLeft: 6 }} onClick={async () => { const x = await jsend(`${API}/lectures`, "POST", { action: "unmerge", mergeId: r.merge!.id }); if (x.ok) { setMsg({ kind: "ok", text: "Unmerged: both lectures are back with their CLOs, weights and links." }); onSaved(); onClose(); } else setMsg({ kind: "err", text: x.d.changed ? `Can't unmerge — changed since: ${(x.d.changed as string[]).join(" ")}` : x.d.error }); }}>Unmerge</button>}</div>}
       {!readOnly && <div className="tw-row">
         <button className="btn btn-secondary btn-sm" onClick={onSplit}>Split</button>
         <button className="btn btn-secondary btn-sm" onClick={onMerge}>Merge with next</button>
@@ -840,6 +930,10 @@ const CSS = `
 .tw-badges{display:flex;gap:5px;flex-wrap:wrap;font-size:10.5px;color:var(--slate);margin-top:2px}
 .tw-safe{font-weight:700}.tw-safe-ok{color:#2E7D32}.tw-safe-warn{color:#C46A12}
 .tw-flag{color:#8A3D0D;background:#FBEFE6;border-radius:4px;padding:0 3px}
+.tw-free{border-style:dashed!important;opacity:.75;background:repeating-linear-gradient(135deg,transparent,transparent 6px,rgba(0,0,0,.03) 6px,rgba(0,0,0,.03) 12px)}
+.tw-linking .tw-card{cursor:crosshair}
+.tw-linkfrom{outline:3px solid #7A1F2B;outline-offset:1px}
+.tw-linkbar{background:#FBF3E4;color:#7A520C}
 .tw-handle{cursor:crosshair;padding:0 4px;color:var(--slate);display:flex;align-items:center;font-size:12px}
 .tw-more{background:none;border:0;cursor:pointer;color:var(--slate);padding:0 6px}
 .tw-drop{height:3px;background:#1565C0;border-radius:2px}

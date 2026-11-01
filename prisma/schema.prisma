@@ -9463,3 +9463,21 @@ model DemoFlag {
   stateJson    String    @default("{}")
   createdAt    DateTime  @default(now())
 }
+
+// Merging and splitting lectures (prisma/migration_lecture_merge.sql): where each merge or split came from, for Unmerge
+// and for showing it as one merge or split everywhere.
+model LectureMerge {
+  id             String    @id
+  courseId       String
+  source         String
+  kind           String    @default("MERGE")
+  intoRowId      String
+  freeRowIdsJson String    @default("[]")
+  partsJson      String    @default("[]")
+  resultJson     String    @default("{}")
+  byUserId       String
+  createdAt      DateTime  @default(now())
+  undoneAt       DateTime?
+
+  @@index([courseId, source], map: "LectureMerge_course_idx")
+}

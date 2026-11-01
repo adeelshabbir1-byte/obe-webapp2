@@ -10,7 +10,7 @@ const API = "/api/faculty/topic-workspace";
 type CourseCheck = {
   courseId: string; code: string; title: string; missingPrereqs: string[]; bloomDrops: string[]; council: { missing: string[]; fewer: { topic: string; council: number; plan: number }[] } | null;
   budget: { line: string; warn: string }; coreNotAssessed: string[]; calendar: string[]; labVsTheory: string[]; bank: string[]; ga: string[]; gaReach: { plo: number; lectures: number }[];
-  noReading: string[]; textbook: string; lastSemester: { previous: string | null; added: string[]; removed: string[]; moved: { topic: string; now: number; then: number }[]; history: { id: string; at: string; by: string; label: string; undone: boolean }[] } | null;
+  noReading: string[]; textbook: string; lastSemester: { previous: string | null; added: string[]; removed: string[]; moved: { topic: string; now: number; then: number }[]; merged?: { from: string[]; into: string }[]; split?: { from: string; into: string[] }[]; history: { id: string; at: string; by: string; label: string; undone: boolean; summary?: string }[] } | null;
 };
 type MapData = { courses: { id: string; code: string; title: string; semester: number | null; topics: { topic: string; importance: string | null; notTaught: boolean }[] }[]; links: { from: string; fromTopic: string; to: string; toTopic: string; level: string; kind: string; pending: boolean }[]; chains: string[][]; keyTopics: { code: string; topic: string; dependents: number }[] };
 
@@ -62,8 +62,10 @@ function CourseChecks({ c }: { c: CourseCheck }) {
       {c.noReading.length > 0 && <p className="small-note">{c.noReading.length} topic(s) have no reading yet{c.textbook ? ` (required books: ${c.textbook})` : ""}.</p>}
       {ls && <div style={{ marginTop: 6 }}>
         <b style={{ fontSize: 13 }}>Compared with {ls.previous || "the last semester"}</b>
-        {ls.previous ? <p className="small-note">{ls.added.length} new · {ls.removed.length} dropped · {ls.moved.length} moved{ls.added.length ? ` · new: ${ls.added.slice(0, 6).join(", ")}` : ""}{ls.removed.length ? ` · dropped: ${ls.removed.slice(0, 6).join(", ")}` : ""}</p> : <p className="small-note">No earlier offering of this course.</p>}
-        {ls.history.length > 0 && <p className="small-note">Saved versions: {ls.history.slice(0, 6).map((h) => `${new Date(h.at).toLocaleString()} by ${h.by}${h.undone ? " (undone)" : ""}`).join(" · ")}</p>}
+        {ls.previous ? <p className="small-note">{(ls.merged || []).length ? `${(ls.merged || []).length} merged · ` : ""}{(ls.split || []).length ? `${(ls.split || []).length} split · ` : ""}{ls.added.length} new · {ls.removed.length} dropped · {ls.moved.length} moved{ls.added.length ? ` · new: ${ls.added.slice(0, 6).join(", ")}` : ""}{ls.removed.length ? ` · dropped: ${ls.removed.slice(0, 6).join(", ")}` : ""}</p> : <p className="small-note">No earlier offering of this course.</p>}
+        {(ls.merged || []).map((m, k) => <p key={`m${k}`} className="small-note" style={{ color: "#6B3FA0" }} data-merge-line>Merged {m.from.map((t) => `“${t}”`).join(" + ")} → “{m.into}”</p>)}
+        {(ls.split || []).map((s, k) => <p key={`s${k}`} className="small-note" style={{ color: "#6B3FA0" }} data-split-line>Split “{s.from}” → {s.into.map((t) => `“${t}”`).join(" + ")}</p>)}
+        {ls.history.length > 0 && <p className="small-note">Saved versions: {ls.history.slice(0, 6).map((h) => `${new Date(h.at).toLocaleString()} by ${h.by}${h.summary ? ` (${h.summary})` : ""}${h.undone ? " (undone)" : ""}`).join(" · ")}</p>}
       </div>}
     </div>
   );

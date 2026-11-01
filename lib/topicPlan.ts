@@ -10,7 +10,7 @@ import { writeAuditLog } from "./audit";
 import { norm, similarity } from "./teachingAnalysis";
 import { rowsForTopic, sameTopic } from "./topicLinks";
 import {
-  applyItems, diffPlan, intentItems, dropSafety, itemLine, layoutHash, prefillImportance, suggestImportance, topicKey,
+  applyItems, diffPlan, intentItems, dropSafety, itemLine, layoutHash, prefillImportance, suggestImportance, topicKey, isFree, explainTopicDiff, changeSummary,
   type Entry, type Item, type Level, type Row, type TopicFacts,
 } from "./topicPlanCore";
 
@@ -173,6 +173,7 @@ export type ColumnRow = {
   overlaps: { code: string; topic: string; verdict: string }[];
   industry: string | null; reading: string | null; readingAuto: boolean; needsClo: boolean; cloSuggestion: { id: string; code: string; why: string } | null; movedFrom: string | null; notTaught: boolean;
   inCouncil: boolean; gaOnly: number[]; comments: number; difficulty: number; bank: number;
+  merge: { id: string; label: string; clos: string[] } | null; free: boolean;
 };
 
 export async function loadColumns(user: Who, open: { courseId: string; plan?: Src | null }[]) {
@@ -200,6 +201,8 @@ export async function columnData(a: Access) {
     Promise.resolve(null),
   ]);
   void sameCode;
+  const merged = await mergesOf(a.planCourseId, a.plan);
+  const cloCode = new Map(clos.map((c) => [c.id, c.code]));
   // Synced courses take the base course's levels: a follower's own rows look up the base plan's importance by topic.
   const m = new Map(meta.map((x) => [x.lectureRowId as string, x]));
   const councilKeys = new Set(council.map((t) => norm(t.topic)));
@@ -258,6 +261,8 @@ export async function columnData(a: Access) {
       inCouncil: facts.inCouncil!, gaOnly: p && (ploRows.get(p) || []).length === 1 ? [p] : [],
       comments: commentsOf.get(topicKey(r.topic)) || 0, difficulty: votesOf.get(topicKey(r.topic)) || 0,
       bank: bank.filter((b) => norm(b.text).includes(norm(r.topic)) || similarity(b.text, r.topic) >= 0.25).length,
+      merge: (() => { const mg = merged.find((x) => x.kind === "MERGE" && x.intoRowId === r.id); return mg ? { id: mg.id, label: `Merged ${mg.parts.map((p) => `L${p.lectureNumber}`).join(" + ")}`, clos: Array.from(new Set(mg.parts.map((p) => (p.cloId ? cloCode.get(p.cloId) : null)).filter((x): x is string => !!x))) } : null; })(),
+      free: isFree(r.topic),
     };
   });
   return { hash: layoutHash(rows), rows: out, lab: /lab/i.test(a.courseType) || /lab/i.test(a.title) };
@@ -296,9 +301,33 @@ export async function writePlans(changes: Change[], actor: Who, opts: { sessionI
     const before = current.filter((r) => r.courseId === c.courseId && r.source === c.source).sort((x, y) => x.lectureNumber - y.lectureNumber);
     await db.topicPlanVersion.create({ data: { id: randomUUID(), courseId: c.courseId, source: c.source, sessionId: opts.sessionId || null, byUserId: actor.id, label: opts.label || "Saved in the Topic Workspace", rowsJson: JSON.stringify(before.map((r) => ({ id: r.id, topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials }))) } }).catch(() => null);
   }
+  // Merges: the absorbed lectures' assessments and exam questions move to the merged lecture (each item keeps measuring
+  // its own CLO), and where they came from is kept for Unmerge and for showing the change as one merge.
+  const merges = changes.flatMap((c) => c.entries.filter((e) => e.id && (e.mergedFrom || []).length > 1).map((e) => ({ c, e, into: e.id!, parts: (e.mergedFrom || []).filter((id) => id !== e.id && byId.has(id)) }))).filter((m) => m.parts.length);
+  const mergeRows = Array.from(new Set(merges.flatMap((m) => [m.into, ...m.parts])));
+  const [mLinks, mPapers, mMeta] = mergeRows.length ? await Promise.all([
+    prisma.lectureRowInstrument.findMany({ where: { lectureRowId: { in: mergeRows } }, select: { lectureRowId: true, instrumentId: true, instrument: { select: { cloId: true } } } }),
+    prisma.paperDistributionItem.findMany({ where: { lectureRowId: { in: mergeRows } }, select: { id: true, lectureRowId: true } }),
+    db.topicMeta.findMany({ where: { lectureRowId: { in: mergeRows } } }).catch(() => []) as Promise<{ lectureRowId: string; importance: string | null }[]>,
+  ]) : [[], [], []];
+  const snap = (id: string) => { const r = byId.get(id)!; return { id, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic, cloId: r.cloId, bloomLevel: r.bloomLevel, weightPct: r.weightPct, teachingMethod: r.teachingMethod, teachingMaterials: r.teachingMaterials, importance: mMeta.find((x) => x.lectureRowId === id)?.importance || null, instrumentIds: mLinks.filter((l) => l.lectureRowId === id).map((l) => l.instrumentId), paperIds: mPapers.filter((p) => p.lectureRowId === id).map((p) => p.id) }; };
+  const mergeSnaps = merges.map((m) => ({ ...m, before: [snap(m.into), ...m.parts.map(snap)], cloSet: [] as string[] }));
   const touched = moved.map((m) => m.id).concat(deleted.map((d) => d.id));
   const created: { courseId: string; source: Src; id: string; importance?: Level | null }[] = [];
   await prisma.$transaction(async (tx) => {
+    for (const m of mergeSnaps) {
+      const into = byId.get(m.into)!;
+      for (const p of m.parts) {
+        const pr = byId.get(p)!;
+        const items = mLinks.filter((l) => l.lectureRowId === p);
+        if (items.length) await tx.lectureRowInstrument.createMany({ data: items.map((l) => ({ lectureRowId: m.into, instrumentId: l.instrumentId })), skipDuplicates: true });
+        // An item that measured the absorbed lecture's CLO keeps measuring it (direct CLO), so attainment doesn't shift.
+        const keep = items.filter((l) => pr.cloId && pr.cloId !== into.cloId && !l.instrument.cloId).map((l) => l.instrumentId);
+        if (keep.length) { await tx.assessmentInstrument.updateMany({ where: { id: { in: keep } }, data: { cloId: pr.cloId } }); m.cloSet.push(...keep); }
+        await tx.lectureRowInstrument.deleteMany({ where: { lectureRowId: p } });
+        await tx.paperDistributionItem.updateMany({ where: { lectureRowId: p }, data: { lectureRowId: m.into } });
+      }
+    }
     if (touched.length) {
       await tx.lectureRowInstrument.deleteMany({ where: { lectureRowId: { in: touched } } });
       await tx.paperDistributionItem.updateMany({ where: { lectureRowId: { in: touched } }, data: { lectureRowId: null } });
@@ -313,9 +342,12 @@ export async function writePlans(changes: Change[], actor: Who, opts: { sessionI
         if (e.id) {
           const r = byId.get(e.id)!;
           const isMoved = r.courseId !== c.courseId || r.source !== c.source;
-          await tx.lectureRow.update({ where: { id: e.id }, data: { courseId: c.courseId, source: c.source, ...pos, topic: e.topic.trim().slice(0, 300), subtopic: e.subtopic ? String(e.subtopic).slice(0, 500) : null, ...(isMoved ? { cloId: null, weightPct: 0, actualDate: null, rescheduledNote: null } : {}) } });
+          const freed = !!e.free || mergeSnaps.some((m) => m.parts.includes(e.id!));
+          await tx.lectureRow.update({ where: { id: e.id }, data: { courseId: c.courseId, source: c.source, ...pos, topic: e.topic.trim().slice(0, 300), subtopic: e.subtopic ? String(e.subtopic).slice(0, 500) : null, ...(isMoved ? { cloId: null, weightPct: 0, actualDate: null, rescheduledNote: null } : {}), ...(freed ? { cloId: null, bloomLevel: null, weightPct: 0, teachingMethod: null, teachingMaterials: null } : {}) } });
         } else {
-          const extra = (e.restore || {}) as Record<string, string | null>;
+          // A split part takes the CLO and Bloom level of the lecture it came from (the user can change them).
+          const src = e.splitFrom ? byId.get(e.splitFrom) : undefined;
+          const extra = (e.restore || (src ? { cloId: src.cloId, bloomLevel: src.bloomLevel, teachingMethod: src.teachingMethod } : {})) as Record<string, string | null>;
           const row = await tx.lectureRow.create({ data: { courseId: c.courseId, source: c.source, ...pos, topic: e.topic.trim().slice(0, 300), subtopic: e.subtopic ? String(e.subtopic).slice(0, 500) : null, cloId: extra.cloId || null, bloomLevel: extra.bloomLevel || null, teachingMethod: extra.teachingMethod || null, teachingMaterials: extra.teachingMaterials || null } });
           created.push({ courseId: c.courseId, source: c.source, id: row.id, importance: e.importance });
         }
@@ -332,6 +364,26 @@ export async function writePlans(changes: Change[], actor: Who, opts: { sessionI
   for (const n of created) if (n.importance) await setMeta(n.id, n.courseId, { importance: n.importance, importanceConfirmed: true }, actor.id);
   for (const mv of moved) await setMeta(mv.id, mv.to, { needsClo: true, movedFrom: codes.get(mv.from)?.code || null }, actor.id);
   for (const d of deleted) await db.topicMeta.deleteMany({ where: { lectureRowId: d.id } }).catch(() => null);
+  // Merges: the higher importance, both lectures' teaching notes, and the record of where it came from.
+  const RANK: Record<string, number> = { CORE: 3, IMPORTANT: 2, OPTIONAL: 1 };
+  for (const m of mergeSnaps) {
+    const top = m.before.map((b) => b.importance).filter(Boolean).sort((a, b) => (RANK[b!] || 0) - (RANK[a!] || 0))[0];
+    if (top) await setMeta(m.into, m.c.courseId, { importance: top, importanceConfirmed: true }, actor.id);
+    for (const p of m.parts) await db.topicMeta.updateMany({ where: { lectureRowId: p }, data: { importance: null } }).catch(() => null);
+    const join = (k: "teachingMethod" | "teachingMaterials") => Array.from(new Set(m.before.map((b) => b[k]).filter(Boolean))).join("; ").slice(0, 2000) || null;
+    await prisma.lectureRow.update({ where: { id: m.into }, data: { teachingMethod: join("teachingMethod"), teachingMaterials: join("teachingMaterials") } }).catch(() => null);
+    const free = m.parts.filter((p) => referenced.includes(p));
+    await db.lectureMerge.create({ data: { id: randomUUID(), courseId: m.c.courseId, source: m.c.source, kind: "MERGE", intoRowId: m.into, freeRowIdsJson: JSON.stringify(free), partsJson: JSON.stringify(m.before.map((b) => ({ ...b, cloSet: m.cloSet.filter((x) => b.instrumentIds.includes(x)) }))), resultJson: JSON.stringify({ topic: m.e.topic.trim(), subtopic: m.e.subtopic || null }), byUserId: actor.id } }).catch(() => null);
+  }
+  // Splits: where each part came from, so history shows one split.
+  for (const c of changes) {
+    const bySrc = new Map<string, string[]>();
+    for (const e of c.entries) if (!e.id && e.splitFrom && byId.has(e.splitFrom)) bySrc.set(e.splitFrom, (bySrc.get(e.splitFrom) || []).concat(e.topic.trim()));
+    for (const [src, topics] of Array.from(bySrc.entries())) {
+      const own = c.entries.find((e) => e.id === src);
+      await db.lectureMerge.create({ data: { id: randomUUID(), courseId: c.courseId, source: c.source, kind: "SPLIT", intoRowId: src, partsJson: JSON.stringify([snap0(byId.get(src)!)]), resultJson: JSON.stringify({ parts: [own?.topic.trim() || byId.get(src)!.topic, ...topics] }), byUserId: actor.id } }).catch(() => null);
+    }
+  }
 
   // Links follow the topics: renamed topics keep their links; a topic moved to another course takes them along.
   for (const c of changes) {
@@ -352,6 +404,72 @@ export async function writePlans(changes: Change[], actor: Who, opts: { sessionI
   for (const id of Array.from(new Set(moved.map((m) => m.from)))) if (!changes.some((c) => c.courseId === id)) await recomputeCourseRows(id, "SE").catch(() => {});
   return { ok: true as const, moved: moved.length, added: created.length, removed: deleted.length };
 }
+const snap0 = (r: { id: string; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null }) => ({ id: r.id, lectureNumber: r.lectureNumber, topic: r.topic, subtopic: r.subtopic, cloId: r.cloId });
+
+/**
+ * Unmerge: the merged lecture and the lectures it absorbed come back as they were — topics, CLOs, weights, teaching
+ * notes, importance, assessments and exam questions — as long as neither has been edited since. Otherwise it says what
+ * changed. Only the plan's owner unmerges.
+ */
+export async function unmergeLectures(user: Who, mergeId: string) {
+  const m = (await db.lectureMerge.findUnique({ where: { id: mergeId } }).catch(() => null)) as { id: string; courseId: string; source: Src; kind: string; intoRowId: string; freeRowIdsJson: string; partsJson: string; resultJson: string; undoneAt: Date | null } | null;
+  if (!m || m.kind !== "MERGE") return { error: "Merge not found.", status: 404 };
+  if (m.undoneAt) return { error: "Already unmerged.", status: 409 };
+  const a = await accessFor(user, m.courseId, m.source);
+  if (!a || a.mode !== "APPLY") return { error: "Only the plan's owner unmerges (or propose it in the Topic Workspace).", status: 403 };
+  type Part = { id: string; lectureNumber: number; topic: string; subtopic: string | null; cloId: string | null; bloomLevel: string | null; weightPct: number | null; teachingMethod: string | null; teachingMaterials: string | null; importance: string | null; instrumentIds: string[]; paperIds: string[]; cloSet: string[] };
+  const parts = JSON.parse(m.partsJson) as Part[];
+  const result = JSON.parse(m.resultJson) as { topic: string; subtopic: string | null };
+  const rows = await prisma.lectureRow.findMany({ where: { courseId: m.courseId, source: m.source }, orderBy: { lectureNumber: "asc" }, select: { id: true, topic: true, subtopic: true, lectureNumber: true } });
+  const into = rows.find((r) => r.id === m.intoRowId);
+  const changed: string[] = [];
+  if (!into) changed.push("The merged lecture has been removed.");
+  else if (into.topic.trim() !== result.topic.trim() || (into.subtopic || "") !== (result.subtopic || "")) changed.push(`L${into.lectureNumber} is now "${into.topic}" (it was "${result.topic}" when merged).`);
+  for (const p of parts.slice(1)) { const r = rows.find((x) => x.id === p.id); if (r && !isFree(r.topic)) changed.push(`The freed lecture L${r.lectureNumber} now holds "${r.topic}".`); }
+  if (changed.length) return { changed, status: 409 };
+  const entries: (Entry & { restore?: Record<string, unknown> | null })[] = [];
+  for (const r of rows) {
+    if (r.id === m.intoRowId) {
+      entries.push({ id: r.id, topic: parts[0].topic, subtopic: parts[0].subtopic });
+      for (const p of parts.slice(1)) if (!rows.some((x) => x.id === p.id)) entries.push({ topic: p.topic, subtopic: p.subtopic, restore: { cloId: p.cloId, bloomLevel: p.bloomLevel, teachingMethod: p.teachingMethod, teachingMaterials: p.teachingMaterials }, _part: p.id } as never);
+      continue;
+    }
+    const p = parts.find((x) => x.id === r.id);
+    entries.push(p ? { id: r.id, topic: p.topic, subtopic: p.subtopic } : { id: r.id, topic: r.topic, subtopic: r.subtopic });
+  }
+  const w = await writePlans([{ courseId: m.courseId, source: m.source, entries }], user, { label: "Unmerged" });
+  if ("error" in w) return { error: w.error, status: 400 };
+  // Rows recreated for absorbed lectures that had been removed: find them by position (right after the merged lecture).
+  const now = await prisma.lectureRow.findMany({ where: { courseId: m.courseId, source: m.source }, orderBy: { lectureNumber: "asc" }, select: { id: true, topic: true } });
+  const idOf = new Map<string, string>(parts.map((p) => [p.id, now.some((x) => x.id === p.id) ? p.id : now.find((x, i) => i > 0 && now[i - 1].id === m.intoRowId && x.topic === p.topic.trim())?.id || ""]));
+  const allPartInstruments = new Set(parts.slice(1).flatMap((p) => p.instrumentIds));
+  for (const p of parts) {
+    const id = idOf.get(p.id);
+    if (!id) continue;
+    await prisma.lectureRow.update({ where: { id }, data: { cloId: p.cloId, bloomLevel: p.bloomLevel, weightPct: p.weightPct ?? 0, teachingMethod: p.teachingMethod, teachingMaterials: p.teachingMaterials } });
+    await db.topicMeta.updateMany({ where: { lectureRowId: id }, data: { importance: p.importance } }).catch(() => null);
+    if (p.importance && !(await db.topicMeta.count({ where: { lectureRowId: id } }).catch(() => 1))) await setMeta(id, m.courseId, { importance: p.importance, importanceConfirmed: true }, user.id);
+    if (p.id === m.intoRowId) continue;
+    // The absorbed lecture's items go back to it (unless they were linked to both before).
+    const back = p.instrumentIds.filter((x) => !parts[0].instrumentIds.includes(x));
+    if (back.length) await prisma.lectureRowInstrument.deleteMany({ where: { lectureRowId: m.intoRowId, instrumentId: { in: back } } });
+    if (p.instrumentIds.length) await prisma.lectureRowInstrument.createMany({ data: p.instrumentIds.map((instrumentId) => ({ lectureRowId: id, instrumentId })), skipDuplicates: true });
+    if (p.paperIds.length) await prisma.paperDistributionItem.updateMany({ where: { id: { in: p.paperIds } }, data: { lectureRowId: id } });
+    if (p.cloSet.length) await prisma.assessmentInstrument.updateMany({ where: { id: { in: p.cloSet } }, data: { cloId: null } });
+  }
+  void allPartInstruments;
+  await db.lectureMerge.update({ where: { id: m.id }, data: { undoneAt: new Date() } });
+  await recomputeCourseRows(m.courseId, m.source);
+  await writeAuditLog({ actorUserId: user.id, action: "LECTURES_UNMERGED", entityType: "Course", entityId: m.courseId, metadata: { lectures: parts.map((p) => `L${p.lectureNumber}`).join(" + ") } }).catch(() => null);
+  return { ok: true, status: 200 };
+}
+
+/** Active merges and splits of a plan, by lecture row (shown on the card: "Merged L7 + L8", Unmerge). */
+export async function mergesOf(courseId: string, source: Src) {
+  const rows = (await db.lectureMerge.findMany({ where: { courseId, source, undoneAt: null }, orderBy: { createdAt: "asc" } }).catch(() => [])) as { id: string; kind: string; intoRowId: string; freeRowIdsJson: string; partsJson: string; resultJson: string; createdAt: Date }[];
+  return rows.map((r) => ({ ...r, parts: JSON.parse(r.partsJson) as { id: string; lectureNumber: number; topic: string; cloId: string | null }[], free: JSON.parse(r.freeRowIdsJson) as string[], result: JSON.parse(r.resultJson) as Record<string, unknown> }));
+}
+
 async function moveLinks(from: { code: string; coordinatorId: string } | undefined, to: { code: string; coordinatorId: string } | undefined, topic: string) {
   if (!from || !to || from.coordinatorId !== to.coordinatorId || from.code === to.code) return;
   const links = await prisma.topicPrerequisite.findMany({ where: { coordinatorId: from.coordinatorId, OR: [{ prereqCourseCode: from.code }, { dependentCourseCode: from.code }] } }).catch(() => []);
@@ -483,6 +601,21 @@ export async function savePlans(user: Who, body: { sessionId?: string; note?: st
 
 export async function createProposal(user: Who, chairmanId: string, a: Access, items: Item[], before: Row[], after: Entry[], note: string | null, kind: "EDIT" | "SHORT_OF_TIME") {
   const id = randomUUID();
+  // A merge or split carries what the Subject Expert needs to decide it as one item: CLOs, weights, the quizzes and
+  // exam questions that move, and the "Free" lecture a merge leaves.
+  const ms = items.filter((it) => it.kind === "MERGE" || it.kind === "SPLIT");
+  if (ms.length) {
+    const rowIds = Array.from(new Set(ms.flatMap((it) => [it.lectureRowId, ...(((it.detail.parts as { id?: string | null }[]) || []).map((p) => p.id))]).filter((x): x is string => !!x)));
+    const rws = await prisma.lectureRow.findMany({ where: { id: { in: rowIds } }, select: { id: true, weightPct: true, clo: { select: { code: true } }, instrumentLinks: { select: { instrument: { select: { label: true } } } }, paperDistributionItems: { select: { examType: true, questionNo: true } } } }).catch(() => [] as never[]);
+    const info = new Map(rws.map((r) => [r.id, { clo: r.clo?.code || null, weight: r.weightPct ?? 0, items: r.instrumentLinks.map((l) => l.instrument.label).concat(r.paperDistributionItems.map((p) => `${p.examType || "Exam"} Q${p.questionNo}`)) }]));
+    for (const it of ms) {
+      const parts = ((it.detail.parts as { id?: string | null; topic: string }[]) || []).map((p) => ({ ...p, ...(p.id ? info.get(p.id) || {} : {}) }));
+      if (it.kind === "MERGE") {
+        const free = after.find((e) => e.free && parts.some((p) => p.id === e.id));
+        it.detail = { ...it.detail, parts, newWeight: Math.round(parts.reduce((s, p) => s + ((p as { weight?: number }).weight || 0), 0) * 100) / 100, moved: parts.slice(1).flatMap((p) => (p as { items?: string[] }).items || []), free: free?.topic || null };
+      } else it.detail = { ...it.detail, parts, clo: it.lectureRowId ? info.get(it.lectureRowId)?.clo || null : null, weight: it.lectureRowId ? info.get(it.lectureRowId)?.weight ?? null : null };
+    }
+  }
   await db.planProposal.create({ data: { id, chairmanId, courseId: a.planCourseId, source: a.plan === "INSTRUCTOR" && kind === "SHORT_OF_TIME" ? "INSTRUCTOR" : a.plan, kind, fromUserId: user.id, toUserId: a.toUserId, note: note?.slice(0, 2000) || null, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(after) } });
   await db.planProposalItem.createMany({ data: items.map((it, i) => ({ id: randomUUID(), proposalId: id, kind: it.kind, lectureRowId: it.lectureRowId, topic: it.topic.slice(0, 300), subtopic: it.subtopic?.slice(0, 500) || null, detailJson: JSON.stringify(it.detail || {}), position: it.position ?? i, linkKey: it.linkKey || null })) });
   if (a.mode === "TEMPLATE" && kind === "EDIT" && a.toUserId === user.id) {
@@ -707,15 +840,22 @@ export async function compareWithLast(courseId: string, source: Src) {
   const now = await prisma.lectureRow.findMany({ where: { courseId, source }, select: { topic: true }, orderBy: { lectureNumber: "asc" } });
   const versions = ((await db.topicPlanVersion.findMany({ where: { courseId, source }, orderBy: { at: "desc" }, take: 20 }).catch(() => [])) as { id: string; at: Date; byUserId: string; label: string | null; undone: boolean; sessionId: string | null }[]);
   const people = new Map((await prisma.user.findMany({ where: { id: { in: versions.map((v) => v.byUserId).concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
-  const history = versions.map((v) => ({ id: v.id, at: v.at, by: people.get(v.byUserId) || "", label: v.label || "", undone: v.undone, sessionId: v.sessionId }));
-  if (!prev) return { previous: null, added: [], removed: [], moved: [], history };
+  const recorded = (await mergesOf(courseId, source)).map((m) => ({ kind: m.kind, from: m.parts.map((p) => p.topic), into: m.kind === "MERGE" ? [String(m.result.topic || "")] : ((m.result.parts as string[]) || []) }));
+  const history = versions.map((v) => {
+    let summary = "";
+    try { const b = (JSON.parse((v as { rowsJson?: string }).rowsJson || "[]") as { topic: string }[]).map((x) => x.topic), a = (JSON.parse((v as { afterJson?: string | null }).afterJson || "null") as { topic: string }[] | null)?.map((x) => x.topic); if (a) summary = changeSummary(explainTopicDiff(b, a, recorded)); } catch { summary = ""; }
+    return { id: v.id, at: v.at, by: people.get(v.byUserId) || "", label: v.label || "", undone: v.undone, sessionId: v.sessionId, summary };
+  });
+  if (!prev) return { previous: null, added: [], removed: [], moved: [], merged: [], split: [], history };
   let then = await prisma.lectureRow.findMany({ where: { courseId: prev.id, source: "INSTRUCTOR" }, select: { topic: true }, orderBy: { lectureNumber: "asc" } });
   if (!then.length) then = await prisma.lectureRow.findMany({ where: { courseId: prev.id, source: "SE" }, select: { topic: true }, orderBy: { lectureNumber: "asc" } });
   const has = (list: { topic: string }[], t: string) => { const i = list.findIndex((x) => norm(x.topic) === norm(t)); return i >= 0 ? i : list.findIndex((x) => sameTopic(x.topic, t)); };
+  const ex = explainTopicDiff(then.map((x) => x.topic), now.map((x) => x.topic), recorded);
   return {
     previous: `${prev.offeredTermName || ""} ${prev.offeredTermYear || ""} ${prev.batch?.batchName || ""}`.trim() || "previous offering",
-    added: now.filter((x) => has(then, x.topic) < 0).map((x) => x.topic),
-    removed: then.filter((x) => has(now, x.topic) < 0).map((x) => x.topic),
+    added: ex.added.filter((t) => has(then, t) < 0),
+    removed: ex.removed.filter((t) => has(now, t) < 0),
+    merged: ex.merged, split: ex.split,
     moved: now.map((x, i) => ({ topic: x.topic, now: i + 1, then: has(then, x.topic) + 1 })).filter((x) => x.then > 0 && Math.abs(x.then - x.now) >= 3),
     history,
   };

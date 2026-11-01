@@ -9,6 +9,8 @@ import PrereqTopicChecks from "../../../../../components/PrereqTopicChecks";
 import LectureExcelImport from "../../../../../components/LectureExcelImport";
 import { ploCoverageShortfalls, ploCoverageRows } from "../../../../../lib/ploCoverage";
 import PloCoverageCard from "../../../../../components/PloCoverageCard";
+import LectureMergeSplit from "../../../../../components/LectureMergeSplit";
+import { mergesOf } from "../../../../../lib/topicPlan";
 import { isTeachingTopic } from "../../../../../lib/courseProgress";
 
 
@@ -74,6 +76,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
       <LectureExcelImport courseId={course.id} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
 
+      <LectureMergeSplit courseId={course.id} plan="SE" rows={course.lectureRows.map((r) => ({ id: r.id, n: r.lectureNumber, topic: r.topic, subtopic: r.subtopic }))} merges={(await mergesOf(course.id, "SE").catch(() => [])).filter((m) => m.kind === "MERGE").map((m) => ({ id: m.id, label: `Merged ${m.parts.map((p) => `L${p.lectureNumber}`).join(" + ")} → L${m.parts[0]?.lectureNumber}` }))} />
       <LectureContentManager
         courseId={course.id}
         initialRows={course.lectureRows.map((r) => ({

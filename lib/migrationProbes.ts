@@ -631,6 +631,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "LandingPageContent"
 },
 {
+"f": "migration_lecture_merge.sql",
+"d": "Merging and splitting lectures (Topic Workspace and the Lecture Content tab): each merge or split remembers where it",
+"t": "LectureMerge"
+},
+{
 "f": "migration_library.sql",
 "d": "Library inventory",
 "t": "LibraryInfo"

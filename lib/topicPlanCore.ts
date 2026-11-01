@@ -25,7 +25,7 @@ export function textHash(s: string) {
 export type Row = { id: string; topic: string; subtopic: string | null; importance?: Level | null };
 /** One entry of an edited plan: an existing lecture row (maybe from another course), or a new topic. */
 /** mergedFrom: this entry is the merge of these rows (its own id first); splitFrom: this entry is a part of that row, split. */
-export type Entry = { id?: string; topic: string; subtopic: string | null; importance?: Level | null; fromCourseId?: string | null; lectureRowFrom?: string | null; mergedFrom?: string[] | null; splitFrom?: string | null };
+export type Entry = { id?: string; topic: string; subtopic: string | null; importance?: Level | null; fromCourseId?: string | null; lectureRowFrom?: string | null; mergedFrom?: string[] | null; splitFrom?: string | null; free?: string | null };
 export type ItemKind = "ADD" | "REMOVE" | "MOVE_IN" | "MOVE_OUT" | "RENAME" | "REORDER" | "IMPORTANCE" | "MERGE" | "SPLIT" | "LINK" | "DROP" | "SHORTEN";
 export type Item = { kind: ItemKind; lectureRowId: string | null; topic: string; subtopic: string | null; position: number; detail: Record<string, unknown>; linkKey?: string | null };
 
@@ -83,8 +83,9 @@ export function intentItems(before: Row[], after: Entry[], movedTo: Map<string, 
     if (own) renamedBy.add(src);
     items.push({ kind: "SPLIT", lectureRowId: src, topic: byId.get(src)!.topic, subtopic: null, position: after.indexOf(all[0]), detail: { lecture: L.get(src), parts: all.map((p) => ({ topic: p.topic, subtopic: p.subtopic, position: after.indexOf(p), id: p.id || null })) } });
   }
+  // The lecture a merge frees keeps its slot as an empty "Free — created by merging …" lecture: part of the merge, not a rename.
   const rest = diffPlan(before, after.filter((e) => !partEntries.has(e)), movedTo).filter((it) =>
-    !(it.kind === "REMOVE" && it.lectureRowId && consumedRows.has(it.lectureRowId)) && !(it.kind === "RENAME" && it.lectureRowId && renamedBy.has(it.lectureRowId)));
+    !(it.kind === "REMOVE" && it.lectureRowId && consumedRows.has(it.lectureRowId)) && !(it.kind === "RENAME" && it.lectureRowId && (renamedBy.has(it.lectureRowId) || consumedRows.has(it.lectureRowId))) && !(it.kind === "ADD" && it.topic.startsWith(FREE_PREFIX)));
   return items.concat(rest.map((it) => (it.lectureRowId && L.has(it.lectureRowId) ? { ...it, detail: { ...it.detail, lecture: L.get(it.lectureRowId) } } : it)));
 }
 
@@ -122,8 +123,12 @@ export function applyItems(current: Row[], items: Item[]): Entry[] {
     if (it.kind === "RENAME") list = list.map((e) => (e.id === it.lectureRowId ? { ...e, topic: it.topic, subtopic: it.subtopic } : e));
     if (it.kind === "IMPORTANCE") list = list.map((e) => (e.id === it.lectureRowId ? { ...e, importance: it.detail.to as Level } : e));
     if (it.kind === "MERGE") {
-      const gone = new Set(((it.detail.parts as { id: string }[]) || []).map((p) => p.id).filter((id) => id !== it.lectureRowId));
-      list = list.filter((e) => !(e.id && gone.has(e.id))).map((e) => (e.id === it.lectureRowId ? { ...e, topic: it.topic, subtopic: it.subtopic } : e));
+      // A real merge: the lecture absorbs the others (their CLO and assessment links follow when written), and each
+      // absorbed lecture keeps its slot as a "Free" lecture, ready for a new topic.
+      const parts = ((it.detail.parts as { id: string }[]) || []).map((p) => p.id);
+      const gone = new Set(parts.filter((id) => id !== it.lectureRowId));
+      const label = freeLabel(((it.detail.lectures as number[]) || []).filter(Boolean));
+      list = list.map((e) => (e.id === it.lectureRowId ? { ...e, topic: it.topic, subtopic: it.subtopic, mergedFrom: parts.filter((id) => id === it.lectureRowId || list.some((x) => x.id === id)) } : e.id && gone.has(e.id) ? { ...e, topic: label, subtopic: null, importance: null, free: label } : e));
     }
     if (it.kind === "SPLIT") {
       const parts = (it.detail.parts as { topic: string; subtopic: string | null; id: string | null }[]) || [];
@@ -141,6 +146,95 @@ export function applyItems(current: Row[], items: Item[]): Entry[] {
     list.splice(Math.max(0, Math.min(it.position, list.length)), 0, e);
   }
   return list;
+}
+
+// ------------------------------------------------------------------------------------------------ merge and split
+export const FREE_PREFIX = "Free — created by merging";
+/** The label of the lecture a merge frees: "Free — created by merging L7 + L8". */
+export const freeLabel = (lectures: number[]) => `${FREE_PREFIX} ${lectures.map((n) => `L${n}`).join(" + ")}`;
+export const isFree = (topic: string | null | undefined) => !!topic && topic.startsWith(FREE_PREFIX);
+export type MergeSide = { topic: string; importance?: Level | null; hard?: boolean; perf?: { vsLectures?: { lectures: number; offerings: number; avg: number }[] | null } | null };
+/**
+ * Reasons to think twice before merging two lectures (the user can still confirm): both Core, either usually hard,
+ * or history saying the topic needs its time ("Recursion: 52% average when given 1 lecture, 71% with 2").
+ */
+export function mergeWarnings(a: MergeSide, b: MergeSide): string[] {
+  const out: string[] = [];
+  if (a.importance === "CORE" && b.importance === "CORE") out.push(`Both are Core topics ("${a.topic}" and "${b.topic}").`);
+  for (const s of [a, b]) if (s.hard) out.push(`"${s.topic}" is usually hard for students.`);
+  for (const s of [a, b]) {
+    const v = (s.perf?.vsLectures || []).filter((x) => x.offerings > 0).sort((x, y) => x.lectures - y.lectures);
+    const one = v.find((x) => x.lectures <= 1), more = v.find((x) => x.lectures >= 2);
+    if (one && more && more.avg - one.avg >= 5) out.push(`${s.topic}: ${Math.round(one.avg)}% average when given 1 lecture, ${Math.round(more.avg)}% with ${more.lectures}.`);
+  }
+  return out;
+}
+/** Splitting a lecture's sub-topics: the first half stays, the rest goes to the new lecture (the user can change it). */
+export function splitSubtopics(sub: string | null | undefined): [string | null, string | null] {
+  const parts = String(sub || "").split(/\s*[;\n]\s*/).map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 2) return [sub?.trim() || null, null];
+  const k = Math.ceil(parts.length / 2);
+  return [parts.slice(0, k).join("; "), parts.slice(k).join("; ")];
+}
+
+/**
+ * A before/after list of topics explained by intent: merges ("A; B" from A and B, or a recorded merge) and splits
+ * ("T (part 2)" / "T (continued)" from T, or a recorded split) first, then what is left as added or removed. Freed
+ * "Free — created by merging …" lectures are part of their merge. Used wherever plans are compared by text.
+ */
+export type TopicChange = { added: string[]; removed: string[]; merged: { from: string[]; into: string }[]; split: { from: string; into: string[] }[] };
+export function explainTopicDiff(then: string[], now: string[], recorded: { kind: string; from: string[]; into: string[] }[] = []): TopicChange {
+  // A merged topic ("A; B") is never "the same" as one of its parts.
+  const base = (t: string) => t.replace(/\s*\((part \d+|continued)\)\s*$/i, "").trim();
+  const plain = (t: string) => !t.includes(";") && base(t) === t.trim();
+  const same = (a: string, b: string) => norm(a) === norm(b) || (plain(a) && plain(b) && loose(a, b) >= 0.9);
+  const nowT = now.filter((t) => !isFree(t));
+  let thenLeft = then.filter((t) => !nowT.some((n) => same(n, t)));
+  let nowLeft = nowT.filter((n) => !then.some((t) => same(n, t)));
+  const merged: TopicChange["merged"] = [], split: TopicChange["split"] = [];
+  const take = (list: string[], t: string) => list.filter((x) => !same(x, t));
+  for (const r of recorded) {
+    if (r.kind === "MERGE" && r.into[0] && nowLeft.some((n) => same(n, r.into[0]))) { merged.push({ from: r.from, into: r.into[0] }); nowLeft = take(nowLeft, r.into[0]); for (const x of r.from) thenLeft = take(thenLeft, x); }
+    if (r.kind === "SPLIT" && r.from[0] && r.into.some((p) => nowLeft.some((n) => same(n, p)))) { split.push({ from: r.from[0], into: r.into }); for (const p of r.into) nowLeft = take(nowLeft, p); thenLeft = take(thenLeft, r.from[0]); }
+  }
+  for (const n of nowLeft.slice()) {
+    const pieces = n.split(/\s*;\s*/).filter(Boolean);
+    if (pieces.length < 2) continue;
+    const from = pieces.map((p) => then.find((t) => same(t, p)));
+    if (from.every(Boolean)) { merged.push({ from: from as string[], into: n }); nowLeft = take(nowLeft, n); for (const x of from as string[]) thenLeft = take(thenLeft, x); }
+  }
+  for (const t of then) {
+    const parts = nowLeft.filter((n) => base(n) !== n && same(base(n), t));
+    if (!parts.length) continue;
+    const into = (nowT.some((n) => same(n, t)) ? [t] : []).concat(parts);
+    if (into.length < 2) continue;
+    split.push({ from: t, into });
+    for (const p of parts) nowLeft = take(nowLeft, p);
+    thenLeft = take(thenLeft, t);
+  }
+  return { added: nowLeft, removed: thenLeft, merged, split };
+}
+export const changeSummary = (c: TopicChange) => [c.merged.length ? `${c.merged.length} merged` : "", c.split.length ? `${c.split.length} split` : "", c.added.length ? `${c.added.length} added` : "", c.removed.length ? `${c.removed.length} removed` : ""].filter(Boolean).join(" · ") || "no topic changes";
+
+// ------------------------------------------------------------------------------------------------ topic links (link mode)
+export type TopicEdge = { fromCode: string; fromTopic: string; toCode: string; toTopic: string };
+const tnode = (code: string, topic: string) => `${code}::${norm(topic)}`;
+/** A loop of topic prerequisites the new link A → B would close, as readable steps, else null. */
+export function topicLoop(edges: TopicEdge[], add: TopicEdge): string[] | null {
+  if (add.fromCode === add.toCode && norm(add.fromTopic) === norm(add.toTopic)) return [`${add.fromCode} ${add.fromTopic}`, `${add.toCode} ${add.toTopic}`];
+  const names = new Map<string, string>();
+  const e = edges.map((x): [string, string] => { names.set(tnode(x.fromCode, x.fromTopic), `${x.fromCode} "${x.fromTopic}"`); names.set(tnode(x.toCode, x.toTopic), `${x.toCode} "${x.toTopic}"`); return [tnode(x.fromCode, x.fromTopic), tnode(x.toCode, x.toTopic)]; });
+  const a = tnode(add.fromCode, add.fromTopic), b = tnode(add.toCode, add.toTopic);
+  names.set(a, `${add.fromCode} "${add.fromTopic}"`); names.set(b, `${add.toCode} "${add.toTopic}"`);
+  const loop = findCycle(e, [a, b]);
+  return loop ? loop.map((n) => names.get(n) || n) : null;
+}
+export const isDuplicateLink = (edges: TopicEdge[], add: TopicEdge) => edges.some((x) => x.fromCode === add.fromCode && x.toCode === add.toCode && norm(x.fromTopic) === norm(add.fromTopic) && norm(x.toTopic) === norm(add.toTopic));
+/** Warnings for A → B ("A is needed for B"): taught after B in the same course (offer to move it), or A's course later. */
+export function linkWarnings(a: { code: string; topic: string; semester: number | null; position: number }, b: { code: string; topic: string; semester: number | null; position: number }) {
+  if (a.code === b.code) return a.position > b.position ? { text: `"${a.topic}" is taught after "${b.topic}" — move it?`, move: true } : null;
+  if (a.semester && b.semester && a.semester > b.semester) return { text: `${a.code} is in semester ${a.semester}, after ${b.code} (semester ${b.semester}): students would meet "${b.topic}" before "${a.topic}".`, move: false };
+  return null;
 }
 
 export const itemLine = (it: Pick<Item, "kind" | "topic" | "detail">, courseCode?: (id: string) => string) => {

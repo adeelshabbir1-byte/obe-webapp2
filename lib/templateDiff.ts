@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { explainTopicDiff, isFree } from "./topicPlanCore";
 
 type Snap = {
   weights: Record<string, number | null>;
@@ -55,14 +56,30 @@ export function diffTemplates(before: Snap, after: Snap): string[] {
 
   const bl = new Map(before.lectures.map((x) => [x.n, x])), al = new Map(after.lectures.map((x) => [x.n, x]));
   const lec: string[] = [];
+  // Merges and splits first, each as one change; the lectures they touch are not listed again one by one.
+  const ex = explainTopicDiff(before.lectures.map((x) => x.topic), after.lectures.map((x) => x.topic));
+  const nOf = (list: Snap["lectures"], t: string) => list.find((x) => x.topic.trim() === t.trim())?.n;
+  const involved = new Set<number>();
+  for (const m of ex.merged) {
+    const into = nOf(after.lectures, m.into);
+    lec.push(`Merged ${m.from.map((t) => `L${nOf(before.lectures, t) ?? "?"} ${short(t, 40)}`).join(" + ")} → L${into ?? "?"}`);
+    if (into) involved.add(into);
+    for (const t of m.from) { const k = nOf(before.lectures, t); if (k) involved.add(k); }
+  }
+  for (const s of ex.split) {
+    lec.push(`Split L${nOf(before.lectures, s.from) ?? "?"} ${short(s.from, 40)} → ${s.into.map((t) => `L${nOf(after.lectures, t) ?? "?"} ${short(t, 40)}`).join(" + ")}`);
+    for (const t of s.into) { const k = nOf(after.lectures, t); if (k) involved.add(k); }
+  }
+  for (const x of after.lectures) if (isFree(x.topic)) involved.add(x.n);
   Array.from(al.entries()).forEach(([n, x]) => {
+    if (involved.has(n)) return;
     const o = bl.get(n);
     if (!o) { lec.push(`Lecture ${n} added — ${short(x.topic)}`); return; }
     if (o.topic !== x.topic || (o.subtopic || "") !== (x.subtopic || "")) lec.push(`Lecture ${n} topic changed from "${short(o.topic)}" to "${short(x.topic)}"`);
     if (o.clo !== x.clo) lec.push(`Lecture ${n} now maps to ${x.clo ?? "no CLO"} (was ${o.clo ?? "no CLO"})`);
     if (o.week !== x.week) lec.push(`Lecture ${n} moved from week ${o.week} to week ${x.week}`);
   });
-  Array.from(bl.keys()).forEach((n) => { if (!al.has(n)) lec.push(`Lecture ${n} removed`); });
+  Array.from(bl.keys()).forEach((n) => { if (!al.has(n) && !involved.has(n)) lec.push(`Lecture ${n} removed`); });
   if (lec.length > 25) out.push(`Lecture plan: ${lec.length} lecture changes (first 25 shown)`, ...lec.slice(0, 25).map((l) => `Lecture plan: ${l}`));
   else out.push(...lec.map((l) => `Lecture plan: ${l}`));
 
