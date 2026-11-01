@@ -2,7 +2,7 @@
 // what a run costs from its token counts, whether the institute's monthly budget allows it, and reading the reply.
 // No database and no network here (tested on its own). No personal data is ever put in a prompt: only course content.
 
-export type Kind = "PAPER" | "PLAN";
+export type Kind = "PAPER" | "PLAN" | "SPLIT";
 export type Price = { inPerM: number; outPerM: number };
 /** Default prices in US$ per million tokens (input / output). The Super Admin edits them to match the price list. */
 export const DEFAULT_PRICES: Record<string, Price> = {
@@ -10,7 +10,7 @@ export const DEFAULT_PRICES: Record<string, Price> = {
   "claude-sonnet-5-5": { inPerM: 3, outPerM: 15 },
   "claude-opus-5-5": { inPerM: 5, outPerM: 25 },
 };
-export const DEFAULT_MODELS: Record<Kind, string> = { PAPER: "claude-haiku-5-5", PLAN: "claude-opus-5-5" };
+export const DEFAULT_MODELS: Record<Kind, string> = { PAPER: "claude-haiku-5-5", PLAN: "claude-opus-5-5", SPLIT: "claude-haiku-5-5" };
 export const costOf = (model: string, inTok: number, outTok: number, prices: Record<string, Price> = DEFAULT_PRICES) => {
   const p = prices[model] || DEFAULT_PRICES[model] || { inPerM: 5, outPerM: 25 };
   return Math.round(((inTok * p.inPerM + outTok * p.outPerM) / 1e6) * 1e6) / 1e6;
@@ -52,7 +52,20 @@ export function planPrompt(i: PlanInput) {
 }
 
 /** A canned reply for tests (model "mock" with the test switch on): fixed tokens, so cost and budget can be checked. */
-export function mockReply(kind: Kind, input: PaperInput | PlanInput): { text: string; inTok: number; outTok: number } {
+export type SplitInput = { pages: number; size: number };
+export type SplitResult = { questions: { no: number; text: string; marks: number | null; parts: { label: string; text: string; marks: number | null }[] }[] };
+/** A past paper (PDF, typed or scanned) split into questions and parts, with marks and equations as LaTeX. */
+export function splitPrompt(): { system: string; user: string } {
+  return {
+    system: "You read university exam papers (typed or scanned, including handwriting) and split them into questions exactly as written. Never invent text. Write equations as LaTeX between $ signs. Reply with JSON only.",
+    user: 'Split the attached paper into its questions and parts. Reply as {"questions":[{"no":1,"text":"stem (with MCQ options as lines a) …)","marks":5,"parts":[{"label":"a","text":"…","marks":2}]}]}. Use null for marks that are not printed.',
+  };
+}
+export function mockReply(kind: Kind, input: PaperInput | PlanInput | SplitInput): { text: string; inTok: number; outTok: number } {
+  if (kind === "SPLIT") {
+    const r: SplitResult = { questions: [{ no: 1, text: "Define a stack and give one application.", marks: 5, parts: [] }, { no: 2, text: "Compare arrays and linked lists for insertion.", marks: 10, parts: [] }] };
+    return { text: JSON.stringify(r), inTok: 2500, outTok: 300 };
+  }
   if (kind === "PAPER") {
     const p = input as PaperInput;
     const r: PaperResult = { questions: p.questions.map((q) => ({ q: q.no, clo: q.clo, level: q.bloom, agrees: true, fitsClo: true, actualBloom: q.bloom, claimedBloom: q.bloom, topic: p.topics[0] || "", clarity: "Clear.", comment: "Fits the claimed CLO.", suggestion: "" })), summary: "Mock review: every question fits its CLO.", paper: { cloCoverage: "All CLOs of this paper are covered.", marksPerClo: Object.fromEntries(p.questions.map((q) => [q.clo, q.marks])), bloomSpread: "Balanced", difficulty: "Medium" } };

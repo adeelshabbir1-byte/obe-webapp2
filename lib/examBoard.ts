@@ -63,6 +63,10 @@ async function lectureCloMap(courseId: string) {
 export type BankQ = BQ & { rubric: string | null; options: string[]; correctIndex: number | null; codeSnippet: string | null; hasImage: boolean; createdAt: Date; usedCount: number; complete: boolean };
 export async function bankOf(chairmanId: string, codes: string[]): Promise<BankQ[]> {
   const items = (await db.questionBankItem.findMany({ where: { chairmanId, courseCode: { in: codes }, active: true }, orderBy: { createdAt: "asc" } })) as { id: string; text: string; marks: number; kind: string; cloCode: string; bloom: string; createdById: string; createdAt: Date; usedCount: number }[];
+  // The question bank's review and privacy (Part 6): drafts, rejected and private questions stay out of team papers.
+  const exts = (await db.qbExt?.findMany({ where: { itemId: { in: items.map((i) => i.id).concat("none") } }, select: { itemId: true, status: true, visibility: true } }).catch(() => [])) as { itemId: string; status: string; visibility: string }[] || [];
+  const hidden = new Set(exts.filter((e) => e.status !== "APPROVED" || e.visibility === "PRIVATE").map((e) => e.itemId));
+  items.splice(0, items.length, ...items.filter((i) => !hidden.has(i.id)));
   const metas = (await db.qbMeta.findMany({ where: { itemId: { in: items.map((i) => i.id) } } }).catch(() => [])) as { itemId: string; lectureNumber: number | null; week: number | null; topic: string; difficulty: string; cloCodesJson: string; rubric: string | null; optionsJson: string | null; correctIndex: number | null; codeSnippet: string | null; imageData: string | null }[];
   const m = new Map(metas.map((x) => [x.itemId, x]));
   return items.map((i) => {
