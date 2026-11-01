@@ -22,7 +22,7 @@ async function GET_handler(req: NextRequest) {
     const year = Number(req.nextUrl.searchParams.get("year")) || new Date().getFullYear();
     const t = await taxYear(s.universityId!, r.id, year);
     const ex = dataOf(r);
-    const uni = await prisma.user.findUnique({ where: { id: s.universityId }, select: { instituteName: true, instituteLogo: true } });
+    const uni = await prisma.user.findUnique({ where: { id: s.universityId! }, select: { instituteName: true, instituteLogo: true } });
     const pdf = await PdfDoc.create(`${uni?.instituteName || "University"} — tax certificate ${year}`);
     await pdf.image(uni?.instituteLogo, 60);
     pdf.title("Certificate of tax deducted", `${r.title} · calendar year ${year}`);
