@@ -42,6 +42,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "CmtAction"
 },
 {
+"f": "migration_adeel_p8.sql",
+"d": "Adeel prompt part 8: the one-year allocation plan (drafts, submit, HOD approval), teachers' section / time picks,",
+"t": "TopicRemedy"
+},
+{
 "f": "migration_affiliates.sql",
 "d": "Affiliated colleges follow their university: the course design a college course took from the university's",
 "t": "AffiliateMarksPolicy"

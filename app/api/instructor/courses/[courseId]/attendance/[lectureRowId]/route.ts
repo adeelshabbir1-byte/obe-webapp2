@@ -26,6 +26,7 @@ async function GET_handler(req: NextRequest, { params }: { params: { courseId: s
 }
 
 async function PUT_handler(req: NextRequest, { params }: { params: { courseId: string; lectureRowId: string } }) {
+  { const g = await (await import("../../../../../../../lib/prereqRemedy")).remedyGate(params.lectureRowId); if (g) return NextResponse.json({ error: g }, { status: 409 }); }
   const user = await getAuthenticatedUser();
   const course = await requireInstructorCourse(user, params.courseId);
   if (!course || !user) return NextResponse.json({ error: "forbidden" }, { status: 403 });

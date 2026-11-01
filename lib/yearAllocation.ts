@@ -15,7 +15,7 @@ const regName = (i: number) => (i % 2 === 0 ? { name: "Fall", year: i / 2 } : { 
 const reg = (term: string, year: number) => (/fall/i.test(term) ? 2 * year : 2 * year - 1);
 const FAIL = /^(F|FA|W|I)$/i;
 
-export type YearRow = { code: string; title: string; batch: string; students: number; sections: number; projected: boolean; teachers: { name: string; n: number }[]; open: number };
+export type YearRow = { code: string; title: string; batch: string; students: number; sections: number; projected: boolean; teachers: { name: string; n: number; id?: string }[]; open: number };
 export type YearTerm = { label: string; summer: boolean; rows: YearRow[]; loads: { name: string; n: number; cap: number }[]; open: number };
 
 export async function yearAllocation(user: MatrixUser) {
@@ -89,7 +89,7 @@ export async function yearAllocation(user: MatrixUser) {
         if (!pick) { r.open++; continue; }
         used.set(pick.id, (used.get(pick.id) || 0) + 1);
         const t = r.teachers.find((x) => x.name === pick.name);
-        if (t) t.n++; else r.teachers.push({ name: pick.name, n: 1 });
+        if (t) t.n++; else r.teachers.push({ name: pick.name, n: 1, id: pick.id });
       }
     }
     out.sort((a, b) => a.batch.localeCompare(b.batch) || a.code.localeCompare(b.code));
