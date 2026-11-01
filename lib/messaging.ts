@@ -6,7 +6,7 @@ import { chairmanIdFor } from "./reportScope";
 // WhatsApp: Meta WhatsApp Cloud API (approved template with two text parameters) or Twilio WhatsApp.
 export const xdb = prisma as unknown as Record<string, any>;
 export type MsgConfig = { chairmanId: string; smsProvider: string; smsJson: string; waProvider: string; waJson: string; kindsJson: string; dailyLimit: number };
-export const ALERT_KINDS: [string, string][] = [["DEADLINE", "Deadlines and reminders"], ["ASSIGNMENT", "New assignments of work"], ["RESULT", "Result submitted / approved"], ["GRADE_CHANGE", "Grade changes"], ["QUIZ", "Online quiz opened (students)"], ["HANDIN", "New hand-in opened (students)"], ["RESULT_STUDENT", "Results published (students)"], ["BROADCAST", "Messages sent from this page"], ["REGISTRATION", "Registration and advisor decisions (students)"], ["HOLD", "Registration holds (students)"], ["ATTENDANCE", "Attendance below the limit (students, weekly)"], ["FEE", "Fee invoices, dues, receipts (students)"], ["FEEDBACK", "Feedback windows (students)"], ["STATUS", "Status changes (students)"], ["EXAM", "Exams and debarred lists (students)"], ["PARENT_SUMMARY", "Weekly summary to parents / guardians"]];
+export const ALERT_KINDS: [string, string][] = [["EXAM_TOMORROW", "Exam tomorrow (students)"], ["TUTORIAL", "Early-warning tutorial scheduled (students)"], ["DEADLINE", "Deadlines and reminders"], ["ASSIGNMENT", "New assignments of work"], ["RESULT", "Result submitted / approved"], ["GRADE_CHANGE", "Grade changes"], ["QUIZ", "Online quiz opened (students)"], ["HANDIN", "New hand-in opened (students)"], ["RESULT_STUDENT", "Results published (students)"], ["BROADCAST", "Messages sent from this page"], ["REGISTRATION", "Registration and advisor decisions (students)"], ["HOLD", "Registration holds (students)"], ["ATTENDANCE", "Attendance below the limit (students, weekly)"], ["FEE", "Fee invoices, dues, receipts (students)"], ["FEEDBACK", "Feedback windows (students)"], ["STATUS", "Status changes (students)"], ["EXAM", "Exams and debarred lists (students)"], ["PARENT_SUMMARY", "Weekly summary to parents / guardians"]];
 
 /** Pakistani numbers to international form: 0300-1234567 → +923001234567. */
 export function normPhone(raw: string | null | undefined): string | null {
@@ -64,7 +64,11 @@ export async function sendAlert(chairmanId: string, kind: string, phones: { to: 
   if (!force && !kinds.includes(kind)) return { sent: 0, failed: 0, skipped: phones.length, reason: "This alert type is turned off." };
   const since = new Date(); since.setHours(0, 0, 0, 0);
   const used = (await xdb.messageLog.count({ where: { chairmanId, createdAt: { gte: since } } }).catch(() => 0)) as number;
-  const room = Math.max(0, c.dailyLimit - used);
+  // Monthly cap per institute (Who Decides What → "msg.monthlyCap"; 0 = none).
+  const cap = await import("./scopedSettings").then(async (m) => Number((await m.allStored(chairmanId)).find((r) => r.scopeType === "INSTITUTE" && r.key === "msg.monthlyCap")?.value || 0)).catch(() => 0);
+  const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
+  const usedMonth = cap ? ((await xdb.messageLog.count({ where: { chairmanId, createdAt: { gte: month } } }).catch(() => 0)) as number) : 0;
+  const room = Math.max(0, Math.min(c.dailyLimit - used, cap ? cap - usedMonth : Infinity));
   const list = Array.from(new Map(phones.map((p) => [normPhone(p.to), p] as const)).entries()).filter(([n]) => !!n).slice(0, room);
   const text = `${title}${body ? `\n${body}` : ""}`.slice(0, 600);
   let sent = 0, failed = 0;

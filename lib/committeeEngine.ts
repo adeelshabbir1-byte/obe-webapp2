@@ -13,7 +13,7 @@ import { OUTCOME_LABEL, VOTE_LABEL, canFinalise, tallyLine, tallyVotes, type CVo
 
 const db = prisma as unknown as Record<string, any>;
 export const CMT_HINT = "Run prisma/migration_committee_engine.sql in Supabase first.";
-export const TYPES: Record<string, string> = { BOS: "Board of Studies", OMC: "OMC", FACULTY_BOARD: "Faculty Board", ACADEMIC_COUNCIL: "Academic Council" };
+export const TYPES: Record<string, string> = { BOS: "Board of Studies", OMC: "OMC", FACULTY_BOARD: "Faculty Board", ACADEMIC_COUNCIL: "Academic Council", BPF: "Board of Faculty / BPF", ADVISORY: "Advisory board", AFFILIATION: "Affiliation Committee", HEC_MANDATED: "HEC-mandated committee", OTHER: "Other committee" };
 export type Committee = { id: string; chairmanId: string; type: string; scope: string; scopeId: string | null; name: string; mode: "FULL" | "CONVENER_ONLY"; quorumPct: number; majorityPct: number; convenerId: string | null; councilStep: boolean };
 export type Member = { id: string; committeeId: string; userId: string | null; name: string; email: string | null; organisation: string | null; external: boolean; tokenSetAt: Date | null };
 export type Item = { id: string; committeeId: string; meetingId: string | null; kind: string; refId: string | null; title: string; summary: string | null; href: string | null; status: string; outcome: Outcome | null; decisionNote: string | null; decidedById: string | null; decidedAt: Date | null; meetingDate: Date | null; signedRef: string | null; signedName: string | null; councilStatus: string | null; councilDate: Date | null; councilRef: string | null; createdAt: Date };
@@ -234,8 +234,18 @@ export async function minutesPdf(meetingId: string) {
     if (c.mode === "FULL") pdf.note(tallyLine(t));
     pdf.text(`Decision: ${it.outcome ? OUTCOME_LABEL[it.outcome] : "Pending"}${it.decisionNote ? ` — ${it.decisionNote}` : ""}${it.councilStatus ? ` · Academic Council ${it.councilStatus.toLowerCase()} ${it.councilDate ? it.councilDate.toISOString().slice(0, 10) : ""}` : ""}`, { size: 9.5 });
   }
+  // Action items of this meeting and the status of the previous ones (Adeel prompt §24.6).
+  const acts = ((await db.cmtAction?.findMany({ where: { committeeId: c.id }, orderBy: { createdAt: "asc" } }).catch(() => [])) || []) as { meetingId: string | null; title: string; ownerId: string | null; due: Date | null; status: string }[];
+  const owners = new Map((await prisma.user.findMany({ where: { id: { in: acts.map((a) => a.ownerId || "").concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+  const prev = acts.filter((a) => a.meetingId !== meetingId), here = acts.filter((a) => a.meetingId === meetingId);
+  if (prev.length) { pdf.text("Status of previous actions", { bold: true, gap: 8 }); pdf.table([["Action", 260], ["Owner", 130], ["Status", 100]], prev.slice(-15).map((a) => [a.title, a.ownerId ? owners.get(a.ownerId) || "" : "", a.status === "DONE" ? "Done" : a.due && a.due < new Date() ? "Overdue" : "Open"]), { size: 8.5 }); }
+  if (here.length) { pdf.text("Action items", { bold: true, gap: 8 }); pdf.table([["Action", 260], ["Owner", 130], ["Deadline", 100]], here.map((a) => [a.title, a.ownerId ? owners.get(a.ownerId) || "" : "", a.due ? a.due.toISOString().slice(0, 10) : ""]), { size: 8.5 }); }
+  // Minutes template: the institute default, adapted by this committee's Convener (lib/minutesTemplate.ts).
+  const tpl = await (await import("./minutesTemplate")).templateFor(c.chairmanId, c.id);
+  for (const sec of tpl.sections) { pdf.text(sec, { bold: true, gap: 8 }); pdf.text("________________________________________________", { size: 9 }); }
   pdf.text(" ", { gap: 30 });
-  pdf.text("Convener: ______________________          Secretary: ______________________          Date: __________", { size: 9.5 });
+  pdf.text(tpl.signatures.map((x) => `${x}: ______________________`).join("        ") + "        Date: __________", { size: 9.5 });
+  if (tpl.footer) pdf.note(tpl.footer);
   return { bytes: await pdf.save(), name: `${c.name.replace(/[^A-Za-z0-9]+/g, "-")}-minutes-${mt.date.toISOString().slice(0, 10)}.pdf` };
 }
 export type { CVote };

@@ -9944,3 +9944,53 @@ model TimetableToken {
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())
 }
+
+// Web push (Adeel prompt §4): one row per browser / phone that allowed notifications (staff userId or studentId).
+model PushSubscription {
+  id        String   @id
+  userId    String?
+  studentId String?
+  endpoint  String   @unique(map: "PushSubscription_endpoint_key")
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+// Mid-semester feedback (Adeel prompt §6): anonymous answers; MidFeedbackDone only records that a student answered.
+model MidFeedback {
+  id           String   @id
+  courseId     String
+  pace         String
+  clarity      Int
+  hardestTopic String?
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  @@index([courseId], map: "MidFeedback_course_idx")
+}
+
+model MidFeedbackDone {
+  courseId  String
+  studentId String
+  at        DateTime @default(now())
+
+  @@id([courseId, studentId])
+}
+
+// Committee action items (Adeel prompt §24.6): owner, deadline; in the owner's "What's next" and the next meeting's agenda.
+model CmtAction {
+  id          String    @id
+  committeeId String
+  meetingId   String?
+  title       String
+  ownerId     String?
+  due         DateTime?
+  status      String    @default("OPEN")
+  note        String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  doneAt      DateTime?
+
+  @@index([committeeId], map: "CmtAction_committee_idx")
+  @@index([ownerId], map: "CmtAction_owner_idx")
+}

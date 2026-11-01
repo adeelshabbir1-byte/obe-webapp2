@@ -73,6 +73,9 @@ async function GET_handler(req: NextRequest) {
   await import("../../../../lib/delegation").then((m) => m.weeklyDelegationSummary(now)).catch(() => 0);
   // Nightly data-quality check (Adeel prompt §9), warming the cache for each institute.
   await (async () => { const { dataQuality } = await import("../../../../lib/dataQuality"); for (const h of await prisma.user.findMany({ where: { role: "CHAIRMAN", isActive: true }, select: { id: true } })) await dataQuality({ chairmanId: h.id }, true).catch(() => null); })().catch(() => null);
+  await import("../../../../lib/examTomorrow").then((m) => m.examTomorrow(now)).catch(() => 0);
+  await import("../../../../lib/midFeedback").then((m) => m.openMidFeedback(now)).catch(() => 0);
+  await import("../../../../lib/meetingsHub").then((m) => m.remindMeetings(now)).catch(() => 0);
   // Course Leads by the rule, for every institute (Adeel prompt §36).
   await (async () => { const { ensureAutoLeads } = await import("../../../../lib/autoLead"); for (const h of await prisma.user.findMany({ where: { role: "CHAIRMAN", isActive: true }, select: { id: true } })) await ensureAutoLeads(h.id).catch(() => null); })().catch(() => null);
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;

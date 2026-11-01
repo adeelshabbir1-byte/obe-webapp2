@@ -898,6 +898,33 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     who: "Leaders change any class; a teacher changes his own (permanent moves need the PL / Department Coordinator). The floor attendant is a delegated task of the Department Coordinator.",
     pages: ["/timetable/live", "/kiosk"], keywords: ["timetable", "reschedule", "free room", "substitute", "cancel", "make-up", "kiosk", "ics", "calendar", "floor register", "class log", "utilisation"], href: "/timetable/live",
   }),
+  A({
+    key: "phone-app", kind: "faq", category: "account", roles: [],
+    title: "Can I install OBEHUB on my phone and get notifications?",
+    summary: "Yes. On a phone (or Chrome), “Install app” adds OBEHUB to the home screen, and “Turn on notifications” sends quizzes, results, deadlines, approvals, early warnings and timetable changes as phone notifications (once the IT Manager has set the push keys). Marks typed while the connection is down are kept on the device and sent when you are back online; a mark changed meanwhile asks you which to keep.",
+    who: "Everyone.", affects: "Blank stays blank (absent) and 0 stays 0, offline too.",
+    pages: ["/dashboard", "/instructor/courses"], keywords: ["install", "phone", "app", "push", "notifications", "offline", "sync"],
+  }),
+  A({
+    key: "mid-feedback", kind: "guide", category: "quality", roles: [INS, SE, PL],
+    title: "Mid-semester feedback from students",
+    summary: "In week 6 (a setting) each course opens a 2-minute anonymous survey: pace, clarity, the hardest topic so far and one comment. The teacher sees the totals from 5 responses, with a suggested action that links to the CQI actions.",
+    steps: ["Students get a notice and answer under Mid-semester Feedback.", "Teachers open Mid-semester Feedback to see pace, clarity, the hardest topics and comments.", "Act on the suggestion (tutorial, re-teach) from the CQI actions."],
+    who: "Students answer; the course's teachers see results. The week is set in Who Decides What.", pages: ["/instructor/mid-feedback"], keywords: ["feedback", "mid semester", "survey", "hardest topic", "pace", "clarity"], href: "/instructor/mid-feedback",
+  }),
+  A({
+    key: "handbook", kind: "faq", category: "help", roles: [],
+    title: "Is there a handbook for my role?",
+    summary: "Yes — My Role Handbook downloads a PDF of every page in your role's menu with its purpose, who uses it and the steps, made fresh each time from the page help, with the institute's name and logo. Pages without help are listed as “help not written yet”.",
+    who: "Every staff member for their own role; leaders for any role.", pages: ["/handbook"], keywords: ["handbook", "manual", "pdf", "guide", "training"], href: "/handbook",
+  }),
+  A({
+    key: "meetings-hub", kind: "guide", category: "quality", roles: [IH, DEAN, HOD, PL, OMC, DC],
+    title: "Meetings: one place for every committee",
+    summary: "Meetings lists every committee on the committee engine with its waiting items, meetings and action items. The Convener gets suggested times when the members and a room are free, sends invitations with a calendar file (reminders go a day before), records action items (they appear in the owner's What's next and in the next minutes), and can adapt the minutes format; the Institute Head sets the institute default.",
+    steps: ["Open Meetings; click Open on a committee to vote, decide and print minutes.", "Suggest times → schedule the meeting on the committee page → Send invitations.", "Add action items with an owner and a deadline.", "Minutes format: the institute default, or this committee's own (Reset to institute default)."],
+    who: "Conveners and the Institute Head manage; members see their committees.", pages: ["/meetings-hub", "/boards"], keywords: ["meeting", "committee", "minutes", "agenda", "quorum", "action items", "bos", "omc"], href: "/meetings-hub",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));

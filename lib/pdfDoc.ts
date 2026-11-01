@@ -118,6 +118,18 @@ export class PdfDoc {
     if (issued.stamp && x + 70 < qx - 160) { const st = await embed(issued.stamp); if (st) { const sc = Math.min(64 / st.width, 64 / st.height); this.page.drawImage(st, { x, y: base + 4, width: st.width * sc, height: st.height * sc, opacity: 0.9 }); } }
     this.y = base - 12;
   }
+  /** A logo / picture from a data URI (PNG or JPEG), centred, at most h points high (Adeel prompt §18: logo on PDFs). */
+  async image(dataUri: string | null | undefined, h = 60) {
+    if (!dataUri || !dataUri.startsWith("data:image/")) return;
+    try {
+      const b = Buffer.from(dataUri.split(",")[1] || "", "base64");
+      const img = dataUri.startsWith("data:image/png") ? await this.doc.embedPng(b) : await this.doc.embedJpg(b);
+      const sc = Math.min(h / img.height, 200 / img.width);
+      this.need(img.height * sc + 10);
+      this.page.drawImage(img, { x: (W - img.width * sc) / 2, y: this.y - img.height * sc, width: img.width * sc, height: img.height * sc });
+      this.y -= img.height * sc + 12;
+    } catch { /* not an image we can embed */ }
+  }
   async save() {
     const pages = this.doc.getPages();
     pages.forEach((p, i) => { p.drawText(`${this.footer}  -  page ${i + 1} of ${pages.length}`, { x: M, y: 22, size: 7.5, font: this.font, color: MUTED }); });
