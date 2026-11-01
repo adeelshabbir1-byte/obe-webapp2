@@ -8,6 +8,8 @@ import { writeAuditLog } from "../../../../../../../lib/audit";
 import { renumberClos } from "../../../../../../../lib/cloOrdering";
 import { ensureCoursePloMapping } from "../../../../../../../lib/coursePloSync";
 import { withErrors } from "../../../../../../../lib/apiHandler";
+import { diffFields, logChange } from "../../../../../../../lib/changeHistory";
+import { offerUndo } from "../../../../../../../lib/undo";
 
 async function PATCH_handler(req: NextRequest, { params }: { params: { courseId: string; cloId: string } }) {
   const user = await getAuthenticatedUser();
@@ -47,11 +49,16 @@ async function PATCH_handler(req: NextRequest, { params }: { params: { courseId:
     },
   });
 
-  await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: cloId });
+  const F = ["statement", "bloomLevel", "mappedPloId", "ploMappingSource", "ploContributionPct", "targetPct"];
+  const changes = diffFields(clo as never, updated as never, F);
+  if (changes.length) await logChange(user.id, "CLO_UPDATED", "CLO", cloId, changes);
+  else await writeAuditLog({ actorUserId: user.id, action: "CLO_UPDATED", entityType: "CLO", entityId: cloId });
   await syncCourseContentToLinkedCourses(course.id);
   if (body.mappedPloId) await ensureCoursePloMapping(course.id, body.mappedPloId, user.id, "MANUAL");
+  const before = Object.fromEntries(F.map((f) => [f, (clo as unknown as Record<string, unknown>)[f] ?? null]));
+  const undo = changes.length ? await offerUndo(user.id, `${clo.code || "CLO"} saved`, { restore: [{ model: "cLO", id: cloId, data: before }], after: [{ kind: "syncCourse", courseId: course.id }] }) : {};
 
-  return NextResponse.json({ clo: updated });
+  return NextResponse.json({ clo: updated, ...undo });
 }
 
 async function DELETE_handler(req: Request, { params }: { params: { courseId: string; cloId: string } }) {
@@ -72,10 +79,11 @@ async function DELETE_handler(req: Request, { params }: { params: { courseId: st
   await prisma.paperDistributionItem.updateMany({ where: { cloId: params.cloId }, data: { cloId: null } });
   await prisma.cLO.delete({ where: { id: params.cloId } });
   await renumberClos(course.id, "SE");
-  await writeAuditLog({ actorUserId: user.id, action: "CLO_DELETED", entityType: "CLO", entityId: params.cloId });
+  await logChange(user.id, "CLO_DELETED", "CLO", params.cloId, [{ field: "statement", from: clo.statement, to: null }], true);
   await syncCourseContentToLinkedCourses(course.id);
+  const undo = await offerUndo(user.id, `${clo.code || "CLO"} deleted`, { recreate: [{ model: "cLO", data: clo as unknown as Record<string, unknown> }], after: [{ kind: "renumberClos", courseId: course.id }, { kind: "syncCourse", courseId: course.id }] });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...undo });
 }
 export const PATCH = withErrors(PATCH_handler);
 export const DELETE = withErrors(DELETE_handler);

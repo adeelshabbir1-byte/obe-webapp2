@@ -1,5 +1,8 @@
 "use client";
 
+import HistoryLink from "./HistoryLink";
+import Term from "./Term";
+import { useServerDraft } from "./useServerDraft";
 import { useEffect, useState } from "react";
 import SortableTable from "./SortableTable";
 
@@ -59,6 +62,8 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       || (d.mappedPloId ? (d.ploContributionPct ?? 100) !== (c.ploContributionPct ?? 100) : false) || d.targetPct !== c.targetPct);
   };
   const dirtyClos = clos.filter(isDirty);
+  // Unsaved edits are kept on the server every few seconds; coming back offers to restore them.
+  const autosave = useServerDraft(`clos:${courseId}`, readOnly ? {} : Object.fromEntries(dirtyClos.map((c) => [c.id, drafts[c.id]])), (v) => !v || Object.keys(v).length === 0, (v) => setDrafts((prev) => ({ ...prev, ...(v as Record<string, Draft>) })));
 
   function edit(c: Clo, patch: Partial<Draft>) {
     setSaved("");
@@ -109,6 +114,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       ok++;
     }
     if (ok) setSaved(`${ok} CLO${ok === 1 ? "" : "s"} saved.`);
+    if (ok === dirtyClos.length) autosave.clear();
     setLoading(false);
   }
 
@@ -182,6 +188,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
 
   return (
     <>
+      {autosave.banner}
       {error && <div className="err">{error}</div>}
       {!readOnly && plos.length === 0 && (
         <div className="card" style={{ borderColor: "var(--rust)" }}>
@@ -201,7 +208,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
       )}
       <div className="card">
         <SortableTable paginate={false}>
-          <thead><tr><th>Code</th><th>Outcome</th><th>Bloom</th><th>Mapped GA</th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
+          <thead><tr><th>Code</th><th><Term k="clo">Outcome</Term></th><th><Term k="bloom">Bloom</Term></th><th><Term k="plo">Mapped GA</Term></th><th>Contribution</th><th>Target %</th>{!readOnly && <th></th>}</tr></thead>
           <tbody>
             {clos.length === 0 && (
               <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--slate)" }}>No CLOs yet.</td></tr>
@@ -219,7 +226,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
               return (
                 <tr key={c.id}>
                   <td style={{ whiteSpace: "nowrap", verticalAlign: "top" }}>
-                    {c.code}{dirty && <span title="Not saved yet" style={{ color: "#B7791F", marginLeft: 3 }}>●</span>}
+                    {c.code}{dirty && <span title="Not saved yet" style={{ color: "#B7791F", marginLeft: 3 }}>●</span>} <HistoryLink type="CLO" id={c.id} label="⟲" />
                     <div style={{ display: "flex", gap: 2, marginTop: 4 }}>
                       <button onClick={() => moveClo(c.id, "up")} disabled={loading || i === 0} title="Move up" style={{ background: "none", border: "1px solid var(--line)", cursor: i === 0 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === 0 ? 0.3 : 1 }}>▲</button>
                       <button onClick={() => moveClo(c.id, "down")} disabled={loading || i === clos.length - 1} title="Move down" style={{ background: "none", border: "1px solid var(--line)", cursor: i === clos.length - 1 ? "default" : "pointer", fontSize: 9, padding: "0 3px", opacity: i === clos.length - 1 ? 0.3 : 1 }}>▼</button>
@@ -262,6 +269,7 @@ export default function ClosManager({ courseId, initialClos, plos, readOnly = fa
             </button>
             {dirtyClos.length > 0 && <button className="btn" type="button" onClick={() => { setDrafts({}); setError(""); }} disabled={loading} style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}>Undo changes</button>}
             {saved && <span style={{ color: "var(--sage)", fontSize: 13 }}>{saved}</span>}
+            {dirtyClos.length > 0 && autosave.note}
             {!saved && dirtyClos.length === 0 && <span style={{ color: "var(--slate)", fontSize: 12 }}>Edit any cell above, then save. CLOs on the same GA share it equally by default; you can change the split before saving.</span>}
           </div>
         )}
