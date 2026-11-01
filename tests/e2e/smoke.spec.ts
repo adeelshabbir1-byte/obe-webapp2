@@ -35,7 +35,9 @@ async function crawl(page: Page, home: string) {
   for (const href of links) {
     if (CNIC_RE.test(href)) bad.push(`${href}: CNIC in the address`);
     CNIC_RE.lastIndex = 0;
-    const r = await page.request.get(href);
+    const t0 = Date.now();
+    const r = await page.request.get(href, { timeout: 45_000 });
+    if (Date.now() - t0 > 5000) console.warn(`[slow-page] ${href} ${Date.now() - t0} ms`);
     const body = r.status() < 400 ? await r.text() : "";
     if (r.status() >= 500 || BROKEN_HTML.test(body)) bad.push(`${href}: ${r.status()}${BROKEN_HTML.test(body) ? ` error page (${BROKEN_HTML.exec(body)![0].slice(0, 40)})` : ""}`);
     for (const m of body.matchAll(/href="([^"]+)"/g)) { if (new RegExp(CNIC_RE.source).test(m[1])) bad.push(`${href}: link with a CNIC`); }
