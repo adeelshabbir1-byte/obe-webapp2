@@ -6,9 +6,9 @@ import Shell from "../../components/Shell";
 import Tabs from "../../components/Tabs";
 import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
-import { claimAmounts, comparison, dataOf, eventsOf, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
+import { claimAmounts, comparison, dataOf, eventsOf, examinerSuggestions, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
 import { getFlag } from "../../lib/scopedSettings";
-import { Ack, EditRecord, Marks, Move, NewRecord, RatesForm } from "./AffForms";
+import { Ack, Codes, EditRecord, Marks, Move, NewRecord, RatesForm, ScriptMarks } from "./AffForms";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,7 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   const ev = open ? await eventsOf(open.id) : [];
   const cover = open && open.kind === "FINAL_PAPER" && (side === "UNI" || "topics" in viewData(open, side)) ? await paperCoverage(open as never, side === "COLLEGE" ? inst : null) : [];
   if (open && open.kind === "FINAL_PAPER" && side === "UNI") await (await import("../../lib/audit")).writeAuditLog({ actorUserId: user.id, action: "FINAL_PAPER_VIEWED", entityType: "AffRecord", entityId: open.id }).catch(() => null);
+  const sugg = open && open.kind === "SESSION" && side === "UNI" ? await examinerSuggestions(open as never) : null;
   const names = new Map((await prisma.user.findMany({ where: { id: { in: ev.map((e) => e.byId).concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   return shell(<>
     <Tabs base="/affiliation" current={k.key} tabs={tabs.map((t) => ({ ...t, badge: t.key === k.key ? rows.length || null : null }))} />
@@ -65,6 +66,11 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
           <EditRecord id={open.id} fields={k.fields} side={side} data={d} />
         </div>
         {cover.length > 0 && <div style={{ marginTop: 8, fontSize: 12.5 }}><b>Coverage of the disclosed lectures</b>{cover.map((c) => <div key={c.collegeId} style={{ color: c.missing.length ? "#b3261e" : "#1b5e20" }}>{side === "UNI" ? `${colName.get(c.collegeId) || "College"}: ` : ""}{c.taught}/{c.of} taught{c.missing.length ? ` — not yet: ${c.missing.length > 12 ? `${c.missing.slice(0, 12).map((n) => `L${n}`).join(", ")}…` : c.missing.map((n) => `L${n}`).join(", ")}` : " ✓"}</div>)}</div>}
+        {sugg && <div style={{ marginTop: 8, fontSize: 12.5 }}>{sugg.split.length > 0 && <div><b>Sessions at this centre</b> ({sugg.capacity} per session): {sugg.split.join(" · ")}</div>}<b>Suggested external examiners</b> <span className="small-note">(paste the record id into “External examiner”)</span><ul style={{ margin: "4px 0" }}>{sugg.ranked.map((e) => <li key={e.id} style={{ color: e.ok ? undefined : "#999" }}>{e.name} — {e.institute}, {e.city} · {e.duties} duties · <code>{e.id}</code>{e.ok ? "" : ` ✗ ${e.why.join(", ")}`}</li>)}</ul></div>}
+        {k.key === "EXAMINER" && side === "UNI" && <div style={{ marginTop: 8 }}><a className="btn-link" href={`/api/affiliation/letter?doc=tax&id=${open.id}&year=${new Date().getFullYear()}`}>Tax deduction certificate {new Date().getFullYear()} (PDF)</a></div>}
+        {k.key === "MARKING" && side === "UNI" && (() => { const key = (d.key || {}) as Record<string, string>; const codes = Object.keys(key); const marks = (d.marks || {}) as Record<string, number | null>; return <div style={{ marginTop: 8 }}>
+          {!codes.length ? <Codes id={open.id} /> : open.status === "MARKING" ? <><b>Marks by code</b> <span className="small-note">(the marker sees only codes)</span><ScriptMarks id={open.id} codes={codes} marks={marks} max={Number(d.maxMarks) || 100} /></> : open.status === "DECODED" ? <><b>Decoded (Controller&apos;s office)</b><table className="table" style={{ fontSize: 12 }}><tbody>{codes.map((c) => <tr key={c}><td>{key[c]}</td><td>{marks[c] ?? "—"}</td></tr>)}</tbody></table></> : <span className="small-note">{codes.length} scripts coded. Move to Marking to enter marks.</span>}
+        </div>; })()}
         {k.key === "SESSION" && <div style={{ marginTop: 8 }}><Marks id={open.id} rows={d.marks || []} side={side} /></div>}
         {m && m.by === side && <div style={{ marginTop: 8 }}>Next: <Move id={open.id} to={m.to} /></div>}
         <details style={{ marginTop: 8 }}><summary className="small-note" style={{ cursor: "pointer" }}>Trail ({ev.length})</summary><ul style={{ fontSize: 12 }}>{ev.map((e, i) => <li key={i}>{new Date(e.at).toLocaleString("en-GB")} · {names.get(e.byId) || "—"} · {e.action.toLowerCase()}{e.note ? ` — ${e.note}` : ""}</li>)}</ul></details>

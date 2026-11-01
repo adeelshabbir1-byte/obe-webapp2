@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/db";
 import { getAuthenticatedUser } from "../../../../lib/session";
 import { chairmanIdFor } from "../../../../lib/reportScope";
-import { dataOf, sideOf } from "../../../../lib/affWork";
+import { dataOf, sideOf, taxYear } from "../../../../lib/affWork";
 import { PdfDoc } from "../../../../lib/pdfDoc";
 import { withErrors } from "../../../../lib/apiHandler";
 
@@ -16,6 +16,21 @@ async function GET_handler(req: NextRequest) {
   const inst = await chairmanIdFor(user as never);
   const s = await sideOf(user as never, inst);
   const r = await db.affRecord?.findUnique({ where: { id: String(req.nextUrl.searchParams.get("id") || "") } });
+  if (req.nextUrl.searchParams.get("doc") === "tax") {
+    // §29.E: yearly tax deduction certificate of one examiner (university side only).
+    if (!r || r.kind !== "EXAMINER" || r.universityId !== s.universityId || !s.asUni) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const year = Number(req.nextUrl.searchParams.get("year")) || new Date().getFullYear();
+    const t = await taxYear(s.universityId!, r.id, year);
+    const ex = dataOf(r);
+    const uni = await prisma.user.findUnique({ where: { id: s.universityId }, select: { instituteName: true, instituteLogo: true } });
+    const pdf = await PdfDoc.create(`${uni?.instituteName || "University"} — tax certificate ${year}`);
+    await pdf.image(uni?.instituteLogo, 60);
+    pdf.title("Certificate of tax deducted", `${r.title} · calendar year ${year}`);
+    pdf.kv([["Examiner", r.title], ["Institute", ex.institute || ""], ["Designation / BPS", `${ex.designation || ""} ${ex.payScale ? `BPS-${ex.payScale}` : ""}`], ["Taxable fees paid", t.taxable], ["Tax deducted", t.tax], ["TA/DA paid (tax-free)", t.tada]]);
+    if (t.rows.length) pdf.table([["Claim", 220], ["Paid", 70], ["Taxable", 70], ["Tax", 60], ["TA/DA", 60]], t.rows.map((x) => [x.title, new Date(x.date).toLocaleDateString("en-GB"), x.taxable, x.tax, x.tada]), { size: 8.5 });
+    pdf.text(" ", { gap: 24 }); pdf.text("Treasurer: ______________________          Date: __________", { size: 9.5 });
+    return new NextResponse(Buffer.from(await pdf.save()), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="tax-certificate-${year}.pdf"` } });
+  }
   if (!r || r.kind !== "APPLICATION" || !["APPROVED", "CONDITIONAL"].includes(r.status) || r.universityId !== s.universityId || (!s.asUni && r.collegeId !== inst)) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const d = dataOf(r);
   const [uni, col] = await Promise.all([prisma.user.findUnique({ where: { id: r.universityId }, select: { instituteName: true, instituteLogo: true } }), r.collegeId ? prisma.user.findUnique({ where: { id: r.collegeId }, select: { instituteName: true, name: true } }) : null]);
