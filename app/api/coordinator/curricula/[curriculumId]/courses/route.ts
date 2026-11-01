@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../../../lib/session";
 import { prisma } from "../../../../../../lib/db";
 import { withErrors } from "../../../../../../lib/apiHandler";
+import { retiredMasterIds } from "../../../../../../lib/officialContent";
 
 // Full course list for a curriculum, for the Coordinator's "pick which
 // courses to import" checklist — grouped client-side by category/domain.
@@ -10,7 +11,7 @@ async function GET_handler(req: Request, { params }: { params: { curriculumId: s
   if (!user || (user.role !== "PROGRAM_COORDINATOR" && user.role !== "OMC")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const courses = await prisma.masterCourse.findMany({
-    where: { masterCurriculumId: params.curriculumId },
+    where: { masterCurriculumId: params.curriculumId, id: { notIn: await retiredMasterIds() } }, // retired duplicates (e.g. IDS-D01) stay hidden
     select: { id: true, code: true, title: true, category: true, domain: true, semesterNumber: true },
     orderBy: [{ category: "asc" }, { domain: "asc" }, { title: "asc" }],
   });

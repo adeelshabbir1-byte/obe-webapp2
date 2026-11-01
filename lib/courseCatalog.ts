@@ -268,3 +268,29 @@ export async function aiOverlaps(chairmanId: string, code: string): Promise<{ li
   return { list, ai };
 }
 export { isGeneric, DEFAULT_STOP_LIST };
+
+/**
+ * Official content (HEC / NCEAC / the owner's own course data) into the catalog: the entry with the same title is
+ * updated as a new version, or a new General Education entry is made (Computing, year 1, area 9). The 32-lecture rule
+ * does not apply here — an official plan keeps the lectures its source has. GA links of CLOs already in the entry stay.
+ */
+export async function saveOfficialEntry(user: { id: string; role: string }, o: { title: string; instituteCode: string; of: string; creditHours: number; semester: number | null; clos: { n: number; statement: string; bloom: string }[]; lectures: { n: number; topic: string; sub: string; clo: number | null }[]; note: string }) {
+  const all = await loadCatalog();
+  const key = titleKey(o.title);
+  const cur = all.find((e) => titleKey(e.title) === key);
+  const codes = (list: { code: string; of: string }[]) => (list.some((x) => x.code === o.instituteCode) ? list : list.concat({ code: o.instituteCode, of: o.of }));
+  const clos = o.clos.map((c) => ({ n: c.n, statement: c.statement, bloom: c.bloom, gas: cur?.clos.find((x) => x.n === c.n)?.gas || [], source: "official" }));
+  const lectures = o.lectures.map((l) => ({ n: l.n, topic: l.topic, sub: l.sub, clo: l.clo, importance: "IMPORTANT" as const, chapter: null, pr: null }));
+  if (cur) {
+    const next: CatalogEntry = { ...cur, clos, lectures, instituteCodes: codes(cur.instituteCodes), source: cur.source === "OBEHUB reference" ? "Official" : cur.source, sourceNote: o.note.slice(0, 600) };
+    const version = cur.version + 1;
+    await db.catalogCourse.update({ where: { id: cur.id }, data: { ...toRow(next), version, updatedById: user.id, updatedAt: new Date() } });
+    await db.catalogVersion.create({ data: { id: randomUUID(), catalogId: cur.id, version, dataJson: JSON.stringify(toRow(next)), byUserId: user.id, note: o.note.slice(0, 300) } });
+    return { id: cur.id, code: cur.code, version };
+  }
+  const serial = 1 + Math.max(0, ...all.filter((e) => e.field === "COMPUTING" && e.level === 1 && e.area === 9).map((e) => e.serial));
+  const e: CatalogEntry = { id: randomUUID(), field: "COMPUTING", discipline: "General Education", code: `CMP-19${serial}`, title: o.title, level: 1, area: 9, serial, creditHours: o.creditHours, theoryCh: o.creditHours, labCh: 0, semester: o.semester, semesterReason: o.semester ? `Semester ${o.semester} in ${o.of}` : null, gaSet: "CGA", source: "Official", sourceNote: o.note.slice(0, 600), instituteCodes: [{ code: o.instituteCode, of: o.of }], clos, lectures, prereqs: [], topicLinks: [], books: [], version: 1 };
+  await db.catalogCourse.create({ data: { id: e.id, ...toRow(e), version: 1, updatedById: user.id, updatedAt: new Date() } });
+  await db.catalogVersion.create({ data: { id: randomUUID(), catalogId: e.id, version: 1, dataJson: JSON.stringify(toRow(e)), byUserId: user.id, note: o.note.slice(0, 300) } });
+  return { id: e.id, code: e.code, version: 1 };
+}

@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/db";
 import { findOwningChairmanId } from "../../../../../lib/institutionCurriculum";
 import { curriculaWhere } from "../../../../../lib/curriculumLibrary";
 import { withErrors } from "../../../../../lib/apiHandler";
+import { retiredMasterIds } from "../../../../../lib/officialContent";
 
 // The "HEC course" picker (Content Sync, Course Equivalence): courses of EVERY curriculum the institute may use —
 // its own published copies, the official curricula assigned to it, and (for a college) its university's — newest
@@ -16,7 +17,7 @@ async function GET_handler() {
     ? await prisma.masterCurriculum.findMany({ where: { AND: [await curriculaWhere(chairmanId), { status: "PUBLISHED" }] }, select: { id: true, authority: true, title: true, version: true, createdAt: true }, orderBy: [{ version: "desc" }, { createdAt: "desc" }] })
     : [];
   const [masterCourses, hecCodes] = await Promise.all([
-    prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: curricula.map((c) => c.id).concat("none") } }, select: { id: true, code: true, title: true, masterCurriculumId: true }, orderBy: [{ code: "asc" }] }),
+    prisma.masterCourse.findMany({ where: { masterCurriculumId: { in: curricula.map((c) => c.id).concat("none") }, id: { notIn: await retiredMasterIds() } }, select: { id: true, code: true, title: true, masterCurriculumId: true }, orderBy: [{ code: "asc" }] }),
     prisma.hecPloSuggestion.findMany({ select: { courseCode: true }, distinct: ["courseCode"] }),
   ]);
   const hecCodeSet = new Set(hecCodes.map((h) => h.courseCode));

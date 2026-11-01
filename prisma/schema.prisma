@@ -9662,3 +9662,33 @@ model VisitingPaySheet {
 
   @@index([userId, periodStart], map: "VisitingPaySheet_user_idx")
 }
+
+// Part 5: official content loaded into a base course (a version to restore; PENDING = waiting for the OMC to reopen an approved plan).
+model OfficialContentLoad {
+  id              String    @id
+  chairmanId      String
+  courseId        String
+  kind            String
+  sourceLabel     String
+  status          String
+  contentJson     String
+  beforeJson      String    @default("{}")
+  summary         String    @default("")
+  changeRequestId String?
+  byUserId        String
+  createdAt       DateTime  @default(now())
+  appliedAt       DateTime?
+  undoneAt        DateTime?
+
+  @@index([courseId])
+  @@index([chairmanId])
+}
+
+// A system-generated duplicate master course, retired: hidden from pickers, kept in the history.
+model MasterCourseRetired {
+  masterCourseId String   @id
+  replacedById   String?
+  reason         String   @default("")
+  byUserId       String?
+  at             DateTime @default(now())
+}

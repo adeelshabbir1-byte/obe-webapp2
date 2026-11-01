@@ -19,6 +19,7 @@ export const ADMIN_NAV = [
   { href: "/admin/feedback", label: "System Feedback" },
   { href: "/admin/problem-reports", label: "Problem Reports" },
   { href: "/admin/ai-usage", label: "AI Usage" },
+  { href: "/admin/official-content", label: "Official Content" },
   { href: "/admin/report-bundles", label: "Report Bundles" },
   { href: "/admin/landing-page", label: "Landing Page" },
   { href: "/national-bank", label: "National Releases" },
