@@ -108,7 +108,13 @@ export default function FacultyTopicWorkspace({ role }: { role: string; courses?
     const pl = await jget(`${API}/links`);
     if (pl.ok) setPendingLinks((pl.d.rows || []).filter((p: PendingLink) => p.status === "PENDING"));
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // ?open=id1,id2,id3 (e.g. "Open QR-I, QR-II and Discrete Structures in the Topic Workspace") opens those side by side.
+    const ids = (new URLSearchParams(window.location.search).get("open") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 8);
+    if (!ids.length) { load(); return; }
+    const o = ids.map((courseId) => ({ courseId, plan: null }));
+    setOpen(o); jsend(`${API}/state`, "PUT", { open: o }).catch(() => null); load(o);
+  }, [load]);
   useEffect(() => { const m = window.matchMedia("(max-width: 760px)"); const f = () => setMobile(m.matches); f(); m.addEventListener("change", f); return () => m.removeEventListener("change", f); }, []);
 
   const persistOpen = useCallback((o: OpenRef[]) => { jsend(`${API}/state`, "PUT", { open: o }).catch(() => null); }, []);

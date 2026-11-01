@@ -5,6 +5,7 @@ import { findOwningChairmanId } from "../../../../lib/institutionCurriculum";
 import { sourcesForProgram, curriculumBoard, batchBoard } from "../../../../lib/batchBoard";
 import * as bs from "../../../../lib/batchSetup";
 import { withErrors } from "../../../../lib/apiHandler";
+import { retiredMasterIds } from "../../../../lib/officialContent";
 
 const db = prisma as unknown as Record<string, any>;
 
@@ -27,7 +28,7 @@ async function GET_handler(req: NextRequest) {
     const like = { contains: text, mode: "insensitive" as const };
     const [batchCourses, masters] = await Promise.all([
       prisma.course.findMany({ where: { coordinator: { managedById: chairmanId }, batchId: { not: q.get("batchId") || "none" }, OR: [{ code: like }, { title: like }] }, take: 25, orderBy: { createdAt: "desc" }, select: { id: true, code: true, title: true, creditHours: true, courseType: true, batch: { select: { degreeProgram: true, batchName: true } }, subjectHomeDepartment: { select: { name: true } } } }),
-      prisma.masterCourse.findMany({ where: { OR: [{ code: like }, { title: like }], masterCurriculum: { status: "PUBLISHED", OR: [{ chairmanId: null }, { chairmanId }] } }, take: 25, select: { id: true, code: true, title: true, creditHours: true, category: true, masterCurriculum: { select: { authority: true, title: true, version: true } } } }),
+      prisma.masterCourse.findMany({ where: { OR: [{ code: like }, { title: like }], id: { notIn: await retiredMasterIds() }, masterCurriculum: { status: "PUBLISHED", OR: [{ chairmanId: null }, { chairmanId }] } }, take: 25, select: { id: true, code: true, title: true, creditHours: true, category: true, masterCurriculum: { select: { authority: true, title: true, version: true } } } }),
     ]);
     return NextResponse.json({ results: [
       ...batchCourses.map((c) => ({ kind: "course", id: c.id, code: c.code, title: c.title, ch: c.creditHours, type: c.courseType, from: `${c.batch?.degreeProgram || ""} ${c.batch?.batchName || ""}`.trim(), home: c.subjectHomeDepartment?.name || null })),

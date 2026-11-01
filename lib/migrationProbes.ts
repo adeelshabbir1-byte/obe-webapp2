@@ -753,6 +753,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "c": "offeredTermName"
 },
 {
+"f": "migration_official_content.sql",
+"d": "Part 5: official content (QR-I, QR-II, Discrete Structures) loaded into base courses, with a restorable version,",
+"t": "MasterCourseRetired"
+},
+{
 "f": "migration_omc.sql",
 "d": "Run in Supabase SQL Editor. Adds the OMC review comment field to Course.",
 "t": "Course",
