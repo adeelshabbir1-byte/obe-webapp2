@@ -12,7 +12,7 @@ const CARD_CSS = "@media (max-width:720px){.apx thead{display:none}.apx tr{displ
 const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 // The "My approvals" list: filters, approve / return in place (return asks for a reason), and bulk approve for safe kinds.
-export default function ApprovalsInbox({ rows }: { rows: InboxRow[] }) {
+export default function ApprovalsInbox({ rows, pages = [] }: { rows: InboxRow[]; pages?: { href: string; label: string }[] }) {
   const router = useRouter();
   const [kind, setKind] = useState("");
   const [area, setArea] = useState("");
@@ -54,6 +54,17 @@ export default function ApprovalsInbox({ rows }: { rows: InboxRow[] }) {
 
   return (
     <div>
+      {/* One card per kind of approval (UX review): tap a card to see only that kind. */}
+      {(kinds.length > 0 || pages.length > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10, marginBottom: 12 }}>
+          {kinds.length > 1 && <button type="button" onClick={() => setKind("")} className="card" style={{ margin: 0, textAlign: "left", cursor: "pointer", borderTop: `3px solid ${!kind ? "#1B5FAA" : "transparent"}` }}><b style={{ fontSize: 22 }}>{rows.length - gone.size}</b><div style={{ fontSize: 13 }}>Everything</div></button>}
+          {kinds.map(([k, l]) => { const list = rows.filter((r) => r.kind === k && !gone.has(key(r))); const od = list.filter((r) => r.overdue).length; return (
+            <button key={k} type="button" onClick={() => setKind(kind === k ? "" : k)} className="card" style={{ margin: 0, textAlign: "left", cursor: "pointer", borderTop: `3px solid ${kind === k ? "#1B5FAA" : od ? "#B3261E" : "transparent"}` }}>
+              <b style={{ fontSize: 22 }}>{list.length}</b><div style={{ fontSize: 13 }}>{l}</div>{od > 0 && <div style={{ fontSize: 11.5, color: "#B3261E" }}>{od} overdue</div>}
+            </button>); })}
+          {pages.map((p) => <a key={p.href} href={p.href} className="card" style={{ margin: 0, textDecoration: "none", color: "inherit" }}><b style={{ fontSize: 13.5 }}>{p.label} →</b><div className="small-note">Opens its own page</div></a>)}
+        </div>
+      )}
       <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "end", marginBottom: 10 }}>
         <label style={{ fontSize: 13 }}>What<br /><select className="input" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">Everything ({rows.length - gone.size})</option>{kinds.map(([k, l]) => <option key={k} value={k}>{l} ({rows.filter((r) => r.kind === k && !gone.has(key(r))).length})</option>)}</select></label>
         {areas.length > 1 && <label style={{ fontSize: 13 }}>Program<br /><select className="input" value={area} onChange={(e) => setArea(e.target.value)}><option value="">All</option>{areas.map((a) => <option key={a} value={a}>{a}</option>)}</select></label>}

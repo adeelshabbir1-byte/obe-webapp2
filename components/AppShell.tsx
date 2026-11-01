@@ -7,6 +7,8 @@ import { Menu, X, LogOut, ShieldCheck, Repeat, HeartHandshake, MessageSquareText
 import { DEPT_COORDINATOR_PAGES } from "../lib/deptCoordinator";
 import { groupNavLinks } from "../lib/navGrouping";
 import { splitMenu } from "../lib/roleMenus";
+import { hubMenu } from "../lib/hubMenu";
+import { MenuContext } from "./MenuContext";
 import { getNavIcon } from "../lib/navIcons";
 import { greetingName, initials } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
@@ -59,7 +61,9 @@ export default function AppShell({
   pins = null,
   defaultPins = [],
   otherWork = [],
-  linkStatus = {},
+  linkStatus: linkStatusIn = {},
+  workspaces = [],
+  focus = "",
   display = "",
   look = null,
   children,
@@ -85,6 +89,8 @@ export default function AppShell({
   display?: string;
   look?: { color: string | null; watermark: string } | null;
   linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
+  workspaces?: { key: string; label: string; home: string }[];
+  focus?: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -129,7 +135,7 @@ export default function AppShell({
   // Once the page has re-rendered in the new role, the switch button is usable again
   // (switching while already on the home page keeps this component mounted).
   const activeRole = roleSwitch?.activeRole;
-  useEffect(() => { setSwitching(false); }, [activeRole]);
+  useEffect(() => { setSwitching(false); }, [activeRole, focus]);
 
   const links = useMemo(() => {
     const withRequests = navLinks.some((n) => n.href === "/requests") ? navLinks : [...navLinks, { href: "/requests", label: "Requests" }];
@@ -138,6 +144,18 @@ export default function AppShell({
       ? withRequests.filter((n) => n.href === "/dept-coordinator/home" || n.href === "/omc/reports" || DEPT_COORDINATOR_PAGES.includes(n.href))
       : withRequests;
   }, [navLinks, deptCoordinator]);
+  // A hub shows the worst status of its pages, with their total count.
+  const linkStatus = useMemo(() => {
+    if (deptCoordinator || focus) return linkStatusIn;
+    const out = { ...linkStatusIn }; const R = { red: 0, amber: 1, blue: 2 } as const;
+    for (const h of hubMenu(menuRole, links).hubs) {
+      const sts = h.members.map((m) => linkStatusIn[m]).filter(Boolean);
+      if (!sts.length) continue;
+      const worst = sts.reduce((a, b) => (R[b.status] < R[a.status] ? b : a));
+      out[h.href] = { status: worst.status, count: sts.reduce((a, b) => a + b.count, 0), reasons: sts.flatMap((x) => x.reasons).slice(0, 4) };
+    }
+    return out;
+  }, [linkStatusIn, deptCoordinator, focus, menuRole, links]);
   // Lighter menus: the main menu holds what this role acts on; other pages and view-only reports fold away below.
   const allSections = useMemo(() => groupNavLinks(links), [links]);
   // Menu colours (Adeel prompt §1): red overdue / blocking, amber due soon, blue in progress; icons too, for colour-blind users.
@@ -155,8 +173,12 @@ export default function AppShell({
     for (const h of hrefs) { const st = linkStatus[h]?.status; if (st && (!w || RANKS[st] < RANKS[w])) w = st; }
     return w ? <span title="Something here needs you" style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: DOT[w][0], marginLeft: 6 }} /> : null;
   };
-  const split = useMemo(() => (deptCoordinator ? null : splitMenu(menuRole, links, dutyHrefs, groupNavLinks)), [menuRole, links, dutyHrefs, deptCoordinator]);
-  const sections = split ? split.main : allSections;
+  // Short menu (UX review): Home, one Approvals, the role's daily pages and a few hubs of cards. A hat workspace
+  // (Controller, QEC …) shows its own few pages flat; a department Program Coordinator keeps the program menu.
+  const hm = useMemo(() => (deptCoordinator || focus ? null : hubMenu(menuRole, links)), [deptCoordinator, focus, menuRole, links]);
+  const hubOfPath = useMemo(() => { const m = new Map<string, string>(); for (const h of hm?.hubs || []) for (const x of h.members) m.set(x, h.href); return m; }, [hm]);
+  const split = useMemo(() => (deptCoordinator || hm || focus ? null : splitMenu(menuRole, links, dutyHrefs, groupNavLinks)), [menuRole, links, dutyHrefs, deptCoordinator, hm, focus]);
+  const sections = hm ? [{ title: "Menu", links: [...hm.direct, ...hm.hubs.map((h) => ({ href: h.href, label: h.label }))] }] : focus ? [{ title: workspaces.find((w) => w.key === focus)?.label || "Workspace", links }] : split ? split.main : allSections;
   const [extraOpen, setExtraOpen] = useState<"" | "more" | "view">("");
   const crowded = !split && sections.length > 2;
 
@@ -329,6 +351,15 @@ export default function AppShell({
         )}
 
         <nav className="sb-nav" ref={navRef}>
+          {workspaces.length > 1 && (
+            <div style={{ margin: "0 0 8px", padding: "6px 8px", borderRadius: 8, background: "rgba(127,127,127,.08)" }}>
+              <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".04em", opacity: 0.7, marginBottom: 4 }}>Working as</div>
+              <select aria-label="Working as" value={focus} disabled={switching} style={{ width: "100%", fontSize: 13, padding: "4px 6px", borderRadius: 6 }}
+                onChange={async (e) => { const w = workspaces.find((x) => x.key === e.target.value); setSwitching(true); await fetch("/api/menu-focus", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ focus: e.target.value }) }).catch(() => null); router.push(w?.home || "/dashboard"); router.refresh(); }}>
+                {workspaces.map((w) => <option key={w.key} value={w.key}>{w.label}</option>)}
+              </select>
+            </div>
+          )}
           {showHome && (
             <Link prefetch={false} href="/dashboard" className="nav-link" aria-current={homeActive ? "page" : undefined} style={{ marginBottom: 6 }}>
               <span className="nl-icon"><Home size={16} strokeWidth={2.1} /></span>
@@ -424,7 +455,7 @@ export default function AppShell({
                   {crowded && <span className="sb-sec-right">{!open && <span className="sb-count">{section.links.length}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>}
                 </button>
                 {open && section.links.map((n) => {
-                  const isActive = n.href === current;
+                  const isActive = n.href === current || (n.href.startsWith("/hub/") && (pathname.startsWith(n.href) || hubOfPath.get(current || "") === n.href));
                   const Icon = n.href === "/requests" ? Inbox : getNavIcon(n.label);
                   return (
                     <Link key={n.href} href={n.href} prefetch={false} className="nav-link" aria-current={isActive ? "page" : undefined} title={n.label}>
@@ -546,7 +577,7 @@ export default function AppShell({
           <WhatsNewNotice />
           <OfflineMarks />
           <UndoToast />
-          {children}
+          <MenuContext.Provider value={{ links, linkStatus }}>{children}</MenuContext.Provider>
           <div className="app-footer">
             {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
             <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved. · <a href="/privacy">Privacy</a></span>
