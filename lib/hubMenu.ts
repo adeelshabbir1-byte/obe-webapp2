@@ -28,7 +28,7 @@ const PLACE: [RegExp, string, string][] = [
   [/^\/(appraisals|recruitment|teacher-performance|fdp|fdp-funding|faculty-leave|delegations|cv-review|recognition|visiting-pay)$/, "people", "Faculty"],
   [/^\/(accreditation\/.*|quality-office|qaa|plagiarism|policy-history|signed-documents|faculty-sufficiency|hemis|research|alumni-voice|ga-council-map|ga-coverage|plo-progress|outcome-flow|risk)$/, "quality", "Quality"],
   [/^\/(committees|boards|meetings-hub|meeting-planner)$/, "quality", "Committees & meetings"],
-  [/^\/(head-dashboard|inactivity|prediction|plan-insights|process-map|who-does-what|where-courses-used|student-movement)$/, "reports", "Insights"],
+  [/^\/(head-dashboard|pilot-figures|inactivity|prediction|plan-insights|process-map|who-does-what|where-courses-used|student-movement)$/, "reports", "Insights"],
   [/^\/operations$/, "institute", "Overview"],
   [/^\/(admissions|fees|fee-refunds|accounts|hr|billing)$/, "institute", "Fees, HR & accounts"],
   [/^\/(assets|inventory|lab-inventory|library.*|purchasing|facilities|facility-booking|faculty-meals|resources)$/, "institute", "Facilities & stores"],

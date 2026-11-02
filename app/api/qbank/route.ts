@@ -70,7 +70,8 @@ async function GET_handler(req: NextRequest) {
     if (!qb.mayOpen(r.ctx, user)) return NextResponse.json({ error: "Only the course's Subject Expert, its teachers and the Program Lead see this bank." }, { status: 403 });
     const { prisma } = await import("../../../lib/db");
     const names = new Map((await prisma.user.findMany({ where: { id: { in: Array.from(new Set(r.items.map((x) => x.authorId))) } }, select: { id: true, name: true } })).map((x) => [x.id, x.name]));
-    return NextResponse.json({ items: r.items.map((x) => shape(x, names)), reviewer: qb.isReviewer(r.ctx, user), isSE: r.viewer.isSE, course: { id: r.ctx.course.id, code: r.ctx.course.code, baseId: r.ctx.baseId } });
+    const practice = Array.from(await (await import("../../../lib/practicePool")).poolFor(r.ctx.chairmanId, r.ctx.codes));
+    return NextResponse.json({ practice, items: r.items.map((x) => shape(x, names)), reviewer: qb.isReviewer(r.ctx, user), isSE: r.viewer.isSE, course: { id: r.ctx.course.id, code: r.ctx.course.code, baseId: r.ctx.baseId } });
   } catch (e) { return fail(e); }
 }
 
@@ -104,6 +105,7 @@ async function POST_handler(req: NextRequest) {
       case "redeem": return NextResponse.json(await qb.redeemCode(user, s(b.code, 40)));
       case "revoke": return NextResponse.json(await qb.revokeCode(user, s(b.id, 60)));
       case "unlock": return NextResponse.json(await qb.unlock(user, s(b.id, 60), s(b.reason, 500)));
+      case "practice": return NextResponse.json(await (await import("../../../lib/practicePool")).setPractice(user, s(b.courseId, 60), s(b.id, 60), !!b.on));
       case "draft": return NextResponse.json(await qb.draft(user, s(b.courseId, 60), b));
       case "variant": return NextResponse.json(await qb.variant(user, s(b.paperId, 60)));
       case "adopt": return NextResponse.json(await qb.adopt(user, s(b.paperId, 60)));
