@@ -26,6 +26,7 @@ export default function QuestionBankApp({ courseId, plan, userId, colleagues }: 
   const [tab, setTab] = useState("bank");
   const [items, setItems] = useState<QItem[]>([]);
   const [reviewer, setReviewer] = useState(false);
+  const [practice, setPractice] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -36,7 +37,7 @@ export default function QuestionBankApp({ courseId, plan, userId, colleagues }: 
     const d = await r.json().catch(() => ({}));
     if (r.status === 401 && d.pin) { setPin((p) => ({ ...(p || { set: true }), unlocked: false })); return; }
     if (!r.ok) { setMsg({ ok: false, text: d.error || "Could not open the bank." }); return; }
-    setItems(d.items || []); setReviewer(!!d.reviewer);
+    setItems(d.items || []); setReviewer(!!d.reviewer); setPractice(new Set((d.practice || []) as string[]));
   }, [courseId, q]);
   useEffect(() => { loadPin(); }, [loadPin]);
   useEffect(() => { if (pin?.unlocked) load(); }, [pin?.unlocked, load]);
@@ -78,6 +79,8 @@ export default function QuestionBankApp({ courseId, plan, userId, colleagues }: 
                 <td>{x.mcq ? "MCQ bank" : VIS[x.visibility]}</td><td>{x.author}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   {x.authorId === userId && !x.mcq && <select value={x.visibility} onChange={(e) => act({ action: "share", id: x.id, visibility: e.target.value, sharedWith: e.target.value === "CHOSEN" ? colleagues.filter((c) => confirm(`Share with ${c.name}?`)).map((c) => c.id) : [] }, () => "Saved.")} data-share={x.id}>{Object.entries(VIS).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>}
+                  {practice.has(x.id) && <div className="small-note" style={{ color: "#1E6B4F" }} data-practice-on>Student practice — never drawn into a graded paper</div>}
+                  {reviewer && !x.mcq && x.status === "APPROVED" && !x.lockedUntil && <button className="btn btn-secondary btn-sm" data-practice={x.id} title="Released questions are shown to the course's students for self-practice, with the answer, and are no longer used in graded papers." onClick={() => { const on = !practice.has(x.id); if (!on || confirm("Release this question for student practice? Students will see it with its answer, and it will no longer be used in graded papers.")) act({ action: "practice", courseId, id: x.id, on }, () => on ? "Released for student practice." : "Taken back from student practice."); }}>{practice.has(x.id) ? "Withdraw from practice" : "Release for practice"}</button>}
                   {reviewer && x.lockedUntil && <button className="btn btn-secondary btn-sm" onClick={() => { const r = prompt("Why unlock it early? (logged)"); if (r) act({ action: "unlock", id: x.id, reason: r }, () => "Unlocked."); }}>Unlock</button>}
                 </td>
               </tr>))}</tbody></table>

@@ -357,7 +357,8 @@ export async function draft(u: U, courseId: string, b: Record<string, any>) {
   const tIdx = termIndex(term);
   const recentUse = new Set(((await db.qbUse.findMany({ where: { courseId: { in: (await prisma.course.findMany({ where: { code: { in: ctx.codes } }, select: { id: true } })).map((c) => c.id) } } }).catch(() => [])) as { itemId: string; termLabel: string }[]).filter((x) => { const i = termIndex(x.termLabel); return i !== null && tIdx !== null && tIdx - i < recentTerms; }).map((x) => x.itemId));
   const v = await viewerFor(u, ctx);
-  const bank = (await items(ctx.chairmanId, ctx.codes)).filter((x) => !x.mcq && x.type !== "MCQ_MULTI" && canSee(x, v) && canUse(x, u.id, true));
+  const practice = await (await import("./practicePool")).poolFor(ctx.chairmanId, ctx.codes);
+  const bank = (await items(ctx.chairmanId, ctx.codes)).filter((x) => !x.mcq && x.type !== "MCQ_MULTI" && canSee(x, v) && canUse(x, u.id, true) && !practice.has(x.id));
   const clos = plan.clos.map((c) => c.code);
   const shares: Record<string, number> = b.cloShares && typeof b.cloShares === "object" ? Object.fromEntries(Object.entries(b.cloShares).map(([k, x]) => [k, Number(x) || 0])) : Object.fromEntries(clos.map((c) => [c, 1]));
   const opts: DraftOpts = { total: Number(b.total) || (examType === "Midterm" ? 30 : 50), minutes: Number(b.minutes) || (examType === "Midterm" ? 90 : 180), cloShares: shares, ...lim, bloom: b.bloom, difficulty: b.difficulty, lastTaught, exclude: recentUse, term };
@@ -381,7 +382,8 @@ export async function variant(u: U, paperId: string) {
   const v = await viewerFor(u, ctx);
   const siblings = (await db.qbPaper.findMany({ where: { OR: [{ id: p.parentId || p.id }, { parentId: p.parentId || p.id }] } })) as { itemIdsJson: string; variant: string }[];
   const taken = new Set(siblings.flatMap((s) => J<string[]>(s.itemIdsJson, [])));
-  const r = makeVariant(questions, all.filter((x) => !x.mcq && canSee(x, v) && canUse(x, u.id, true)), { exclude: taken, term: p.termLabel, lastTaught: opts.lastTaught ?? null });
+  const practice = await (await import("./practicePool")).poolFor(ctx.chairmanId, ctx.codes);
+  const r = makeVariant(questions, all.filter((x) => !x.mcq && canSee(x, v) && canUse(x, u.id, true) && !practice.has(x.id)), { exclude: taken, term: p.termLabel, lastTaught: opts.lastTaught ?? null });
   const letter = String.fromCharCode(65 + siblings.length);
   const id = randomUUID();
   const check = paperCheck(r.chosen, { ...opts, cloShares: opts.cloShares || {} });

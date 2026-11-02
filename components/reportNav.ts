@@ -381,6 +381,7 @@ export const HOD_NAV = [
 // University ERP pages, added to each role's menu by what the role may use (see lib/erp erpAccess).
 const ERP_LINKS: [string, string, string[]][] = [
   ["/head-dashboard", "Institute Dashboard", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"]],
+  ["/pilot-figures", "Pilot Figures (time saved)", ["CHAIRMAN", "DEAN"]],
   ["/regulations", "National Regulations", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "PROGRAM_LEAD", "DEPARTMENT_COORDINATOR", "SUBJECT_EXPERT", "INSTRUCTOR", "OMC", "COURSE_ASSIGNER", "LAB_ENGINEER", "LAB_MANAGER", "LIBRARIAN", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "FACILITIES_MANAGER"]],
   ["/consortium", "Consortium", ["CHAIRMAN"]],
   ["/consortium/agreements", "Consortium Agreements", ["CHAIRMAN", "SUBJECT_EXPERT"]],
