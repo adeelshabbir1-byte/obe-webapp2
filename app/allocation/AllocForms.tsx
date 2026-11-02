@@ -47,3 +47,22 @@ export function SwapAsk({ planId, mine, others }: { planId: string; mine: { key:
     <select value={b} onChange={(e) => setB(e.target.value)}><option value="">swap with…</option>{others.map((x) => <option key={`${x.key}|${x.teacherId}`} value={`${x.key}|${x.teacherId}`}>{x.teacher}: {x.label}</option>)}</select>
     <button type="button" className="btn btn-sm" onClick={async () => { const [row, ...id] = b.split("|"); const otherRow = b.slice(0, b.lastIndexOf("|")); const r = await post({ action: "swap", planId, myRow: a, otherRow, otherId: b.slice(b.lastIndexOf("|") + 1) }); void row; void id; setM(r.error || "Asked ✓"); }}>Ask to swap</button> {m}</span>;
 }
+
+// The preference window: teachers can save course preferences only between these dates (none set = always open).
+export function WindowForm({ opens, closes, note }: { opens: string; closes: string; note: string }) {
+  const [v, setV] = useState({ opens, closes, note }); const [m, setM] = useState("");
+  return <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap", alignItems: "end", fontSize: 13 }} data-window>
+    <label>Opens<br /><input type="date" value={v.opens} onChange={(e) => setV({ ...v, opens: e.target.value })} /></label>
+    <label>Closes<br /><input type="date" value={v.closes} onChange={(e) => setV({ ...v, closes: e.target.value })} /></label>
+    <label>Message to teachers<br /><input value={v.note} onChange={(e) => setV({ ...v, note: e.target.value })} style={{ minWidth: 220 }} /></label>
+    <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "prefWindow", ...v }); setM(r.error || "Saved — teachers are told ✓"); }}>Save window</button>
+    {(opens || closes) && <button type="button" className="btn-link" onClick={async () => { const r = await post({ action: "prefWindow", opens: "", closes: "" }); setM(r.error || "Window removed — always open"); if (!r.error) setV({ opens: "", closes: "", note: "" }); }}>Remove</button>}
+    <span className="small-note">{m}</span></span>;
+}
+// A mentor for a teacher's first time on a course.
+export function MentorPick({ teacherId, code, current, suggest, pool }: { teacherId: string; code: string; current: string; suggest: { id: string; name: string; why: string }[]; pool: { id: string; name: string }[] }) {
+  const [v, setV] = useState(current); const [m, setM] = useState("");
+  const rest = pool.filter((p) => p.id !== teacherId && !suggest.some((s) => s.id === p.id));
+  return <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><select value={v} onChange={(e) => setV(e.target.value)} data-mentor={`${teacherId}|${code}`}><option value="">— no mentor —</option>{suggest.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.why})</option>)}{rest.length > 0 && <optgroup label="Others">{rest.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup>}</select>
+    <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "mentor", teacherId, code, mentorId: v }); setM(r.error || "Saved ✓ — both are told"); }}>Save</button><span className="small-note">{m}</span></span>;
+}

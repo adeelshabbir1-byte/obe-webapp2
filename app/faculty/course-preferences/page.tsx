@@ -4,6 +4,8 @@ import { roleLabel } from "../../../lib/reportScope";
 import { navForRole } from "../../../components/reportNav";
 import Shell from "../../../components/Shell";
 import CoursePreferencesManager from "../../../components/CoursePreferencesManager";
+import { chairmanIdFor } from "../../../lib/reportScope";
+import { windowNow } from "../../../lib/allocExtras";
 
 export default async function CoursePreferencesPage() {
   const user = await getAuthenticatedUser();
@@ -12,12 +14,14 @@ export default async function CoursePreferencesPage() {
   if (user.mustChangePassword) redirect("/change-password");
   if (!["SUBJECT_EXPERT", "INSTRUCTOR"].includes(user.role)) redirect("/dashboard");
 
+  const win = await windowNow(await chairmanIdFor(user as never)).catch(() => ({ state: "NONE", text: "" }));
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>My Course Preferences</h1>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 20 }}>
         Let the Course Assigner know which courses you'd like to teach.
       </p>
+      {win.state !== "NONE" && <p style={{ fontSize: 13, padding: 8, borderRadius: 6, background: win.state === "OPEN" ? "#E3F2E6" : "#FBF3E4", marginBottom: 12 }} data-window-state>{win.text}</p>}
       <CoursePreferencesManager />
     </Shell>
   );

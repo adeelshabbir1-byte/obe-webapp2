@@ -112,3 +112,18 @@ export function LectureModes({ id, code, courseId, lectures, pct }: { id: string
     <div style={{ columns: "2 300px" }}>{lectures.map((l) => <div key={l.n} style={{ breakInside: "avoid", display: "flex", gap: 6, alignItems: "center", padding: "1px 0" }}><span style={{ width: 30 }}>L{l.n}</span><select value={m[String(l.n)] || ""} onChange={(e) => setM({ ...m, [String(l.n)]: e.target.value })}><option value="">—</option><option value="F2F">Face-to-face</option><option value="LIVE">Live online</option><option value="REC">Recorded</option></select><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.topic}</span></div>)}</div>
     <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "modes", id, courseId, code, modes: m }); setMsg(r.error || `Saved — ${r.pct}% face-to-face or live (blended needs ≥ 34%, ODL 8.2.3)`); }}>Save tags</button> <span className="small-note">{msg}</span></details>;
 }
+
+export function PartnerAccess({ id, partners, links }: { id: string; partners: { name: string }[]; links: { id: string; partner: string; contact: string; email: string; expires: string; revoked?: boolean; lastSeen?: string }[] }) {
+  const [f, setF] = useState({ partner: partners[0]?.name || "", contact: "", email: "", days: "90" }); const [m, setM] = useState(""); const [url, setUrl] = useState("");
+  return <details style={{ marginTop: 12, fontSize: 13 }} data-partner-access><summary style={{ cursor: "pointer" }}><b>Partner access</b> <span className="small-note">— a private link for each partner&apos;s focal person to see the programme and comment on or agree each step ({links.filter((l) => !l.revoked && new Date(l.expires) > new Date()).length} active)</span></summary>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "end", marginTop: 6 }}>
+      <label>Partner<br /><select value={f.partner} onChange={(e) => setF({ ...f, partner: e.target.value })}>{partners.map((x) => <option key={x.name}>{x.name}</option>)}</select></label>
+      <label>Focal person<br /><input value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></label>
+      <label>Email<br /><input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+      <label>Valid for (days)<br /><input type="number" min={7} max={365} value={f.days} onChange={(e) => setF({ ...f, days: e.target.value })} style={{ width: 70 }} /></label>
+      <button type="button" className="btn btn-sm" disabled={!f.partner} onClick={async () => { const r = await post({ action: "partnerLink", id, ...f, days: Number(f.days) }); if (r.error) setM(r.error); else { setUrl(r.url); setM("Link made — copy it now; it is shown only once."); } }}>Make link</button>
+    </div>
+    {url && <p style={{ wordBreak: "break-all", background: "#F7F6F1", padding: 6, borderRadius: 6 }} data-partner-url>{url}</p>}<span className="small-note">{m}</span>
+    {links.length > 0 && <table className="table" style={{ fontSize: 12.5, marginTop: 6 }}><thead><tr><th>Partner</th><th>Focal person</th><th>Valid until</th><th>Last used</th><th /></tr></thead><tbody>{links.map((l) => <tr key={l.id}><td>{l.partner}</td><td>{l.contact}{l.email ? ` · ${l.email}` : ""}</td><td>{l.revoked ? "revoked" : l.expires.slice(0, 10)}</td><td>{l.lastSeen ? l.lastSeen.slice(0, 10) : "—"}</td><td>{!l.revoked && <button type="button" className="btn-link" onClick={async () => { const r = await post({ action: "partnerRevoke", id, linkId: l.id }); if (r.error) setM(r.error); else location.reload(); }}>Revoke</button>}</td></tr>)}</tbody></table>}
+  </details>;
+}

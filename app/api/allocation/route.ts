@@ -32,7 +32,10 @@ async function POST_handler(req: NextRequest) {
       case "submit": if (!assigner) break; await submit(user as never, await plan(), !!b.markVisiting); return NextResponse.json({ ok: true });
       case "withdraw": { if (!assigner) break; const p = await plan(); if (p.status !== "SUBMITTED") throw new Error("Not submitted."); await db.allocationPlan.update({ where: { id: p.id }, data: { status: "DRAFT" } }); return NextResponse.json({ ok: true }); }
       case "decide": { const p = (await db.allocationPlan.findUnique({ where: { id: String(b.planId) } })) as Plan | null; if (!p || p.chairmanId !== cid) throw new Error("Not found."); await decide(user, p, !!b.approve); return NextResponse.json({ ok: true }); }
+      case "prefWindow": { if (!["HEAD_OF_DEPARTMENT", "CHAIRMAN", "COURSE_ASSIGNER"].includes(user.role)) break; const { setPrefWindow } = await import("../../../lib/allocExtras"); return NextResponse.json({ ok: true, window: await setPrefWindow(user, cid, String(b.opens || ""), String(b.closes || ""), String(b.note || "")) }); }
+      case "mentor": { if (!assigner) break; const { setMentor } = await import("../../../lib/allocExtras"); const { yearLabelNow } = await import("../../../lib/yearPlan"); await setMentor(user, cid, yearLabelNow(), String(b.teacherId), String(b.code), String(b.mentorId || "")); return NextResponse.json({ ok: true }); }
       case "pref": {
+        { const block = await (await import("../../../lib/allocExtras")).prefBlock(cid); if (block) throw new Error(block); }
         const code = String(b.courseCode || "").trim().toUpperCase(); if (!code) throw new Error("Which course?");
         const rank = Math.max(1, Math.min(3, Number(b.rank) || 2));
         const had = await prisma.facultyCoursePreference.findFirst({ where: { facultyId: user.id, courseCode: code } });
@@ -41,7 +44,8 @@ async function POST_handler(req: NextRequest) {
         await savePrefDetail(user.id, code, String(b.sections || ""), String(b.times || ""));
         return NextResponse.json({ ok: true });
       }
-      case "unpref": await prisma.facultyCoursePreference.deleteMany({ where: { facultyId: user.id, courseCode: String(b.courseCode || "").toUpperCase() } }); return NextResponse.json({ ok: true });
+      case "unpref": { const block = await (await import("../../../lib/allocExtras")).prefBlock(cid); if (block) throw new Error(block); }
+        await prisma.facultyCoursePreference.deleteMany({ where: { facultyId: user.id, courseCode: String(b.courseCode || "").toUpperCase() } }); return NextResponse.json({ ok: true });
       case "rule": if (!["HEAD_OF_DEPARTMENT", "CHAIRMAN"].includes(user.role)) break; await addRule(user.id, cid, b as never); return NextResponse.json({ ok: true });
       case "unrule": if (!["HEAD_OF_DEPARTMENT", "CHAIRMAN"].includes(user.role)) break; await removeRule(cid, String(b.id)); return NextResponse.json({ ok: true });
       case "swap": {

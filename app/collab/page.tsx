@@ -7,7 +7,7 @@ import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { staffOf } from "../../lib/registers";
 import { ASSIGNERS, lectureModes, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
-import { Assign, Cem, CemOk, Check, Courses, Field, Kpis, LectureModes, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
+import { PartnerAccess, Assign, Cem, CemOk, Check, Courses, Field, Kpis, LectureModes, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
 
 export const dynamic = "force-dynamic";
 const LEADERS = ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"];
@@ -102,6 +102,8 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
             {isDdjd(p.kind) && <div style={{ border: "1px solid var(--line, #ddd)", borderRadius: 8, padding: 10, fontSize: 13 }}><b>Public programme page</b><div style={{ marginTop: 4 }}><a href={`/programme/${p.id}`} target="_blank">Open</a></div></div>}
           </div>}
 
+          {(((d as Record<string, any>).partnerNotes || []) as { partner: string; contact: string; step: string; text: string; agree: boolean; at: string }[]).filter((n) => n.step === st.key).map((n, i) => <div key={i} style={{ marginTop: 8, padding: 8, borderRadius: 8, background: n.agree ? "#E6F4EA" : "#F1F4F9", fontSize: 13 }} data-partner-note><b>{n.partner}</b> ({n.contact}) {n.agree ? "agreed this step" : "commented"} · {n.at.slice(0, 10)}{n.text ? <div style={{ whiteSpace: "pre-wrap" }}>{n.text}</div> : null}</div>)}
+          {isDdjd(p.kind) && <PartnerAccess id={p.id} partners={d.partners || []} links={(((d as Record<string, any>).partnerLinks || []) as { id: string; partner: string; contact: string; email: string; expires: string; revoked?: boolean; lastSeen?: string }[])} />}
           <div style={{ marginTop: 14, padding: 10, borderRadius: 8, background: missing.length ? "#FFF6E5" : "#E6F4EA", fontSize: 13 }}>
             {missing.length ? <><b>Still missing in this step</b><ul style={{ margin: "4px 0 0 18px", padding: 0 }}>{missing.map((m) => <li key={m}>{m}</li>)}</ul></> : <b>This step is complete ✓</b>}
           </div>

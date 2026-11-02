@@ -78,6 +78,11 @@ async function PUT_handler(req: NextRequest) {
   }
   const { courseCode, priority } = body;
   if (!courseCode) return NextResponse.json({ error: "courseCode is required" }, { status: 400 });
+  {
+    const { chairmanIdFor } = await import("../../../../lib/reportScope");
+    const block = await (await import("../../../../lib/allocExtras")).prefBlock(await chairmanIdFor(user as never));
+    if (block) return NextResponse.json({ error: block }, { status: 400 });
+  }
 
   if (priority === null || priority === undefined) {
     // "Not interested" — no explicit record needed, that's the default.

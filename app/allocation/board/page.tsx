@@ -6,7 +6,8 @@ import Tabs from "../../../components/Tabs";
 import { navForRole } from "../../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../../lib/reportScope";
 import { board, fairness } from "../../../lib/allocBoard";
-import { Act } from "../AllocForms";
+import { Act, WindowForm } from "../AllocForms";
+import { prefWindow, windowNow } from "../../../lib/allocExtras";
 import RuleForm from "./RuleForm";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function AllocationBoardPage({ searchParams: sp }: { search
   const cid = await chairmanIdFor(user as never);
   const b = await board(user as never, cid);
   const tab = sp.tab || "courses";
+  const [win, winNow] = await Promise.all([prefWindow(cid), windowNow(cid)]);
   const hod = ["HEAD_OF_DEPARTMENT", "CHAIRMAN"].includes(user.role);
   const lines = b.lines.filter((l) => (!sp.area || l.category === sp.area) && (!sp.course || l.code === sp.course));
   const teachers = b.teachers.filter((t) => (!sp.area || t.category === sp.area) && (!sp.teacher || t.id === sp.teacher));
@@ -31,6 +33,8 @@ export default async function AllocationBoardPage({ searchParams: sp }: { search
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1>Allocation — preferences board</h1>
       <p className="small-note">Teachers rank courses and may pick sections and times on their <Link href="/allocation/year-card">year card</Link>. A course only one teacher asked for is <b>uncontested</b> (he gets it unless it overloads him or breaks a rule); two or more is <b>contested</b> — teachers are ranked by points (their rank, times taught, subject match, load). <Link href="/allocation/year-plan">Year plan →</Link></p>
+      <div className="card no-print" style={{ fontSize: 13 }} data-pref-window><b>Preference window</b> <span className="small-note">{winNow.state === "NONE" ? "Not set — teachers can change preferences at any time." : winNow.text}</span>
+        {["HEAD_OF_DEPARTMENT", "CHAIRMAN", "COURSE_ASSIGNER"].includes(user.role) && <div style={{ marginTop: 6 }}><WindowForm opens={win?.opens || ""} closes={win?.closes || ""} note={win?.note || ""} /></div>}</div>
       <form className="card no-print" style={{ fontSize: 13, display: "flex", gap: 8, flexWrap: "wrap" }}><input type="hidden" name="tab" value={tab} />
         <select name="area" defaultValue={sp.area || ""}><option value="">All subject areas</option>{b.categories.map((c) => <option key={c}>{c}</option>)}</select>
         <button className="btn btn-sm">Show</button> <Link href="/allocation/board" className="small-note">Clear</Link></form>

@@ -25,6 +25,12 @@ async function POST_handler(req: NextRequest) {
       const to = b.userId ? await prisma.user.findUnique({ where: { id: String(b.userId) }, select: { id: true, name: true } }) : null;
       await assignOwner(user, p, to?.id || "", to?.name || ""); return NextResponse.json({ ok: true });
     }
+    if (b.action === "partnerLink") {
+      const { createLink } = await import("../../../lib/collabPartner");
+      const r = await createLink(user, p, String(b.partner || ""), String(b.contact || ""), String(b.email || ""), Number(b.days) || 90);
+      return NextResponse.json({ ok: true, url: `${req.nextUrl.origin}/collab-partner/${r.token}`, expires: r.link.expires });
+    }
+    if (b.action === "partnerRevoke") { const { revokeLink } = await import("../../../lib/collabPartner"); await revokeLink(user, p, String(b.linkId)); return NextResponse.json({ ok: true }); }
     if (b.action === "save") { await saveData(p, b.data || {}, b.status); return NextResponse.json({ ok: true }); }
     if (b.action === "modes") return NextResponse.json({ ok: true, pct: await saveModes(p, user.id, String(b.courseId), String(b.code), b.modes || {}) });
     if (b.action === "cem") { const cem = await draftCem(String(b.ours), String(b.theirs)); await saveData(p, { cem }); return NextResponse.json({ ok: true, lines: cem.length }); }

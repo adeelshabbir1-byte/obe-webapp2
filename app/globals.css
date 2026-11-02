@@ -772,3 +772,14 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
 
 /* Batch set-up strip: only the step numbers on narrow screens */
 @media (max-width: 760px) { .setup-strip-title { display: none; } }
+
+/* Phones, teacher screens (UX queue item 7): wide tables scroll inside themselves instead of widening the page; form
+   fields at 16 px so phones do not zoom in on tap; long words and links wrap; pictures fit the screen. */
+@media (max-width:760px){
+  .main table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .main input,.main select,.main textarea{font-size:16px;max-width:100%;}
+  .main textarea{min-height:72px;}
+  .main p,.main li{overflow-wrap:anywhere;}
+  .main img,.main svg:not(.lucide){max-width:100%;height:auto;}
+  .main .btn + .btn{margin-top:4px;}
+}

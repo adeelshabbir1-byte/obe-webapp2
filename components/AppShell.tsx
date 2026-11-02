@@ -9,6 +9,7 @@ import { groupNavLinks } from "../lib/navGrouping";
 import { splitMenu } from "../lib/roleMenus";
 import { hubMenu } from "../lib/hubMenu";
 import { MenuContext } from "./MenuContext";
+import { tr } from "../lib/i18n/ur";
 import { getNavIcon } from "../lib/navIcons";
 import { greetingName, initials } from "../lib/names";
 import { BRAND, sized } from "../lib/brandAssets";
@@ -65,6 +66,7 @@ export default function AppShell({
   workspaces = [],
   focus = "",
   display = "",
+  lang = "",
   look = null,
   children,
 }: {
@@ -87,12 +89,14 @@ export default function AppShell({
   defaultPins?: string[];
   otherWork?: { role: string; label: string; links: NavLink[] }[];
   display?: string;
+  lang?: string;
   look?: { color: string | null; watermark: string } | null;
   linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
   workspaces?: { key: string; label: string; home: string }[];
   focus?: string;
   children: React.ReactNode;
 }) {
+  const t = (s: string) => tr(lang, s);
   const router = useRouter();
   const pathname = usePathname() || "";
   const [navOpen, setNavOpen] = useState(false);
@@ -307,7 +311,8 @@ export default function AppShell({
   return (
     <div className="shell" data-nav-open={navOpen ? "true" : "false"}>
       <div className="sb-overlay" onClick={() => setNavOpen(false)} aria-hidden="true" />
-      <aside className="sidebar" aria-label="Main navigation">
+      <aside className="sidebar" aria-label="Main navigation" dir={lang === "ur" ? "rtl" : undefined} style={lang === "ur" ? { fontFamily: "'Noto Nastaliq Urdu', 'Noto Naskh Arabic', serif", lineHeight: 1.9 } : undefined}>
+        {lang === "ur" && <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" />}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link prefetch={false} href="/dashboard" className="sb-brand" aria-label="OBEHUB home">
             <img className="sb-mark" src={BRAND.mark.src} alt="" {...sized(BRAND.mark, 35)} />
@@ -346,7 +351,7 @@ export default function AppShell({
           <div className="sb-search">
             <Search size={15} aria-hidden="true" />
             <input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onSearchKey}
-              placeholder="Find a page…" aria-label="Find a page" aria-controls="sb-results" autoComplete="off" spellCheck={false} />
+              placeholder={t("Find a page…")} aria-label="Find a page" aria-controls="sb-results" autoComplete="off" spellCheck={false} />
           </div>
         )}
 
@@ -360,10 +365,11 @@ export default function AppShell({
               </select>
             </div>
           )}
+          <button type="button" className="btn-link" style={{ fontSize: 12, margin: "0 0 6px 8px" }} data-lang onClick={async () => { await fetch("/api/lang", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang: lang === "ur" ? "en" : "ur" }) }); location.reload(); }}>{lang === "ur" ? "English" : "اردو"}</button>
           {showHome && (
             <Link prefetch={false} href="/dashboard" className="nav-link" aria-current={homeActive ? "page" : undefined} style={{ marginBottom: 6 }}>
               <span className="nl-icon"><Home size={16} strokeWidth={2.1} /></span>
-              <span className="nl-label">Home</span>
+              <span className="nl-label">{t("Home")}</span>
             </Link>
           )}
           {q && (
@@ -375,7 +381,7 @@ export default function AppShell({
                   <Link key={n.href} href={n.href} prefetch={false} className="nav-link" role="option" aria-selected={i === hit} data-hit={i === hit ? "true" : "false"}
                     aria-current={n.href === current ? "page" : undefined} onClick={() => setQuery("")} onMouseEnter={() => setHit(i)}>
                     <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
-                    <span className="nl-label">{n.label}<span className="nl-sub">{n.section}</span></span>
+                    <span className="nl-label">{t(n.label)}<span className="nl-sub">{t(n.section)}</span></span>
                   </Link>
                 );
               })}
@@ -383,13 +389,13 @@ export default function AppShell({
           )}
           {!q && (
             <div className="sb-section">
-              <div className="sb-section-title" data-collapsible="false"><span><Star size={11} style={{ verticalAlign: -1, marginRight: 4 }} />My work</span></div>
+              <div className="sb-section-title" data-collapsible="false"><span><Star size={11} style={{ verticalAlign: -1, marginRight: 4 }} />{t("My work")}</span></div>
               {myWork.map((n) => {
                 const Icon = n.href === "/requests" ? Inbox : getNavIcon(n.label);
                 return (
                   <Link key={n.href} href={n.href} prefetch={false} className="nav-link" aria-current={n.href === current ? "page" : undefined} title={n.label}>
                     <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
-                    <span className="nl-label">{n.label}</span>
+                    <span className="nl-label">{t(n.label)}</span>
                     {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
                     {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
                     {n.href !== "/approvals" && dot(n.href)}
@@ -412,7 +418,7 @@ export default function AppShell({
                 return (
                   <a key={n.href} href={n.href} className="nav-link" title={`Switches to this role and opens ${n.label}`} onClick={(e) => { e.preventDefault(); openAs(w.role, n.href); }}>
                     <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
-                    <span className="nl-label">{n.label}</span>
+                    <span className="nl-label">{t(n.label)}</span>
                   </a>
                 );
               })}
@@ -426,7 +432,7 @@ export default function AppShell({
                 return (
                   <Link key={n.href} href={n.href} prefetch={false} className="nav-link nl-compact" title={n.label}>
                     <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span>
-                    <span className="nl-label">{n.label}</span>
+                    <span className="nl-label">{t(n.label)}</span>
                   </Link>
                 );
               })}
@@ -451,7 +457,7 @@ export default function AppShell({
                   onClick={() => setSections({ ...openSec, [section.title]: !open })}
                   aria-expanded={open}
                 >
-                  <span>{section.title}{groupDot(section.links.map((l) => l.href))}</span>
+                  <span>{t(section.title)}{groupDot(section.links.map((l) => l.href))}</span>
                   {crowded && <span className="sb-sec-right">{!open && <span className="sb-count">{section.links.length}</span>}{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>}
                 </button>
                 {open && section.links.map((n) => {
@@ -460,7 +466,7 @@ export default function AppShell({
                   return (
                     <Link key={n.href} href={n.href} prefetch={false} className="nav-link" aria-current={isActive ? "page" : undefined} title={n.label}>
                       <span className="nl-icon"><Icon size={16} strokeWidth={2.1} /></span>
-                      <span className="nl-label">{n.label}</span>
+                      <span className="nl-label">{t(n.label)}</span>
                       {n.href === "/requests" && requestsCount > 0 && <span className="nl-badge" aria-label={`${requestsCount} waiting`}>{requestsCount}</span>}
                     {n.href === "/approvals" && approvalsCount > 0 && <span className="nl-badge" aria-label={`${approvalsCount} waiting for your approval`}>{approvalsCount}</span>}
                       {n.href !== "/approvals" && dot(n.href)}
@@ -487,7 +493,7 @@ export default function AppShell({
                       const Icon = getNavIcon(l.label);
                       return (
                         <Link key={l.href} href={l.href} prefetch={false} className="nav-link nl-compact" aria-current={l.href === current ? "page" : undefined} title={l.label}>
-                          <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span><span className="nl-label">{l.label}</span>{dot(l.href)}{star(l.href)}
+                          <span className="nl-icon"><Icon size={14} strokeWidth={2.1} /></span><span className="nl-label">{t(l.label)}</span>{dot(l.href)}{star(l.href)}
                         </Link>
                       );
                     })}
@@ -577,7 +583,7 @@ export default function AppShell({
           <WhatsNewNotice />
           <OfflineMarks />
           <UndoToast />
-          <MenuContext.Provider value={{ links, linkStatus }}>{children}</MenuContext.Provider>
+          <MenuContext.Provider value={{ links, linkStatus, lang }}>{children}</MenuContext.Provider>
           <div className="app-footer">
             {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
             <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved. · <a href="/privacy">Privacy</a></span>

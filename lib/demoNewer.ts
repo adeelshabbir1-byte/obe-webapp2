@@ -8,7 +8,7 @@ import { DEMO_HEAD, DEMO_PASSWORD } from "./demoInstitute";
 // (Dream College Sahiwal) with its own head; jobs and the exam team. Then the year allocation plan, committee members,
 // a full affiliation year, and a joint degree plus a single ODL course.
 const db = prisma as unknown as Record<string, any>;
-export const NEWER_PARTS = ["people", "allocation", "committees", "affiliation", "collab"] as const;
+export const NEWER_PARTS = ["people", "allocation", "committees", "affiliation", "collab", "college"] as const;
 export const COLLEGE_HEAD = "dream.college";
 const day = (n: number) => new Date(Date.now() + n * 864e5);
 const iso = (n: number) => day(n).toISOString().slice(0, 10);
@@ -104,6 +104,42 @@ export async function newerPart(part: string, superUserId: string): Promise<stri
       await rec("MARKING", "MARKING", "CS-201 final — answer sheets", { course: "CS-201", marker: "Dr. Usman Ali", markerInstitute: "BZU Multan", maxMarks: 60, key, marks: Object.fromEntries(Object.keys(key).slice(0, 12).map((c, i) => [c, 30 + (i * 3) % 25])) }, col.id);
       await rec("RECHECK", "APPLIED", "Re-marking — DCS-24-017, CS-201", { student: "DCS-24-017", course: "CS-201", type: "Re-marking", fee: 1000 }, col.id, col.id);
       return "16 affiliation records (applications, centre, 3 examiners, sessions with agreed marks, claims, notice, faculty approval, fees, NCEAC, final paper, coded marking, re-check)";
+    }
+    case "college": {
+      // Dream College Sahiwal gets a BS CS batch: a Program Lead, 3 teachers, 25 students, semesters 2 (complete) and 3
+      // (running) with marks — then university registration numbers and the OBE records, so "Results & OBE" has data.
+      const col = await must(COLLEGE_HEAD);
+      const I = await import("./demoInstitute");
+      const { CD2023_PLOS } = await import("./computing2023Content");
+      const hash = await hashPassword(DEMO_PASSWORD);
+      const mkU = async (username: string, name: string, role: string, managedById: string) => (await u(username)) || prisma.user.create({ data: { id: randomUUID(), username, email: `${username}@dreamcollege.demo`, passwordHash: hash, name, role, mustChangePassword: false, managedById } as never });
+      await mkU("dream.college.lead", "Mr. Asif Nawaz", "PROGRAM_COORDINATOR", col.id);
+      const lead = await must("dream.college.lead");
+      for (const [i, n] of ["Ms. Sana Javed", "Mr. Kashif Ali", "Ms. Rabia Noor"].entries()) await mkU(`dream.college.t${i + 1}`, n, "INSTRUCTOR", lead.id);
+      const teacherIds = (await Promise.all([1, 2, 3].map((i) => must(`dream.college.t${i}`)))).map((t) => t.id);
+      let batch = await prisma.batch.findFirst({ where: { coordinatorId: lead.id }, select: { id: true } });
+      if (!batch) {
+        await prisma.degreeProgram.create({ data: { coordinatorId: lead.id, name: "BS Computer Science", shortCode: "BSCS" } as never }).catch(() => null);
+        batch = await prisma.batch.create({ data: { coordinatorId: lead.id, degreeProgram: "BS Computer Science", batchName: "BSCS Fall 2025", startTerm: "Fall", startYear: 2025, studentCount: 25, advisorId: teacherIds[0] } as never, select: { id: true } });
+        await prisma.currentTerm.create({ data: { coordinatorId: lead.id, termName: "Fall", year: 2026 } as never }).catch(() => null);
+        const G: [string, number][] = [["A", 4], ["A-", 3.67], ["B+", 3.33], ["B", 3], ["B-", 2.67], ["C+", 2.33], ["C", 2], ["C-", 1.67], ["D+", 1.33], ["D", 1], ["F", 0]];
+        await prisma.gradingScale.createMany({ data: G.map(([letter, gpa], i) => ({ coordinatorId: lead.id, letter, gpaValue: gpa, orderIndex: i })) as never }).catch(() => null);
+        await prisma.pLO.createMany({ data: (CD2023_PLOS as { number: number; title: string; description?: string }[]).map((p) => ({ coordinatorId: lead.id, batchId: batch!.id, number: p.number, title: p.title, description: p.description || p.title, status: "approved" })) as never });
+        const F = ["Ali", "Sara", "Hamza", "Ayesha", "Bilal", "Zainab", "Usman", "Hira", "Fahad", "Maryam", "Saad", "Iqra", "Omar"], L = ["Khan", "Ahmed", "Raza", "Malik", "Shah", "Iqbal", "Butt", "Qureshi"];
+        await prisma.student.createMany({ data: Array.from({ length: 25 }, (_, i) => ({ id: randomUUID(), batchId: batch!.id, name: `${F[(i * 7) % F.length]} ${L[(i * 3) % L.length]}`, rollNumber: `DCS-CS-25-${String(i + 1).padStart(3, "0")}`, passwordHash: hash, mustChangePassword: false, currentSemesterNumber: 3 })) as never });
+      }
+      let courses = 0;
+      for (const sem of [2, 3]) courses += await I.coursesStep(batch.id, I.BUILTIN_CS, sem, teacherIds);
+      for (const sem of [2, 3]) await I.activityStep(batch.id, sem).catch(() => 0);
+      // University registration numbers, confirmed by the university's Registrar (the affiliation office in the demo).
+      const studs = await prisma.student.findMany({ where: { batchId: batch.id }, orderBy: { rollNumber: "asc" }, select: { id: true } });
+      const reg = await must("dream.affiliation");
+      for (const [i, st] of studs.entries()) {
+        const regNo = `DU-25-${String(i + 1).padStart(4, "0")}`;
+        await db.affStudentReg?.upsert({ where: { studentId: st.id }, create: { studentId: st.id, universityId: h.id, collegeId: col.id, regNo, status: "CONFIRMED", confirmedAt: new Date(), confirmedById: reg.id }, update: { regNo, status: "CONFIRMED" } }).catch(() => null);
+      }
+      const sync = await (await import("./uniObe")).syncCollege(col.id).catch(() => ({ courses: 0, records: 0 }));
+      return `Dream College: BS CS Fall 2025, 25 students with registration numbers, ${courses} new course(s) in semesters 2 and 3 with marks; ${sync.records} OBE records on ${sync.courses} course(s)`;
     }
     case "collab": {
       const C = await import("./collab");

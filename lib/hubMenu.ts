@@ -21,7 +21,7 @@ const PLACE: [RegExp, string, string][] = [
   [/^\/(my-calendar|my-leave|my-payslips|my-obe|handbook|guide|my-feedback|benefits|allocation\/year-card)$/, "work", "Me"],
   [/^\/(controller|exams|exam-board|degrees|official-transcript|status-changes|term-archive|accommodations|academic-rules|admission-criteria)$/, "academics", "Exams & results"],
   [/^\/(allocation\/(board|year-plan)|hod\/assign-subject-experts|scheduling|timetable\/live|semester-readiness|academic-calendar|plan-requests)$/, "academics", "Semester & Timetable"],
-  [/^\/(course-catalog|course-homes|courses-in-degree|curriculum-changes|dean\/course-codes|coordinator\/(course-codes|curriculum-sync|labs-overview|activities)|question-bank|program-spec)$/, "academics", "Programs & Courses"],
+  [/^\/(course-catalog|course-homes|courses-in-degree|curriculum-changes|dean\/course-codes|coordinator\/(course-codes|curriculum-sync|labs-overview|activities)|question-bank|plan-generate|program-spec)$/, "academics", "Programs & Courses"],
   [/^\/(omc\/.*|moderation|cqi\/remedies|early-warning|instructor\/mid-feedback)$/, "academics", "Outcomes & CQI"],
   [/^\/(adp|collab|affiliation|affiliates\/marks|chairman\/affiliates|college\/design)$/, "academics", "Degrees, partners & colleges"],
   [/^\/(counselling)$/, "academics", "Students"],

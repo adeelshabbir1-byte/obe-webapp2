@@ -324,7 +324,7 @@ export async function refreshStats(courseId: string) {
 }
 
 // ---------------------------------------------------------------- drafting a paper
-async function omcLimits(chairmanId: string, examType: string) {
+export async function omcLimits(chairmanId: string, examType: string) {
   const { blueprintOf } = await import("./examBoard");
   const bp = await blueprintOf(chairmanId, examType === "Midterm" ? "Midterm" : "Final").catch(() => null);
   return { minCloPct: bp?.minCloPct ?? 10, maxCloPct: bp?.maxCloPct ?? 50 };
