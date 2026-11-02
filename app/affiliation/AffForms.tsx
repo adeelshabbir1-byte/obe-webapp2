@@ -59,3 +59,14 @@ export function Officer({ current, staff, side }: { current: string; staff: { id
   const [v, setV] = useState(current); const [m, setM] = useState("");
   return <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>{side === "UNI" ? "Affiliation office handled by" : "Affiliation focal person"} <select value={v} onChange={(e) => setV(e.target.value)}><option value="">— nobody —</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select><button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "officer", userId: v }); setM(r.error || "Assigned ✓ — they were told"); }}>Assign</button> <span className="small-note">{m}</span></span>;
 }
+
+export function JobsForm({ jobs, staff }: { jobs: { key: string; label: string; does: string; holders: string[] }[]; staff: { id: string; name: string }[] }) {
+  const [v, setV] = useState<Record<string, string[]>>(Object.fromEntries(jobs.map((j) => [j.key, j.holders]))); const [add, setAdd] = useState<Record<string, string>>({}); const [m, setM] = useState("");
+  const name = (id: string) => staff.find((s) => s.id === id)?.name || id;
+  return <div style={{ marginTop: 8 }}><p className="small-note" style={{ marginTop: 0 }}>Each step is done only by the people named for its job (and the Institute Head). A job with nobody named is done by the Affiliation office and the heads.</p>
+    <table className="table" style={{ fontSize: 12.5 }}><tbody>{jobs.map((j) => <tr key={j.key}><td style={{ width: "40%" }}><b>{j.label}</b><div className="small-note">{j.does}</div></td><td>
+      {(v[j.key] || []).map((id) => <span key={id} style={{ display: "inline-block", margin: "0 6px 4px 0", padding: "1px 8px", borderRadius: 10, background: "rgba(27,95,170,.1)" }}>{name(id)} <button type="button" className="btn-link" aria-label={`Remove ${name(id)}`} onClick={() => setV({ ...v, [j.key]: (v[j.key] || []).filter((x) => x !== id) })}>×</button></span>)}
+      <select value={add[j.key] || ""} onChange={(e) => { const id = e.target.value; if (id) setV({ ...v, [j.key]: Array.from(new Set([...(v[j.key] || []), id])) }); setAdd({ ...add, [j.key]: "" }); }}><option value="">+ add a person…</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+    </td></tr>)}</tbody></table>
+    <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "jobs", jobs: v }); setM(r.error || "Saved ✓ — new people were told"); }}>Save</button> <span className="small-note">{m}</span></div>;
+}

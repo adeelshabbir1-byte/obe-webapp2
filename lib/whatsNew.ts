@@ -5,6 +5,7 @@ export type WhatsNew = { id: string; date: string; roles: string[]; text: string
 
 const STAFF = "*";
 export const WHATS_NEW: WhatsNew[] = [
+  { id: "2026-11-02-a", date: "2026-11-02", roles: ["CHAIRMAN", "DEAN"], text: "Affiliation: “Who does what” — name the Affiliation office, inspectors, committee, final authority, Registrar, Controller and Treasurer; each step is done only by its job's people.", href: "/affiliation" },
   { id: "2026-11-01-zl", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR"], text: "Joint degrees and ODL: every HEC file in PDF or Word, and a Memorandum of Commitment drafted from the wizard (items a–r).", href: "/collab" },
   { id: "2026-11-01-zj", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], text: "Committees: a step-by-step “New committee”, and the Members card first — roles and terms, people suggested to tick, add by email, replace with history, your composition rule, and a Secretary who manages members.", href: "/boards" },
   { id: "2026-11-01-zk", date: "2026-11-01", roles: ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"], text: "Desks run by others (Library Desk, fees, payroll, facilities, stores) left your menu; see them on one Institute operations page.", href: "/operations" },

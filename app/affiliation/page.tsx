@@ -8,7 +8,7 @@ import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { claimAmounts, comparison, dataOf, eventsOf, examinerSuggestions, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
 import { getFlag } from "../../lib/scopedSettings";
-import { Ack, Codes, EditRecord, Marks, Move, NewRecord, Officer, RatesForm, ScriptMarks } from "./AffForms";
+import { Ack, Codes, EditRecord, JobsForm, Marks, Move, NewRecord, Officer, RatesForm, ScriptMarks } from "./AffForms";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,13 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   if (!s.universityId || (!s.asUni && !s.asCollege)) return shell(<div className="card"><p>Your institute is not an affiliating university with colleges, nor an affiliated college. The link is set on <Link href="/chairman/affiliates">Affiliated colleges</Link>.</p></div>);
   const side = s.asUni ? "UNI" : "COLLEGE";
   { const off = await (await import("../../lib/dutyAssign")).affiliationOfficer(inst, side);
-    bar = ["CHAIRMAN", "DEAN"].includes(user.role) ? <div className="card" style={{ padding: "8px 12px", fontSize: 13 }}><Officer current={off?.userId || ""} side={side} staff={(await (await import("../../lib/registers")).staffOf(inst)).filter((x) => x.id !== user.id)} /></div> : off ? <p className="small-note">Handled by {off.name}.</p> : null; }
+    const officerBar = ["CHAIRMAN", "DEAN"].includes(user.role) ? <div className="card" style={{ padding: "8px 12px", fontSize: 13 }}><Officer current={off?.userId || ""} side={side} staff={(await (await import("../../lib/registers")).staffOf(inst)).filter((x) => x.id !== user.id)} /></div> : off ? <p className="small-note">Handled by {off.name}.</p> : null;
+    const jobs = side === "UNI" ? await (await import("../../lib/affJobs")).jobsOf(inst) : null;
+    const JC = await import("../../lib/affJobsCore");
+    const jobsBar = jobs ? <details className="card" style={{ padding: "8px 12px", fontSize: 13 }}><summary style={{ cursor: "pointer", fontWeight: 700 }}>Who does what ({Object.values(jobs).flat().length} people)</summary>
+      {["CHAIRMAN", "DEAN"].includes(user.role) ? <JobsForm jobs={Object.entries(JC.JOBS).map(([k, v]) => ({ key: k, label: v.label, does: v.does, holders: (jobs[k] || []).map((h) => h.userId) }))} staff={(await (await import("../../lib/registers")).staffOf(inst)).map((x) => ({ id: x.id, name: x.name }))} />
+        : <table className="table" style={{ fontSize: 12.5 }}><tbody>{Object.entries(JC.JOBS).map(([k, v]) => <tr key={k}><td><b>{v.label}</b><div className="small-note">{v.does}</div></td><td>{(jobs[k] || []).map((h) => h.name).join(", ") || <span className="small-note">not named — the Affiliation office and heads</span>}</td></tr>)}</tbody></table>}</details> : null;
+    bar = <>{officerBar}{jobsBar}</>; }
   const tab = searchParams.tab || "APPLICATION";
   const colleges = s.colleges.map((c) => ({ id: c.collegeId, name: c.head?.instituteName || c.head?.name || "College" }));
   const colName = new Map(colleges.map((c) => [c.id, c.name]));
@@ -50,6 +56,8 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   const cover = open && open.kind === "FINAL_PAPER" && (side === "UNI" || "topics" in viewData(open, side)) ? await paperCoverage(open as never, side === "COLLEGE" ? inst : null) : [];
   if (open && open.kind === "FINAL_PAPER" && side === "UNI") await (await import("../../lib/audit")).writeAuditLog({ actorUserId: user.id, action: "FINAL_PAPER_VIEWED", entityType: "AffRecord", entityId: open.id }).catch(() => null);
   const sugg = open && open.kind === "SESSION" && side === "UNI" ? await examinerSuggestions(open as never) : null;
+  const JCx = await import("../../lib/affJobsCore");
+  const jobsX = side === "UNI" ? await (await import("../../lib/affJobs")).jobsOf(inst) : {};
   const names = new Map((await prisma.user.findMany({ where: { id: { in: ev.map((e) => e.byId).concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   return shell(<>
     <Tabs base="/affiliation" current={k.key} tabs={tabs.map((t) => ({ ...t, badge: t.key === k.key ? rows.length || null : null }))} />
@@ -75,7 +83,7 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
           {!codes.length ? <Codes id={open.id} /> : open.status === "MARKING" ? <><b>Marks by code</b> <span className="small-note">(the marker sees only codes)</span><ScriptMarks id={open.id} codes={codes} marks={marks} max={Number(d.maxMarks) || 100} /></> : open.status === "DECODED" ? <><b>Decoded (Controller&apos;s office)</b><table className="table" style={{ fontSize: 12 }}><tbody>{codes.map((c) => <tr key={c}><td>{key[c]}</td><td>{marks[c] ?? "—"}</td></tr>)}</tbody></table></> : <span className="small-note">{codes.length} scripts coded. Move to Marking to enter marks.</span>}
         </div>; })()}
         {k.key === "SESSION" && <div style={{ marginTop: 8 }}><Marks id={open.id} rows={d.marks || []} side={side} /></div>}
-        {m && m.by === side && <div style={{ marginTop: 8 }}>Next: <Move id={open.id} to={m.to} /></div>}
+        {m && m.by === side && <div style={{ marginTop: 8 }}>Next: <Move id={open.id} to={m.to} />{side === "UNI" && <div className="small-note">{Array.from(new Set(m.to.map((t) => (JCx.JOBS[JCx.jobForMove(open.kind, t)] ? JCx.holdersText(JCx.jobForMove(open.kind, t), jobsX) : "")))).filter(Boolean).map((t) => `For the ${t}`).join(" · ")}</div>}</div>}
         <details style={{ marginTop: 8 }}><summary className="small-note" style={{ cursor: "pointer" }}>Trail ({ev.length})</summary><ul style={{ fontSize: 12 }}>{ev.map((e, i) => <li key={i}>{new Date(e.at).toLocaleString("en-GB")} · {names.get(e.byId) || "—"} · {e.action.toLowerCase()}{e.note ? ` — ${e.note}` : ""}</li>)}</ul></details>
       </div>); })()}
   </>);
