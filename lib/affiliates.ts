@@ -144,6 +144,8 @@ export const headOf = (heads: Head[], instrumentType: string) => heads.find((h) 
 
 /** Refusal when a college teacher enters marks of a head the university enters. */
 export async function collegeMarksBlock(courseId: string, instrumentIds: string[]): Promise<string | null> {
+  // Sessional marks submitted to the university lock until it reopens them (lib/uniObe.ts).
+  { const lk = await (await import("./uniObe")).sessionalBlock(courseId, instrumentIds).catch(() => null); if (lk) return lk; }
   const p = await policyFor(courseId).catch(() => null);
   if (!p) return null;
   const uniHeads = p.heads.filter((h) => h.by === "UNIVERSITY").map((h) => norm(h.type));
@@ -228,6 +230,8 @@ export async function universitySave(actorId: string, universityId: string, cour
   const inst = sheet.insts.find((i) => i.id === instrumentId);
   if (!inst) throw new Error("That assessment is not one the university enters.");
   const byRoll = new Map(sheet.students.map((s) => [s.rollNumber.trim().toUpperCase(), s.id]));
+  // The university's registration numbers work too (lib/uniObe.ts).
+  for (const [sid, r] of Array.from((await (await import("./uniObe")).regMap(sheet.students.map((s) => s.id))).entries())) if (r.regNo && r.status === "CONFIRMED") byRoll.set(r.regNo.trim().toUpperCase(), sid);
   let saved = 0; const unknown: string[] = []; const bad: string[] = [];
   for (const raw of lines.split(/\r?\n/)) {
     const line = raw.trim(); if (!line) continue;
@@ -241,6 +245,8 @@ export async function universitySave(actorId: string, universityId: string, cour
     await prisma.studentMark.upsert({ where: { studentId_instrumentId: { studentId: sid, instrumentId } }, create: { studentId: sid, courseId, instrumentId, score, enteredById: actorId }, update: { score, enteredById: actorId } });
     saved++;
   }
+  // Both sides at once: the college's course has the marks; the university's OBE record is refreshed (re-checks too).
+  await (await import("./uniObe")).syncCourseObe(courseId).catch(() => 0);
   await writeAuditLog({ actorUserId: actorId, action: "AFFILIATE_UNIVERSITY_MARKS", entityType: "Course", entityId: courseId, metadata: { instrumentId, saved, unknown: unknown.length, bad: bad.length } });
   return `Saved ${saved} mark(s) for ${inst.label}.${unknown.length ? ` Unknown roll numbers: ${unknown.slice(0, 8).join(", ")}${unknown.length > 8 ? "…" : ""}.` : ""}${bad.length ? ` ${bad.length} line(s) skipped (not "roll, score" or above ${inst.maxScore}).` : ""}`;
 }

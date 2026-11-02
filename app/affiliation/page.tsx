@@ -8,12 +8,13 @@ import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { claimAmounts, comparison, dataOf, eventsOf, examinerSuggestions, KINDS, kindOf, list, paperCoverage, ratesOf, sessionalVsFinal, sideOf, viewData } from "../../lib/affWork";
 import { getFlag } from "../../lib/scopedSettings";
+import ResultsTab from "./ResultsTab";
 import { Ack, Codes, EditRecord, JobsForm, Marks, Move, NewRecord, Officer, RatesForm, ScriptMarks } from "./AffForms";
 
 export const dynamic = "force-dynamic";
 
 // Affiliation: university ↔ colleges (Adeel prompt §28–30). One register per kind with its workflow, plus reports.
-export default async function AffiliationPage({ searchParams }: { searchParams: { tab?: string; open?: string } }) {
+export default async function AffiliationPage({ searchParams }: { searchParams: { tab?: string; open?: string; college?: string; student?: string; q?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -34,7 +35,7 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
   const tab = searchParams.tab || "APPLICATION";
   const colleges = s.colleges.map((c) => ({ id: c.collegeId, name: c.head?.instituteName || c.head?.name || "College" }));
   const colName = new Map(colleges.map((c) => [c.id, c.name]));
-  const tabs = [...KINDS.map((k) => ({ key: k.key, label: k.label })), ...(side === "UNI" ? [{ key: "REPORTS", label: "Comparison reports" }, { key: "RATES", label: "Examiner rates" }] : [])];
+  const tabs = [{ key: "RESULTS", label: "Results & OBE" }, ...KINDS.map((k) => ({ key: k.key, label: k.label })), ...(side === "UNI" ? [{ key: "REPORTS", label: "Comparison reports" }, { key: "RATES", label: "Examiner rates" }] : [])];
   if (tab === "REPORTS" && side === "UNI") {
     const [cmp, gap] = await Promise.all([comparison(s.universityId), sessionalVsFinal(s.universityId)]);
     const codes = Array.from(new Set(cmp.map((c) => c.code))).sort();
@@ -47,6 +48,7 @@ export default async function AffiliationPage({ searchParams }: { searchParams: 
       <div className="card"><h3 style={{ marginTop: 0, fontSize: 15 }}>Programs without council accreditation</h3><ul style={{ fontSize: 13 }}>{acc.filter((a) => a.status !== "ACCREDITED").map((a) => <li key={a.id}>{colName.get(a.collegeId || "")}: {dataOf(a).program} — {a.status.toLowerCase()}</li>)}{acc.filter((a) => a.status === "ACCREDITED" && dataOf(a).validUntil && new Date(dataOf(a).validUntil) < new Date(Date.now() + 180 * 864e5)).map((a) => <li key={a.id}>{colName.get(a.collegeId || "")}: {dataOf(a).program} — accreditation expires {dataOf(a).validUntil}</li>)}</ul></div>
     </>);
   }
+  if (tab === "RESULTS") return shell(<><Tabs base="/affiliation" current={tab} tabs={tabs} /><ResultsTab side={side} inst={inst} universityId={s.universityId!} colleges={colleges} sp={searchParams} /></>);
   if (tab === "RATES" && side === "UNI") return shell(<><Tabs base="/affiliation" current={tab} tabs={tabs} /><div className="card"><RatesForm rates={await ratesOf(s.universityId) as never} /></div></>);
   const k = kindOf(tab) || KINDS[0];
   const rows = await list(s.universityId, k.key, side === "COLLEGE" ? inst : null);

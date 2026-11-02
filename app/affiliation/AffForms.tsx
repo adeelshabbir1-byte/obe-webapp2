@@ -70,3 +70,13 @@ export function JobsForm({ jobs, staff }: { jobs: { key: string; label: string; 
     </td></tr>)}</tbody></table>
     <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "jobs", jobs: v }); setM(r.error || "Saved ✓ — new people were told"); }}>Save</button> <span className="small-note">{m}</span></div>;
 }
+
+export function ResultsAction({ label, body, confirm: ask }: { label: string; body: Record<string, unknown>; confirm?: string }) {
+  const [m, setM] = useState(""); const [busy, setBusy] = useState(false);
+  return <span><button type="button" className="btn btn-sm" disabled={busy} onClick={async () => { if (ask && !confirm(ask)) return; setBusy(true); const r = await post(body); setBusy(false); setM(r.error || r.message || "Done ✓"); if (!r.error) location.reload(); }}>{busy ? "Working…" : label}</button> <span className="small-note">{m}</span></span>;
+}
+export function RegConfirm({ collegeId, sample }: { collegeId: string; sample: string }) {
+  const [v, setV] = useState(sample); const [m, setM] = useState("");
+  return <div><p className="small-note" style={{ margin: "4px 0" }}>One per line: college roll number, registration number.</p><textarea rows={6} value={v} onChange={(e) => setV(e.target.value)} style={{ width: "100%", fontFamily: "monospace" }} />
+    <button type="button" className="btn btn-sm" onClick={async () => { const r = await post({ action: "regConfirm", collegeId, lines: v }); setM(r.error || r.message); if (!r.error) location.reload(); }}>Confirm numbers</button> <span className="small-note">{m}</span></div>;
+}

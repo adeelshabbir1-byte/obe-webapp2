@@ -974,6 +974,13 @@ export const BUILTIN_ARTICLES: HelpArticle[] = [
     steps: ["Menu → Institute → Institute operations.", "Red cards need attention (overdue loans, past-due fees, open faults).", "Open a card to see the desk."],
     who: "Institute Head, Dean and HOD.", pages: ["/operations"], keywords: ["operations", "library", "fees", "payroll", "facilities", "assets", "store"], href: "/operations",
   }),
+  A({
+    key: "affiliate-results-obe", kind: "guide", category: "exams", roles: [IH, DEAN, HOD, PL],
+    title: "Affiliated colleges: one exam, two complete OBE records",
+    summary: "The college enters its sessional marks and submits them to the university, which locks them. The university enters its own parts (the final) straight into the college's course, matched by registration number. The college's OBE data is then complete for NCEAC, and the university keeps its own OBE record of every college student — CLO and graduate-attribute results per course — for OBE transcripts. A re-checked mark updates both sides.",
+    steps: ["College: Affiliation → Results & OBE → request registration numbers.", "University (Registrar): confirm the numbers (roll, registration no.).", "College: submit each course's sessional marks; they lock.", "University (Controller): enter the final per question (Enter university marks); OBE records refresh.", "Either side: open a student's OBE transcript; the university's is official, the college's an internal copy."],
+    who: "The college's heads and the university's Registrar and Controller.", pages: ["/affiliation"], keywords: ["obe transcript", "registration number", "sessional", "final exam", "affiliated college", "nceac", "graduate attributes"], href: "/affiliation",
+  }),
 ];
 
 export const BUILTIN_BY_KEY = new Map(BUILTIN_ARTICLES.map((a) => [a.key, a]));
