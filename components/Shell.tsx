@@ -127,6 +127,7 @@ export default async function Shell({
       linkStatus={menu?.statuses || {}}
       look={user && user.role !== "SUPER_USER" ? await import("../lib/brandLookServer").then(async (m) => m.lookOf(await (await import("../lib/branding")).cachedChairmanIdFor(user as never))).catch(() => null) : null}
       display={user ? (await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "display")).catch(() => null)) || "" : ""}
+      lang={user ? (await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "lang")).catch(() => null)) || "" : ""}
       unreadNotifications={unreadNotifications}
       pins={focus ? [] : pins}
       defaultPins={sessionInfo?.deptCoordinator ? defaultWork(role, links) : []}

@@ -45,7 +45,7 @@ export type Step = { key: string; label: string; p?: Prog; start?: number; sem?:
 
 /** Every step of "Make demo ready", in order. Each one is one HTTP call that fits the Vercel time limit. */
 /** The newest features' demo data (lib/demoNewer.ts), also runnable on their own from the demo page. */
-export const NEWER: [string, string][] = [["people", "Affiliation office, Treasurer, an affiliated college, affiliation jobs, exam team"], ["allocation", "Year allocation plan: drafted, submitted, approved"], ["committees", "BOS members with roles, terms, Secretary and composition rule"], ["affiliation", "A year of affiliation work with Dream College Sahiwal"], ["collab", "A joint degree and a blended ODL course, each with its lead"]];
+export const NEWER: [string, string][] = [["people", "Affiliation office, Treasurer, an affiliated college, affiliation jobs, exam team"], ["allocation", "Year allocation plan: drafted, submitted, approved"], ["committees", "BOS members with roles, terms, Secretary and composition rule"], ["affiliation", "A year of affiliation work with Dream College Sahiwal"], ["collab", "A joint degree and a blended ODL course, each with its lead"], ["college", "Dream College: a BS CS batch with students, courses, marks, registration numbers and OBE records"]];
 export function readyPlan(): Step[] {
   const s: Step[] = [{ key: "delete", label: "Removing the old demo institute" }, { key: "setup", label: "Institute, people, BS CS and BS AI, 120 students a batch" }];
   const batchSteps = (p: Prog, start: number) => {
