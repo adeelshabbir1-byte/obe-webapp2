@@ -130,6 +130,7 @@ export async function create(user: { id: string }, side: Side, universityId: str
   if (!db.affRecord) throw new Error("Run prisma/migration_adeel_p9.sql in Supabase first.");
   const k = kindOf(kind); if (!k) throw new Error("Unknown kind.");
   if (k.createdBy !== side) throw new Error(`${k.label} are started by the ${k.createdBy === "UNI" ? "university" : "college"}.`);
+  if (side === "UNI") await (await import("./affJobs")).requireJob(user as never, universityId, (await import("./affJobsCore")).jobForKind(kind));
   const id = randomUUID();
   const clean = Object.fromEntries(k.fields.filter((f) => !f.side || f.side === side).map((f) => [f.key, data[f.key] ?? ""]));
   await db.affRecord.create({ data: { id, universityId, collegeId, kind, status: k.statuses[0], title: title.slice(0, 200) || k.label, dataJson: JSON.stringify(clean), createdById: user.id } });
@@ -143,6 +144,11 @@ export async function create(user: { id: string }, side: Side, universityId: str
 export async function edit(user: { id: string }, side: Side, rec: Rec, data: Record<string, unknown>) {
   const k = kindOf(rec.kind)!;
   const d = dataOf(rec);
+  if (side === "UNI") {
+    const J2 = await import("./affJobsCore");
+    const changed = k.fields.filter((f) => (!f.side || f.side === side) && f.key in data && String(data[f.key] ?? "") !== String(d[f.key] ?? ""));
+    for (const job of Array.from(new Set(changed.map((f) => J2.jobForField(rec.kind, f.key))))) await (await import("./affJobs")).requireJob(user as never, rec.universityId, job);
+  }
   for (const f of k.fields) if ((!f.side || f.side === side) && f.key in data) d[f.key] = data[f.key];
   if (rec.kind === "SESSION" && d.externalId && rec.collegeId) {
     const ex = (await db.affRecord.findUnique({ where: { id: String(d.externalId) } })) as Rec | null;
@@ -159,6 +165,7 @@ export async function move(user: { id: string; name: string }, side: Side, rec: 
   const k = kindOf(rec.kind)!, m = k.moves[rec.status];
   if (!m || !m.to.includes(to)) throw new Error(`Can't go from ${rec.status} to ${to}.`);
   if (m.by !== side) throw new Error(`The ${m.by === "UNI" ? "university" : "college"} does this step.`);
+  if (side === "UNI") await (await import("./affJobs")).requireJob(user as never, rec.universityId, (await import("./affJobsCore")).jobForMove(rec.kind, to));
   const d = dataOf(rec);
   if (rec.kind === "SESSION" && to === "MARKS_AGREED") {
     const rows = (d.marks || []) as { ext?: boolean; int?: boolean }[];
@@ -187,6 +194,7 @@ export async function move(user: { id: string; name: string }, side: Side, rec: 
 
 /** Session marks: each row { roll, mark, ext, int }; the external examiner (university side) and the internal (college) confirm. */
 export async function sessionMarks(user: { id: string }, side: Side, rec: Rec, rows: { roll: string; mark: number | null }[], confirm: boolean) {
+  if (side === "UNI") await (await import("./affJobs")).requireJob(user as never, rec.universityId, "CONTROLLER");
   const d = dataOf(rec);
   const cur = new Map(((d.marks || []) as { roll: string; mark: number | null; ext?: boolean; int?: boolean }[]).map((r) => [r.roll, r]));
   for (const r of rows) {
@@ -252,6 +260,7 @@ export async function sessionalVsFinal(universityId: string, gap = 25) {
 
 /** §30.2: generate the code key for the roll numbers (once), record marks per code, and decode (university only). */
 export async function setCodes(user: { id: string }, rec: Rec, rolls: string[]) {
+  await (await import("./affJobs")).requireJob(user as never, rec.universityId, "CONTROLLER");
   const d = dataOf(rec);
   if (Object.keys(d.key || {}).length) throw new Error("Codes are already generated for this paper.");
   const list = Array.from(new Set(rolls.map((r) => r.trim()).filter(Boolean)));
@@ -261,6 +270,7 @@ export async function setCodes(user: { id: string }, rec: Rec, rolls: string[]) 
   await log(rec.id, user.id, "CODED", `${list.length} scripts`);
 }
 export async function scriptMarks(user: { id: string }, rec: Rec, rows: { code: string; mark: number | null }[]) {
+  await (await import("./affJobs")).requireJob(user as never, rec.universityId, "CONTROLLER");
   const d = dataOf(rec);
   if (rec.status !== "MARKING") throw new Error("Marks are entered while the paper is with the marker.");
   const max = Number(d.maxMarks) || 100;
