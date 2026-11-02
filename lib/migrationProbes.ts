@@ -27,6 +27,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "UserFlag"
 },
 {
+"f": "migration_adeel_p10.sql",
+"d": "Affiliated colleges' results on both sides: university registration numbers of college students, the college's",
+"t": "UniObeRecord"
+},
+{
 "f": "migration_adeel_p4.sql",
 "d": "Adeel prompt part 4: one delegation engine (chosen tasks / approvals / acting, with scope, period and \"may pass on\"),",
 "t": "ArchiveAmendment"

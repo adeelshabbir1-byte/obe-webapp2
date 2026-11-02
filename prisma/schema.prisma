@@ -10276,3 +10276,52 @@ model PaperAccessLog {
 
   @@index([paperId])
 }
+
+// Adeel prompt — affiliated colleges' results on both sides (migration_adeel_p10.sql).
+model AffStudentReg {
+  studentId     String    @id
+  universityId  String
+  collegeId     String
+  regNo         String?
+  status        String    @default("REQUESTED")
+  requestedAt   DateTime  @default(now())
+  confirmedAt   DateTime?
+  confirmedById String?
+
+  @@unique([universityId, regNo], map: "AffStudentReg_uni_reg_key")
+  @@index([universityId, status], map: "AffStudentReg_uni_idx")
+}
+
+model UniSessional {
+  id            String   @id
+  paperId       String
+  collegeId     String
+  courseId      String
+  studentId     String
+  regNo         String?
+  pct           Float?
+  cloJson       String   @default("{}")
+  submittedById String
+  submittedAt   DateTime @default(now())
+
+  @@unique([paperId, studentId], map: "UniSessional_key")
+}
+
+model UniObeRecord {
+  id           String   @id
+  universityId String
+  collegeId    String
+  studentId    String
+  regNo        String?
+  courseCode   String
+  courseTitle  String?
+  term         String?
+  totalPct     Float?
+  cloJson      String   @default("[]")
+  gaJson       String   @default("[]")
+  paperId      String?
+  updatedAt    DateTime @default(now())
+
+  @@unique([universityId, studentId, courseCode, term], map: "UniObeRecord_key")
+  @@index([universityId, regNo], map: "UniObeRecord_reg_idx")
+}
