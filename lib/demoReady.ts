@@ -112,6 +112,7 @@ export async function runReadyStep(i: number, superUserId: string): Promise<{ la
     case "samples": return out(await samples());
     case "polish": return out(await polish(st.p!));
     case "facilities": return out(await facilities());
+    case "newer": return out(await (await import("./demoNewer")).newerPart(st.part!, superUserId));
     case "check": return out(await finalCheck());
   }
   throw new Error(`Unknown step ${st.key}.`);
@@ -653,7 +654,9 @@ export async function demoLoginTarget(key: string): Promise<{ kind: "staff"; id:
   const u = await prisma.user.findUnique({ where: { username: role.username! }, select: { id: true, role: true, isActive: true, managedById: true, managedBy: { select: { managedById: true } } } });
   if (!u || !u.isActive) throw new Error("That demo account is not built yet — run Make demo ready.");
   // Only people of the flagged demo institute (directly under its head, or under one of its Program Leads).
-  if (u.role === "SUPER_USER" || (u.managedById !== d.head.id && u.managedBy?.managedById !== d.head.id)) throw new Error("Not a demo account.");
+  // The demo's affiliated college has its own head, linked to the demo as its university.
+  const college = role.username === "dream.college" && (await (await import("./curriculumLibrary")).universityOf(u.id).catch(() => null)) === d.head.id;
+  if (!college && (u.role === "SUPER_USER" || (u.managedById !== d.head.id && u.managedBy?.managedById !== d.head.id))) throw new Error("Not a demo account.");
   return { kind: "staff", id: u.id };
 }
 

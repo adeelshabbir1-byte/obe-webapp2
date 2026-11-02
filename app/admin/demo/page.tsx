@@ -5,6 +5,8 @@ import { navForRole } from "../../../components/reportNav";
 import { demoSummary, sourceOptions, DEMO_PASSWORD, DEMO_NAME } from "../../../lib/demoInstitute";
 import DemoInstituteRunner from "../../../components/DemoInstituteRunner";
 import DemoReadyRunner from "../../../components/DemoReadyRunner";
+import DemoNewerRunner from "../../../components/DemoNewerRunner";
+import { DEMO_ROLES, NEWER } from "../../../lib/demoReadyCore";
 import { readyStatus } from "../../../lib/demoReady";
 import { adminCan, adminNavFor } from "../../../lib/platformTeam";
 
@@ -27,6 +29,7 @@ export default async function DemoInstitutePage() {
         running (lectures to week 8, attendance, quizzes, assignments and midterm marked). Nothing is emailed. Real institutes are not touched.
       </p>
       <DemoReadyRunner status={JSON.parse(JSON.stringify(ready))} />
+      <DemoNewerRunner parts={NEWER} roles={DEMO_ROLES.filter((r) => r.username).map((r) => ({ key: r.key, label: r.label }))} />
       <details style={{ marginBottom: 12 }}><summary style={{ fontSize: 13, cursor: "pointer" }}>Older builder: copy a real institute&apos;s curriculum instead</summary>
       <DemoInstituteRunner summary={summary ? { ...summary, createdAt: summary.createdAt.toISOString() } : null} sources={sources} password={DEMO_PASSWORD} />
       </details>

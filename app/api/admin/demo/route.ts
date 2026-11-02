@@ -38,6 +38,13 @@ async function POST_handler(req: Request) {
     // "Make demo ready": the page runs the plan one step at a time (each call fits the time limit).
     if (b.step === "readyStatus") return NextResponse.json(await readyStatus());
     if (b.step === "ready") return NextResponse.json(await runReadyStep(Number(b.index), user.id));
+    if (b.step === "newer") return NextResponse.json({ info: await (await import("../../../../lib/demoNewer")).newerPart(String(b.part), user.id) });
+    if (b.step === "pageCheck") {
+      const role = (await import("../../../../lib/demoReadyCore")).roleByKey(String(b.role));
+      if (!role?.username) return NextResponse.json({ error: "Unknown demo role." }, { status: 400 });
+      const extra = ["/affiliation", "/collab", "/boards", "/boards/new", "/operations", "/controller", "/allocation/year-plan", "/allocation/board", "/allocation/year-card", "/whats-new", "/settings/who-decides", "/delegations", "/data-quality", "/meetings-hub", "/cqi/remedies", "/adp", "/timetable/live"];
+      return NextResponse.json(await (await import("../../../../lib/pageCheck")).checkPages(new URL(req.url).origin, role.username, extra, Number(b.offset) || 0));
+    }
     if (b.step === "reset") return NextResponse.json(await resetDemo(user));
     if (b.step === "logins") { await setLogins(!!b.on); return NextResponse.json({ ok: true }); }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }

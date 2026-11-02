@@ -17,6 +17,9 @@ export const DEMO_ROLES: DemoRole[] = [
   { key: "labeng", label: "Lab Engineer", daily: "Runs lab sessions and enters lab marks", username: "dream.labeng" },
   { key: "controller", label: "Controller of Examinations", daily: "Publishes approved results", username: "dream.controller" },
   { key: "qec", label: "QEC", daily: "Quality office: SAR, surveys and reviews", username: "dream.qec" },
+  { key: "affiliation", label: "Affiliation office", daily: "Runs affiliated colleges: applications, visits, centres, examiners, notices", username: "dream.affiliation" },
+  { key: "treasurer", label: "Treasurer", daily: "Approves and pays examiner claims; college fees", username: "dream.treasurer" },
+  { key: "college", label: "Affiliated college head", daily: "Dream College Sahiwal: applications, faculty approvals, notices from the university", username: "dream.college" },
   { key: "student", label: "Student", daily: "Sees attendance, marks, results and transcript", student: true },
 ];
 export const roleByKey = (k: string) => DEMO_ROLES.find((r) => r.key === k) || null;
@@ -41,6 +44,8 @@ export const semNow = (startYear: number) => tIdx("Fall", 2026) - tIdx("Fall", s
 export type Step = { key: string; label: string; p?: Prog; start?: number; sem?: number; part?: string };
 
 /** Every step of "Make demo ready", in order. Each one is one HTTP call that fits the Vercel time limit. */
+/** The newest features' demo data (lib/demoNewer.ts), also runnable on their own from the demo page. */
+export const NEWER: [string, string][] = [["people", "Affiliation office, Treasurer, an affiliated college, affiliation jobs, exam team"], ["allocation", "Year allocation plan: drafted, submitted, approved"], ["committees", "BOS members with roles, terms, Secretary and composition rule"], ["affiliation", "A year of affiliation work with Dream College Sahiwal"], ["collab", "A joint degree and a blended ODL course, each with its lead"]];
 export function readyPlan(): Step[] {
   const s: Step[] = [{ key: "delete", label: "Removing the old demo institute" }, { key: "setup", label: "Institute, people, BS CS and BS AI, 120 students a batch" }];
   const batchSteps = (p: Prog, start: number) => {
@@ -67,7 +72,9 @@ export function readyPlan(): Step[] {
   for (const p of PROGRAMS) for (const start of ALL_STARTS) s.push({ key: "history", p: p.p, start, label: `${p.code} Fall ${start}: topic performance and GA history` });
   s.push({ key: "samples", label: "Best, average and weakest samples (PDF)" });
   for (const p of ["CS", "AI"] as const) s.push({ key: "polish", p, start: 2024, label: `${p === "CS" ? "BS CS" : "BS AI"}: faculty records and loads, lab plan, activities, evidence, course folders` });
-  s.push({ key: "facilities", label: "Rooms and lab computers for 960 computing students" }, { key: "check", label: "Checking readiness" });
+  s.push({ key: "facilities", label: "Rooms and lab computers for 960 computing students" });
+  for (const [part, label] of NEWER) s.push({ key: "newer", part, label });
+  s.push({ key: "check", label: "Checking readiness" });
   return s;
 }
 
