@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { setupDemo, coursesStep, activityStep, finishDemo, deletePass, demoSummary } from "../../../../lib/demoInstitute";
 import { addBusinessSchool } from "../../../../lib/demoCampus";
-import { campusPart, runReadyStep, readyStatus, resetDemo, setLogins } from "../../../../lib/demoReady";
+import { adoptDemo, campusPart, runReadyStep, readyStatus, resetDemo, setLogins } from "../../../../lib/demoReady";
 import { adminCan } from "../../../../lib/platformTeam";
 import { withErrors } from "../../../../lib/apiHandler";
 
@@ -45,6 +45,7 @@ async function POST_handler(req: Request) {
       const extra = ["/affiliation", "/collab", "/boards", "/boards/new", "/operations", "/controller", "/allocation/year-plan", "/allocation/board", "/allocation/year-card", "/whats-new", "/settings/who-decides", "/delegations", "/data-quality", "/meetings-hub", "/cqi/remedies", "/adp", "/timetable/live"];
       return NextResponse.json(await (await import("../../../../lib/pageCheck")).checkPages(new URL(req.url).origin, role.username, extra, Number(b.offset) || 0));
     }
+    if (b.step === "adopt") return NextResponse.json({ info: await adoptDemo(user.id) });
     if (b.step === "reset") return NextResponse.json(await resetDemo(user));
     if (b.step === "logins") { await setLogins(!!b.on); return NextResponse.json({ ok: true }); }
     if (b.step === "finish") { await finishDemo(); return NextResponse.json({ summary: await demoSummary() }); }
