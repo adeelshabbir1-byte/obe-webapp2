@@ -4,7 +4,8 @@ import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
 import { navForRole } from "../../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../../lib/reportScope";
-import { rowsOf, yearCardOf } from "../../../lib/yearPlan";
+import { rowsOf, yearCardOf, yearLabelNow } from "../../../lib/yearPlan";
+import { windowNow, myMentoring } from "../../../lib/allocExtras";
 import { getFlag } from "../../../lib/scopedSettings";
 import { Act, Concern, PrefForm, SwapAsk } from "../AllocForms";
 
@@ -23,6 +24,7 @@ export default async function YearCardPage() {
     (db.allocPrefDetail?.findMany({ where: { facultyId: user.id } }).catch(() => []) || []) as Promise<{ courseCode: string; sections: string | null; times: string | null }[]>,
     yearCardOf(user.id, cid),
   ]);
+  const [win, mentoring] = await Promise.all([windowNow(cid), myMentoring(cid, yearLabelNow(), user.id).catch(() => ({ mentors: [], mentees: [] }))]);
   const swaps = ((await db.allocSwap?.findMany({ where: { bId: user.id, status: "ASKED" } }).catch(() => [])) || []) as { id: string; aId: string; aRow: string; bRow: string }[];
   const names = new Map((await prisma.user.findMany({ where: { id: { in: swaps.map((s) => s.aId).concat("none") } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   return (
@@ -30,10 +32,12 @@ export default async function YearCardPage() {
       <h1>My teaching — preferences and year card</h1>
       <div className="card" style={{ marginBottom: 10 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>My preferences</h3>
+        {win.state !== "NONE" && <p style={{ fontSize: 13, padding: 6, borderRadius: 6, background: win.state === "OPEN" ? "#E3F2E6" : "#FBF3E4" }} data-window-state>{win.text}</p>}
         <p className="small-note">Rank the courses you want to teach. You may name sections (e.g. BSCS-1A, 1B) and times (e.g. mornings only; not Friday). Only one teacher asking for a course makes it uncontested.</p>
         {prefs.map((p) => { const d = details.find((x) => x.courseCode.toUpperCase() === p.courseCode.toUpperCase()); return <div key={p.id} style={{ marginBottom: 4 }}><PrefForm code={p.courseCode} rank={p.priority} sections={d?.sections} times={d?.times} /></div>; })}
         <div style={{ marginTop: 6 }}><PrefForm /></div>
       </div>
+      {(mentoring.mentors.length > 0 || mentoring.mentees.length > 0) && <div className="card" style={{ marginBottom: 10, fontSize: 13 }} data-mentoring><b>Mentoring</b>{mentoring.mentors.map((x) => <div key={x.code}>Your mentor for <b>{x.code}</b> (first time): {x.mentor}</div>)}{mentoring.mentees.map((x) => <div key={x.code + x.teacher}>You mentor {x.teacher} for <b>{x.code}</b></div>)}</div>}
       {swaps.length > 0 && <div className="card" style={{ marginBottom: 10, fontSize: 13 }}><b>Swap requests</b>{swaps.map((s) => <div key={s.id}>{names.get(s.aId)} asks to swap {s.aRow.split("|").slice(0, 2).join(" ")} for your {s.bRow.split("|").slice(0, 2).join(" ")} <Act body={{ action: "swapAnswer", id: s.id, accept: true }} label="Agree" /> <Act body={{ action: "swapAnswer", id: s.id, accept: false }} label="Decline" /></div>)}</div>}
       {card.length === 0 ? <div className="card"><p>No approved year allocation for you yet.</p></div> : await Promise.all(card.map(async (c) => {
         const ack = await getFlag(user.id, `alloc:ack:${c.plan.id}`), concern = await getFlag(user.id, `alloc:concern:${c.plan.id}`);

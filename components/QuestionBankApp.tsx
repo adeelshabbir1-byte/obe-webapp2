@@ -100,6 +100,7 @@ export default function QuestionBankApp({ courseId, plan, userId, colleagues }: 
             </div>))}
         </div>
       )}
+      {tab === "draft" && <p className="small-note" style={{ background: "#E8F1EC", padding: 8, borderRadius: 6 }}>To generate a quiz, assignment, mid or final from the Subject Expert&apos;s plan (its topics and CLOs pre-filled, with rebalancing toward a weak GA), use <a href={`/plan-generate?courseId=${courseId}`}>Generate from the plan</a>.</p>}
       {tab === "draft" && <DraftPaper courseId={courseId} plan={plan} onMsg={setMsg} />}
       {tab === "import" && <ImportTab courseId={courseId} plan={plan} onMsg={setMsg} reload={load} />}
       {tab === "sharing" && <SharingTab selected={Array.from(sel)} onMsg={setMsg} />}

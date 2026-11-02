@@ -148,7 +148,11 @@ const bank: Source<NextUser> = { name: "bank", run: async (u) => {
   if (u.role !== "SUBJECT_EXPERT") return [];
   const courses = await prisma.course.findMany({ where: { subjectExpertId: u.id }, orderBy: { createdAt: "desc" }, take: 6, select: { id: true, code: true } });
   const { bankWarnings } = await import("./qbankAnalytics");
-  return (await bankWarnings(courses)).map((w) => ({ title: `Question bank of ${w.code} is below target`, detail: w.text, href: `/question-bank?courseId=${w.courseId}`, due: null, urgency: "normal" as const, source: "bank" }));
+  const short = await (await import("./planGen")).shortfallsFor(u.id).catch(() => []);
+  return [
+    ...short.map((x) => ({ title: `${x.code}: add questions for ${x.label}`, detail: x.gaps.join("; "), href: `/question-bank?courseId=${x.courseId}`, due: null, urgency: "soon" as const, source: "bank" })),
+    ...(await bankWarnings(courses)).map((w) => ({ title: `Question bank of ${w.code} is below target`, detail: w.text, href: `/question-bank?courseId=${w.courseId}`, due: null, urgency: "normal" as const, source: "bank" })),
+  ];
 } };
 
 const publish: Source<NextUser> = { name: "publish", run: async (u) => {

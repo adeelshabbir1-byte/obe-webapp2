@@ -9,14 +9,15 @@ import { chairmanIdFor, roleLabel } from "../../../lib/reportScope";
 import { completeness, getPlan, rowsOf, scoreOf, yearLabelNow, type Plan } from "../../../lib/yearPlan";
 import { loadMatrix } from "../../../lib/assignerMatrix";
 import { getFlag } from "../../../lib/scopedSettings";
-import { Act, RowEdit } from "../AllocForms";
+import { Act, RowEdit, MentorPick } from "../AllocForms";
+import { whatIf, firstTimeList } from "../../../lib/allocExtras";
 
 export const dynamic = "force-dynamic";
 const db = prisma as unknown as Record<string, any>;
 
 // The one-year allocation plan (Adeel prompt §25.1, 11): Fall + Spring + tentative Summer, Draft A / B with scores,
 // submit (blocked while a Fall / Spring section is open), HOD approval, changes after approval with a reason.
-export default async function YearPlanPage({ searchParams }: { searchParams: { draft?: string; term?: string } }) {
+export default async function YearPlanPage({ searchParams }: { searchParams: { draft?: string; term?: string; whatif?: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (!user.mfaVerified) redirect("/mfa-verify");
@@ -28,13 +29,15 @@ export default async function YearPlanPage({ searchParams }: { searchParams: { d
   const plan = draft === "B" ? b : a;
   const waiting = ((await db.allocationPlan?.findMany({ where: { chairmanId: cid, status: "SUBMITTED" } }).catch(() => [])) || []) as Plan[];
   const swaps = ((await db.allocSwap?.findMany({ where: { status: "AGREED", planId: { in: [a?.id, b?.id].filter(Boolean).concat("none") as string[] } } }).catch(() => [])) || []) as { id: string; aRow: string; bRow: string; aId: string; bId: string }[];
-  const m = await loadMatrix(user as never).catch(() => null) as unknown as { instructors?: { id: string; name: string; isVisiting?: boolean }[] } | null;
+  const m = await loadMatrix(user as never).catch(() => null) as unknown as { instructors?: { id: string; name: string; isVisiting?: boolean; outOfPool?: boolean; normalLoad?: number; externalLoadCount?: number }[] } | null;
   const pool = (m?.instructors || []).filter((i) => !i.isVisiting).map((i) => ({ id: i.id, name: i.name }));
   const rows = plan ? rowsOf(plan) : [];
   const comp = completeness(rows);
   const terms = Array.from(new Set(rows.map((r) => r.term)));
   const term = searchParams.term && terms.includes(searchParams.term) ? searchParams.term : terms[0];
   const [sa, sb] = await Promise.all([a ? scoreOf(rowsOf(a)) : null, b ? scoreOf(rowsOf(b)) : null]);
+  const away = plan && searchParams.whatif ? await whatIf(rows, String(searchParams.whatif), m?.instructors || []).catch(() => null) : null;
+  const firsts = plan ? await firstTimeList(cid, yearLabelNow(), rows).catch(() => []) : [];
   const concerns = plan ? await Promise.all(Array.from(new Set(rows.flatMap((r) => r.teachers.map((t) => t.id)))).map(async (id) => ({ id, text: await getFlag(id, `alloc:concern:${plan.id}`), ack: await getFlag(id, `alloc:ack:${plan.id}`) }))) : [];
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
@@ -51,6 +54,18 @@ export default async function YearPlanPage({ searchParams }: { searchParams: { d
       {comp.length > 0 && <div className="card" style={{ marginBottom: 10, fontSize: 13 }}>{comp.map((c) => <span key={c.term} style={{ marginRight: 14 }}>{c.term}{c.summer ? " (tentative)" : ""}: <b style={{ color: c.pct === 100 ? "#1B6B3A" : c.summer ? "#7A520C" : "#B3261E" }}>{c.pct}%</b> ({c.done}/{c.need})</span>)}</div>}
       {swaps.length > 0 && <div className="card" style={{ marginBottom: 10, fontSize: 13 }}><b>Swaps agreed by both teachers</b>{swaps.map((s) => <div key={s.id}>{pool.find((p) => p.id === s.aId)?.name} ⇄ {pool.find((p) => p.id === s.bId)?.name} <Act body={{ action: "swapApprove", id: s.id, approve: true }} label="Approve" /> <Act body={{ action: "swapApprove", id: s.id, approve: false }} label="Refuse" /></div>)}</div>}
       {concerns.some((c) => c.text) && <div className="card" style={{ marginBottom: 10, fontSize: 13 }}><b>Concerns raised</b>{concerns.filter((c) => c.text).map((c) => <div key={c.id}>{pool.find((p) => p.id === c.id)?.name}: {c.text}</div>)}</div>}
+      {plan && <div className="card" style={{ marginBottom: 10, fontSize: 13 }} data-whatif>
+        <b>What if…</b> a teacher is away next year (leave, study, resignation)? <form method="get" style={{ display: "inline-flex", gap: 6 }}><input type="hidden" name="draft" value={draft} /><select name="whatif" defaultValue={searchParams.whatif || ""}><option value="">— choose a teacher —</option>{pool.filter((p) => rows.some((r) => r.teachers.some((t) => t.id === p.id))).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="btn btn-secondary btn-sm">Show</button></form>
+        {away && <div style={{ marginTop: 6 }}>
+          <div>{away.after.map((t) => { const b0 = away.before.find((x) => x.term === t.term); return <span key={t.term} style={{ marginRight: 14 }}>{t.term}: {b0 ? `${b0.done}/${b0.need}` : ""} → <b style={{ color: t.done < t.need ? "#B3261E" : "#1B6B3A" }}>{t.done}/{t.need}</b></span>; })}</div>
+          {away.open.length === 0 ? <p>Nothing is left open.</p> : <ul>{away.open.map((o) => <li key={o.key}>{o.term} · <b>{o.code}</b> {o.title} ({o.batch}) — {o.missing} section(s) open. {o.suggest.length ? <>Could take it: {o.suggest.map((s) => `${s.name} (${s.spare} spare${s.why ? `, ${s.why}` : ""})`).join("; ")}.</> : <span style={{ color: "#B3261E" }}>Nobody with spare load has asked for or taught it — plan a visiting teacher.</span>}</li>)}</ul>}
+          <p className="small-note">Nothing is changed: this only shows the effect. Edit the rows below to act on it.</p>
+        </div>}
+      </div>}
+      {firsts.length > 0 && <div className="card" style={{ marginBottom: 10, fontSize: 13 }} data-mentors>
+        <b>First time on a course — mentors</b> <span className="small-note">Teachers in this plan who have not taught the course before. A mentor (the Subject Expert or someone who has taught it) helps with the plan, material and assessments.</span>
+        <table className="table" style={{ fontSize: 12.5, marginTop: 6 }}><thead><tr><th>Teacher</th><th>Course</th><th>Mentor</th></tr></thead><tbody>{firsts.map((f) => <tr key={`${f.teacherId}|${f.code}`}><td>{f.teacher}</td><td><b>{f.code}</b> {f.title}</td><td>{assigner ? <MentorPick teacherId={f.teacherId} code={f.code} current={f.mentor?.mentorId || ""} suggest={f.suggest} pool={pool} /> : f.mentor?.mentorName || "—"}</td></tr>)}</tbody></table>
+      </div>}
       {plan && <>
         <Tabs base={`/allocation/year-plan?draft=${draft}`} current={term || ""} tabs={terms.map((t) => ({ key: t, label: t, badge: (comp.find((c) => c.term === t)?.need || 0) - (comp.find((c) => c.term === t)?.done || 0) || null, warn: true }))} />
         <div className="card" style={{ overflowX: "auto" }}><table className="table" style={{ fontSize: 12.5, width: "100%" }}><thead><tr><th style={{ textAlign: "left" }}>Course</th><th>Batch</th><th>Sections</th><th style={{ textAlign: "left" }}>Teachers</th></tr></thead>
