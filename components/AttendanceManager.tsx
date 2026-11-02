@@ -64,6 +64,7 @@ export default function AttendanceManager({ courseId, lectureRows: initialRows }
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSaving(false); return; }
+      if (data.queued) { setSaved(true); setSaving(false); setError("You are offline: this attendance is kept on this phone and will be sent when you are back online."); return; }
       setLectureRows((prev) => prev.map((r) => (r.id === selectedLectureId ? { ...r, actualDate: data.actualDate || date } : r)));
       setSaved(true); setSaving(false); loadSummary();
     } catch (err: any) { setError("Unexpected error: " + err.message); setSaving(false); }

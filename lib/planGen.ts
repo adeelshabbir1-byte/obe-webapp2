@@ -67,7 +67,8 @@ export async function board(u: U, courseId: string) {
     byInst.set(o.instrumentId, [...(byInst.get(o.instrumentId) || []), { id: p.id, status: p.status, variant: p.variant, createdAt: p.createdAt }]);
   }
   const short = await shortfallOf(r.ctx.chairmanId, courseId);
-  return { course: { id: courseId, code: r.ctx.course.code, title: r.ctx.course.title }, term, forAll: r.forAll, source: plan.source, assessments: plan.list.map((a) => ({ ...a, papers: byInst.get(a.id) || [] })), ga, cqi, short };
+  const self = await (await import("./cloSelf")).courseSelf(courseId).catch(() => ({ students: 0, clos: [] as { code: string; n: number; self: number | null; direct: number | null; gap: number | null; flag: string }[] }));
+  return { course: { id: courseId, code: r.ctx.course.code, title: r.ctx.course.title }, term, forAll: r.forAll, source: plan.source, assessments: plan.list.map((a) => ({ ...a, papers: byInst.get(a.id) || [] })), ga, cqi, short, self };
 }
 
 /** Uses that still rest this term, across every course with the same code (agreed gap: final 3 · mid 2 · other 1 term). */

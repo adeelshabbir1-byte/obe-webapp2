@@ -26,4 +26,5 @@ export const ADMIN_NAV = [
   { href: "/public-library", label: "Shared Courses" },
   { href: "/admin/shared-courses", label: "Shared Courses Moderation" },
   { href: "/admin/analytics", label: "Platform Analytics" },
+  { href: "/admin/hec-view", label: "HEC National View" },
 ];

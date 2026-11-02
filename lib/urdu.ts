@@ -6,6 +6,7 @@ export const URDU_FONT = "https://fonts.googleapis.com/css2?family=Noto+Nastaliq
 export const urduStyle = { direction: "rtl" as const, fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif", lineHeight: 2 };
 
 export const NAV_UR: Record<string, string> = {
+  "/student/skills-transcript": "میرا مہارتوں کا ٹرانسکرپٹ", "/student/clo-self": "اپنے CLO کا خود جائزہ",
   "/student/registration": "کورس رجسٹریشن", "/student/degree-plan": "ڈگری پلان", "/student/dashboard": "اختیاری مضامین", "/student/timetable": "میرا ٹائم ٹیبل",
   "/student/exams": "میرے امتحانات", "/student/quizzes": "آن لائن کوئز", "/student/submissions": "کام جمع کرائیں", "/student/fyp": "فائنل ایئر پراجیکٹ",
   "/student/details": "میری تفصیلات", "/student/cv": "میرا پروفائل اور سی وی", "/student/fees": "میری فیس", "/student/activities": "سوسائٹیز اور سرگرمیاں",

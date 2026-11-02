@@ -32,6 +32,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "UniObeRecord"
 },
 {
+"f": "migration_adeel_p11.sql",
+"d": "Queue item 8: classroom observations, students' CLO self-assessment, learning resources per lecture topic, and the",
+"t": "HecViewLink"
+},
+{
 "f": "migration_adeel_p4.sql",
 "d": "Adeel prompt part 4: one delegation engine (chosen tasks / approvals / acting, with scope, period and \"may pass on\"),",
 "t": "ArchiveAmendment"
