@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Status = { exists: boolean; flagged: boolean; notDemo: boolean; steps: string[]; missing: string[]; demoCourse: { id: string; code: string; title: string; result: string; instructor: { name: string; username: string } | null } | null; loginsOn: boolean; readyAt: string | null; resetAt: string | null; state: { overall?: number | null; open?: string[]; demoCourse?: string | null } };
+type Status = { exists: boolean; flagged: boolean; notDemo: boolean; headInstitute?: string | null; steps: string[]; missing: string[]; demoCourse: { id: string; code: string; title: string; result: string; instructor: { name: string; username: string } | null } | null; loginsOn: boolean; readyAt: string | null; resetAt: string | null; state: { overall?: number | null; open?: string[]; demoCourse?: string | null } };
 const KEY = "obehub.demoReady.next";
 
 async function call(body: Record<string, unknown>) {
@@ -72,7 +72,11 @@ export default function DemoReadyRunner({ status }: { status: Status }) {
         (S1, S3, S5, S7) of 120 students, approved plans, BOS-approved course codes, the semester finished — with <b>one course left without its
         final-exam marks</b> for the live demo. Only an institute flagged as a demo is ever touched.
       </p>
-      {status.notDemo && <div className="err" style={{ marginBottom: 8 }}>An institute with the demo head&apos;s login exists but is not flagged as a demo. Nothing will be changed.</div>}
+      {status.notDemo && <div className="err" style={{ marginBottom: 8 }}>
+        The institute with the demo head&apos;s login (dream.head{status.headInstitute ? ` — “${status.headInstitute}”` : ""}) is not flagged as the demo, so nothing is changed yet.
+        If this is your demo institute, flag it once and everything here works:{" "}
+        <button type="button" className="btn btn-sm" onClick={async () => { if (!confirm(`Flag “${status.headInstitute || "dream.head's institute"}” as the demo? Only a demo can be rebuilt, reset and signed into with the one-click logins.`)) return; try { const j = await call({ step: "adopt" }); alert(j.info); router.refresh(); } catch (e) { alert((e as Error).message); } }}>Yes, this is our demo — flag it</button>
+      </div>}
       {status.missing.length > 0 && (
         <div style={{ background: "#FBF3E4", color: "#7A520C", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 10 }}>
           <b>Run these migrations first</b> ({status.missing.length}): {status.missing.join(", ")}

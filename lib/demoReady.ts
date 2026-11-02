@@ -35,12 +35,25 @@ export async function missingMigrations() {
   return MIGRATIONS.filter((m) => !(m.c ? cols.has(`${m.t}.${m.c}`) : tables.has(m.t))).map((m) => m.f);
 }
 
+/** The Super Admin confirms that the institute with the demo head's login is the demo, so it can be rebuilt and
+ *  signed into (an institute built before the flag existed, or renamed). Only that one login's institute. */
+export async function adoptDemo(byId: string) {
+  const head = await demo.demoHead();
+  if (!head) throw new Error("There is no institute with the demo head's login.");
+  if (!db.demoFlag) throw new Error("Run prisma/migration_demo_ready.sql in Supabase first.");
+  try { await db.demoFlag.upsert({ where: { chairmanId: head.id }, create: { chairmanId: head.id }, update: {} }); }
+  catch { throw new Error("Run prisma/migration_demo_ready.sql in Supabase first (the demo flag table is missing)."); }
+  await writeAuditLog({ actorUserId: byId, action: "DEMO_ADOPTED", entityType: "User", entityId: head.id });
+  const h = await prisma.user.findUnique({ where: { id: head.id }, select: { instituteName: true } });
+  return `“${h?.instituteName || head.name}” is now flagged as the demo.`;
+}
 export async function readyStatus() {
   const head = await demo.demoHead();
   const flag = head ? await flagOf(head.id) : null;
   const course = flag?.demoCourseId ? await prisma.course.findUnique({ where: { id: flag.demoCourseId }, select: { id: true, code: true, title: true, instructor: { select: { name: true, username: true } } } }) : null;
   const result = course ? await db.courseResult.findUnique({ where: { courseId: course.id } }).catch(() => null) : null;
-  return { exists: !!head, flagged: !!flag, notDemo: !!head && !flag, steps: readyPlan().map((s) => s.label), missing: await missingMigrations().catch(() => [] as string[]),
+  const nm = head ? await prisma.user.findUnique({ where: { id: head.id }, select: { instituteName: true } }).catch(() => null) : null;
+  return { exists: !!head, flagged: !!flag, notDemo: !!head && !flag, headInstitute: nm?.instituteName || null, steps: readyPlan().map((s) => s.label), missing: await missingMigrations().catch(() => [] as string[]),
     demoCourse: course ? { ...course, result: (result?.status as string) || "NOT SUBMITTED" } : null, loginsOn: flag?.loginsOn ?? false, readyAt: flag?.readyAt || null, resetAt: flag?.resetAt || null, state: J<Record<string, unknown>>(flag?.stateJson, {}) };
 }
 const J = <T>(s: string | null | undefined, d: T): T => { try { return s ? (JSON.parse(s) as T) : d; } catch { return d; } };
