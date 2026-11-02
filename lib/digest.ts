@@ -21,10 +21,22 @@ export async function runDigest(now = new Date()) {
       waitingFor(u.id, now).catch(() => new Set<string>()),
     ]);
     const hot = tasks.filter((t) => !waiting.has(taskKey(t))).map((t) => ({ t, s: statusOf(t, amber, now) })).filter((x) => x.s !== "blue");
-    if (!hot.length) continue;
+    const weak = await weakGaLines(u.id, u.role).catch(() => [] as { line: string; courseId: string }[]);
+    if (!hot.length && !weak.length) continue;
     const red = hot.filter((x) => x.s === "red").length;
-    await notifyUsers([u.id], { kind: "DIGEST", title: `${red ? `${red} overdue · ` : ""}${hot.length - red} due soon`, body: hot.slice(0, 8).map((x) => `${x.s === "red" ? "🔴" : "🟠"} ${x.t.title}`).join("\n"), href: "/dashboard#whats-next" }).catch(() => null);
+    const action = weak.length ? `\nSuggested this week: hold a short tutorial on ${weak[0].line.split(" ")[0]}, record it on "Generate from the plan", then rebalance your next paper toward it.` : "";
+    await notifyUsers([u.id], { kind: "DIGEST", title: hot.length ? `${red ? `${red} overdue · ` : ""}${hot.length - red} due soon${weak.length ? ` · ${weak.length} weak GA` : ""}` : `${weak.length} weak graduate attribute${weak.length > 1 ? "s" : ""} in your courses`, body: [...hot.slice(0, 8).map((x) => `${x.s === "red" ? "🔴" : "🟠"} ${x.t.title}`), ...weak.map((w) => `📉 ${w.line}`)].join("\n") + action, href: weak.length && !hot.length ? `/plan-generate?courseId=${weak[0].courseId}` : "/dashboard#whats-next" }).catch(() => null);
     sent++;
   }
   return sent;
+}
+
+/** A teacher's weak graduate attributes this term (from his own courses' CLO results), for the digest. */
+async function weakGaLines(userId: string, role: string) {
+  if (!["INSTRUCTOR", "SUBJECT_EXPERT"].includes(role)) return [];
+  const cs = await prisma.course.findMany({ where: { isOffered: true, instructorId: userId }, take: 3, select: { id: true, code: true } });
+  const { gaOfCourse } = await import("./planGen");
+  const out: { line: string; courseId: string }[] = [];
+  for (const c of cs) for (const g of (await gaOfCourse(c.id).catch(() => ({ weak: [] as { ga: string; pct: number }[] }))).weak.slice(0, 2)) out.push({ line: `${g.ga} weak in ${c.code} (${g.pct}%)`, courseId: c.id });
+  return out.slice(0, 4);
 }

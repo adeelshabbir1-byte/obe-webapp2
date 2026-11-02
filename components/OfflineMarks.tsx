@@ -9,7 +9,9 @@ type Q = { url: string; body: string; at: string; conflict?: string };
 const KEY = "obehub-offline-marks";
 const read = (): Q[] => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
 const write = (q: Q[]) => { try { localStorage.setItem(KEY, JSON.stringify(q)); } catch { /* full */ } };
-const isMarks = (url: string, method?: string) => (method || "GET").toUpperCase() === "PUT" && /\/api\/instructor\/courses\/[^/]+\/marks(\?|$)/.test(url);
+// Marks and lecture attendance (3 Nov 2026) are kept offline the same way.
+const isMarks = (url: string, method?: string) => (method || "GET").toUpperCase() === "PUT" && (/\/api\/instructor\/courses\/[^/]+\/marks(\?|$)/.test(url) || /\/api\/instructor\/courses\/[^/]+\/attendance\/[^/?]+$/.test(url));
+const isAttendance = (url: string) => /\/attendance\//.test(url);
 
 export default function OfflineMarks() {
   const [q, setQ] = useState<Q[]>([]);
@@ -58,7 +60,7 @@ export default function OfflineMarks() {
   };
   return (
     <div role="status" className="no-print" style={{ background: "#FFF8E1", border: "1px solid #E0B54A", borderRadius: 8, padding: "6px 10px", margin: "0 0 10px", fontSize: 13 }}>
-      <b>{q.length - conflicts.length} mark{q.length - conflicts.length === 1 ? "" : "s"} waiting to sync</b>{!navigator.onLine ? " — you are offline; they are kept on this device." : ""}
+      <b>{q.length - conflicts.length} change{q.length - conflicts.length === 1 ? "" : "s"} waiting to sync{q.some((x) => isAttendance(x.url)) ? ` (${q.filter((x) => isAttendance(x.url)).length} attendance)` : ""}</b>{!navigator.onLine ? " — you are offline; they are kept on this device." : ""}
       {conflicts.map((c) => { const i = q.indexOf(c); let who = ""; try { const b = JSON.parse(c.body); who = `${b.studentId?.slice(-5)} · score ${b.score === null || b.score === "" ? "absent" : b.score}`; } catch { /* */ } return <div key={i}>⚠ {who}: {c.conflict} <button type="button" className="btn-link" onClick={() => resolve(i, true)}>Keep mine</button> · <button type="button" className="btn-link" onClick={() => resolve(i, false)}>Keep theirs</button></div>; })}
     </div>
   );

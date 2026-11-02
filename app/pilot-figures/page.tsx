@@ -6,6 +6,8 @@ import { roleLabel, chairmanIdFor } from "../../lib/reportScope";
 import Shell from "../../components/Shell";
 import { pilotFigures, PERIODS } from "../../lib/pilotFigures";
 import PilotMinutesForm from "../../components/PilotMinutesForm";
+import { HecShare } from "../../components/HecForms";
+import { sharing } from "../../lib/hecView";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pilot figures" };
@@ -18,7 +20,8 @@ export default async function PilotFiguresPage({ searchParams }: { searchParams:
   if (!["CHAIRMAN", "DEAN"].includes(user.role)) redirect("/home");
   const d = Number(searchParams.days);
   const days = PERIODS.includes(d) ? d : 90;
-  const f = await pilotFigures(await chairmanIdFor(user), days);
+  const cid = await chairmanIdFor(user);
+  const [f, shared] = await Promise.all([pilotFigures(cid, days), sharing(cid).catch(() => false)]);
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
       <h1>Pilot figures</h1>
@@ -35,6 +38,7 @@ export default async function PilotFiguresPage({ searchParams }: { searchParams:
           <tbody>{f.rows.map((r) => <tr key={r.key} data-area={r.key}><td>{r.label}</td><td>{r.count.toLocaleString()}</td><td>{r.before ?? "—"}</td><td>{r.now ?? "—"}</td><td>{r.hoursSaved ?? "—"}</td></tr>)}</tbody></table>
         <p className="small-note">Hours saved = tasks × (minutes before − minutes now) ÷ 60. Sign-ins and settings are not counted as tasks.</p>
       </div>
+      {user.role === "CHAIRMAN" && <div className="card" data-hec-share><b>HEC national view</b><p className="small-note">HEC can see totals of institutes that agree: programs, students, courses, CLO mapping, CQI and GA attainment by program. Never a student&apos;s or teacher&apos;s name.</p><HecShare on={shared} /></div>}
       {user.role === "CHAIRMAN" ? <PilotMinutesForm rows={f.rows} /> : <p className="small-note">The Institute Head enters the minutes per task.</p>}
     </Shell>
   );

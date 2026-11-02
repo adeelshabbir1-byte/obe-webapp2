@@ -6,7 +6,7 @@ type Lec = { n: number; topic: string; clo: string | null };
 type Asmt = { id: string; type: string; label: string; maxScore: number; marksPct: number; lectures: Lec[]; papers: { id: string; status: string; variant: string }[] };
 type Ga = { ga: string; pct: number; clos: string[]; assessed: number };
 type Cqi = { id: string; sourceReference: string | null; finding: string; actionTaken: string | null; status: string; metricBefore: number | null; metricAfter: number | null };
-type Board = { course: { id: string; code: string; title: string }; term: string; forAll: boolean; assessments: Asmt[]; ga: { standing: Ga[]; weak: Ga[]; target: number }; cqi: Cqi[]; short: { label: string; gaps: string[] } | null };
+type Board = { course: { id: string; code: string; title: string }; term: string; forAll: boolean; assessments: Asmt[]; ga: { standing: Ga[]; weak: Ga[]; target: number }; cqi: Cqi[]; short: { label: string; gaps: string[] } | null; self?: { students: number; clos: { code: string; n: number; self: number | null; direct: number | null; gap: number | null; flag: string }[] } };
 type Q = { id: string; text: string; marks: number; clo: string; bloom: string; difficulty: string; measured: string | null; lecture: number | null; topic: string };
 type View = { id: string; status: string; variant: string; examType: string; label: string; check: { ok?: boolean; fails?: string[]; notes?: string[]; cloPct?: Record<string, number>; gaps?: string[]; total?: number }; questions: Q[]; versions: { id: string; variant: string; status: string }[] };
 type Swap = { fromId: string; toId: string; fromClo: string; toClo: string; fromTopic: string; toTopic: string; marks: number; difficulty: string };
@@ -42,7 +42,7 @@ export default function PlanGenerateApp({ courseId }: { courseId: string }) {
   const openGa = b.cqi.filter((c) => ["open", "in-progress"].includes(c.status));
   return (
     <div>
-      <p className="small-note"><Link href={`/question-bank?courseId=${courseId}`}>← Question bank</Link></p>
+      <p className="small-note"><Link href={`/question-bank?courseId=${courseId}`}>← Question bank</Link> · <Link href={`/topic-resources?courseId=${courseId}`}>Learning resources per topic</Link></p>
       <h1>Generate from the plan — {b.course.code} {b.course.title}</h1>
       <p className="small-note">{b.term}. Each assessment opens with its lectures (topics), CLOs and marks from the plan. Questions used recently rest: a final&apos;s for 3 terms, a mid&apos;s for 2, a quiz&apos;s or assignment&apos;s for 1. Questions released for student practice are never used.</p>
       {msg && <div className={msg.ok ? "ok" : "err"} role="status" data-msg>{msg.text}</div>}
@@ -50,6 +50,12 @@ export default function PlanGenerateApp({ courseId }: { courseId: string }) {
 
       <GaCard b={b} courseId={courseId} run={run} />
 
+      {b.self && b.self.students > 0 && <div className="card" style={{ overflowX: "auto" }} data-clo-self>
+        <h3 style={{ marginTop: 0 }}>Students&apos; own view of each CLO</h3>
+        <p className="small-note">{b.self.students} student(s) rated their confidence (indirect evidence), beside the class average from marks (direct). A gap over 20 points is flagged.</p>
+        <table style={{ fontSize: 13 }}><thead><tr><th>CLO</th><th>Students&apos; confidence</th><th>Marks (class average)</th><th /></tr></thead>
+          <tbody>{b.self.clos.map((c) => <tr key={c.code}><td>{c.code}</td><td>{c.self === null ? "—" : `${c.self}%`} <span className="small-note">({c.n})</span></td><td>{c.direct === null ? "—" : `${c.direct}%`}</td><td style={{ color: c.flag ? "#8a5a00" : undefined }}>{c.flag}</td></tr>)}</tbody></table>
+      </div>}
       <div className="card" style={{ overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>Assessments in the plan</h3>
         <table style={{ fontSize: 13 }}><thead><tr><th>Assessment</th><th>Marks</th><th>Lectures</th><th>CLOs</th><th>Generated</th><th /></tr></thead>

@@ -10325,3 +10325,64 @@ model UniObeRecord {
   @@unique([universityId, studentId, courseCode, term], map: "UniObeRecord_key")
   @@index([universityId, regNo], map: "UniObeRecord_reg_idx")
 }
+
+// Queue item 8 (prisma/migration_adeel_p11.sql): classroom observations, students' CLO self-assessment, learning
+// resources per lecture topic, and the HEC national view's private links.
+model ClassObservation {
+  id            String   @id
+  chairmanId    String
+  courseId      String
+  teacherId     String
+  observerId    String
+  lectureNumber Int?
+  observedOn    DateTime
+  plannedTopic  String?
+  taughtTopic   String?
+  scoresJson    String   @default("{}")
+  strengths     String?
+  improve       String?
+  status        String   @default("SHARED")
+  teacherReply  String?
+  createdAt     DateTime @default(now())
+
+  @@index([teacherId], map: "ClassObservation_teacher_idx")
+  @@index([chairmanId], map: "ClassObservation_chairman_idx")
+}
+
+model CloSelfRating {
+  id        String   @id
+  studentId String
+  courseId  String
+  cloCode   String
+  rating    Int
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId, cloCode], map: "CloSelfRating_key")
+  @@index([courseId], map: "CloSelfRating_course_idx")
+}
+
+model TopicResource {
+  id            String   @id
+  chairmanId    String
+  courseCode    String
+  lectureNumber Int
+  title         String
+  url           String?
+  kind          String   @default("LINK")
+  note          String?
+  addedById     String
+  createdAt     DateTime @default(now())
+
+  @@index([chairmanId, courseCode], map: "TopicResource_course_idx")
+}
+
+model HecViewLink {
+  id          String    @id
+  label       String
+  tokenHash   String    @unique(map: "HecViewLink_token_key")
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastSeen    DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+}
