@@ -7,6 +7,8 @@ import { navForRole } from "../../components/reportNav";
 import { chairmanIdFor, roleLabel } from "../../lib/reportScope";
 import { staffOf } from "../../lib/registers";
 import { ASSIGNERS, lectureModes, compliance, dataOf, DDJD_CHECKS, isDdjd, KINDS, KPI, listFor, missingIn, MOC_ITEMS, ODL_CHECKS, stepsOf, TYPE_RULE } from "../../lib/collab";
+import { refreshOdlFacts } from "../../lib/odlWizard";
+import OdlSteps from "./OdlSteps";
 import { PartnerAccess, Assign, Cem, CemOk, Check, Courses, Field, Kpis, LectureModes, MocField, NewProg, Partners, SameDiscipline } from "./CollabForms";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +24,12 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
   const leader = LEADERS.includes(user.role);
   const all = await listFor(cid);
   const list = leader ? all : all.filter((x) => dataOf(x).ownerId === user.id);
-  const p = searchParams.id ? list.find((x) => x.id === searchParams.id) : list.length === 1 && !leader ? list[0] : null;
+  let p = searchParams.id ? list.find((x) => x.id === searchParams.id) : list.length === 1 && !leader ? list[0] : null;
   const canAssign = ASSIGNERS.includes(user.role);
-  const staff = canAssign ? await staffOf(cid) : [];
+  const odl = !!p && !isDdjd(p.kind);
+  const staff = canAssign || odl ? await staffOf(cid) : [];
+  // ODL: what OBEHUB can tell from its own records is worked out afresh on each visit (lib/odlWizard.ts).
+  if (p && odl) { await refreshOdlFacts(p).catch(() => null); p = ((await listFor(cid)).find((x) => x.id === p!.id) || p); }
   const box = { border: "1px solid var(--line, #ddd)", borderRadius: 10, padding: 14, background: "var(--card, #fff)" } as const;
 
   if (!p) return (
@@ -92,9 +97,10 @@ export default async function CollabPage({ searchParams }: { searchParams: { id?
           {st.widgets.includes("courses") && (d.courses || []).length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>Delivery mode of each lecture</b> <span className="small-note">from the course&apos;s lecture plan; saving updates the course&apos;s face-to-face / live share above</span>
             {(await lectureModes(p.chairmanId, (d.courses || []).map((x: { code: string }) => x.code))).map((x) => <LectureModes key={x.courseId} id={p.id} code={x.code} courseId={x.courseId} lectures={x.lectures} pct={x.pct} />)}</div>}
 
+          {odl && <OdlSteps p={p} st={st} staff={staff} />}
           {st.moc.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>What the MoC says</b>{st.moc.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>({k}) {MOC_ITEMS.find((x) => x[0] === k)?.[1]}<br /><MocField id={p.id} k={k} value={d.moc?.[k] || ""} all={d.moc || {}} /></div>)}</div>}
           {st.fields.map(([k, label, t]) => <Field key={k} id={p.id} k={k} label={label} type={t} value={d[k] == null ? "" : String(d[k])} />)}
-          {st.checks.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>HEC conditions</b>{st.checks.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>{checkLabel.get(k)}<br /><Check id={p.id} k={k} done={!!d.checks?.[k]?.done} note={d.checks?.[k]?.note || ""} all={d.checks || {}} /></div>)}</div>}
+          {st.checks.length > 0 && <div style={{ marginTop: 10 }}><b style={{ fontSize: 13 }}>HEC conditions</b>{st.checks.map((k) => <div key={k} style={{ margin: "6px 0", fontSize: 13 }}>{checkLabel.get(k)}<br />{d.auto?.[k]?.ok ? <span style={{ color: "#1E6B3A" }}>✓ met from OBEHUB&apos;s records</span> : <Check id={p.id} k={k} done={!!d.checks?.[k]?.done} note={d.checks?.[k]?.note || ""} all={d.checks || {}} />}</div>)}</div>}
           {st.widgets.includes("moc-all") && <div style={{ marginTop: 10, fontSize: 12.5 }}><b style={{ fontSize: 13 }}>MoC checklist — Annexure-I vii (a–r)</b><div style={{ columns: "2 240px", marginTop: 4 }}>{c.moc.map((m) => <div key={m.key} style={{ color: m.done ? "#1E6B3A" : "#B3261E" }}>{m.done ? "✓" : "✗"} {m.label}</div>)}</div></div>}
           {st.widgets.includes("kpis") && <div style={{ marginTop: 12 }}><b style={{ fontSize: 13 }}>Yearly KPIs (Annexure-III)</b><Kpis id={p.id} kpis={d.kpis || {}} defs={KPI} /></div>}
           {st.widgets.includes("docs") && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 8 }}>

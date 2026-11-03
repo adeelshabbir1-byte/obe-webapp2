@@ -8,7 +8,7 @@ export const OMC_CONVENER = "OMC_CONVENER";
 export const DUTIES: Record<string, { label: string; href: string; what: string }> = {
   [EXAM_CONTROLLER]: { label: "Controller of Examinations", href: "/controller", what: "You run the exams: sessions, date sheets, seating, debarred lists and admit cards; you publish approved results, handle re-checking and grade changes, transcripts, degrees and standing lists; you set the CGPA limits and the minimum attendance for exams." },
   [QEC_INCHARGE]: { label: "QEC Convener", href: "/evaluations/questionnaires", what: "You head the Quality Enhancement Cell: feedback questionnaires and windows, surveys, QAA self-assessment, IPE and the quality registers." },
-  IT_MANAGER: { label: "IT Manager", href: "/chairman/backups", what: "You run the institute's IT: backups, the subscription and its invoices, the Moodle link and the SMS / WhatsApp gateway." },
+  IT_MANAGER: { label: "IT Manager", href: "/chairman/backups", what: "You run the institute's IT: backups, the subscription and its invoices, the teaching tools (Moodle, Google Classroom and Meet, Teams, YouTube) and the SMS / WhatsApp gateway." },
   [OMC_CONVENER]: { label: "OMC Convener", href: "/omc/convener", what: "You lead your department's OMC: share out course reviews among the members, decide when they disagree, and receive OMC escalations." },
 };
 

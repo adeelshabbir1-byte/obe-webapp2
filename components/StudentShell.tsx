@@ -21,6 +21,7 @@ const NAV = [
   { href: "/student/degree-plan", label: "Degree Plan" },
   { href: "/student/dashboard", label: "Elective Choices" },
   { href: "/student/timetable", label: "My Timetable" },
+  { href: "/student/live", label: "Live Lectures" },
   { href: "/student/exams", label: "My Exams" },
   { href: "/student/quizzes", label: "Online Quizzes" },
   { href: "/student/submissions", label: "Submit Work" },

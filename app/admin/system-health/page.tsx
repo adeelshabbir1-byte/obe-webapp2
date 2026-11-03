@@ -35,6 +35,7 @@ export default async function SystemHealthPage() {
   const tables = Array.from(new Set(breaks.map((i) => i.table)));
   const drill = await (prisma as unknown as Record<string, any>).restoreDrill.findFirst({ orderBy: { at: "desc" } }).catch(() => null) as { at: Date; passed: boolean; summary: string | null } | null;
 
+  const tools = await import("../../../lib/teachingTools").then((m) => m.toolsHealth()).catch(() => null);
   return (
     <Shell roleLabel="Super User" userName={user.name} navLinks={adminNav}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>System Health</h1>
@@ -111,6 +112,12 @@ export default async function SystemHealthPage() {
           ))}</tbody>
         </table>
       </div>
+      {tools && tools.length > 0 && <div className="card" style={{ overflowX: "auto" }}>
+        <h3 style={{ marginTop: 0 }}>Teaching tools of each institute</h3>
+        <p style={{ fontSize: 12.5, color: "var(--slate)", marginTop: 0 }}>Moodle, Google Classroom + Meet, Microsoft Teams and YouTube connections, from each institute&apos;s last test. The institute fixes its own under Teaching tools.</p>
+        <table style={{ fontSize: 12.5 }}><thead><tr><th>Institute</th><th>Tool</th><th>Status</th><th>Checked</th><th>Problem</th></tr></thead>
+          <tbody>{tools.map((t) => <tr key={`${t.chairmanId}-${t.tool}`}><td>{t.institute}</td><td>{t.tool}</td><td><span className={`badge ${t.status === "OK" ? "badge-ok" : t.status === "FAILING" ? "badge-no" : "badge-neutral"}`}>{t.status.toLowerCase()}</span></td><td>{t.lastCheckAt ? t.lastCheckAt.toISOString().slice(0, 16).replace("T", " ") : "—"}</td><td>{t.lastError || ""}</td></tr>)}</tbody></table>
+      </div>}
     </Shell>
   );
 }

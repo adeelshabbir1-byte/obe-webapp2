@@ -13,6 +13,7 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import AffiliateMarksNote from "../../../../../components/AffiliateMarksNote";
 import LmsImport from "../../../../../components/LmsImport";
+import { linkedGradeTools } from "../../../../../lib/teachingTools";
 import MarkSheetScan from "../../../../../components/MarkSheetScan";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
@@ -226,7 +227,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
       ) : (
         <>
         <div style={{ margin: "8px 0" }}><MarkSheetScan courseId={course.id} /></div>
-        <div style={{ margin: "8px 0" }}><LmsImport courseId={course.id} instruments={instruments.filter((i) => i.marksPct > 0 || !i.partOfId).map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))} /></div>
+        <div style={{ margin: "8px 0" }}><LmsImport courseId={course.id} tools={await linkedGradeTools(course.id)} instruments={instruments.filter((i) => i.marksPct > 0 || !i.partOfId).map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))} /></div>
         <MarksEntryManager
           courseId={course.id}
           instruments={instruments.map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))}

@@ -493,7 +493,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/chairman/affiliates", "Affiliated Colleges", ["CHAIRMAN"]],
   ["/affiliates/marks", "Affiliated Colleges — Marks", ["CHAIRMAN"]],
   ["/college/design", "Course Design from University (colleges)", ["CHAIRMAN", "PROGRAM_COORDINATOR"]],
-  ["/chairman/lms", "Moodle Link", ["CHAIRMAN"]],
+  ["/teaching-tools", "Teaching Tools", ["CHAIRMAN"]],
   ["/process-map", "Process Map", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "COURSE_ASSIGNER", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR", "LAB_ENGINEER", "FINANCE_OFFICER", "STUDENT_AFFAIRS", "LIBRARIAN", "FACILITIES_MANAGER", "LAB_MANAGER"]],
   ["/guide", "Getting Started", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "SUBJECT_EXPERT", "INSTRUCTOR"]],
   ["/quality-office", "Quality Office", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT"]],

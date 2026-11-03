@@ -41,7 +41,7 @@ export const ROWS: PmRow[] = [
   { phase: 0, task: "Rules", sub: "Passing criteria, assessment-type rules, weight policy", when: "Week 1", href: "/omc/assessment-rules", group: "B", cells: { CONV: D("Sets for own department"), OMC: D("Drafts"), HOD: A("Agrees"), SE: V("Must follow"), INS: V("Must follow") } },
   { phase: 0, task: "Rules", sub: "Registration rules (auto-registration, holds for low CGPA)", when: "Week 1", href: "/registration-rules", group: "B", cells: { CTRL: D("Sets"), PL: V("Sees"), ADV: V("Decides held students later") } },
   { phase: 0, task: "Finance", sub: "Fee structure per program, bank / JazzCash / Easypaisa details, fee holds", when: "Week 1", href: "/fees", group: "B", cells: { FIN: D("Sets"), IH: A("Approves fee structure") } },
-  { phase: 0, task: "Systems", sub: "Moodle link, SMS / WhatsApp gateway, backups", when: "Week 1", href: "/chairman/lms", group: "B", cells: { IH: D("Links Moodle and messaging; backups run weekly") } },
+  { phase: 0, task: "Systems", sub: "Teaching tools, SMS / WhatsApp gateway, backups", when: "Week 1", href: "/teaching-tools", group: "B", cells: { IH: D("Links Moodle and messaging; backups run weekly") } },
 
   // ---------------- 1. Programs and curriculum
   { phase: 1, task: "New program", sub: "Proposal → feasibility → BOS → BOF → Academic Council → HEC NOC", when: "Months before launch", href: "/quality-office/program_proposal", cells: { HOD: R("Proposes"), DEAN: A("Board of Faculty"), IH: A("Academic Council"), QEC: D("Records stages, minutes; creates program when approved") } },

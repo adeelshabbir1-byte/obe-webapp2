@@ -112,7 +112,7 @@ export const PAGE_LINES: Record<string, string> = {
   "/chairman/affiliates": "The colleges affiliated with your university.",
   "/affiliates/marks": "Marks of affiliated colleges' students, from both sides.",
   "/college/design": "Take a course's design (CLOs, plan) from the affiliating university.",
-  "/chairman/lms": "Link OBEHUB with your Moodle site.",
+  "/teaching-tools": "Connect the teaching tools: Moodle, Classroom and Meet, Teams, YouTube.",
   "/process-map": "Who does what at each step, from curriculum to results.",
   "/guide": "First steps for your role in OBEHUB.",
   "/quality-office": "The quality enhancement cell's work: reviews, proformas and reports.",

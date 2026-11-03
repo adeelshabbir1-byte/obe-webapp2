@@ -63,6 +63,8 @@ async function GET_handler(req: NextRequest) {
   void statusApplied; void backups; void qa;
   // Topic Workspace: reminders for unanswered plan proposals (the Program Lead is told after a week), and ready help
   // for usually-hard topics offered to instructors a week before the lecture.
+  // ODL teaching tools: attendance and recordings of live lectures that ended in the last three days (queue item 14).
+  const liveSynced = await import("../../../../lib/teachingTools").then((m) => m.syncRecentSessions()).catch(() => 0);
   const topicPlans = await import("../../../../lib/topicPlan").then((m) => m.proposalReminders(now)).catch(() => null);
   const topicHelp = await import("../../../../lib/topicChecks").then((m) => m.offerTopicHelp(now)).catch(() => 0);
   // Marks within one week (reminders on working days 4–5, HOD on day 8) and early-warning escalation.
@@ -94,7 +96,7 @@ async function GET_handler(req: NextRequest) {
   })().catch(() => null);
   const weekly = now.getUTCDay() === 1 ? await import("../../../../lib/weeklyJobs").then((m) => m.runWeekly(now)).catch(() => null) : null;
   const ids = Array.from(per.keys());
-  if (!ids.length) return NextResponse.json({ sent: 0, digest, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
+  if (!ids.length) return NextResponse.json({ sent: 0, digest, bell, inactive, attendanceClosed, weekly, autoReg, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts, liveSynced });
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
   const [recent, active] = await Promise.all([
     prisma.taskRequest.findMany({ where: { toId: { in: ids }, subject: { startsWith: "Reminder:" }, createdAt: { gte: weekAgo } } as never, select: { toId: true } }),
@@ -109,7 +111,7 @@ async function GET_handler(req: NextRequest) {
   });
   if (data.length) await prisma.taskRequest.createMany({ data: data as never });
   const emailed = await emailDigest(data.map((d) => ({ toId: d.toId, subject: d.subject, body: d.body })));
-  return NextResponse.json({ sent: data.length, digest, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts });
+  return NextResponse.json({ sent: data.length, digest, emailed, bell, inactive, attendanceClosed, labManuals, qaa, renewals, approvals, dashboards, helpSla, counselling, library, billing, studentAlerts, liveSynced });
 }
 
 // Optional email: only when RESEND_API_KEY and EMAIL_FROM are set in Vercel (a free Resend account is enough). Otherwise reminders stay in the app.
