@@ -33,8 +33,8 @@ export default function HubCards({ hubKey, about }: { hubKey: string; about: Rec
         </div>
       )}
       {shown.map((s) => (
-        <section key={s.title} style={{ marginTop: 14 }}>
-          <h2 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--slate, #667)", margin: "0 0 6px" }}>{t(s.title)}</h2>
+        <section key={s.title} data-group={s.title} style={{ marginTop: 16, border: "1px solid rgba(27,95,170,.18)", borderRadius: 12, padding: "10px 12px 12px", background: "rgba(27,95,170,.035)" }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8, paddingBottom: 6, borderBottom: "1px solid rgba(27,95,170,.15)" }}>{t(s.title)} <span className="small-note" style={{ fontWeight: 400 }}>{s.links.length}</span></h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 10 }}>
             {s.links.map((l) => {
               const Icon = getNavIcon(l.label); const st = linkStatus[l.href];

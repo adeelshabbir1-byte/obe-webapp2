@@ -20,7 +20,7 @@ export const UR: Record<string, string> = {
   "People & Structure": "افراد اور ڈھانچہ", "Accreditation": "ایکریڈیٹیشن", "Reports & Analytics": "رپورٹس اور تجزیے", "University Operations": "یونیورسٹی کے امور", "Facilities & Calendar": "سہولیات اور کیلنڈر",
   "Settings": "ترتیبات", "Platform": "پلیٹ فارم", "More": "مزید", "Other pages": "دیگر صفحات", "Me": "میں", "Exams & results": "امتحانات اور نتائج", "Outcomes & CQI": "نتائج اور CQI",
   "Degrees, partners & colleges": "ڈگریاں، شراکت دار اور کالج", "Faculty": "اساتذہ", "Quality": "معیار", "Committees & meetings": "کمیٹیاں اور اجلاس", "Insights": "بصیرت", "Overview": "جائزہ",
-  "Fees, HR & accounts": "فیس، HR اور اکاؤنٹس", "Facilities & stores": "سہولیات اور اسٹور", "Student life": "طلبہ کی زندگی", "Setup & settings": "سیٹ اپ اور ترتیبات",
+  "Fees, HR & accounts": "فیس، HR اور اکاؤنٹس", "Facilities & stores": "سہولیات اور اسٹور", "Student life": "طلبہ کی زندگی", "Setup & settings": "سیٹ اپ اور ترتیبات", "Set up & data": "سیٹ اپ اور ڈیٹا", "Settings & connections": "ترتیبات اور رابطے", "Students & admissions": "طلبہ اور داخلے",
   // pages
   "AI Configuration": "AI کی ترتیب", "AI Usage": "AI کا استعمال", "Academic Calendar": "تعلیمی کیلنڈر", "Academic Rules & Registration": "تعلیمی قواعد اور رجسٹریشن", "Account Requests": "اکاؤنٹ کی درخواستیں",
   "Accounts": "اکاؤنٹس", "Accreditation Data": "ایکریڈیٹیشن ڈیٹا", "Accreditation Evidence": "ایکریڈیٹیشن کے شواہد", "Accreditation Overview": "ایکریڈیٹیشن کا جائزہ", "Accreditation Status": "ایکریڈیٹیشن کی صورتحال",
