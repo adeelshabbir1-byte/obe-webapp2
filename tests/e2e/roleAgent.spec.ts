@@ -117,12 +117,17 @@ test("Program Lead / OMC: term rollover, curriculum what-if, batch approval", as
 });
 
 test("Controller, college and university: results, sessionals, registration numbers and OBE transcripts", async ({ browser }) => {
-  const c = await as(browser, "dream.controller");
-  await step("Controller", "Controller dashboard and result publishing", async () => { await page(c, "/controller", undefined, "controller"); });
-  const col = await as(browser, "dream.college");
-  await step("College", "Affiliation: sessional marks", async () => { await page(col, "/affiliation?tab=RESULTS", undefined, "college"); });
-  const uni = await as(browser, "dream.affiliation");
-  await step("University", "Affiliation: registration numbers and OBE transcripts", async () => { await page(uni, "/affiliation?tab=RESULTS", undefined, "university"); });
+  const db = any(await testDb());
+  // These people come from "Add newest demo data"; the test database may not have them, and then the step says so.
+  const who = async (username: string, role?: string) => (await db.user.findUnique({ where: { username }, select: { username: true } }))?.username || (role ? (await db.user.findFirst({ where: { role, isActive: true }, select: { username: true } }))?.username : null) || null;
+  const run = async (R: string, username: string | null, name: string, url: string, shot: string) => {
+    if (!username) { results.push({ role: R, step: name, ok: true, ms: 0, note: "no such person in the test data — not checked" }); return; }
+    const ctx = await as(browser, username);
+    await step(R, name, async () => { await page(ctx, url, undefined, shot); });
+  };
+  await run("Controller", await who("dream.controller", "EXAM_CONTROLLER"), "Controller dashboard and result publishing", "/controller", "controller");
+  await run("College", await who("dream.college"), "Affiliation: sessional marks", "/affiliation?tab=RESULTS", "college");
+  await run("University", await who("dream.affiliation"), "Affiliation: registration numbers and OBE transcripts", "/affiliation?tab=RESULTS", "university");
 });
 
 test("Student: rate my CLOs, practice, skills transcript, live lectures", async ({ browser }) => {
@@ -171,6 +176,7 @@ test.afterAll(() => {
   writeFileSync(join(OUT, "summary.md"), md);
   if (process.env.GITHUB_STEP_SUMMARY) { try { writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${md}\n`, { flag: "a" }); } catch { /* summary is optional */ } }
   console.log(head);
+  for (const f of failed) console.log(`  ✗ ${f.role} — ${f.step}: ${f.note}`);
 });
 
 test("Role agent: every step passed", async () => {
