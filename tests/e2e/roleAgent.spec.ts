@@ -45,7 +45,10 @@ test("Teacher: generate the whole term, adopt, scan a mark sheet, marks reach th
   await step(R, "AI stand-in switched on for the institute (no AI budget spent)", async () => { ok(await call(su, "POST", "/api/admin/ai-usage", { chairmanId: head.id, monthlyBudgetUsd: 5, paperModel: "mock", planModel: "mock" }), "ai settings"); });
   const t = await as(browser, "dream.instructor");
   const ins = await db.user.findUniqueOrThrow({ where: { username: "dream.instructor" } });
-  const course = await db.course.findFirst({ where: { instructorId: ins.id, isOffered: true, studentEnrollments: { some: {} } }, select: { id: true, code: true } }) || await db.course.findFirst({ where: { instructorId: ins.id }, select: { id: true, code: true } });
+  // A course of this teacher whose result is still open (an approved or submitted result is locked, as it should be).
+  const locked = new Set(((await db.courseResult.findMany({ where: { status: { in: ["APPROVED", "SUBMITTED"] } }, select: { courseId: true } }).catch(() => [])) as { courseId: string }[]).map((r) => r.courseId));
+  const mine = (await db.course.findMany({ where: { instructorId: ins.id, studentEnrollments: { some: {} } }, select: { id: true, code: true, isOffered: true }, orderBy: { isOffered: "desc" } })) as { id: string; code: string }[];
+  const course = mine.find((c) => !locked.has(c.id)) || mine[0] || await db.course.findFirst({ where: { instructorId: ins.id }, select: { id: true, code: true } });
   if (!course) { results.push({ role: R, step: "find a course", ok: false, ms: 0, note: "dream.instructor teaches no course" }); return; }
   await step(R, `Open ${course.code}'s plan board`, async () => { ok(await call(t, "GET", `/api/plan-generate?courseId=${course.id}`), "board"); });
   let paperId = "";
@@ -99,7 +102,7 @@ test("HOD: approvals, year-plan what-if, classroom observation", async ({ browse
     const c = await db.course.findFirst({ where: { instructorId: { not: null, notIn: [hod.id] }, coordinator: { managedById: hod.managedById || undefined } }, select: { id: true } });
     if (!c) throw new Error("no course with a teacher");
     const before = await db.classObservation.count({ where: { courseId: c.id } });
-    ok(await call(h, "POST", "/api/observations", { courseId: c.id, lectureNumber: 1, scores: {}, strengths: "Clear examples (role agent).", improve: "More questions to the class." }), "observation");
+    ok(await call(h, "POST", "/api/observations", { courseId: c.id, lectureNumber: 1, scores: { prep: 3, clarity: 4 }, strengths: "Clear examples (role agent).", improve: "More questions to the class." }), "observation");
     const after = await db.classObservation.count({ where: { courseId: c.id } });
     if (after <= before) throw new Error("the observation was not stored");
   });
