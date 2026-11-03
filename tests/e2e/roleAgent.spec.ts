@@ -45,7 +45,7 @@ test("Teacher: generate the whole term, adopt, scan a mark sheet, marks reach th
   await step(R, "AI stand-in switched on for the institute (no AI budget spent)", async () => { ok(await call(su, "POST", "/api/admin/ai-usage", { chairmanId: head.id, monthlyBudgetUsd: 5, paperModel: "mock", planModel: "mock" }), "ai settings"); });
   const t = await as(browser, "dream.instructor");
   const ins = await db.user.findUniqueOrThrow({ where: { username: "dream.instructor" } });
-  const course = await db.course.findFirst({ where: { instructorId: ins.id, isOffered: true, enrollments: { some: {} } }, select: { id: true, code: true } }) || await db.course.findFirst({ where: { instructorId: ins.id }, select: { id: true, code: true } });
+  const course = await db.course.findFirst({ where: { instructorId: ins.id, isOffered: true, studentEnrollments: { some: {} } }, select: { id: true, code: true } }) || await db.course.findFirst({ where: { instructorId: ins.id }, select: { id: true, code: true } });
   if (!course) { results.push({ role: R, step: "find a course", ok: false, ms: 0, note: "dream.instructor teaches no course" }); return; }
   await step(R, `Open ${course.code}'s plan board`, async () => { ok(await call(t, "GET", `/api/plan-generate?courseId=${course.id}`), "board"); });
   let paperId = "";
