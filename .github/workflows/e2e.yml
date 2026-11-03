@@ -7,6 +7,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly run of the whole suite, including the role agent (tests/e2e/roleAgent.spec.ts): 02:17 Pakistan time.
+  schedule:
+    - cron: "17 21 * * *"
   workflow_dispatch:
     inputs:
       base_url:
@@ -61,6 +64,13 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 14
+      - name: Role agent summary and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: role-agent
+          path: test-results/role-agent/
+          retention-days: 30
       - name: Phone screenshots
         if: always()
         uses: actions/upload-artifact@v4

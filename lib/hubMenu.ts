@@ -41,7 +41,7 @@ const OVERRIDE: [RegExp, string, string][] = [
   [/^\/(operations|plans)$/, "institute", "Overview"],
   [/^\/(admissions|student-activities|societies\/elections)$/, "institute", "Students & admissions"],
   [/^\/(chairman\/setup|setup-check|chairman\/institute-settings|chairman\/campuses|data-import|data-quality|chairman\/backups|admin\/migrations)$/, "institute", "Set up & data"],
-  [/^\/(billing|settings\/who-decides|chairman\/ai-configuration|chairman\/messaging|chairman\/lms)$/, "institute", "Settings & connections"],
+  [/^\/(billing|settings\/who-decides|chairman\/ai-configuration|chairman\/messaging|chairman\/lms|teaching-tools)$/, "institute", "Settings & connections"],
   [/^\/(academic-rules|registration-rules)$/, "academics", "Policies & Rules"],
   [/^\/(plan-requests)$/, "academics", "Students"],
   [/^\/(coordinator\/batches|coordinator\/assign-subject-experts|hod\/assign-subject-experts|coordinator\/elective-options|coordinator\/custom-categories|coordinator\/plos|chairman\/plos|coordinator\/grading-scale|coordinator\/program-profile|program-spec|coordinator\/course-codes|dean\/course-codes|course-homes|clo-bulk-import|course-split)$/, "academics", "Program set-up"],

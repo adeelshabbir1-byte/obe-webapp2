@@ -174,7 +174,7 @@ export const CARD_TEXT: Record<string, string> = {
   "/chairman/affiliates": "List the colleges affiliated with your university.",
   "/affiliates/marks": "Exchange marks with affiliated colleges: sessionals and finals.",
   "/college/design": "Take a course's CLOs and plan from the affiliating university.",
-  "/chairman/lms": "Connect OBEHUB with your Moodle site to pull grades.",
+  "/teaching-tools": "Connect Moodle, Google Classroom and Meet, Teams and YouTube for ODL teaching.",
   "/process-map": "See who does what at each step, from curriculum to results.",
   "/quality-office": "Run the QEC's work: reviews, proformas and reports.",
   "/program-spec": "Produce the program specification document from live data.",

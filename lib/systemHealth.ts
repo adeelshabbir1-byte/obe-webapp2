@@ -178,5 +178,6 @@ export function settingsCheck() {
     { key: "SENTRY_DSN", set: has("SENTRY_DSN"), need: "optional", what: "Error monitoring (Sentry). Without it errors are only in the Vercel logs and System Feedback." },
     { key: "SENTRY_TRACES_SAMPLE_RATE", set: has("SENTRY_TRACES_SAMPLE_RATE"), need: "optional", what: "Share of requests traced for speed in Sentry (default 0.1 = 10%)." },
     { key: "SUPPORT_EMAIL", set: has("SUPPORT_EMAIL"), need: "optional", what: "Where 'Report a problem' emails go when the automatic report can't be sent." },
+    { key: "TOOLS_SECRET_KEY", set: has("TOOLS_SECRET_KEY"), need: "optional", what: "Encrypts the teaching-tool credentials institutes save (Moodle, Google, Microsoft, YouTube). Without it the server key is used." },
   ];
 }

@@ -7,7 +7,7 @@ export const urduStyle = { direction: "rtl" as const, fontFamily: "'Noto Nastali
 
 export const NAV_UR: Record<string, string> = {
   "/student/skills-transcript": "میرا مہارتوں کا ٹرانسکرپٹ", "/student/clo-self": "اپنے CLO کا خود جائزہ",
-  "/student/registration": "کورس رجسٹریشن", "/student/degree-plan": "ڈگری پلان", "/student/dashboard": "اختیاری مضامین", "/student/timetable": "میرا ٹائم ٹیبل",
+  "/student/registration": "کورس رجسٹریشن", "/student/degree-plan": "ڈگری پلان", "/student/dashboard": "اختیاری مضامین", "/student/timetable": "میرا ٹائم ٹیبل", "/student/live": "براہِ راست لیکچر",
   "/student/exams": "میرے امتحانات", "/student/quizzes": "آن لائن کوئز", "/student/submissions": "کام جمع کرائیں", "/student/fyp": "فائنل ایئر پراجیکٹ",
   "/student/details": "میری تفصیلات", "/student/cv": "میرا پروفائل اور سی وی", "/student/fees": "میری فیس", "/student/activities": "سوسائٹیز اور سرگرمیاں",
   "/student/elections": "سوسائٹی انتخابات", "/student/transcript": "میرا ٹرانسکرپٹ", "/student/recheck": "نتیجہ کی دوبارہ جانچ", "/student/obe-analytics": "میری او بی ای پیش رفت",

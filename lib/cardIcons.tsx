@@ -56,7 +56,7 @@ const RULES: [RegExp, LucideIcon[]][] = [
   [/people|org-chart|employees|faculty|teacher|onboarding|lab-engineers|subject-experts|recruit|program-moves|move-program|custodian/, [Users, UserCog, UserPlus, UsersRound, Contact]],
   [/training|recognition|certification|learn|fdp|badge/, [Award, Medal, Trophy, Lightbulb]],
   [/leave|delegation|substitut/, [ArrowLeftRight, Clock]],
-  [/setup|settings|institute-settings|modules|platform-settings|messaging|lms|ai-configuration|backups|migrations|data-import|landing/, [Settings, Plug, Cloud, HardDrive, Upload, Server, Bot, KeyRound]],
+  [/setup|settings|institute-settings|modules|platform-settings|messaging|lms|teaching-tools|ai-configuration|backups|migrations|data-import|landing/, [Settings, Plug, Cloud, HardDrive, Upload, Server, Bot, KeyRound]],
   [/report|summary|dashboard|overview|operations|insight|pilot|head-dashboard|yearly/, [BarChart3, LineChart, Gauge, Activity, FileBarChart]],
   [/consortium|collab|affiliat|adp|joint|partner/, [Handshake, Link2, Globe, Network]],
   [/plan|planner|my-obe|guide|handbook|home|profile|topic-workspace|my-/, [NotebookPen, Compass, Info, Star, BookOpen]],

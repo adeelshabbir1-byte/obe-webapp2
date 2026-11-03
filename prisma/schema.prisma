@@ -10386,3 +10386,102 @@ model HecViewLink {
   createdById String
   createdAt   DateTime  @default(now())
 }
+
+// Queue item 14 (prisma/migration_adeel_p12.sql): ODL teaching tools per institute and the evidence pulled back.
+model TeachingTool {
+  chairmanId  String
+  tool        String // MOODLE | GOOGLE | MICROSOFT | YOUTUBE
+  configJson  String    @default("{}")
+  secretBox   String?
+  status      String    @default("NEW") // NEW | OK | FAILING
+  lastCheckAt DateTime?
+  lastError   String?
+  checkJson   String?
+  updatedById String?
+  updatedAt   DateTime  @default(now())
+
+  @@id([chairmanId, tool])
+}
+
+model CourseToolLink {
+  courseId     String
+  tool         String
+  externalId   String
+  extraJson    String    @default("{}")
+  lastSyncAt   DateTime?
+  lastSyncNote String?
+
+  @@id([courseId, tool])
+}
+
+model OdlModule {
+  id            String   @id
+  courseId      String
+  lectureNumber Int
+  videoUrl      String?
+  videoId       String?
+  videoTitle    String?
+  videoMin      Float?
+  captions      Boolean  @default(false)
+  selfQ         Int      @default(0)
+  readingUrl    String?
+  readingMin    Int?
+  refs          String?
+  interaction   String?
+  updatedById   String?
+  updatedAt     DateTime @default(now())
+
+  @@unique([courseId, lectureNumber], map: "OdlModule_key")
+}
+
+model OdlContentReview {
+  courseId  String    @id
+  seId      String?
+  seName    String?
+  seAt      DateTime?
+  idId      String?
+  idName    String?
+  idAt      DateTime?
+  notes     String?
+  updatedAt DateTime  @default(now())
+}
+
+model LiveSession {
+  id             String    @id
+  courseId       String
+  lectureNumber  Int
+  tool           String
+  startsAt       DateTime
+  endsAt         DateTime
+  joinUrl        String?
+  externalId     String?
+  organizer      String?
+  recordingUrl   String?
+  attendees      Int?
+  attendanceJson String?
+  heldMinutes    Float?
+  status         String    @default("PLANNED") // PLANNED | HELD | NOT_HELD
+  syncNote       String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  syncedAt       DateTime?
+
+  @@unique([courseId, lectureNumber], map: "LiveSession_key")
+  @@index([endsAt], map: "LiveSession_time_idx")
+}
+
+model DiscussionActivity {
+  courseId     String
+  tool         String
+  forumId      String
+  week         Int
+  forumName    String
+  graded       Boolean  @default(false)
+  posts        Int      @default(0)
+  teacherPosts Int      @default(0)
+  students     Int      @default(0)
+  hours        Float?
+  syncedAt     DateTime @default(now())
+
+  @@id([courseId, tool, forumId, week])
+}

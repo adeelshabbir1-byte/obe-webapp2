@@ -37,6 +37,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string }[] = [
 "t": "HecViewLink"
 },
 {
+"f": "migration_adeel_p12.sql",
+"d": "Queue item 14: ODL teaching tools (Moodle, Google Classroom + Meet, Microsoft Teams, YouTube) per institute, each",
+"t": "DiscussionActivity"
+},
+{
 "f": "migration_adeel_p4.sql",
 "d": "Adeel prompt part 4: one delegation engine (chosen tasks / approvals / acting, with scope, period and \"may pass on\"),",
 "t": "ArchiveAmendment"

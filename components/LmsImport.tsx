@@ -7,9 +7,9 @@ import TemplateLink from "./TemplateLink";
 type Inst = { id: string; label: string; type: string; maxScore: number };
 
 /** Upload a Moodle / Google Classroom / Canvas gradebook CSV and map its columns to this course's assessments. */
-export default function LmsImport({ courseId, instruments }: { courseId: string; instruments: Inst[] }) {
+export default function LmsImport({ courseId, instruments, tools = [], startOpen = false }: { courseId: string; instruments: Inst[]; tools?: { tool: string; label: string }[]; startOpen?: boolean }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [sheet, setSheet] = useState<LmsSheet | null>(null);
   const [map, setMap] = useState<Record<number, { instrumentId: string; outOf: string }>>({});
   const [overwrite, setOverwrite] = useState(false);
@@ -27,6 +27,15 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(d.error || "Moodle did not answer."); return; }
+    await onText(d.csv);
+  }
+  /** From a course linked under Teaching tools: Moodle (whole items or per quiz question), Classroom, Teams. */
+  async function fromTool(tool: string, perQuestion = false) {
+    setMsg(""); setSheet(null); setBusy(true);
+    const r = await fetch(`/api/course-tools?courseId=${courseId}&tool=${tool}&do=grades${perQuestion ? "&perQuestion=1" : ""}`);
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) { setMsg(d.error || "The tool did not answer."); return; }
     await onText(d.csv);
   }
   async function onFile(f: File | undefined) {
@@ -57,7 +66,7 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
     setMsg(`Imported ${d.written} marks${d.skipped ? `, kept ${d.skipped} existing` : ""}.${d.unmatchedCount ? ` ${d.unmatchedCount} rows did not match a student: ${d.unmatched.join(", ")}` : ""}`);
     router.refresh();
   }
-  if (!open) return <button className="btn btn-secondary btn-sm" type="button" onClick={() => setOpen(true)}>Import from Moodle / Google Classroom</button>;
+  if (!open) return <button className="btn btn-secondary btn-sm" type="button" onClick={() => setOpen(true)}>Import from Moodle / Google Classroom / Teams</button>;
   return (
     <div className="card" style={{ borderLeft: "4px solid #2D63B5" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}><b>Import grades from an LMS</b><button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Close</button></div>
@@ -65,6 +74,9 @@ export default function LmsImport({ courseId, instruments }: { courseId: string;
       <TemplateLink name="lms-gradebook" />{" "}
       <input type="file" accept=".csv,.txt,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
       <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><span className="small-note">or pull from Moodle — course id</span><input value={mid} onChange={(e) => setMid(e.target.value.replace(/\D/g, ""))} style={{ width: 80 }} placeholder="e.g. 245" /><button type="button" className="btn btn-secondary btn-sm" disabled={!mid || busy} onClick={fromMoodle}>Fetch grades</button></div>
+      {tools.length > 0 && <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}><span className="small-note">or pull from this course&apos;s linked class:</span>
+        {tools.map((t) => <span key={t.tool} style={{ display: "inline-flex", gap: 4 }}><button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => fromTool(t.tool)}>{t.label} grades</button>
+          {t.tool === "MOODLE" && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => fromTool("MOODLE", true)} title="Each quiz question as its own column, for per-question CLO results">Moodle quiz marks per question</button>}</span>)}</div>}
       {sheet && (
         <>
           <p className="small-note">{sheet.source} file · {sheet.rows.length} students · {sheet.gradeCols.length} grade columns</p>
