@@ -12,6 +12,8 @@ export type Ctx = { user: SessionUser; w: Who };
 export type Item = {
   kind: string; id: string; title: string; from: string; area: string; since: Date; due: Date | null;
   priority: "high" | "normal" | "low"; href: string; actions: Action[]; onBehalfOf?: string; note?: string;
+  /** Things the approver should look at; an item with none "passes" and can go in "Approve all that pass". */
+  checks?: string[];
 };
 export type Provider = {
   kind: string; label: string;

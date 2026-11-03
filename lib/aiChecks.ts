@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "./db";
-import { DEFAULT_MODELS, DEFAULT_PRICES, costOf, overBudget, versionKey, readJson, paperPrompt, planPrompt, splitPrompt, mockReply, type Kind, type PaperInput, type PlanInput, type SplitInput, type SplitResult, type PaperResult, type PlanResult, type Price } from "./aiChecksCore";
+import { DEFAULT_MODELS, DEFAULT_PRICES, costOf, overBudget, versionKey, readJson, paperPrompt, planPrompt, splitPrompt, marksPrompt, mockReply, type MarksInput, type MarksResult, type Kind, type PaperInput, type PlanInput, type SplitInput, type SplitResult, type PaperResult, type PlanResult, type Price } from "./aiChecksCore";
 
 // AI checks with the university's own API key (ANTHROPIC_API_KEY in Vercel, or the institute's AI Configuration): the
 // Instructor's "AI check" of a mid / final paper and the SE's "AI review" of the plan. The prompt is built from data the
@@ -34,7 +34,7 @@ async function keyFor(chairmanId: string) {
 }
 
 /** One AI run: cache (same version → no new cost), budget, the call, the usage log. */
-async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; courseId: string; input: PaperInput | PlanInput | SplitInput; build: () => { system: string; user: string }; document?: { data: string; mediaType: string } | null }): Promise<{ result: T; cached: boolean; costUsd: number; model: string }> {
+async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; courseId: string; input: PaperInput | PlanInput | SplitInput | MarksInput; build: () => { system: string; user: string }; document?: { data: string; mediaType: string } | null }): Promise<{ result: T; cached: boolean; costUsd: number; model: string }> {
   const s = await settingsOf(a.chairmanId);
   if (!s.enabled) throw new Error("AI checks are switched off for this institute.");
   const model = a.kind === "PLAN" ? s.planModel : s.paperModel;
@@ -54,7 +54,7 @@ async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; cours
     if (!apiKey) throw new Error("No AI key: set ANTHROPIC_API_KEY in Vercel (or the institute's AI Configuration).");
     const { system, user } = a.build();
     const client = new Anthropic({ apiKey, timeout: 90000, maxRetries: 1 });
-    const content: Anthropic.MessageParam["content"] = a.document ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: a.document.data } } as never, { type: "text", text: user }] : user;
+    const content: Anthropic.MessageParam["content"] = a.document ? [(a.document.mediaType.startsWith("image/") ? { type: "image", source: { type: "base64", media_type: a.document.mediaType, data: a.document.data } } : { type: "document", source: { type: "base64", media_type: "application/pdf", data: a.document.data } }) as never, { type: "text", text: user }] : user;
     try {
       const r = await client.messages.create({ model, max_tokens: 8000, system, messages: [{ role: "user", content }] });
       text = r.content.map((c) => (c.type === "text" ? c.text : "")).join("");
@@ -69,6 +69,13 @@ async function run<T>(a: { chairmanId: string; userId: string; kind: Kind; cours
   const result = readJson<T>(text);
   await db.aiCheckCache.upsert({ where: { key }, create: { key, chairmanId: a.chairmanId, kind: a.kind, courseId: a.courseId, resultJson: JSON.stringify(result) }, update: { resultJson: JSON.stringify(result), createdAt: new Date() } }).catch(() => null);
   return { result, cached: false, costUsd, model };
+}
+
+/** A photographed / scanned mark sheet read into rows of marks (the paper model, the same budget and log). */
+export async function readMarkSheet(user: { id: string }, chairmanId: string, courseId: string, data: string, mediaType: string, columns: string[]) {
+  const input: MarksInput = { size: data.length, columns };
+  const r = await run<MarksResult>({ chairmanId, userId: user.id, kind: "MARKS", courseId: `marks:${courseId}:${versionKey({ d: data.slice(0, 5000), n: data.length })}`, input, build: () => marksPrompt(columns), document: { data, mediaType } });
+  return { ...r.result, model: r.model, costUsd: r.costUsd, cached: r.cached };
 }
 
 /** A past paper's PDF split into questions by the AI (scans included): the cheaper paper model, the same budget and log. */

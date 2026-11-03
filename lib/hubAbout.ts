@@ -185,6 +185,7 @@ export const PAGE_LINES: Record<string, string> = {
   "/coordinator/surveys": "Feedback surveys of the program and their results.",
   "/question-bank": "Questions of each course by CLO, Bloom level and difficulty.",
   "/plan-generate": "Generate quizzes, assignments, mids and finals from the course plan.",
+  "/term-rollover": "Give every unplanned course the plan of its latest offering, in one step.",
   "/curriculum-whatif": "See what dropping a course does to credits, GA coverage and prerequisites.",
   "/admin/hec-view": "Private links for HEC to see shared institutes' totals and curriculum adoption.",
   "/observations": "Observe a colleague's lecture with a short form; the teacher replies.",

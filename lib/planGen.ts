@@ -67,8 +67,12 @@ export async function board(u: U, courseId: string) {
     byInst.set(o.instrumentId, [...(byInst.get(o.instrumentId) || []), { id: p.id, status: p.status, variant: p.variant, createdAt: p.createdAt }]);
   }
   const short = await shortfallOf(r.ctx.chairmanId, courseId);
+  const allIds = (await prisma.course.findMany({ where: { code: { in: r.ctx.codes.map(String) }, coordinator: { managedById: r.ctx.chairmanId } }, select: { id: true } })).map((c) => c.id);
+  const past = ((await db.qbPaper.findMany({ where: { courseId: { in: allIds.concat("none") } }, orderBy: { createdAt: "desc" }, take: 80, select: { examType: true, optsJson: true } }).catch(() => [])) || []) as { examType: string; optsJson: string }[];
+  const lastMix: Record<string, { EASY: number; MEDIUM: number; HARD: number }> = {};
+  for (const x of past) { const o = J<{ difficulty?: Record<string, number> }>(x.optsJson, {}); const k = OFFICIAL.test(x.examType) ? x.examType : x.examType.replace(/\s*\d+$/, ""); if (o.difficulty && !lastMix[k]) lastMix[k] = { EASY: Number(o.difficulty.EASY) || 0, MEDIUM: Number(o.difficulty.MEDIUM) || 0, HARD: Number(o.difficulty.HARD) || 0 }; }
   const self = await (await import("./cloSelf")).courseSelf(courseId).catch(() => ({ students: 0, clos: [] as { code: string; n: number; self: number | null; direct: number | null; gap: number | null; flag: string }[] }));
-  return { course: { id: courseId, code: r.ctx.course.code, title: r.ctx.course.title }, term, forAll: r.forAll, source: plan.source, assessments: plan.list.map((a) => ({ ...a, papers: byInst.get(a.id) || [] })), ga, cqi, short, self };
+  return { course: { id: courseId, code: r.ctx.course.code, title: r.ctx.course.title }, term, forAll: r.forAll, source: plan.source, assessments: plan.list.map((a) => ({ ...a, papers: byInst.get(a.id) || [] })), ga, cqi, short, self, lastMix };
 }
 
 /** Uses that still rest this term, across every course with the same code (agreed gap: final 3 · mid 2 · other 1 term). */
@@ -246,4 +250,38 @@ export async function shortfallsFor(seId: string) {
   const out: { courseId: string; code: string; label: string; gaps: string[] }[] = [];
   for (const c of cs) { const s = await shortfallOf(c.coordinator.managedById || "", c.id); if (s) out.push({ courseId: c.id, code: c.code, label: s.label, gaps: s.gaps }); }
   return out;
+}
+
+/** Generate the whole term at once: every quiz and assignment of the plan not generated yet this term (the mid and
+ *  the final are left to their own vetting). The teacher then only reviews and adopts. */
+export async function generateAll(u: U, courseId: string, b: { difficulty?: Record<string, number>; allSections?: boolean }) {
+  const r = await roleIn(u, courseId);
+  if (!r.may) throw new Error("forbidden");
+  const [plan, term] = await Promise.all([planItems(courseId), currentTerm(courseId)]);
+  const done = new Set(((await db.qbPaper.findMany({ where: { courseId, termLabel: term }, select: { optsJson: true } }).catch(() => [])) as { optsJson: string }[]).map((p) => J<{ instrumentId?: string }>(p.optsJson, {}).instrumentId).filter(Boolean));
+  const todo = plan.list.filter((a) => !OFFICIAL.test(a.type) && a.lectures.some((l) => l.clo) && !done.has(a.id));
+  const out: { label: string; id?: string; questions?: number; gaps?: string[]; error?: string }[] = [];
+  for (const a of todo) {
+    try { const g = await generate(u, courseId, { instrumentId: a.id, difficulty: b.difficulty, allSections: b.allSections && r.forAll }); out.push({ label: a.label, id: g.id, questions: g.chosen.length, gaps: g.gaps }); }
+    catch (e) { out.push({ label: a.label, error: (e as Error).message }); }
+  }
+  return { made: out.filter((x) => x.id).length, skipped: plan.list.length - todo.length, items: out };
+}
+
+/** CQI closes itself (3 Nov 2026): when a course's result is approved, every open weak-GA CQI record of the course is
+ *  re-checked against the final standing and marked effective or not effective — nobody presses "Re-check". */
+export async function autoCloseCqi(courseId: string, byId: string) {
+  const open = (await cqiOpen(courseId)).filter((x) => ["open", "in-progress"].includes(x.status) && x.sourceReference);
+  if (!open.length) return 0;
+  const gas = await gaOfCourse(courseId);
+  let n = 0;
+  for (const rec of open) {
+    const g = gas.standing.find((x) => x.ga === rec.sourceReference);
+    if (!g || !g.assessed) continue;
+    const ok = effective(rec.metricBefore ?? 0, g.pct);
+    await prisma.cqiRecord.update({ where: { id: rec.id }, data: { metricAfter: g.pct, status: ok ? "verified-effective" : "verified-ineffective", verifiedById: byId, verifiedAt: new Date(), lastUpdatedById: byId, actionTaken: `${rec.actionTaken || ""}\nClosed automatically when the result was approved: ${rec.sourceReference} ${rec.metricBefore ?? "?"}% → ${g.pct}%.`.trim() } as never });
+    n++;
+  }
+  if (n) await writeAuditLog({ actorUserId: byId, action: "CQI_AUTO_CLOSED", entityType: "Course", entityId: courseId, metadata: { records: n } });
+  return n;
 }

@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     switch (b.action) {
       case "generate": return NextResponse.json(await pg.generate(u, s(b.courseId), { instrumentId: s(b.instrumentId), lectures: Array.isArray(b.lectures) ? b.lectures.map(Number).filter(Number.isFinite).slice(0, 200) : undefined, difficulty: b.difficulty && typeof b.difficulty === "object" ? Object.fromEntries(["EASY", "MEDIUM", "HARD"].map((k) => [k, Math.max(0, Math.min(100, Number(b.difficulty[k]) || 0))])) : undefined, minutes: Number(b.minutes) || undefined, examDate: b.examDate ? s(b.examDate, 20) : null, allSections: !!b.allSections }));
+      case "generateAll": return NextResponse.json(await pg.generateAll(u, s(b.courseId), { difficulty: b.difficulty && typeof b.difficulty === "object" ? Object.fromEntries(["EASY", "MEDIUM", "HARD"].map((k) => [k, Math.max(0, Math.min(100, Number(b.difficulty[k]) || 0))])) : undefined, allSections: !!b.allSections }));
       case "swap": return NextResponse.json(await pg.swapOne(u, s(b.paperId), s(b.questionId)));
       case "adopt": return NextResponse.json(await pg.adoptPaper(u, s(b.paperId)));
       case "tutorial": return NextResponse.json(await pg.recordTutorial(u, s(b.courseId), s(b.ga, 12), s(b.note, 1000)));

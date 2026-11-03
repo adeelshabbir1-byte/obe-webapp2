@@ -458,6 +458,7 @@ const ERP_LINKS: [string, string, string[]][] = [
   ["/early-warning", "Early Warning", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "DEPARTMENT_COORDINATOR", "STUDENT_AFFAIRS", "INSTRUCTOR", "SUBJECT_EXPERT", "OMC", "LAB_ENGINEER"]],
   ["/question-bank", "Question Bank", ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR"]],
   ["/plan-generate", "Generate Assessments from the Plan", ["INSTRUCTOR", "SUBJECT_EXPERT", "PROGRAM_COORDINATOR"]],
+  ["/term-rollover", "Term Rollover", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC"]],
   ["/curriculum-whatif", "Curriculum What-If", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "DEPARTMENT_COORDINATOR"]],
   ["/observations", "Classroom Observation", ["CHAIRMAN", "DEAN", "HEAD_OF_DEPARTMENT", "PROGRAM_COORDINATOR", "OMC", "INSTRUCTOR", "SUBJECT_EXPERT"]],
   ["/question-bank/analytics", "Question Bank Analytics", ["PROGRAM_COORDINATOR", "OMC"]],

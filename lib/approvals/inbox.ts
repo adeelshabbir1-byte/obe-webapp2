@@ -158,13 +158,16 @@ export async function runApprovalJobs(now = new Date()) {
       const above = await approverFor(w.chairmanId, nextPosition(u.role), { departmentId: u.departmentId }).catch(() => null);
       const ids = (above?.ids || []).filter((x) => x !== u.id);
       if (ids.length) await notifyUsers(ids, { kind: "APPROVAL_ESCALATION", title: `${esc.length} item(s) overdue with ${u.name}`, body: `Waiting longer than the institute's limit for ${u.name}'s decision: ${list(esc)} Please follow them up.`, href: esc.length === 1 ? esc[0].href : "/approvals" });
-      await notifyUsers([u.id], { kind: "APPROVAL_REMINDER", title: `${esc.length} item(s) overdue — the position above you has been told`, body: list(esc), href: "/approvals" });
+      await notifyUsers([u.id], { kind: "APPROVAL_REMINDER", title: `${esc.length} item(s) overdue — the position above you has been told`, body: list(esc), href: oneHref(esc) });
       escalations += esc.length;
     }
     if (rem.length) {
-      await notifyUsers([u.id], { kind: "APPROVAL_REMINDER", title: `Reminder: ${rem.length} item(s) waiting for your decision`, body: list(rem), href: "/approvals" });
+      await notifyUsers([u.id], { kind: "APPROVAL_REMINDER", title: `Reminder: ${rem.length} item(s) waiting for your decision`, body: list(rem), href: oneHref(rem) });
       reminders += rem.length;
     }
   }
   return { digests, reminders, escalations };
 }
+
+/** One waiting item: straight to its one-tap approval page; several: the inbox. */
+const oneHref = (xs: { kind: string; id: string }[]) => (xs.length === 1 ? `/approvals/one?k=${encodeURIComponent(xs[0].kind)}&i=${encodeURIComponent(xs[0].id)}` : "/approvals");
