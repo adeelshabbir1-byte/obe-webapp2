@@ -122,13 +122,13 @@ test("Program Lead / OMC: term rollover, curriculum what-if, batch approval", as
 test("Controller, college and university: results, sessionals, registration numbers and OBE transcripts", async ({ browser }) => {
   const db = any(await testDb());
   // These people come from "Add newest demo data"; the test database may not have them, and then the step says so.
-  const who = async (username: string, role?: string) => (await db.user.findUnique({ where: { username }, select: { username: true } }))?.username || (role ? (await db.user.findFirst({ where: { role, isActive: true }, select: { username: true } }))?.username : null) || null;
+  const who = async (username: string) => (await db.user.findUnique({ where: { username }, select: { username: true } }))?.username || null;
   const run = async (R: string, username: string | null, name: string, url: string, shot: string) => {
     if (!username) { results.push({ role: R, step: name, ok: true, ms: 0, note: "no such person in the test data — not checked" }); return; }
     const ctx = await as(browser, username);
     await step(R, name, async () => { await page(ctx, url, undefined, shot); });
   };
-  await run("Controller", await who("dream.controller", "EXAM_CONTROLLER"), "Controller dashboard and result publishing", "/controller", "controller");
+  await run("Controller", await who("dream.controller"), "Controller dashboard and result publishing", "/controller", "controller");
   await run("College", await who("dream.college"), "Affiliation: sessional marks", "/affiliation?tab=RESULTS", "college");
   await run("University", await who("dream.affiliation"), "Affiliation: registration numbers and OBE transcripts", "/affiliation?tab=RESULTS", "university");
 });
