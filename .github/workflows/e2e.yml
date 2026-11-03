@@ -17,7 +17,7 @@ on:
         required: false
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
       postgres:
@@ -47,6 +47,8 @@ jobs:
         if: env.E2E_BASE_URL == ''
         run: |
           npx prisma db push --skip-generate
+          # Triggers and functions live only in the migration SQL (db push does not create them).
+          npx prisma db execute --schema prisma/schema.prisma --file prisma/migration_paper_templates.sql
           npx tsx tests/e2e/seed.ts
       - name: Production build
         if: env.E2E_BASE_URL == ''
