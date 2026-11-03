@@ -59,8 +59,11 @@ export default async function PlatformTeamPage() {
       <h3 style={{ marginTop: 0 }}>Platform roles</h3>
       <p className="small-note" style={{ marginTop: 0 }}>{Object.values(ROLES).map((r) => <span key={r.label} style={{ display: "block" }}><b>{r.label}</b> — {r.does}</span>)}</p>
       {ps.length === 0 ? <p className="small-note">No platform accounts yet.</p> : <table style={{ fontSize: 12.5 }}>
-        <thead><tr><th>Person</th><th>2FA</th>{Object.values(ROLES).map((r) => <th key={r.label} style={{ fontSize: 11 }}>{r.label}</th>)}</tr></thead>
-        <tbody>{ps.map((p) => <tr key={p.id}><td>{p.name}<div className="small-note" style={{ margin: 0 }}>{p.email}</div></td><td style={{ color: p.mfaEnabled ? "#1F5E36" : "#B3261E" }}>{p.mfaEnabled ? "on" : "off"}</td>
+        <thead><tr><th>Person</th><th>Login</th><th>2FA</th>{Object.values(ROLES).map((r) => <th key={r.label} style={{ fontSize: 11 }}>{r.label}</th>)}</tr></thead>
+        <tbody>{ps.map((p) => <tr key={p.id}><td>{p.name}<div className="small-note" style={{ margin: 0 }}>{p.email}</div></td><td style={{ whiteSpace: "nowrap" }}>
+            <ActionButton showMessage url="/api/admin/team" body={{ action: "resetLogin", userId: p.id }} label="Reset password" className="btn btn-secondary btn-sm" confirmText={`Give ${p.name} a temporary password? They are signed out everywhere.`} />{" "}
+            <ActionButton showMessage url="/api/admin/team" body={{ action: "active", userId: p.id, on: !p.isActive }} label={p.isActive ? "Switch off" : "Switch on"} className="btn btn-secondary btn-sm" confirmText={p.isActive ? `Switch off ${p.name}'s account?` : undefined} /></td>
+          <td style={{ color: p.mfaEnabled ? "#1F5E36" : "#B3261E", whiteSpace: "nowrap" }}>{p.mfaEnabled ? "on" : "off"}{p.mfaEnabled && <> <ActionButton showMessage url="/api/admin/team" body={{ action: "resetTwoStep", userId: p.id }} label="Reset" className="btn btn-secondary btn-sm" confirmText={`Turn off ${p.name}'s two-step sign-in (lost phone)?`} /></>}</td>
           {(Object.keys(ROLES) as (keyof typeof ROLES)[]).map((k) => { const on = p.roles.includes(k); return <td key={k} style={{ textAlign: "center" }}>
             <ActionButton showMessage url="/api/admin/team" body={{ action: "role", userId: p.id, role: k, on: !on }} label={on ? "✓" : "—"} className={on ? "btn btn-sm" : "btn btn-secondary btn-sm"} /></td>; })}
         </tr>)}</tbody></table>}

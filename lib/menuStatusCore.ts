@@ -2,10 +2,10 @@
 // No database here (tested on its own). Status order: red (overdue / blocking) > amber (due within N working days) >
 // blue (in progress) > none. A task the person marked "waiting on someone else" counts as grey (left out).
 
-export type Status = "red" | "amber" | "blue";
+export type Status = "red" | "amber" | "blue" | "grey" | "green";
 export type MenuTask = { title: string; href: string; due?: Date | string | null; urgency: "overdue" | "soon" | "normal"; detail?: string | null };
 export type LinkStatus = { status: Status; count: number; reasons: string[] };
-const RANK: Record<Status, number> = { red: 0, amber: 1, blue: 2 };
+const RANK: Record<Status, number> = { red: 0, amber: 1, blue: 2, grey: 3, green: 4 };
 export const worst = (a: Status | null, b: Status | null): Status | null => (!a ? b : !b ? a : RANK[a] <= RANK[b] ? a : b);
 
 /** Working days (Mon–Fri) from now until the date; negative when it has passed. */

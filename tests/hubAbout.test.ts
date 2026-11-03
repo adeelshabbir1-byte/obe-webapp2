@@ -22,3 +22,25 @@ test("Import Course Content describes importing, not equivalence", () => {
   assert.match(about["/omc/import-content"], /Copy CLOs/);
   assert.doesNotMatch(about["/omc/import-content"], /Equivalence/i);
 });
+
+import { CARD_TEXT } from "../lib/cardText";
+test("every menu page has its own card line, starting with a verb, of card length", () => {
+  const missing = Array.from(pages.keys()).filter((h) => !CARD_TEXT[h]);
+  assert.deepEqual(missing, []);
+  const bad = Object.entries(CARD_TEXT).filter(([, l]) => l.length < 20 || l.length > 100 || !/^[A-Z][a-z]+\b/.test(l)).map(([h]) => h);
+  assert.deepEqual(bad, []);
+});
+
+import { iconsFor, hasRule } from "../lib/cardIcons";
+import { hubsOf } from "../lib/hubMenu";
+test("every card has a chosen icon, none repeated inside a group", () => {
+  const noRule = Array.from(pages.entries()).filter(([h, l]) => !hasRule(h, l)).map(([h]) => h);
+  assert.deepEqual(noRule, []);
+  for (const r of ROLES) for (const [, groups] of hubsOf(navForRole(r) as { href: string; label: string }[])) for (const g of groups) {
+    const icons = Array.from(iconsFor(g.links).values());
+    assert.equal(new Set(icons).size, icons.length, `${r} ${g.title}`);
+  }
+});
+test("no group is a dumping ground", () => {
+  for (const r of ROLES) for (const [hub, groups] of hubsOf(navForRole(r) as { href: string; label: string }[])) for (const g of groups) assert.ok(g.links.length <= 18, `${r} ${hub} ${g.title}: ${g.links.length} cards`);
+});

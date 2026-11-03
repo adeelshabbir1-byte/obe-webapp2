@@ -34,7 +34,7 @@ export default async function TodayPanel({ user }: { user: NextUser }) {
     waitingFor(user.id).catch(() => Object.assign(new Set<string>(), { expired: new Set<string>() })),
     getFlag(user.id, "digest").catch(() => null),
   ]);
-  const toneOf = (t: Task): keyof typeof TONE => (waiting.has(taskKey(t)) ? "grey" : waiting.expired.has(taskKey(t)) ? "red" : statusOf(t, amber, now));
+  const toneOf = (t: Task): keyof typeof TONE => (waiting.has(taskKey(t)) ? "grey" : waiting.expired.has(taskKey(t)) ? "red" : (statusOf(t, amber, now) as "red" | "amber" | "blue"));
   const open = tasks.filter((t) => !waiting.has(taskKey(t))), parked = tasks.filter((t) => waiting.has(taskKey(t)));
   const top = open.slice(0, 7), rest = open.slice(7);
   // My week: the next 7 days' deadlines, in date order.

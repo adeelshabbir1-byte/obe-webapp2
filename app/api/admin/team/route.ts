@@ -17,6 +17,9 @@ async function POST_handler(req: NextRequest) {
     else if (b.action === "teamDelete") message = await deleteTeam(user.id, str(b.id, 60));
     else if (b.action === "member") message = await setMember(user.id, str(b.teamId, 60), str(b.userId, 60), b.role ? str(b.role, 20) : null);
     else if (b.action === "role") message = await setRole(user.id, str(b.userId, 60), str(b.role, 30), b.on !== false);
+    else if (b.action === "resetLogin") { const temp = await (await import("../../../../lib/platformTeam")).resetMemberLogin(user.id, str(b.userId, 60), { twoStep: !!b.twoStep }); return NextResponse.json({ ok: true, message: `Temporary password: ${temp} — give it to the person; they must change it at the next sign-in.` }); }
+    else if (b.action === "resetTwoStep") { await (await import("../../../../lib/platformTeam")).resetMemberTwoStep(user.id, str(b.userId, 60)); message = "Two-step sign-in turned off; they set it up again at the next sign-in."; }
+    else if (b.action === "active") { await (await import("../../../../lib/platformTeam")).setMemberActive(user.id, str(b.userId, 60), b.on !== false); message = b.on !== false ? "Account switched on." : "Account switched off and signed out."; }
     else return NextResponse.json({ error: "Unknown action." }, { status: 400 });
     return NextResponse.json({ ok: true, message });
   } catch (e) {

@@ -51,7 +51,7 @@ export default async function DeanCurriculumReviewPage({ params }: { params: { c
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} className="no-print">
           <a className="btn btn-secondary btn-sm" href={`/api/master-curriculum/${c.id}/download?format=xlsx`}>Download Excel</a>
-          <a className="btn btn-secondary btn-sm" href={`/api/master-curriculum/${c.id}/download?format=docx`}>Download Word</a>
+          <a className="btn btn-secondary btn-sm" href={`/api/master-curriculum/${c.id}/download?format=docx`}>Download Word</a> <a className="btn btn-secondary btn-sm" href={`/api/master-curriculum/${c.id}/download?format=pdf`}>Download PDF</a>
           <Link className="btn btn-secondary btn-sm" href="/dean/curricula">← Back to curricula</Link>
         </div>
       </div>

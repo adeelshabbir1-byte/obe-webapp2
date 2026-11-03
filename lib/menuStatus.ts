@@ -39,5 +39,10 @@ export async function menuState(user: NextUser, linkHrefs: string[]): Promise<{ 
   const s = await load(user);
   // Still waiting after the recheck date: red again for the person who was waiting.
   const open = s.tasks.filter((t) => !s.waiting.has(taskKey(t))).map((t) => (s.waiting.expired.has(taskKey(t)) ? { ...t, due: null, urgency: "overdue" as const } : t));
-  return { count: open.length, statuses: menuStatuses(open, linkHrefs, s.amber, new Set()) };
+  const statuses = menuStatuses(open, linkHrefs, s.amber, new Set());
+  // Pages with a check (queue item 9): green when complete this term, grey when not set up, amber / red when work is needed.
+  // A task on the page (red / amber / blue) always wins over the check.
+  const checks = await (await import("./pageStates")).pageStates(user as never).catch(() => ({} as Record<string, { status: LinkStatus["status"]; reason: string }>));
+  for (const [h, c] of Object.entries(checks)) if (linkHrefs.includes(h) && !statuses[h]) statuses[h] = { status: c.status, count: 0, reasons: [c.reason] };
+  return { count: open.length, statuses };
 }

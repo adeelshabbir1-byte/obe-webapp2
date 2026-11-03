@@ -1,3 +1,4 @@
+import { CARD_TEXT } from "./cardText";
 // One line per page for the hub cards (UX queue item 4). Chosen in this order:
 //   1. the help article whose main page (href) is that page — its first sentence;
 //   2. the line written for the page below;
@@ -253,7 +254,8 @@ const first = (s: string) => (s.split(/(?<=\.)\s/)[0] || "").slice(0, 140);
 
 /** The one line shown on each page's hub card. */
 export function aboutPages(articles: Article[]): Record<string, string> {
-  const out: Record<string, string> = {};
+  // Queue item 10: the written action-first card lines come first.
+  const out: Record<string, string> = { ...CARD_TEXT };
   for (const a of articles) if (a.href && !out[a.href]) out[a.href] = first(a.summary);
   for (const [h, l] of Object.entries(PAGE_LINES)) if (!out[h]) out[h] = l;
   const used = new Set(Object.values(out));

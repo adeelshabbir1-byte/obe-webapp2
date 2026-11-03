@@ -7,12 +7,16 @@ import { withErrors } from "../../../../../lib/apiHandler";
 
 export const maxDuration = 120;
 
-// The full master curriculum: ?format=xlsx (default) or ?format=docx.
+// The full master curriculum: ?format=xlsx (default), ?format=docx or ?format=pdf (with its contributors).
 async function GET_handler(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "not logged in" }, { status: 401 });
   const c = await loadCurriculumForDownload(user, params.id);
   if (!c) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (req.nextUrl.searchParams.get("format") === "pdf") {
+    const { curriculumPdf } = await import("../../../../../lib/curriculumPdf");
+    return new NextResponse(await curriculumPdf(c), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${fileBase(c)}.pdf"` } });
+  }
   if (req.nextUrl.searchParams.get("format") === "docx") return buildDocxResponse(`${fileBase(c)}.docx`, curriculumDocument(c));
   return buildExcelResponse(`${fileBase(c)}.xlsx`, curriculumSheets(c));
 }

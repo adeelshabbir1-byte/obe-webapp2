@@ -1,3 +1,4 @@
+import CompareTabs from "../../../components/CompareTabs";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import Shell from "../../../components/Shell";
@@ -15,6 +16,8 @@ export default async function HecComparisonPage({ searchParams }: { searchParams
   const data = await computeHecComparison(user.id, searchParams.batchId || "", searchParams.curriculumId || "");
   return (
     <Shell roleLabel="Program Lead" userName={user.name} navLinks={navForRole(user.role)}>
+      <h1 style={{ fontSize: 22, margin: "0 0 4px" }}>Curriculum comparison</h1>
+      <CompareTabs active="hec" batchId={searchParams.batchId} />
       <HecComparisonReport data={data} action="/coordinator/hec-comparison" />
     </Shell>
   );
