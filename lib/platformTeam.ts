@@ -47,9 +47,9 @@ export async function adminCan(user: U | null | undefined, area: Area | Area[]) 
 export async function teamNav(user: U, all: { href: string; label: string }[]) {
   if (user.role === "SUPER_USER") return all;
   const have = await rolesOf(user.id);
-  const pages = new Set<string>(["/platform"]);
+  const pages = new Set<string>(["/platform", "/platform/profile"]);
   for (const a of have) for (const p of a === "CURRICULUM" ? CURRICULUM_PAGES : ROLES[a].pages) pages.add(p);
-  const extra: { href: string; label: string }[] = [{ href: "/platform", label: "My Platform Roles" }];
+  const extra: { href: string; label: string }[] = [{ href: "/platform", label: "My Platform Roles" }, { href: "/platform/profile", label: "My Profile" }];
   if (have.includes("ANALYTICS")) extra.push({ href: "/admin/analytics", label: "Platform Analytics" });
   return [...extra, ...all.filter((l) => pages.has(l.href))];
 }
@@ -167,4 +167,54 @@ export async function addStarterTeams(actorId: string) {
   let n = 0;
   for (const t of STARTER_TEAMS) if (!have.has(t.name.toLowerCase())) { await saveTeam(actorId, t); n++; }
   return n ? `Added ${n} starter team(s). Add each team's Convener and National Subject Experts.` : "All starter teams are already there.";
+}
+
+// ---------------------------------------------------------------- platform team accounts (queue item 11)
+/** The Super Admin resets a team member's login: a temporary password they must change, optionally their two-step
+ *  sign-in too; every open session is signed out. Returns the temporary password to hand over once. */
+export async function resetMemberLogin(actorId: string, userId: string, opts: { twoStep?: boolean }) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, isPlatformExpert: true, role: true } });
+  if (!u || !u.isPlatformExpert || u.role === "SUPER_USER") throw new Error("Not a platform team member.");
+  const temp = `Obe-${crypto.randomBytes(5).toString("hex")}`;
+  const { hashPassword } = await import("./auth");
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(temp), mustChangePassword: true, failedLoginCount: 0, lockedUntil: null, ...(opts.twoStep ? { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null } : {}) } as never });
+  await prisma.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+  await writeAuditLog({ actorUserId: actorId, action: "PLATFORM_MEMBER_PASSWORD_RESET", entityType: "User", entityId: userId, metadata: { twoStep: !!opts.twoStep } });
+  return temp;
+}
+export async function resetMemberTwoStep(actorId: string, userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { isPlatformExpert: true, role: true } });
+  if (!u || !u.isPlatformExpert || u.role === "SUPER_USER") throw new Error("Not a platform team member.");
+  await prisma.user.update({ where: { id: userId }, data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null } as never });
+  await writeAuditLog({ actorUserId: actorId, action: "MFA_TURNED_OFF_FOR_USER", entityType: "User", entityId: userId, metadata: { platform: true } });
+}
+export async function setMemberActive(actorId: string, userId: string, on: boolean) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { isPlatformExpert: true, role: true } });
+  if (!u || !u.isPlatformExpert || u.role === "SUPER_USER") throw new Error("Not a platform team member.");
+  await prisma.user.update({ where: { id: userId }, data: { isActive: on } });
+  if (!on) await prisma.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+  await writeAuditLog({ actorUserId: actorId, action: on ? "PLATFORM_MEMBER_ENABLED" : "PLATFORM_MEMBER_DISABLED", entityType: "User", entityId: userId });
+}
+/** A team member's own profile: details, roles, teams and recent activity. */
+export async function memberProfile(userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true, organization: true, mfaEnabled: true, createdAt: true } }).catch(() => null);
+  if (!u) return null;
+  const fp = (await prisma.facultyProfile.findUnique({ where: { userId }, select: { photo: true, designation: true, phone: true } }).catch(() => null)) || { photo: null, designation: null, phone: null };
+  const [roles, ms, acts] = await Promise.all([
+    rolesOf(userId),
+    pdb.platformTeamMember.findMany({ where: { userId } }).catch(() => []) as Promise<Member[]>,
+    prisma.auditLog.findMany({ where: { actorUserId: userId }, orderBy: { createdAt: "desc" }, take: 15, select: { action: true, createdAt: true, entityType: true } }),
+  ]);
+  const ts = ms.length ? ((await pdb.platformTeam.findMany({ where: { id: { in: ms.map((m) => m.teamId) } } })) as Team[]) : [];
+  return { user: u, profile: fp, roles: roles.map((r) => (r === "CURRICULUM" ? "National curriculum team" : ROLES[r as keyof typeof ROLES].label)), teams: ms.map((m) => ({ name: ts.find((t) => t.id === m.teamId)?.name || "", role: m.role === "CONVENER" ? "Convener" : "National Subject Expert" })), activity: acts };
+}
+
+export async function saveMemberProfile(userId: string, b: { name?: string; organization?: string; designation?: string; phone?: string; photo?: string | null }) {
+  const name = String(b.name || "").trim().slice(0, 120);
+  if (name.length < 3) throw new Error("Give your full name.");
+  const photo = b.photo === null ? null : typeof b.photo === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(b.photo) && b.photo.length < 400_000 ? b.photo : undefined;
+  await prisma.user.update({ where: { id: userId }, data: { name, organization: String(b.organization || "").slice(0, 160) || null } });
+  const data = { designation: String(b.designation || "").slice(0, 120) || null, phone: String(b.phone || "").slice(0, 40) || null, ...(photo !== undefined ? { photo } : {}) };
+  await prisma.facultyProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+  await writeAuditLog({ actorUserId: userId, action: "PERSON_EDITED", entityType: "User", entityId: userId, metadata: { own: true } });
 }

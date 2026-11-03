@@ -37,6 +37,10 @@ export async function newerPart(part: string, superUserId: string): Promise<stri
       const progs = Array.from(new Set((await prisma.batch.findMany({ where: { coordinator: { managedById: h.id } }, select: { degreeProgram: true } })).map((b) => b.degreeProgram))).sort();
       const team = (await Promise.all(["dream.instructor", "dream.labeng"].map(u))).filter(Boolean).map((x, i) => ({ userId: x!.id, name: x!.name, programs: progs.filter((_, j) => j % 2 === i) }));
       await D.saveExamTeam(H, h.id, team);
+      // Titles that do not match the first name ("Ms. Fahad …") are corrected on the demo institute's people.
+      const { fixTitle } = await import("./demoNames");
+      const ppl = await prisma.user.findMany({ where: { OR: [{ id: h.id }, { managedById: h.id }, { managedBy: { managedById: h.id } }] }, select: { id: true, name: true } });
+      for (const p of ppl) { const n = fixTitle(p.name); if (n !== p.name) await prisma.user.update({ where: { id: p.id }, data: { name: n } }); }
       return `Affiliation office, Treasurer, Dream College Sahiwal (login ${COLLEGE_HEAD}), 7 affiliation jobs, exam team of ${team.length}`;
     }
     case "allocation": {
@@ -148,7 +152,13 @@ export async function newerPart(part: string, superUserId: string): Promise<stri
       const jid = await C.createProg(H, h.id, "JOINT", "BS Computer Science — joint degree with UET Lahore");
       const get = async (id: string) => (await db.collabProgramme.findUnique({ where: { id } })) as import("./collab").Prog;
       const cur = await prisma.masterCurriculum.findMany({ where: { chairmanId: h.id }, select: { id: true, degreeProgram: true }, take: 4 });
-      const cem = cur.length >= 2 ? await C.draftCem(cur[0].id, cur[1].id) : [];
+      let cem = cur.length >= 2 ? await C.draftCem(cur[0].id, cur[1].id) : [];
+      if (!cem.length) {
+        // No two curricula to match: map the demo BS CS courses to the partner's courses of the same name (demo only).
+        const ours = await prisma.course.findMany({ where: { coordinator: { managedById: h.id }, batch: { degreeProgram: { contains: "Computer" } } }, orderBy: [{ semesterNumber: "asc" }, { code: "asc" }], take: 40, select: { code: true, title: true, creditHours: true } });
+        const seen = new Set<string>();
+        cem = ours.filter((c) => !seen.has(c.code) && seen.add(c.code)).slice(0, 16).map((c) => ({ ours: c.code, oursTitle: c.title, theirs: `UET-${c.code.replace(/[^0-9]/g, "") || "100"}`, theirsTitle: c.title, ch: c.creditHours || 3, contactHours: (c.creditHours || 3) * 16, assessment: "Mid 30 · Final 50 · Sessional 20", ok: true }));
+      }
       const checks = Object.fromEntries(C.DDJD_CHECKS.map(([k], i) => [k, { done: i < 12, note: i < 12 ? "On file" : "" }]));
       const moc = Object.fromEntries(C.MOC_ITEMS.filter(([k]) => k !== "q" && k !== "r").map(([k, label]) => [k, `${label}: agreed — see the joint scheme of studies, clause ${k}.`]));
       await C.saveData(await get(jid), { partners: [{ name: "University of Engineering & Technology, Lahore", country: "Pakistan", recognised: true }], checks, moc, cem: cem.slice(0, 20).map((r, i) => ({ ...r, ok: r.ok || i % 5 !== 0, assessment: "Mid 30 · Final 50 · Sessional 20" })), mocFrom: iso(-30), mocUntil: iso(5 * 365 + 30), moderationPct: 20, fees: "Rs 145,000 per semester for 8 semesters; Rs 25,000 admission (once).", feeCapPct: 10, focal: "Dr. Ayesha Malik — Dream Institute; Dr. Kashif Raza — UET Lahore", kpis: { enrolment: 86, graduation: 68, satisfaction: 82, employability: 77 } });

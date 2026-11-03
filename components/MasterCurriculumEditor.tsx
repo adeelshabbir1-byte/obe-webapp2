@@ -226,6 +226,8 @@ export default function MasterCurriculumEditor() {
             </a>
             <a href={`/api/master-curriculum/${selectedId}/download?format=docx`} className="btn" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 8, textDecoration: "none", display: "inline-block" }} title="A readable curriculum document: GAs, scheme of studies and every course's details">
               Download as Word
+            </a><a href={`/api/master-curriculum/${selectedId}/download?format=pdf`} className="btn" style={{ fontSize: 12, padding: "6px 12px", marginLeft: 8, textDecoration: "none", display: "inline-block" }} title="A readable curriculum document: GAs, scheme of studies and every course's details">
+              Download as PDF
             </a>
           </>
         )}

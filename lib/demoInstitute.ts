@@ -8,6 +8,7 @@ import { BBA_SCHEME, bbaPlos } from "./demoBba";
 import { BBA_CONTENT, topicForLecture } from "./demoBbaContent";
 import { PU_BSCS_2021 } from "./puBscs2021";
 import { CD2023_PLOS, CD2023_COURSES } from "./computing2023Content";
+import { titleFor } from "./demoNames";
 
 // "My Dream Institute": a demo copy of a real institute for presentations. Two batches (BS CS, BS AI) in their 5th
 // semester in Fall 2026, curriculum copied from the real institute, fake people, semesters 1-4 completed with approved
@@ -108,7 +109,7 @@ export async function setupDemo(superUserId: string, sources: { sourceBatchId: s
     await prisma.user.create({ data: lead as never });
     const per = Math.max(5, Math.min(20, opts.teachers || 5));
     const teachers = Array.from({ length: per }, (_, i) => {
-      const n = `${["Mr.", "Ms.", "Dr."][(t + i) % 3]} ${FIRST[(t + i * 3 + 5) % FIRST.length]} ${LAST[(t + i * 5 + 2) % LAST.length]}`;
+      const first = FIRST[(t + i * 3 + 5) % FIRST.length]; const n = `${titleFor(first, t + i)} ${first} ${LAST[(t + i * 5 + 2) % LAST.length]}`;
       const uname = t === 0 && i === 0 ? "dream.instructor" : t === 0 && i === 1 ? "dream.se" : `dream.t${t + i + 1}`;
       return mk(uname, n, uname === "dream.se" ? "SUBJECT_EXPERT" : "INSTRUCTOR", { managedById: lead.id, departmentId: dept.id, ...(uname === "dream.se" ? { secondaryRole: "INSTRUCTOR" } : {}) });
     });

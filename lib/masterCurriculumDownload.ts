@@ -32,12 +32,12 @@ export async function loadCurriculumForDownload(user: Who, id: string) {
   const ok = await (await import("./curriculumLibrary")).canUseCurriculum(c, chairmanId);
   return ok ? c : null;
 }
-type Curriculum = NonNullable<Awaited<ReturnType<typeof loadCurriculumForDownload>>>;
+export type Curriculum = NonNullable<Awaited<ReturnType<typeof loadCurriculumForDownload>>>;
 
 export const fileBase = (c: Curriculum) => `${c.authority}-${c.title}-${c.version}`.replace(/[^A-Za-z0-9._-]+/g, "_");
-const semLabel = (n: number | null) => (n ? `Semester ${n}` : "Electives / not placed in a semester");
+export const semLabel = (n: number | null) => (n ? `Semester ${n}` : "Electives / not placed in a semester");
 const cloOf = (t: object) => ((t as { cloNumber?: number | null }).cloNumber ? `CLO-${(t as { cloNumber: number }).cloNumber}` : "");
-const coursePlos = (k: Curriculum["courses"][number]) => Array.from(new Set(k.seedClos.map((l) => l.mappedPlo?.number).filter((n): n is number => n != null))).sort((a, b) => a - b);
+export const coursePlos = (k: Curriculum["courses"][number]) => Array.from(new Set(k.seedClos.map((l) => l.mappedPlo?.number).filter((n): n is number => n != null))).sort((a, b) => a - b);
 
 export function curriculumSheets(c: Curriculum): SheetSpec[] {
   return [

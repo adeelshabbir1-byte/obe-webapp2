@@ -91,7 +91,7 @@ export default function AppShell({
   display?: string;
   lang?: string;
   look?: { color: string | null; watermark: string } | null;
-  linkStatus?: Record<string, { status: "red" | "amber" | "blue"; count: number; reasons: string[] }>;
+  linkStatus?: Record<string, { status: "red" | "amber" | "blue" | "grey" | "green"; count: number; reasons: string[] }>;
   workspaces?: { key: string; label: string; home: string }[];
   focus?: string;
   children: React.ReactNode;
@@ -151,7 +151,7 @@ export default function AppShell({
   // A hub shows the worst status of its pages, with their total count.
   const linkStatus = useMemo(() => {
     if (deptCoordinator || focus) return linkStatusIn;
-    const out = { ...linkStatusIn }; const R = { red: 0, amber: 1, blue: 2 } as const;
+    const out = { ...linkStatusIn }; const R = { red: 0, amber: 1, blue: 2, grey: 3, green: 4 } as const;
     for (const h of hubMenu(menuRole, links).hubs) {
       const sts = h.members.map((m) => linkStatusIn[m]).filter(Boolean);
       if (!sts.length) continue;
@@ -163,18 +163,18 @@ export default function AppShell({
   // Lighter menus: the main menu holds what this role acts on; other pages and view-only reports fold away below.
   const allSections = useMemo(() => groupNavLinks(links), [links]);
   // Menu colours (Adeel prompt §1): red overdue / blocking, amber due soon, blue in progress; icons too, for colour-blind users.
-  const DOT = { red: ["#B3261E", "!"], amber: ["#B26A00", "⚠"], blue: ["#1B5FAA", "•"] } as const;
-  const RANKS = { red: 0, amber: 1, blue: 2 } as const;
+  const DOT = { red: ["#B3261E", "!"], amber: ["#B26A00", "⚠"], blue: ["#1B5FAA", "•"], green: ["#1E6B3A", "✓"], grey: ["#8A939C", "○"] } as const;
+  const RANKS = { red: 0, amber: 1, blue: 2, grey: 3, green: 4 } as const;
   const dot = (href: string) => {
     const st = linkStatus[href];
     if (!st) return null;
     const [c, icon] = DOT[st.status];
     const why = st.reasons.join(" · ") + (st.count > st.reasons.length ? ` · +${st.count - st.reasons.length} more` : "");
-    return <span className="nl-status" title={why} aria-label={`${st.count} open: ${why}`} style={{ marginLeft: "auto", background: c, color: "#fff", borderRadius: 9, fontSize: 10.5, fontWeight: 700, padding: "0 6px", lineHeight: "16px", minWidth: 16, textAlign: "center" }}>{icon} {st.count}</span>;
+    return <span className="nl-status" title={why} aria-label={st.count ? `${st.count} open: ${why}` : why} style={{ marginLeft: "auto", background: c, color: "#fff", borderRadius: 9, fontSize: 10.5, fontWeight: 700, padding: "0 6px", lineHeight: "16px", minWidth: 16, textAlign: "center" }}>{icon}{st.count ? ` ${st.count}` : ""}</span>;
   };
   const groupDot = (hrefs: string[]) => {
     let w: "red" | "amber" | "blue" | null = null;
-    for (const h of hrefs) { const st = linkStatus[h]?.status; if (st && (!w || RANKS[st] < RANKS[w])) w = st; }
+    for (const h of hrefs) { const st = linkStatus[h]?.status; if (st && st !== "green" && st !== "grey" && (!w || RANKS[st] < RANKS[w])) w = st; }
     return w ? <span title="Something here needs you" style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: DOT[w][0], marginLeft: 6 }} /> : null;
   };
   // Short menu (UX review): Home, one Approvals, the role's daily pages and a few hubs of cards. A hat workspace

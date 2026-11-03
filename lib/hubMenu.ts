@@ -44,16 +44,30 @@ const OVERRIDE: [RegExp, string, string][] = [
   [/^\/(billing|settings\/who-decides|chairman\/ai-configuration|chairman\/messaging|chairman\/lms)$/, "institute", "Settings & connections"],
   [/^\/(academic-rules|registration-rules)$/, "academics", "Policies & Rules"],
   [/^\/(plan-requests)$/, "academics", "Students"],
-  [/^\/(course-split)$/, "academics", "Programs & Courses"],
+  [/^\/(coordinator\/batches|coordinator\/assign-subject-experts|hod\/assign-subject-experts|coordinator\/elective-options|coordinator\/custom-categories|coordinator\/plos|chairman\/plos|coordinator\/grading-scale|coordinator\/program-profile|program-spec|coordinator\/course-codes|dean\/course-codes|course-homes|clo-bulk-import|course-split)$/, "academics", "Program set-up"],
+  [/^\/(question-bank|question-bank\/analytics|plan-generate|topic-resources)$/, "academics", "Assessments & question bank"],
+  [/^\/(coordinator\/activities)$/, "academics", "Students"],
+  // The platform team's pages (Super Admin) in three groups.
+  [/^\/admin\/(users|account-requests|modules|billing|affiliations|consortium|analytics|hec-view)$/, "institute", "Platform: institutes"],
+  [/^\/(curricula\/builder|admin\/(curricula|master-experts|curriculum-migration|official-content|shared-courses)|national-bank)$/, "institute", "Platform: national curricula"],
+  [/^\/admin\/(team|platform-settings|system-health|migrations|demo|feedback|problem-reports|ai-usage|report-bundles|landing-page)$/, "institute", "Platform: running OBEHUB"],
+  [/^\/(admission-criteria)$/, "academics", "Policies & Rules"],
+  // Accreditation & quality in six clear groups (queue item 10).
+  [/^\/(accreditation-overview|accreditation\/readiness|accreditation|accreditation\/tasks|accreditation\/aas|accreditation\/outcomes-report|evidence-files|coordinator\/evidence|coordinator\/course-folders|coordinator\/accreditation-status|aol|cv-review|faculty-sufficiency|lab-file)$/, "quality", "Accreditation"],
+  [/^\/(outcome-flow|plo-progress|ga-coverage|ga-council-map|peo-attainment|indirect-assessment|exit-surveys|faculty-survey|alumni-voice|evaluations|coordinator\/surveys|outcomes|complex-problems|portfolio-review|grade-distribution)$/, "quality", "Outcomes & surveys"],
+  [/^\/(quality-office|qec-proformas|qaa|ipe|risk|policy-check|policy-history|plagiarism)$/, "quality", "Quality office"],
+  [/^\/(hemis|accreditation\/nceac-portal|accreditation\/eligibility|signed-documents)$/, "quality", "Reporting to HEC & councils"],
+  [/^\/(research|internationalisation)$/, "quality", "Research"],
+  [/^\/(chairman\/training|recognition)$/, "people", "Faculty"],
 ];
 // One name per group: a group the shared menu calls "Settings" is the same as "Setup & settings".
 const ALIAS: Record<string, string> = { Settings: "Settings & connections", Platform: "Settings & connections", "Setup & settings": "Settings & connections", "Student life": "Students & admissions" };
 // The order of the groups on each hub's page; groups not listed come after, in the order met.
 const ORDER: Record<string, string[]> = {
-  institute: ["Overview", "Set up & data", "Settings & connections", "Students & admissions", "Fees, HR & accounts", "Facilities & stores", "Other pages"],
-  academics: ["Semester & Timetable", "Programs & Courses", "Outcomes & CQI", "Curriculum & Outcomes", "Curriculum Maps", "Exams & results", "Students", "Degrees, partners & colleges", "Policies & Rules", "Review & Approval", "National", "Consortium"],
+  institute: ["Platform: institutes", "Platform: national curricula", "Platform: running OBEHUB", "Overview", "Set up & data", "Settings & connections", "Students & admissions", "Fees, HR & accounts", "Facilities & stores", "Other pages"],
+  academics: ["Semester & Timetable", "Program set-up", "Programs & Courses", "Assessments & question bank", "Outcomes & CQI", "Curriculum & Outcomes", "Curriculum Maps", "Exams & results", "Students", "Degrees, partners & colleges", "Policies & Rules", "Review & Approval", "National", "Consortium"],
   people: ["People & Structure", "Faculty"],
-  quality: ["Accreditation", "Quality", "Committees & meetings"],
+  quality: ["Accreditation", "Outcomes & surveys", "Quality office", "Reporting to HEC & councils", "Research", "Committees & meetings"],
   reports: ["Reports & Analytics", "Insights", "Reports"],
   work: ["Daily pages", "Me", "Community"],
 };
