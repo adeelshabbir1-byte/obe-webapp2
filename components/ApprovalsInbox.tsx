@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 export type InboxRow = {
   kind: string; id: string; title: string; from: string; area: string; since: string; due: string | null; priority: "high" | "normal" | "low";
-  href: string; actions: ("approve" | "return")[]; onBehalfOf?: string; note?: string; label: string; bulk: boolean; age: number; overdue: boolean;
+  href: string; actions: ("approve" | "return")[]; onBehalfOf?: string; note?: string; label: string; bulk: boolean; age: number; overdue: boolean; checks?: string[];
 };
 
 // On a phone each row becomes a card.
@@ -42,8 +42,9 @@ export default function ApprovalsInbox({ rows, pages = [] }: { rows: InboxRow[];
     if (ok) { setGone(new Set(gone).add(key(r))); setReturning(null); setReason(""); setMsg({ ok: true, text: `${decision === "approve" ? "Approved" : "Returned"}: ${r.title}` }); router.refresh(); }
     else setMsg({ ok: false, text: d.error || "Could not save." });
   }
-  async function bulk() {
-    const list = bulkable.filter((r) => sel.has(key(r)));
+  const passing = bulkable.filter((r) => !(r.checks || []).length);
+  async function bulk(all = false) {
+    const list = all ? passing : bulkable.filter((r) => sel.has(key(r)));
     if (!list.length || !confirm(`Approve ${list.length} item(s)?`)) return;
     setBusy("bulk"); setMsg(null);
     const { d } = await post({ action: "bulk", items: list.map((r) => ({ kind: r.kind, id: r.id })) });
@@ -70,7 +71,7 @@ export default function ApprovalsInbox({ rows, pages = [] }: { rows: InboxRow[];
         {areas.length > 1 && <label style={{ fontSize: 13 }}>Program<br /><select className="input" value={area} onChange={(e) => setArea(e.target.value)}><option value="">All</option>{areas.map((a) => <option key={a} value={a}>{a}</option>)}</select></label>}
         <label style={{ fontSize: 13 }}>Search<br /><input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="name, course, roll no." /></label>
         <label style={{ fontSize: 13, display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}><input type="checkbox" checked={late} onChange={(e) => setLate(e.target.checked)} /> Overdue only</label>
-        {bulkable.length > 0 && <button type="button" className="btn btn-brass btn-sm" disabled={busy === "bulk" || !bulkable.some((r) => sel.has(key(r)))} onClick={bulk}>{busy === "bulk" ? "Approving…" : `Approve selected (${bulkable.filter((r) => sel.has(key(r))).length})`}</button>}
+        {passing.length > 0 && <button type="button" className="btn btn-sm" data-approve-passing disabled={busy === "bulk"} onClick={() => bulk(true)} title="Approves every item shown that is safe to approve in bulk and has nothing to check">{`Approve all that pass (${passing.length})`}</button>} {bulkable.length > 0 && <button type="button" className="btn btn-brass btn-sm" disabled={busy === "bulk" || !bulkable.some((r) => sel.has(key(r)))} onClick={() => bulk()}>{busy === "bulk" ? "Approving…" : `Approve selected (${bulkable.filter((r) => sel.has(key(r))).length})`}</button>}
       </div>
       {msg && <p role="status" style={{ color: msg.ok ? "#1E6B3A" : "#B3261E", fontWeight: 700, margin: "0 0 8px" }}>{msg.text}</p>}
       {shown.length === 0 ? <div className="card"><p style={{ margin: 0, color: "#1E6B3A", fontWeight: 700 }}>✓ Nothing waiting{kind || area || late || q ? " that matches these filters" : " for you"}.</p></div> : (
@@ -88,6 +89,8 @@ export default function ApprovalsInbox({ rows, pages = [] }: { rows: InboxRow[];
                   <div><a href={r.href} style={{ fontWeight: 700 }}>{r.title}</a></div>
                   {r.area && <div className="small-note" style={{ margin: 0 }}>{r.area}</div>}
                   {r.note && <div className="small-note" style={{ margin: 0, color: "#6B4E00" }}>{r.note}</div>}
+                  {(r.checks || []).length > 0 && <div style={{ margin: "2px 0 0", fontSize: 12, color: "#8a5a00" }} data-checks>⚠ {(r.checks || []).join(" · ")}</div>}
+                  <a href={`/approvals/one?k=${encodeURIComponent(r.kind)}&i=${encodeURIComponent(r.id)}`} className="small-note">Open on its own</a>
                 </td>
                 <td data-l="From">{r.from || "—"}</td>
                 <td data-l="Waiting" style={{ whiteSpace: "nowrap", color: r.overdue ? "#B3261E" : undefined, fontWeight: r.overdue ? 700 : 400 }}>{r.age === 0 ? "today" : `${r.age} day${r.age === 1 ? "" : "s"}`}<div className="small-note" style={{ margin: 0 }}>since {fmt(r.since)}</div></td>

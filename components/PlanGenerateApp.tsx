@@ -6,7 +6,7 @@ type Lec = { n: number; topic: string; clo: string | null };
 type Asmt = { id: string; type: string; label: string; maxScore: number; marksPct: number; lectures: Lec[]; papers: { id: string; status: string; variant: string }[] };
 type Ga = { ga: string; pct: number; clos: string[]; assessed: number };
 type Cqi = { id: string; sourceReference: string | null; finding: string; actionTaken: string | null; status: string; metricBefore: number | null; metricAfter: number | null };
-type Board = { course: { id: string; code: string; title: string }; term: string; forAll: boolean; assessments: Asmt[]; ga: { standing: Ga[]; weak: Ga[]; target: number }; cqi: Cqi[]; short: { label: string; gaps: string[] } | null; self?: { students: number; clos: { code: string; n: number; self: number | null; direct: number | null; gap: number | null; flag: string }[] } };
+type Board = { course: { id: string; code: string; title: string }; term: string; forAll: boolean; assessments: Asmt[]; ga: { standing: Ga[]; weak: Ga[]; target: number }; cqi: Cqi[]; short: { label: string; gaps: string[] } | null; lastMix?: Record<string, { EASY: number; MEDIUM: number; HARD: number }>; self?: { students: number; clos: { code: string; n: number; self: number | null; direct: number | null; gap: number | null; flag: string }[] } };
 type Q = { id: string; text: string; marks: number; clo: string; bloom: string; difficulty: string; measured: string | null; lecture: number | null; topic: string };
 type View = { id: string; status: string; variant: string; examType: string; label: string; check: { ok?: boolean; fails?: string[]; notes?: string[]; cloPct?: Record<string, number>; gaps?: string[]; total?: number }; questions: Q[]; versions: { id: string; variant: string; status: string }[] };
 type Swap = { fromId: string; toId: string; fromClo: string; toClo: string; fromTopic: string; toTopic: string; marks: number; difficulty: string };
@@ -57,7 +57,9 @@ export default function PlanGenerateApp({ courseId }: { courseId: string }) {
           <tbody>{b.self.clos.map((c) => <tr key={c.code}><td>{c.code}</td><td>{c.self === null ? "—" : `${c.self}%`} <span className="small-note">({c.n})</span></td><td>{c.direct === null ? "—" : `${c.direct}%`}</td><td style={{ color: c.flag ? "#8a5a00" : undefined }}>{c.flag}</td></tr>)}</tbody></table>
       </div>}
       <div className="card" style={{ overflowX: "auto" }}>
-        <h3 style={{ marginTop: 0 }}>Assessments in the plan</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}><h3 style={{ margin: 0 }}>Assessments in the plan</h3>
+          <button className="btn btn-sm" data-generate-all onClick={() => run({ action: "generateAll", courseId, difficulty: b.lastMix?.Quiz || b.lastMix?.Assignment || { EASY: 30, MEDIUM: 50, HARD: 20 } }, (d) => `${d.made} quiz/assignment draft(s) made for the term${d.skipped ? ` (${d.skipped} already done, or the mid / final)` : ""}${d.items.some((x: { error?: string }) => x.error) ? ` — not made: ${d.items.filter((x: { error?: string }) => x.error).map((x: { label: string; error?: string }) => `${x.label} (${x.error})`).join("; ")}` : ""}. Open each one below to review and adopt.`)}>Generate the whole term</button></div>
+        <p className="small-note" style={{ marginTop: 4 }}>Drafts every quiz and assignment not made yet this term, with {b.lastMix?.Quiz || b.lastMix?.Assignment ? "the difficulty mix you used last time" : "a 30 / 50 / 20 difficulty mix"}. The mid and final are generated one by one.</p>
         <table style={{ fontSize: 13 }}><thead><tr><th>Assessment</th><th>Marks</th><th>Lectures</th><th>CLOs</th><th>Generated</th><th /></tr></thead>
           <tbody>{b.assessments.map((a) => (
             <tr key={a.id} data-asmt={a.id}>
@@ -69,7 +71,7 @@ export default function PlanGenerateApp({ courseId }: { courseId: string }) {
             </tr>))}</tbody></table>
         {b.assessments.length === 0 && <p className="small-note">The plan has no assessments yet. The Subject Expert sets them in the course plan.</p>}
       </div>
-      {open && <GenForm a={b.assessments.find((x) => x.id === open)!} forAll={b.forAll} onDone={async (id) => { setOpen(null); await load(); await show(id); }} run={run} courseId={courseId} />}
+      {open && <GenForm a={b.assessments.find((x) => x.id === open)!} last={(() => { const t = b.assessments.find((x) => x.id === open)!.type; return b.lastMix?.[/mid/i.test(t) ? "Midterm" : /final/i.test(t) ? "Final" : t.replace(/\s*\d+$/, "")]; })()} forAll={b.forAll} onDone={async (id) => { setOpen(null); await load(); await show(id); }} run={run} courseId={courseId} />}
       {paper && <PaperView p={paper} weak={b.ga.weak.map((g) => g.ga)} openGa={openGa.map((c) => c.sourceReference || "")} run={run} reload={() => show(paper.id)} onOpen={show} />}
     </div>
   );
@@ -104,9 +106,9 @@ function GaCard({ b, courseId, run }: { b: Board; courseId: string; run: (body: 
   );
 }
 
-function GenForm({ a, forAll, courseId, run, onDone }: { a: Asmt; forAll: boolean; courseId: string; run: (body: Record<string, unknown>, ok: (d: Record<string, any>) => string) => Promise<any>; onDone: (id: string) => void }) {
+function GenForm({ a, last, forAll, courseId, run, onDone }: { a: Asmt; last?: { EASY: number; MEDIUM: number; HARD: number }; forAll: boolean; courseId: string; run: (body: Record<string, unknown>, ok: (d: Record<string, any>) => string) => Promise<any>; onDone: (id: string) => void }) {
   const [pick, setPick] = useState<Set<number>>(new Set(a.lectures.map((l) => l.n)));
-  const [mix, setMix] = useState({ EASY: 30, MEDIUM: 50, HARD: 20 });
+  const [mix, setMix] = useState(last || { EASY: 30, MEDIUM: 50, HARD: 20 });
   const [all, setAll] = useState(false);
   const [examDate, setExamDate] = useState("");
   return (
@@ -116,7 +118,7 @@ function GenForm({ a, forAll, courseId, run, onDone }: { a: Asmt; forAll: boolea
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 4, fontSize: 13 }}>
         {a.lectures.map((l) => <label key={l.n}><input type="checkbox" checked={pick.has(l.n)} onChange={(e) => { const n = new Set(pick); if (e.target.checked) n.add(l.n); else n.delete(l.n); setPick(n); }} /> L{l.n} {l.topic} <span className="small-note">{l.clo || ""}</span></label>)}
       </div>
-      <p style={{ fontSize: 13 }}>Difficulty mix: {(["EASY", "MEDIUM", "HARD"] as const).map((k) => <label key={k} style={{ marginRight: 10 }}>{lower(k)} <input type="number" min={0} max={100} value={mix[k]} onChange={(e) => setMix({ ...mix, [k]: Number(e.target.value) })} style={{ width: 60 }} />%</label>)}</p>
+      <p style={{ fontSize: 13 }}>{last ? <span className="small-note">From last time. </span> : null}Difficulty mix: {(["EASY", "MEDIUM", "HARD"] as const).map((k) => <label key={k} style={{ marginRight: 10 }}>{lower(k)} <input type="number" min={0} max={100} value={mix[k]} onChange={(e) => setMix({ ...mix, [k]: Number(e.target.value) })} style={{ width: 60 }} />%</label>)}</p>
       {/mid|final/i.test(a.type) && <p style={{ fontSize: 13 }}>Exam date (only topics taught before it): <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} /></p>}
       {forAll && <label style={{ fontSize: 13, display: "block", marginBottom: 8 }}><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> For all sections (equivalent versions B, C …)</label>}
       <button className="btn" onClick={async () => { const d = await run({ action: "generate", courseId, instrumentId: a.id, lectures: Array.from(pick), difficulty: mix, examDate: examDate || null, allSections: all }, (d) => `${d.label}: ${d.chosen.length} question(s)${d.versions?.length ? `, versions ${d.versions.join(", ")}` : ""}${d.gaps.length ? ` — the bank is short: ${d.gaps.join("; ")}` : ""}.`); if (d) onDone(d.id); }} data-run>Generate</button>

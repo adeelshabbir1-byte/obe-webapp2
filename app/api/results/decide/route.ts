@@ -32,6 +32,7 @@ async function POST_handler(req: NextRequest) {
   const summary = await resultSummary(courseId);
   await db.courseResult.update({ where: { courseId }, data: { status: "APPROVED", decidedById: user.id, decidedAt: new Date(), note: note || null, summaryJson: JSON.stringify(summary) } });
   await logResult(user.id, "RESULT_APPROVED", courseId, { students: summary.students, passRate: summary.passRate, note: note || null });
+  await (await import("../../../../lib/planGen")).autoCloseCqi(courseId, user.id).catch((e) => console.warn("CQI auto-close:", (e as Error).message));
   // The CLO method and settings in force are saved with this term; later changes never silently change it.
   await import("../../../../lib/cloMethods").then((m) => m.lockTerm(courseId)).catch(() => null);
   // CQI: a PLO below 50% in this batch flags the course for review in the next curriculum revision.

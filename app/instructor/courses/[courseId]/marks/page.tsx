@@ -13,6 +13,7 @@ import Shell from "../../../../../components/Shell";
 import InstructorCourseSubNav from "../../../../../components/InstructorCourseSubNav";
 import AffiliateMarksNote from "../../../../../components/AffiliateMarksNote";
 import LmsImport from "../../../../../components/LmsImport";
+import MarkSheetScan from "../../../../../components/MarkSheetScan";
 import MarksEntryManager from "../../../../../components/MarksEntryManager";
 import CombinedMarksEntryManager from "../../../../../components/CombinedMarksEntryManager";
 import { navForRole } from "../../../../../components/reportNav";
@@ -224,6 +225,7 @@ export default async function MarksEntryPage({ params, searchParams }: { params:
         <CombinedMarksEntryManager instruments={combinedData.instruments} sections={combinedData.sections} instrumentIdBySlot={combinedData.instrumentIdBySlot} />
       ) : (
         <>
+        <div style={{ margin: "8px 0" }}><MarkSheetScan courseId={course.id} /></div>
         <div style={{ margin: "8px 0" }}><LmsImport courseId={course.id} instruments={instruments.filter((i) => i.marksPct > 0 || !i.partOfId).map((i) => ({ id: i.id, type: i.type, label: i.label, maxScore: i.maxScore }))} /></div>
         <MarksEntryManager
           courseId={course.id}

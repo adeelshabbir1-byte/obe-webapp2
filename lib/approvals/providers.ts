@@ -44,7 +44,7 @@ register({
       }
       else mine = await canDecideLeave(user as never, l);
       if (!mine) continue;
-      out.push(item({ kind: "LEAVE", id: l.id, title: `${nm.get(l.userId) || "Teacher"}: leave ${day(l.fromDate)}–${day(l.toDate)}${d?.deanStatus === "PENDING" ? " (Dean's step)" : ""}`, from: nm.get(l.userId) || "—", area: l.reason.slice(0, 60), since: l.createdAt, due: l.fromDate, priority: new Date(l.fromDate).getTime() - Date.now() < 2 * 864e5 ? "high" : "normal", href: "/leave-approvals", actions: ["approve", "return"] }));
+      out.push(item({ kind: "LEAVE", id: l.id, title: `${nm.get(l.userId) || "Teacher"}: leave ${day(l.fromDate)}–${day(l.toDate)}${d?.deanStatus === "PENDING" ? " (Dean's step)" : ""}`, from: nm.get(l.userId) || "—", area: l.reason.slice(0, 60), since: l.createdAt, due: l.fromDate, priority: new Date(l.fromDate).getTime() - Date.now() < 2 * 864e5 ? "high" : "normal", href: "/leave-approvals", checks: new Date(l.fromDate).getTime() - Date.now() < 2 * 864e5 ? ["Starts in less than 2 days — check the substitutes"] : [], actions: ["approve", "return"] }));
     }
     return out;
   },
@@ -248,8 +248,10 @@ register({
   kind: "TEACHER_ASSIGNMENT", label: "Teacher assignments to approve", bulk: true,
   async fetch({ user }) {
     if (user.role !== "HEAD_OF_DEPARTMENT") return [];
-    const cs = await prisma.course.findMany({ where: { instructorApproval: "PENDING", coordinator: { managedById: user.managedById || "none", departmentId: user.departmentId || "none" } }, select: { id: true, code: true, title: true, createdAt: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } } } }) as unknown as { id: string; code: string; title: string; createdAt?: Date; instructor: { name: string } | null; batch: { degreeProgram: string; batchName: string } | null }[];
-    return cs.map((c) => item({ kind: "TEACHER_ASSIGNMENT", id: c.id, title: `${c.instructor?.name || "A teacher"} to teach ${c.code} ${c.title}`, from: "Course Assigner", area: `${c.batch?.degreeProgram || ""} ${c.batch?.batchName || ""}`, since: c.createdAt || new Date(), due: null, href: "/hod/department", actions: ["approve", "return"] }));
+    const cs = await prisma.course.findMany({ where: { instructorApproval: "PENDING", coordinator: { managedById: user.managedById || "none", departmentId: user.departmentId || "none" } }, select: { id: true, code: true, title: true, createdAt: true, instructorId: true, instructor: { select: { name: true } }, batch: { select: { degreeProgram: true, batchName: true } } } }) as unknown as { id: string; code: string; title: string; createdAt?: Date; instructor: { name: string } | null; batch: { degreeProgram: string; batchName: string } | null }[];
+    const tids = Array.from(new Set((cs as unknown as { instructorId: string | null }[]).map((c) => c.instructorId).filter((x): x is string => !!x)));
+    const load = new Map<string, number>((await prisma.course.groupBy({ by: ["instructorId"], where: { instructorId: { in: tids.concat("none") }, isOffered: true }, _count: { _all: true } }).catch(() => [])).map((g) => [String(g.instructorId), g._count._all as number]));
+    return cs.map((c) => item({ checks: (load.get(String((c as unknown as { instructorId: string | null }).instructorId)) || 0) >= 4 ? [`The teacher already has ${load.get(String((c as unknown as { instructorId: string | null }).instructorId))} courses this term`] : [], kind: "TEACHER_ASSIGNMENT", id: c.id, title: `${c.instructor?.name || "A teacher"} to teach ${c.code} ${c.title}`, from: "Course Assigner", area: `${c.batch?.degreeProgram || ""} ${c.batch?.batchName || ""}`, since: c.createdAt || new Date(), due: null, href: "/hod/department", actions: ["approve", "return"] }));
   },
   async act(_c, id, action, reason, req) {
     const { POST } = await import("../../app/api/hod/approvals/route");

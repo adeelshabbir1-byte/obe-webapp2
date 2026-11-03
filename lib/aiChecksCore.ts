@@ -2,7 +2,7 @@
 // what a run costs from its token counts, whether the institute's monthly budget allows it, and reading the reply.
 // No database and no network here (tested on its own). No personal data is ever put in a prompt: only course content.
 
-export type Kind = "PAPER" | "PLAN" | "SPLIT";
+export type Kind = "PAPER" | "PLAN" | "SPLIT" | "MARKS";
 export type Price = { inPerM: number; outPerM: number };
 /** Default prices in US$ per million tokens (input / output). The Super Admin edits them to match the price list. */
 export const DEFAULT_PRICES: Record<string, Price> = {
@@ -10,7 +10,7 @@ export const DEFAULT_PRICES: Record<string, Price> = {
   "claude-sonnet-5-5": { inPerM: 3, outPerM: 15 },
   "claude-opus-5-5": { inPerM: 5, outPerM: 25 },
 };
-export const DEFAULT_MODELS: Record<Kind, string> = { PAPER: "claude-haiku-5-5", PLAN: "claude-opus-5-5", SPLIT: "claude-haiku-5-5" };
+export const DEFAULT_MODELS: Record<Kind, string> = { PAPER: "claude-haiku-5-5", PLAN: "claude-opus-5-5", SPLIT: "claude-haiku-5-5", MARKS: "claude-haiku-5-5" };
 export const costOf = (model: string, inTok: number, outTok: number, prices: Record<string, Price> = DEFAULT_PRICES) => {
   const p = prices[model] || DEFAULT_PRICES[model] || { inPerM: 5, outPerM: 25 };
   return Math.round(((inTok * p.inPerM + outTok * p.outPerM) / 1e6) * 1e6) / 1e6;
@@ -61,7 +61,20 @@ export function splitPrompt(): { system: string; user: string } {
     user: 'Split the attached paper into its questions and parts. Reply as {"questions":[{"no":1,"text":"stem (with MCQ options as lines a) …)","marks":5,"parts":[{"label":"a","text":"…","marks":2}]}]}. Use null for marks that are not printed.',
   };
 }
-export function mockReply(kind: Kind, input: PaperInput | PlanInput | SplitInput): { text: string; inTok: number; outTok: number } {
+// A photographed or scanned award list / mark sheet (scan a mark sheet, 3 Nov 2026).
+export type MarksInput = { size: number; columns: string[] };
+export type MarksResult = { columns: string[]; rows: { roll: string; name?: string; values: (number | string | null)[] }[] };
+export function marksPrompt(expected: string[]): { system: string; user: string } {
+  return {
+    system: "You read photographed or scanned university mark sheets (award lists), typed or handwritten. Copy exactly what is written; never guess a mark you cannot read (use null). Reply with JSON only.",
+    user: `Read the attached mark sheet. The columns are usually roll number, name, then one column per assessment or question${expected.length ? ` (this course has: ${expected.join(", ")})` : ""}. Reply as {"columns":["heading of each mark column, left to right"],"rows":[{"roll":"roll or registration number as written","name":"name if written","values":[mark, mark, …]}]}. Write "A" for absent, null for an unreadable or empty cell.`,
+  };
+}
+export function mockReply(kind: Kind, input: PaperInput | PlanInput | SplitInput | MarksInput): { text: string; inTok: number; outTok: number } {
+  if (kind === "MARKS") {
+    const r: MarksResult = { columns: ["Quiz 1", "Assignment 1"], rows: [{ roll: "001", values: [8, 9] }, { roll: "002", values: ["A", 7] }] };
+    return { text: JSON.stringify(r), inTok: 2000, outTok: 300 };
+  }
   if (kind === "SPLIT") {
     const r: SplitResult = { questions: [{ no: 1, text: "Define a stack and give one application.", marks: 5, parts: [] }, { no: 2, text: "Compare arrays and linked lists for insertion.", marks: 10, parts: [] }] };
     return { text: JSON.stringify(r), inTok: 2500, outTok: 300 };
