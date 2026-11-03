@@ -36,6 +36,27 @@ const PLACE: [RegExp, string, string][] = [
   [/^\/(chairman\/.*|data-import|data-quality|settings\/.*|setup-check|plans)$/, "institute", "Setup & settings"],
 ];
 
+// Pages that sat in the wrong card group (UX review, 3 Nov 2026), placed by hand whatever group the shared grouping gave.
+const OVERRIDE: [RegExp, string, string][] = [
+  [/^\/(operations|plans)$/, "institute", "Overview"],
+  [/^\/(admissions|student-activities|societies\/elections)$/, "institute", "Students & admissions"],
+  [/^\/(chairman\/setup|setup-check|chairman\/institute-settings|chairman\/campuses|data-import|data-quality|chairman\/backups|admin\/migrations)$/, "institute", "Set up & data"],
+  [/^\/(billing|settings\/who-decides|chairman\/ai-configuration|chairman\/messaging|chairman\/lms)$/, "institute", "Settings & connections"],
+  [/^\/(academic-rules|registration-rules)$/, "academics", "Policies & Rules"],
+  [/^\/(plan-requests)$/, "academics", "Students"],
+  [/^\/(course-split)$/, "academics", "Programs & Courses"],
+];
+// One name per group: a group the shared menu calls "Settings" is the same as "Setup & settings".
+const ALIAS: Record<string, string> = { Settings: "Settings & connections", Platform: "Settings & connections", "Setup & settings": "Settings & connections", "Student life": "Students & admissions" };
+// The order of the groups on each hub's page; groups not listed come after, in the order met.
+const ORDER: Record<string, string[]> = {
+  institute: ["Overview", "Set up & data", "Settings & connections", "Students & admissions", "Fees, HR & accounts", "Facilities & stores", "Other pages"],
+  academics: ["Semester & Timetable", "Programs & Courses", "Outcomes & CQI", "Curriculum & Outcomes", "Curriculum Maps", "Exams & results", "Students", "Degrees, partners & colleges", "Policies & Rules", "Review & Approval", "National", "Consortium"],
+  people: ["People & Structure", "Faculty"],
+  quality: ["Accreditation", "Quality", "Committees & meetings"],
+  reports: ["Reports & Analytics", "Insights", "Reports"],
+  work: ["Daily pages", "Me", "Community"],
+};
 /** Splits a role's links into the hub each belongs to. */
 export function hubsOf(links: Link[]) {
   const out = new Map<string, { title: string; links: Link[] }[]>();
@@ -43,15 +64,20 @@ export function hubsOf(links: Link[]) {
     for (const l of sec.links) {
       let hub = HUBS.find((h) => h.sections.includes(sec.title))?.key || "institute";
       let title = sec.title;
-      const placed = ["More", "Facilities & Calendar", "University Operations"].includes(sec.title) ? PLACE.find(([re]) => re.test(l.href)) : null;
+      const forced = OVERRIDE.find(([re]) => re.test(l.href));
+      const placed = forced || (["More", "Facilities & Calendar", "University Operations"].includes(sec.title) ? PLACE.find(([re]) => re.test(l.href)) : null);
       if (placed) { hub = placed[1]; title = placed[2]; }
       else if (sec.title === "More" && REPORT_HINT.test(l.href)) { hub = "reports"; title = "Reports"; }
       else if (sec.title === "More") title = "Other pages";
+      title = ALIAS[title] || title;
       const list = out.get(hub) || [];
       let s = list.find((x) => x.title === title); if (!s) { s = { title, links: [] }; list.push(s); }
       s.links.push(l); out.set(hub, list);
     }
   }
+  const rank = (h: string) => { for (const [re] of OVERRIDE) { const m = re.source.replace(/^\^\\\/\(|\)\$$/g, "").split("|").map((x) => x.replace(/\\\//g, "/")); const i = m.indexOf(h.slice(1)); if (i >= 0) return i; } return 999; };
+  for (const list of out.values()) for (const sct of list) sct.links.sort((x, y) => rank(x.href) - rank(y.href));
+  for (const [hub, list] of out) { const o = ORDER[hub] || []; const at = (t: string) => { const i = o.indexOf(t); return i < 0 ? 999 : i; }; list.sort((x, y) => at(x.title) - at(y.title)); }
   return out;
 }
 /** The short menu: direct links (approvals + the role's daily pages) and the hub entries with their member pages. */
