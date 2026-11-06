@@ -47,8 +47,7 @@ export async function askClaude(cfg: { apiKey: string; model: string }, system: 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: cfg.model, max_tokens: 900, system, messages }),
-  });
+    body: JSON.stringify({ model: cfg.model, max_tokens: 900, system, messages }), signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`The AI service returned an error (${res.status}).`);
   const d = await res.json();
   return (d.content || []).map((c: { text?: string }) => c.text || "").join("").trim();

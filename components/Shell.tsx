@@ -13,6 +13,7 @@ import { defaultWork, ROLE_WORK_LABEL } from "../lib/navDefaults";
 import { applyTitles, titlesFor } from "../lib/titles";
 import { badgeCount } from "../lib/approvals/inbox";
 import ReportProblemButton from "./ReportProblemButton";
+import { cached } from "../lib/cache";
 
 /**
  * Server wrapper for the app chrome. Everything the sidebar needs (branding,
@@ -38,7 +39,11 @@ export default async function Shell({
   const user = await getSignedInUser();
 
   const needAdvisor = !!user && !navLinks.some((l) => l.href === "/advisor/dashboard");
-  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises, userPhoto, pinRow] = await Promise.all([
+  const pdb = prisma as unknown as Record<string, any>;
+  const rawRole = user ? String((user as { rawRole?: string }).rawRole || user.role) : "";
+  const staffUser = !!user && !["STUDENT", "SUPER_USER"].includes(rawRole);
+  // Everything that does not depend on anything else, in one round (it used to be ~15 queries one after another).
+  const [branding, sessionInfo, requestsCount, currentTerm, unreadNotifications, advises, userPhoto, pinRow, inst, cid, flagRows, counsellorRow, approvalsCount, reportButton, bill] = await Promise.all([
     getBrandingFor(user),
     user ? getSessionInfo(user) : null,
     user ? getRequestsCount(user) : 0,
@@ -48,18 +53,36 @@ export default async function Shell({
     user ? unreadCount(user.id) : 0,
     user ? prisma.batch.count({ where: { advisorId: user.id } }).then((n) => n > 0).catch(() => false) : false,
     user ? prisma.facultyProfile.findUnique({ where: { userId: user.id }, select: { photo: true } }).then((p) => p?.photo || null).catch(() => null) : null,
-    user ? (((prisma as unknown as Record<string, any>).userNavPref?.findUnique({ where: { userId: user.id } }) as Promise<{ pinsJson: string } | null> | undefined)?.catch(() => null) ?? null) : null,
+    user ? ((pdb.userNavPref?.findUnique({ where: { userId: user.id } }) as Promise<{ pinsJson: string } | null> | undefined)?.catch(() => null) ?? null) : null,
+    user && user.role !== "SUPER_USER" ? instituteOfUser({ id: user.id, role: rawRole, managedById: user.managedById ?? null }).catch(() => null) : null,
+    user && user.role !== "SUPER_USER" ? import("../lib/branding").then((m) => m.cachedChairmanIdFor(user as never)).catch(() => "") : "",
+    // The person's menu flags in one query: duties handed to them, the workspace in focus, display and language.
+    user ? ((pdb.userFlag?.findMany({ where: { userId: user.id, OR: [{ key: { in: ["menuFocus", "display", "lang"] } }, { key: { startsWith: "duty:" } }] }, select: { key: true, value: true } }) as Promise<{ key: string; value: string }[]> | undefined)?.catch(() => []) ?? []) : [],
+    user ? ((pdb.counsellorProfile?.findUnique({ where: { userId: user.id }, select: { isCounsellor: true } }) as Promise<{ isCounsellor: boolean } | null> | undefined)?.catch(() => null) ?? null) : null,
+    // My Approvals: every member of staff gets it, with a count of what is waiting for them (cached for a few minutes).
+    staffUser ? badgeCount(user as never).catch(() => 0) : 0,
+    // "Report a problem" (pilot): on every page, unless the institute's pilot switch leaves this person out.
+    user ? import("../lib/problemReports").then((m) => m.showButton(user as never)).catch(() => false) : false,
+    // Billing: the Institute Head sees overdue OBEHUB invoices, the lock they cause, or a trial ending soon.
+    user && user.role === "CHAIRMAN" ? import("../lib/billing").then((m) => m.billingNotice(user.id)).catch(() => null) : null,
+  ]);
+  const flag = (k: string) => flagRows.find((f) => f.key === k)?.value ?? null;
+  const hats = ((user as { extraRoles?: string[] } | null)?.extraRoles || []);
+  // The institute-wide lookups (cached per institute), also in one round.
+  const [off, titles, actingDean, look] = await Promise.all([
+    user && user.role !== "SUPER_USER" ? lockedModules(inst) : Promise.resolve(new Set<string>()),
+    titlesFor(inst),
+    user && user.role === "DEAN" && !hats.includes("EXAM_CONTROLLER") && cid ? cached(`actingCoe:${cid}`, 120, () => import("../lib/academicRules").then((m) => m.actingControllerDean(cid)).catch(() => null)) : Promise.resolve(null),
+    user && user.role !== "SUPER_USER" && cid ? cached(`look:${cid}`, 120, () => import("../lib/brandLookServer").then((m) => m.lookOf(cid)).catch(() => null)) : Promise.resolve(null),
   ]);
   // Advising is a per-batch duty, not a role: anyone named a batch's Advisor gets the Advisor Dashboard in every role's menu.
   // Licensing: links to modules the institute has not bought are left out of the menu.
-  const off = user && user.role !== "SUPER_USER" ? await lockedModules(await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null)) : new Set<string>();
   const licensed = off.size ? navLinks.filter((l) => { const m = moduleForPath(l.href); return !m || !off.has(m.key); }) : navLinks;
   // Duties held as hats (lib/duties.ts) add their pages to whichever role the person is working in.
-  const hats = ((user as { extraRoles?: string[] } | null)?.extraRoles || []);
   // A Dean acts as Controller of Examinations while none is named (lib/academicRules.ts).
-  const actingCoe = !!user && user.role === "DEAN" && !hats.includes("EXAM_CONTROLLER") && (await (await import("../lib/academicRules")).actingControllerDean(await (await import("../lib/reportScope")).chairmanIdFor(user as never)).catch(() => null)) === user.id;
+  const actingCoe = !!user && actingDean === user.id;
   // Counselling: batch advisors and the student counsellors Student Affairs designates.
-  const counsellor = !!user && (advises || !!(await ((prisma as unknown as Record<string, any>).counsellorProfile?.findUnique({ where: { userId: user.id } }) as Promise<{ isCounsellor: boolean } | null> | undefined)?.catch(() => null))?.isCounsellor);
+  const counsellor = !!user && (advises || !!counsellorRow?.isCounsellor);
   // Duties held as hats are separate workspaces (UX review, Nov 2026): working as Dean you see the Dean's menu only;
   // "Working as" at the top of the menu switches to the Controller of Examinations (or QEC, IT Manager …) menu.
   const dutyGroups: { key: string; label: string; home: string; links: { href: string; label: string }[] }[] = [
@@ -70,11 +93,11 @@ export default async function Shell({
     ...(hats.includes("CURRICULUM_BUILDER") ? [{ key: "CURRICULUM_BUILDER", label: "Curriculum Builder", home: "/curricula/builder", links: [{ href: "/curricula/builder", label: "National Curriculum Builder" }, { href: "/curricula", label: "National Curricula" }] }] : []),
   ];
   // Duties handed to this person by a head (lib/dutyAssign.ts, lib/collab.ts): their own workspaces too.
-  const given = user ? await import("../lib/scopedSettings").then((m) => m.flagsLike(user.id, "duty:")).catch(() => []) : [];
+  const given = flagRows.filter((f) => f.key.startsWith("duty:"));
   if (given.some((f) => f.key === "duty:coe") && !dutyGroups.some((g) => g.key === "EXAM_CONTROLLER")) dutyGroups.push({ key: "COE_TEAM", label: "Examinations office", home: "/controller", links: [{ href: "/controller", label: "Controller Dashboard" }] });
   if (given.some((f) => f.key === "duty:affiliation")) dutyGroups.push({ key: "AFFILIATION", label: "Affiliation office", home: "/affiliation", links: [{ href: "/affiliation", label: "Affiliation" }] });
   if (given.some((f) => f.key.startsWith("duty:collab:"))) dutyGroups.push({ key: "COLLAB", label: "Joint degrees & ODL", home: "/collab", links: [{ href: "/collab", label: "Joint degrees and ODL" }] });
-  const focusFlag = user && dutyGroups.length ? await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "menuFocus")).catch(() => null) : null;
+  const focusFlag = dutyGroups.length ? flag("menuFocus") : null;
   const focus = dutyGroups.find((g) => g.key === focusFlag) || null;
   const dutyLinks = focus ? focus.links : [];
   // Duty pages head the "My duties" group of the lighter menu (lib/roleMenus.ts).
@@ -83,16 +106,10 @@ export default async function Shell({
   const rawLinks = [...(advises && needAdvisor ? [...licensed, { href: "/advisor/dashboard", label: "Advisor Dashboard" }, ...(licensed.some((l) => l.href === "/status-changes") ? [] : [{ href: "/status-changes", label: "Student Status Changes" }])] : licensed), ...dutyOnly.filter((l) => !(advises && needAdvisor && l.href === "/status-changes")), ...(counsellor && !licensed.some((l) => l.href === "/counselling") ? [{ href: "/counselling", label: "Counselling" }] : [])];
   // The institute's own position titles (VC, Director of School …) replace the default names in the menu and role label.
   const menuLinks = focus ? focus.links : rawLinks;
-  const titles = await titlesFor(user && user.role !== "SUPER_USER" ? await instituteOfUser({ id: user.id, role: (user as { rawRole?: string }).rawRole || user.role, managedById: user.managedById ?? null }).catch(() => null) : null);
-  // My Approvals: every member of staff gets it, with a count of what is waiting for them (cached for a few minutes).
-  const staffUser = !!user && !["STUDENT", "SUPER_USER"].includes(String((user as { rawRole?: string }).rawRole || user.role));
-  const approvalsCount = staffUser ? await badgeCount(user as never).catch(() => 0) : 0;
   // "What's next": the number of open tasks next to the name (cached for a few minutes).
   // Menu colours (Adeel prompt §1): each page's status for this person, from the same tasks (cached per person).
   const menu = staffUser ? await import("../lib/menuStatus").then((m) => m.menuState(user as never, menuLinks.map((l) => l.href).concat("/approvals"))).catch(() => null) : null;
   const tasksCount = menu ? menu.count : 0;
-  // "Report a problem" (pilot): on every page, unless the institute's pilot switch leaves this person out.
-  const reportButton = !!user && await import("../lib/problemReports").then((m) => m.showButton(user as never)).catch(() => false);
   const withInbox = staffUser && !menuLinks.some((l) => l.href === "/approvals") ? [{ href: "/approvals", label: "My Approvals" }, ...menuLinks] : menuLinks;
   const links = withInbox.filter((l, i, a) => a.findIndex((x) => x.href === l.href) === i).map((l) => ({ ...l, label: applyTitles(l.label, titles) }));
   const shownRole = focus ? focus.label : applyTitles(roleLabel, titles);
@@ -106,8 +123,6 @@ export default async function Shell({
     return { role: o.role, label: ROLE_WORK_LABEL[o.role] || `${o.label} work`, links: defaultWork(o.role, menu).map((h) => menu.find((l) => l.href === h)).filter((l): l is { href: string; label: string } => !!l) };
   }).filter((w) => w.links.length);
 
-  // Billing: the Institute Head sees overdue OBEHUB invoices, the lock they cause, or a trial ending soon.
-  const bill = user && user.role === "CHAIRMAN" ? await (await import("../lib/billing")).billingNotice(user.id).catch(() => null) : null;
   return (
     <AppShell
       roleLabel={shownRole}
@@ -125,9 +140,9 @@ export default async function Shell({
       approvalsCount={approvalsCount}
       tasksCount={tasksCount}
       linkStatus={menu?.statuses || {}}
-      look={user && user.role !== "SUPER_USER" ? await import("../lib/brandLookServer").then(async (m) => m.lookOf(await (await import("../lib/branding")).cachedChairmanIdFor(user as never))).catch(() => null) : null}
-      display={user ? (await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "display")).catch(() => null)) || "" : ""}
-      lang={user ? (await import("../lib/scopedSettings").then((m) => m.getFlag(user.id, "lang")).catch(() => null)) || "" : ""}
+      look={look}
+      display={flag("display") || ""}
+      lang={flag("lang") || ""}
       unreadNotifications={unreadNotifications}
       pins={focus ? [] : pins}
       defaultPins={sessionInfo?.deptCoordinator ? defaultWork(role, links) : []}

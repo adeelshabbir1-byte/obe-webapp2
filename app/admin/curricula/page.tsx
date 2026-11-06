@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -35,7 +36,7 @@ export default async function AdminCurriculaPage() {
         new version when it's updated — the original stays intact for batches that already imported it.
       </p>
       <p style={{ fontSize: 13 }}><a href="/curricula">Open the Curriculum Library</a> to filter, compare versions and give every curriculum its standard code · <a href="/curricula/tidy">Name &amp; tidy up</a> · <a href="/admin/affiliations">Affiliated colleges</a></p>
-      <CurriculumWorkbookImport official={true} />
+      <Reveal label="Import a curriculum workbook"><CurriculumWorkbookImport official={true} /></Reveal>
       <AssignByInstitute />
       <CurriculaManager
         initialCurricula={curricula.map((c) => ({ id: c.id, authority: c.authority, title: c.title, version: c.version, courseCount: c._count.courses, ploCount: c._count.plos, degreeGroup: degreeGroupLabel(c), assignedCount: c._count.assignments }))}

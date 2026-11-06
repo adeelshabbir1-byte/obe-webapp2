@@ -59,8 +59,7 @@ async function POST_handler(req: NextRequest) {
       body: JSON.stringify({
         from, to: [user.email], subject: "Reset your OBEHUB password",
         text: `Dear ${user.name},\n\nSomeone (hopefully you) asked to reset the password of your OBEHUB account. Open this link within ${TTL_MIN} minutes to choose a new password:\n\n${url}\n\nThe link works once. If you didn't ask for this, ignore this email — your password stays as it is.`,
-      }),
-    }).catch(() => null);
+      }), signal: AbortSignal.timeout(15000) }).catch(() => null);
     await writeAuditLog({ actorUserId: user.id, action: res?.ok ? "PASSWORD_RESET_LINK_SENT" : "PASSWORD_RESET_EMAIL_FAILED", entityType: "User", entityId: user.id });
   } catch (e) {
     console.error("forgot-password", (e as Error).message);

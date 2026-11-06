@@ -17,8 +17,7 @@ async function POST_handler() {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": config.apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: config.model, max_tokens: 10, messages: [{ role: "user", content: "Reply with just: OK" }] }),
-    });
+      body: JSON.stringify({ model: config.model, max_tokens: 10, messages: [{ role: "user", content: "Reply with just: OK" }] }), signal: AbortSignal.timeout(60000) });
     if (res.ok) {
       ok = true; note = "Connected successfully.";
     } else {

@@ -127,7 +127,7 @@ async function emailDigest(items: { toId: string; subject: string; body: string 
       const u = email.get(it.toId);
       if (!u?.email) return;
       try {
-        const res = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to: [u.email], subject: it.subject, text: `Dear ${u.name},\n\n${it.body}\n\n${base ? `${base}/deadlines` : ""}` }) });
+        const res = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to: [u.email], subject: it.subject, text: `Dear ${u.name},\n\n${it.body}\n\n${base ? `${base}/deadlines` : ""}` }), signal: AbortSignal.timeout(15000) });
         if (res.ok) sent++;
       } catch { /* one failed email must not stop the rest */ }
     }));

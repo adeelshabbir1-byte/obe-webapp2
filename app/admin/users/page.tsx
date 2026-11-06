@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -37,7 +38,7 @@ export default async function AdminUsersPage() {
 
       <HeadPasswordReset heads={chairmen.map((c) => ({ id: c.id, label: `${c.name} (${c.username})${c.instituteName ? ` — ${c.instituteName}` : ""}` }))} />
 
-      <CreateUserForm endpoint="/api/admin/users" buttonLabel="Create Institute Head" />
+      <Reveal label="Add a user"><CreateUserForm endpoint="/api/admin/users" buttonLabel="Create Institute Head" /></Reveal>
     </Shell>
   );
 }

@@ -1,3 +1,4 @@
+import Reveal from "../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -29,7 +30,7 @@ export default async function MeetingsPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         OMC, BOS, BPF, faculty meetings and the industrial advisory board. Recording a meeting here also ticks off the matching task in the Semester plan for the person who recorded it.
       </p>
-      {canAdd && <EvidenceFileForm mode="meeting" kinds={MEETING_KINDS} leads={scope.leads.map((l) => ({ id: l.id, label: l.leadProgram || l.name }))} />}
+      {canAdd && <Reveal label="Upload a file"><EvidenceFileForm mode="meeting" kinds={MEETING_KINDS} leads={scope.leads.map((l) => ({ id: l.id, label: l.leadProgram || l.name }))} /></Reveal>}
       <div className="card" style={{ overflowX: "auto" }}>
         {rows.length === 0 ? <p style={{ color: "var(--slate)", margin: 0 }}>No meetings recorded yet.</p> : rows.map((m) => (
           <div key={m.id} style={{ borderTop: "1px solid var(--line)", padding: "10px 0" }}>

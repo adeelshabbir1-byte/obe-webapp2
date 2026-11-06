@@ -1,3 +1,4 @@
+import Reveal from "../../../../../components/Reveal";
 import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -54,7 +55,7 @@ export default async function InstructorSchedulePage({ params }: { params: { cou
       </div>
       <CourseEvaluationSection courseId={course.id} initialObservations={course.instructorObservations || ""} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
-      <PlanWorkbookImport courseId={course.id} source="INSTRUCTOR" />
+      <Reveal label="Import from Excel"><PlanWorkbookImport courseId={course.id} source="INSTRUCTOR" /></Reveal>
       <LectureMergeSplit courseId={course.id} plan="INSTRUCTOR" rows={instructorRows.map((r) => ({ id: r.id, n: r.lectureNumber, topic: r.topic, subtopic: r.subtopic }))} merges={(await mergesOf(course.id, "INSTRUCTOR").catch(() => [])).filter((m) => m.kind === "MERGE").map((m) => ({ id: m.id, label: `Merged ${m.parts.map((p) => `L${p.lectureNumber}`).join(" + ")} → L${m.parts[0]?.lectureNumber}` }))} />
       <InstructorLectureContentManager
         courseId={course.id}

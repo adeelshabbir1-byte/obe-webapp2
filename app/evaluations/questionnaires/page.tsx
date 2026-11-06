@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../lib/session";
@@ -31,7 +32,7 @@ export default async function QuestionnairesPage() {
         </div>
         <Link href="/evaluations" className="btn btn-secondary btn-sm">Results</Link>
       </div>
-      <FeedbackWindowForm fromWeek={s.fromWeek} toWeek={s.toWeek} minResponses={s.minResponses} />
+      <Reveal label="Open a feedback window"><FeedbackWindowForm fromWeek={s.fromWeek} toWeek={s.toWeek} minResponses={s.minResponses} /></Reveal>
       <QuestionnaireEditor key={teacher.map((q) => `${q.key}${q.version}${q.retired}`).join()} kind="TEACHER" title="Teacher evaluation" questions={teacher} versions={Object.fromEntries(vT)} />
       <QuestionnaireEditor key={course.map((q) => `${q.key}${q.version}${q.retired}`).join()} kind="COURSE" title="Course evaluation" questions={course} versions={Object.fromEntries(vC)} />
     </Shell>

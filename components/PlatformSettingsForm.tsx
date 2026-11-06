@@ -44,7 +44,7 @@ export default function PlatformSettingsForm({ initial }: { initial: { ownerLogo
     return (
       <div className="field">
         <label>{label}</label>
-        {value && <img src={value} alt={label} style={{ maxHeight: 60, maxWidth: 160, display: "block", marginBottom: 8, border: "1px solid var(--line)", padding: 6, background: "#fff" }} />}
+        {value && <img loading="lazy" decoding="async" src={value} alt={label} style={{ maxHeight: 60, maxWidth: 160, display: "block", marginBottom: 8, border: "1px solid var(--line)", padding: 6, background: "#fff" }} />}
         <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={onChange} style={{ fontSize: 12.5 }} />
       </div>
     );

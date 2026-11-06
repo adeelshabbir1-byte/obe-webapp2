@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -117,7 +118,7 @@ export default async function OmcPloMatrixPage({ searchParams }: { searchParams:
             If two batches share the same or an equivalent curriculum, copy one's GA mappings into the other —
             matched by course code and GA number. Only fills in gaps; never overwrites what's already set.
           </p>
-          <CopyPloMappingsForm batches={allBatches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))} />
+          <Reveal label="Copy GA mappings from another course"><CopyPloMappingsForm batches={allBatches.map((b) => ({ id: b.id, label: `${b.degreeProgram} — ${b.batchName}` }))} /></Reveal>
         </div>
       )}
       {hasFilter && <PloMatrix programs={programs} />}

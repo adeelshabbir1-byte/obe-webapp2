@@ -151,8 +151,7 @@ async function runAiCheck(apiKeyStr: string, modelStr: string, fileBuffer: Buffe
       model: modelStr,
       max_tokens: 500,
       messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
-    }),
-  });
+    }), signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
   const data = await res.json();
   const text = (data.content || []).map((b: any) => b.text || "").join("");

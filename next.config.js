@@ -9,7 +9,10 @@ const nextConfig = {
     NEXT_PUBLIC_RELEASE: process.env.VERCEL_GIT_COMMIT_SHA || "",
     NEXT_PUBLIC_SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || "",
   },
+  // Gzip from the Node server; on Vercel the edge also serves Brotli to browsers that accept it.
   compress: true,
+  // Any image served through next/image comes as AVIF or WebP (smallest the browser accepts), cached for a week.
+  images: { formats: ["image/avif", "image/webp"], minimumCacheTTL: 604800 },
   experimental: {
     // instrumentation.ts starts server-side error monitoring when SENTRY_DSN is set.
     instrumentationHook: true,
@@ -41,6 +44,16 @@ const nextConfig = {
   },
   async headers() {
     return [
+      {
+        // App icons and the web manifest: cached by the browser and Vercel's CDN for a month.
+        source: "/:file(icon-192.png|icon-512.png|manifest.webmanifest)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=2592000" }],
+      },
+      {
+        // The service worker must always be checked for a new version.
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+      },
       {
         // Brand assets are re-generated under a new file name if they ever change.
         source: "/brand/:path*",

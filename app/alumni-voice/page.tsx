@@ -1,3 +1,4 @@
+import Reveal from "../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { navForRole } from "../../components/reportNav";
@@ -44,7 +45,7 @@ export default async function AlumniVoicePage() {
 
       <div className="card">
         <b>Ask an alumnus</b> <span className="small-note">· you: {mine.answered} answered of {mine.sent} sent{next ? ` · ${next - mine.answered} more for the next badge` : ""}</span>
-        <div style={{ marginTop: 8 }}><AlumniRequestForm alumni={opts} /></div>
+        <div style={{ marginTop: 8 }}><Reveal label="Ask alumni for feedback"><AlumniRequestForm alumni={opts} /></Reveal></div>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>

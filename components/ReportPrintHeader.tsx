@@ -28,11 +28,11 @@ export default function ReportPrintHeader({ title, instituteName }: { title: str
       ` }} />
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {nceacLogo ? (
-          <img src={nceacLogo} alt="NCEAC" style={{ width: 44, height: 44, objectFit: "contain" }} />
+          <img loading="lazy" decoding="async" src={nceacLogo} alt="NCEAC" style={{ width: 44, height: 44, objectFit: "contain" }} />
         ) : (
           <div className="seal" style={{ width: 44, height: 44, margin: 0, fontSize: 11 }}>NCEAC</div>
         )}
-        {instituteLogo && <img src={instituteLogo} alt={instituteName || fetchedName || "Institute"} style={{ maxHeight: 44, maxWidth: 100, objectFit: "contain" }} />}
+        {instituteLogo && <img loading="lazy" decoding="async" src={instituteLogo} alt={instituteName || fetchedName || "Institute"} style={{ maxHeight: 44, maxWidth: 100, objectFit: "contain" }} />}
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "Georgia, serif" }}>{title}</div>
           <div style={{ fontSize: 11, color: "var(--slate)" }}>{instituteName || fetchedName || "National Computing Education Accreditation Council"}</div>

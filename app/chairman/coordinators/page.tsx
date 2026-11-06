@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
@@ -57,7 +58,7 @@ export default async function ChairmanCoordinatorsPage() {
         </table>
       </div>
 
-      <CreateUserForm endpoint="/api/chairman/coordinators" buttonLabel="Create Program Lead" />
+      <Reveal label="Add a Program Lead"><CreateUserForm endpoint="/api/chairman/coordinators" buttonLabel="Create Program Lead" /></Reveal>
     </Shell>
   );
 }

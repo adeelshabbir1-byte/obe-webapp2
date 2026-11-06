@@ -81,7 +81,7 @@ export default function ChairmenBrandingManager({ chairmen: initialChairmen }: {
                     </div>
                     <div className="field">
                       <label>Institute Logo</label>
-                      {instituteLogo && <img src={instituteLogo} alt="Institute logo" style={{ maxHeight: 60, maxWidth: 160, display: "block", marginBottom: 8, border: "1px solid var(--line)", padding: 6, background: "#fff" }} />}
+                      {instituteLogo && <img loading="lazy" decoding="async" src={instituteLogo} alt="Institute logo" style={{ maxHeight: 60, maxWidth: 160, display: "block", marginBottom: 8, border: "1px solid var(--line)", padding: 6, background: "#fff" }} />}
                       <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleFile} style={{ fontSize: 12.5 }} />
                     </div>
                     <div className="field">

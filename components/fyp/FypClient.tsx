@@ -45,7 +45,9 @@ export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, d
   /** Show the server's own message (e.g. a one-time password) and keep it on screen after a collapsed form closes. */ showMessage?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(!collapsed);
+  // Forms start as a button and open when needed (pass collapsed={false} for a form that is the page's whole purpose).
+  const folded = collapsed !== false;
+  const [open, setOpen] = useState(!folded);
   const [v, setV] = useState<Record<string, unknown>>(initial);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -58,7 +60,7 @@ export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, d
     if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
     setMsg(done ? { ok: true, text: done } : showMessage && typeof r.data?.message === "string" ? { ok: true, text: r.data.message } : null);
     onDone?.(r.data);
-    if (collapsed) setOpen(false);
+    if (folded) setOpen(false);
     router.refresh();
   }
   return (
@@ -81,7 +83,7 @@ export function ActionForm({ url, fixed, fields, initial = {}, submit, onDone, d
       })}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button type="submit" className="btn btn-brass btn-sm" disabled={busy}>{busy ? "Saving…" : submit}</button>
-        {collapsed && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Cancel</button>}
+        {folded && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Cancel</button>}
         {msg && <span className="small-note" style={{ color: msg.ok ? "var(--sage)" : "var(--rust)" }}>{msg.text}</span>}
       </div>
     </form>

@@ -125,7 +125,7 @@ export default function HelpRequests({ audience, canPublish = false, initialId, 
               {t.deskLabel} · asked by {t.requesterName} on {when(t.createdAt)}{t.routedTo.length ? ` · with ${t.routedTo.join(", ")}` : ""}{t.page ? ` · from ${t.page}` : ""}
             </p>
             <div className="hp-msg"><small>{t.requesterName} · {when(t.createdAt)}</small>{t.body}</div>
-            {t.screenshot && <a href={t.screenshot} target="_blank" rel="noreferrer" title="Open the picture of the page"><img src={t.screenshot} alt="The page when the request was raised" style={{ maxWidth: "100%", maxHeight: 220, border: "1px solid var(--line)", borderRadius: 6, margin: "6px 0" }} /></a>}
+            {t.screenshot && <a href={t.screenshot} target="_blank" rel="noreferrer" title="Open the picture of the page"><img loading="lazy" decoding="async" src={t.screenshot} alt="The page when the request was raised" style={{ maxWidth: "100%", maxHeight: 220, border: "1px solid var(--line)", borderRadius: 6, margin: "6px 0" }} /></a>}
             {t.canAnswer && (t.pageUrl || t.browser) && <p className="small-note" style={{ margin: "2px 0 8px", wordBreak: "break-all" }}>{t.pageUrl ? <>Page: {t.pageUrl}<br /></> : null}{t.browser ? `Browser: ${t.browser}` : ""} · role {t.requesterRole}</p>}
             {(t.fixNote || t.releaseRef) && <div className="hp-msg theirs" style={{ borderLeft: "3px solid #1E6B3A" }}><small>Fix{t.releaseRef ? ` · release ${t.releaseRef}` : ""}</small>{t.fixNote || ""}</div>}
             {detail!.messages.map((m) => <div key={m.id} className={`hp-msg ${m.fromRequester ? "" : "theirs"}`}><small>{m.authorName} · {when(m.createdAt)}</small>{m.body}</div>)}

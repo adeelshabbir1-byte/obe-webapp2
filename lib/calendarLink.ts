@@ -98,13 +98,13 @@ async function fetchBusy(p: Provider, enc: string, from: number, to: number) {
   const t = await token(p, { grant_type: "refresh_token", refresh_token: refresh, ...(p === "MICROSOFT" ? { scope: CONF[p].scope } : {}) });
   const h = { Authorization: `Bearer ${t.access_token}` };
   if (p === "GOOGLE") {
-    const r = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ timeMin: new Date(from).toISOString(), timeMax: new Date(to).toISOString(), items: [{ id: "primary" }] }) });
+    const r = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ timeMin: new Date(from).toISOString(), timeMax: new Date(to).toISOString(), items: [{ id: "primary" }] }), signal: AbortSignal.timeout(15000) });
     const j = (await r.json()) as { calendars?: { primary?: { busy?: { start: string; end: string }[] } } };
     if (!r.ok) throw new Error(`Google ${r.status}`);
     return (j.calendars?.primary?.busy || []).map((b) => ({ start: Date.parse(b.start), end: Date.parse(b.end) }));
   }
   const q = new URLSearchParams({ startDateTime: new Date(from).toISOString(), endDateTime: new Date(to).toISOString(), $select: "start,end,showAs", $top: "200" });
-  const r = await fetch(`https://graph.microsoft.com/v1.0/me/calendarView?${q}`, { headers: { ...h, Prefer: 'outlook.timezone="UTC"' } });
+  const r = await fetch(`https://graph.microsoft.com/v1.0/me/calendarView?${q}`, { headers: { ...h, Prefer: 'outlook.timezone="UTC"' }, signal: AbortSignal.timeout(15000) });
   const j = (await r.json()) as { value?: { start: { dateTime: string }; end: { dateTime: string }; showAs?: string }[] };
   if (!r.ok) throw new Error(`Outlook ${r.status}`);
   return (j.value || []).filter((e) => e.showAs !== "free").map((e) => ({ start: Date.parse(`${e.start.dateTime.replace(/Z?$/, "")}Z`), end: Date.parse(`${e.end.dateTime.replace(/Z?$/, "")}Z`) }));

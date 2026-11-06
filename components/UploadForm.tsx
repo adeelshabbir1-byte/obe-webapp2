@@ -7,7 +7,7 @@ type Field = { name: string; label: string; type?: "text" | "number" | "date" | 
 /** A form with ordinary fields and one file, sent as multipart to `url`. */
 export default function UploadForm({ url, fields, file, submit, fixed = {}, collapsed, openLabel, initial = {} }: { url: string; fields: Field[]; file?: { name: string; label: string; accept?: string }; submit: string; fixed?: Record<string, string>; collapsed?: boolean; openLabel?: string; initial?: Record<string, string> }) {
   const router = useRouter();
-  const [open, setOpen] = useState(!collapsed);
+  const [open, setOpen] = useState(collapsed === false); // starts as a button unless collapsed={false}
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   async function go(e: React.FormEvent<HTMLFormElement>) {
@@ -19,7 +19,7 @@ export default function UploadForm({ url, fields, file, submit, fixed = {}, coll
     const r = await fetch(url, { method: "POST", body: fd });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
-    if (r.ok) { setMsg({ ok: true, t: "Saved." }); formEl.reset(); router.refresh(); if (collapsed) setOpen(false); } else setMsg({ ok: false, t: d.error || "Could not save" });
+    if (r.ok) { setMsg({ ok: true, t: "Saved." }); formEl.reset(); router.refresh(); if (collapsed !== false) setOpen(false); } else setMsg({ ok: false, t: d.error || "Could not save" });
   }
   if (!open) return <button className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}>{openLabel || submit}</button>;
   return (
@@ -33,7 +33,7 @@ export default function UploadForm({ url, fields, file, submit, fixed = {}, coll
       ))}
       {file && <label style={{ fontSize: 12 }}>{file.label}<br /><input name={file.name} type="file" accept={file.accept} style={{ maxWidth: 240 }} /></label>}
       <button className="btn btn-brass btn-sm" disabled={busy}>{busy ? "Saving…" : submit}</button>
-      {collapsed && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Cancel</button>}
+      {collapsed !== false && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Cancel</button>}
       {msg && <span style={{ fontSize: 12.5, color: msg.ok ? "#1E6B3A" : "#B3261E" }}>{msg.t}</span>}
     </form>
   );

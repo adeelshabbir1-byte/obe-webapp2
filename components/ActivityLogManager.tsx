@@ -66,7 +66,7 @@ export default function ActivityLogManager({ items, categories, batches }: { ite
                 {f("What happened", <textarea name="description" rows={3} defaultValue={cur?.description || ""} style={inp} />, true)}
                 {f("Result / awards", <textarea name="outcome" rows={2} defaultValue={cur?.outcome || ""} style={inp} />, true)}
                 {f("Picture", <>
-                  {photo && <img src={photo} alt="" style={{ maxWidth: 220, maxHeight: 150, display: "block", marginBottom: 6, border: "1px solid var(--line)" }} />}
+                  {photo && <img loading="lazy" decoding="async" src={photo} alt="" style={{ maxWidth: 220, maxHeight: 150, display: "block", marginBottom: 6, border: "1px solid var(--line)" }} />}
                   <input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { try { setPhoto(await shrink(file, 900)); } catch { setOk(false); setMsg("could not read that picture"); } } }} />
                   {photo && <button type="button" className="btn" style={{ fontSize: 11, marginLeft: 8 }} onClick={() => setPhoto(null)}>Remove picture</button>}
                 </>, true)}
@@ -78,7 +78,7 @@ export default function ActivityLogManager({ items, categories, batches }: { ite
             {shown.length === 0 && <div className="card" style={{ color: "var(--slate)" }}>Nothing logged yet.</div>}
             {shown.map((i) => (
               <div key={i.id} className="card" style={{ display: "flex", gap: 14, alignItems: "flex-start", margin: 0 }}>
-                {i.photo && <img src={i.photo} alt="" style={{ width: 120, height: 84, objectFit: "cover", border: "1px solid var(--line)" }} />}
+                {i.photo && <img loading="lazy" decoding="async" src={i.photo} alt="" style={{ width: 120, height: 84, objectFit: "cover", border: "1px solid var(--line)" }} />}
                 <div style={{ flex: 1, fontSize: 13 }}>
                   <b>{i.title}</b> <span className="badge badge-neutral" style={{ marginLeft: 6 }}>{i.category}</span>
                   <div style={{ color: "var(--slate)" }}>{[i.activityDate.slice(0, 10), i.venue, i.organizer && `by ${i.organizer}`, i.participants !== null && `${i.participants} students`, i.batchLabel].filter(Boolean).join(" · ")}</div>

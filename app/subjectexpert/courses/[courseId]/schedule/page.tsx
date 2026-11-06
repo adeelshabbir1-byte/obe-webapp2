@@ -1,3 +1,4 @@
+import Reveal from "../../../../../components/Reveal";
 import { redirect, notFound } from "next/navigation";
 import { getAuthenticatedUser } from "../../../../../lib/session";
 import { prisma } from "../../../../../lib/db";
@@ -74,7 +75,7 @@ export default async function SchedulePage({ params }: { params: { courseId: str
         </div>
       )}
 
-      <PlanWorkbookImport courseId={course.id} source="SE" />
+      <Reveal label="Import the plan from Excel"><PlanWorkbookImport courseId={course.id} source="SE" /></Reveal>
       <LectureExcelImport courseId={course.id} />
       <PloCoverageCard rows={ploRows} minTopics={coverage.rules.ploMinTopics} minPct={coverage.rules.ploMinPct || undefined} minItems={coverage.rules.ploMinItems || undefined} />
 

@@ -61,7 +61,7 @@ export default function FacultyProfileForm({ profile, records, name }: { profile
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ width: 130, height: 160, border: "1px solid var(--line)", background: "#f4f1ea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {photo ? <img src={photo} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: "var(--slate)", fontSize: 12 }}>No picture</span>}
+                  {photo ? <img loading="lazy" decoding="async" src={photo} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: "var(--slate)", fontSize: 12 }}>No picture</span>}
                 </div>
                 <label className="btn" style={{ display: "inline-block", marginTop: 8, fontSize: 12, cursor: "pointer" }}>Choose picture
                   <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => pickPhoto(e.target.files?.[0])} />
@@ -152,7 +152,7 @@ function RecordSection({ def, items, onDone }: { def: KindDef; items: Rec[]; onD
             {def.photo && (
               <div className="field" style={{ gridColumn: "1 / -1" }}>
                 <label>Picture from the event</label>
-                {photo && <img src={photo} alt="Event" style={{ maxWidth: 220, maxHeight: 150, display: "block", marginBottom: 6, border: "1px solid var(--line)" }} />}
+                {photo && <img loading="lazy" decoding="async" src={photo} alt="Event" style={{ maxWidth: 220, maxHeight: 150, display: "block", marginBottom: 6, border: "1px solid var(--line)" }} />}
                 <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { setPhoto(await shrink(f, 900)); } catch { onDone("could not read that picture", false); } } }} />
                 {photo && <button type="button" className="btn" style={{ fontSize: 11, marginLeft: 8 }} onClick={() => setPhoto(null)}>Remove picture</button>}
               </div>
@@ -168,7 +168,7 @@ function RecordSection({ def, items, onDone }: { def: KindDef; items: Rec[]; onD
       <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
         {items.map((r) => (
           <div key={r.id} style={{ display: "flex", gap: 12, padding: "10px 12px", border: "1px solid var(--line)", alignItems: "flex-start" }}>
-            {r.photo && <img src={r.photo} alt="" style={{ width: 90, height: 64, objectFit: "cover", border: "1px solid var(--line)" }} />}
+            {r.photo && <img loading="lazy" decoding="async" src={r.photo} alt="" style={{ width: 90, height: 64, objectFit: "cover", border: "1px solid var(--line)" }} />}
             <div style={{ flex: 1, fontSize: 13 }}>
               <b>{r.title}</b>
               <div style={{ color: "var(--slate)" }}>

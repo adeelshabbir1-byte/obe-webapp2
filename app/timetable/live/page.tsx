@@ -97,7 +97,7 @@ export default async function TimetableLivePage({ searchParams: sp }: { searchPa
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
               <div><h2 style={{ margin: 0 }}>{r.name}</h2><div className="small-note">{r.type} · {r.capacity} seats · last updated {new Date().toLocaleDateString("en-GB")}</div></div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrGif(`https://obe-webapp2.vercel.app${url}`, 3)} alt="QR to the live room page" width={90} height={90} />
+              <img loading="lazy" decoding="async" src={qrGif(`https://obe-webapp2.vercel.app${url}`, 3)} alt="QR to the live room page" width={90} height={90} />
             </div>
             <table className="table" style={{ fontSize: 12, marginTop: 8, width: "100%" }}><thead><tr><th>Day</th><th style={{ textAlign: "left" }}>Classes</th></tr></thead>
               <tbody>{DAYS.map((d) => <tr key={d}><td>{d}</td><td>{es.filter((e) => e.dayOfWeek === d).sort((a, b) => a.startHour - b.startHour).map((e) => `${hh(e.startHour)}–${hh(e.endHour)} ${e.courseCode} (${e.batchLabels.join(", ")}) ${e.instructorName}`).join(" · ") || "—"}</td></tr>)}</tbody></table>

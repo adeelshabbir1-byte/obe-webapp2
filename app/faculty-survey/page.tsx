@@ -37,7 +37,7 @@ export default async function FacultySurveyPage() {
       {staff && open && (
         <div className="card">
           <h3 style={{ marginTop: 0 }}>{open.title} {mine && <span className="small-note">— you have answered; you can change your answers until it closes</span>}</h3>
-          <ActionForm url="/api/quality" fixed={{ action: "fsAnswer" }} submit={mine ? "Update my answers" : "Submit (anonymous)"} done="Thank you — your answers are saved."
+          <ActionForm collapsed={false} url="/api/quality" fixed={{ action: "fsAnswer" }} submit={mine ? "Update my answers" : "Submit (anonymous)"} done="Thank you — your answers are saved."
             initial={mine ? Object.fromEntries(Object.entries(JSON.parse(mine.answersJson) as Record<string, number>).map(([k, v]) => [`q_${k}`, String(v)])) : {}}
             fields={[...FACULTY_SURVEY.flatMap((g) => g.items.map(([k, t]) => ({ name: `q_${k}`, label: `${g.group}: ${t}`, type: "select" as const, options: [["", "—"], ["5", "5 Strongly agree"], ["4", "4 Agree"], ["3", "3 Neutral"], ["2", "2 Disagree"], ["1", "1 Strongly disagree"]] as [string, string][], full: true }))), { name: "comment", label: "Anything else the institute should know (optional)", type: "textarea" as const, full: true }]} />
         </div>

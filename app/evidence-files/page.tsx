@@ -1,3 +1,4 @@
+import Reveal from "../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -35,7 +36,7 @@ export default async function EvidenceFilesPage({ searchParams }: { searchParams
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         The actual documents behind the accreditation report: approval letters, certificates, reports, photographs. Each is filed under an NCEAC criterion and listed in the printed Self-Assessment Report.
       </p>
-      <EvidenceFileForm mode="file" criteria={CRITERIA} leads={scope.leads.map((l) => ({ id: l.id, label: l.leadProgram || l.name }))} />
+      <Reveal label="Upload evidence"><EvidenceFileForm mode="file" criteria={CRITERIA} leads={scope.leads.map((l) => ({ id: l.id, label: l.leadProgram || l.name }))} /></Reveal>
       <form method="get" style={{ marginBottom: 10, display: "flex", gap: 8, alignItems: "center" }}>
         <label style={{ fontSize: 13 }}>Show <select name="criterion" defaultValue={crit ? String(crit) : ""} style={{ padding: "5px 8px" }}><option value="">All criteria</option>{Object.entries(CRITERIA).map(([n, t]) => <option key={n} value={n}>{n}. {t}</option>)}</select></label>
         <button className="btn" type="submit">Show</button>

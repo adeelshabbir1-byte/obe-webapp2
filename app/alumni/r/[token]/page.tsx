@@ -19,7 +19,7 @@ export default async function AlumniRequestPage({ params }: { params: { token: s
         {r.respondedAt ? <p>Thank you — your reply has been recorded.</p> : <>
           <p style={{ fontSize: 13.5, whiteSpace: "pre-wrap" }}>{r.message}</p>
           <p className="small-note">— {by?.name}</p>
-          <ActionForm url="/api/alumni/public" fixed={{ action: "answer", token: params.token }} submit="Send" done="Thank you — recorded."
+          <ActionForm collapsed={false} url="/api/alumni/public" fixed={{ action: "answer", token: params.token }} submit="Send" done="Thank you — recorded."
             initial={{ email: al?.email || "" }}
             fields={[
               ...qs.map((q, i) => ({ name: `q${i}`, label: q, type: "textarea" as const })),

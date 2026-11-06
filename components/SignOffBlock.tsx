@@ -13,14 +13,14 @@ export default function SignOffBlock({ issued, compact }: { issued: Issued | nul
         {issued.signers.map((s, i) => (
           <div key={i} style={{ minWidth: 150, maxWidth: 220 }}>
             <div style={{ height: 46, display: "flex", alignItems: "flex-end" }}>
-              {s.userId && issued.signatures[s.userId] ? <img src={issued.signatures[s.userId]} alt={`Signature of ${s.name}`} style={{ maxHeight: 44, maxWidth: 170 }} /> : null}
+              {s.userId && issued.signatures[s.userId] ? <img loading="lazy" decoding="async" src={issued.signatures[s.userId]} alt={`Signature of ${s.name}`} style={{ maxHeight: 44, maxWidth: 170 }} /> : null}
             </div>
             <div style={{ borderTop: "1px solid #444", paddingTop: 3, fontSize: 12.5, fontWeight: 700 }}>{s.name}</div>
             <div style={{ fontSize: 11.5 }}>{s.title}</div>
             <div style={{ fontSize: 10.5, color: "#555" }}>{s.role} · {when(s.at)}</div>
           </div>
         ))}
-        {issued.stamp && <img src={issued.stamp} alt="Institute stamp" style={{ maxHeight: 80, maxWidth: 110, opacity: 0.9 }} />}
+        {issued.stamp && <img loading="lazy" decoding="async" src={issued.stamp} alt="Institute stamp" style={{ maxHeight: 80, maxWidth: 110, opacity: 0.9 }} />}
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <div style={{ textAlign: "right", fontSize: 10.5, lineHeight: 1.4, maxWidth: 230 }}>

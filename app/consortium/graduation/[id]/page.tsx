@@ -26,7 +26,7 @@ export default async function GradRecord({ params }: { params: { id: string } })
   const H = (id: string) => heads.find((h) => h.id === id);
   return (
     <main style={{ maxWidth: 820, margin: "24px auto", padding: "28px 32px", background: "#fff", color: "#111", fontFamily: "Georgia, 'Times New Roman', serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", gap: 20, marginBottom: 14 }}>{a.parties.map((p) => <div key={p.chairmanId} style={{ textAlign: "center" }}>{H(p.chairmanId)?.instituteLogo ? <img src={H(p.chairmanId)!.instituteLogo!} alt="" style={{ height: 64 }} /> : null}<div style={{ fontWeight: 700 }}>{H(p.chairmanId)?.instituteName || H(p.chairmanId)?.name}</div></div>)}</div>
+      <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", gap: 20, marginBottom: 14 }}>{a.parties.map((p) => <div key={p.chairmanId} style={{ textAlign: "center" }}>{H(p.chairmanId)?.instituteLogo ? <img loading="lazy" decoding="async" src={H(p.chairmanId)!.instituteLogo!} alt="" style={{ height: 64 }} /> : null}<div style={{ fontWeight: 700 }}>{H(p.chairmanId)?.instituteName || H(p.chairmanId)?.name}</div></div>)}</div>
       <h1 style={{ textAlign: "center", fontSize: 24, margin: "6px 0" }}>Joint Degree Record</h1>
       <p style={{ textAlign: "center", margin: "4px 0 18px" }}>This is to record that <b>{st?.name}</b> ({st?.rollNumber}) has completed the joint programme <b>{a.title}</b>{a.programme && a.programme !== a.title ? ` (${a.programme})` : ""}, jointly offered and awarded by {a.parties.map((p) => H(p.chairmanId)?.instituteName || H(p.chairmanId)?.name).join(" and ")}.</p>
       <table style={{ width: "100%", fontSize: 14, marginBottom: 14 }}><tbody>

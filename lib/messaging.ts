@@ -28,7 +28,7 @@ export async function configOf(chairmanId: string) {
 async function sendSms(c: MsgConfig, to: string, text: string): Promise<string | null> {
   const k = parse(c.smsJson);
   if (c.smsProvider === "TWILIO") {
-    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${k.sid}/Messages.json`, { method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${k.sid}:${k.token}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ To: to, From: k.from, Body: text }) });
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${k.sid}/Messages.json`, { method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${k.sid}:${k.token}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ To: to, From: k.from, Body: text }), signal: AbortSignal.timeout(15000) });
     return r.ok ? null : `Twilio ${r.status}: ${(await r.text()).slice(0, 200)}`;
   }
   if (c.smsProvider === "HTTP") {
@@ -46,11 +46,11 @@ async function sendWhatsApp(c: MsgConfig, to: string, title: string, body: strin
   const k = parse(c.waJson);
   if (c.waProvider === "META") {
     const r = await fetch(`https://graph.facebook.com/v20.0/${k.phoneNumberId}/messages`, { method: "POST", headers: { Authorization: `Bearer ${k.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to: to.replace(/^\+/, ""), type: "template", template: { name: k.template || "obehub_alert", language: { code: k.lang || "en" }, components: [{ type: "body", parameters: [{ type: "text", text: title.slice(0, 200) }, { type: "text", text: (body || "-").replace(/\s+/g, " ").slice(0, 900) }] }] } }) });
+      body: JSON.stringify({ messaging_product: "whatsapp", to: to.replace(/^\+/, ""), type: "template", template: { name: k.template || "obehub_alert", language: { code: k.lang || "en" }, components: [{ type: "body", parameters: [{ type: "text", text: title.slice(0, 200) }, { type: "text", text: (body || "-").replace(/\s+/g, " ").slice(0, 900) }] }] } }), signal: AbortSignal.timeout(15000) });
     return r.ok ? null : `WhatsApp ${r.status}: ${(await r.text()).slice(0, 200)}`;
   }
   if (c.waProvider === "TWILIO") {
-    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${k.sid}/Messages.json`, { method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${k.sid}:${k.token}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ To: `whatsapp:${to}`, From: `whatsapp:${k.from}`, Body: `${title}\n${body}` }) });
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${k.sid}/Messages.json`, { method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${k.sid}:${k.token}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ To: `whatsapp:${to}`, From: `whatsapp:${k.from}`, Body: `${title}\n${body}` }), signal: AbortSignal.timeout(15000) });
     return r.ok ? null : `Twilio WhatsApp ${r.status}: ${(await r.text()).slice(0, 200)}`;
   }
   return "WhatsApp not set up";

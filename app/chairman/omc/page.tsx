@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
@@ -76,7 +77,7 @@ export default async function ChairmanOmcPage() {
         </div>
       </div>
 
-      <CreateUserForm endpoint="/api/chairman/omc" buttonLabel="Create OMC Member (industry / external)" showOrganization />
+      <Reveal label="Add an OMC member"><CreateUserForm endpoint="/api/chairman/omc" buttonLabel="Create OMC Member (industry / external)" showOrganization /></Reveal>
     </Shell>
   );
 }

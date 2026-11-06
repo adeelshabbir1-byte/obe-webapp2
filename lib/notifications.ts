@@ -39,8 +39,7 @@ async function emailUsers(ids: string[], subject: string, body: string, href?: s
     const base = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "");
     await Promise.all(users.filter((u) => u.email).slice(0, 50).map((u) => fetch("https://api.resend.com/emails", {
       method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [u.email], subject, text: `Dear ${u.name},\n\n${body}\n\n${base && href ? base + href : ""}` }),
-    }).catch(() => null)));
+      body: JSON.stringify({ from, to: [u.email], subject, text: `Dear ${u.name},\n\n${body}\n\n${base && href ? base + href : ""}` }), signal: AbortSignal.timeout(15000) }).catch(() => null)));
   } catch { /* email is best effort */ }
 }
 

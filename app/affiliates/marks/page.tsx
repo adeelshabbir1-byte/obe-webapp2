@@ -65,7 +65,7 @@ export default async function AffiliateMarks({ searchParams }: { searchParams: {
         sheet.insts.map((i) => { const have = new Map(sheet.marks.filter((m) => m.instrumentId === i.id).map((m) => [m.studentId, m.score])); return (
           <div key={i.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 10 }}>
             <b>{i.label}</b> <span className="small-note">{i.type} · out of {i.maxScore} · {have.size}/{sheet.students.length} entered</span>
-            <ActionForm showMessage url="/api/affiliates" fixed={{ action: "marks", courseId: searchParams.course, instrumentId: i.id }} submit="Save marks"
+            <ActionForm collapsed={false} showMessage url="/api/affiliates" fixed={{ action: "marks", courseId: searchParams.course, instrumentId: i.id }} submit="Save marks"
               initial={{ lines: sheet.students.map((s) => `${s.rollNumber}, ${have.has(s.id) ? have.get(s.id) : ""}`).join("\n") }}
               fields={[{ name: "lines", label: "One line per student: roll number, score (paste from your result sheet)", type: "textarea", full: true }]} />
           </div>); })}

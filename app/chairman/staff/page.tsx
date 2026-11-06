@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -23,7 +24,7 @@ export default async function StaffPage() {
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>
         The Lab Manager keeps the computer lab inventory, the Librarian keeps the library record, the Finance Officer keeps the budget, spending and income, and Student Affairs enters the admission criteria. You can open those pages at any time and correct anything.
       </p>
-      <StaffLoginForm />
+      <Reveal label="Add a staff login"><StaffLoginForm /></Reveal>
       <div className="card" style={{ marginBottom: 14, overflowX: "auto" }}>
         <h3 style={{ marginTop: 0 }}>Current logins</h3>
         {staff.length === 0 ? <p style={{ color: "var(--slate)" }}>No Librarian or Finance Officer yet.</p> : (

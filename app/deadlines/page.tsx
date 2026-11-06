@@ -1,3 +1,4 @@
+import Reveal from "../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -202,7 +203,7 @@ export default async function DeadlinesPage() {
       {isSetter && (
         <p style={{ marginBottom: 12 }}><a className="btn" href="/semester-plan">Semester plan: targets for every role, and who is behind</a></p>
       )}
-      {isSetter && <DeadlineForm people={people.map((p) => ({ id: p.id, name: `${p.name} (${ROLE_TEXT[p.role] || p.role})` }))} courses={courseOpts} roles={roleOpts} />}
+      {isSetter && <Reveal label="Add a deadline"><DeadlineForm people={people.map((p) => ({ id: p.id, name: `${p.name} (${ROLE_TEXT[p.role] || p.role})` }))} courses={courseOpts} roles={roleOpts} /></Reveal>}
       {isSetter && unheld > 0 && (
         <div className="card" style={{ marginBottom: 14, borderLeft: "4px solid #B3261E" }}>
           <b style={{ color: "#B3261E" }}>{unheld} overdue deadline{unheld > 1 ? "s" : ""} belong to a role nobody holds yet</b>

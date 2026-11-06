@@ -58,7 +58,7 @@ async function Detail({ r, k, cid, edit, form, actionForm }: { r: QRec; k: NonNu
   return (
     <div id={`r${r.id}`} className="card" style={{ borderLeft: "5px solid #1565C0" }}>
       <h3 style={{ marginTop: 0 }}>{r.data[k.titleKey] || k.title}</h3>
-      {edit ? <ActionForm url="/api/qa-office" fixed={{ action: "save", kind: k.key, id: r.id }} fields={form} initial={r.data} submit="Save changes" />
+      {edit ? <ActionForm collapsed={false} url="/api/qa-office" fixed={{ action: "save", kind: k.key, id: r.id }} fields={form} initial={r.data} submit="Save changes" />
         : <dl style={{ fontSize: 13 }}>{k.fields.map((f) => r.data[f.key] ? <div key={f.key}><dt className="small-note">{f.label}</dt><dd style={{ margin: "0 0 6px" }}>{r.data[f.key]}</dd></div> : null)}</dl>}
       {st && (
         <div style={{ marginTop: 12 }}>

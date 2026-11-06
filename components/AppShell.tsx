@@ -585,7 +585,7 @@ export default function AppShell({
           <UndoToast />
           <MenuContext.Provider value={{ links, linkStatus, lang }}>{children}</MenuContext.Provider>
           <div className="app-footer">
-            {branding.ownerLogoUrl && <img src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
+            {branding.ownerLogoUrl && <img loading="lazy" decoding="async" src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
             <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved. · <a href="/privacy">Privacy</a></span>
           </div>
         </div>

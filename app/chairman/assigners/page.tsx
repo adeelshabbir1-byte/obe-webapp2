@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import SortableTable from "../../../components/SortableTable";
 import { getAuthenticatedUser } from "../../../lib/session";
@@ -60,7 +61,7 @@ export default async function ChairmanAssignersPage() {
 
       <AssignerHatManager teachers={people.map((p) => ({ id: p.id, name: p.name }))} holders={holders} currentLabel={term ? termLabel(term) : null} nextLabel={term ? nextTermLabel(term) : null} />
 
-      <CreateUserForm endpoint="/api/chairman/assigners" buttonLabel="Create Course Assigner" />
+      <Reveal label="Add a course assigner"><CreateUserForm endpoint="/api/chairman/assigners" buttonLabel="Create Course Assigner" /></Reveal>
     </Shell>
   );
 }

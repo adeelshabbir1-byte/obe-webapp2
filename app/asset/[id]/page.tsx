@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/db";
 import { getSignedInUser } from "../../../lib/session";
@@ -21,7 +22,7 @@ export default async function AssetPage({ params }: { params: { id: string } }) 
         <h1 style={{ fontSize: 22, margin: "6px 0 2px" }}>{a.item}</h1>
         <p style={{ margin: "0 0 12px", color: "#555" }}>{[CATEGORIES[a.category], a.makeModel, `tag ${a.assetTag}`, lab?.name || a.room].filter(Boolean).join(" · ")}</p>
         <p style={{ margin: "0 0 14px", fontWeight: 700, color: a.status === "WORKING" ? "#1E6B3A" : "#B3261E" }}>{STATUS[a.status]}{open ? ` — ${open} fault report(s) being looked at` : ""}</p>
-        {a.status === "CONDEMNED" ? <p>This item has been written off.</p> : <AssetFaultForm assetId={a.id} signedIn={signedIn} />}
+        {a.status === "CONDEMNED" ? <p>This item has been written off.</p> : <Reveal label="Report a fault"><AssetFaultForm assetId={a.id} signedIn={signedIn} /></Reveal>}
       </div>
     </main>
   );

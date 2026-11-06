@@ -27,7 +27,7 @@ export async function pushTo(target: { userIds?: string[]; studentIds?: string[]
     let sent = 0;
     await Promise.all(subs.map(async (s) => {
       if (s.userId) { const pref = await getFlag(s.userId, "push:kinds").catch(() => null); if (pref) { try { const k = JSON.parse(pref) as string[]; if (k.length && !k.includes(group)) return; } catch { /* all */ } } }
-      try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify({ title: n.title, body: n.body || "", url: n.href || "/" }), { TTL: 3600 }); sent++; }
+      try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify({ title: n.title, body: n.body || "", url: n.href || "/" }), { TTL: 3600, timeout: 10000 }); sent++; }
       catch (e) { const code = (e as { statusCode?: number }).statusCode; if (code === 404 || code === 410) await db.pushSubscription.delete({ where: { id: s.id } }).catch(() => null); }
     }));
     return sent;

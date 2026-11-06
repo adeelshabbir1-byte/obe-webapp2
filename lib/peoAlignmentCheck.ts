@@ -57,8 +57,7 @@ Use STRONG when multiple GAs clearly and directly build toward the PEO, PARTIAL 
       body: JSON.stringify({
         model: creds.model, max_tokens: 2000,
         messages: [{ role: "user", content: prompt }],
-      }),
-    });
+      }), signal: AbortSignal.timeout(60000) });
     if (!res.ok) return { error: `The AI model returned an error (status ${res.status}).` };
     const data = await res.json();
     const text = (data.content || []).map((b: any) => b.text || "").join("").trim();

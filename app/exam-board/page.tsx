@@ -86,7 +86,7 @@ export default async function ExamBoardPage({ searchParams }: { searchParams: { 
           <thead><tr><th>Question</th><th>Topic</th><th>CLOs</th><th>Difficulty</th><th>Bloom</th><th>Marks</th><th>By</th><th>Used</th><th></th></tr></thead>
           <tbody>{R.bank.map((q) => (
             <tr key={q.id} data-bank={q.id}>
-              <td style={{ whiteSpace: "pre-wrap", maxWidth: 440 }}>{q.text}{q.codeSnippet && <pre style={{ fontSize: 11, background: "var(--bg-soft, #f6f6f6)", padding: 6, overflowX: "auto" }}>{q.codeSnippet}</pre>}{q.options.length > 0 && <ol type="a" style={{ margin: "4px 0" }}>{q.options.map((o, i) => <li key={i} style={{ fontWeight: i === q.correctIndex ? 600 : 400 }}>{o}</li>)}</ol>}{q.hasImage && <div><img src={`/api/exam-board?image=${q.id}`} alt="Diagram" style={{ maxWidth: 260, maxHeight: 180 }} /></div>}{!q.complete && <div className="small-note" style={{ color: "#B76E00" }}>Metadata missing — its author completes it before it can be used.</div>}</td>
+              <td style={{ whiteSpace: "pre-wrap", maxWidth: 440 }}>{q.text}{q.codeSnippet && <pre style={{ fontSize: 11, background: "var(--bg-soft, #f6f6f6)", padding: 6, overflowX: "auto" }}>{q.codeSnippet}</pre>}{q.options.length > 0 && <ol type="a" style={{ margin: "4px 0" }}>{q.options.map((o, i) => <li key={i} style={{ fontWeight: i === q.correctIndex ? 600 : 400 }}>{o}</li>)}</ol>}{q.hasImage && <div><img loading="lazy" decoding="async" src={`/api/exam-board?image=${q.id}`} alt="Diagram" style={{ maxWidth: 260, maxHeight: 180 }} /></div>}{!q.complete && <div className="small-note" style={{ color: "#B76E00" }}>Metadata missing — its author completes it before it can be used.</div>}</td>
               <td>{q.lectureNumber !== null ? `W${q.week} L${q.lectureNumber} ${q.topic.slice(0, 40)}` : "—"}</td><td>{q.cloCodes.join(", ") || "—"}</td><td>{dLabel(q.difficulty)}</td><td>{q.bloom}</td><td>{q.marks}</td><td>{names.get(q.authorId) || "—"}</td><td>{q.usedCount}</td>
               <td>{q.authorId === user.id && <QuestionForm scope={{ team: team.key }} lectures={plan.lectures} clos={plan.clos} initial={{ id: q.id, text: q.text, marks: q.marks, kind: q.kind, bloom: q.bloom, difficulty: q.difficulty, cloCodes: q.cloCodes, lectureNumber: q.lectureNumber, rubric: q.rubric, options: q.options, correctIndex: q.correctIndex, codeSnippet: q.codeSnippet, hasImage: q.hasImage }} />}</td>
             </tr>
@@ -192,7 +192,7 @@ function OfficialPaper({ r, team, examType, lead, names }: { r: Round; team: Tea
             <span style={{ whiteSpace: "pre-wrap" }}>{q.text}</span> <b>[{q.marks}]</b>
             {q.codeSnippet && <pre style={{ fontSize: 12, padding: 6, overflowX: "auto", border: "1px solid var(--line)" }}>{q.codeSnippet}</pre>}
             {q.options.length > 0 && <ol type="a">{q.options.map((o, i) => <li key={i}>{o}</li>)}</ol>}
-            {q.hasImage && <div><img src={`/api/exam-board?image=${q.id}`} alt={`Diagram for question ${q.no}`} style={{ maxWidth: 420 }} /></div>}
+            {q.hasImage && <div><img loading="lazy" decoding="async" src={`/api/exam-board?image=${q.id}`} alt={`Diagram for question ${q.no}`} style={{ maxWidth: 420 }} /></div>}
           </li>
         ))}</ol>
       </div>

@@ -1,3 +1,4 @@
+import Reveal from "../../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
@@ -40,7 +41,7 @@ export default async function StakeholdersPage() {
         from your institution's designated data custodian before it's used (e.g. for surveys). An alumni's roll
         number and an employer's name must be unique, so the same person or company is never added twice.
       </p>
-      <BulkStakeholderImport />
+      <Reveal label="Import stakeholders from Excel"><BulkStakeholderImport /></Reveal>
       <StakeholdersManager
         key={`${alumni.length}-${employers.length}-${employment.length}-${degrees.length}`}
         alumni={alumni.map((a) => ({ id: a.id, name: a.name, email: a.email, rollNumber: a.rollNumber, degreeProgram: a.degreeProgram, graduationYear: a.graduationYear, totalWorkExperienceYears: a.totalWorkExperienceYears, status: a.status }))}

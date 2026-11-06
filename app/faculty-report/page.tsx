@@ -1,3 +1,4 @@
+import Reveal from "../../components/Reveal";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
@@ -61,7 +62,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
       </form>
       <div className="card" style={{ display: "grid", gap: 6 }}>
         <b style={{ fontSize: 13 }}>Update details from Excel</b>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><a className="btn btn-secondary btn-sm" href="/api/faculty-report/details">1. Download the details sheet</a><ExcelUploadForm url="/api/faculty-report/details" label="2. Upload it back" help="Only empty fields are filled — anything a teacher already entered in My Profile is kept." /></div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><a className="btn btn-secondary btn-sm" href="/api/faculty-report/details">1. Download the details sheet</a><Reveal label="Upload from Excel"><ExcelUploadForm url="/api/faculty-report/details" label="2. Upload it back" help="Only empty fields are filled — anything a teacher already entered in My Profile is kept." /></Reveal></div>
       </div>
       {searchParams.group && (() => {
         const key = (r: (typeof rows)[number]) => searchParams.group === "role" ? roleOf(r) : searchParams.group === "edu" ? eduOf(r.degree) : searchParams.group === "spec" ? specOf(r) : searchParams.group === "dept" ? r.p.department_?.name || "—" : r.pr?.designation || "Not entered";
@@ -99,7 +100,7 @@ export default async function FacultyReportPage({ searchParams }: { searchParams
             {shown.length === 0 && <tr><td colSpan={16} style={{ color: "var(--slate)" }}>No faculty found.</td></tr>}
             {shown.map(({ p, pr, degree, pubs, grants, projects, events, comp, yrs, exp }) => (
               <tr key={p.id}>
-                <td>{pr?.photo ? <img src={pr.photo} alt="" style={{ width: 34, height: 42, objectFit: "cover", border: "1px solid var(--line)" }} /> : <span style={{ display: "inline-block", width: 34, height: 42, background: "#EEE9DD" }} />}</td>
+                <td>{pr?.photo ? <img loading="lazy" decoding="async" src={pr.photo} alt="" style={{ width: 34, height: 42, objectFit: "cover", border: "1px solid var(--line)" }} /> : <span style={{ display: "inline-block", width: 34, height: 42, background: "#EEE9DD" }} />}</td>
                 <td><a href={`/faculty-report/${p.id}`}><b>{p.name}</b></a> <a className="small-note" href={`/faculty-record/${p.id}`}>courses →</a></td>
                 <td>{p.department_?.name || "—"}</td>
                 <td>{pr?.designation || <span style={{ color: "var(--slate)" }}>—</span>}</td>

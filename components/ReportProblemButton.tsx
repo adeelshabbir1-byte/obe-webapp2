@@ -42,7 +42,7 @@ export default function ReportProblemButton() {
             </div>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="What happened, or what did you expect?" style={{ width: "100%" }} aria-label="Note" data-report-note />
             <div style={{ margin: "8px 0", fontSize: 12.5 }}>
-              {shot ? <><img src={shot} alt="Screenshot of the page" style={{ maxWidth: "100%", maxHeight: 220, border: "1px solid #DDD", borderRadius: 6 }} /><div><button type="button" className="tw-linkbtn" onClick={() => setShot(null)}>Remove the screenshot</button></div></>
+              {shot ? <><img loading="lazy" decoding="async" src={shot} alt="Screenshot of the page" style={{ maxWidth: "100%", maxHeight: 220, border: "1px solid #DDD", borderRadius: 6 }} /><div><button type="button" className="tw-linkbtn" onClick={() => setShot(null)}>Remove the screenshot</button></div></>
                 : <span>No screenshot. Paste one here (Ctrl+V) or <label style={{ textDecoration: "underline", cursor: "pointer" }}>upload an image<input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => fromFile(e.target.files?.[0])} /></label>.</span>}
             </div>
             <p className="small-note" style={{ margin: "0 0 8px" }}>Sent with it: this page&apos;s address, your name and role, your browser and the time.</p>

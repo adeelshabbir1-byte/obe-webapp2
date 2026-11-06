@@ -34,7 +34,7 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
       <div className="card">
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           <div style={{ width: 130, height: 160, border: "1px solid var(--line)", background: "#f4f1ea", overflow: "hidden" }}>
-            {pr?.photo ? <img src={pr.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
+            {pr?.photo ? <img loading="lazy" decoding="async" src={pr.photo} alt={person.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
           </div>
           <div style={{ flex: 1, minWidth: 280 }}>
             <h1 style={{ fontSize: 22, margin: 0 }}>{person.name}</h1>
@@ -72,7 +72,7 @@ export default async function FacultyCvPage({ params }: { params: { userId: stri
             <h3 style={{ marginTop: 0 }}>{k.heading} ({items.length})</h3>
             {items.length === 0 ? <p style={{ color: "var(--slate)", fontSize: 13, margin: 0 }}>Nothing entered.</p> : items.map((r) => (
               <div key={r.id} style={{ display: "flex", gap: 12, padding: "8px 0", borderTop: "1px solid #eee", fontSize: 13 }}>
-                {r.photo && <img src={r.photo} alt="" style={{ width: 110, height: 78, objectFit: "cover", border: "1px solid var(--line)" }} />}
+                {r.photo && <img loading="lazy" decoding="async" src={r.photo} alt="" style={{ width: 110, height: 78, objectFit: "cover", border: "1px solid var(--line)" }} />}
                 <div>
                   <b>{r.title}</b>
                   <div style={{ color: "var(--slate)" }}>{[r.organisation, r.role, periodText(r as never), r.amount, r.status].filter(Boolean).join(" · ")}</div>

@@ -16,7 +16,7 @@ export default async function ProgrammePage({ params }: { params: { id: string }
   const row = (k: string, v?: string | number | null) => (v ? <tr><th style={{ textAlign: "left", padding: "6px 12px 6px 0", verticalAlign: "top", width: 220 }}>{k}</th><td style={{ padding: 6, whiteSpace: "pre-wrap" }}>{v}</td></tr> : null);
   return (
     <main style={{ maxWidth: 860, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui, sans-serif", lineHeight: 1.5 }}>
-      {inst?.instituteLogo && <img src={inst.instituteLogo} alt="" style={{ height: 56 }} />}
+      {inst?.instituteLogo && <img loading="lazy" decoding="async" src={inst.instituteLogo} alt="" style={{ height: 56 }} />}
       <h1 style={{ marginBottom: 4 }}>{p.title}</h1>
       <p style={{ color: "#555", marginTop: 0 }}>{KINDS[p.kind]} · {inst?.instituteName}{(d.partners || []).length ? ` with ${(d.partners || []).map((x) => x.name + (x.country ? ` (${x.country})` : "")).join(", ")}` : ""}</p>
       <p>{TYPE_RULE[p.kind]}</p>
