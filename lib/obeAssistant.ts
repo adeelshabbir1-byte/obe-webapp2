@@ -52,3 +52,13 @@ export async function askClaude(cfg: { apiKey: string; model: string }, system: 
   const d = await res.json();
   return (d.content || []).map((c: { text?: string }) => c.text || "").join("").trim();
 }
+
+/** The answer as it is written, piece by piece (Anthropic streaming), so the faculty member reads it as it comes. */
+export async function* streamClaude(cfg: { apiKey: string; model: string }, system: string, messages: { role: "user" | "assistant"; content: string }[]): AsyncGenerator<string> {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const client = new Anthropic({ apiKey: cfg.apiKey, timeout: 60000, maxRetries: 1 });
+  const stream = client.messages.stream({ model: cfg.model, max_tokens: 900, system, messages });
+  for await (const ev of stream) {
+    if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") yield ev.delta.text;
+  }
+}

@@ -34,7 +34,10 @@ export default function StudentPicker({ current, param = "studentId", template, 
   useEffect(() => {
     if (t.current) clearTimeout(t.current);
     if (q.trim().length < 2) { setHits([]); return; }
-    t.current = setTimeout(() => { fetch(`/api/students/pick?q=${encodeURIComponent(q.trim())}`).then((r) => r.json()).then((d) => { setHits(d.students || []); setHit(0); }).catch(() => null); }, 200);
+    // Debounced 250 ms; a slower answer to an older search is dropped (it would replace the newer results).
+    const ctl = new AbortController();
+    t.current = setTimeout(() => { fetch(`/api/students/pick?q=${encodeURIComponent(q.trim())}`, { signal: ctl.signal }).then((r) => r.json()).then((d) => { setHits(d.students || []); setHit(0); }).catch(() => null); }, 250);
+    return () => ctl.abort();
   }, [q]);
   useEffect(() => { if (!batch) { setList([]); return; } fetch(`/api/students/pick?batchId=${batch}&cgpa=1`).then((r) => r.json()).then((d) => setList(d.students || [])).catch(() => null); }, [batch]);
   // ← → move to the previous / next student of the batch (not while typing).

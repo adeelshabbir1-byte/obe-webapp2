@@ -23,6 +23,7 @@ import UndoToast from "./UndoToast";
 import OfflineMarks from "./OfflineMarks";
 import DisplayPrefs, { DISPLAY_CSS } from "./DisplayPrefs";
 import GlobalSearch from "./GlobalSearch";
+import AutoPaginate from "./AutoPaginate";
 
 type NavLink = { href: string; label: string };
 
@@ -584,6 +585,7 @@ export default function AppShell({
           <OfflineMarks />
           <UndoToast />
           <MenuContext.Provider value={{ links, linkStatus, lang }}>{children}</MenuContext.Provider>
+          <AutoPaginate />
           <div className="app-footer">
             {branding.ownerLogoUrl && <img loading="lazy" decoding="async" src={branding.ownerLogoUrl} alt="Lets Innovate Pvt Ltd" />}
             <span>{branding.instituteName ? `${branding.instituteName} — ` : ""}© {year} Lets Innovate Pvt Ltd. All rights reserved. · <a href="/privacy">Privacy</a></span>

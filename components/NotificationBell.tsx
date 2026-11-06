@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getJson } from "../lib/clientFetch";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 
@@ -22,7 +23,8 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
   const box = useRef<HTMLDivElement>(null);
 
   async function load() {
-    try { const r = await fetch("/api/notifications", { cache: "no-store" }); if (!r.ok) return; const d = await r.json(); setUnread(d.unread); setItems(d.items); } catch { /* offline */ }
+    // One request at a time, shared by the timer, the tab coming back and the bell being opened.
+    try { const d = await getJson<{ unread: number; items: Item[] }>("/api/notifications"); setUnread(d.unread); setItems(d.items); } catch { /* offline */ }
   }
   useEffect(() => {
     const t = setInterval(load, 60000);
@@ -37,14 +39,17 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
 
+  // Marked read on screen at once; the server is told in the background (and the count put back if it fails).
   async function read(id?: string) {
-    const r = await fetch("/api/notifications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(id ? { id } : { all: true }) }).catch(() => null);
-    const d = r && r.ok ? await r.json() : null;
-    if (d) setUnread(d.unread);
+    const before = { unread, items };
+    setUnread((u) => (id ? Math.max(0, u - 1) : 0));
     setItems((xs) => (xs || []).map((x) => (!id || x.id === id ? { ...x, readAt: x.readAt || new Date().toISOString() } : x)));
+    const r = await fetch("/api/notifications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(id ? { id } : { all: true }) }).catch(() => null);
+    const d = r && r.ok ? await r.json().catch(() => null) : null;
+    if (d) setUnread(d.unread); else { setUnread(before.unread); setItems(before.items); }
   }
-  async function openItem(it: Item) {
-    if (!it.readAt) await read(it.id);
+  function openItem(it: Item) {
+    if (!it.readAt) void read(it.id);
     setOpen(false);
     if (it.href) router.push(it.href);
   }

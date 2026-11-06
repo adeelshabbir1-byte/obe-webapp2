@@ -783,3 +783,9 @@ a.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color
   .main img,.main svg:not(.lucide){max-width:100%;height:auto;}
   .main .btn + .btn{margin-top:4px;}
 }
+
+/* Long tables split into pages (components/AutoPaginate.tsx); printing shows every row. */
+[data-pg-hide] { display: none !important; }
+.pg-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 4px; font-size: 13px; }
+.pg-bar .pg-title { margin-right: 8px; color: var(--slate, #555); }
+@media print { [data-pg-hide] { display: table-row !important; } .pg-bar { display: none !important; } }

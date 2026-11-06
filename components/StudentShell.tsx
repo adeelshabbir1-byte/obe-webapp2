@@ -12,6 +12,7 @@ import GlobalSearch from "./GlobalSearch";
 import StudentBell from "./StudentBell";
 import { AttendanceWarning } from "./attendance/StudentAttendance";
 import FeedbackReminder from "./FeedbackReminder";
+import AutoPaginate from "./AutoPaginate";
 import { NAV_UR, UI_UR, URDU_FONT, urduStyle } from "../lib/urdu";
 
 const NAV = [
@@ -116,7 +117,7 @@ export default function StudentShell({ studentName, children }: { studentName?: 
           </div>
         </div>
       </header>
-      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{pathname !== "/student/course-survey" && <FeedbackReminder />}{children}<p className="small-note" style={{ textAlign: "center", marginTop: 24 }}><a href="/privacy">Privacy</a> · <a href="/security">Security</a></p></main>
+      <main className="st-main">{lockedNote && <div className="card" style={{ borderLeft: "4px solid #B7791F", fontSize: 13 }}>{lockedNote}</div>}{pathname !== "/student/attendance" && <AttendanceWarning />}{pathname !== "/student/course-survey" && <FeedbackReminder />}{children}<AutoPaginate /><p className="small-note" style={{ textAlign: "center", marginTop: 24 }}><a href="/privacy">Privacy</a> · <a href="/security">Security</a></p></main>
     </div>
   );
 }

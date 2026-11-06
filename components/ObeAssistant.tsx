@@ -17,11 +17,19 @@ export default function ObeAssistant({ courseId, courseLabel }: { courseId?: str
   async function ask(text: string) {
     if (!text.trim() || busy) return;
     setBusy(true); setErr(""); setQ("");
-    const r = await fetch("/api/obe-assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, question: text, history: chat }) });
-    const d = await r.json().catch(() => ({}));
+    const r = await fetch("/api/obe-assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, question: text, history: chat, stream: true }) });
+    if (!r.ok || !r.body) { const d = await r.json().catch(() => ({})); setBusy(false); setErr(d.error || "No answer."); setQ(text); return; }
+    // The answer appears as it is written.
+    setChat((c) => [...c, { q: text, a: "" }]);
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const piece = dec.decode(value, { stream: true });
+      setChat((c) => c.map((m, i) => (i === c.length - 1 ? { ...m, a: m.a + piece } : m)));
+    }
     setBusy(false);
-    if (!r.ok) { setErr(d.error || "No answer."); setQ(text); return; }
-    setChat((c) => [...c, { q: text, a: d.answer }]); setLeft(d.left ?? left);
+    const l = Number(r.headers.get("X-Questions-Left")); if (Number.isFinite(l)) setLeft(l);
   }
   const starters = courseId
     ? ["Why is each CLO mapped to its GA? Is any mapping weak?", "Are my CLOs at the right Bloom level for this semester?", "Which CLO has too few topics or assessments?", "Rewrite my weakest CLO to be measurable."]

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../lib/session";
 import { prisma } from "../../../lib/db";
 import { chairmanIdFor } from "../../../lib/reportScope";
-import { assistantConfig, usedToday, courseContext, SYSTEM_PROMPT, askClaude } from "../../../lib/obeAssistant";
+import { assistantConfig, usedToday, courseContext, SYSTEM_PROMPT, askClaude, streamClaude } from "../../../lib/obeAssistant";
 import { withErrors } from "../../../lib/apiHandler";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +41,29 @@ async function POST_handler(req: Request) {
   if (courseId && !(await canUseCourse(user, courseId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const context = courseId ? await courseContext(courseId) : "";
   const history = (Array.isArray(b.history) ? b.history : []).slice(-4).flatMap((h: { q?: string; a?: string }) => [{ role: "user" as const, content: String(h.q || "").slice(0, 1500) }, { role: "assistant" as const, content: String(h.a || "").slice(0, 3000) }]).filter((m: { content: string }) => m.content);
+  const system = SYSTEM_PROMPT + (context ? `
+
+THE FACULTY MEMBER'S COURSE (their own plan):
+${context}` : "");
+  // { stream: true }: the answer is sent as plain text, piece by piece, while it is being written.
+  if (b.stream) {
+    const enc = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      async start(ctl) {
+        let answer = "";
+        try {
+          for await (const piece of streamClaude(cfg, system, [...history, { role: "user", content: question }])) { answer += piece; ctl.enqueue(enc.encode(piece)); }
+          await (prisma as unknown as Record<string, any>).obeChatLog.create({ data: { userId: user.id, chairmanId, courseId, question, answer: answer.slice(0, 8000) } }).catch(() => null);
+        } catch (e) {
+          ctl.enqueue(enc.encode(`
+
+[${e instanceof Error ? e.message : "The AI service could not be reached."}]`));
+        }
+        ctl.close();
+      },
+    });
+    return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Questions-Left": String(Math.max(0, cfg.limit - (await usedToday(user.id)) - 1)) } });
+  }
   try {
     const answer = await askClaude(cfg, SYSTEM_PROMPT + (context ? `\n\nTHE FACULTY MEMBER'S COURSE (their own plan):\n${context}` : ""), [...history, { role: "user", content: question }]);
     await (prisma as unknown as Record<string, any>).obeChatLog.create({ data: { userId: user.id, chairmanId, courseId, question, answer: answer.slice(0, 8000) } }).catch(() => null);

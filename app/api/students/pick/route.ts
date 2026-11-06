@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "../../../../lib/session";
 import { prisma } from "../../../../lib/db";
 import { visibleBatchIds } from "../../../../lib/studentScope";
 import { bestAttemptTotals } from "../../../../lib/cgpaMath";
+import { pageOf, pageResult } from "../../../../lib/paging";
 import { withErrors } from "../../../../lib/apiHandler";
 
 // GET ?q=2510 → matching students (as you type)
@@ -21,8 +22,11 @@ async function GET_handler(req: NextRequest) {
   }
   const q = (p.get("q") || "").trim();
   if (q) {
-    const xs = await prisma.student.findMany({ where: { batchId: { in: ids.concat("none") }, OR: [{ rollNumber: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] }, select: sel, orderBy: { rollNumber: "asc" }, take: 30 });
-    return NextResponse.json({ students: xs });
+    // Searches are paged: 30 at a time (?page=2 for the next).
+    const pg = pageOf(p, { size: 30 });
+    const xs = await prisma.student.findMany({ where: { batchId: { in: ids.concat("none") }, OR: [{ rollNumber: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] }, select: sel, skip: pg.skip, take: pg.take, orderBy: { rollNumber: "asc" } });
+    const r = pageResult(xs, pg);
+    return NextResponse.json({ students: r.rows, page: r.page, hasMore: r.hasMore });
   }
   let batchId = p.get("batchId") || "";
   const around = p.get("around");

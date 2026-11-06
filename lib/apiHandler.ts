@@ -1,3 +1,4 @@
+import { traced, traceId, SLOW_MS } from "./trace";
 import { NextResponse } from "next/server";
 import { makeRef, reportServerError } from "./monitoring";
 
@@ -29,6 +30,15 @@ export function isNextSignal(e: unknown) {
 
 export function withErrors<A extends unknown[], R>(fn: (...args: A) => Promise<R> | R) {
   return async (...args: A): Promise<R | NextResponse> => {
+    // Every API call is a span ("api GET /api/…"); calls slower than SLOW_MS are logged as [slow-request] with the trace id.
+    const rq = args[0] as { url?: string; method?: string } | undefined;
+    const path = rq?.url ? new URL(rq.url, "http://x").pathname : "";
+    const t0 = Date.now();
+    return traced(`api ${rq?.method || ""} ${path}`.trim(), { "http.route": path, "http.method": rq?.method || "" }, async () => {
+      try { return await run(); }
+      finally { const ms = Date.now() - t0; if (ms > SLOW_MS) console.warn(`[slow-request] ${ms}ms ${rq?.method || ""} ${path}${traceId() ? ` trace=${traceId()}` : ""}`); }
+    });
+  async function run(): Promise<R | NextResponse> {
     try {
       const res = await fn(...args);
       // File downloads: CNICs masked, the export logged, bulk student exports limited (lib/exportGuard.ts).
@@ -45,5 +55,6 @@ export function withErrors<A extends unknown[], R>(fn: (...args: A) => Promise<R
       await reportServerError(e, { ref, route: `${req?.method || ""} ${req?.url ? new URL(req.url, "http://x").pathname : ""}`.trim(), kind: out.status === 503 ? "db" : "api" }).catch(() => null);
       return NextResponse.json({ error: out.error, ref }, { status: out.status });
     }
+  }
   };
 }
