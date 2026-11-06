@@ -1,13 +1,13 @@
 "use client";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { mathSegments } from "../lib/qbankCore";
 
 // Text with LaTeX equations ($…$, $$…$$), rendered by KaTeX (chemistry with \ce{…}) — the same in the bank, the
 // paper preview and online quizzes. Code between ``` fences is shown as a code block.
 let mhchem: Promise<unknown> | null = null;
-export default function MathText({ text, block }: { text: string; block?: boolean }) {
+function MathTextInner({ text, block }: { text: string; block?: boolean }) {
   const [, setReady] = useState(0);
   useEffect(() => { if (/\\ce\{/.test(text)) { mhchem ||= import("katex/contrib/mhchem" as string); mhchem.then(() => setReady((x) => x + 1)).catch(() => null); } }, [text]);
   const parts = String(text || "").split(/```(?:\w+)?\n?([\s\S]*?)```/);
@@ -20,6 +20,10 @@ export default function MathText({ text, block }: { text: string; block?: boolea
     </span>
   );
 }
+
+// KaTeX rendering is costly: the same text is not drawn again when the page around it re-renders.
+const MathText = memo(MathTextInner);
+export default MathText;
 
 /** The visual equation editor (MathLive) with a "type LaTeX" option; Insert puts $…$ into the field it belongs to. */
 export function EquationButton({ onInsert }: { onInsert: (latex: string) => void }) {

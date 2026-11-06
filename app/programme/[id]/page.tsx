@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/db";
 import { compliance, dataOf, isDdjd, KINDS, TYPE_RULE, type Prog } from "../../../lib/collab";
 
-export const dynamic = "force-dynamic";
+// Public page (no sign-in): rendered on the server and kept for 5 minutes, so visitors get it instantly.
+export const revalidate = 300;
 const db = prisma as unknown as Record<string, any>;
 
 // The public programme page that must be published before enrolment (HEC DDJD Policy 2026, 2.iv): the nature of the

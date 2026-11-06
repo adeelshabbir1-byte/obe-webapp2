@@ -32,11 +32,16 @@ export default async function OmcPloReportPage() {
   const reportSections = [];
   const allTypesSeen = new Set<string>();
 
+  // Every program's GAs and their course mappings in two queries (it was one query per GA).
+  const allPlos = await prisma.pLO.findMany({ where: { coordinatorId: { in: coordinators.map((c) => c.id).concat("none") } }, orderBy: { number: "asc" } });
+  const allMaps = await prisma.coursePloMapping.findMany({ where: { ploId: { in: allPlos.map((p) => p.id).concat("none") } }, select: { ploId: true, course: { select: { courseType: true } } } });
+  const mapsOf = new Map<string, { course: { courseType: string } }[]>();
+  for (const m of allMaps) { const l = mapsOf.get(m.ploId); if (l) l.push(m); else mapsOf.set(m.ploId, [m]); }
   for (const coord of coordinators) {
-    const plos = await prisma.pLO.findMany({ where: { coordinatorId: coord.id }, orderBy: { number: "asc" } });
+    const plos = allPlos.filter((p) => p.coordinatorId === coord.id);
     const rows = [];
     for (const p of plos) {
-      const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
+      const mappings = mapsOf.get(p.id) || [];
       const byType: Record<string, number> = {};
       for (const m of mappings) {
         byType[m.course.courseType] = (byType[m.course.courseType] || 0) + 1;

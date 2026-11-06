@@ -32,21 +32,42 @@ async function getBatchesFor(user: ReportUser, filter?: ReportFilter) {
 }
 
 // ============================================================================
+// Shared loading: every batch's GAs (PLOs), their course mappings and the courses in three queries in all — the reports
+// used to ask once per GA and once per course (hundreds of queries for an institute).
+// ============================================================================
+async function loadPloData(batchIds: string[]) {
+  const ids = batchIds.length ? batchIds : ["none"];
+  const [plos, courses] = await Promise.all([
+    prisma.pLO.findMany({ where: { batchId: { in: ids } }, orderBy: { number: "asc" }, select: { id: true, batchId: true, number: true, title: true, status: true } }),
+    prisma.course.findMany({ where: { batchId: { in: ids } }, select: { id: true, batchId: true, courseType: true, semesterNumber: true } }),
+  ]);
+  const maps = await prisma.coursePloMapping.findMany({ where: { ploId: { in: plos.map((p) => p.id).concat("none") } }, select: { ploId: true, course: { select: { courseType: true, semesterNumber: true } } } });
+  const byPlo = new Map<string, { courseType: string; semesterNumber: number | null }[]>();
+  for (const m of maps) { const l = byPlo.get(m.ploId); if (l) l.push(m.course); else byPlo.set(m.ploId, [m.course]); }
+  return {
+    plosOf: (batchId: string) => plos.filter((p) => p.batchId === batchId),
+    coursesOf: (batchId: string) => courses.filter((c) => c.batchId === batchId),
+    mappingsOf: (ploId: string) => byPlo.get(ploId) || [],
+  };
+}
+
+// ============================================================================
 // Report 1 — Program-Level PLO Coverage & Distribution Summary
 // ============================================================================
 export async function getCoverageReport(user: ReportUser, filter?: ReportFilter) {
   const batches = await getBatchesFor(user, filter);
+  const d = await loadPloData(batches.map((b) => b.id));
   const programs = [];
   for (const batch of batches) {
-    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
+    const plos = d.plosOf(batch.id);
     const rows = [];
     for (const p of plos) {
-      const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
+      const mappings = d.mappingsOf(p.id);
       const byType: Record<string, number> = {};
-      for (const m of mappings) byType[m.course.courseType] = (byType[m.course.courseType] || 0) + 1;
+      for (const m of mappings) byType[m.courseType] = (byType[m.courseType] || 0) + 1;
       rows.push({ number: p.number, title: p.title, status: p.status, count: mappings.length, byType });
     }
-    const totalCourses = await prisma.course.count({ where: { batchId: batch.id } });
+    const totalCourses = d.coursesOf(batch.id).length;
     if (totalCourses === 0 && rows.length === 0) continue;
     const notHit = rows.filter((r) => r.count === 0).length;
     const avg = rows.length ? Number((rows.reduce((s, r) => s + r.count, 0) / rows.length).toFixed(1)) : 0;
@@ -61,19 +82,20 @@ export async function getCoverageReport(user: ReportUser, filter?: ReportFilter)
 // ============================================================================
 export async function getHeatmapReport(user: ReportUser, filter?: ReportFilter) {
   const batches = await getBatchesFor(user, filter);
+  const d = await loadPloData(batches.map((b) => b.id));
   const programs = [];
   for (const batch of batches) {
-    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
-    const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
+    const plos = d.plosOf(batch.id);
+    const courses = d.coursesOf(batch.id);
     if (courses.length === 0 && plos.length === 0) continue;
     const courseTypes = Array.from(new Set(courses.map((c) => c.courseType))).sort();
 
     const matrix: Record<number, Record<string, number>> = {};
     for (const p of plos) {
-      const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
+      const mappings = d.mappingsOf(p.id);
       const row: Record<string, number> = {};
       for (const t of courseTypes) row[t] = 0;
-      for (const m of mappings) row[m.course.courseType] = (row[m.course.courseType] || 0) + 1;
+      for (const m of mappings) row[m.courseType] = (row[m.courseType] || 0) + 1;
       matrix[p.number] = row;
     }
     programs.push({ coordinatorName: `${batch.degreeProgram} — ${batch.batchName}`, courseTypes, plos: plos.map((p) => ({ number: p.number, title: p.title })), matrix });
@@ -86,20 +108,21 @@ export async function getHeatmapReport(user: ReportUser, filter?: ReportFilter) 
 // ============================================================================
 export async function getProgressionReport(user: ReportUser, filter?: ReportFilter) {
   const batches = await getBatchesFor(user, filter);
+  const d = await loadPloData(batches.map((b) => b.id));
   const programs = [];
   for (const batch of batches) {
-    const plos = await prisma.pLO.findMany({ where: { batchId: batch.id }, orderBy: { number: "asc" } });
+    const plos = d.plosOf(batch.id);
     if (plos.length === 0) continue;
     const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
     const matrix: Record<number, Record<number, number>> = {};
     for (const p of plos) {
-      const mappings = await prisma.coursePloMapping.findMany({ where: { ploId: p.id }, include: { course: true } });
+      const mappings = d.mappingsOf(p.id);
       const row: Record<number, number> = {};
       for (const s of semesters) row[s] = 0;
       for (const m of mappings) {
-        if (m.course.semesterNumber && m.course.semesterNumber >= 1 && m.course.semesterNumber <= 8) {
-          row[m.course.semesterNumber] = (row[m.course.semesterNumber] || 0) + 1;
+        if (m.semesterNumber && m.semesterNumber >= 1 && m.semesterNumber <= 8) {
+          row[m.semesterNumber] = (row[m.semesterNumber] || 0) + 1;
         }
       }
       matrix[p.number] = row;
@@ -119,16 +142,21 @@ const BLOOM_LABELS: Record<string, string> = {
 
 export async function getBloomReport(user: ReportUser, filter?: ReportFilter) {
   const batches = await getBatchesFor(user, filter);
+  // Every course and its SE CLOs in two queries (it was one CLO query per course).
+  const allCourses = await prisma.course.findMany({ where: { batchId: { in: batches.map((b) => b.id).concat("none") } }, select: { id: true, batchId: true, semesterNumber: true } });
+  const allClos = await prisma.cLO.findMany({ where: { courseId: { in: allCourses.map((c) => c.id).concat("none") }, source: "SE" }, select: { courseId: true, bloomLevel: true } });
+  const closOf = new Map<string, { bloomLevel: string }[]>();
+  for (const c of allClos) { const l = closOf.get(c.courseId); if (l) l.push(c); else closOf.set(c.courseId, [c]); }
   const programs = [];
   for (const batch of batches) {
-    const courses = await prisma.course.findMany({ where: { batchId: batch.id } });
+    const courses = allCourses.filter((c) => c.batchId === batch.id);
     if (courses.length === 0) continue;
     const bySemester: Record<number, Record<string, number>> = {};
     const overall: Record<string, number> = {};
     for (const b of BLOOM_ORDER) overall[b] = 0;
 
     for (const c of courses) {
-      const clos = await prisma.cLO.findMany({ where: { courseId: c.id, source: "SE" } });
+      const clos = closOf.get(c.id) || [];
       const sem = c.semesterNumber || 0;
       if (!bySemester[sem]) { bySemester[sem] = {}; for (const b of BLOOM_ORDER) bySemester[sem][b] = 0; }
       for (const clo of clos) {

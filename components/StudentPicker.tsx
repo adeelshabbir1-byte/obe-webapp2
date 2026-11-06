@@ -1,5 +1,6 @@
 "use client";
 
+import VirtualList from "./VirtualList";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -79,8 +80,9 @@ export default function StudentPicker({ current, param = "studentId", template, 
         </div>
       )}
       {list.length > 0 && (
-        <div style={{ flexBasis: "100%", maxHeight: 280, overflowY: "auto", border: "1px solid var(--line, #eee)", borderRadius: 6 }}>
-          {list.map((s) => <div key={s.id} onClick={() => go(s.id)} style={{ padding: "5px 10px", fontSize: 13, cursor: "pointer", borderBottom: "1px solid var(--line, #f0f0f0)", background: s.id === current ? "rgba(21,101,192,.08)" : undefined }}>{row(s)}</div>)}
+        <div style={{ flexBasis: "100%", border: "1px solid var(--line, #eee)", borderRadius: 6 }}>
+          {/* Only the students in view are drawn (a batch can have hundreds). */}
+          <VirtualList items={list} rowHeight={30} height={280} getKey={(s) => s.id} render={(s) => <div onClick={() => go(s.id)} style={{ padding: "5px 10px", fontSize: 13, cursor: "pointer", borderBottom: "1px solid var(--line, #f0f0f0)", height: 30, boxSizing: "border-box", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", background: s.id === current ? "rgba(21,101,192,.08)" : undefined }}>{row(s)}</div>} />
         </div>
       )}
     </div>

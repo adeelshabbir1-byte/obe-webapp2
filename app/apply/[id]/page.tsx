@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/db";
 import PublicInquiryForm from "../../../components/PublicInquiryForm";
 
-export const dynamic = "force-dynamic";
+// Public page (no sign-in): rendered on the server and kept for 5 minutes, so visitors get it instantly.
+export const revalidate = 300;
 export const metadata = { title: "Admission inquiry" };
 
 // Public admission inquiry form (link it from the institute's website).

@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 async function GET_handler(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // Background jobs left from the day (retries, or a function stopped mid-way) are run here too (lib/jobs.ts).
+  await import("../../../../lib/jobs").then((m) => m.runJobs({ limit: 200 })).catch(() => null);
   const now = new Date();
   const soon = new Date(now.getTime() + 3 * 86400000);
   const rows = (await prisma.deadline.findMany({

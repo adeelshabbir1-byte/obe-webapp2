@@ -10683,3 +10683,19 @@ model DiscussionActivity {
 
   @@id([courseId, tool, forumId, week])
 }
+
+// Speed: background job queue (lib/jobs.ts).
+model BackgroundJob {
+  id          String    @id
+  kind        String
+  payloadJson String    @default("null")
+  status      String    @default("QUEUED")
+  attempts    Int       @default(0)
+  runAfter    DateTime  @default(now())
+  startedAt   DateTime?
+  doneAt      DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, runAfter])
+}

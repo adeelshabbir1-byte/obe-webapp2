@@ -24,11 +24,20 @@ export async function notifyUsers(userIds: (string | null | undefined)[], n: { k
   try {
     await ndb.notification.createMany({ data: ids.map((userId) => ({ id: randomUUID(), userId, kind: n.kind, title: n.title.slice(0, 300), body: n.body?.slice(0, 2000) || null, href: n.href || null })) });
   } catch { return; }
+  // Email, SMS / WhatsApp and phone push go out from the background queue, after the response (lib/jobs.ts): the action
+  // that caused the notification no longer waits for them.
+  const { enqueue } = await import("./jobs");
+  await enqueue("notify.deliver", { ids, n });
+}
+
+/** The background part of a notification: email for important kinds, SMS / WhatsApp, phone / browser push. */
+export async function deliverNotification(p: { ids: string[]; n: { kind: string; title: string; body?: string; href?: string } }) {
+  const { ids, n } = p;
   if (EMAIL_KINDS.has(n.kind)) await emailUsers(ids, n.title, n.body || "", n.href);
-  // SMS / WhatsApp, when the institute has a gateway and this kind of alert turned on (capped at 4 s so it never holds the action up).
-  try { const m = await import("./messaging"); await Promise.race([m.alertStaff(ids, n.kind, n.title, n.body), new Promise((r) => setTimeout(r, 4000))]); } catch { /* best effort */ }
-  // Phone / browser push, when VAPID keys are set and the person allowed it (Adeel prompt §4); capped at 3 s.
-  try { const p = await import("./webPush"); await Promise.race([p.pushTo({ userIds: ids }, n), new Promise((r) => setTimeout(r, 3000))]); } catch { /* best effort */ }
+  // SMS / WhatsApp, when the institute has a gateway and this kind of alert turned on.
+  try { const m = await import("./messaging"); await m.alertStaff(ids, n.kind, n.title, n.body); } catch { /* best effort */ }
+  // Phone / browser push, when VAPID keys are set and the person allowed it (Adeel prompt §4).
+  try { const w = await import("./webPush"); await w.pushTo({ userIds: ids }, n); } catch { /* best effort */ }
 }
 
 async function emailUsers(ids: string[], subject: string, body: string, href?: string) {

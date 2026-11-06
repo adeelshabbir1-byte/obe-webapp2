@@ -31,6 +31,9 @@ register({
     const rows = await safe(() => db.shortLeave.findMany({ where: { chairmanId: w.chairmanId, status: "PENDING" }, orderBy: { createdAt: "asc" }, take: 200 }) as Promise<ShortLeaveRow[]>);
     const det = await details(rows.map((r) => r.id)).catch(() => new Map());
     const nm = await names(rows.map((r) => r.userId));
+    // The teachers at the Dean's step, in one query (was one per leave).
+    const deanStep = rows.filter((l) => (det.get(l.id) as { deanStatus?: string } | undefined)?.deanStatus === "PENDING").map((l) => l.userId);
+    const teachers = new Map((deanStep.length ? await prisma.user.findMany({ where: { id: { in: Array.from(new Set(deanStep)) } }, select: { id: true, departmentId: true, department_: { select: { facultyId: true } } } }) : []).map((t) => [t.id, t]));
     const out: Item[] = [];
     for (const l of rows) {
       if (l.userId === user.id) continue;
@@ -38,7 +41,7 @@ register({
       let mine = false;
       if (d?.deanStatus === "PENDING") {
         // Same rule as the short-leave route: the Dean of the teacher's faculty, or whoever acts for / covers the Dean.
-        const t = await prisma.user.findUnique({ where: { id: l.userId }, select: { departmentId: true, department_: { select: { facultyId: true } } } });
+        const t = teachers.get(l.userId);
         const isDean = user.role === "DEAN" && user.managedById === l.chairmanId && !!user.facultyId && t?.department_?.facultyId === user.facultyId;
         mine = isDean || (await approverFor(w.chairmanId, "DEAN", { departmentId: t?.departmentId })).ids.includes(user.id);
       }

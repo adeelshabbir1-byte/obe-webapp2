@@ -140,6 +140,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string; i?: stri
 "t": "AttendanceThreshold"
 },
 {
+"f": "migration_background_jobs.sql",
+"d": "Speed: a background job queue (lib/jobs.ts). Slow work the person does not need to wait for \u2014 email, SMS / WhatsApp,",
+"t": "BackgroundJob"
+},
+{
 "f": "migration_batch5.sql",
 "d": "Prompt 3 batch 5: campuses, fee settings and online payment claims, Moodle link.",
 "t": "LmsCourseLink"
