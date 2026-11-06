@@ -40,7 +40,7 @@ export default function AppointmentBooking({ base, api, people, chosen, monday, 
           <div className="card" style={{ marginTop: 8 }}>
             {!view.open ? <p className="small-note" style={{ margin: 0 }}>{chosen.name} is not taking appointments at the moment.</p>
               : view.free.length === 0 ? <p className="small-note" style={{ margin: 0 }}>No free slots this week — try the next week.</p>
-              : <ActionForm url={api} fixed={{ action: "request", teacherId: chosen.id }} submit="Ask for this time" done="Sent — you will be told when they reply." initial={{ startsAt: new Date(view.free[0].start).toISOString() }}
+              : <ActionForm collapsed={false} url={api} fixed={{ action: "request", teacherId: chosen.id }} submit="Ask for this time" done="Sent — you will be told when they reply." initial={{ startsAt: new Date(view.free[0].start).toISOString() }}
                   fields={[{ name: "startsAt", label: "Free time", type: "select", options: view.free.map((f) => [new Date(f.start).toISOString(), whenText(f.start)] as [string, string]), width: 220 }, { name: "reason", label: "What is it about?", type: "text", placeholder: "e.g. Discuss my midterm result", width: 320 }]} />}
           </div>
         </>

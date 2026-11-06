@@ -76,16 +76,23 @@ export default function AutoPaginate() {
     const root = document.querySelector(".main, main.st-main, main") as HTMLElement | null;
     if (!root) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const run = () => { root.querySelectorAll("table").forEach((t) => setup(t as HTMLTableElement)); };
-    run();
+    let stopped = false;
+    const run = () => { if (!stopped) root.querySelectorAll("table").forEach((t) => setup(t as HTMLTableElement)); };
     // Rows added or removed by the page (filters, live updates): set the pages again, at most every 150 ms.
     const obs = new MutationObserver((muts) => {
       if (muts.every((m) => (m.target as HTMLElement).closest?.("[data-pg-bar]"))) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(run, 150);
     });
-    obs.observe(root, { childList: true, subtree: true });
-    return () => { obs.disconnect(); if (timer) clearTimeout(timer); };
+    // Only once React has finished taking over the server's HTML (the page loaded, then an idle moment): changing the
+    // page before that makes React throw the server HTML away and start the screen again.
+    const start = () => {
+      const go = () => { if (stopped) return; run(); obs.observe(root, { childList: true, subtree: true }); };
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      setTimeout(() => (w.requestIdleCallback ? w.requestIdleCallback(go, { timeout: 1500 }) : go()), 300);
+    };
+    if (document.readyState === "complete") start(); else window.addEventListener("load", start, { once: true });
+    return () => { stopped = true; obs.disconnect(); if (timer) clearTimeout(timer); window.removeEventListener("load", start); };
   }, [pathname]);
   return null;
 }
