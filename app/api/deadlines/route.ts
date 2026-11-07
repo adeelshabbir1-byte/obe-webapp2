@@ -40,6 +40,7 @@ async function POST_handler(req: NextRequest) {
   }
   const dueW = await shiftToWorkday(chairmanOf(user), due); // never on a weekend or holiday
   const row = await prisma.deadline.create({ data: { chairmanId: chairmanOf(user), assigneeId, role, setById: user.id, kind: b.kind, title: String(b.title).trim().slice(0, 200), description: String(b.description || "").trim().slice(0, 1000) || null, courseId, dueDate: dueW, ...(standing ? { allCourses: true } : {}) } as never });
+  if (b.fixedDate) await (await import("../../../lib/workCalendar")).markFixed(row.id);
   if (standing) await topUpStanding(chairmanOf(user));
   await writeAuditLog({ actorUserId: user.id, action: "DEADLINE_SET", entityType: "Deadline", entityId: row.id });
   return NextResponse.json({ ok: true }, { status: 201 });

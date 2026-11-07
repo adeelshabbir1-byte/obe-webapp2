@@ -5,7 +5,9 @@
 //   3. assignInvigilators — every room in use gets invigilators, spreading duties evenly and never double-booking.
 // A "group" is all sections of one course code: they sit the same paper at the same time.
 
-export type Group = { key: string; courseIds: string[]; students: string[]; instructorIds: string[]; pinned?: { day: number; slot: number } | null };
+export type Group = { key: string; courseIds: string[]; students: string[]; instructorIds: string[]; pinned?: { day: number; slot: number } | null; batches?: string[]; core?: boolean };
+export type SheetRules = { carried?: Set<string>; allowCoreCore?: boolean };
+import { dayRules } from "./examDutiesCore";
 export type Placement = { day: number; slot: number };
 export type RoomIn = { id: string; seats: number };
 export type RoomUse = { roomId: string; students: { studentId: string; courseId: string }[] };
@@ -23,7 +25,9 @@ export function examDays(start: Date, end: Date, offDays: number[], holidays: Se
   return out;
 }
 
-export function scheduleExams(groups: Group[], days: number, slots: number, maxPerDay: number, seatsPerSlot: number) {
+export function scheduleExams(groups: Group[], days: number, slots: number, maxPerDay: number, seatsPerSlot: number, rules?: SheetRules) {
+  const bent: { key: string; why: string }[] = [];
+  const dayGroups = new Map<number, Group[]>();
   const placed = new Map<string, Placement>();
   const unplaced: { key: string; why: string }[] = [];
   const slotGroups = new Map<string, string[]>(); // "d:s" -> group keys
@@ -48,32 +52,41 @@ export function scheduleExams(groups: Group[], days: number, slots: number, maxP
     placed.set(g.key, p);
     slotGroups.set(k, [...(slotGroups.get(k) || []), g.key]);
     slotSeats.set(k, (slotSeats.get(k) || 0) + g.students.length);
+    dayGroups.set(p.day, [...(dayGroups.get(p.day) || []), g]);
     for (const s of g.students) { studentDay.set(`${s}|${p.day}`, (studentDay.get(`${s}|${p.day}`) || 0) + 1); studentSlot.add(`${s}|${k}`); }
   };
   // Hand-placed papers first.
   for (const g of groups) if (g.pinned && g.pinned.day < days && g.pinned.slot < slots) put(g, g.pinned);
 
   const order = groups.filter((g) => !placed.has(g.key)).sort((a, b) => (conflicts.get(b.key)! - conflicts.get(a.key)!) || (b.students.length - a.students.length) || a.key.localeCompare(b.key));
+  const studentSets = new Map(groups.map((g) => [g.key, new Set(g.students)]));
   for (const g of order) {
-    let best: { p: Placement; score: number } | null = null;
+    let best: { p: Placement; score: number; why?: string } | null = null;
     let why = "no day/slot without a student clash";
-    for (let d = 0; d < days; d++) {
-      for (let s = 0; s < slots; s++) {
-        const k = `${d}:${s}`;
-        if (g.students.some((st) => studentSlot.has(`${st}|${k}`))) continue;
-        if (g.students.some((st) => (studentDay.get(`${st}|${d}`) || 0) >= maxPerDay)) { why = `students would have more than ${maxPerDay} papers on a day`; continue; }
-        if ((slotSeats.get(k) || 0) + g.students.length > seatsPerSlot) { why = "not enough exam seats in any free slot"; continue; }
-        // Spread the load: fewer of this paper's students already sitting a paper that day, the day before or after, and emptier slots.
-        let busy = 0;
-        for (const st of g.students) busy += (studentDay.get(`${st}|${d}`) || 0) * 3 + (studentDay.get(`${st}|${d - 1}`) || 0) + (studentDay.get(`${st}|${d + 1}`) || 0);
-        const score = busy / Math.max(1, g.students.length) + ((slotSeats.get(k) || 0) / Math.max(1, seatsPerSlot)) * 0.5 + d * 0.01 + s * 0.001;
-        if (!best || score < best.score) best = { p: { day: d, slot: s }, score };
+    // Pass 0 keeps the date-sheet rules (one paper per batch a day; never two core papers on a student's day unless
+    // allowed); pass 1 runs only when nothing fits, and says which rule it bent.
+    for (let pass = 0; pass < 2 && !best; pass++) {
+      for (let d = 0; d < days; d++) {
+        const same = (dayGroups.get(d) || []).map((x) => ({ batches: x.batches || [], core: !!x.core, students: studentSets.get(x.key)! }));
+        const r = rules ? dayRules({ batches: g.batches || [], core: !!g.core, students: g.students }, same, (st) => !!rules.carried?.has(`${st}|${g.key}`)) : { batchClash: false, coreCore: 0, carried: 0 };
+        if (pass === 0 && rules && (r.batchClash || (r.coreCore > 0 && !rules.allowCoreCore))) { why = r.batchClash ? "another paper of the same batch that day" : "two core papers on a student's day"; continue; }
+        for (let s = 0; s < slots; s++) {
+          const k = `${d}:${s}`;
+          if (g.students.some((st) => studentSlot.has(`${st}|${k}`))) continue;
+          if (g.students.some((st) => (studentDay.get(`${st}|${d}`) || 0) >= maxPerDay)) { why = `students would have more than ${maxPerDay} papers on a day`; continue; }
+          if ((slotSeats.get(k) || 0) + g.students.length > seatsPerSlot) { why = "not enough exam seats in any free slot"; continue; }
+          // Spread the load: fewer of this paper's students already sitting a paper that day, the day before or after, and emptier slots.
+          let busy = 0;
+          for (const st of g.students) busy += (studentDay.get(`${st}|${d}`) || 0) * 3 + (studentDay.get(`${st}|${d - 1}`) || 0) + (studentDay.get(`${st}|${d + 1}`) || 0);
+          const score = busy / Math.max(1, g.students.length) + ((slotSeats.get(k) || 0) / Math.max(1, seatsPerSlot)) * 0.5 + d * 0.01 + s * 0.001 + r.carried * 0.5 + r.coreCore * 2;
+          if (!best || score < best.score) best = { p: { day: d, slot: s }, score, why: pass ? (r.batchClash ? "placed on a day with another paper of the same batch" : r.coreCore ? `${r.coreCore} student(s) have two core papers that day` : undefined) : undefined };
+        }
       }
     }
-    if (best) put(g, best.p); else unplaced.push({ key: g.key, why });
+    if (best) { put(g, best.p); if (best.why) bent.push({ key: g.key, why: best.why }); } else unplaced.push({ key: g.key, why });
   }
   void byKey; void studentsOf;
-  return { placed, unplaced };
+  return { placed, unplaced, bent };
 }
 
 /** Fill the rooms of one slot. Each group's students go in roll order into rooms with free seats; rooms may be shared. */

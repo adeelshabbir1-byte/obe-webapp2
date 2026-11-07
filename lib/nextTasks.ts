@@ -35,9 +35,18 @@ const deadlines: Source<NextUser> = { name: "deadlines", run: async (u, now) => 
   ]);
   const rows = await prisma.deadline.findMany({
     where: { completedAt: null, dueDate: { lte: new Date(now.getTime() + 14 * day) }, allCourses: false, OR: [{ assigneeId: u.id }, { courseId: { in: se.map((c) => c.id) }, role: "SUBJECT_EXPERT" }, { courseId: { in: mine.map((c) => c.id) }, role: "INSTRUCTOR" }] } as never,
-    orderBy: { dueDate: "asc" }, take: 20, select: { title: true, dueDate: true, courseId: true },
+    orderBy: { dueDate: "asc" }, take: 20, select: { id: true, title: true, dueDate: true, courseId: true },
   });
-  return rows.map((d) => ({ title: d.title, href: "/deadlines", due: d.dueDate, urgency: urgencyOf(d.dueDate, now, "normal"), source: "deadlines" }));
+  // Item 22: a deadline on a day this person does not work moves to their next working day (fixed dates stay).
+  const { personalDue } = await import("./workCalendar"); const { movedText } = await import("./workDaysCore");
+  const cid = await (await import("./reportScope")).chairmanIdFor(u as never).catch(() => null);
+  const fixed = await (await import("./workCalendar")).fixedIds(rows.map((d) => d.id));
+  const out = [];
+  for (const d of rows) {
+    const p = cid ? await personalDue(u.id, cid, d.dueDate, fixed.has(d.id)).catch(() => ({ due: d.dueDate, from: null })) : { due: d.dueDate, from: null };
+    out.push({ title: `${d.title}${movedText(p.from)}`, href: "/deadlines", due: p.due, urgency: urgencyOf(p.due, now, "normal"), source: "deadlines" });
+  }
+  return out;
 } };
 
 const marks: Source<NextUser> = { name: "marks", run: async (u, now) => {

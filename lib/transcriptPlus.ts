@@ -55,6 +55,7 @@ export async function degreeAudit(studentId: string) {
     prisma.gradingScale.findMany({ where: { coordinator: { batches: { some: { id: st.batchId } } } }, select: { letter: true, gpaValue: true } }).catch(() => []),
   ]);
   const rules = await academicRules(st.batch.coordinator.managedById);
+  const minCgpa = await (await import("./workCalendar")).graduateCgpa(st.batch.coordinator.managedById || "", rules.probationCgpa);
   const isPass = (r: { grade: string; gpaPoints: number | null }) => (r.grade === "P" || r.grade === "TR" || r.grade === "IT") || (r.gpaPoints !== null && r.gpaPoints > 0);
   const best = new Map<string, (typeof recs)[number]>();
   for (const r of recs) { const k = up(r.courseCode), b = best.get(k); if (!b || (r.gpaPoints ?? -1) > (b.gpaPoints ?? -1)) best.set(k, r); }
@@ -79,7 +80,7 @@ export async function degreeAudit(studentId: string) {
   const plos = await ploTranscript(studentId);
   const graduation: AuditCheck[] = [
     { label: "Credit hours of the scheme passed", ok: passed >= required && required > 0, detail: `${passed} of ${required} passed${inProgress ? `, ${inProgress} in progress` : ""} — ${Math.max(0, required - passed - inProgress)} still to take` },
-    { label: `CGPA at least ${rules.probationCgpa.toFixed(2)}`, ok: cgpa !== null && cgpa >= rules.probationCgpa, detail: cgpa !== null ? `CGPA ${cgpa.toFixed(2)}` : "no results yet" },
+    { label: `CGPA at least ${minCgpa.toFixed(2)}`, ok: cgpa !== null && cgpa >= minCgpa, detail: cgpa !== null ? `CGPA ${cgpa.toFixed(2)}` : "no results yet" },
     { label: "No failed course outstanding", ok: !list.some((g) => g.courses.some((c) => c.status === "FAILED")), detail: list.flatMap((g) => g.courses.filter((c) => c.status === "FAILED").map((c) => c.code)).join(", ") || "none" },
     { label: "Every PLO attained", ok: plos.length > 0 && plos.every((p) => p.attained !== false), detail: plos.filter((p) => p.attained === false).map((p) => `${p.label} ${p.avg}%`).join(", ") || (plos.some((p) => p.attained === null) ? `${plos.filter((p) => p.attained === null).length} PLO(s) not assessed yet` : "all attained") },
     { label: "Deficiency (non-credit) courses passed", ok: !scheme.filter((c) => c.isNonCredit).some((c) => !(best.get(up(c.code)) && isPass(best.get(up(c.code))!))), detail: scheme.filter((c) => c.isNonCredit).map((c) => c.code).join(", ") || "none in the scheme" },

@@ -10699,3 +10699,161 @@ model BackgroundJob {
 
   @@index([status, runAfter])
 }
+
+// Queue items 16-22 (prisma/migration_adeel_p13.sql). New tables only, so nothing existing breaks before it is run.
+model DeadlineFixed {
+  deadlineId String @id
+}
+model ExamSessionExtra {
+  sessionId String   @id
+  json      String   @default("{}")
+  updatedAt DateTime @default(now())
+}
+model ExamDutyOpt {
+  sessionId String
+  userId    String
+  json      String   @default("{}")
+  @@id([sessionId, userId])
+}
+model ExamRoomLog {
+  id        String   @id
+  sessionId String
+  slotKey   String
+  roomId    String
+  kind      String // CHECKIN | CUSTODY | UFM | REPLACE
+  userId    String
+  dataJson  String   @default("{}")
+  at        DateTime @default(now())
+  @@index([sessionId], map: "ExamRoomLog_session_idx")
+}
+model DegreeAuditSnapshot {
+  id           String   @id
+  chairmanId   String
+  studentId    String
+  issueId      String?
+  auditJson    String
+  hash         String
+  signedById   String
+  signedByName String
+  at           DateTime @default(now())
+  @@index([studentId], map: "DegreeAuditSnapshot_student_idx")
+}
+model PaperGenSetting {
+  id           String    @id
+  chairmanId   String
+  courseCode   String
+  examType     String
+  specJson     String    @default("{}")
+  status       String    @default("DRAFT") // DRAFT | PROPOSED | PL_OK | LOCKED
+  proposedById String?
+  plById       String?
+  plAt         DateTime?
+  omcById      String?
+  omcAt        DateTime?
+  updatedAt    DateTime  @default(now())
+  @@unique([chairmanId, courseCode, examType], map: "PaperGenSetting_key")
+}
+model GeneratedPaper {
+  id            String    @id
+  chairmanId    String
+  settingId     String
+  courseCode    String
+  examType      String
+  version       Int
+  itemIdsJson   String
+  checkCode     String    @unique(map: "GeneratedPaper_code")
+  status        String    @default("GENERATED") // GENERATED | REVIEWED | PRINTED | VOID
+  reviewById    String?
+  reviewAt      DateTime?
+  swapsJson     String    @default("[]")
+  errorNote     String?
+  generatedById String
+  at            DateTime  @default(now())
+}
+model CourseNote {
+  id            String   @id
+  courseId      String
+  lectureNumber Int?
+  kind          String // NOTE | STRUGGLE | WORKED
+  userId        String
+  toUserId      String?
+  cqiId         String?
+  text          String
+  at            DateTime @default(now())
+  @@index([courseId], map: "CourseNote_course_idx")
+}
+model NationalReview {
+  id          String    @id
+  refKind     String
+  refId       String
+  title       String
+  adoptions   Int       @default(0)
+  status      String    @default("OPEN") // OPEN | ACCEPTED | DECLINED
+  decision    String?
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  @@unique([refKind, refId], map: "NationalReview_ref")
+}
+model LabBroadcast {
+  id           String   @id
+  chairmanId   String
+  courseCode   String
+  week         Int
+  instructions String
+  rubric       String?
+  sentById     String
+  at           DateTime @default(now())
+}
+model LabBroadcastAck {
+  broadcastId String
+  userId      String
+  courseId    String
+  note        String?
+  at          DateTime @default(now())
+  @@id([broadcastId, userId])
+}
+model AdviserNote {
+  id           String   @id
+  studentId    String
+  adviserId    String
+  text         String
+  planTerm     String?
+  planApproved Boolean  @default(false)
+  at           DateTime @default(now())
+  @@index([studentId], map: "AdviserNote_student_idx")
+}
+model LabCourseNeed {
+  id          String  @id
+  chairmanId  String
+  courseId    String
+  category    String
+  perStudents Int     @default(1)
+  labId       String?
+  note        String?
+  @@index([chairmanId], map: "LabCourseNeed_chairman_idx")
+}
+model ComplianceItem {
+  id          String    @id
+  chairmanId  String
+  body        String
+  code        String
+  title       String
+  ownerId     String?
+  dueDate     DateTime?
+  status      String    @default("OPEN") // OPEN | MET | SLIPPING
+  evidenceUrl String?
+  improvement String?
+  checkedAt   DateTime?
+  updatedAt   DateTime  @default(now())
+  @@unique([chairmanId, body, code], map: "ComplianceItem_key")
+}
+model ReportVersion {
+  id         String   @id
+  chairmanId String
+  kind       String
+  title      String
+  byId       String?
+  at         DateTime @default(now())
+  @@index([chairmanId], map: "ReportVersion_chairman_idx")
+}

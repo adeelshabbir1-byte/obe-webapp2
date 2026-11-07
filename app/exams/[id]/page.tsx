@@ -8,12 +8,14 @@ import { navForRole } from "../../../components/reportNav";
 import { roleLabel, chairmanIdFor } from "../../../lib/reportScope";
 import { xdb, loadSession, sessionDays, examIssues, examRooms, parse, EXAM_VIEWERS, type ExamPaperRow } from "../../../lib/exams";
 import { seatOrder } from "../../../lib/examPlanner";
+import { seatLabel } from "../../../lib/examDutiesCore";
+import ExamExtraTabs from "./ExamExtraTabs";
 import { ExamActions, ExamSessionForm, PaperMove } from "../../../components/ExamControls";
 
 export const dynamic = "force-dynamic";
 const ymd = (d: Date) => new Date(d).toISOString().slice(0, 10);
 const dayLabel = (d: Date | string) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-const TABS = [["sheet", "Date sheet"], ["rooms", "Rooms & seating"], ["duties", "Invigilation"], ["students", "Student look-up"], ["settings", "Settings"]] as const;
+const TABS = [["sheet", "Date sheet"], ["rooms", "Rooms & seating"], ["duties", "Invigilation"], ["students", "Student look-up"], ["setup", "Set-up & rules"], ["day", "On the day"], ["allowance", "Allowance"], ["settings", "Settings"]] as const;
 
 export default async function ExamSessionPage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string; q?: string; slot?: string } }) {
   const user = await getAuthenticatedUser();
@@ -35,6 +37,7 @@ export default async function ExamSessionPage({ params, searchParams }: { params
   const cOf = new Map(courses.map((c) => [c.id, c]));
   const roomName = new Map(rooms.map((r) => [r.id, r.name]));
   const roomCap = new Map(rooms.map((r) => [r.id, r.seats]));
+  const roomCols = new Map(rooms.map((r) => [r.id, (r as { cols?: number }).cols || 0]));
   const invIds = Array.from(new Set(papers.flatMap((p) => parse<{ userIds: string[] }[]>(p.invigilatorsJson, []).flatMap((r) => r.userIds))));
   const people = new Map((invIds.length ? await prisma.user.findMany({ where: { id: { in: invIds } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
   const issues = viewer ? await examIssues(s) : [];
@@ -171,7 +174,7 @@ export default async function ExamSessionPage({ params, searchParams }: { params
                 </div>
                 <table style={{ fontSize: 12, marginTop: 8 }}>
                   <thead><tr><th style={{ width: 60 }}>Seat</th><th>Roll no.</th><th>Name</th><th>Paper</th><th style={{ width: 120 }}>Signature</th></tr></thead>
-                  <tbody>{seated.map((x) => <tr key={x.studentId}><td>{x.seat}</td><td>{x.roll}</td><td>{studs.get(x.studentId)?.name || ""}</td><td>{cOf.get(x.courseId)?.code}</td><td></td></tr>)}</tbody>
+                  <tbody>{seated.map((x) => <tr key={x.studentId}><td>{x.seat}{roomCols.get(u.roomId) ? ` · ${seatLabel(x.seat - 1, roomCols.get(u.roomId)!)}` : ""}</td><td>{x.roll}</td><td>{studs.get(x.studentId)?.name || ""}</td><td>{cOf.get(x.courseId)?.code}</td><td></td></tr>)}</tbody>
                 </table>
               </div>
             );
@@ -221,6 +224,7 @@ export default async function ExamSessionPage({ params, searchParams }: { params
         </div>
       )}
 
+      {(tab === "setup" || tab === "day" || tab === "allowance") && viewer && <ExamExtraTabs tab={tab} sessionId={s.id} manager={manager} />}
       {tab === "settings" && manager && (
         <div className="card">
           <ExamSessionForm sessionId={s.id} initial={{ name: s.name, examType: s.examType, startDate: ymd(s.startDate), endDate: ymd(s.endDate), slots: slots.join("\n"), offDays: parse<number[]>(s.offDaysJson, [0]), maxPerDay: s.maxPerDay, seatPercent: s.seatPercent, invigilatorsPerRoom: s.invigilatorsPerRoom, includeLabs: s.includeLabs }} />

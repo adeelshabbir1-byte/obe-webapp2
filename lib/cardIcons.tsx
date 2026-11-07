@@ -14,6 +14,10 @@ import {
 // A fitting picture per hub card (queue item 10): the first rule that matches the page (by address, then name) gives a
 // short list of suitable icons; inside one group each card takes the first icon not used yet, so neighbours differ.
 const RULES: [RegExp, LucideIcon[]][] = [
+  [/working-days/, [CalendarRange, CalendarClock]],
+  [/responsibility/, [UserCheck, Gauge]],
+  [/\/compliance/, [ShieldCheck, ListChecks]],
+  [/national-review/, [Landmark, Stamp]],
   [/hec-view|national-bank|official-content/, [Landmark, Globe, Library]],
   [/cqi|follow-ups/, [RefreshCw, Repeat, CheckSquare]],
   [/audit-log|assignment-history|historical-grades/, [History, Archive, ScrollText]],
