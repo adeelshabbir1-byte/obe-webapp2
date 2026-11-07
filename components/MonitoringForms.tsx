@@ -39,3 +39,12 @@ export function AddCompliance() {
   const [f, setF] = useState({ body: "QEC", code: "", title: "" }); const [m, setM] = useState("");
   return <div style={{ fontSize: 12.5, display: "flex", gap: 6, flexWrap: "wrap" }}><input value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} style={{ width: 70 }} aria-label="Body" /><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} placeholder="code" style={{ width: 80 }} /><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="requirement, as written by the body" style={{ width: 340 }} /><button type="button" className="btn btn-sm" onClick={async () => done(await post({ action: "compliance", item: f }), setM)}>Add</button><span className="small-note">{m}</span></div>;
 }
+
+export function ReportSchedule({ kinds, chosen, can }: { kinds: { kind: string; title: string }[]; chosen: string[]; can: boolean }) {
+  const [c, setC] = useState<string[]>(chosen); const [m, setM] = useState("");
+  return <div style={{ fontSize: 12.5 }}>
+    <p className="small-note" style={{ marginTop: 0 }}>Ticked reports are refreshed on the 1st of each month, kept as a version, and the Institute Head gets one notice with the links.</p>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>{kinds.map((k) => <label key={k.kind}><input type="checkbox" disabled={!can} checked={c.includes(k.kind)} onChange={(e) => setC(e.target.checked ? [...c, k.kind] : c.filter((x) => x !== k.kind))} /> {k.title}</label>)}</div>
+    {can && <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={async () => { const r = await post({ action: "schedule", kinds: c }); setM(r.error || "Saved ✓"); }}>Save schedule</button>} <span className="small-note" role="status">{m}</span>
+  </div>;
+}

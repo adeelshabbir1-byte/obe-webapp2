@@ -29,7 +29,8 @@ export default async function FacultySufficiencyPage({ searchParams }: { searchP
   let ready = true; try { await (prisma as unknown as Record<string, any>).facultyQualification.count(); } catch { ready = false; }
   return (
     <Shell roleLabel={roleLabel(user.role)} userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Faculty Qualification &amp; Sufficiency</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>NBEAC Faculty Qualification (AQ / PQ)</h1>
+      <div className="card" style={{ borderLeft: "4px solid #B26A00", fontSize: 13 }}>AQ / PQ is the NBEAC (business school) model. Its definitions here are platform defaults that have not yet been checked against an uploaded NBEAC manual — confirm them and change the limits below. <b>Computing programs</b> are judged by NCEAC Criterion 5 on <a href="/faculty-status?tab=nceac">Faculty status → NCEAC Criterion 5</a>; each teacher&apos;s degree, designation and AQ / PQ can be set on <a href="/faculty-status">Faculty status</a>.</div>
       <p className="small-note" style={{ marginBottom: 10 }}>NBEAC Standard 4: who is academically qualified (AQ) or professionally qualified (PQ), each teacher&apos;s full-time equivalent, and the ratios per program. Programs bound to NBEAC are listed first.</p>
       <HowCalculated shows="Worked out from each teacher's profile (degrees, experience, publications) and this term's offered courses.">
         <ul style={{ margin: "0 0 4px 18px", padding: 0 }}>

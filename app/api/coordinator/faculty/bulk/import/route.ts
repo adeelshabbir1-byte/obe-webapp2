@@ -6,6 +6,9 @@ import { hashPassword } from "../../../../../../lib/auth";
 import { writeAuditLog } from "../../../../../../lib/audit";
 import { collegeRoleBlock } from "../../../../../../lib/affiliates";
 import { withErrors } from "../../../../../../lib/apiHandler";
+import { saveStatus } from "../../../../../../lib/facultyStatus";
+import { parseEmployment } from "../../../../../../lib/facultyRulesCore";
+import { chairmanIdFor } from "../../../../../../lib/reportScope";
 
 const DEFAULT_TEMP_PASSWORD = "12345678"; // same fixed default already used by "Reset All Faculty Passwords"
 
@@ -53,6 +56,8 @@ async function POST_handler(req: NextRequest) {
   const createdLogins: { name: string; username: string; role: string }[] = [];
   const skippedRows: { row: number; reason: string }[] = [];
   const seenUsernamesThisFile = new Set<string>();
+  const statusCid = await chairmanIdFor(user as never).catch(() => user.id);
+  let statusUpdated = 0;
 
   for (let r = 2; r <= ws.rowCount; r++) {
     const row = ws.getRow(r);
@@ -61,10 +66,17 @@ async function POST_handler(req: NextRequest) {
     const rawName = row.getCell(3).value;
     const rawSpecialization = row.getCell(4).value;
     const rawRole = row.getCell(5).value;
+    // Item 23: Highest degree, Designation and Employment (optional columns; old sheets still work).
+    const cellText = (n: number) => { const v = row.getCell(n).value as unknown; const s = v && typeof v === "object" && "text" in (v as Record<string, unknown>) ? String((v as { text: unknown }).text) : v == null ? "" : String(v); return s.trim(); };
+    const extra = { degree: cellText(6) || undefined, designation: cellText(7) || undefined, employment: cellText(8) ? parseEmployment(cellText(8), "") : undefined };
+    const hasExtra = !!(extra.degree || extra.designation || extra.employment);
 
     if (rawId && String(rawId).trim()) {
-      if (existingIds.has(String(rawId).trim())) rowsSkippedExisting++;
-      continue; // existing login — not editable from this sheet
+      if (existingIds.has(String(rawId).trim())) {
+        rowsSkippedExisting++;
+        if (hasExtra) await saveStatus(user.id, statusCid, String(rawId).trim(), extra).then(() => statusUpdated++).catch(() => null);
+      }
+      continue; // existing login — only the degree / designation / employment columns are taken from this sheet
     }
 
     const username = rawUsername ? String(rawUsername).trim() : "";
@@ -110,12 +122,13 @@ async function POST_handler(req: NextRequest) {
     seenUsernamesThisFile.add(usernameKey);
     allUsernames.add(usernameKey);
     allEmails.add(email.toLowerCase());
+    if (hasExtra) await saveStatus(user.id, statusCid, createdUser.id, extra).then(() => statusUpdated++).catch(() => null);
     created++;
     createdLogins.push({ name, username, role });
   }
 
   return NextResponse.json({
-    ok: true, created, rowsSkippedExisting,
+    ok: true, created, rowsSkippedExisting, statusUpdated,
     createdLogins, skippedRows: skippedRows.slice(0, 30),
     tempPassword: created > 0 ? DEFAULT_TEMP_PASSWORD : undefined,
   });

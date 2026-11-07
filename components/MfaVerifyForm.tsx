@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function MfaVerifyForm() {
-  const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,8 +16,8 @@ export default function MfaVerifyForm() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Invalid code."); setLoading(false); return; }
-      router.push("/dashboard");
-      router.refresh();
+      // One full page load of the right home page (push + refresh rendered the page twice).
+      window.location.assign(typeof data.href === "string" && data.href.startsWith("/") ? data.href : "/dashboard");
     } catch (err: any) { setError("Unexpected error: " + err.message); setLoading(false); }
   }
 

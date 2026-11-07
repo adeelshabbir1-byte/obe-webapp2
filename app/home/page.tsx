@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { cached, homeTag, keyOf } from "../../lib/pageCache";
+import HomeRefresh from "../../components/HomeRefresh";
 import { getAuthenticatedUser } from "../../lib/session";
 import { prisma } from "../../lib/db";
 import { navForRole } from "../../components/reportNav";
@@ -35,7 +37,7 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
   ]) : [null, null, null];
   const actingName = acting ? (await prisma.user.findUnique({ where: { id: acting }, select: { name: true } }))?.name : null;
   const [lines, openAsked, answered, splitWaiting, overdue, staleLib, lastChanges] = await Promise.all([
-    planProgress(user),
+    cached(["home-plan", user.id, user.role], homeTag(chairmanId), 600, () => planProgress(user)).then((x) => x.value),
     prisma.taskRequest.count({ where: { toId: user.id, status: "OPEN" } }),
     prisma.taskRequest.count({ where: { fromId: user.id, status: { in: ["RESPONDED", "DONE"] } } }),
     prisma.courseOwner.count({ where: { chairmanId, status: "PENDING" } as never }),
@@ -49,24 +51,33 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
   const dept = searchParams.dept && deptTabs.some(([id]) => id === searchParams.dept) ? searchParams.dept : "";
   const leads = dept ? allLeads.filter((l) => (l.departmentId || "none") === dept) : allLeads;
   const deptName = new Map(deptTabs);
-  const offered = (await prisma.course.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) }, isOffered: true, isNonCredit: false } as never, select: { id: true, coordinatorId: true, instructorId: true, subjectExpertId: true }, take: 3000 })) as unknown as { id: string; coordinatorId: string; instructorId: string | null; subjectExpertId: string | null }[];
-  const offeredIds = offered.map((c) => c.id).concat(["none"]);
+  // Item 23 (speed): the course figures for every program are kept for 10 minutes ("Refresh now" works them out again).
+  const figs = await cached(["home-figs", keyOf(leads.map((l) => l.id))], homeTag(chairmanId), 600, async () => {
+    const offered = (await prisma.course.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) }, isOffered: true, isNonCredit: false } as never, select: { id: true, coordinatorId: true, instructorId: true, subjectExpertId: true }, take: 3000 })) as unknown as { id: string; coordinatorId: string; instructorId: string | null; subjectExpertId: string | null }[];
+    const offeredIds = offered.map((c) => c.id).concat(["none"]);
+    const staleCut = new Date(Date.now() - 14 * 86400000);
+    const [studentRows, attRows, outFigs] = (await Promise.all([
+      prisma.student.groupBy({ by: ["batchId"], _count: { _all: true }, where: { batch: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } } } } as never),
+      prisma.attendanceRecord.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _max: { updatedAt: true } } as never),
+      prisma.outcomeFigure.findMany({ where: { leadId: { in: leads.map((l) => l.id).concat(["none"]) } } as never, orderBy: { intakeYear: "desc" }, select: { leadId: true, intakeYear: true, admitted: true, graduated: true, droppedOut: true } }),
+    ])) as unknown as [{ batchId: string; _count: { _all: number } }[], { courseId: string; _max: { updatedAt: Date | null } }[], { leadId: string; intakeYear: number; admitted: number; graduated: number; droppedOut: number }[]];
+    const batchOwner = new Map<string, string>((await prisma.batch.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } }, select: { id: true, coordinatorId: true } })).map((b) => [b.id as string, b.coordinatorId as string]));
+    const studentsOf = new Map<string, number>();
+    for (const r of studentRows) { const o = batchOwner.get(r.batchId); if (o) studentsOf.set(o, (studentsOf.get(o) || 0) + r._count._all); }
+    const lastAtt = new Map<string, Date | null>(attRows.map((r) => [r.courseId, r._max.updatedAt]));
+    const [cloRows, lectureRows, markRows] = (await Promise.all([
+      prisma.cLO.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
+      prisma.lectureRow.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
+      prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _count: { _all: true } } as never),
+    ])) as unknown as { courseId: string }[][];
+    const hasClo = new Set(cloRows.map((r) => r.courseId)), hasPlan = new Set(lectureRows.map((r) => r.courseId)), hasMarks = new Set(markRows.map((r) => r.courseId));
+    return { offered, studentsOf: Array.from(studentsOf.entries()), lastAtt: Array.from(lastAtt.entries()), outFigs, hasClo: Array.from(hasClo), hasPlan: Array.from(hasPlan), hasMarks: Array.from(hasMarks) };
+  });
+  const { offered, outFigs } = figs.value;
   const staleCut = new Date(Date.now() - 14 * 86400000);
-  const [studentRows, attRows, outFigs] = (await Promise.all([
-    prisma.student.groupBy({ by: ["batchId"], _count: { _all: true }, where: { batch: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } } } } as never),
-    prisma.attendanceRecord.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _max: { updatedAt: true } } as never),
-    prisma.outcomeFigure.findMany({ where: { leadId: { in: leads.map((l) => l.id).concat(["none"]) } } as never, orderBy: { intakeYear: "desc" }, select: { leadId: true, intakeYear: true, admitted: true, graduated: true, droppedOut: true } }),
-  ])) as unknown as [{ batchId: string; _count: { _all: number } }[], { courseId: string; _max: { updatedAt: Date | null } }[], { leadId: string; intakeYear: number; admitted: number; graduated: number; droppedOut: number }[]];
-  const batchOwner = new Map<string, string>((await prisma.batch.findMany({ where: { coordinatorId: { in: leads.map((l) => l.id).concat(["none"]) } }, select: { id: true, coordinatorId: true } })).map((b) => [b.id as string, b.coordinatorId as string]));
-  const studentsOf = new Map<string, number>();
-  for (const r of studentRows) { const o = batchOwner.get(r.batchId); if (o) studentsOf.set(o, (studentsOf.get(o) || 0) + r._count._all); }
-  const lastAtt = new Map<string, Date | null>(attRows.map((r) => [r.courseId, r._max.updatedAt]));
-  const [cloRows, lectureRows, markRows] = (await Promise.all([
-    prisma.cLO.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
-    prisma.lectureRow.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds }, source: "SE" } as never, _count: { _all: true } } as never),
-    prisma.studentMark.groupBy({ by: ["courseId"], where: { courseId: { in: offeredIds } }, _count: { _all: true } } as never),
-  ])) as unknown as { courseId: string }[][];
-  const hasClo = new Set(cloRows.map((r) => r.courseId)), hasPlan = new Set(lectureRows.map((r) => r.courseId)), hasMarks = new Set(markRows.map((r) => r.courseId));
+  const studentsOf = new Map<string, number>(figs.value.studentsOf);
+  const lastAtt = new Map<string, Date | null>(figs.value.lastAtt);
+  const hasClo = new Set<string>(figs.value.hasClo), hasPlan = new Set<string>(figs.value.hasPlan), hasMarks = new Set<string>(figs.value.hasMarks);
   const perLead = leads.map((l) => {
     const cs = offered.filter((c) => c.coordinatorId === l.id);
     return { id: l.id, dept: l.departmentId || "none", program: l.leadProgram || l.name, total: cs.length, noInstr: cs.filter((c) => !c.instructorId).length, noSe: cs.filter((c) => !c.subjectExpertId).length, noClo: cs.filter((c) => !hasClo.has(c.id)).length, noPlan: cs.filter((c) => !hasPlan.has(c.id)).length, noMarks: cs.filter((c) => !hasMarks.has(c.id)).length, noAtt: cs.filter((c) => { const d = lastAtt.get(c.id); return !d || d < staleCut; }).length, students: studentsOf.get(l.id) || 0, fig: outFigs.find((f) => f.leadId === l.id) || null };
@@ -87,7 +98,7 @@ export default async function HomePage({ searchParams }: { searchParams: { dept?
   const staleDays = staleLib ? Math.floor((now.getTime() - staleLib.updatedAt.getTime()) / 86400000) : null;
   return (
     <Shell roleLabel="Home" userName={user.name} navLinks={navForRole(user.role)}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Needs your attention</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><h1 style={{ fontSize: 22, marginBottom: 4 }}>Needs your attention</h1><HomeRefresh at={figs.at.toISOString()} /></div>
       <p style={{ color: "var(--slate)", fontSize: 13, marginBottom: 14 }}>What is late, waiting for you, or waiting on others, as of today. Green means nothing to do. For every program&apos;s risks in one table, open the <Link href="/risk">Risk Register</Link>.</p>
       <TodayPanel user={user as never} />
       {deptTabs.length > 1 && (

@@ -15,6 +15,12 @@ import {
 // short list of suitable icons; inside one group each card takes the first icon not used yet, so neighbours differ.
 const RULES: [RegExp, LucideIcon[]][] = [
   [/working-days/, [CalendarRange, CalendarClock]],
+  [/faculty-status/, [UserCog, Users]],
+  [/accreditation\/visit$/, [Gavel, Scale]],
+  [/accreditation\/letters/, [Inbox, FileText]],
+  [/accreditation-rules/, [Scale, ClipboardCheck]],
+  [/consortium\/network/, [Network, Route]],
+  [/network-scorecard/, [Star, Network]],
   [/responsibility/, [UserCheck, Gauge]],
   [/\/compliance/, [ShieldCheck, ListChecks]],
   [/national-review/, [Landmark, Stamp]],

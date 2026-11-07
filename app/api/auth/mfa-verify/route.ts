@@ -40,6 +40,7 @@ async function POST_handler(req: NextRequest) {
   await markSessionMfaVerified();
   await writeAuditLog({ actorUserId: user.id, action: "MFA_VERIFY_SUCCESS" });
 
-  return NextResponse.json({ ok: true });
+  // Item 23 (speed): the Institute Head goes straight to their home page, without the /dashboard hop.
+  return NextResponse.json({ ok: true, href: user.role === "CHAIRMAN" ? "/home" : "/dashboard" });
 }
 export const POST = withErrors(POST_handler);

@@ -40,6 +40,7 @@ export async function monthlySummary() {
   for (const h of heads) {
     const r = await responsibility(h.id, from, to).catch(() => []); if (!r.length) continue;
     const late = r.filter((x) => x.overdue || x.late);
+    await scheduledReports(h.id).catch(() => 0);
     await notifyUsers([h.id], { kind: "INFO", title: `Last month: ${r.length - late.length} of ${r.length} people on time`, body: late.slice(0, 5).map((x) => `${x.name}: ${x.overdue} overdue, ${x.late} late`).join("; "), href: "/responsibility" }).catch(() => null); n++;
   }
   return n;
@@ -129,3 +130,21 @@ export async function logReport(chairmanId: string, kind: string, byId: string) 
   return r.href;
 }
 export async function reportLog(chairmanId: string) { return ((await db.reportVersion?.findMany({ where: { chairmanId }, orderBy: { at: "desc" }, take: 60 }).catch(() => [])) || []) as { kind: string; title: string; byId: string | null; at: Date }[]; }
+
+// ---- Scheduled reports (item 20): the reports an institute ticks are refreshed into the log on the 1st of each month
+// and the Institute Head gets one notice with the links (each opens with the month's live figures and its PDF button).
+export async function reportSchedule(chairmanId: string): Promise<string[]> {
+  const { allStored } = await import("./scopedSettings");
+  const r = (await allStored(chairmanId)).find((x) => x.scopeType === "INSTITUTE" && x.key === "reports.schedule");
+  try { return r ? (JSON.parse(r.value) as string[]).filter((k) => REPORTS.some((x) => x.kind === k)) : []; } catch { return []; }
+}
+export async function saveReportSchedule(chairmanId: string, kinds: string[], byId: string) {
+  const { saveSetting } = await import("./scopedSettings");
+  await saveSetting(chairmanId, "INSTITUTE", chairmanId, "reports.schedule", JSON.stringify(kinds.filter((k) => REPORTS.some((x) => x.kind === k))), byId);
+}
+export async function scheduledReports(chairmanId: string) {
+  const kinds = await reportSchedule(chairmanId); if (!kinds.length) return 0;
+  for (const k of kinds) { const r = REPORTS.find((x) => x.kind === k)!; await db.reportVersion?.create({ data: { id: randomUUID(), chairmanId, kind: k, title: `${r.title} (monthly)`, byId: chairmanId } }).catch(() => null); }
+  await notifyUsers([chairmanId], { kind: "INFO", title: `This month's reports are ready (${kinds.length})`, body: kinds.map((k) => REPORTS.find((x) => x.kind === k)!.title).join(" · "), href: "/reports-center" }).catch(() => null);
+  return kinds.length;
+}

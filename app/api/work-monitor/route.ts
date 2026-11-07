@@ -23,6 +23,7 @@ async function POST_handler(req: NextRequest) {
     if (!LEADERS.includes(user.role)) return NextResponse.json({ error: "Not for your role." }, { status: 403 });
     if (b.action === "labneed") { await M.saveLabNeed(cid, { courseId: String(b.courseId), category: String(b.category || ""), perStudents: Number(b.perStudents) || 1, labId: b.labId || null, note: b.note || null }); return NextResponse.json({ ok: true }); }
     if (b.action === "seed") return NextResponse.json({ ok: true, n: await M.seedCompliance(cid, String(b.body || "")) });
+    if (b.action === "schedule") { if (user.role !== "CHAIRMAN") return NextResponse.json({ error: "The Institute Head sets the schedule." }, { status: 403 }); await M.saveReportSchedule(cid, Array.isArray(b.kinds) ? b.kinds.map(String) : [], user.id); return NextResponse.json({ ok: true }); }
     if (b.action === "compliance") { await M.saveCompliance(cid, b.item || {}); return NextResponse.json({ ok: true }); }
   } catch (e) { const m = (e as Error).message || ""; return NextResponse.json({ error: /adviserNote|labCourseNeed|complianceItem|does not exist/.test(m) ? M.MON_HINT : m }, { status: 400 }); }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });

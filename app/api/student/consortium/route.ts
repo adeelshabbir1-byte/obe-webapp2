@@ -18,6 +18,10 @@ async function POST_handler(req: NextRequest) {
     if (b.action === "withdraw") return NextResponse.json({ ok: true, message: await withdraw(st.id, str(b.id, 60)) });
     if (b.action === "centre") return NextResponse.json({ ok: true, message: await changeCentre(st.id, str(b.id, 60), str(b.centreId, 60)) });
     if (b.action === "plan") return NextResponse.json({ ok: true, message: await choose(st.id, str(b.courseId, 60), str(b.chairmanId, 60)) });
+    // Item 21: the network degree planner.
+    if (b.action === "netplan") return NextResponse.json({ ok: true, message: await (await import("../../../../lib/networkDegrees")).choose(st.id, str(b.courseId, 60), str(b.offeringId, 60) || null) });
+    if (b.action === "consent") { await (await import("../../../../lib/networkDegrees")).giveConsent(st.id, b.yes === true || b.yes === "true" || b.yes === "on"); return NextResponse.json({ ok: true, message: "Saved ✓" }); }
+    if (b.action === "city") return NextResponse.json({ ok: true, message: await (await import("../../../../lib/networkDegrees")).setCity(st.id, str(b.city, 60)) });
     if (b.action === "pay") return NextResponse.json({ ok: true, message: await claimPayment(st.id, str(b.id, 60), str(b.ref, 120)) });
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) {

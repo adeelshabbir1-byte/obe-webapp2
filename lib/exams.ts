@@ -162,11 +162,12 @@ export async function allocate(sessionId: string) {
   const prefs = new Map(people.map((u) => { const o = opts.get(u) || {}; const p = old.get(u); return [u, { ...o, slots: p ? Array.from(p.slots) : [], perDay: o.perDay || p?.maxPerDay || 2 }] as const; }));
   const dutySlots = slotRooms.map((x) => { const [date, sl] = x.key.split(":"); return {
     key: x.key, date, slot: Number(sl), slotsInDay: slotTimes.length, reserves: ex.reservePerRooms ? Math.ceil(x.rooms.length / ex.reservePerRooms) : 0,
-    rooms: [...x.rooms.map((r) => ({ roomId: r.roomId, need: D.neededFor(r.students, ex.perStudents || 0, s.invigilatorsPerRoom), teachers: r.instructorIds })), ...(ex.superintendent && x.rooms.length ? [{ roomId: "SUPERINTENDENT", need: 1, teachers: [] as string[] }] : [])],
+    rooms: [...x.rooms.map((r) => { const rx = ex.rooms?.[r.roomId] || (ex.extraRooms || []).find((e) => e.id === r.roomId); return { roomId: r.roomId, need: D.neededFor(r.students, ex.perStudents || 0, s.invigilatorsPerRoom), teachers: r.instructorIds, female: !!rx?.female, building: rx?.building || undefined }; }), ...(ex.superintendent && x.rooms.length ? [{ roomId: "SUPERINTENDENT", need: 1, teachers: [] as string[] }] : [])],
   }; });
   const total = dutySlots.reduce((a, x) => a + x.rooms.reduce((b, r) => b + r.need, 0) + x.reserves, 0);
   const quota = D.quotas(total, people, new Map(Object.entries(ex.reduced || {}).map(([u, v]) => [u, v.quota])));
-  const res = D.assignDuties(dutySlots, people, { prefs, quota, history, blocked: (u, key) => {
+  const women = new Set<string>((await prisma.facultyProfile.findMany({ where: { userId: { in: people.concat("none") }, gender: { in: ["F", "Female", "FEMALE", "female"] } }, select: { userId: true } })).map((x) => x.userId as string));
+  const res = D.assignDuties(dutySlots, people, { prefs, quota, history, female: women, blocked: (u, key) => {
     const [date, sl] = key.split(":");
     if (awayOn(key).has(u)) return "approved leave";
     if (ex.official?.[u]?.dates.includes(date)) return "official work";
