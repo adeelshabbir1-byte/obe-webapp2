@@ -11,7 +11,7 @@ const db = prisma as unknown as Record<string, any>;
 export const PG_HINT = "Run prisma/migration_adeel_p13.sql (System Health → database updates) first.";
 export type Spec = { total: number; minutes: number; cloShares: Record<string, number>; bloom?: Record<string, number>; difficulty?: Record<string, number>; versions?: number };
 export type Setting = { id: string; chairmanId: string; courseCode: string; examType: string; specJson: string; status: string; proposedById: string | null; plById: string | null; plAt: Date | null; omcById: string | null; omcAt: Date | null; updatedAt: Date };
-export type Gen = { id: string; settingId: string; courseCode: string; examType: string; version: number; itemIdsJson: string; checkCode: string; status: string; reviewById: string | null; reviewAt: Date | null; swapsJson: string; errorNote: string | null; generatedById: string; at: Date };
+export type Gen = { id: string; chairmanId: string; settingId: string; courseCode: string; examType: string; version: number; itemIdsJson: string; checkCode: string; status: string; reviewById: string | null; reviewAt: Date | null; swapsJson: string; errorNote: string | null; generatedById: string; at: Date };
 type U = { id: string; role: string; name: string; managedById?: string | null };
 const J = <T>(s: string | null | undefined, d: T): T => { try { return s ? (JSON.parse(s) as T) : d; } catch { return d; } };
 export const POLICIES = { A: "The course instructor reviews it before printing", B: "The HOD or a subject expert not teaching the course this term reviews it", C: "Sealed: no teacher sees it before the exam" } as const;
