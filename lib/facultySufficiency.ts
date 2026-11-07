@@ -16,7 +16,10 @@ export const RULE_LABELS: [keyof Rules, string][] = [["studentsPerFte", "Most st
 
 export async function rulesFor(chairmanId: string): Promise<Rules> {
   const r = await rdb.facultySufficiencyRule.findUnique({ where: { chairmanId } }).catch(() => null);
-  return { ...DEFAULT_RULES, ...parseJ<Partial<Rules>>(r?.rulesJson, {}) };
+  const own = parseJ<Partial<Rules>>(r?.rulesJson, {});
+  // Item 23: the full load defaults to the institute's own figure (Faculty status page) unless set here.
+  const full = own.fullLoad ?? (await import("./facultyStatus").then((m) => m.fullLoad(chairmanId)).catch(() => DEFAULT_RULES.fullLoad));
+  return { ...DEFAULT_RULES, ...own, fullLoad: full };
 }
 
 type Rec = { userId: string; kind: string; title: string; category: string | null; startYear: number | null; startMonth: number | null; endYear: number | null; endMonth: number | null };
@@ -52,10 +55,14 @@ export async function sufficiency(chairmanId: string, program: string) {
     rdb.facultyQualification.findMany({ where: { userId: { in: ids.concat(["none"]) } } }).catch(() => []) as Promise<{ userId: string; status: Status; note: string | null }[]>,
     prisma.course.groupBy({ by: ["instructorId"], where: { instructorId: { in: ids.concat(["none"]) }, isOffered: true, isNonCredit: false }, _sum: { creditHours: true } }),
   ]);
+  const fstat = ((await import("./facultyStatus").then((m) => m.storedStatus(ids)).catch(() => null)) || []) as { userId: string; aqpq: string | null }[];
   const teachers = ids.map((id) => {
     const p = profiles.find((x) => x.userId === id);
     const c = classify(recs.filter((r) => r.userId === id), rules);
-    const o = overrides.find((x) => x.userId === id);
+    const o0 = overrides.find((x) => x.userId === id);
+    // Item 23: AQ / PQ set on the Faculty status page counts as the reviewer's classification.
+    const fs = fstat.find((x) => x.userId === id);
+    const o = o0 || (fs?.aqpq ? { userId: id, status: fs.aqpq as Status, note: "set on Faculty status" } : undefined);
     const fullTime = !/visit|part|adjunct/i.test(p?.employmentType || "");
     const loadAll = allLoads.find((l) => l.instructorId === id)?._sum.creditHours || 0;
     const inProgram = courses.filter((k) => k.instructorId === id).reduce((t, k) => t + k.creditHours, 0);

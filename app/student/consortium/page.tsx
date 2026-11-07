@@ -45,6 +45,7 @@ export default async function StudentConsortium() {
   const uni = (id: string) => heads.find((h) => h.id === id)?.instituteName || heads.find((h) => h.id === id)?.name || "—";
   return shell(<>
     <h1 style={{ fontSize: 22, marginBottom: 4 }}>Consortium courses</h1>
+    <p style={{ margin: "0 0 8px" }}><Link href="/student/network" className="btn btn-secondary btn-sm">Plan my degree across universities →</Link></p>
     <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 0 }}>Take a course at another member university — on its campus or online. The host decides on admission and you pay its fee; your own university decides whether the course counts toward your degree. The final exam is proctored at the centre you choose. <Link href="/catalog">Full catalog</Link></p>
 
     {reveal.map((a) => <div key={a.id} className="card" style={{ borderLeft: "4px solid #2E7D32" }}><b>Your sign-in at {uni(a.hostChairmanId)}</b> — shown only once, write it down: roll number <b style={{ fontFamily: "ui-monospace, Consolas, monospace" }}>{a.hostLogin}</b>, first password <b style={{ fontFamily: "ui-monospace, Consolas, monospace" }}>{a.tempSecret}</b>. Sign out and sign in with these to see the course, attendance and marks there; you will choose your own password. Lost it? Ask the host&apos;s Program Coordinator to reset it.</div>)}

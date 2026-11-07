@@ -105,6 +105,13 @@ export async function buildSlots(user: { id: string; managedById: string | null 
   // Already teaching in another department's own timetable -> not free here.
   const elsewhere = await busyElsewhere(chairmanId || "", scope.key, teacherIds);
   const unavailability: { facultyId: string; dayOfWeek: string; startHour: number; endHour: number; batchIds?: string[] }[] = [...unavailabilityRaw, ...elsewhere].map((u) => ({ facultyId: u.facultyId, dayOfWeek: u.dayOfWeek, startHour: u.startHour, endHour: u.endHour }));
+  // Item 22: a teacher with their own working days (set by HR, e.g. Friday–Sunday for weekend classes) is not given
+  // classes on the days they do not work.
+  {
+    const { getFlag } = await import("./scopedSettings"); const { parseDays } = await import("./workDaysCore");
+    const DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    for (const id of teacherIds) { const f = await getFlag(id, "work.days").catch(() => null); if (!f) continue; const days = parseDays(f); for (let d = 0; d < 7; d++) if (!days.includes(d)) unavailability.push({ facultyId: id, dayOfWeek: DN[d], startHour: 0, endHour: 24 }); }
+  }
   // Jummah break: nobody is scheduled to teach during it, so no class (of any batch) can fall in that hour.
   for (const instructorId of new Set(slots.map((sl) => sl.instructorId).filter(Boolean))) {
     unavailability.push({ facultyId: instructorId, dayOfWeek: JUMMAH_BREAK.day, startHour: JUMMAH_BREAK.startHour, endHour: JUMMAH_BREAK.endHour });

@@ -336,7 +336,9 @@ async function facilities(l: SourceLoader): Promise<SourceResult> {
   for (const r of rooms) { const t = types.get(r.roomType) || { n: 0, seats: 0, mm: 0 }; t.n++; t.seats += r.capacity || 0; if (r.multimedia) t.mm++; types.set(r.roomType, t); }
   return {
     key: "facilities", title: "Rooms", columns: ["Type", "Rooms", "Seats", "With multimedia"], rows: Array.from(types.entries()).map(([k, t]) => [k, t.n, t.seats, t.mm]),
-    checks: [chk("Rooms recorded by the Facilities Manager", Math.min(rooms.length, 1), 1, "Ask the Facilities Manager to enter the rooms.", "/facilities")], gaps: [],
+    checks: [chk("Rooms recorded by the Facilities Manager", Math.min(rooms.length, 1), 1, "Ask the Facilities Manager to enter the rooms.", "/facilities"),
+      // Item 20: lab courses with enough working equipment for their students (from Lab needs and the asset register).
+      ...(await (async () => { const n = await (await import("../workMonitor")).labNeeds(l.ctx.chairmanId).catch(() => null); return n && n.length ? [chk("Lab courses with enough working equipment", n.filter((x) => !x.short).length, n.length, `Short: ${n.filter((x) => x.short).map((x) => `${x.course} (${x.short} ${x.category})`).slice(0, 4).join("; ")}`, "/lab-needs")] : []; })())], gaps: [],
   };
 }
 

@@ -47,6 +47,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string; i?: stri
 "t": "ReportVersion"
 },
 {
+"f": "migration_adeel_p14.sql",
+"d": "Queue items 21 and 23 (7 Nov 2026): faculty status (degree, designation, NCEAC class), accreditation requirement",
+"t": "NetRecord"
+},
+{
 "f": "migration_adeel_p4.sql",
 "d": "Adeel prompt part 4: one delegation engine (chosen tasks / approvals / acting, with scope, period and \"may pass on\"),",
 "t": "ArchiveAmendment"

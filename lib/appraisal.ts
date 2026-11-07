@@ -131,6 +131,17 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
     const adj = n ? Math.round((100 * fbs.reduce((a, f) => a + (f.adjusted as number) * f.n, 0)) / n) / 100 : null;
     indicators.push({ key: "feedback", label: "Student feedback (adjusted for batch strictness)", value: adj !== null ? `${adj}/5 (${n} answers)` : "too few answers", score: adj !== null ? Math.round((adj / 5) * 100) : null });
   }
+  // Item 18: questions the teacher added to course banks this year, and how many passed review (rejected ones do not count).
+  {
+    const from = new Date(Date.UTC(year, 0, 1)), to = new Date(Date.UTC(year + 1, 0, 1));
+    const mineQ = (await (prisma as unknown as Record<string, any>).questionBankItem.findMany({ where: { createdById: userId, createdAt: { gte: from, lt: to } }, select: { id: true } }).catch(() => [])) as { id: string }[];
+    if (mineQ.length) {
+      const ex = (await (prisma as unknown as Record<string, any>).qbExt.findMany({ where: { itemId: { in: mineQ.map((q) => q.id) } }, select: { itemId: true, status: true } }).catch(() => [])) as { itemId: string; status: string }[];
+      const st = new Map(ex.map((e) => [e.itemId, e.status]));
+      const ok = mineQ.filter((q) => (st.get(q.id) || "APPROVED") === "APPROVED").length;
+      indicators.push({ key: "qbank", label: "Questions added to course banks (passed review)", value: `${ok} of ${mineQ.length}`, score: pct(ok, mineQ.length) });
+    } else indicators.push({ key: "qbank", label: "Questions added to course banks (passed review)", value: "none this year", score: null });
+  }
   const scored = indicators.filter((i) => i.score !== null) as { score: number }[];
   return {
     teacher: { id: userId, name: user?.name || "—", department: user?.department_?.name || null }, year,

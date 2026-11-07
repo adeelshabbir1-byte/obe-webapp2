@@ -10857,3 +10857,66 @@ model ReportVersion {
   at         DateTime @default(now())
   @@index([chairmanId], map: "ReportVersion_chairman_idx")
 }
+
+// Queue item 23: each person's highest degree, designation, employment and accreditation class (editable).
+model FacultyStatus {
+  userId      String   @id
+  degree      String?  // PHD | MS | BS | OTHER
+  designation String?
+  employment  String?  // PERMANENT | CONTRACT | VISITING | LAB_ENGINEER
+  facultyClass String? // NCEAC: DEDICATED | SHARED | VISITING | DEMONSTRATOR (blank = worked out)
+  aqpq        String?  // NBEAC: AQ | PQ | OTHER (blank = worked out)
+  note        String?
+  byId        String?
+  updatedAt   DateTime @default(now())
+}
+// Requirement figures per accreditation body, kept by the Super Admin team; each applies from a term onwards.
+model AccreditationRuleVersion {
+  id        String   @id
+  body      String
+  label     String
+  fromTerm  String
+  fromYear  Int
+  rulesJson String
+  status    String   @default("ACTIVE")
+  note      String?
+  byId      String
+  at        DateTime @default(now())
+
+  @@index([body])
+}
+// Letters and documents exchanged with NCEAC, HEC, NBEAC and others.
+model AccreditationLetter {
+  id          String    @id
+  chairmanId  String
+  program     String?
+  cycleId     String?
+  counterpart String
+  direction   String    // IN | OUT
+  kind        String
+  refNo       String?
+  letterDate  DateTime?
+  subject     String
+  fileUrl     String?
+  fileName    String?
+  byId        String
+  at          DateTime  @default(now())
+
+  @@index([chairmanId])
+}
+// Queue item 21: network-degree records (forward plans, rotations, study centres, complaints, settlements, consent,
+// quality reviews, network question-bank reviews) in one table.
+model NetRecord {
+  id         String   @id
+  kind       String
+  chairmanId String
+  refId      String?
+  status     String   @default("OPEN")
+  json       String   @default("{}")
+  byId       String
+  at         DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  @@index([kind, chairmanId])
+  @@index([kind, refId])
+}

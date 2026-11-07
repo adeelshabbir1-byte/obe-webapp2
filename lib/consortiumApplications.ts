@@ -35,6 +35,8 @@ export async function apply(studentId: string, offeringId: string, f: { wantsCre
   if (!o.open) throw new Error("Applications for this course have closed.");
   if (!o.seatsLeft) throw new Error("The course is full.");
   if (await cdb.consortiumApplication.findFirst({ where: { offeringId, studentId } })) throw new Error("You have already applied for this course.");
+  // Item 21: the student's consent to share records, when the consortium rules ask for it.
+  if ((await rulesOn()).rules.consentRequired && !(await import("./networkDegrees").then((m) => m.hasConsent(studentId)).catch(() => true))) throw new Error("First give your consent to share your records (Network degree planner).");
   const usable = await usableCentres(home, (await cdb.consortiumOffering.findUnique({ where: { id: offeringId } })) as Offering);
   if (!usable.length) throw new Error("None of this course's exam centres is approved by your university yet — ask your Chairman to approve one (Consortium page).");
   if (!usable.some((c) => c.id === f.examCentreId)) throw new Error("Choose an exam centre both universities approve.");
@@ -84,6 +86,9 @@ export async function hostDecide(user: { id: string; role: string }, appId: stri
   if (!o) throw new Error("The listing is gone.");
   const taken = (await cdb.consortiumApplication.count({ where: { offeringId: o.id, status: "ACCEPTED" } })) as number;
   if (taken >= o.seats) throw new Error("All consortium seats are taken.");
+  // Item 21: fair seat shares — one home university takes at most its share of an offering's seats.
+  { const pct = Number((await rulesOn()).rules.maxSeatSharePct ?? 100); const fromHome = (await cdb.consortiumApplication.count({ where: { offeringId: o.id, status: "ACCEPTED", homeChairmanId: a.homeChairmanId } })) as number;
+    if (pct < 100 && fromHome + 1 > Math.max(1, Math.floor((o.seats * pct) / 100))) throw new Error(`That university already has its share (${pct}%) of this course's seats.`); }
   const course = await prisma.course.findUnique({ where: { id: o.courseId }, select: { id: true, coordinatorId: true } });
   const st = await prisma.student.findUnique({ where: { id: a.studentId }, select: { name: true, rollNumber: true } });
   if (!course || !st) throw new Error("Course or student not found.");

@@ -40,6 +40,12 @@ export const RULES: RuleDef[] = [
   { key: "maxVisitingSections", label: "Visiting faculty: sections at other universities per semester, at most", group: "Visiting faculty", type: "number", def: 2, unit: "sections", source: PF, stricter: "lower" },
   { key: "industryApplicants", label: "Industry experts (sponsored accounts) may be created and apply", group: "Identity", type: "bool", def: false, source: PF, stricter: null },
   { key: "sponsoredDays", label: "Sponsored account valid for", group: "Identity", type: "number", def: 365, unit: "days", source: PF, stricter: "lower" },
+  { key: "maxOutsidePct", label: "Network degree: credits taken at other members, at most", group: "Network degree", type: "number", def: 50, unit: "% of the degree", source: PF, stricter: "lower" },
+  { key: "maxSeatSharePct", label: "Seats of one offering going to one home university, at most", group: "Network degree", type: "number", def: 50, unit: "% of the seats", source: PF, stricter: "lower" },
+  { key: "minQuestionsPerMember", label: "Network question bank: new questions per member per shared course each term, at least", group: "Network degree", type: "number", def: 20, unit: "questions", source: PF, stricter: "higher" },
+  { key: "consentRequired", label: "Student's consent to share records before applying elsewhere", group: "Network degree", type: "bool", def: true, source: PF, stricter: "true" },
+  { key: "leaveNoticeMonths", label: "Leaving the consortium: notice at least", group: "Network degree", type: "number", def: 6, unit: "months", source: PF, stricter: "higher" },
+  { key: "settlementDays", label: "Fees between members settled within", group: "Network degree", type: "number", def: 30, unit: "days after the term", source: PF, stricter: "lower" },
   { key: "sponsorCap", label: "Active sponsored accounts per university, at most", group: "Identity", type: "number", def: 10, unit: "accounts", source: PF, stricter: "lower" },
 ];
 export type Rules = Record<string, number | boolean>;

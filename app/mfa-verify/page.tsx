@@ -6,7 +6,7 @@ import { BRAND } from "../../lib/brandAssets";
 export default async function MfaVerifyPage() {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
-  if (user.mfaVerified) redirect("/dashboard");
+  if (user.mfaVerified) redirect(user.role === "CHAIRMAN" ? "/home" : "/dashboard");
 
   return (
     <div className="login-wrap">

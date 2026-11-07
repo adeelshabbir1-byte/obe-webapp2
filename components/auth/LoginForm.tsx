@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { User, Lock, ArrowRight } from "lucide-react";
 import AuthInput from "./AuthInput";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,8 +35,11 @@ export default function LoginForm() {
         setLoading(false);
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      // Item 23 (speed): one full page load straight to the right page — MFA first if it is on, the Institute Head's
+      // home page, else the dashboard (push + refresh rendered /dashboard twice and then redirected).
+      const data = await res.json().catch(() => ({}));
+      const u = data?.user || {};
+      window.location.assign(u.mfaEnabled ? "/mfa-verify" : u.mustChangePassword ? "/change-password" : u.role === "CHAIRMAN" ? "/home" : "/dashboard");
     } catch (err: any) {
       setError("Unexpected error: " + err.message);
       setLoading(false);

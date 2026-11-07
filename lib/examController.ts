@@ -168,11 +168,29 @@ export async function admitCards(sessionId: string, studentIds: string[]) {
   ]);
   const cname = new Map(courses.map((c) => [c.id, c]));
   const rname = new Map(rooms.map((r) => [r.id, r.name]));
+  // Item 17: the seat on the card — the same order the room sheet uses (papers interleaved), with row-seat when the
+  // Controller set the room's layout.
+  const { seatOrder } = await import("./examPlanner"); const { seatLabel } = await import("./examDutiesCore"); const { extraOf } = await import("./examsExtra");
+  const ex = await extraOf(sessionId).catch(() => ({} as Awaited<ReturnType<typeof extraOf>>));
+  for (const r of ex.extraRooms || []) rname.set(r.id, r.name);
+  const colsOf = (id: string) => ex.rooms?.[id]?.cols || (ex.extraRooms || []).find((x) => x.id === id)?.cols || 0;
+  const rollOf = new Map<string, string>();
+  const seatCache = new Map<string, Map<string, number>>();
+  const seatIn = (p: (typeof papers)[number], roomId: string, sid: string) => {
+    const k = `${p.date ? new Date(p.date).toISOString().slice(0, 10) : ""}:${p.slot}:${roomId}`;
+    if (!seatCache.has(k)) {
+      const all = papers.filter((x) => String(x.date) === String(p.date) && x.slot === p.slot).flatMap((x) => { try { return (JSON.parse(x.roomsJson) as { roomId: string; studentIds: string[] }[]).filter((r) => r.roomId === roomId).flatMap((r) => r.studentIds.map((id) => ({ studentId: id, courseId: x.courseId, roll: rollOf.get(id) || id }))); } catch { return []; } });
+      seatCache.set(k, new Map(seatOrder(all).map((x) => [x.studentId, x.seat])));
+    }
+    return seatCache.get(k)!.get(sid) || 0;
+  };
+  const everyone = Array.from(new Set(papers.flatMap((x) => { try { return (JSON.parse(x.roomsJson) as { studentIds: string[] }[]).flatMap((r) => r.studentIds); } catch { return []; } })));
+  for (const st of await prisma.student.findMany({ where: { id: { in: everyone.concat("none") } }, select: { id: true, rollNumber: true } })) rollOf.set(st.id, st.rollNumber);
   return { session: s, cards: studs.map((st) => ({
     student: st,
     papers: en.filter((e) => e.studentId === st.id).map((e) => {
       const p = papers.find((x) => x.courseId === e.courseId)!;
-      let room = ""; try { const r = (JSON.parse(p.roomsJson) as { roomId: string; studentIds: string[] }[]).find((x) => x.studentIds.includes(st.id)); room = r ? rname.get(r.roomId) || "" : ""; } catch { /* none */ }
+      let room = ""; try { const r = (JSON.parse(p.roomsJson) as { roomId: string; studentIds: string[] }[]).find((x) => x.studentIds.includes(st.id)); if (r) { const n = seatIn(p, r.roomId, st.id); const c = colsOf(r.roomId); room = `${rname.get(r.roomId) || ""}${n ? ` · seat ${n}${c ? ` (${seatLabel(n - 1, c)})` : ""}` : ""}`; } } catch { /* none */ }
       return { code: cname.get(e.courseId)?.code || "", title: cname.get(e.courseId)?.title || "", date: p.date, slot: SLOT(s.slotsJson, p.slot), room, debarred: deb.some((d) => d.studentId === st.id && d.courseId === e.courseId) };
     }).sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0)),
   })) };

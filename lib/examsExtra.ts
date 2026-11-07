@@ -9,7 +9,7 @@ import { layoutSeats, type Layout, type Pref } from "./examDutiesCore";
 const db = prisma as unknown as Record<string, any>;
 export const EXTRA_HINT = "Run prisma/migration_adeel_p13.sql (System Health → database updates) first.";
 export type Extra = {
-  rooms?: Record<string, { use?: boolean } & Partial<Layout>>; extraRooms?: ({ id: string; name: string } & Layout)[];
+  rooms?: Record<string, { use?: boolean; female?: boolean; building?: string } & Partial<Layout>>; extraRooms?: ({ id: string; name: string; female?: boolean; building?: string } & Layout)[];
   durations?: { Midterm?: number; Final?: number; other?: number; courses?: Record<string, number> };
   allowCoreCore?: boolean; perStudents?: number; reservePerRooms?: number; superintendent?: boolean;
   reduced?: Record<string, { quota: number; reason: string }>; official?: Record<string, { dates: string[]; reason: string }>;
