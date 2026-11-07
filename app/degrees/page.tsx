@@ -47,7 +47,8 @@ export default async function DegreesPage({ searchParams }: { searchParams: { ta
     const sel = batches.find((b) => b.id === searchParams.batch)?.id;
     const st = (await candidates(w.chairmanId, sel)).filter((s) => !w.lead || batches.some((b) => b.degreeProgram === s.batch.degreeProgram && b.batchName === s.batch.batchName));
     const cls = ready ? new Map(((await rdb.degreeClearance.findMany({ where: { studentId: { in: st.map((s) => s.id).concat(["none"]) } } })) as Clearance[]).map((c) => [c.studentId, c])) : new Map<string, Clearance>();
-    const audits = await Promise.all(st.slice(0, 120).map(async (s) => [s.id, (await degreeAudit(s.id).catch(() => null))?.eligible ?? false] as const));
+    const audits: (readonly [string, boolean])[] = [];
+    for (let i = 0; i < st.length; i += 20) audits.push(...await Promise.all(st.slice(i, i + 20).map(async (s) => [s.id, (await degreeAudit(s.id).catch(() => null))?.eligible ?? false] as const)));
     const aud = new Map(audits);
     const issued = new Set(issues.filter((i) => !i.cancelledAt && i.studentId).map((i) => i.studentId));
     return shell(<>

@@ -69,6 +69,7 @@ async function POST_handler(req: Request) {
       const id = randomUUID();
       await rdb.degreeIssue.create({ data: { id, chairmanId: w.chairmanId, studentId: st.id, rollNumber: st.rollNumber, studentName: st.name, fatherName: father, program: st.batch.degreeProgram, degreeTitle: str(b.degreeTitle, 160) || st.batch.degreeProgram, cgpa: cgpa === null ? null : Math.round(cgpa * 100) / 100, serialNo, issuedAt, convocationId: str(b.convocationId, 60) || null, issuedById: w.id } });
       await writeAuditLog({ actorUserId: w.id, action: "DEGREE_ISSUED", entityType: "DegreeIssue", entityId: id, metadata: { serialNo } });
+      await (await import("../../../lib/degreeAuditOps")).snapshotAtIssue(w.chairmanId, st.id, id, { id: w.id, name: (user as { name: string }).name });
       return NextResponse.json({ ok: true, serialNo });
     }
     if (b.action === "legacy") {

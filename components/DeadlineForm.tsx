@@ -10,7 +10,7 @@ const input = { padding: "6px 8px", border: "1px solid var(--line)" } as const;
 
 export default function DeadlineForm({ people, courses, roles }: { people: Person[]; courses: CourseOpt[]; roles: { value: string; label: string }[] }) {
   const router = useRouter();
-  const [f, setF] = useState({ mode: "role", assigneeId: people[0]?.id || "", role: roles[0]?.value || "", kind: "CUSTOM", title: "", description: "", courseId: "", dueDate: "" });
+  const [f, setF] = useState({ mode: "role", assigneeId: people[0]?.id || "", role: roles[0]?.value || "", kind: "CUSTOM", title: "", description: "", courseId: "", dueDate: "", fixedDate: false });
   const [msg, setMsg] = useState(""); const [ok, setOk] = useState(false);
   const isCourse = COURSE_KINDS.includes(f.kind);
   const impliedRole = KIND_ROLE[f.kind];
@@ -40,6 +40,7 @@ export default function DeadlineForm({ people, courses, roles }: { people: Perso
         )}
         <label style={{ fontSize: 12 }}>Title<br /><input style={{ ...input, width: 230 }} value={f.title} placeholder="What must be done" onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
         <label style={{ fontSize: 12 }}>Due date<br /><input style={input} type="date" value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} /></label>
+        <label style={{ fontSize: 12 }} title="Exam days, result dates, HEC / council dates: not moved for anyone's off day"><input type="checkbox" checked={f.fixedDate} onChange={(e) => setF({ ...f, fixedDate: e.target.checked })} /> Fixed date</label>
         <button className="btn" onClick={add}>Set deadline</button>
         <span style={{ fontSize: 12.5, color: ok ? "var(--sage)" : "#b3261e" }}>{msg}</span>
       </div>

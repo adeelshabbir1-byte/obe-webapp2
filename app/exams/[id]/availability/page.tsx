@@ -9,6 +9,7 @@ import { loadSession, sessionDays, parse, invigilatorPool } from "../../../../li
 import { ebdb, examChairman } from "../../../../lib/examBranch";
 import { ActionButton } from "../../../../components/fyp/FypClient";
 import DutyPrefGrid from "../../../../components/DutyPrefGrid";
+import DutyOptsForm from "../../../../components/DutyOptsForm";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,21 @@ export default async function AvailabilityPage({ params }: { params: { id: strin
   const days = (await sessionDays(s)).map((d) => ({ key: d.toISOString().slice(0, 10), label: d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }) }));
   const slots = parse<string[]>(s.slotsJson, []);
   const canTeach = pool.some((p) => p.id === user.id);
+  // Item 17: the person's own day / time preferences and their expected number of duties.
+  const X = await import("../../../../lib/examsExtra");
+  const myOpts = (await X.optsOf(s.id)).get(user.id) || {};
+  const ex = await X.extraOf(s.id);
+  const papersN = await ebdb.examPaper.findMany({ where: { sessionId: s.id }, select: { invigilatorsJson: true } }).catch(() => []) as { invigilatorsJson: string }[];
+  const totalDuties = papersN.reduce((a, p) => a + parse<{ userIds: string[] }[]>(p.invigilatorsJson, []).reduce((b, r) => b + Math.max(1, r.userIds.length), 0), 0) || days.length * slots.length * 3;
+  const { quotas } = await import("../../../../lib/examDutiesCore");
+  const myQuota = quotas(totalDuties, (listed.length ? listed.map((l) => l.userId) : pool.map((p) => p.id)), new Map(Object.entries(ex.reduced || {}).map(([u, v]) => [u, v.quota]))).get(user.id) ?? 0;
   const names = new Map(pool.map((p) => [p.id, p.name]));
   return shell(<>
     <p className="small-note">1) Program Leads tick which of their staff are available for this session (if nobody lists anyone, all teaching staff are used). 2) Each teacher marks preferred slots and a daily limit. 3) The exam branch generates duties, which respect both.</p>
     {mine.length > 0 && <div className="card"><h3 style={{ marginTop: 0 }}>Your staff available for duties</h3>
       {mine.map((m) => <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "2px 0", fontSize: 13.5 }}><span style={{ minWidth: 220 }}>{m.name}</span>{inList.has(m.id) ? <ActionButton url={`/api/exams/${s.id}/availability`} body={{ action: "pool", userId: m.id, on: false }} label="Available ✓ (remove)" className="btn btn-secondary btn-sm" /> : <ActionButton url={`/api/exams/${s.id}/availability`} body={{ action: "pool", userId: m.id, on: true }} label="Mark available" />}</div>)}
       <div style={{ marginTop: 6 }}>{mine.filter((m) => !inList.has(m.id)).length > 0 && <span className="small-note">Tick each person, or ask the exam branch to add everyone.</span>}</div></div>}
+    {canTeach && <div className="card"><h3 style={{ marginTop: 0 }}>My duty days</h3><DutyOptsForm sessionId={s.id} days={days} slots={slots} initial={myOpts} quota={myQuota} /></div>}
     {canTeach && <div className="card"><h3 style={{ marginTop: 0 }}>My preferences</h3><DutyPrefGrid sessionId={s.id} days={days} slots={slots} initial={myPref ? parse<string[]>(myPref.slotsJson, []) : []} maxPerDay={myPref?.maxPerDay || 1} note={myPref?.note || ""} /></div>}
     {branch && <div className="card" style={{ overflowX: "auto" }}><h3 style={{ marginTop: 0 }}>Duty list ({listed.length ? `${listed.length} listed by Program Leads` : "nobody listed yet — all teaching staff will be used"})</h3>
       <table><thead><tr><th>Name</th><th>Listed</th><th>Preferred slots</th><th>Per day</th><th>Note</th><th /></tr></thead>

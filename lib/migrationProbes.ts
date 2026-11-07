@@ -42,6 +42,11 @@ export const MIGRATIONS: { f: string; d: string; t: string; c?: string; i?: stri
 "t": "DiscussionActivity"
 },
 {
+"f": "migration_adeel_p13.sql",
+"d": "Queue items 16-22 (7 Nov 2026): personal working days, degree audit snapshots, exam set-up / seating / duties,",
+"t": "ReportVersion"
+},
+{
 "f": "migration_adeel_p4.sql",
 "d": "Adeel prompt part 4: one delegation engine (chosen tasks / approvals / acting, with scope, period and \"may pass on\"),",
 "t": "ArchiveAmendment"

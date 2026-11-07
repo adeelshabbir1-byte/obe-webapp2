@@ -1,3 +1,4 @@
+import AdviserNotes from "./AdviserNotes";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import StudentPicker from "../../../../components/StudentPicker";
@@ -120,6 +121,7 @@ export default async function AdvisorStudentPage({ params, searchParams }: { par
         <div className="no-print" style={{ fontSize: 13, margin: "4px 0 8px" }}>View: {searchParams.view === "plo" ? <Link href={`${base}?tab=obe`}>GA matrix</Link> : <b>GA matrix</b>} · {searchParams.view === "plo" ? <b>GA list & degree audit</b> : <Link href={`${base}?tab=obe&view=plo`}>GA list & degree audit</Link>}</div>
         {searchParams.view === "plo" ? <TranscriptView studentId={s.id} tab={searchParams.t || "plo"} base={`${base}?tab=obe&view=plo`} param="t" staff /> : <GaMatrix studentId={s.id} base={base} ga={searchParams.ga ? Number(searchParams.ga) : null} />}
       </>}
+      <AdviserNotes studentId={s.id} />
     </Shell>
   );
 }

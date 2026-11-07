@@ -1,3 +1,5 @@
+import { dutyCode } from "../../../../lib/examDutiesCore";
+import { DutyDay } from "../../../../components/ExamSetup";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getAuthenticatedUser } from "../../../../lib/session";
@@ -51,6 +53,7 @@ export default async function MyDuties({ params, searchParams }: { params: { id:
     if (c?.instructorId === who) cells.set(k, [...(cells.get(k) || []), { title: `Your paper · ${c.code}`, sub: parse<{ roomId: string }[]>(p.roomsJson, []).map((r) => rooms.get(r.roomId)).join(", "), tone: "paper" }]);
   }
   const mode = await swapMode(s.id);
+  const xtra = await (await import("../../../../lib/examsExtra")).extraOf(s.id);
   const incoming = swaps.filter((x) => x.toUserId === user.id && x.status === "PEER");
   const queue = branch ? swaps.filter((x) => x.status === "BRANCH") : [];
   const mineReq = swaps.filter((x) => x.fromUserId === user.id).slice(0, 20);
@@ -59,6 +62,10 @@ export default async function MyDuties({ params, searchParams }: { params: { id:
     <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}><h1 style={{ fontSize: 21, margin: 0 }}>{who === user.id ? "My exam duties" : `Duties of ${names.get(who)}`} — {s.name}</h1><PrintButton label="Print" className="btn btn-secondary btn-sm no-print" /></div>
     {branch && <form className="no-print" style={{ margin: "6px 0" }}><select name="who" defaultValue={who}>{pool.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select> <button className="btn btn-secondary btn-sm">Show</button></form>}
     <div className="card"><ScheduleGrid corner="Date" rows={days} cols={slots.map((t, i) => ({ key: String(i), label: t }))} cells={cells} /></div>
+    {duties.length > 0 && <div className="card" style={{ overflowX: "auto" }}><h3 style={{ marginTop: 0 }}>Duty letter</h3>
+      <p className="small-note" style={{ marginTop: 0 }}>Report {xtra.reportMinutes || 30} minutes before the paper. On the day: check in, sign the chain of custody, and report any unfair means from here.</p>
+      <table className="table" style={{ fontSize: 12.5 }}><thead><tr><th>Code</th><th>Date</th><th>Time</th><th>Room</th><th>Paper</th><th className="no-print">On the day</th></tr></thead>
+        <tbody>{duties.sort((a, b) => a.key.localeCompare(b.key)).map((d, i) => { const di = days.findIndex((x) => x.key === day(d.paper.date!)); return <tr key={i}><td><b>{dutyCode(Math.max(0, di), d.paper.slot ?? 0)}</b></td><td>{days[di]?.label || day(d.paper.date!)}</td><td>{slots[d.paper.slot ?? 0]}</td><td>{rooms.get(d.roomId) || d.roomId}</td><td>{courses.get(d.paper.courseId)?.code}</td><td className="no-print">{who === user.id && <DutyDay sessionId={s.id} slotKey={d.key} roomId={d.roomId} />}</td></tr>; })}</tbody></table></div>}
     <div className="card no-print">
       <h3 style={{ marginTop: 0 }}>Change a duty</h3>
       <p className="small-note">{mode === "PEER" ? "Duties were published today: hand a duty directly to a free colleague; it changes as soon as they accept." : "Direct swaps were open only on the day duties were published. Now your request goes to the exam branch for approval."}</p>

@@ -37,7 +37,12 @@ export async function computeScorecard(userId: string, year: number, opts: { dee
   const courseDeadlines = roleCourseIds.length ? ((await prisma.deadline.findMany({ where: { courseId: { in: roleCourseIds }, allCourses: false, dueDate: { gte: from, lt: to } } as never, select: { dueDate: true, completedAt: true, courseId: true, role: true, kind: true } })) as unknown as { dueDate: Date; completedAt: Date | null; courseId: string; role: string | null; kind: string }[]) : [];
   const mineByRole = courseDeadlines.filter((d) => { const r = d.role || KIND_ROLE[d.kind]; return r === "INSTRUCTOR" ? ids.includes(d.courseId) : r === "SUBJECT_EXPERT" ? seCourses.some((c) => c.id === d.courseId) : false; });
   const dl: Record<"ON_TIME" | "LATE_DONE" | "OVERDUE" | "SOON" | "UPCOMING", number> = { ON_TIME: 0, LATE_DONE: 0, OVERDUE: 0, SOON: 0, UPCOMING: 0 };
-  for (const d of [...deadlinesNamed, ...mineByRole]) dl[statusOf(d)]++;
+  // Item 22: judged against the teacher's own working days, so nobody is late for a day they were not working.
+  const { calendarOf } = await import("./workCalendar"); const { moveDue } = await import("./workDaysCore");
+  const wu = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, managedById: true } });
+  const wcid = wu ? await (await import("./reportScope")).chairmanIdFor(wu as never).catch(() => null) : null;
+  const wcal = wcid ? await calendarOf(userId, wcid).catch(() => null) : null;
+  for (const d of [...deadlinesNamed, ...mineByRole]) dl[statusOf(wcal ? { ...d, dueDate: moveDue(d.dueDate, wcal, false).due } : d)]++;
   const judged = dl.ON_TIME + dl.LATE_DONE + dl.OVERDUE;
 
   // Delivery and attendance.

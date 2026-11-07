@@ -48,7 +48,7 @@ export async function paperData(sessionId: string) {
   const papers = (await xdb.examPaper.findMany({ where: { sessionId } })) as ExamPaperRow[];
   const courses = await prisma.course.findMany({
     where: { id: { in: papers.map((p) => p.courseId) } },
-    select: { id: true, code: true, title: true, courseType: true, instructorId: true, batch: { select: { degreeProgram: true, batchName: true } }, studentEnrollments: { where: { status: { not: "WITHDRAWN" } }, select: { studentId: true } } },
+    select: { id: true, code: true, title: true, courseType: true, instructorId: true, batchId: true, batch: { select: { degreeProgram: true, batchName: true } }, studentEnrollments: { where: { status: { not: "WITHDRAWN" } }, select: { studentId: true, student: { select: { batchId: true } } } } },
   });
   const cOf = new Map(courses.map((c) => [c.id, c]));
   return { papers, cOf };
@@ -69,28 +69,39 @@ export async function generate(sessionId: string) {
   const seatsPerSlot = rooms.reduce((n, r) => n + r.seats, 0);
   const dayIndex = new Map(days.map((d, i) => [iso(d), i]));
   const groups = new Map<string, Group>();
+  const carried = new Set<string>(); // "student|paper": a student taking the course with a junior (or senior) batch
+  const { extraOf, saveExtra } = await import("./examsExtra");
+  const ex = await extraOf(sessionId);
   for (const p of papers) {
     const c = cOf.get(p.courseId); if (!c) continue;
     const k = groupKey(c.code);
-    const g = groups.get(k) || { key: k, courseIds: [], students: [], instructorIds: [], pinned: null };
+    const g = groups.get(k) || { key: k, courseIds: [], students: [], instructorIds: [], pinned: null, batches: [] as string[], core: /core|major/i.test(c.courseType || "") };
     g.courseIds.push(c.id);
+    if (c.batchId && !g.batches!.includes(c.batchId)) g.batches!.push(c.batchId);
+    for (const e of c.studentEnrollments) if (c.batchId && e.student?.batchId && e.student.batchId !== c.batchId) carried.add(`${e.studentId}|${k}`);
     for (const e of c.studentEnrollments) if (!g.students.includes(e.studentId)) g.students.push(e.studentId);
     if (c.instructorId && !g.instructorIds.includes(c.instructorId)) g.instructorIds.push(c.instructorId);
     if (p.pinned && p.date && p.slot !== null && dayIndex.has(iso(new Date(p.date)))) g.pinned = { day: dayIndex.get(iso(new Date(p.date)))!, slot: p.slot };
     groups.set(k, g);
   }
-  const r = scheduleExams(Array.from(groups.values()), days.length, slots.length, s.maxPerDay, seatsPerSlot || Number.MAX_SAFE_INTEGER);
+  const r = scheduleExams(Array.from(groups.values()), days.length, slots.length, s.maxPerDay, seatsPerSlot || Number.MAX_SAFE_INTEGER, { carried, allowCoreCore: !!ex.allowCoreCore });
+  await saveExtra(sessionId, { lastBent: r.bent }).catch(() => null);
   for (const g of Array.from(groups.values())) {
     const p = r.placed.get(g.key);
     await xdb.examPaper.updateMany({ where: { sessionId, courseId: { in: g.courseIds } }, data: p ? { date: days[p.day], slot: p.slot } : { date: null, slot: null, pinned: false } });
   }
   await allocate(sessionId);
-  return { ok: true, placed: r.placed.size, unplaced: r.unplaced.length };
+  return { ok: true, placed: r.placed.size, unplaced: r.unplaced.length, bent: r.bent.length };
 }
 
 export async function examRooms(s: ExamSessionRow) {
+  // Item 17: the Controller ticks which timetable rooms are used, sets rows × seats per row, and adds exam-only rooms.
+  const { extraOf, seatsOf } = await import("./examsExtra");
+  const e = await extraOf(s.id);
   const rooms = await prisma.room.findMany({ where: { chairmanId: s.chairmanId, type: "LECTURE" }, select: { id: true, name: true, capacity: true } });
-  return rooms.map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, seats: Math.floor((r.capacity * s.seatPercent) / 100) }));
+  const base = rooms.filter((r) => e.rooms?.[r.id]?.use !== false).map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, seats: seatsOf(r, s.seatPercent, e), cols: e.rooms?.[r.id]?.cols || 0 }));
+  const extra = (e.extraRooms || []).map((r) => ({ id: r.id, name: r.name, capacity: r.rows * r.cols, seats: Math.max(0, r.rows * r.cols - (r.blocked || 0)), cols: r.cols }));
+  return [...base, ...extra];
 }
 
 /** People who can invigilate: active teaching staff of the institute. */
@@ -118,7 +129,7 @@ export async function allocate(sessionId: string) {
   const bySlot = new Map<string, ExamPaperRow[]>();
   for (const p of papers) if (p.date && p.slot !== null) { const k = `${iso(new Date(p.date))}:${p.slot}`; bySlot.set(k, [...(bySlot.get(k) || []), p]); }
   const roomPlan = new Map<string, Map<string, { roomId: string; studentIds: string[] }[]>>(); // slot -> paperId -> rooms
-  const slotRooms: { key: string; rooms: { roomId: string; instructorIds: string[] }[] }[] = [];
+  const slotRooms: { key: string; rooms: { roomId: string; students: number; instructorIds: string[] }[] }[] = [];
   for (const [k, ps] of Array.from(bySlot.entries()).sort()) {
     const al = allocateRooms(ps.map((p) => ({ courseId: p.courseId, students: (cOf.get(p.courseId)?.studentEnrollments || []).map((e) => e.studentId) })), rooms);
     const perPaper = new Map<string, { roomId: string; studentIds: string[] }[]>();
@@ -131,7 +142,7 @@ export async function allocate(sessionId: string) {
       }
     }
     roomPlan.set(k, perPaper);
-    slotRooms.push({ key: k, rooms: al.uses.map((u) => ({ roomId: u.roomId, instructorIds: Array.from(new Set(u.students.map((x) => cOf.get(x.courseId)?.instructorId).filter((x): x is string => !!x))) })) });
+    slotRooms.push({ key: k, rooms: al.uses.map((u) => ({ roomId: u.roomId, students: u.students.length, instructorIds: Array.from(new Set(u.students.map((x) => cOf.get(x.courseId)?.instructorId).filter((x): x is string => !!x))) })) });
   }
   // Teachers on approved short leave on an exam day are not given duties that day.
   let shortLeaves: { userId: string; fromDate: Date; toDate: Date }[] = [];
@@ -139,7 +150,34 @@ export async function allocate(sessionId: string) {
   const awayOn = (slotKey: string) => { const d = new Date(`${slotKey.split(":")[0]}T00:00:00Z`); return new Set(shortLeaves.filter((x) => new Date(x.fromDate) <= d && new Date(x.toDate) >= d).map((x) => x.userId)); };
   const { dutyPool, prefsOf } = await import("./examBranch");
   const listed = await dutyPool(s.id, pool);
-  const inv = assignInvigilators(slotRooms, listed.filter((id) => !away.has(id)), Math.max(1, s.invigilatorsPerRoom), awayOn, await prefsOf(s.id));
+  // Item 17: invigilators by room size, reserves and a superintendent per slot, quotas and reduced load, official
+  // work, own classes, personal preferences, duties of the last year, never more than two in a row.
+  const X = await import("./examsExtra"); const D = await import("./examDutiesCore");
+  const ex = await X.extraOf(s.id);
+  const people = listed.filter((id) => !away.has(id));
+  const slotTimes = parse<string[]>(s.slotsJson, []);
+  const dayList = (await sessionDays(s)).map((d) => iso(d));
+  const clash = await X.classClash(s.chairmanId, people);
+  const [old, opts, history] = await Promise.all([prefsOf(s.id), X.optsOf(s.id), X.dutyHistory(s.chairmanId, s.id)]);
+  const prefs = new Map(people.map((u) => { const o = opts.get(u) || {}; const p = old.get(u); return [u, { ...o, slots: p ? Array.from(p.slots) : [], perDay: o.perDay || p?.maxPerDay || 2 }] as const; }));
+  const dutySlots = slotRooms.map((x) => { const [date, sl] = x.key.split(":"); return {
+    key: x.key, date, slot: Number(sl), slotsInDay: slotTimes.length, reserves: ex.reservePerRooms ? Math.ceil(x.rooms.length / ex.reservePerRooms) : 0,
+    rooms: [...x.rooms.map((r) => ({ roomId: r.roomId, need: D.neededFor(r.students, ex.perStudents || 0, s.invigilatorsPerRoom), teachers: r.instructorIds })), ...(ex.superintendent && x.rooms.length ? [{ roomId: "SUPERINTENDENT", need: 1, teachers: [] as string[] }] : [])],
+  }; });
+  const total = dutySlots.reduce((a, x) => a + x.rooms.reduce((b, r) => b + r.need, 0) + x.reserves, 0);
+  const quota = D.quotas(total, people, new Map(Object.entries(ex.reduced || {}).map(([u, v]) => [u, v.quota])));
+  const res = D.assignDuties(dutySlots, people, { prefs, quota, history, blocked: (u, key) => {
+    const [date, sl] = key.split(":");
+    if (awayOn(key).has(u)) return "approved leave";
+    if (ex.official?.[u]?.dates.includes(date)) return "official work";
+    if (clash(u, date, slotTimes[Number(sl)] || "")) return "own class at that time";
+    return dayList.includes(date) ? null : "not an exam day";
+  } });
+  const staff: Record<string, Record<string, string[]>> = {};
+  for (const [k, m] of Array.from(res.bySlot.entries())) for (const [roomId, ids] of Array.from(m.entries())) if (roomId.startsWith("RESERVE") || roomId === "SUPERINTENDENT") (staff[k] ||= {})[roomId] = ids;
+  await X.saveExtra(s.id, { slotStaff: staff });
+  const inv = { bySlot: res.bySlot };
+  void assignInvigilators;
   for (const p of papers) {
     if (!p.date || p.slot === null) { await xdb.examPaper.update({ where: { id: p.id }, data: { roomsJson: "[]", invigilatorsJson: "[]" } }); continue; }
     const k = `${iso(new Date(p.date))}:${p.slot}`;
@@ -172,6 +210,10 @@ export async function examIssues(s: ExamSessionRow) {
     noInv += parse<{ roomId: string; userIds: string[] }[]>(p.invigilatorsJson, []).filter((x) => !x.userIds.length).length;
   }
   for (const v of Array.from(dayOf.values())) if (v > s.maxPerDay) heavy++;
+  // Item 17: a paper longer than its slot.
+  { const { extraOf } = await import("./examsExtra"); const e = await extraOf(s.id); const want = e.durations?.[s.examType as "Midterm" | "Final"] || 0;
+    const short = parse<string[]>(s.slotsJson, []).filter((t) => { const m = /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/.exec(t); return want && m && (+m[3] * 60 + +m[4]) - (+m[1] * 60 + +m[2]) < want; });
+    if (short.length) out.push({ level: "warn", text: `Slot(s) ${short.join(", ")} are shorter than the ${want}-minute ${s.examType} paper — lengthen them in Settings.` }); }
   if (clashes) out.push({ level: "bad", text: `${clashes} student clash(es): a student has two papers at the same time.` });
   if (heavy) out.push({ level: "warn", text: `${heavy} student-day(s) with more than ${s.maxPerDay} papers.` });
   if (unseated) out.push({ level: "bad", text: `${unseated} student seat(s) could not be given a room — add rooms, raise the seat % or add a slot.` });
